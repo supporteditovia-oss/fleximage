@@ -28,3 +28,52 @@ export const updateProfileSchema = insertProfileSchema.partial();
 export type Profile = typeof profiles.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;
+
+// --- Prompt Templates ---
+export const promptTemplates = pgTable("prompt_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  prompt_text: text("prompt_text").notNull(),
+  category: text("category").notNull(),
+  is_active: boolean("is_active").default(true).notNull(),
+  created_by: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
+  name: z.string().min(2).max(200),
+  description: z.string().max(500).optional(),
+  prompt_text: z.string().min(10).max(2000),
+  category: z.string().min(2).max(100),
+});
+
+export const updatePromptTemplateSchema = insertPromptTemplateSchema.partial().omit({ id: true as never });
+
+export type PromptTemplate = typeof promptTemplates.$inferSelect;
+export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
+
+// --- Generated Pranks ---
+export const generatedPranks = pgTable("generated_pranks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  template_id: uuid("template_id").references(() => promptTemplates.id, { onDelete: "set null" }),
+  final_prompt: text("final_prompt").notNull(),
+  kie_task_id: text("kie_task_id").notNull(),
+  status: text("status", { enum: ["waiting", "success", "fail"] }).default("waiting").notNull(),
+  result_urls: text("result_urls"),
+  fail_message: text("fail_message"),
+  cost_time: text("cost_time"),
+  aspect_ratio: text("aspect_ratio"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertGeneratedPrankSchema = createInsertSchema(generatedPranks, {
+  final_prompt: z.string().min(1).max(2000),
+  kie_task_id: z.string().min(1),
+});
+
+export type GeneratedPrank = typeof generatedPranks.$inferSelect;
+export type InsertGeneratedPrank = z.infer<typeof insertGeneratedPrankSchema>;

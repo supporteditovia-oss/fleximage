@@ -1,15 +1,16 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProfileSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Shield, AlertTriangle, Info } from "lucide-react";
+import { Loader2, AlertTriangle, Info, CreditCard } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -48,7 +49,7 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    
+
     if (profile?.is_subscriber) {
       toast({
         variant: "destructive",
@@ -121,25 +122,26 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {profile?.role === "admin" && (
-          <Card className="border-border/60">
-            <CardHeader>
-              <CardTitle>Statut du Compte</CardTitle>
-              <CardDescription>Consultez vos permissions d'accès.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 p-4 border rounded-lg bg-primary/5 border-primary/10">
-                <Shield className="h-8 w-8 text-primary" />
-                <div>
-                  <p className="font-medium">Rôle : Administrateur</p>
-                  <p className="text-sm text-muted-foreground">
-                    Vous avez un accès administratif complet à la plateforme.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Billing / Plans */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Facturation
+            </CardTitle>
+            <CardDescription>Statut de votre abonnement.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Abonnement :</span>
+              {profile?.is_subscriber ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/10">Actif</Badge>
+              ) : (
+                <Badge variant="secondary">Inactif</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border-destructive/20 bg-destructive/5">
           <CardHeader>
@@ -161,7 +163,7 @@ export default function Settings() {
                   <span>Cette action est immédiate et irréversible.</span>
                 </div>
               </div>
-              
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="shrink-0 shadow-lg shadow-destructive/20">
@@ -180,7 +182,7 @@ export default function Settings() {
                       </p>
                       {profile?.is_subscriber ? (
                         <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
-                          Vous avez un abonnement actif. Veuillez d'abord le résilier depuis l'onglet "Facturation" avant de pouvoir supprimer votre compte.
+                          Vous avez un abonnement actif. Veuillez d'abord le résilier depuis la section "Facturation" avant de pouvoir supprimer votre compte.
                         </div>
                       ) : (
                         <>
@@ -191,9 +193,9 @@ export default function Settings() {
                             <Label htmlFor="confirm-delete" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                               Saisissez "SUPPRIMER" pour confirmer
                             </Label>
-                            <Input 
+                            <Input
                               id="confirm-delete"
-                              placeholder="SUPPRIMER" 
+                              placeholder="SUPPRIMER"
                               value={deleteConfirmText}
                               onChange={(e) => setDeleteConfirmText(e.target.value)}
                               className="border-destructive/30 focus-visible:ring-destructive"

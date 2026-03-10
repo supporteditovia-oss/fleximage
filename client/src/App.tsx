@@ -10,10 +10,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
 import AdminPage from "@/pages/Admin";
+import AdminTemplates from "@/pages/AdminTemplates";
+import Generate from "@/pages/Generate";
+import PrankHistory from "@/pages/PrankHistory";
 import Settings from "@/pages/Settings";
-import Billing from "@/pages/Billing";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
 import Confidentialite from "@/pages/Confidentialite";
@@ -69,23 +70,30 @@ function Router() {
 
       {/* Protected Routes */}
       <Route path="/app">
-        <ProtectedRoute component={Dashboard} />
+        <Redirect to="/generate" />
+      </Route>
+
+      <Route path="/generate">
+        <ProtectedRoute component={Generate} />
+      </Route>
+
+      <Route path="/history">
+        <ProtectedRoute component={PrankHistory} />
       </Route>
 
       <Route path="/settings">
         <ProtectedRoute component={Settings} />
       </Route>
 
-      <Route path="/billing">
-        <ProtectedRoute component={Billing} />
-      </Route>
-
-      {/* Admin Route */}
+      {/* Admin Routes */}
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
       </Route>
       <Route path="/admin/users">
         <ProtectedRoute component={AdminPage} />
+      </Route>
+      <Route path="/admin/templates">
+        <ProtectedRoute component={AdminTemplates} />
       </Route>
       
       {/* Fallback */}

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     is_subscriber BOOLEAN DEFAULT FALSE NOT NULL,
     has_accepted_terms BOOLEAN DEFAULT FALSE NOT NULL,
     stripe_customer_id TEXT,
-    stripe_subscription_id TEXT,
+    stripe_subscription_id TEXT, 
     subscription_status TEXT,
     last_active_at TIMESTAMP WITH TIME ZONE,
     full_name TEXT,
@@ -115,3 +115,115 @@ GRANT ALL ON public.profiles TO service_role;
 -- Pour promouvoir un utilisateur en administrateur, exécutez la commande suivante
 -- dans l'éditeur SQL de Supabase en remplaçant 'email@example.com' :
 -- UPDATE public.profiles SET role = 'admin' WHERE email = 'email@example.com';
+
+-- =========================================================================================
+-- PROMPT TEMPLATES TABLE
+-- =========================================================================================
+CREATE TABLE IF NOT EXISTS public.prompt_templates (
+    id UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    prompt_text TEXT NOT NULL,
+    category TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE public.prompt_templates ENABLE ROW LEVEL SECURITY;
+
+-- Tout le monde peut lire les templates actifs
+CREATE POLICY "Anyone can read active templates"
+  ON public.prompt_templates FOR SELECT
+  USING (is_active = true);
+
+-- Les admins peuvent tout lire (y compris les inactifs)
+CREATE POLICY "Admins can read all templates"
+  ON public.prompt_templates FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Les admins peuvent insérer des templates
+CREATE POLICY "Admins can insert templates"
+  ON public.prompt_templates FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Les admins peuvent modifier des templates
+CREATE POLICY "Admins can update templates"
+  ON public.prompt_templates FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Les admins peuvent supprimer des templates
+CREATE POLICY "Admins can delete templates"
+  ON public.prompt_templates FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+GRANT ALL ON public.prompt_templates TO authenticated;
+GRANT SELECT ON public.prompt_templates TO anon;
+GRANT ALL ON public.prompt_templates TO service_role;
+
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_category ON public.prompt_templates(category);
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_is_active ON public.prompt_templates(is_active);
+
+-- =========================================================================================
+-- GENERATED PRANKS TABLE
+-- =========================================================================================
+CREATE TABLE IF NOT EXISTS public.generated_pranks (
+    id UUID DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    template_id UUID REFERENCES public.prompt_templates(id) ON DELETE SET NULL,
+    final_prompt TEXT NOT NULL,
+    kie_task_id TEXT NOT NULL,
+    status TEXT DEFAULT 'waiting' NOT NULL,
+    result_urls TEXT,
+    fail_message TEXT,
+    cost_time TEXT,
+    aspect_ratio TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+
+    CONSTRAINT generated_pranks_status_check CHECK (status IN ('waiting', 'success', 'fail'))
+);
+
+ALTER TABLE public.generated_pranks ENABLE ROW LEVEL SECURITY;
+
+-- Les utilisateurs peuvent lire leurs propres pranks
+CREATE POLICY "Users can read own pranks"
+  ON public.generated_pranks FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Les admins peuvent lire tous les pranks
+CREATE POLICY "Admins can read all pranks"
+  ON public.generated_pranks FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+GRANT ALL ON public.generated_pranks TO authenticated;
+GRANT ALL ON public.generated_pranks TO service_role;
+
+CREATE INDEX IF NOT EXISTS idx_generated_pranks_user_id ON public.generated_pranks(user_id);
+CREATE INDEX IF NOT EXISTS idx_generated_pranks_status ON public.generated_pranks(status);

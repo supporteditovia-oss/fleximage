@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, profiles } from './schema';
+import { insertProfileSchema, insertPromptTemplateSchema } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -41,6 +41,46 @@ export const api = {
         200: insertProfileSchema,
         400: errorSchemas.validation,
       },
+    },
+  },
+  templates: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/templates',
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/templates/:id',
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/templates',
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/templates/:id',
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/templates/:id',
+    },
+  },
+  pranks: {
+    generate: {
+      method: 'POST' as const,
+      path: '/api/pranks/generate',
+    },
+    status: {
+      method: 'GET' as const,
+      path: '/api/pranks/:taskId/status',
+    },
+    history: {
+      method: 'GET' as const,
+      path: '/api/pranks/history',
+    },
+    download: {
+      method: 'GET' as const,
+      path: '/api/pranks/:prankId/download/:imageIndex',
     },
   },
 };
