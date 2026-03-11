@@ -1,8 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
 import { TermsGuard } from "./TermsGuard";
 import { BottomDock } from "./BottomDock";
-import { Coins } from "lucide-react";
+import FloatingHeader from "@/components/layout/FloatingHeader";
 
 function SubscriptionGuard() {
   const { profile, isLoading, signOut } = useAuth();
@@ -33,33 +32,6 @@ function SubscriptionGuard() {
   );
 }
 
-function StickyHeader() {
-  const { profile } = useAuth();
-
-  return (
-    <div className="sticky top-0 z-40 flex justify-center px-4 pt-4 pb-2 bg-[#F4F4F4]">
-      <header className="bg-background/80 backdrop-blur-xl border border-border/50 flex items-center justify-between px-6 py-3 rounded-full w-full md:max-w-[60%] shadow-xl shadow-black/5">
-        <Link href="/generate" className="hover:scale-105 transition-transform">
-          <span
-            className="inline-block text-xl font-extrabold tracking-tight select-none"
-            style={{
-              WebkitTextStroke: "1.5px black",
-              paintOrder: "stroke fill",
-            }}
-          >
-            <span className="text-secondary">Turbo</span>
-            <span className="text-primary">Prank</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <Coins className="w-4 h-4 text-yellow-500" />
-          <span>{profile?.credits ?? 0}</span>
-        </div>
-      </header>
-    </div>
-  );
-}
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
 
@@ -79,8 +51,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#F4F4F4]">
       <TermsGuard />
-      <StickyHeader />
-      <main className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-28">
+      <FloatingHeader variant="app" />
+      <main className="flex-1 px-4 md:px-8 pt-20 pb-28">
         <div className="mx-auto max-w-full md:max-w-[60vw] animate-in fade-in slide-in-from-bottom-4 duration-500">
           {children}
         </div>

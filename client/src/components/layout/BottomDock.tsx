@@ -34,7 +34,7 @@ export function BottomDock() {
 
   const dockItemClass = (active: boolean) =>
     cn(
-      "group flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl text-xs font-medium transition-all duration-200 min-w-[64px]",
+      "group flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl text-xs font-medium transition-all duration-200 min-w-[64px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5",
       active
         ? "text-primary scale-110"
         : "text-muted-foreground hover:text-foreground hover:scale-105"
@@ -42,7 +42,7 @@ export function BottomDock() {
 
   const dockIconClass = (active: boolean) =>
     cn(
-      "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200",
+      "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 md:w-9 md:h-9",
       active
         ? "bg-primary/10 shadow-sm"
         : "group-hover:bg-muted/60"
@@ -50,15 +50,15 @@ export function BottomDock() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)]">
-      <nav className="w-full md:max-w-[480px] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-white/50">
-        <div className="flex items-center justify-around px-4 py-3">
+      <nav className="w-full md:max-w-[360px] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-white/50">
+        <div className="flex items-center justify-evenly px-4 py-3 md:px-3 md:py-2">
           {/* Historique */}
           <Link
             href="/history"
             className={dockItemClass(isActive("/history"))}
           >
             <div className={dockIconClass(isActive("/history"))}>
-              <History className="h-6 w-6" />
+              <History className="h-6 w-6 md:h-5 md:w-5" />
             </div>
             <span>Historique</span>
           </Link>
@@ -69,17 +69,17 @@ export function BottomDock() {
             className={dockItemClass(isActive("/generate"))}
           >
             <div className={dockIconClass(isActive("/generate"))}>
-              <Plus className="h-6 w-6" />
+              <Plus className="h-6 w-6 md:h-5 md:w-5" />
             </div>
             <span>Créer</span>
           </Link>
 
           {/* Compte */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button className={cn(dockItemClass(false), "text-muted-foreground hover:text-foreground")}>
-                <div className="flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 group-hover:bg-muted/60">
-                  <Avatar className="h-7 w-7">
+                <div className="flex items-center justify-center w-12 h-12 md:w-9 md:h-9 rounded-2xl transition-all duration-200 group-hover:bg-muted/60">
+                  <Avatar className="h-7 w-7 md:h-6 md:w-6">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                       {profile?.email?.substring(0, 2).toUpperCase()}

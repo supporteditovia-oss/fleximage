@@ -50,6 +50,9 @@
 }
 
 @layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
   * {
     @apply border-border;
   }
@@ -77,4 +80,72 @@
   .dock-nav {
     @apply rounded-[40px_40px_0_0];
   }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse 20s linear infinite;
+}
+
+@media (min-width: 768px) {
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+  .animate-marquee-reverse {
+    animation: marquee-reverse 30s linear infinite;
+  }
+}
+
+.marquee-row:hover .animate-marquee,
+.marquee-row:hover .animate-marquee-reverse {
+  animation-play-state: paused;
+}
+
+/* Floating emoji animation */
+@keyframes emoji-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+.emoji-float {
+  animation: emoji-float 7s ease-in-out infinite;
+}
+
+/* Handdrawn arrow bounce */
+@keyframes arrow-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+.animate-arrow-bounce {
+  animation: arrow-bounce 1.5s ease-in-out infinite;
 }
