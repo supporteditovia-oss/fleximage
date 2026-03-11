@@ -21,8 +21,29 @@ import Confidentialite from "@/pages/Confidentialite";
 import { Loader2 } from "lucide-react";
 import { AUTH_CONFIG } from "@/config/auth";
 
+// OAuth callback handler — waits for Supabase to parse the hash fragment
+function AuthCallback() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <Redirect to={user ? AUTH_CONFIG.REDIRECT_PATH : AUTH_CONFIG.LOGIN_PATH} />
+  );
+}
+
 // Protected Route Wrapper
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({
+  component: Component,
+}: {
+  component: React.ComponentType;
+}) {
   const { user, isLoading } = useAuth();
 
   React.useEffect(() => {
@@ -60,7 +81,7 @@ function Router() {
       <Route path="/mentions-legales" component={MentionsLegales} />
       <Route path="/cgu" component={CGU} />
       <Route path="/confidentialite" component={Confidentialite} />
-      
+
       <Route path={AUTH_CONFIG.LOGIN_PATH}>
         {user ? <Redirect to={AUTH_CONFIG.REDIRECT_PATH} /> : <AuthPage />}
       </Route>
@@ -68,9 +89,9 @@ function Router() {
         {user ? <Redirect to={AUTH_CONFIG.REDIRECT_PATH} /> : <AuthPage />}
       </Route>
 
-      {/* Protected Routes */}
+      {/* OAuth callback + redirect */}
       <Route path="/app">
-        <Redirect to="/generate" />
+        <AuthCallback />
       </Route>
 
       <Route path="/generate">
@@ -95,7 +116,7 @@ function Router() {
       <Route path="/admin/templates">
         <ProtectedRoute component={AdminTemplates} />
       </Route>
-      
+
       {/* Fallback */}
       <Route component={NotFound} />
     </Switch>

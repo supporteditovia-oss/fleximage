@@ -1,18 +1,28 @@
-import { pgTable, text, timestamp, uuid, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  boolean,
+  integer,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey(), 
+  id: uuid("id").primaryKey(),
   email: text("email"),
   full_name: text("full_name"),
   avatar_url: text("avatar_url"),
-  role: text("role", { enum: ["user", "admin"] }).default("user").notNull(),
+  role: text("role", { enum: ["user", "admin"] })
+    .default("user")
+    .notNull(),
   is_subscriber: boolean("is_subscriber").default(false).notNull(),
   stripe_customer_id: text("stripe_customer_id"),
   stripe_subscription_id: text("stripe_subscription_id"),
   subscription_status: text("subscription_status"),
   has_accepted_terms: boolean("has_accepted_terms").default(false).notNull(),
+  credits: integer("credits").default(0).notNull(),
   last_active_at: timestamp("last_active_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -37,9 +47,19 @@ export const promptTemplates = pgTable("prompt_templates", {
   prompt_text: text("prompt_text").notNull(),
   category: text("category").notNull(),
   is_active: boolean("is_active").default(true).notNull(),
-  created_by: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  required_images: integer("required_images").default(0).notNull(),
+  optional_images: integer("optional_images").default(0).notNull(),
+  output_label: text("output_label"),
+  image_labels: text("image_labels"),
+  created_by: uuid("created_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
@@ -47,9 +67,15 @@ export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
   description: z.string().max(500).optional(),
   prompt_text: z.string().min(10).max(2000),
   category: z.string().min(2).max(100),
+  required_images: z.number().int().min(0).max(3).optional().default(0),
+  optional_images: z.number().int().min(0).max(3).optional().default(0),
+  output_label: z.string().max(50).optional(),
+  image_labels: z.string().max(1000).optional(),
 });
 
-export const updatePromptTemplateSchema = insertPromptTemplateSchema.partial().omit({ id: true as never });
+export const updatePromptTemplateSchema = insertPromptTemplateSchema
+  .partial()
+  .omit({ id: true as never });
 
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
@@ -57,17 +83,27 @@ export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 // --- Generated Pranks ---
 export const generatedPranks = pgTable("generated_pranks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
-  template_id: uuid("template_id").references(() => promptTemplates.id, { onDelete: "set null" }),
+  user_id: uuid("user_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  template_id: uuid("template_id").references(() => promptTemplates.id, {
+    onDelete: "set null",
+  }),
   final_prompt: text("final_prompt").notNull(),
   kie_task_id: text("kie_task_id").notNull(),
-  status: text("status", { enum: ["waiting", "success", "fail"] }).default("waiting").notNull(),
+  status: text("status", { enum: ["waiting", "success", "fail"] })
+    .default("waiting")
+    .notNull(),
   result_urls: text("result_urls"),
   fail_message: text("fail_message"),
   cost_time: text("cost_time"),
   aspect_ratio: text("aspect_ratio"),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const insertGeneratedPrankSchema = createInsertSchema(generatedPranks, {

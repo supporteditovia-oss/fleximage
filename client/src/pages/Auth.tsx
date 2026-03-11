@@ -4,7 +4,14 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -25,16 +32,19 @@ export default function AuthPage() {
 
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: "", color: "bg-muted" };
-    if (pass.length < 6) return { score: 1, label: "Trop court", color: "bg-destructive" };
-    
+    if (pass.length < 6)
+      return { score: 1, label: "Trop court", color: "bg-destructive" };
+
     let score = 1;
     if (pass.length > 8) score++;
     if (/[A-Z]/.test(pass)) score++;
     if (/[0-9]/.test(pass)) score++;
     if (/[^A-Za-z0-9]/.test(pass)) score++;
-    
-    if (score <= 2) return { score: 2, label: "Faible", color: "bg-orange-500" };
-    if (score <= 3) return { score: 3, label: "Moyenne", color: "bg-yellow-500" };
+
+    if (score <= 2)
+      return { score: 2, label: "Faible", color: "bg-orange-500" };
+    if (score <= 3)
+      return { score: 3, label: "Moyenne", color: "bg-yellow-500" };
     if (score <= 4) return { score: 4, label: "Forte", color: "bg-green-500" };
     return { score: 5, label: "Excellente", color: "bg-emerald-600" };
   };
@@ -61,12 +71,16 @@ export default function AuthPage() {
           options: {
             emailRedirectTo: `${window.location.origin}/app`,
             data: {
-              has_accepted_terms: true
-            }
-          }
+              has_accepted_terms: true,
+            },
+          },
         });
         if (error) throw error;
-        toast({ title: "Compte créé", description: "Veuillez vérifier vos emails pour confirmer votre inscription." });
+        toast({
+          title: "Compte créé",
+          description:
+            "Veuillez vérifier vos emails pour confirmer votre inscription.",
+        });
         setLocation("/login");
       }
     } catch (error: any) {
@@ -103,21 +117,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary/30 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl shadow-black/5 border-border/60">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-display font-bold text-center">
             {isLogin ? "Bon retour parmi nous" : "Créer un compte"}
           </CardTitle>
           <CardDescription className="text-center">
-            {isLogin ? "Entrez vos identifiants pour vous connecter" : "Entrez votre email pour commencer"}
+            {isLogin
+              ? "Entrez vos identifiants pour vous connecter"
+              : "Entrez votre email pour commencer"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button 
+            <Button
               type="button"
-              variant="outline" 
+              variant="outline"
               className="w-full h-11 text-base font-semibold"
               onClick={handleGoogleAuth}
               disabled={isLoading}
@@ -177,17 +193,17 @@ export default function AuthPage() {
                       <span className="font-medium">{strength.label}</span>
                     </div>
                     <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-300 ${strength.color}`} 
-                        style={ { width: `${(strength.score / 5) * 100}%` } }
+                      <div
+                        className={`h-full transition-all duration-300 ${strength.color}`}
+                        style={{ width: `${(strength.score / 5) * 100}%` }}
                       />
                     </div>
                   </div>
                 )}
               </div>
-              <Button 
-                type="submit" 
-                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20" 
+              <Button
+                type="submit"
+                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20"
                 disabled={isLoading}
                 data-testid="button-auth-submit"
               >
@@ -198,12 +214,14 @@ export default function AuthPage() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => setLocation(isLogin ? "/register" : "/login")}
             className="text-muted-foreground hover:text-primary transition-colors h-auto p-0 hover:bg-transparent"
           >
-            {isLogin ? "Pas encore de compte ? S'inscrire" : "Déjà un compte ? Se connecter"}
+            {isLogin
+              ? "Pas encore de compte ? S'inscrire"
+              : "Déjà un compte ? Se connecter"}
           </Button>
         </CardFooter>
       </Card>

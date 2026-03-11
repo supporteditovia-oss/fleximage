@@ -7,6 +7,13 @@ interface GeneratePrankInput {
   aspect_ratio?: string;
 }
 
+interface GenerateDirectInput {
+  prompt: string;
+  aspect_ratio?: string;
+  images?: string[];
+  template_id?: string;
+}
+
 interface GeneratePrankResponse {
   id: string;
   taskId: string;
@@ -48,6 +55,24 @@ export function useGeneratePrank() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useGenerateDirectPrank() {
+  const queryClient = useQueryClient();
+  return useMutation<GeneratePrankResponse, Error, GenerateDirectInput>({
+    mutationFn: async (data) => {
+      const res = await authFetch("/api/pranks/generate-direct", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }

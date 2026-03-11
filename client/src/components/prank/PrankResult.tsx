@@ -22,13 +22,16 @@ export function PrankResult({ resultUrls }: PrankResultProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="flex flex-wrap justify-center gap-4">
       {resultUrls.map((url, index) => (
-        <div key={index} className="relative group rounded-lg overflow-hidden border">
+        <div
+          key={index}
+          className="relative group rounded-lg overflow-hidden border max-w-[240px]"
+        >
           <img
             src={url}
             alt={`Prank généré ${index + 1}`}
-            className="w-full h-auto object-cover"
+            className="w-full max-h-[50vh] object-contain"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-end p-2">

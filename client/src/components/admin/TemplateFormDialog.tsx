@@ -37,7 +37,11 @@ interface TemplateFormDialogProps {
   template?: PromptTemplate | null;
 }
 
-export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFormDialogProps) {
+export function TemplateFormDialog({
+  open,
+  onOpenChange,
+  template,
+}: TemplateFormDialogProps) {
   const { toast } = useToast();
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
@@ -47,6 +51,10 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
   const [promptText, setPromptText] = useState("");
   const [category, setCategory] = useState("humour");
   const [isActive, setIsActive] = useState(true);
+  const [requiredImages, setRequiredImages] = useState(0);
+  const [optionalImages, setOptionalImages] = useState(0);
+  const [outputLabel, setOutputLabel] = useState("");
+  const [imageLabels, setImageLabels] = useState<string[]>([]);
 
   const isEditing = !!template;
   const isPending = createTemplate.isPending || updateTemplate.isPending;
@@ -58,12 +66,26 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
       setPromptText(template.prompt_text);
       setCategory(template.category);
       setIsActive(template.is_active);
+      setRequiredImages(template.required_images ?? 0);
+      setOptionalImages(template.optional_images ?? 0);
+      setOutputLabel(template.output_label || "");
+      try {
+        setImageLabels(
+          template.image_labels ? JSON.parse(template.image_labels) : [],
+        );
+      } catch {
+        setImageLabels([]);
+      }
     } else {
       setName("");
       setDescription("");
       setPromptText("");
       setCategory("humour");
       setIsActive(true);
+      setRequiredImages(0);
+      setOptionalImages(0);
+      setOutputLabel("");
+      setImageLabels([]);
     }
   }, [template, open]);
 
@@ -76,6 +98,11 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
       prompt_text: promptText,
       category,
       is_active: isActive,
+      required_images: requiredImages,
+      optional_images: optionalImages,
+      output_label: outputLabel || undefined,
+      image_labels:
+        imageLabels.length > 0 ? JSON.stringify(imageLabels) : undefined,
     };
 
     try {
@@ -143,7 +170,8 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              Utilisez {"{{variable}}"} pour les champs que l'utilisateur pourra personnaliser.
+              Utilisez {"{{variable}}"} pour les champs que l'utilisateur pourra
+              personnaliser.
             </p>
           </div>
 
@@ -165,6 +193,86 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="output_label">Label de sortie</Label>
+              <Input
+                id="output_label"
+                value={outputLabel}
+                onChange={(e) => setOutputLabel(e.target.value)}
+                placeholder="Ex: PV, Echo, SMS…"
+                maxLength={50}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="required_images">Images requises</Label>
+              <Select
+                value={String(requiredImages)}
+                onValueChange={(v) => {
+                  const val = Number(v);
+                  setRequiredImages(val);
+                  if (val + optionalImages > 3) setOptionalImages(3 - val);
+                  const totalNew = val + Math.min(optionalImages, 3 - val);
+                  setImageLabels((prev) => {
+                    const next = [...prev];
+                    next.length = totalNew;
+                    for (let j = 0; j < totalNew; j++)
+                      if (!next[j]) next[j] = "";
+                    return next;
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[0, 1, 2, 3].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="optional_images">Images optionnelles</Label>
+              <Select
+                value={String(optionalImages)}
+                onValueChange={(v) => {
+                  const val = Number(v);
+                  setOptionalImages(val);
+                  const totalNew = requiredImages + val;
+                  setImageLabels((prev) => {
+                    const next = [...prev];
+                    next.length = totalNew;
+                    for (let j = 0; j < totalNew; j++)
+                      if (!next[j]) next[j] = "";
+                    return next;
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(
+                    { length: 3 - requiredImages + 1 },
+                    (_, i) => i,
+                  ).map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Total max : 3 images
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="is_active">Actif</Label>
               <div className="flex items-center gap-2 pt-2">
                 <Switch
@@ -173,14 +281,50 @@ export function TemplateFormDialog({ open, onOpenChange, template }: TemplateFor
                   onCheckedChange={setIsActive}
                 />
                 <span className="text-sm text-muted-foreground">
-                  {isActive ? "Visible par les utilisateurs" : "Masqué"}
+                  {isActive ? "Visible" : "Masqué"}
                 </span>
               </div>
             </div>
           </div>
 
+          {requiredImages + optionalImages > 0 && (
+            <div className="space-y-2">
+              <Label>Consigne pour chaque image</Label>
+              <p className="text-xs text-muted-foreground">
+                Texte affiché à l'utilisateur pour chaque emplacement d'image.
+              </p>
+              {Array.from(
+                { length: requiredImages + optionalImages },
+                (_, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-20 shrink-0">
+                      Image {idx + 1}{" "}
+                      {idx < requiredImages ? "(requis)" : "(optionnel)"}
+                    </span>
+                    <Input
+                      value={imageLabels[idx] || ""}
+                      onChange={(e) => {
+                        setImageLabels((prev) => {
+                          const next = [...prev];
+                          next[idx] = e.target.value;
+                          return next;
+                        });
+                      }}
+                      placeholder={`Ex: ton visage, ta voiture…`}
+                      maxLength={100}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Annuler
             </Button>
             <Button type="submit" disabled={isPending}>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,8 +6,8 @@
 
 :root {
   /* Vibrant SaaS Palette - Light Mode Only */
-  --font-sans: 'DM Sans', sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-display: "Outfit", sans-serif;
 
   --background: 0 0% 96%;
   --foreground: 222 47% 11%;
@@ -18,27 +18,27 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 45 90% 56%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 223 100% 59%;
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 25 100% 50%;
+  --secondary-foreground: 0 0% 100%;
 
   --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
 
-  --accent: 262 83% 58%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 25 100% 50%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 100%;
 
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 45 90% 56%;
+  --ring: 223 100% 59%;
 
   --radius: 0.75rem;
-  
+
   --sidebar-background: 0 0% 100%;
   --sidebar-foreground: 240 5.3% 26.1%;
   --sidebar-primary: 240 5.9% 10%;
@@ -46,7 +46,7 @@
   --sidebar-accent: 240 4.8% 95.9%;
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar-ring: 223 100% 59%;
 }
 
 @layer base {
@@ -58,7 +58,12 @@
     font-family: var(--font-sans);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     @apply tracking-tight font-bold;
   }
@@ -67,10 +72,6 @@
 @layer utilities {
   .glass {
     @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-lg;
-  }
-
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
   }
 
   .dock-nav {

@@ -4,9 +4,16 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 
 import { validateRequest } from "./lib/validate";
-import { insertPromptTemplateSchema, updatePromptTemplateSchema } from "@shared/schema";
+import {
+  insertPromptTemplateSchema,
+  updatePromptTemplateSchema,
+} from "@shared/schema";
 import { logger } from "./lib/logger";
-import { requireAuth, requireAdmin, type AuthenticatedRequest } from "./lib/auth-middleware";
+import {
+  requireAuth,
+  requireAdmin,
+  type AuthenticatedRequest,
+} from "./lib/auth-middleware";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
 import { downloadAndStoreImages } from "./lib/image-storage";
@@ -21,13 +28,20 @@ function extractImageUrls(parsed: unknown): string[] {
 
   // Direct array of strings
   if (Array.isArray(parsed)) {
-    const urls = parsed.filter((item) => typeof item === "string" && item.startsWith("http"));
+    const urls = parsed.filter(
+      (item) => typeof item === "string" && item.startsWith("http"),
+    );
     if (urls.length > 0) return urls;
     // Array of objects with url field
     const fromObjects = parsed
       .filter((item) => typeof item === "object" && item !== null)
-      .map((item: any) => item.url || item.image_url || item.imageUrl || item.src)
-      .filter((u: unknown) => typeof u === "string" && (u as string).startsWith("http"));
+      .map(
+        (item: any) => item.url || item.image_url || item.imageUrl || item.src,
+      )
+      .filter(
+        (u: unknown) =>
+          typeof u === "string" && (u as string).startsWith("http"),
+      );
     if (fromObjects.length > 0) return fromObjects as string[];
   }
 
@@ -35,7 +49,15 @@ function extractImageUrls(parsed: unknown): string[] {
     const obj = parsed as Record<string, unknown>;
 
     // Try common known keys
-    for (const key of ["resultUrls", "result_urls", "images", "urls", "output", "data", "results"]) {
+    for (const key of [
+      "resultUrls",
+      "result_urls",
+      "images",
+      "urls",
+      "output",
+      "data",
+      "results",
+    ]) {
       const value = obj[key];
       if (Array.isArray(value)) {
         const extracted = extractImageUrls(value);
@@ -44,7 +66,14 @@ function extractImageUrls(parsed: unknown): string[] {
     }
 
     // Single URL field
-    for (const key of ["url", "image_url", "imageUrl", "src", "image", "output"]) {
+    for (const key of [
+      "url",
+      "image_url",
+      "imageUrl",
+      "src",
+      "image",
+      "output",
+    ]) {
       const value = obj[key];
       if (typeof value === "string" && value.startsWith("http")) {
         return [value];
@@ -70,9 +99,8 @@ function extractImageUrls(parsed: unknown): string[] {
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
-
   // =============================================
   // HEALTH CHECK
   // =============================================
@@ -157,7 +185,7 @@ export async function registerRoutes(
         logger.error({ err: error }, "Error creating template");
         res.status(500).json({ message: error.message });
       }
-    }
+    },
   );
 
   // PATCH /api/templates/:id (Admin only)
@@ -183,7 +211,7 @@ export async function registerRoutes(
         logger.error({ err: error }, "Error updating template");
         res.status(500).json({ message: error.message });
       }
-    }
+    },
   );
 
   // DELETE /api/templates/:id (Admin only)
@@ -205,7 +233,7 @@ export async function registerRoutes(
         logger.error({ err: error }, "Error deleting template");
         res.status(500).json({ message: error.message });
       }
-    }
+    },
   );
 
   // =============================================
@@ -229,7 +257,25 @@ export async function registerRoutes(
         const { template_id, placeholders, aspect_ratio } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
 
-        // 1. Fetch template
+        // 1. Check credits
+        const { data: userProfile, error: profileErr } = await supabaseAdmin
+          .from("profiles")
+          .select("credits")
+          .eq("id", authReq.userId)
+          .single();
+
+        if (profileErr || !userProfile) {
+          return res.status(403).json({ message: "Profil introuvable" });
+        }
+
+        if (userProfile.credits < 5) {
+          return res.status(403).json({
+            message:
+              "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
+          });
+        }
+
+        // 2. Fetch template
         const { data: template, error: tplErr } = await supabaseAdmin
           .from("prompt_templates")
           .select("*")
@@ -238,16 +284,20 @@ export async function registerRoutes(
           .single();
 
         if (tplErr || !template) {
-          return res.status(404).json({ message: "Template non trouvé ou inactif" });
+          return res
+            .status(404)
+            .json({ message: "Template non trouvé ou inactif" });
         }
 
         // 2. Build final prompt by replacing placeholders
         let finalPrompt: string = template.prompt_text;
         if (placeholders) {
-          for (const [key, value] of Object.entries(placeholders as Record<string, string>)) {
+          for (const [key, value] of Object.entries(
+            placeholders as Record<string, string>,
+          )) {
             finalPrompt = finalPrompt.replace(
               new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-              value
+              value,
             );
           }
         }
@@ -259,11 +309,29 @@ export async function registerRoutes(
         });
 
         if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-          logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-          return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+          logger.error(
+            { response: kieResponse },
+            "Kie.ai createTask unexpected response",
+          );
+          return res.status(502).json({
+            message: "Erreur lors de la création de la tâche de génération",
+          });
         }
 
-        // 4. Store in generated_pranks
+        // 4. Deduct 5 credits atomically
+        const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
+          p_user_id: authReq.userId,
+          p_amount: 5,
+        });
+
+        if (deductErr) {
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: "Erreur lors de la déduction des crédits" });
+        }
+
+        // 5. Store in generated_pranks
         const { data: prank, error: insertErr } = await supabaseAdmin
           .from("generated_pranks")
           .insert({
@@ -288,7 +356,119 @@ export async function registerRoutes(
         logger.error({ err: error }, "Error generating prank");
         res.status(500).json({ message: error.message });
       }
-    }
+    },
+  );
+
+  // POST /api/pranks/generate-direct (free prompt, no template)
+  const generateDirectBodySchema = z.object({
+    prompt: z.string().min(1).max(2000),
+    aspect_ratio: z.string().optional().default("9:16"),
+    images: z.array(z.string()).optional().default([]),
+    template_id: z.string().uuid().optional(),
+  });
+
+  app.post(
+    api.pranks.generateDirect.path,
+    requireAuth,
+    validateRequest(generateDirectBodySchema),
+    async (req, res) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const { prompt, aspect_ratio, images, template_id } = req.body;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        // 1. Check credits
+        const { data: userProfile, error: profileErr } = await supabaseAdmin
+          .from("profiles")
+          .select("credits")
+          .eq("id", authReq.userId)
+          .single();
+
+        if (profileErr || !userProfile) {
+          return res.status(403).json({ message: "Profil introuvable" });
+        }
+
+        if (userProfile.credits < 5) {
+          return res.status(403).json({
+            message:
+              "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
+          });
+        }
+
+        // 2. Upload images to R2 and get public URLs
+        let imageUrls: string[] = [];
+        if (images && images.length > 0) {
+          const { uploadToR2 } = await import("./lib/r2-client");
+          for (let i = 0; i < images.length; i++) {
+            const dataUrl = images[i];
+            const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+            if (!match) continue;
+            const contentType = match[1];
+            const base64Data = match[2];
+            const buffer = Buffer.from(base64Data, "base64");
+            const ext = contentType.split("/")[1] || "jpg";
+            const key = `inputs/${authReq.userId}/${Date.now()}-${i}.${ext}`;
+            const publicUrl = await uploadToR2(key, buffer, contentType);
+            imageUrls.push(publicUrl);
+          }
+        }
+
+        // 3. Call Kie.ai
+        const kieResponse = await createKieTask({
+          prompt,
+          aspect_ratio: aspect_ratio || "9:16",
+          ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+        });
+
+        if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+          logger.error(
+            { response: kieResponse },
+            "Kie.ai createTask unexpected response",
+          );
+          return res.status(502).json({
+            message: "Erreur lors de la création de la tâche de génération",
+          });
+        }
+
+        // 4. Deduct 5 credits
+        const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
+          p_user_id: authReq.userId,
+          p_amount: 5,
+        });
+
+        if (deductErr) {
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: "Erreur lors de la déduction des crédits" });
+        }
+
+        // 5. Store in generated_pranks
+        const { data: prank, error: insertErr } = await supabaseAdmin
+          .from("generated_pranks")
+          .insert({
+            user_id: authReq.userId,
+            template_id: template_id || null,
+            final_prompt: prompt,
+            kie_task_id: kieResponse.data.taskId,
+            status: "waiting",
+            aspect_ratio,
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+
+        res.status(201).json({
+          id: prank.id,
+          taskId: kieResponse.data.taskId,
+          status: "waiting",
+        });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error generating direct prank");
+        res.status(500).json({ message: error.message });
+      }
+    },
   );
 
   // GET /api/pranks/:taskId/status
@@ -323,15 +503,24 @@ export async function registerRoutes(
       // Poll Kie.ai
       const kieStatus = await getKieTaskStatus(taskId);
 
-      if (kieStatus.data.state === "success" || kieStatus.data.state === "fail") {
+      if (
+        kieStatus.data.state === "success" ||
+        kieStatus.data.state === "fail"
+      ) {
         let resultUrls: string[] = [];
         if (kieStatus.data.state === "success" && kieStatus.data.resultJson) {
           try {
             const parsed = JSON.parse(kieStatus.data.resultJson);
-            logger.info({ resultJson: parsed, rawResultJson: kieStatus.data.resultJson }, "Kie.ai resultJson parsed");
+            logger.info(
+              { resultJson: parsed, rawResultJson: kieStatus.data.resultJson },
+              "Kie.ai resultJson parsed",
+            );
             resultUrls = extractImageUrls(parsed);
           } catch (parseErr) {
-            logger.error({ err: parseErr, rawResultJson: kieStatus.data.resultJson }, "Failed to parse Kie.ai resultJson");
+            logger.error(
+              { err: parseErr, rawResultJson: kieStatus.data.resultJson },
+              "Failed to parse Kie.ai resultJson",
+            );
           }
 
           // Re-upload images to R2 for permanent storage
@@ -339,7 +528,10 @@ export async function registerRoutes(
             try {
               resultUrls = await downloadAndStoreImages(prank.id, resultUrls);
             } catch (err) {
-              logger.error({ err, prankId: prank.id }, "Failed to re-upload images to R2, keeping original URLs");
+              logger.error(
+                { err, prankId: prank.id },
+                "Failed to re-upload images to R2, keeping original URLs",
+              );
             }
           }
         }
@@ -351,7 +543,9 @@ export async function registerRoutes(
             status: kieStatus.data.state,
             result_urls: JSON.stringify(resultUrls),
             fail_message: kieStatus.data.failMsg || null,
-            cost_time: kieStatus.data.costTime ? String(kieStatus.data.costTime) : null,
+            cost_time: kieStatus.data.costTime
+              ? String(kieStatus.data.costTime)
+              : null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", prank.id);
@@ -365,7 +559,12 @@ export async function registerRoutes(
       }
 
       // Still waiting
-      res.json({ status: "waiting", resultUrls: [], failMessage: null, costTime: null });
+      res.json({
+        status: "waiting",
+        resultUrls: [],
+        failMessage: null,
+        costTime: null,
+      });
     } catch (error: any) {
       logger.error({ err: error }, "Error checking prank status");
       res.status(500).json({ message: error.message });
@@ -430,14 +629,24 @@ export async function registerRoutes(
       const imageUrl = urls[index];
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
-        return res.status(502).json({ message: "Impossible de récupérer l'image" });
+        return res
+          .status(502)
+          .json({ message: "Impossible de récupérer l'image" });
       }
 
-      const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
-      const extension = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+      const contentType =
+        imageResponse.headers.get("content-type") || "image/jpeg";
+      const extension = contentType.includes("png")
+        ? "png"
+        : contentType.includes("webp")
+          ? "webp"
+          : "jpg";
 
       res.setHeader("Content-Type", contentType);
-      res.setHeader("Content-Disposition", `attachment; filename="prank-${index + 1}.${extension}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="prank-${index + 1}.${extension}"`,
+      );
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
       const arrayBuffer = await imageResponse.arrayBuffer();
@@ -447,6 +656,40 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message });
     }
   });
+
+  // =============================================
+  // ADMIN: CREDITS MANAGEMENT
+  // =============================================
+
+  const addCreditsBodySchema = z.object({
+    user_id: z.string().uuid(),
+    amount: z.number().int().min(1),
+  });
+
+  app.post(
+    api.admin.credits.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(addCreditsBodySchema),
+    async (req, res) => {
+      try {
+        const { user_id, amount } = req.body;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { data, error } = await supabaseAdmin.rpc("add_credits", {
+          p_user_id: user_id,
+          p_amount: amount,
+        });
+
+        if (error) throw error;
+
+        res.json({ message: `${amount} jetons ajoutés`, credits: data });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error adding credits");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   return httpServer;
 }

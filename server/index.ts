@@ -8,8 +8,8 @@ import pinoHttp from "pino-http";
 const app = express();
 const httpServer = createServer(app);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
 app.use(
   pinoHttp({
@@ -19,8 +19,8 @@ app.use(
       ignore: (req) => {
         const url = req.url || "";
         return (
-          url.startsWith("/@") || 
-          url.includes(".") || 
+          url.startsWith("/@") ||
+          url.includes(".") ||
           url.startsWith("/src/") ||
           url.startsWith("/node_modules/")
         );
@@ -37,7 +37,7 @@ app.use(
         url: req.url,
       }),
     },
-  })
+  }),
 );
 
 (async () => {
@@ -46,7 +46,7 @@ app.use(
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    
+
     logger.error({ err, status }, message);
     res.status(status).json({ message });
   });

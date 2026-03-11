@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { insertProfileSchema, insertPromptTemplateSchema } from './schema';
+import { z } from "zod";
+import { insertProfileSchema, insertPromptTemplateSchema } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -19,24 +19,24 @@ export const errorSchemas = {
 
 export const api = {
   health: {
-    method: 'GET' as const,
-    path: '/api/health',
+    method: "GET" as const,
+    path: "/api/health",
     responses: {
       200: z.object({ status: z.string() }),
     },
   },
   profiles: {
     get: {
-      method: 'GET' as const,
-      path: '/api/profiles/:id',
+      method: "GET" as const,
+      path: "/api/profiles/:id",
       responses: {
         200: insertProfileSchema,
         404: errorSchemas.notFound,
       },
     },
     update: {
-      method: 'PATCH' as const,
-      path: '/api/profiles/:id',
+      method: "PATCH" as const,
+      path: "/api/profiles/:id",
       responses: {
         200: insertProfileSchema,
         400: errorSchemas.validation,
@@ -45,47 +45,60 @@ export const api = {
   },
   templates: {
     list: {
-      method: 'GET' as const,
-      path: '/api/templates',
+      method: "GET" as const,
+      path: "/api/templates",
     },
     get: {
-      method: 'GET' as const,
-      path: '/api/templates/:id',
+      method: "GET" as const,
+      path: "/api/templates/:id",
     },
     create: {
-      method: 'POST' as const,
-      path: '/api/templates',
+      method: "POST" as const,
+      path: "/api/templates",
     },
     update: {
-      method: 'PATCH' as const,
-      path: '/api/templates/:id',
+      method: "PATCH" as const,
+      path: "/api/templates/:id",
     },
     delete: {
-      method: 'DELETE' as const,
-      path: '/api/templates/:id',
+      method: "DELETE" as const,
+      path: "/api/templates/:id",
     },
   },
   pranks: {
     generate: {
-      method: 'POST' as const,
-      path: '/api/pranks/generate',
+      method: "POST" as const,
+      path: "/api/pranks/generate",
+    },
+    generateDirect: {
+      method: "POST" as const,
+      path: "/api/pranks/generate-direct",
     },
     status: {
-      method: 'GET' as const,
-      path: '/api/pranks/:taskId/status',
+      method: "GET" as const,
+      path: "/api/pranks/:taskId/status",
     },
     history: {
-      method: 'GET' as const,
-      path: '/api/pranks/history',
+      method: "GET" as const,
+      path: "/api/pranks/history",
     },
     download: {
-      method: 'GET' as const,
-      path: '/api/pranks/:prankId/download/:imageIndex',
+      method: "GET" as const,
+      path: "/api/pranks/:prankId/download/:imageIndex",
+    },
+  },
+  admin: {
+    credits: {
+      method: "POST" as const,
+      path: "/api/admin/credits",
     },
   },
 };
 
-export function buildUrl(path: string, params?: Record<string, string | number>): string {
+export function buildUrl(
+  path: string,
+  params?: Record<string, string | number>,
+): string {
   let url = path;
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
