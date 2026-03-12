@@ -90,13 +90,10 @@ export default function Generate() {
   const selectTemplate = (tpl: PromptTemplate) => {
     const slots = parseImageSlots(tpl);
     const requiredCount = slots.filter((s) => s.required).length;
-    const initSlots = Math.max(
-      requiredCount,
-      slots.length > 0 ? requiredCount : 0,
-    );
+    const initSlots = slots.length > 0 ? slots.length : 1;
     setSelectedTemplate(tpl);
     setPrompt(tpl.prompt_text);
-    setImages(initSlots > 0 ? Array(initSlots).fill(null) : [null]);
+    setImages(Array(initSlots).fill(null));
     setTextValues({});
     topRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -128,6 +125,34 @@ export default function Generate() {
         description: "Décris ton prank avant de lancer la génération.",
       });
       return;
+    }
+
+    // Validate required image slots
+    if (selectedTemplate) {
+      const slots = parseImageSlots(selectedTemplate);
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i].required && !images[i]) {
+          toast({
+            variant: "destructive",
+            title: "Image manquante",
+            description: `L'image « ${slots[i].label || `Image ${i + 1}`} » est obligatoire.`,
+          });
+          return;
+        }
+      }
+
+      // Validate required text fields
+      const fields = parseTextFields(selectedTemplate);
+      for (let i = 0; i < fields.length; i++) {
+        if (fields[i].required && !textValues[i]?.trim()) {
+          toast({
+            variant: "destructive",
+            title: "Champ manquant",
+            description: `Le champ « ${fields[i].label || `Texte ${i + 1}`} » est obligatoire.`,
+          });
+          return;
+        }
+      }
     }
 
     try {
@@ -187,7 +212,13 @@ export default function Generate() {
           <h1 className="font-display text-3xl font-bold">
             Génération en cours
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{prompt}</p>
+          {selectedTemplate ? (
+            <p className="text-muted-foreground mt-1 text-sm">
+              {selectedTemplate.name}
+            </p>
+          ) : (
+            <p className="text-muted-foreground mt-1 text-sm">{prompt}</p>
+          )}
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -244,7 +275,9 @@ export default function Generate() {
         {/* Images + input group */}
         <div className="flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
-          <div className="w-full flex justify-center px-4 -mb-7 md:-mb-8">
+          <div
+            className={`w-full flex justify-center px-4${!selectedTemplate ? " -mb-7 md:-mb-8" : ""}`}
+          >
             <div className="flex items-end justify-center gap-2 md:gap-3 w-full max-w-md">
               {images.map((img, i) => {
                 const slots = parseImageSlots(selectedTemplate);
@@ -271,13 +304,7 @@ export default function Generate() {
                         </button>
                       </>
                     ) : (
-                      <label
-                        className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
-                          selectedTemplate && isRequired
-                            ? "border-secondary bg-secondary/5 hover:border-secondary hover:bg-secondary/10"
-                            : "border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5"
-                        }`}
-                      >
+                      <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed cursor-pointer transition-all border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5">
                         <input
                           type="file"
                           accept="image/*"
@@ -293,32 +320,16 @@ export default function Generate() {
                             const label = slots[i]?.label || "";
                             return (
                               <>
-                                <div
-                                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                                    isRequired
-                                      ? "bg-secondary/10 group-hover:bg-secondary/20"
-                                      : "bg-primary/10 group-hover:bg-primary/15"
-                                  }`}
-                                >
-                                  <ImageUp
-                                    className={`w-7 h-7 transition-colors ${
-                                      isRequired
-                                        ? "text-secondary"
-                                        : "text-primary"
-                                    }`}
-                                  />
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
+                                  <ImageUp className="w-7 h-7 text-primary transition-colors" />
                                 </div>
                                 <div className="text-center px-2">
-                                  <p
-                                    className={`text-[11px] font-semibold ${isRequired ? "text-secondary" : "text-foreground"}`}
-                                  >
+                                  <p className="text-[11px] font-semibold text-foreground">
                                     {label
-                                      ? `Photo de ${label}`
+                                      ? `Photo ${label}`
                                       : "Dépose ton image"}
                                   </p>
-                                  <p
-                                    className={`text-[10px] mt-0.5 ${isRequired ? "text-secondary/70" : "text-muted-foreground/70"}`}
-                                  >
+                                  <p className="text-[10px] mt-0.5 text-muted-foreground/70">
                                     {isRequired ? "Obligatoire" : "Optionnel"}
                                   </p>
                                 </div>
@@ -345,41 +356,43 @@ export default function Generate() {
             </div>
           </div>
 
-          {/* Text input — sits on top of images via z-10 */}
-          <div className="relative z-10 w-full flex justify-center px-4">
-            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Décris ton prank…"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
-              />
-              <button
-                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
-                onClick={handleGenerate}
-                disabled={generateDirect.isPending}
-              >
-                {generateDirect.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <SendHorizonal className="w-4 h-4" />
-                )}
-              </button>
-              <Button
-                size="sm"
-                className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-                onClick={handleGenerate}
-                disabled={generateDirect.isPending}
-              >
-                {generateDirect.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  "Générer"
-                )}
-              </Button>
+          {/* Text input + generate — only in free mode */}
+          {!selectedTemplate && (
+            <div className="relative z-10 w-full flex justify-center px-4">
+              <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                <input
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Décris ton prank…"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+                />
+                <button
+                  className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+                  onClick={handleGenerate}
+                  disabled={generateDirect.isPending}
+                >
+                  {generateDirect.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <SendHorizonal className="w-4 h-4" />
+                  )}
+                </button>
+                <Button
+                  size="sm"
+                  className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+                  onClick={handleGenerate}
+                  disabled={generateDirect.isPending}
+                >
+                  {generateDirect.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Générer"
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Text fields for selected template */}
           {selectedTemplate &&
@@ -392,10 +405,10 @@ export default function Generate() {
                     {fields.map((field, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-4 py-2 shadow-sm"
+                        className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-4 py-2.5 shadow-sm"
                       >
-                        <label className="text-xs text-muted-foreground shrink-0 min-w-[80px]">
-                          {field.label || `Texte ${idx + 1}`}
+                        <label className="text-sm font-medium text-foreground shrink-0">
+                          {field.label || `Texte ${idx + 1}`} :
                           {field.required && (
                             <span className="text-destructive ml-0.5">*</span>
                           )}
@@ -409,8 +422,7 @@ export default function Generate() {
                               [idx]: e.target.value,
                             }))
                           }
-                          placeholder={field.label || `Texte ${idx + 1}`}
-                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+                          className="flex-1 bg-transparent text-sm outline-none"
                           required={field.required}
                         />
                       </div>
@@ -419,6 +431,23 @@ export default function Generate() {
                 </div>
               );
             })()}
+
+          {/* Generate button — template mode */}
+          {selectedTemplate && (
+            <div className="relative z-10 w-full flex justify-center px-4 mt-2">
+              <Button
+                size="lg"
+                className="rounded-full h-12 px-8 text-sm font-semibold active:scale-95 transition-transform"
+                onClick={handleGenerate}
+                disabled={generateDirect.isPending}
+              >
+                {generateDirect.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                {generateDirect.isPending ? "Génération…" : "Générer"}
+              </Button>
+            </div>
+          )}
 
           {/* Voir les templates link */}
           <button
@@ -503,7 +532,7 @@ export default function Generate() {
                       />
                     </div>
                     {/* Divider line */}
-                    <div className="absolute inset-y-0 right-0 group-hover:right-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
+                    <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
                     {/* Labels */}
                     <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">

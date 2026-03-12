@@ -141,3 +141,23 @@ ALTER TABLE public.prompt_templates
 ALTER TABLE public.prompt_templates
   ADD COLUMN IF NOT EXISTS example_before_url TEXT,
   ADD COLUMN IF NOT EXISTS example_after_url TEXT;
+
+-- =========================================================================================
+-- 5. MAKE category optional (nullable)
+-- =========================================================================================
+ALTER TABLE public.prompt_templates
+  ALTER COLUMN category DROP NOT NULL;
+
+-- =========================================================================================
+-- 6. ADD input_urls column to generated_pranks
+-- =========================================================================================
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'generated_pranks'
+      AND column_name = 'input_urls'
+  ) THEN
+    ALTER TABLE public.generated_pranks ADD COLUMN input_urls TEXT;
+  END IF;
+END $$;

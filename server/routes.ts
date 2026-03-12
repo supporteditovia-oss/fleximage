@@ -579,8 +579,16 @@ export async function registerRoutes(
           const { uploadToR2 } = await import("./lib/r2-client");
           for (let i = 0; i < images.length; i++) {
             const dataUrl = images[i];
-            const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-            if (!match) continue;
+            const match = dataUrl.match(
+              /^data:(image\/[\w+.-]+);base64,(.+)$/s,
+            );
+            if (!match) {
+              logger.warn(
+                { index: i, prefix: dataUrl.substring(0, 40) },
+                "Invalid base64 image, skipping",
+              );
+              continue;
+            }
             const contentType = match[1];
             const base64Data = match[2];
             const buffer = Buffer.from(base64Data, "base64");
@@ -592,6 +600,10 @@ export async function registerRoutes(
         }
 
         // 3. Call Kie.ai
+        logger.info(
+          { imageCount: imageUrls.length, imageUrls },
+          "Calling Kie.ai with images",
+        );
         const kieResponse = await createKieTask({
           prompt,
           aspect_ratio: aspect_ratio || "9:16",
@@ -631,6 +643,7 @@ export async function registerRoutes(
             kie_task_id: kieResponse.data.taskId,
             status: "waiting",
             aspect_ratio,
+            input_urls: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
           })
           .select()
           .single();
@@ -671,6 +684,7 @@ export async function registerRoutes(
       // If already terminal, return cached result
       if (prank.status === "success" || prank.status === "fail") {
         return res.json({
+          prankId: prank.id,
           status: prank.status,
           resultUrls: prank.result_urls ? JSON.parse(prank.result_urls) : [],
           failMessage: prank.fail_message,
@@ -729,6 +743,7 @@ export async function registerRoutes(
           .eq("id", prank.id);
 
         return res.json({
+          prankId: prank.id,
           status: kieStatus.data.state,
           resultUrls,
           failMessage: kieStatus.data.failMsg,
@@ -738,6 +753,7 @@ export async function registerRoutes(
 
       // Still waiting
       res.json({
+        prankId: prank.id,
         status: "waiting",
         resultUrls: [],
         failMessage: null,
@@ -820,10 +836,12 @@ export async function registerRoutes(
           ? "webp"
           : "jpg";
 
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+
       res.setHeader("Content-Type", contentType);
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="prank-${index + 1}.${extension}"`,
+        `attachment; filename="prank-${randomSuffix}.${extension}"`,
       );
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
@@ -831,6 +849,27 @@ export async function registerRoutes(
       res.send(Buffer.from(arrayBuffer));
     } catch (error: any) {
       logger.error({ err: error }, "Error downloading prank image");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // DELETE /api/pranks/:prankId
+  app.delete(api.pranks.delete.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { prankId } = req.params;
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { error } = await supabaseAdmin
+        .from("generated_pranks")
+        .delete()
+        .eq("id", prankId)
+        .eq("user_id", authReq.userId);
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error deleting prank");
       res.status(500).json({ message: error.message });
     }
   });

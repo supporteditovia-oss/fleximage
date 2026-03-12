@@ -9,7 +9,11 @@ interface GenerationProgressProps {
   onReset: () => void;
 }
 
-export function GenerationProgress({ taskId, onRetry, onReset }: GenerationProgressProps) {
+export function GenerationProgress({
+  taskId,
+  onRetry,
+  onReset,
+}: GenerationProgressProps) {
   const { data, isLoading, error } = usePrankStatus(taskId);
 
   if (isLoading && !data) {
@@ -46,7 +50,8 @@ export function GenerationProgress({ taskId, onRetry, onReset }: GenerationProgr
         <div className="text-center space-y-1">
           <p className="font-medium">Génération en cours...</p>
           <p className="text-sm text-muted-foreground">
-            Votre prank est en train d'être créé par l'IA. Cela peut prendre quelques instants.
+            Votre prank est en train d'être créé par l'IA. Cela peut prendre
+            quelques instants.
           </p>
         </div>
       </div>
@@ -60,7 +65,8 @@ export function GenerationProgress({ taskId, onRetry, onReset }: GenerationProgr
         <div className="text-center space-y-1">
           <p className="text-destructive font-medium">Échec de la génération</p>
           <p className="text-sm text-muted-foreground">
-            {data.failMessage || "Une erreur est survenue lors de la génération."}
+            {data.failMessage ||
+              "Une erreur est survenue lors de la génération."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -81,7 +87,7 @@ export function GenerationProgress({ taskId, onRetry, onReset }: GenerationProgr
         <CheckCircle2 className="h-5 w-5 text-green-500" />
         <p className="font-medium text-green-600">Prank généré avec succès !</p>
       </div>
-      <PrankResult resultUrls={data.resultUrls} />
+      <PrankResult resultUrls={data.resultUrls} prankId={data.prankId} />
       <div className="flex justify-center">
         <Button variant="outline" onClick={onReset}>
           <RotateCcw className="mr-2 h-4 w-4" />

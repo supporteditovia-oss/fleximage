@@ -131,6 +131,7 @@ export const generatedPranks = pgTable("generated_pranks", {
     .default("waiting")
     .notNull(),
   result_urls: text("result_urls"),
+  input_urls: text("input_urls"),
   fail_message: text("fail_message"),
   cost_time: text("cost_time"),
   aspect_ratio: text("aspect_ratio"),

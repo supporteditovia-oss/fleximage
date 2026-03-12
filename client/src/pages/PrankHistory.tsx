@@ -1,6 +1,6 @@
-import { usePrankHistory } from "@/hooks/use-pranks";
+import { usePrankHistory, useDeletePrank } from "@/hooks/use-pranks";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -8,32 +8,57 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Clock, CheckCircle2, XCircle, ImageOff } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState, useCallback } from "react";
+import {
+  Clock,
+  XCircle,
+  ImageOff,
+  Trash2,
+  Loader2,
+  Download,
+  Send,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { authFetch } from "@/lib/api";
 
 const STATUS_CONFIG = {
   waiting: {
     label: "En cours",
-    variant: "secondary" as const,
     icon: Clock,
-  },
-  success: {
-    label: "Terminé",
-    variant: "default" as const,
-    icon: CheckCircle2,
   },
   fail: {
     label: "Échoué",
-    variant: "destructive" as const,
     icon: XCircle,
   },
 };
 
 export default function PrankHistory() {
   const { data: pranks, isLoading } = usePrankHistory();
+  const deletePrank = useDeletePrank();
+  const { toast } = useToast();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [shareGuide, setShareGuide] = useState<{
+    platform: string;
+    prankId: string;
+    imageIndex: number;
+  } | null>(null);
 
   function getResultUrls(resultUrlsStr: string | null): string[] {
     if (!resultUrlsStr) return [];
@@ -44,19 +69,105 @@ export default function PrankHistory() {
     }
   }
 
+  function getInputUrls(inputUrlsStr: string | null): string[] {
+    if (!inputUrlsStr) return [];
+    try {
+      return JSON.parse(inputUrlsStr);
+    } catch {
+      return [];
+    }
+  }
+
+  async function handleDownload(prankId: string, imageIndex: number = 0) {
+    try {
+      const res = await authFetch(
+        `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+      );
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const ext = blob.type.includes("png")
+        ? "png"
+        : blob.type.includes("webp")
+          ? "webp"
+          : "jpg";
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `prank-${randomSuffix}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      toast({ title: "Erreur lors du téléchargement", variant: "destructive" });
+    }
+  }
+
+  async function handleShare(
+    prankId: string,
+    imageIndex: number,
+    platform: "whatsapp" | "snapchat" | "instagram",
+  ) {
+    // Try native share with the actual image file (works on mobile)
+    if (navigator.share && navigator.canShare) {
+      try {
+        const res = await authFetch(
+          `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+        );
+        const blob = await res.blob();
+        const file = new File([blob], "prank.jpg", {
+          type: blob.type || "image/jpeg",
+        });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch {
+        // User cancelled or error — fall through to guide
+      }
+    }
+    // Fallback: show tutorial
+    const names = {
+      whatsapp: "WhatsApp",
+      snapchat: "Snapchat",
+      instagram: "Instagram",
+    };
+    setShareGuide({ platform: names[platform], prankId, imageIndex });
+  }
+
+  async function handleDelete() {
+    if (!deletingId) return;
+    try {
+      await deletePrank.mutateAsync(deletingId);
+      toast({ title: "Prank supprimé" });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+    setDeletingId(null);
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-display">Historique des Pranks</h1>
+      <div className="text-center">
+        <h1 className="text-3xl font-bold font-display">
+          Historique des Pranks
+        </h1>
         <p className="text-muted-foreground mt-1">
           Retrouvez tous vos pranks générés.
         </p>
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton
+              key={i}
+              className="aspect-[9/16] max-h-[50vh] rounded-xl mx-auto"
+            />
           ))}
         </div>
       ) : !pranks?.length ? (
@@ -64,85 +175,241 @@ export default function PrankHistory() {
           <CardContent className="py-12 text-center text-muted-foreground">
             <ImageOff className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p>Aucun prank généré pour le moment.</p>
-            <p className="text-sm mt-1">Rendez-vous dans "Générer" pour créer votre premier prank.</p>
+            <p className="text-sm mt-1">
+              Rendez-vous dans "Générer" pour créer votre premier prank.
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
           {pranks.map((prank) => {
             const urls = getResultUrls(prank.result_urls);
-            const statusConfig = STATUS_CONFIG[prank.status];
-            const StatusIcon = statusConfig.icon;
+            const inputUrls = getInputUrls(prank.input_urls);
+            const isSuccess = prank.status === "success" && urls.length > 0;
+            const hasInputImage = inputUrls.length > 0;
+            const statusInfo =
+              prank.status !== "success"
+                ? STATUS_CONFIG[prank.status as keyof typeof STATUS_CONFIG]
+                : null;
 
             return (
-              <Card key={prank.id} className="overflow-hidden">
-                {/* Thumbnail */}
-                {urls.length > 0 ? (
-                  <div
-                    className="aspect-video bg-muted cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setSelectedImage(urls[0])}
+              <div key={prank.id} className="relative">
+                <div
+                  className="group relative aspect-[9/16] max-h-[50vh] rounded-xl overflow-hidden bg-muted cursor-pointer mx-auto"
+                  onClick={() => isSuccess && setSelectedImage(urls[0])}
+                >
+                  {isSuccess ? (
+                    <>
+                      {/* Result image (default) */}
+                      <img
+                        src={urls[0]}
+                        alt="Prank généré"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      {/* Input image overlay (hover) */}
+                      {hasInputImage && (
+                        <>
+                          <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                            <img
+                              src={inputUrls[0]}
+                              alt="Image d'origine"
+                              className="absolute inset-0 w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                          {/* Divider line */}
+                          <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
+                          {/* Labels */}
+                          <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                            <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              Avant
+                            </span>
+                          </div>
+                          <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
+                            <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              Après
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                      {statusInfo && (
+                        <>
+                          <statusInfo.icon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
+                          <span className="text-xs text-muted-foreground">
+                            {statusInfo.label}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bottom overlay */}
+                  {(prank.prompt_templates?.name || prank.fail_message) && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3 pt-10">
+                      {prank.prompt_templates?.name && (
+                        <p className="text-white text-sm font-medium truncate">
+                          {prank.prompt_templates.name}
+                        </p>
+                      )}
+                      {prank.fail_message && (
+                        <p className="text-xs text-red-300 mt-1 line-clamp-2">
+                          {prank.fail_message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delete button top-right */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingId(prank.id);
+                    }}
                   >
-                    <img
-                      src={urls[0]}
-                      alt="Prank généré"
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : (
-                  <div className="aspect-video bg-muted flex items-center justify-center">
-                    {prank.status === "waiting" ? (
-                      <Clock className="h-8 w-8 text-muted-foreground/50 animate-pulse" />
-                    ) : (
-                      <ImageOff className="h-8 w-8 text-muted-foreground/50" />
-                    )}
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Action buttons below image */}
+                {isSuccess && (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleDownload(prank.id)}
+                    >
+                      <Download className="mr-1.5 h-4 w-4" />
+                      Télécharger
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="flex-1">
+                          <Send className="mr-1.5 h-4 w-4" />
+                          Envoyer
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleShare(prank.id, 0, "whatsapp")}
+                        >
+                          WhatsApp
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleShare(prank.id, 0, "snapchat")}
+                        >
+                          Snapchat
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleShare(prank.id, 0, "instagram")}
+                        >
+                          Instagram
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
-
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm truncate">
-                      {prank.prompt_templates?.name || "Template supprimé"}
-                    </p>
-                    <Badge variant={statusConfig.variant} className="shrink-0">
-                      <StatusIcon className="mr-1 h-3 w-3" />
-                      {statusConfig.label}
-                    </Badge>
-                  </div>
-
-                  {prank.prompt_templates?.category && (
-                    <Badge variant="outline" className="text-xs">
-                      {prank.prompt_templates.category}
-                    </Badge>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(prank.created_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
-                  </p>
-
-                  {prank.fail_message && (
-                    <p className="text-xs text-destructive">{prank.fail_message}</p>
-                  )}
-                </CardContent>
-              </Card>
+              </div>
             );
           })}
         </div>
       )}
 
       {/* Image viewer dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+      <Dialog
+        open={!!selectedImage}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-3xl max-h-[90vh] p-2 sm:p-4 flex flex-col">
+          <DialogHeader className="sr-only">
             <DialogTitle>Prank généré</DialogTitle>
           </DialogHeader>
           {selectedImage && (
-            <img
-              src={selectedImage}
-              alt="Prank généré"
-              className="w-full h-auto rounded-lg"
-            />
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <img
+                src={selectedImage}
+                alt="Prank généré"
+                className="max-w-full max-h-[calc(90vh-3rem)] object-contain rounded-lg"
+              />
+            </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(o) => !o && setDeletingId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce prank ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le prank sera définitivement
+              supprimé de votre historique.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletePrank.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Share tutorial dialog */}
+      <Dialog
+        open={!!shareGuide}
+        onOpenChange={(open) => !open && setShareGuide(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Pour partager l'image directement :
+            </p>
+            <ol className="text-sm space-y-2 list-decimal list-inside">
+              <li>Télécharge l'image avec le bouton ci-dessous</li>
+              <li>
+                Ouvre{" "}
+                <span className="font-semibold">{shareGuide?.platform}</span>
+              </li>
+              <li>
+                Choisis une conversation et envoie l'image depuis ta galerie
+              </li>
+            </ol>
+            <Button
+              className="w-full"
+              onClick={async () => {
+                if (shareGuide) {
+                  await handleDownload(
+                    shareGuide.prankId,
+                    shareGuide.imageIndex,
+                  );
+                  toast({ title: "Image téléchargée !" });
+                }
+              }}
+            >
+              <Download className="mr-1.5 h-4 w-4" />
+              Télécharger l'image
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

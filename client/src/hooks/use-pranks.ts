@@ -21,6 +21,7 @@ interface GeneratePrankResponse {
 }
 
 interface PrankStatusResponse {
+  prankId: string;
   status: "waiting" | "success" | "fail";
   resultUrls: string[];
   failMessage: string | null;
@@ -35,6 +36,7 @@ interface PrankHistoryItem {
   kie_task_id: string;
   status: "waiting" | "success" | "fail";
   result_urls: string | null;
+  input_urls: string | null;
   fail_message: string | null;
   cost_time: string | null;
   aspect_ratio: string | null;
@@ -101,6 +103,24 @@ export function usePrankHistory() {
     queryFn: async () => {
       const res = await authFetch("/api/pranks/history");
       return res.json();
+    },
+  });
+}
+
+export function useDeletePrank() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (prankId: string) => {
+      const res = await authFetch(
+        `/api/pranks/${encodeURIComponent(prankId)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
     },
   });
 }

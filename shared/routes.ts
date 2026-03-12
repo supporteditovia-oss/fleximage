@@ -94,6 +94,10 @@ export const api = {
       method: "GET" as const,
       path: "/api/pranks/:prankId/download/:imageIndex",
     },
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/pranks/:prankId",
+    },
   },
   admin: {
     credits: {

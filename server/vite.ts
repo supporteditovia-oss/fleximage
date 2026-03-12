@@ -32,6 +32,9 @@ export async function setupVite(server: Server, app: Express) {
   app.use(vite.middlewares);
 
   app.use("*", async (req, res, next) => {
+    if (req.method !== "GET") {
+      return res.status(404).json({ message: "Not found" });
+    }
     const url = req.originalUrl;
 
     try {
