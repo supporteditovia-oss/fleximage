@@ -89,9 +89,9 @@ export default function HeroSection() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="flex flex-col items-center justify-center w-full h-full"
+        className="flex flex-col items-center justify-center w-full flex-1"
       >
-        <div className="w-full flex flex-col items-center gap-3 md:gap-6 pt-20 md:pt-24">
+        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-10 md:pt-14">
         {/* Title area */}
         <div className="relative flex flex-col items-center justify-center">
           <motion.h1
@@ -121,7 +121,7 @@ export default function HeroSection() {
         </div>
 
         {/* Bottom group: drop zone + input + prank ideas */}
-        <div className="flex flex-col items-center gap-2 md:gap-4 w-full mt-[0.25rem] md:mt-[3rem] pb-6 md:pb-10">
+        <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
@@ -131,7 +131,7 @@ export default function HeroSection() {
               {images.map((img, i) => (
                 <div
                   key={i}
-                  className="relative flex-shrink-1 min-w-0 h-[min(35vh,280px)] md:h-[min(47vh,420px)] aspect-[9/16]"
+                  className="relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
                 >
                   {img ? (
                     <>
