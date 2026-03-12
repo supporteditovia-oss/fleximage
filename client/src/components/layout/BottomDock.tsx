@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef } from "react";
 
 const adminNavItems = [
   { href: "/admin", label: "Aperçu Admin", icon: ShieldCheck },
@@ -27,6 +28,43 @@ const adminNavItems = [
 export function BottomDock() {
   const [location] = useLocation();
   const { user, profile, isAdmin, signOut } = useAuth();
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollY.current && currentY > 50) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+      lastScrollY.current = currentY;
+    };
+
+    const onFocusIn = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") {
+        setHidden(true);
+      }
+    };
+
+    const onFocusOut = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") {
+        setHidden(false);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
 
   const isActive = (path: string) => location === path;
 
@@ -48,7 +86,10 @@ export function BottomDock() {
     );
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)]">
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
+      hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
+    )}>
       <nav className="w-full md:max-w-[360px] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-white/50">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}

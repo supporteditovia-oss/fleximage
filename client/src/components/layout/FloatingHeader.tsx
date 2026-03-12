@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Coins } from "lucide-react";
 
 interface FloatingHeaderProps {
@@ -11,18 +12,50 @@ interface FloatingHeaderProps {
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
   const { user, profile } = useAuth();
+  const isMobile = useIsMobile();
   const [scrolled, setScrolled] = React.useState(false);
+  const [hidden, setHidden] = React.useState(false);
+  const lastScrollY = React.useRef(0);
 
   React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      setScrolled(currentY > 30);
+
+      if (isMobile) {
+        if (currentY > lastScrollY.current && currentY > 60) {
+          setHidden(true);
+        } else if (currentY < lastScrollY.current) {
+          setHidden(false);
+        }
+      }
+
+      lastScrollY.current = currentY;
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [isMobile]);
+
+  // Hide header when virtual keyboard opens on mobile
+  React.useEffect(() => {
+    if (!isMobile || !window.visualViewport) return;
+
+    const vv = window.visualViewport;
+    const onResize = () => {
+      const keyboardOpen = vv.height < window.innerHeight * 0.75;
+      setHidden(keyboardOpen);
+    };
+
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, [isMobile]);
 
   const logoHref = variant === "app" ? "/generate" : "/";
 
   return (
-    <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+    <div className={`fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-300 ${
+      hidden ? "-translate-y-24 opacity-0" : "translate-y-0 opacity-100"
+    }`}>
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

@@ -149,22 +149,20 @@ export default function PrankHistory() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold font-display">
+    <div className="space-y-16 pt-10">
+      <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
+        <span className="relative inline-block">
           Historique des Pranks
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Retrouvez tous vos pranks générés.
-        </p>
-      </div>
+          <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+        </span>
+      </h1>
 
       {isLoading ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
+        <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
           {[...Array(4)].map((_, i) => (
             <Skeleton
               key={i}
-              className="aspect-[9/16] max-h-[50vh] rounded-xl"
+              className="aspect-[9/16] rounded-xl"
             />
           ))}
         </div>
@@ -179,7 +177,7 @@ export default function PrankHistory() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
+        <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
           {pranks.map((prank) => {
             const urls = getResultUrls(prank.result_urls);
             const inputUrls = getInputUrls(prank.input_urls);
@@ -193,7 +191,7 @@ export default function PrankHistory() {
             return (
               <div
                 key={prank.id}
-                className="group relative aspect-[9/16] max-h-[50vh] rounded-xl overflow-hidden bg-muted cursor-pointer"
+                className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
                 onClick={() => isSuccess && setSelectedImage(urls[0])}
               >
                 {isSuccess ? (
@@ -206,60 +204,31 @@ export default function PrankHistory() {
                       loading="lazy"
                     />
 
-                    {/* Before/after — same as Generate template list */}
+                    {/* Before/after — desktop only: hover clip-path reveal */}
                     {hasInputImage && (
-                      <>
-                        {/* Mobile: split view — après (top) + avant (bottom) */}
-                        <div className="md:hidden absolute inset-0">
-                          <div className="absolute inset-x-0 top-0 h-[calc(50%+1px)] overflow-hidden">
-                            <img
-                              src={urls[0]}
-                              alt="Après"
-                              className="absolute inset-0 w-full h-full object-cover object-center"
-                              loading="lazy"
-                            />
-                            <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full z-10">
-                              Après
-                            </span>
-                          </div>
-                          <div className="absolute inset-x-0 bottom-0 h-[calc(50%+1px)] overflow-hidden">
-                            <img
-                              src={inputUrls[0]}
-                              alt="Avant"
-                              className="absolute inset-0 w-full h-full object-cover object-center"
-                              loading="lazy"
-                            />
-                            <span className="absolute top-1 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full z-10">
-                              Avant
-                            </span>
-                          </div>
+                      <div className="hidden md:block absolute inset-0">
+                        <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                          <img
+                            src={inputUrls[0]}
+                            alt="Image d'origine"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                          />
                         </div>
-
-                        {/* Desktop: hover clip-path reveal */}
-                        <div className="hidden md:block absolute inset-0">
-                          <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
-                            <img
-                              src={inputUrls[0]}
-                              alt="Image d'origine"
-                              className="absolute inset-0 w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                          {/* Divider line */}
-                          <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
-                          {/* Labels */}
-                          <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                            <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                              Avant
-                            </span>
-                          </div>
-                          <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
-                            <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                              Après
-                            </span>
-                          </div>
+                        {/* Divider line */}
+                        <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
+                        {/* Labels */}
+                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                          <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                            Avant
+                          </span>
                         </div>
-                      </>
+                        <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
+                          <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                            Après
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </>
                 ) : (
@@ -281,13 +250,13 @@ export default function PrankHistory() {
                     e.stopPropagation();
                     setDeletingId(prank.id);
                   }}
-                  className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70 active:opacity-100"
+                  className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-black/70"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
 
                 {/* Bottom gradient overlay with name + action buttons */}
-                <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-12 flex items-end justify-between gap-2">
+                <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-12 flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     {prank.prompt_templates?.name && (
                       <p className="text-white text-sm font-semibold truncate">

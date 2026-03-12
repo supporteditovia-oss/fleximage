@@ -30,13 +30,11 @@ export default function HeroSection() {
   const [images, setImages] = React.useState<(string | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
-  const [selectedChip, setSelectedChip] = React.useState<string | null>(null);
   const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
     setPrompt(random.example);
-    setSelectedChip(random.id);
   };
 
   const handleImageSelect = (index: number, file: File) => {
@@ -80,7 +78,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[100svh] flex flex-col items-center px-4">
+    <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
       {/* Abstract Background Shapes */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-3xl -z-10" />
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl -z-10" />
@@ -267,7 +265,7 @@ export default function HeroSection() {
                   transition={{ duration: 0.2 }}
                   className="p-3 rounded-2xl border border-border/40 bg-white shadow-xl"
                 >
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {prankChips.map((chip) => {
                       const Icon = chip.icon;
                       return (
@@ -275,18 +273,11 @@ export default function HeroSection() {
                           key={chip.id}
                           onClick={() => {
                             setPrompt(chip.example);
-                            setSelectedChip(chip.id);
                             setAccordionOpen(false);
                           }}
-                          className={`flex items-center gap-2.5 px-4 h-11 rounded-full border text-sm font-medium transition-all ${
-                            selectedChip === chip.id
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border/40 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground"
-                          }`}
+                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                         >
-                          <Icon className={`w-4 h-4 shrink-0 ${
-                            selectedChip === chip.id ? "text-primary" : "text-muted-foreground"
-                          }`} />
+                          <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate">{chip.label}</span>
                         </button>
                       );
@@ -313,10 +304,11 @@ export default function HeroSection() {
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                 className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[20px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
               >
-                <div className="flex justify-center mb-4">
+                <div className="flex justify-center mb-3">
                   <div className="w-10 h-1 rounded-full bg-gray-300" />
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
+                <h3 className="text-base font-semibold text-center mb-4">Idées de pranks</h3>
+                <div className="grid grid-cols-3 gap-1.5">
                   {prankChips.map((chip) => {
                     const Icon = chip.icon;
                     return (
@@ -324,18 +316,11 @@ export default function HeroSection() {
                         key={chip.id}
                         onClick={() => {
                           setPrompt(chip.example);
-                          setSelectedChip(chip.id);
                           setAccordionOpen(false);
                         }}
-                        className={`flex items-center gap-2.5 px-4 h-11 rounded-full border text-sm font-medium transition-all ${
-                          selectedChip === chip.id
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-gray-200 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground"
-                        }`}
+                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-gray-200 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${
-                          selectedChip === chip.id ? "text-primary" : "text-muted-foreground"
-                        }`} />
+                        <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{chip.label}</span>
                       </button>
                     );
