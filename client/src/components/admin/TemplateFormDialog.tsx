@@ -41,7 +41,36 @@ import {
   ChevronsUpDown,
   Check,
 } from "lucide-react";
+import { icons } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const POPULAR_ICONS = [
+  "Camera", "Image", "Laugh", "Smile", "SmilePlus", "Zap", "Flame", "Ghost",
+  "Skull", "PartyPopper", "Sparkles", "Wand2", "Star", "Heart", "HeartCrack",
+  "ThumbsUp", "ThumbsDown", "MessageCircle", "User", "Users", "Baby", "Cat",
+  "Dog", "Fish", "Bug", "Palette", "Music", "Video", "Film", "Mic", "Phone",
+  "Gift", "Trophy", "Crown", "Gem", "Rocket", "Plane", "Car", "Bomb", "Shield",
+  "Sword", "Target", "Eye", "EyeOff", "Scissors", "Pen", "Pencil",
+  "AlertTriangle", "Ban", "Clock", "Calendar", "MapPin", "Home", "Building",
+  "Briefcase", "Coffee", "Wine", "Pizza", "Apple", "ShoppingCart", "Sun",
+  "Moon", "Cloud", "Umbrella", "Snowflake", "Tree", "Mountain", "Waves",
+  "Glasses", "Shirt", "Cookie", "Cake", "Monitor", "Smartphone", "Gamepad2",
+  "Headphones", "Book", "Newspaper", "Flag", "Hand", "Fingerprint", "Lock",
+  "Unlock", "Key", "Bell", "Megaphone", "Angry", "Frown", "Meh", "Drama",
+  "Siren", "CircleAlert", "Radiation", "Biohazard", "Scan", "ScanFace",
+  "Handshake", "Brain", "Dumbbell", "Cigarette", "Beer", "GlassWater",
+  "Utensils", "Popcorn", "IceCreamCone", "Banana", "Cherry", "Grape", "Leaf",
+  "Flower2", "PawPrint", "Rabbit", "Bird", "Turtle", "Squirrel",
+  "CircleDollarSign", "Wallet", "CreditCard", "Receipt", "BadgeCheck",
+  "BadgeAlert", "Flame", "Lightbulb", "Tv", "Radio", "Speaker", "Volume2",
+  "Clapperboard", "Ticket", "Dices", "Joystick", "Puzzle", "ToyBrick",
+  "Armchair", "Bath", "BedDouble", "DoorOpen", "Hammer", "Wrench",
+  "Paintbrush", "Brush", "Eraser", "Ruler", "Compass", "Scale", "Telescope",
+  "Microscope", "FlaskConical", "TestTube2", "Pill", "Stethoscope",
+  "Ambulance", "Cross", "Hospital", "GraduationCap", "School",
+  "BookOpen", "PenTool", "FileText", "FolderOpen", "Globe", "Languages",
+  "QrCode", "Wifi", "Bluetooth", "Usb", "Battery", "Power", "Cpu", "HardDrive",
+];
 
 interface TemplateFormDialogProps {
   open: boolean;
@@ -80,6 +109,9 @@ export function TemplateFormDialog({
   const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
   const [textFields, setTextFields] = useState<TextFieldSlot[]>([]);
   const [keywords, setKeywords] = useState("");
+  const [icon, setIcon] = useState("");
+  const [iconOpen, setIconOpen] = useState(false);
+  const [iconSearch, setIconSearch] = useState("");
   const [beforePreview, setBeforePreview] = useState<string | null>(null);
   const [afterPreview, setAfterPreview] = useState<string | null>(null);
   const [beforeFile, setBeforeFile] = useState<File | null>(null);
@@ -100,6 +132,7 @@ export function TemplateFormDialog({
       setCategory(template.category || "");
       setIsActive(template.is_active);
       setKeywords(template.keywords || "");
+      setIcon(template.icon || "");
       setImageSlots(parseJson<ImageSlot[]>(template.image_slots, []));
       setTextFields(parseJson<TextFieldSlot[]>(template.text_fields, []));
       setBeforePreview(template.example_before_url || null);
@@ -112,6 +145,7 @@ export function TemplateFormDialog({
       setCategory("");
       setIsActive(true);
       setKeywords("");
+      setIcon("");
       setImageSlots([]);
       setTextFields([]);
       setBeforePreview(null);
@@ -204,6 +238,7 @@ export function TemplateFormDialog({
       category: category || null,
       is_active: isActive,
       keywords: keywords.trim() || null,
+      icon: icon.trim() || null,
       image_slots:
         imageSlots.length > 0 ? JSON.stringify(imageSlots) : undefined,
       text_fields:
@@ -262,7 +297,262 @@ export function TemplateFormDialog({
           onSubmit={handleSubmit}
           className="space-y-6 overflow-y-auto pr-1 flex-1"
         >
-          {/* ── SECTION 1: Entrées utilisateur ── */}
+          {/* ── SECTION 1: Informations générales ── */}
+          <fieldset className="space-y-4 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">
+              Informations générales
+            </legend>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Titre</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Photo embarrassante"
+                required
+                minLength={2}
+                maxLength={200}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Catégorie</Label>
+                <Popover open={catPopoverOpen} onOpenChange={setCatPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={catPopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {category
+                        ? categoriesList?.find((c) => c.slug === category)
+                            ?.name || category
+                        : "Aucune catégorie"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Rechercher ou créer…"
+                        value={catSearch}
+                        onValueChange={setCatSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty className="py-2 px-3 text-sm text-muted-foreground">
+                          Aucune catégorie trouvée.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="__none__"
+                            onSelect={() => {
+                              setCategory("");
+                              setCatPopoverOpen(false);
+                              setCatSearch("");
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !category ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            <span className="text-muted-foreground italic">
+                              Aucune catégorie
+                            </span>
+                          </CommandItem>
+                          {(categoriesList || [])
+                            .filter(
+                              (cat) =>
+                                cat.name
+                                  .toLowerCase()
+                                  .includes(catSearch.toLowerCase()) ||
+                                cat.slug
+                                  .toLowerCase()
+                                  .includes(catSearch.toLowerCase()),
+                            )
+                            .map((cat) => (
+                              <CommandItem
+                                key={cat.slug}
+                                value={cat.slug}
+                                onSelect={() => {
+                                  setCategory(cat.slug);
+                                  setCatPopoverOpen(false);
+                                  setCatSearch("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    category === cat.slug
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                        {catSearch.trim() &&
+                          !(categoriesList || []).some(
+                            (c) =>
+                              c.name.toLowerCase() ===
+                              catSearch.trim().toLowerCase(),
+                          ) && (
+                            <CommandGroup>
+                              <CommandItem
+                                onSelect={() =>
+                                  handleQuickCreateCategory(catSearch.trim())
+                                }
+                                className="text-primary"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Créer « {catSearch.trim()} »
+                              </CommandItem>
+                            </CommandGroup>
+                          )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Icône</Label>
+                <Popover open={iconOpen} onOpenChange={(o) => { setIconOpen(o); if (!o) setIconSearch(""); }}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={iconOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        {icon && icons[icon as keyof typeof icons] ? (() => {
+                          const Ic = icons[icon as keyof typeof icons];
+                          return <Ic className="w-4 h-4 shrink-0" />;
+                        })() : null}
+                        <span className="truncate">{icon || "Aucune"}</span>
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Rechercher une icône…"
+                        value={iconSearch}
+                        onValueChange={setIconSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Aucune icône trouvée.</CommandEmpty>
+                        <CommandGroup className="max-h-[250px] overflow-y-auto">
+                          {icon && (
+                            <CommandItem
+                              value="__clear__"
+                              onSelect={() => {
+                                setIcon("");
+                                setIconOpen(false);
+                              }}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Aucune icône
+                            </CommandItem>
+                          )}
+                          {(iconSearch.trim()
+                            ? Object.keys(icons)
+                                .filter(name => name.toLowerCase().includes(iconSearch.toLowerCase()))
+                                .slice(0, 150)
+                            : POPULAR_ICONS.filter(name => name in icons)
+                          ).map((name) => {
+                            const Ic = icons[name as keyof typeof icons];
+                            return (
+                              <CommandItem
+                                key={name}
+                                value={name}
+                                onSelect={() => {
+                                  setIcon(name);
+                                  setIconOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", icon === name ? "opacity-100" : "opacity-0")} />
+                                <Ic className="mr-2 h-4 w-4" />
+                                {name}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Mots-clés</Label>
+                <Input
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  placeholder="drôle, bureau, collègue…"
+                  maxLength={1000}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Séparés par des virgules, pour la recherche.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="is_active">Visibilité</Label>
+                <div className="flex items-center gap-2 pt-2">
+                  <Switch
+                    id="is_active"
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {isActive ? "Visible" : "Masqué"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          {/* ── SECTION 2: Prompt ── */}
+          <fieldset className="space-y-3 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">Prompt</legend>
+            <Textarea
+              id="prompt_text"
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              placeholder="Ex: Une photo réaliste de {text1} en train de {text2}…"
+              required
+              minLength={10}
+              maxLength={2000}
+              rows={5}
+            />
+            {textFields.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Variables disponibles :{" "}
+                {textFields.map((f, i) => (
+                  <code
+                    key={i}
+                    className="bg-muted px-1 rounded text-[11px] mr-1"
+                  >
+                    {`{text${i + 1}}`}
+                  </code>
+                ))}
+              </p>
+            )}
+          </fieldset>
+
+          {/* ── SECTION 3: Entrées utilisateur ── */}
           <fieldset className="space-y-4 rounded-lg border p-4">
             <legend className="px-2 text-sm font-semibold">
               Entrées demandées à l'utilisateur
@@ -414,297 +704,114 @@ export function TemplateFormDialog({
             </div>
           </fieldset>
 
-          {/* ── SECTION 2: Prompt ── */}
+          {/* ── SECTION 4: Images d'illustration ── */}
           <fieldset className="space-y-3 rounded-lg border p-4">
-            <legend className="px-2 text-sm font-semibold">Prompt</legend>
-            <Textarea
-              id="prompt_text"
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              placeholder="Ex: Une photo réaliste de {text1} en train de {text2}…"
-              required
-              minLength={10}
-              maxLength={2000}
-              rows={5}
-            />
-            {textFields.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Variables disponibles :{" "}
-                {textFields.map((f, i) => (
-                  <code
-                    key={i}
-                    className="bg-muted px-1 rounded text-[11px] mr-1"
-                  >
-                    {`{text${i + 1}}`}
-                  </code>
-                ))}
-              </p>
-            )}
-          </fieldset>
-
-          {/* ── SECTION 3: Paramètres généraux ── */}
-          <fieldset className="space-y-4 rounded-lg border p-4">
             <legend className="px-2 text-sm font-semibold">
-              Paramètres généraux
+              Images d'illustration
             </legend>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Titre</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Photo embarrassante"
-                required
-                minLength={2}
-                maxLength={200}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Catégorie</Label>
-                <Popover open={catPopoverOpen} onOpenChange={setCatPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={catPopoverOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {category
-                        ? categoriesList?.find((c) => c.slug === category)
-                            ?.name || category
-                        : "Aucune catégorie"}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[--radix-popover-trigger-width] p-0"
-                    align="start"
-                  >
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Rechercher ou créer…"
-                        value={catSearch}
-                        onValueChange={setCatSearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty className="py-2 px-3 text-sm text-muted-foreground">
-                          Aucune catégorie trouvée.
-                        </CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            value="__none__"
-                            onSelect={() => {
-                              setCategory("");
-                              setCatPopoverOpen(false);
-                              setCatSearch("");
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                !category ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <span className="text-muted-foreground italic">
-                              Aucune catégorie
-                            </span>
-                          </CommandItem>
-                          {(categoriesList || [])
-                            .filter(
-                              (cat) =>
-                                cat.name
-                                  .toLowerCase()
-                                  .includes(catSearch.toLowerCase()) ||
-                                cat.slug
-                                  .toLowerCase()
-                                  .includes(catSearch.toLowerCase()),
-                            )
-                            .map((cat) => (
-                              <CommandItem
-                                key={cat.slug}
-                                value={cat.slug}
-                                onSelect={() => {
-                                  setCategory(cat.slug);
-                                  setCatPopoverOpen(false);
-                                  setCatSearch("");
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    category === cat.slug
-                                      ? "opacity-100"
-                                      : "opacity-0",
-                                  )}
-                                />
-                                {cat.name}
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                        {catSearch.trim() &&
-                          !(categoriesList || []).some(
-                            (c) =>
-                              c.name.toLowerCase() ===
-                              catSearch.trim().toLowerCase(),
-                          ) && (
-                            <CommandGroup>
-                              <CommandItem
-                                onSelect={() =>
-                                  handleQuickCreateCategory(catSearch.trim())
-                                }
-                                className="text-primary"
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Créer « {catSearch.trim()} »
-                              </CommandItem>
-                            </CommandGroup>
-                          )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="is_active">Visibilité</Label>
-                <div className="flex items-center gap-2 pt-2">
-                  <Switch
-                    id="is_active"
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {isActive ? "Visible" : "Masqué"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Example images (before / after) */}
-            <div className="space-y-2">
-              <Label>Images d'illustration (avant / après)</Label>
-              <p className="text-xs text-muted-foreground">
-                Photos d'exemple affichées dans la galerie de pranks.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {/* Before */}
-                <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Avant
-                  </span>
-                  <div
-                    onClick={() => beforeInputRef.current?.click()}
-                    className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
-                  >
-                    <input
-                      ref={beforeInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f)
-                          handleFileSelect(f, setBeforePreview, setBeforeFile);
-                      }}
-                    />
-                    {beforePreview ? (
-                      <>
-                        <img
-                          src={beforePreview}
-                          alt="Avant"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBeforePreview(null);
-                            setBeforeFile(null);
-                          }}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                        <ImageUp className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">
-                          Photo avant
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* After */}
-                <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Après
-                  </span>
-                  <div
-                    onClick={() => afterInputRef.current?.click()}
-                    className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
-                  >
-                    <input
-                      ref={afterInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f)
-                          handleFileSelect(f, setAfterPreview, setAfterFile);
-                      }}
-                    />
-                    {afterPreview ? (
-                      <>
-                        <img
-                          src={afterPreview}
-                          alt="Après"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAfterPreview(null);
-                            setAfterFile(null);
-                          }}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                        <ImageUp className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">
-                          Photo après
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </fieldset>
-
-          {/* ── SECTION 4: Mots-clés ── */}
-          <fieldset className="space-y-3 rounded-lg border p-4">
-            <legend className="px-2 text-sm font-semibold">Mots-clés</legend>
-            <Input
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="Ex: drôle, embarrassant, bureau, collègue…"
-              maxLength={1000}
-            />
             <p className="text-xs text-muted-foreground">
-              Séparez les mots-clés par des virgules. Ils permettent de
-              retrouver ce template via la barre de recherche.
+              Photos d'exemple affichées dans la galerie de pranks (avant / après).
             </p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Before */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Avant
+                </span>
+                <div
+                  onClick={() => beforeInputRef.current?.click()}
+                  className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
+                >
+                  <input
+                    ref={beforeInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f)
+                        handleFileSelect(f, setBeforePreview, setBeforeFile);
+                    }}
+                  />
+                  {beforePreview ? (
+                    <>
+                      <img
+                        src={beforePreview}
+                        alt="Avant"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setBeforePreview(null);
+                          setBeforeFile(null);
+                        }}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                      <ImageUp className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">
+                        Photo avant
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* After */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Après
+                </span>
+                <div
+                  onClick={() => afterInputRef.current?.click()}
+                  className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
+                >
+                  <input
+                    ref={afterInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f)
+                        handleFileSelect(f, setAfterPreview, setAfterFile);
+                    }}
+                  />
+                  {afterPreview ? (
+                    <>
+                      <img
+                        src={afterPreview}
+                        alt="Après"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAfterPreview(null);
+                          setAfterFile(null);
+                        }}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                      <ImageUp className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">
+                        Photo après
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </fieldset>
 
           <DialogFooter>

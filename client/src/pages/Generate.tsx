@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -11,11 +12,16 @@ import {
   Plus,
   Sparkles,
   ChevronDown,
+  Star,
 } from "lucide-react";
+import { icons } from "lucide-react";
 import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { useTemplates } from "@/hooks/use-templates";
+import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
+import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
+import { prankIdeas } from "@/lib/prank-data";
 import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
 
 function parseImageSlots(template: PromptTemplate | null): ImageSlot[] {
@@ -38,6 +44,8 @@ function parseTextFields(template: PromptTemplate | null): TextFieldSlot[] {
 
 export default function Generate() {
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([
     null,
@@ -48,9 +56,12 @@ export default function Generate() {
   const [textValues, setTextValues] = useState<Record<number, string>>({});
   const generateDirect = useGenerateDirectPrank();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
+  const { data: favoriteIds = [] } = useFavorites();
+  const toggleFavorite = useToggleFavorite();
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
@@ -95,7 +106,7 @@ export default function Generate() {
     setPrompt(tpl.prompt_text);
     setImages(Array(initSlots).fill(null));
     setTextValues({});
-    topRef.current?.scrollIntoView({ behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const deselectTemplate = () => {
@@ -119,15 +130,21 @@ export default function Generate() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-  const filtered = (templates || []).filter((t) => {
-    const q = normalize(search);
-    if (!q) return true;
-    return (
-      normalize(t.name).includes(q) ||
-      (t.keywords && normalize(t.keywords).includes(q)) ||
-      (t.category && normalize(t.category).includes(q))
-    );
-  });
+  const filtered = (templates || [])
+    .filter((t) => {
+      const q = normalize(search);
+      if (!q) return true;
+      return (
+        normalize(t.name).includes(q) ||
+        (t.keywords && normalize(t.keywords).includes(q)) ||
+        (t.category && normalize(t.category).includes(q))
+      );
+    })
+    .sort((a, b) => {
+      const aFav = favoriteIds.includes(a.id) ? 0 : 1;
+      const bFav = favoriteIds.includes(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -250,47 +267,16 @@ export default function Generate() {
       {/* Image upload zone + prompt */}
       <div
         ref={topRef}
-        className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-6rem)] pt-8 pb-4"
+        className="flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-6rem)] pt-4 pb-4"
       >
-        <div className="relative">
-          <h1 className="font-display text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight text-center">
-            {selectedTemplate
-              ? selectedTemplate.name
-              : "Crée ton prank rapidement"}
-          </h1>
-          {!selectedTemplate && (
-            <svg
-              viewBox="0 0 512 512"
-              preserveAspectRatio="xMidYMid meet"
-              className="animate-arrow-bounce opacity-70 absolute -right md:-right-14 top-12 md:top-10 h-[70px] md:h-[100px] w-auto"
-            >
-              <g
-                transform="translate(512,512) scale(-0.1,-0.1)"
-                fill="#F97316"
-                stroke="none"
-              >
-                <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
-              </g>
-            </svg>
-          )}
-        </div>
-        {selectedTemplate && (
-          <button
-            onClick={deselectTemplate}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            <X className="w-3 h-3" />
-            Revenir au mode libre
-          </button>
-        )}
-
         {/* Images + input group */}
-        <div className="flex flex-col items-center gap-3 md:gap-4 w-full">
+        <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
           <div
-            className={`w-full flex justify-center px-4${!selectedTemplate ? " -mb-7 md:-mb-8" : ""}`}
+            className="w-full flex justify-center px-4 -mb-7 md:-mb-8"
           >
-            <div className="flex items-end justify-center gap-2 md:gap-3 w-full max-w-md">
+            <div className="flex flex-col w-full max-w-md">
+              <div className="flex items-end justify-center gap-2 md:gap-3 w-full">
               {images.map((img, i) => {
                 const slots = parseImageSlots(selectedTemplate);
                 const isRequired = selectedTemplate
@@ -299,8 +285,28 @@ export default function Generate() {
                 return (
                   <div
                     key={i}
-                    className="relative flex-shrink-1 min-w-0 h-[min(42vh,340px)] md:h-[min(48vh,420px)] aspect-[9/16]"
+                    className="relative flex-shrink-1 min-w-0 h-[min(52vh,440px)] md:h-[min(58vh,520px)] aspect-[9/16] flex flex-col"
                   >
+                    {/* Template header — above first image slot */}
+                    {selectedTemplate && i === 0 && (
+                      <div className="absolute bottom-full left-0 right-0 pb-2 flex items-center justify-between z-10">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {selectedTemplate.icon && icons[selectedTemplate.icon as keyof typeof icons] && (() => {
+                            const LucideIcon = icons[selectedTemplate.icon as keyof typeof icons];
+                            return <LucideIcon className="w-4 h-4 text-primary shrink-0" />;
+                          })()}
+                          <span className="text-sm font-semibold truncate">
+                            {selectedTemplate.name}
+                          </span>
+                        </div>
+                        <button
+                          onClick={deselectTemplate}
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     {img ? (
                       <>
                         <img
@@ -316,7 +322,20 @@ export default function Generate() {
                         </button>
                       </>
                     ) : (
-                      <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed cursor-pointer transition-all border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5">
+                      <>
+                        {!selectedTemplate && (
+                          <span className="hero-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                        )}
+                        {selectedTemplate && isRequired && (
+                          <span className="required-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                        )}
+                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
+                        !selectedTemplate
+                          ? "border-transparent bg-card/80 hover:bg-primary/5"
+                          : isRequired
+                            ? "border-dashed border-border/60 bg-card/80 hover:border-destructive/60 hover:bg-destructive/5"
+                            : "border-dashed border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5"
+                      }`}>
                         <input
                           type="file"
                           accept="image/*"
@@ -332,8 +351,8 @@ export default function Generate() {
                             const label = slots[i]?.label || "";
                             return (
                               <>
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
-                                  <ImageUp className="w-7 h-7 text-primary transition-colors" />
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isRequired ? "bg-destructive/10 group-hover:bg-destructive/15" : "bg-primary/10 group-hover:bg-primary/15"}`}>
+                                  <ImageUp className={`w-7 h-7 transition-colors ${isRequired ? "text-destructive" : "text-primary"}`} />
                                 </div>
                                 <div className="text-center px-2">
                                   <p className="text-[11px] font-semibold text-foreground">
@@ -361,105 +380,108 @@ export default function Generate() {
                           <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         )}
                       </label>
+                      </>
                     )}
                   </div>
                 );
               })}
             </div>
+            </div>
           </div>
 
-          {/* Text input + generate — only in free mode */}
-          {!selectedTemplate && (
-            <div className="relative z-10 w-full flex justify-center px-4">
-              <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-                <input
-                  type="text"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Décris ton prank…"
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
-                />
-                <button
-                  className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
-                  onClick={handleGenerate}
-                  disabled={generateDirect.isPending}
-                >
-                  {generateDirect.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <SendHorizonal className="w-4 h-4" />
-                  )}
-                </button>
-                <Button
-                  size="sm"
-                  className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-                  onClick={handleGenerate}
-                  disabled={generateDirect.isPending}
-                >
-                  {generateDirect.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Générer"
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Text fields for selected template */}
-          {selectedTemplate &&
-            (() => {
-              const fields = parseTextFields(selectedTemplate);
-              if (fields.length === 0) return null;
-              return (
-                <div className="relative z-10 w-full flex justify-center px-4">
-                  <div className="w-full max-w-md space-y-2">
-                    {fields.map((field, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-4 py-2.5 shadow-sm"
-                      >
-                        <label className="text-sm font-medium text-foreground shrink-0">
-                          {field.label || `Texte ${idx + 1}`} :
-                          {field.required && (
-                            <span className="text-destructive ml-0.5">*</span>
-                          )}
-                        </label>
-                        <input
-                          type="text"
-                          value={textValues[idx] || ""}
-                          onChange={(e) =>
-                            setTextValues((prev) => ({
-                              ...prev,
-                              [idx]: e.target.value,
-                            }))
-                          }
-                          className="flex-1 bg-transparent text-sm outline-none"
-                          required={field.required}
-                        />
-                      </div>
-                    ))}
-                  </div>
+          {/* Unified input bar */}
+          <div className="relative z-10 w-full flex justify-center px-4">
+            <div className="flex flex-col gap-2 w-full max-w-md">
+              {/* Free mode: single text input */}
+              {!selectedTemplate && (
+                <div className="flex items-center gap-2 md:gap-3 w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                  <input
+                    type="text"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={placeholderText || "Décris ton prank…"}
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+                  />
+                  <button
+                    className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+                    onClick={handleGenerate}
+                    disabled={generateDirect.isPending}
+                  >
+                    {generateDirect.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <SendHorizonal className="w-4 h-4" />
+                    )}
+                  </button>
+                  <Button
+                    size="sm"
+                    className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+                    onClick={handleGenerate}
+                    disabled={generateDirect.isPending}
+                  >
+                    {generateDirect.isPending ? "Création…" : "Créer"}
+                  </Button>
                 </div>
-              );
-            })()}
+              )}
 
-          {/* Generate button — template mode */}
-          {selectedTemplate && (
-            <div className="relative z-10 w-full flex justify-center px-4 mt-2">
-              <Button
-                size="lg"
-                className="rounded-full h-12 px-8 text-sm font-semibold active:scale-95 transition-transform"
-                onClick={handleGenerate}
-                disabled={generateDirect.isPending}
-              >
-                {generateDirect.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                {generateDirect.isPending ? "Génération…" : "Générer"}
-              </Button>
+              {/* Template mode: text fields + generate */}
+              {selectedTemplate &&
+                (() => {
+                  const fields = parseTextFields(selectedTemplate);
+                  return (
+                    <div className="flex items-center gap-2 md:gap-3 w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5">
+                      {fields.length > 0 ? (
+                        <div className="flex flex-col gap-2 flex-1">
+                          {fields.map((field, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <label className="text-sm font-medium text-foreground shrink-0">
+                                {field.label || `Texte ${idx + 1}`} :
+                                {field.required && (
+                                  <span className="text-destructive ml-0.5">*</span>
+                                )}
+                              </label>
+                              <input
+                                type="text"
+                                value={textValues[idx] || ""}
+                                onChange={(e) =>
+                                  setTextValues((prev) => ({
+                                    ...prev,
+                                    [idx]: e.target.value,
+                                  }))
+                                }
+                                className="flex-1 bg-transparent text-sm outline-none"
+                                required={field.required}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="flex-1 text-sm text-muted-foreground/70">Prêt à générer</span>
+                      )}
+                      <button
+                        className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+                        onClick={handleGenerate}
+                        disabled={generateDirect.isPending}
+                      >
+                        {generateDirect.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <SendHorizonal className="w-4 h-4" />
+                        )}
+                      </button>
+                      <Button
+                        size="sm"
+                        className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+                        onClick={handleGenerate}
+                        disabled={generateDirect.isPending}
+                      >
+                        {generateDirect.isPending ? "Création…" : "Créer"}
+                      </Button>
+                    </div>
+                  );
+                })()}
             </div>
-          )}
+          </div>
 
           {/* Voir les templates link */}
           <button
@@ -479,24 +501,52 @@ export default function Generate() {
         ref={galleryRef}
         className="flex flex-col gap-6 scroll-mt-20 max-w-3xl mx-auto"
       >
-        <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
-          Choisis parmi les pranks existants
+        <h2 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
+          <span className="relative inline-block">
+            Choisis parmi les pranks existants
+            <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+          </span>
         </h2>
 
-        {/* Search bar */}
-        <div className="flex items-center gap-2 md:gap-3 rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+        {/* Search bar — expands on focus */}
+        <motion.div
+          animate={{ width: searchOpen ? "100%" : "75%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="mx-auto flex items-center gap-2 md:gap-3 rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 focus-within:shadow-lg transition-colors cursor-text"
+          onClick={() => {
+            setSearchOpen(true);
+            searchInputRef.current?.focus();
+          }}
+        >
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
+            ref={searchInputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Recherche un prank… ex: diplôme, amende"
+            placeholder="Recherche un prank…"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => {
+              if (!search) setSearchOpen(false);
+            }}
           />
-        </div>
+          {search && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSearch("");
+                searchInputRef.current?.focus();
+              }}
+              className="shrink-0"
+            >
+              <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+            </button>
+          )}
+        </motion.div>
 
         {/* Prank grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {templatesLoading && (
             <div className="col-span-full flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -509,6 +559,7 @@ export default function Generate() {
           )}
           {filtered.map((tpl) => {
             const isSelected = selectedTemplate?.id === tpl.id;
+            const isFav = favoriteIds.includes(tpl.id);
             const hasBothImages =
               !!tpl.example_before_url && !!tpl.example_after_url;
 
@@ -518,72 +569,106 @@ export default function Generate() {
                 onClick={() =>
                   isSelected ? deselectTemplate() : selectTemplate(tpl)
                 }
-                className={`group cursor-pointer flex flex-col rounded-2xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
-                  isSelected
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-border/60 hover:border-primary/40"
-                }`}
+                className="group relative cursor-pointer flex flex-col rounded-xl overflow-hidden bg-muted transition-all hover:shadow-lg hover:-translate-y-0.5"
               >
+                {/* Favorite star */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite.mutate({ templateId: tpl.id, isFavorite: isFav });
+                  }}
+                  className="absolute top-1.5 right-1.5 z-20 w-7 h-7 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
+                >
+                  <Star
+                    className={`w-3.5 h-3.5 transition-colors ${
+                      isFav
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  />
+                </button>
                 {/* Image area */}
                 {hasBothImages ? (
-                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-muted">
-                    {/* After image (base layer, visible by default) */}
-                    <img
-                      src={tpl.example_after_url!}
-                      alt={`${tpl.name} — après`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    {/* Before image (overlay, clips on hover via CSS) */}
-                    <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                  <>
+                    {/* Mobile: split view — après (top) + avant (bottom) */}
+                    <div className="md:hidden relative aspect-[2/3] w-full overflow-hidden">
+                      <div className="absolute inset-x-0 top-0 h-[calc(50%+1px)] overflow-hidden">
+                        <img
+                          src={tpl.example_after_url!}
+                          alt={`${tpl.name} — après`}
+                          className="absolute inset-0 w-full h-full object-cover object-center"
+                          loading="lazy"
+                        />
+                        <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
+                          Après
+                        </span>
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 h-[calc(50%+1px)] overflow-hidden">
+                        <img
+                          src={tpl.example_before_url!}
+                          alt={`${tpl.name} — avant`}
+                          className="absolute inset-0 w-full h-full object-cover object-center"
+                          loading="lazy"
+                        />
+                        <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
+                          Avant
+                        </span>
+                      </div>
+                    </div>
+                    {/* Desktop: hover clip-path effect */}
+                    <div className="hidden md:block relative aspect-[2/3] w-full overflow-hidden">
                       <img
-                        src={tpl.example_before_url!}
-                        alt={`${tpl.name} — avant`}
+                        src={tpl.example_after_url!}
+                        alt={`${tpl.name} — après`}
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                       />
+                      <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                        <img
+                          src={tpl.example_before_url!}
+                          alt={`${tpl.name} — avant`}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
+                      <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          Avant
+                        </span>
+                      </div>
+                      <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          Après
+                        </span>
+                      </div>
                     </div>
-                    {/* Divider line */}
-                    <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
-                    {/* Labels */}
-                    <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Avant
-                      </span>
-                    </div>
-                    <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Après
-                      </span>
-                    </div>
-                  </div>
+                  </>
                 ) : tpl.example_after_url ? (
-                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-muted">
+                  <div className="relative aspect-[2/3] w-full overflow-hidden">
                     <img
                       src={tpl.example_after_url}
                       alt={tpl.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="block w-full h-full object-cover"
                       loading="lazy"
                     />
                   </div>
                 ) : (
-                  <div className="relative aspect-[9/16] w-full bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center">
+                  <div className="relative aspect-[2/3] w-full bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center">
                     <Sparkles className="w-8 h-8 text-primary/30" />
                   </div>
                 )}
 
-                {/* Text overlay at bottom */}
-                <div className="p-3 bg-card">
-                  <p className="text-sm font-semibold truncate">{tpl.name}</p>
-                  <span
-                    className={`text-[11px] font-semibold transition-all ${
+                {/* Footer */}
+                <div className="flex items-center justify-between gap-1 px-2.5 py-2.5 bg-card">
+                  <p className="text-xs font-semibold leading-tight line-clamp-2">{tpl.name}</p>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${
                       isSelected
                         ? "text-primary"
-                        : "text-primary/0 group-hover:text-primary/100"
+                        : "text-muted-foreground/40 group-hover:text-primary"
                     }`}
-                  >
-                    {isSelected ? "Sélectionné ✓" : "Essayer →"}
-                  </span>
+                  />
                 </div>
               </div>
             );

@@ -908,5 +908,69 @@ export async function registerRoutes(
     },
   );
 
+  // =============================================
+  // FAVORITES ENDPOINTS
+  // =============================================
+
+  // GET /api/favorites - List user's favorite template IDs
+  app.get(api.favorites.list.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data, error } = await supabaseAdmin
+        .from("favorite_templates")
+        .select("template_id")
+        .eq("user_id", authReq.userId);
+
+      if (error) throw error;
+      res.json(data.map((f: { template_id: string }) => f.template_id));
+    } catch (error: any) {
+      logger.error({ err: error }, "Error listing favorites");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/favorites/:templateId - Add a favorite
+  app.post(api.favorites.add.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { error } = await supabaseAdmin
+        .from("favorite_templates")
+        .upsert(
+          { user_id: authReq.userId, template_id: req.params.templateId },
+          { onConflict: "user_id,template_id" },
+        );
+
+      if (error) throw error;
+      res.json({ message: "Favori ajouté" });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error adding favorite");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // DELETE /api/favorites/:templateId - Remove a favorite
+  app.delete(api.favorites.remove.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { error } = await supabaseAdmin
+        .from("favorite_templates")
+        .delete()
+        .eq("user_id", authReq.userId)
+        .eq("template_id", req.params.templateId);
+
+      if (error) throw error;
+      res.json({ message: "Favori retiré" });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error removing favorite");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

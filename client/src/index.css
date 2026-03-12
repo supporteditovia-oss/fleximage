@@ -149,3 +149,61 @@
 .animate-arrow-bounce {
   animation: arrow-bounce 1.5s ease-in-out infinite;
 }
+
+/* Animated glowing border for hero image slot */
+@property --glow-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes glow-rotate {
+  to { --glow-angle: 360deg; }
+}
+
+.hero-image-slot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--glow-angle),
+    transparent 0%,
+    transparent 60%,
+    hsl(var(--primary) / 0.5) 75%,
+    hsl(var(--primary)) 85%,
+    hsl(var(--primary) / 0.5) 95%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: glow-rotate 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Animated glowing border for required image slots (red/orange) */
+.required-image-slot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--glow-angle),
+    transparent 0%,
+    transparent 60%,
+    hsl(0 80% 60% / 0.5) 75%,
+    hsl(0 80% 55%) 85%,
+    hsl(0 80% 60% / 0.5) 95%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: glow-rotate 3s linear infinite;
+  pointer-events: none;
+}

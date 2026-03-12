@@ -35,7 +35,7 @@ export function BottomDock() {
 
   const dockItemClass = (active: boolean) =>
     cn(
-      "group flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl text-xs font-medium transition-all duration-200 min-w-[64px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5",
+      "group flex flex-col items-center gap-0.5 px-3 py-1 rounded-2xl text-[11px] font-medium transition-all duration-200 min-w-[56px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5 md:text-xs",
       active
         ? "text-primary scale-110"
         : "text-muted-foreground hover:text-foreground hover:scale-105",
@@ -43,14 +43,14 @@ export function BottomDock() {
 
   const dockIconClass = (active: boolean) =>
     cn(
-      "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 md:w-9 md:h-9",
+      "flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 md:w-9 md:h-9",
       active ? "bg-primary/10 shadow-sm" : "group-hover:bg-muted/60",
     );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)]">
       <nav className="w-full md:max-w-[360px] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-white/50">
-        <div className="flex items-center justify-evenly px-4 py-3 md:px-3 md:py-2">
+        <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}
           <Link href="/history" className={dockItemClass(isActive("/history"))}>
             <div className={dockIconClass(isActive("/history"))}>
@@ -79,7 +79,7 @@ export function BottomDock() {
                   "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <div className="flex items-center justify-center w-12 h-12 md:w-9 md:h-9 rounded-2xl transition-all duration-200 group-hover:bg-muted/60">
+                <div className="flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-2xl transition-all duration-200 group-hover:bg-muted/60">
                   <Avatar className="h-7 w-7 md:h-6 md:w-6">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary">

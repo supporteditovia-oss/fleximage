@@ -43,6 +43,7 @@ export function useCreateTemplate() {
       category: string | null;
       is_active?: boolean;
       keywords?: string | null;
+      icon?: string | null;
       image_slots?: string;
       text_fields?: string;
     }) => {
@@ -72,6 +73,7 @@ export function useUpdateTemplate() {
       category?: string | null;
       is_active?: boolean;
       keywords?: string | null;
+      icon?: string | null;
       image_slots?: string;
       text_fields?: string;
     }) => {

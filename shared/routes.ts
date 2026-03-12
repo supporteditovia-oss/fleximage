@@ -123,6 +123,20 @@ export const api = {
       path: "/api/categories/:id",
     },
   },
+  favorites: {
+    list: {
+      method: "GET" as const,
+      path: "/api/favorites",
+    },
+    add: {
+      method: "POST" as const,
+      path: "/api/favorites/:templateId",
+    },
+    remove: {
+      method: "DELETE" as const,
+      path: "/api/favorites/:templateId",
+    },
+  },
 };
 
 export function buildUrl(

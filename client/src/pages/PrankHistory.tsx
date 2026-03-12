@@ -1,6 +1,5 @@
 import { usePrankHistory, useDeletePrank } from "@/hooks/use-pranks";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -24,7 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Clock,
   XCircle,
@@ -108,7 +108,6 @@ export default function PrankHistory() {
     imageIndex: number,
     platform: "whatsapp" | "snapchat" | "instagram",
   ) {
-    // Try native share with the actual image file (works on mobile)
     if (navigator.share && navigator.canShare) {
       try {
         const res = await authFetch(
@@ -126,7 +125,6 @@ export default function PrankHistory() {
         // User cancelled or error — fall through to guide
       }
     }
-    // Fallback: show tutorial
     const names = {
       whatsapp: "WhatsApp",
       snapchat: "Snapchat",
@@ -166,7 +164,7 @@ export default function PrankHistory() {
           {[...Array(4)].map((_, i) => (
             <Skeleton
               key={i}
-              className="aspect-[9/16] max-h-[50vh] rounded-xl mx-auto"
+              className="aspect-[9/16] max-h-[50vh] rounded-xl"
             />
           ))}
         </div>
@@ -193,23 +191,52 @@ export default function PrankHistory() {
                 : null;
 
             return (
-              <div key={prank.id} className="relative">
-                <div
-                  className="group relative aspect-[9/16] max-h-[50vh] rounded-xl overflow-hidden bg-muted cursor-pointer mx-auto"
-                  onClick={() => isSuccess && setSelectedImage(urls[0])}
-                >
-                  {isSuccess ? (
-                    <>
-                      {/* Result image (default) */}
-                      <img
-                        src={urls[0]}
-                        alt="Prank généré"
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      {/* Input image overlay (hover) */}
-                      {hasInputImage && (
-                        <>
+              <div
+                key={prank.id}
+                className="group relative aspect-[9/16] max-h-[50vh] rounded-xl overflow-hidden bg-muted cursor-pointer"
+                onClick={() => isSuccess && setSelectedImage(urls[0])}
+              >
+                {isSuccess ? (
+                  <>
+                    {/* Result image (après) — always visible, with hover zoom */}
+                    <img
+                      src={urls[0]}
+                      alt="Prank généré"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                      loading="lazy"
+                    />
+
+                    {/* Before/after — same as Generate template list */}
+                    {hasInputImage && (
+                      <>
+                        {/* Mobile: split view — après (top) + avant (bottom) */}
+                        <div className="md:hidden absolute inset-0">
+                          <div className="absolute inset-x-0 top-0 h-[calc(50%+1px)] overflow-hidden">
+                            <img
+                              src={urls[0]}
+                              alt="Après"
+                              className="absolute inset-0 w-full h-full object-cover object-center"
+                              loading="lazy"
+                            />
+                            <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full z-10">
+                              Après
+                            </span>
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-[calc(50%+1px)] overflow-hidden">
+                            <img
+                              src={inputUrls[0]}
+                              alt="Avant"
+                              className="absolute inset-0 w-full h-full object-cover object-center"
+                              loading="lazy"
+                            />
+                            <span className="absolute top-1 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full z-10">
+                              Avant
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Desktop: hover clip-path reveal */}
+                        <div className="hidden md:block absolute inset-0">
                           <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
                             <img
                               src={inputUrls[0]}
@@ -219,103 +246,110 @@ export default function PrankHistory() {
                             />
                           </div>
                           {/* Divider line */}
-                          <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
+                          <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
                           {/* Labels */}
-                          <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                          <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
                             <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                               Avant
                             </span>
                           </div>
-                          <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
+                          <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
                             <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                               Après
                             </span>
                           </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                      {statusInfo && (
-                        <>
-                          <statusInfo.icon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
-                          <span className="text-xs text-muted-foreground">
-                            {statusInfo.label}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Bottom overlay */}
-                  {(prank.prompt_templates?.name || prank.fail_message) && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3 pt-10">
-                      {prank.prompt_templates?.name && (
-                        <p className="text-white text-sm font-medium truncate">
-                          {prank.prompt_templates.name}
-                        </p>
-                      )}
-                      {prank.fail_message && (
-                        <p className="text-xs text-red-300 mt-1 line-clamp-2">
-                          {prank.fail_message}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Delete button top-right */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingId(prank.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Action buttons below image */}
-                {isSuccess && (
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleDownload(prank.id)}
-                    >
-                      <Download className="mr-1.5 h-4 w-4" />
-                      Télécharger
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="flex-1">
-                          <Send className="mr-1.5 h-4 w-4" />
-                          Envoyer
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleShare(prank.id, 0, "whatsapp")}
-                        >
-                          WhatsApp
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleShare(prank.id, 0, "snapchat")}
-                        >
-                          Snapchat
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleShare(prank.id, 0, "instagram")}
-                        >
-                          Instagram
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    {statusInfo && (
+                      <>
+                        <statusInfo.icon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
+                        <span className="text-xs text-muted-foreground">
+                          {statusInfo.label}
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
+
+                {/* Delete button — top-right, visible on hover/tap only */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeletingId(prank.id);
+                  }}
+                  className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70 active:opacity-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Bottom gradient overlay with name + action buttons */}
+                <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-12 flex items-end justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    {prank.prompt_templates?.name && (
+                      <p className="text-white text-sm font-semibold truncate">
+                        {prank.prompt_templates.name}
+                      </p>
+                    )}
+                    {prank.fail_message && (
+                      <p className="text-xs text-red-300 mt-0.5 line-clamp-1">
+                        {prank.fail_message}
+                      </p>
+                    )}
+                  </div>
+
+                  {isSuccess && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(prank.id);
+                        }}
+                        className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                        title="Télécharger"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                            title="Envoyer"
+                          >
+                            <Send className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleShare(prank.id, 0, "whatsapp")
+                            }
+                          >
+                            WhatsApp
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleShare(prank.id, 0, "snapchat")
+                            }
+                          >
+                            Snapchat
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleShare(prank.id, 0, "instagram")
+                            }
+                          >
+                            Instagram
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

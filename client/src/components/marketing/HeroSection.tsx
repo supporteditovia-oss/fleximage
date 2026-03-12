@@ -10,35 +10,9 @@ import {
   Shuffle,
   Sparkles,
   ArrowRight,
-  Ticket,
-  Baby,
-  MessageCircle,
-  FileText,
-  Trophy,
-  ShieldAlert,
-  Landmark,
-  Car,
 } from "lucide-react";
-
-const prankChips: { id: string; icon: React.ElementType; label: string; example: string }[] = [
-  { id: "ticket", icon: Ticket, label: "Ticket d'amende", example: "Envoie-moi un PV de stationnement réaliste à mon nom" },
-  { id: "echo", icon: Baby, label: "Fausse grossesse", example: "Crée une fausse échographie pour surprendre mon père" },
-  { id: "sms", icon: MessageCircle, label: "Rupture SMS", example: "Une capture d'écran de rupture par SMS drôle" },
-  { id: "lettre", icon: FileText, label: "Licenciement", example: "Une lettre de licenciement officielle et convaincante" },
-  { id: "loto", icon: Trophy, label: "Jackpot loto", example: "Un ticket gagnant au loto à 2 millions d'euros" },
-  { id: "police", icon: ShieldAlert, label: "Convocation police", example: "Une fausse convocation au commissariat" },
-  { id: "banque", icon: Landmark, label: "Découvert banque", example: "Un relevé bancaire avec un découvert énorme" },
-  { id: "permis", icon: Car, label: "Retrait de permis", example: "Une lettre de retrait de permis de conduire" },
-];
-
-const prankIdeas = [
-  "Flirte avec ma copine…",
-  "Ces deux personnes s'embrassent…",
-  "Mon pote a gagné au loto…",
-  "Un PV sur la voiture de mon père…",
-  "Ma sœur se fait virer de son boulot…",
-  "Mon coloc a acheté une villa…",
-];
+import { prankChips, prankIdeas } from "@/lib/prank-data";
+import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -57,52 +31,7 @@ export default function HeroSection() {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
   const [selectedChip, setSelectedChip] = React.useState<string | null>(null);
-  const [socialCount, setSocialCount] = React.useState(12);
-  const [placeholderText, setPlaceholderText] = React.useState("");
-  const [ideaIndex, setIdeaIndex] = React.useState(0);
-
-  // Animate social proof counter
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setSocialCount((prev) => {
-        const delta = Math.random() < 0.5 ? 1 : 2;
-        const next = prev + delta;
-        return next > 30 ? 8 + Math.floor(Math.random() * 5) : next;
-      });
-    }, 3000 + Math.random() * 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Typewriter animated placeholder
-  React.useEffect(() => {
-    if (prompt) return;
-    let charIndex = 0;
-    let deleting = false;
-    const currentIdea = prankIdeas[ideaIndex];
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      if (!deleting) {
-        charIndex++;
-        setPlaceholderText(currentIdea.slice(0, charIndex));
-        if (charIndex === currentIdea.length) {
-          timer = setTimeout(() => { deleting = true; tick(); }, 1800);
-          return;
-        }
-        timer = setTimeout(tick, 60);
-      } else {
-        charIndex--;
-        setPlaceholderText(currentIdea.slice(0, charIndex));
-        if (charIndex === 0) {
-          setIdeaIndex((prev) => (prev + 1) % prankIdeas.length);
-          return;
-        }
-        timer = setTimeout(tick, 30);
-      }
-    };
-    tick();
-    return () => clearTimeout(timer);
-  }, [ideaIndex, prompt]);
+  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -160,49 +89,39 @@ export default function HeroSection() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="flex flex-col items-center justify-between w-full h-full"
+        className="flex flex-col items-center justify-center w-full h-full"
       >
+        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-10 md:pt-14">
         {/* Title area */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 pt-12 md:pt-16">
+        <div className="relative flex flex-col items-center justify-center">
           <motion.h1
             variants={itemVariants}
             className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
           >
             Crée des <span className="text-primary">pranks</span> hyper réalistes
           </motion.h1>
-
-          <motion.p
-            variants={itemVariants}
-            className="text-sm md:text-lg text-muted-foreground text-center max-w-xs md:max-w-md"
+          <motion.div
+            variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
+            className="hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
           >
-            Génère des images bluffantes en quelques secondes grâce à l'IA
-          </motion.p>
-
-          {/* Social proof badge */}
-          <motion.div variants={itemVariants} className="mt-1">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-muted/60 border border-border/50">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                <motion.span
-                  key={socialCount}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="inline-block font-semibold text-foreground"
-                >
-                  {socialCount}
-                </motion.span>
-                {" "}pranks créés à l'instant
-              </span>
-            </div>
+            <svg
+              viewBox="0 0 512 512"
+              preserveAspectRatio="xMidYMid meet"
+              className="animate-arrow-bounce h-[92px] md:h-[112px] w-auto text-primary"
+            >
+              <g
+                transform="translate(512,512) scale(-0.1,-0.1)"
+                fill="currentColor"
+                stroke="none"
+              >
+                <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
+              </g>
+            </svg>
           </motion.div>
         </div>
 
         {/* Bottom group: drop zone + input + prank ideas */}
-        <div className="flex flex-col items-center gap-3 md:gap-4 w-full pb-6 md:pb-12">
+        <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
@@ -212,7 +131,7 @@ export default function HeroSection() {
               {images.map((img, i) => (
                 <div
                   key={i}
-                  className="relative flex-shrink-1 min-w-0 h-[min(38vh,320px)] md:h-[min(45vh,400px)] aspect-[9/16]"
+                  className="relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
                 >
                   {img ? (
                     <>
@@ -229,11 +148,15 @@ export default function HeroSection() {
                       </button>
                     </>
                   ) : (
+                    <>
+                      {draggedIndex !== i && (
+                        <span className="hero-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                      )}
                     <label
                       className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
                         draggedIndex === i
                           ? "border-primary bg-primary/10 border-solid"
-                          : "border-dashed border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5"
+                          : "border-transparent bg-card/80 hover:bg-primary/5"
                       }`}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragLeave={handleDragLeave}
@@ -271,6 +194,7 @@ export default function HeroSection() {
                         )
                       )}
                     </label>
+                    </>
                   )}
                 </div>
               ))}
@@ -428,6 +352,7 @@ export default function HeroSection() {
               onClick={() => setAccordionOpen(false)}
             />
           )}
+        </div>
         </div>
       </motion.div>
     </section>

@@ -12,7 +12,7 @@ import {
   useDeleteCategory,
 } from "@/hooks/use-categories";
 import { TemplateFormDialog } from "@/components/admin/TemplateFormDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -509,13 +509,19 @@ export default function AdminTemplates() {
       : "Sans catégorie";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 pt-2">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-display">
-            Gestion des Templates
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold font-display">Templates</h1>
+            {templates && (
+              <Badge variant="secondary" className="text-xs tabular-nums">
+                {templates.length}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Gérez les modèles de prompts pour la génération de pranks.
           </p>
         </div>
@@ -528,82 +534,83 @@ export default function AdminTemplates() {
             <Settings2 className="mr-2 h-4 w-4" />
             Catégories
           </Button>
-          <Button onClick={handleCreate}>
+          <Button size="sm" onClick={handleCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Nouveau template
           </Button>
         </div>
       </div>
 
+      {/* Search + category filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un template..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setCategoryFilter("all")}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+              categoryFilter === "all"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
+            )}
+          >
+            Toutes
+          </button>
+          {(categoriesList || []).map((cat) => (
+            <button
+              key={cat.slug}
+              onClick={() =>
+                setCategoryFilter(
+                  cat.slug === categoryFilter ? "all" : cat.slug,
+                )
+              }
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+                categoryFilter === cat.slug
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
+              )}
+            >
+              {cat.name}
+            </button>
+          ))}
+          <button
+            onClick={() =>
+              setCategoryFilter(
+                categoryFilter === "__none__" ? "all" : "__none__",
+              )
+            }
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
+              categoryFilter === "__none__"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
+            )}
+          >
+            Sans catégorie
+          </button>
+        </div>
+      </div>
+
+      {/* Templates table */}
       <Card>
-        <CardHeader>
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un template..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setCategoryFilter("all")}
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-                  categoryFilter === "all"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
-                )}
-              >
-                Toutes
-              </button>
-              {(categoriesList || []).map((cat) => (
-                <button
-                  key={cat.slug}
-                  onClick={() =>
-                    setCategoryFilter(
-                      cat.slug === categoryFilter ? "all" : cat.slug,
-                    )
-                  }
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-                    categoryFilter === cat.slug
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
-                  )}
-                >
-                  {cat.name}
-                </button>
-              ))}
-              <button
-                onClick={() =>
-                  setCategoryFilter(
-                    categoryFilter === "__none__" ? "all" : "__none__",
-                  )
-                }
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
-                  categoryFilter === "__none__"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted",
-                )}
-              >
-                Sans catégorie
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-3 p-6">
               {[...Array(3)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           ) : !filteredTemplates?.length ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground">
               {templates?.length
                 ? "Aucun template ne correspond à la recherche."
                 : "Aucun template créé. Commencez par en créer un."}
@@ -621,7 +628,7 @@ export default function AdminTemplates() {
               </TableHeader>
               <TableBody>
                 {filteredTemplates.map((template) => (
-                  <TableRow key={template.id}>
+                  <TableRow key={template.id} className="group">
                     <TableCell>
                       <p className="font-medium">{template.name}</p>
                     </TableCell>
@@ -664,20 +671,22 @@ export default function AdminTemplates() {
                       })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
                           onClick={() => handleEdit(template)}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8"
                           onClick={() => setDeletingTemplate(template)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>

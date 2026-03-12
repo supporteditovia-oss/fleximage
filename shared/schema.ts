@@ -89,6 +89,7 @@ export const promptTemplates = pgTable("prompt_templates", {
   example_before_url: text("example_before_url"),
   example_after_url: text("example_after_url"),
   keywords: text("keywords"),
+  icon: text("icon"),
   created_by: uuid("created_by").references(() => profiles.id, {
     onDelete: "set null",
   }),
@@ -109,6 +110,7 @@ export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
   example_before_url: z.string().max(500).optional(),
   example_after_url: z.string().max(500).optional(),
   keywords: z.string().max(1000).optional().nullable(),
+  icon: z.string().max(100).optional().nullable(),
 });
 
 export const updatePromptTemplateSchema = insertPromptTemplateSchema
@@ -152,3 +154,19 @@ export const insertGeneratedPrankSchema = createInsertSchema(generatedPranks, {
 
 export type GeneratedPrank = typeof generatedPranks.$inferSelect;
 export type InsertGeneratedPrank = z.infer<typeof insertGeneratedPrankSchema>;
+
+// --- Favorite Templates ---
+export const favoriteTemplates = pgTable("favorite_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  template_id: uuid("template_id")
+    .references(() => promptTemplates.id, { onDelete: "cascade" })
+    .notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type FavoriteTemplate = typeof favoriteTemplates.$inferSelect;
