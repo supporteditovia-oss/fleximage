@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,29 +12,50 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useCreateTemplate, useUpdateTemplate } from "@/hooks/use-templates";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  useCreateTemplate,
+  useUpdateTemplate,
+  useUploadTemplateImage,
+} from "@/hooks/use-templates";
+import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useToast } from "@/hooks/use-toast";
-import type { PromptTemplate } from "@shared/schema";
-import { Loader2 } from "lucide-react";
-
-const CATEGORIES = [
-  { value: "humour", label: "Humour" },
-  { value: "absurde", label: "Absurde" },
-  { value: "celebrite", label: "Célébrité" },
-  { value: "situation", label: "Situation" },
-  { value: "personnalise", label: "Personnalisé" },
-];
+import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
+import {
+  Loader2,
+  Plus,
+  X,
+  Type,
+  ImageUp,
+  ChevronsUpDown,
+  Check,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TemplateFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template?: PromptTemplate | null;
+}
+
+function parseJson<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 export function TemplateFormDialog({
@@ -45,74 +66,176 @@ export function TemplateFormDialog({
   const { toast } = useToast();
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
+  const uploadImage = useUploadTemplateImage();
+  const { data: categoriesList } = useCategories();
+
+  const createCategory = useCreateCategory();
+  const [catPopoverOpen, setCatPopoverOpen] = useState(false);
+  const [catSearch, setCatSearch] = useState("");
 
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
-  const [category, setCategory] = useState("humour");
+  const [category, setCategory] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [requiredImages, setRequiredImages] = useState(0);
-  const [optionalImages, setOptionalImages] = useState(0);
-  const [outputLabel, setOutputLabel] = useState("");
-  const [imageLabels, setImageLabels] = useState<string[]>([]);
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
+  const [textFields, setTextFields] = useState<TextFieldSlot[]>([]);
+  const [beforePreview, setBeforePreview] = useState<string | null>(null);
+  const [afterPreview, setAfterPreview] = useState<string | null>(null);
+  const [beforeFile, setBeforeFile] = useState<File | null>(null);
+  const [afterFile, setAfterFile] = useState<File | null>(null);
+  const beforeInputRef = useRef<HTMLInputElement>(null);
+  const afterInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!template;
-  const isPending = createTemplate.isPending || updateTemplate.isPending;
+  const isPending =
+    createTemplate.isPending ||
+    updateTemplate.isPending ||
+    uploadImage.isPending;
 
   useEffect(() => {
     if (template) {
       setName(template.name);
-      setDescription(template.description || "");
       setPromptText(template.prompt_text);
-      setCategory(template.category);
+      setCategory(template.category || "");
       setIsActive(template.is_active);
-      setRequiredImages(template.required_images ?? 0);
-      setOptionalImages(template.optional_images ?? 0);
-      setOutputLabel(template.output_label || "");
-      try {
-        setImageLabels(
-          template.image_labels ? JSON.parse(template.image_labels) : [],
-        );
-      } catch {
-        setImageLabels([]);
-      }
+      setImageSlots(parseJson<ImageSlot[]>(template.image_slots, []));
+      setTextFields(parseJson<TextFieldSlot[]>(template.text_fields, []));
+      setBeforePreview(template.example_before_url || null);
+      setAfterPreview(template.example_after_url || null);
+      setBeforeFile(null);
+      setAfterFile(null);
     } else {
       setName("");
-      setDescription("");
       setPromptText("");
-      setCategory("humour");
+      setCategory("");
       setIsActive(true);
-      setRequiredImages(0);
-      setOptionalImages(0);
-      setOutputLabel("");
-      setImageLabels([]);
+      setImageSlots([]);
+      setTextFields([]);
+      setBeforePreview(null);
+      setAfterPreview(null);
+      setBeforeFile(null);
+      setAfterFile(null);
     }
   }, [template, open]);
+
+  function slugify(text: string): string {
+    return text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  async function handleQuickCreateCategory(name: string) {
+    const slug = slugify(name);
+    if (!slug) return;
+    try {
+      await createCategory.mutateAsync({ name, slug, is_active: true });
+      setCategory(slug);
+      setCatPopoverOpen(false);
+      setCatSearch("");
+      toast({ title: `Catégorie "${name}" créée` });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  // --- Image slots ---
+  function addImageSlot() {
+    if (imageSlots.length >= 3) return;
+    setImageSlots((prev) => [...prev, { label: "", required: false }]);
+  }
+  function removeImageSlot(index: number) {
+    setImageSlots((prev) => prev.filter((_, i) => i !== index));
+  }
+  function updateImageSlot(index: number, updates: Partial<ImageSlot>) {
+    setImageSlots((prev) =>
+      prev.map((slot, i) => (i === index ? { ...slot, ...updates } : slot)),
+    );
+  }
+
+  // --- Text fields ---
+  function addTextField() {
+    if (textFields.length >= 5) return;
+    setTextFields((prev) => [...prev, { label: "", required: false }]);
+  }
+  function removeTextField(index: number) {
+    setTextFields((prev) => prev.filter((_, i) => i !== index));
+  }
+  function updateTextField(index: number, updates: Partial<TextFieldSlot>) {
+    setTextFields((prev) =>
+      prev.map((field, i) => (i === index ? { ...field, ...updates } : field)),
+    );
+  }
+
+  function handleFileSelect(
+    file: File,
+    setPreview: (url: string) => void,
+    setFile: (f: File) => void,
+  ) {
+    setFile(file);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+  }
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     const data = {
       name,
-      description: description || undefined,
       prompt_text: promptText,
-      category,
+      category: category || null,
       is_active: isActive,
-      required_images: requiredImages,
-      optional_images: optionalImages,
-      output_label: outputLabel || undefined,
-      image_labels:
-        imageLabels.length > 0 ? JSON.stringify(imageLabels) : undefined,
+      image_slots:
+        imageSlots.length > 0 ? JSON.stringify(imageSlots) : undefined,
+      text_fields:
+        textFields.length > 0 ? JSON.stringify(textFields) : undefined,
     };
 
     try {
+      let templateId: string;
       if (isEditing && template) {
         await updateTemplate.mutateAsync({ id: template.id, ...data });
+        templateId = template.id;
         toast({ title: "Template mis à jour" });
       } else {
-        await createTemplate.mutateAsync(data);
+        const created = await createTemplate.mutateAsync(data);
+        templateId = created.id;
         toast({ title: "Template créé" });
       }
+
+      // Upload example images if new files were selected
+      if (beforeFile) {
+        const b64 = await fileToBase64(beforeFile);
+        await uploadImage.mutateAsync({
+          id: templateId,
+          field: "example_before_url",
+          image: b64,
+        });
+      }
+      if (afterFile) {
+        const b64 = await fileToBase64(afterFile);
+        await uploadImage.mutateAsync({
+          id: templateId,
+          field: "example_after_url",
+          image: b64,
+        });
+      }
+
       onOpenChange(false);
     } catch (error: any) {
       toast({
@@ -125,199 +248,445 @@ export function TemplateFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Modifier le template" : "Nouveau template"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nom</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Photo embarrassante"
-              required
-              minLength={2}
-              maxLength={200}
-            />
-          </div>
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6 overflow-y-auto pr-1 flex-1"
+        >
+          {/* ── SECTION 1: Entrées utilisateur ── */}
+          <fieldset className="space-y-4 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">
+              Entrées demandées à l'utilisateur
+            </legend>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brève description du template..."
-              maxLength={500}
-              rows={2}
-            />
-          </div>
+            {/* Image slots */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Images</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Images que l'utilisateur devra fournir (max 3).
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addImageSlot}
+                  disabled={imageSlots.length >= 3}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Image
+                </Button>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="prompt_text">Texte du prompt</Label>
+              {imageSlots.map((slot, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-lg border p-3"
+                >
+                  <div className="flex-1 space-y-1">
+                    <Input
+                      value={slot.label}
+                      onChange={(e) =>
+                        updateImageSlot(idx, { label: e.target.value })
+                      }
+                      placeholder="Ex: ton visage, ta voiture…"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Switch
+                      checked={slot.required}
+                      onCheckedChange={(checked) =>
+                        updateImageSlot(idx, { required: checked })
+                      }
+                    />
+                    <span className="text-xs text-muted-foreground w-16">
+                      {slot.required ? "Requis" : "Facultatif"}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => removeImageSlot(idx)}
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Separator */}
+            {(imageSlots.length > 0 || textFields.length > 0) && (
+              <div className="border-t" />
+            )}
+
+            {/* Text fields */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Champs texte</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Champs que l'utilisateur pourra remplir (max 5). Utilisez{" "}
+                    <code className="bg-muted px-1 rounded text-[11px]">
+                      {"{text1}"}
+                    </code>
+                    ,{" "}
+                    <code className="bg-muted px-1 rounded text-[11px]">
+                      {"{text2}"}
+                    </code>
+                    … dans le prompt pour les injecter.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addTextField}
+                  disabled={textFields.length >= 5}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Texte
+                </Button>
+              </div>
+
+              {textFields.map((field, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Type className="h-4 w-4 text-muted-foreground" />
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                      {`{text${idx + 1}}`}
+                    </code>
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      value={field.label}
+                      onChange={(e) =>
+                        updateTextField(idx, { label: e.target.value })
+                      }
+                      placeholder="Ex: Prénom de la personne"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Switch
+                      checked={field.required}
+                      onCheckedChange={(checked) =>
+                        updateTextField(idx, { required: checked })
+                      }
+                    />
+                    <span className="text-xs text-muted-foreground w-16">
+                      {field.required ? "Requis" : "Facultatif"}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => removeTextField(idx)}
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+
+              {imageSlots.length === 0 && textFields.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-3 border border-dashed rounded-lg">
+                  Aucune entrée définie. Ajoutez des images ou des champs texte.
+                </p>
+              )}
+            </div>
+          </fieldset>
+
+          {/* ── SECTION 2: Prompt ── */}
+          <fieldset className="space-y-3 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">Prompt</legend>
             <Textarea
               id="prompt_text"
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
-              placeholder="Ex: Une photo réaliste de {{nom}} en train de {{action}} dans {{lieu}}"
+              placeholder="Ex: Une photo réaliste de {text1} en train de {text2}…"
               required
               minLength={10}
               maxLength={2000}
-              rows={4}
+              rows={5}
             />
-            <p className="text-xs text-muted-foreground">
-              Utilisez {"{{variable}}"} pour les champs que l'utilisateur pourra
-              personnaliser.
-            </p>
-          </div>
+            {textFields.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Variables disponibles :{" "}
+                {textFields.map((f, i) => (
+                  <code
+                    key={i}
+                    className="bg-muted px-1 rounded text-[11px] mr-1"
+                  >
+                    {`{text${i + 1}}`}
+                  </code>
+                ))}
+              </p>
+            )}
+          </fieldset>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Catégorie</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* ── SECTION 3: Paramètres généraux ── */}
+          <fieldset className="space-y-4 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">
+              Paramètres généraux
+            </legend>
 
             <div className="space-y-2">
-              <Label htmlFor="output_label">Label de sortie</Label>
+              <Label htmlFor="name">Titre</Label>
               <Input
-                id="output_label"
-                value={outputLabel}
-                onChange={(e) => setOutputLabel(e.target.value)}
-                placeholder="Ex: PV, Echo, SMS…"
-                maxLength={50}
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Photo embarrassante"
+                required
+                minLength={2}
+                maxLength={200}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="required_images">Images requises</Label>
-              <Select
-                value={String(requiredImages)}
-                onValueChange={(v) => {
-                  const val = Number(v);
-                  setRequiredImages(val);
-                  if (val + optionalImages > 3) setOptionalImages(3 - val);
-                  const totalNew = val + Math.min(optionalImages, 3 - val);
-                  setImageLabels((prev) => {
-                    const next = [...prev];
-                    next.length = totalNew;
-                    for (let j = 0; j < totalNew; j++)
-                      if (!next[j]) next[j] = "";
-                    return next;
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[0, 1, 2, 3].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Catégorie</Label>
+                <Popover open={catPopoverOpen} onOpenChange={setCatPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={catPopoverOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {category
+                        ? categoriesList?.find((c) => c.slug === category)
+                            ?.name || category
+                        : "Aucune catégorie"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Rechercher ou créer…"
+                        value={catSearch}
+                        onValueChange={setCatSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty className="py-2 px-3 text-sm text-muted-foreground">
+                          Aucune catégorie trouvée.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="__none__"
+                            onSelect={() => {
+                              setCategory("");
+                              setCatPopoverOpen(false);
+                              setCatSearch("");
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !category ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            <span className="text-muted-foreground italic">
+                              Aucune catégorie
+                            </span>
+                          </CommandItem>
+                          {(categoriesList || [])
+                            .filter(
+                              (cat) =>
+                                cat.name
+                                  .toLowerCase()
+                                  .includes(catSearch.toLowerCase()) ||
+                                cat.slug
+                                  .toLowerCase()
+                                  .includes(catSearch.toLowerCase()),
+                            )
+                            .map((cat) => (
+                              <CommandItem
+                                key={cat.slug}
+                                value={cat.slug}
+                                onSelect={() => {
+                                  setCategory(cat.slug);
+                                  setCatPopoverOpen(false);
+                                  setCatSearch("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    category === cat.slug
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                        {catSearch.trim() &&
+                          !(categoriesList || []).some(
+                            (c) =>
+                              c.name.toLowerCase() ===
+                              catSearch.trim().toLowerCase(),
+                          ) && (
+                            <CommandGroup>
+                              <CommandItem
+                                onSelect={() =>
+                                  handleQuickCreateCategory(catSearch.trim())
+                                }
+                                className="text-primary"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Créer « {catSearch.trim()} »
+                              </CommandItem>
+                            </CommandGroup>
+                          )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="optional_images">Images optionnelles</Label>
-              <Select
-                value={String(optionalImages)}
-                onValueChange={(v) => {
-                  const val = Number(v);
-                  setOptionalImages(val);
-                  const totalNew = requiredImages + val;
-                  setImageLabels((prev) => {
-                    const next = [...prev];
-                    next.length = totalNew;
-                    for (let j = 0; j < totalNew; j++)
-                      if (!next[j]) next[j] = "";
-                    return next;
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from(
-                    { length: 3 - requiredImages + 1 },
-                    (_, i) => i,
-                  ).map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Total max : 3 images
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="is_active">Actif</Label>
-              <div className="flex items-center gap-2 pt-2">
-                <Switch
-                  id="is_active"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {isActive ? "Visible" : "Masqué"}
-                </span>
+              <div className="space-y-2">
+                <Label htmlFor="is_active">Visibilité</Label>
+                <div className="flex items-center gap-2 pt-2">
+                  <Switch
+                    id="is_active"
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {isActive ? "Visible" : "Masqué"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {requiredImages + optionalImages > 0 && (
+            {/* Example images (before / after) */}
             <div className="space-y-2">
-              <Label>Consigne pour chaque image</Label>
+              <Label>Images d'illustration (avant / après)</Label>
               <p className="text-xs text-muted-foreground">
-                Texte affiché à l'utilisateur pour chaque emplacement d'image.
+                Photos d'exemple affichées dans la galerie de pranks.
               </p>
-              {Array.from(
-                { length: requiredImages + optionalImages },
-                (_, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground w-20 shrink-0">
-                      Image {idx + 1}{" "}
-                      {idx < requiredImages ? "(requis)" : "(optionnel)"}
-                    </span>
-                    <Input
-                      value={imageLabels[idx] || ""}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Before */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Avant
+                  </span>
+                  <div
+                    onClick={() => beforeInputRef.current?.click()}
+                    className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
+                  >
+                    <input
+                      ref={beforeInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
                       onChange={(e) => {
-                        setImageLabels((prev) => {
-                          const next = [...prev];
-                          next[idx] = e.target.value;
-                          return next;
-                        });
+                        const f = e.target.files?.[0];
+                        if (f)
+                          handleFileSelect(f, setBeforePreview, setBeforeFile);
                       }}
-                      placeholder={`Ex: ton visage, ta voiture…`}
-                      maxLength={100}
                     />
+                    {beforePreview ? (
+                      <>
+                        <img
+                          src={beforePreview}
+                          alt="Avant"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBeforePreview(null);
+                            setBeforeFile(null);
+                          }}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                        <ImageUp className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          Photo avant
+                        </span>
+                      </div>
+                    )}
                   </div>
-                ),
-              )}
+                </div>
+                {/* After */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Après
+                  </span>
+                  <div
+                    onClick={() => afterInputRef.current?.click()}
+                    className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
+                  >
+                    <input
+                      ref={afterInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f)
+                          handleFileSelect(f, setAfterPreview, setAfterFile);
+                      }}
+                    />
+                    {afterPreview ? (
+                      <>
+                        <img
+                          src={afterPreview}
+                          alt="Après"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAfterPreview(null);
+                            setAfterFile(null);
+                          }}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                        <ImageUp className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          Photo après
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </fieldset>
 
           <DialogFooter>
             <Button

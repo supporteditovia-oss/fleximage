@@ -39,18 +39,55 @@ export type Profile = typeof profiles.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;
 
+// --- Categories ---
+export const categories = pgTable("categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  is_active: boolean("is_active").default(true).notNull(),
+  display_order: integer("display_order").default(0).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const insertCategorySchema = createInsertSchema(categories, {
+  name: z.string().min(2).max(100),
+  slug: z.string().min(2).max(100),
+  is_active: z.boolean().optional().default(true),
+  display_order: z.number().int().min(0).optional().default(0),
+});
+
+export const updateCategorySchema = insertCategorySchema
+  .partial()
+  .omit({ id: true as never });
+
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+
+// --- Image Slot type ---
+export interface ImageSlot {
+  label: string;
+  required: boolean;
+}
+
+// --- Text Field Slot type ---
+export interface TextFieldSlot {
+  label: string;
+  required: boolean;
+}
+
 // --- Prompt Templates ---
 export const promptTemplates = pgTable("prompt_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  description: text("description"),
   prompt_text: text("prompt_text").notNull(),
-  category: text("category").notNull(),
+  category: text("category"),
   is_active: boolean("is_active").default(true).notNull(),
-  required_images: integer("required_images").default(0).notNull(),
-  optional_images: integer("optional_images").default(0).notNull(),
-  output_label: text("output_label"),
-  image_labels: text("image_labels"),
+  image_slots: text("image_slots"),
+  text_fields: text("text_fields"),
+  example_before_url: text("example_before_url"),
+  example_after_url: text("example_after_url"),
   created_by: uuid("created_by").references(() => profiles.id, {
     onDelete: "set null",
   }),
@@ -64,13 +101,12 @@ export const promptTemplates = pgTable("prompt_templates", {
 
 export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
   name: z.string().min(2).max(200),
-  description: z.string().max(500).optional(),
   prompt_text: z.string().min(10).max(2000),
-  category: z.string().min(2).max(100),
-  required_images: z.number().int().min(0).max(3).optional().default(0),
-  optional_images: z.number().int().min(0).max(3).optional().default(0),
-  output_label: z.string().max(50).optional(),
-  image_labels: z.string().max(1000).optional(),
+  category: z.string().max(100).optional().nullable(),
+  image_slots: z.string().max(2000).optional(),
+  text_fields: z.string().max(2000).optional(),
+  example_before_url: z.string().max(500).optional(),
+  example_after_url: z.string().max(500).optional(),
 });
 
 export const updatePromptTemplateSchema = insertPromptTemplateSchema

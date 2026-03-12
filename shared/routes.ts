@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { insertProfileSchema, insertPromptTemplateSchema } from "./schema";
+import {
+  insertProfileSchema,
+  insertPromptTemplateSchema,
+  insertCategorySchema,
+} from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -64,6 +68,10 @@ export const api = {
       method: "DELETE" as const,
       path: "/api/templates/:id",
     },
+    uploadImage: {
+      method: "POST" as const,
+      path: "/api/templates/:id/upload-image",
+    },
   },
   pranks: {
     generate: {
@@ -91,6 +99,24 @@ export const api = {
     credits: {
       method: "POST" as const,
       path: "/api/admin/credits",
+    },
+  },
+  categories: {
+    list: {
+      method: "GET" as const,
+      path: "/api/categories",
+    },
+    create: {
+      method: "POST" as const,
+      path: "/api/categories",
+    },
+    update: {
+      method: "PATCH" as const,
+      path: "/api/categories/:id",
+    },
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/categories/:id",
     },
   },
 };

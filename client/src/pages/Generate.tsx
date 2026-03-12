@@ -16,7 +16,25 @@ import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { useTemplates } from "@/hooks/use-templates";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
-import type { PromptTemplate } from "@shared/schema";
+import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
+
+function parseImageSlots(template: PromptTemplate | null): ImageSlot[] {
+  if (!template?.image_slots) return [];
+  try {
+    return JSON.parse(template.image_slots) as ImageSlot[];
+  } catch {
+    return [];
+  }
+}
+
+function parseTextFields(template: PromptTemplate | null): TextFieldSlot[] {
+  if (!template?.text_fields) return [];
+  try {
+    return JSON.parse(template.text_fields) as TextFieldSlot[];
+  } catch {
+    return [];
+  }
+}
 
 export default function Generate() {
   const [search, setSearch] = useState("");
@@ -27,6 +45,7 @@ export default function Generate() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] =
     useState<PromptTemplate | null>(null);
+  const [textValues, setTextValues] = useState<Record<number, string>>({});
   const generateDirect = useGenerateDirectPrank();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
   const { toast } = useToast();
@@ -38,11 +57,9 @@ export default function Generate() {
     setImages((prev) => {
       const next = [...prev];
       next[index] = { url, file };
-      // Auto-add a new empty slot when all are filled (like Hero)
-      const maxSlots = selectedTemplate
-        ? (selectedTemplate.required_images ?? 0) +
-          (selectedTemplate.optional_images ?? 0)
-        : 3;
+      // Auto-add a new empty slot when all are filled
+      const slots = parseImageSlots(selectedTemplate);
+      const maxSlots = selectedTemplate ? slots.length : 3;
       const allFilled = !next.some((img) => img === null);
       if (allFilled && next.length < maxSlots) {
         next.push(null);
@@ -52,16 +69,15 @@ export default function Generate() {
   };
 
   const addSlot = () => {
-    const maxSlots = selectedTemplate
-      ? (selectedTemplate.required_images ?? 0) +
-        (selectedTemplate.optional_images ?? 0)
-      : 3;
+    const slots = parseImageSlots(selectedTemplate);
+    const maxSlots = selectedTemplate ? slots.length : 3;
     if (images.length < maxSlots) setImages((prev) => [...prev, null]);
   };
 
   const removeSlot = (index: number) => {
+    const slots = parseImageSlots(selectedTemplate);
     const minSlots = selectedTemplate
-      ? (selectedTemplate.required_images ?? 0)
+      ? slots.filter((s) => s.required).length
       : 0;
     setImages((prev) => {
       const next = prev.filter((_, i) => i !== index);
@@ -72,14 +88,16 @@ export default function Generate() {
   };
 
   const selectTemplate = (tpl: PromptTemplate) => {
-    const total = (tpl.required_images ?? 0) + (tpl.optional_images ?? 0);
-    const slots = Math.max(
-      tpl.required_images ?? 0,
-      total > 0 ? (tpl.required_images ?? 0) : 0,
+    const slots = parseImageSlots(tpl);
+    const requiredCount = slots.filter((s) => s.required).length;
+    const initSlots = Math.max(
+      requiredCount,
+      slots.length > 0 ? requiredCount : 0,
     );
     setSelectedTemplate(tpl);
     setPrompt(tpl.prompt_text);
-    setImages(slots > 0 ? Array(slots).fill(null) : [null]);
+    setImages(initSlots > 0 ? Array(initSlots).fill(null) : [null]);
+    setTextValues({});
     topRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -87,6 +105,7 @@ export default function Generate() {
     setSelectedTemplate(null);
     setPrompt("");
     setImages([null]);
+    setTextValues({});
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -97,10 +116,8 @@ export default function Generate() {
       reader.readAsDataURL(file);
     });
 
-  const filtered = (templates || []).filter(
-    (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.description || "").toLowerCase().includes(search.toLowerCase()),
+  const filtered = (templates || []).filter((t) =>
+    t.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleGenerate = async () => {
@@ -121,8 +138,16 @@ export default function Generate() {
         files.map((img) => fileToBase64(img.file)),
       );
 
+      // Inject text field values into the prompt
+      let finalPrompt = prompt.trim();
+      const fields = parseTextFields(selectedTemplate);
+      fields.forEach((_, idx) => {
+        const val = textValues[idx] || "";
+        finalPrompt = finalPrompt.replaceAll(`{text${idx + 1}}`, val);
+      });
+
       const result = await generateDirect.mutateAsync({
-        prompt: prompt.trim(),
+        prompt: finalPrompt,
         aspect_ratio: "9:16",
         images: base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedTemplate?.id,
@@ -151,6 +176,7 @@ export default function Generate() {
     setPrompt("");
     setImages([null]);
     setSelectedTemplate(null);
+    setTextValues({});
   };
 
   // -- Generation in progress / result view --
@@ -179,10 +205,15 @@ export default function Generate() {
   return (
     <div className="space-y-8">
       {/* Image upload zone + prompt */}
-      <div ref={topRef} className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-6rem)] pt-8 pb-4">
+      <div
+        ref={topRef}
+        className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-6rem)] pt-8 pb-4"
+      >
         <div className="relative">
           <h1 className="font-display text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight text-center">
-            {selectedTemplate ? selectedTemplate.name : "Crée ton prank rapidement"}
+            {selectedTemplate
+              ? selectedTemplate.name
+              : "Crée ton prank rapidement"}
           </h1>
           {!selectedTemplate && (
             <svg
@@ -190,7 +221,11 @@ export default function Generate() {
               preserveAspectRatio="xMidYMid meet"
               className="animate-arrow-bounce opacity-70 absolute -right md:-right-14 top-12 md:top-10 h-[70px] md:h-[100px] w-auto"
             >
-              <g transform="translate(512,512) scale(-0.1,-0.1)" fill="#F97316" stroke="none">
+              <g
+                transform="translate(512,512) scale(-0.1,-0.1)"
+                fill="#F97316"
+                stroke="none"
+              >
                 <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
               </g>
             </svg>
@@ -212,8 +247,10 @@ export default function Generate() {
           <div className="w-full flex justify-center px-4 -mb-7 md:-mb-8">
             <div className="flex items-end justify-center gap-2 md:gap-3 w-full max-w-md">
               {images.map((img, i) => {
-                const reqCount = selectedTemplate?.required_images ?? 0;
-                const isRequired = i < reqCount;
+                const slots = parseImageSlots(selectedTemplate);
+                const isRequired = selectedTemplate
+                  ? (slots[i]?.required ?? false)
+                  : false;
                 return (
                   <div
                     key={i}
@@ -252,13 +289,8 @@ export default function Generate() {
                         />
                         {selectedTemplate ? (
                           (() => {
-                            let labels: string[] = [];
-                            try {
-                              labels = selectedTemplate.image_labels
-                                ? JSON.parse(selectedTemplate.image_labels)
-                                : [];
-                            } catch {}
-                            const label = labels[i] || "";
+                            const slots = parseImageSlots(selectedTemplate);
+                            const label = slots[i]?.label || "";
                             return (
                               <>
                                 <div
@@ -270,7 +302,9 @@ export default function Generate() {
                                 >
                                   <ImageUp
                                     className={`w-7 h-7 transition-colors ${
-                                      isRequired ? "text-secondary" : "text-primary"
+                                      isRequired
+                                        ? "text-secondary"
+                                        : "text-primary"
                                     }`}
                                   />
                                 </div>
@@ -347,9 +381,50 @@ export default function Generate() {
             </div>
           </div>
 
+          {/* Text fields for selected template */}
+          {selectedTemplate &&
+            (() => {
+              const fields = parseTextFields(selectedTemplate);
+              if (fields.length === 0) return null;
+              return (
+                <div className="relative z-10 w-full flex justify-center px-4">
+                  <div className="w-full max-w-md space-y-2">
+                    {fields.map((field, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-2xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-4 py-2 shadow-sm"
+                      >
+                        <label className="text-xs text-muted-foreground shrink-0 min-w-[80px]">
+                          {field.label || `Texte ${idx + 1}`}
+                          {field.required && (
+                            <span className="text-destructive ml-0.5">*</span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={textValues[idx] || ""}
+                          onChange={(e) =>
+                            setTextValues((prev) => ({
+                              ...prev,
+                              [idx]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.label || `Texte ${idx + 1}`}
+                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+                          required={field.required}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
           {/* Voir les templates link */}
           <button
-            onClick={() => galleryRef.current?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() =>
+              galleryRef.current?.scrollIntoView({ behavior: "smooth" })
+            }
             className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-1"
           >
             Voir les templates
@@ -359,7 +434,10 @@ export default function Generate() {
       </div>
 
       {/* Pranks Gallery */}
-      <div ref={galleryRef} className="flex flex-col gap-6 scroll-mt-20 max-w-3xl mx-auto">
+      <div
+        ref={galleryRef}
+        className="flex flex-col gap-6 scroll-mt-20 max-w-3xl mx-auto"
+      >
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
           Choisis parmi les pranks existants
         </h2>
@@ -377,7 +455,7 @@ export default function Generate() {
         </div>
 
         {/* Prank grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {templatesLoading && (
             <div className="col-span-full flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -390,58 +468,82 @@ export default function Generate() {
           )}
           {filtered.map((tpl) => {
             const isSelected = selectedTemplate?.id === tpl.id;
-            const reqImages = tpl.required_images ?? 0;
-            const optImages = tpl.optional_images ?? 0;
+            const hasBothImages =
+              !!tpl.example_before_url && !!tpl.example_after_url;
+
             return (
               <div
                 key={tpl.id}
                 onClick={() =>
                   isSelected ? deselectTemplate() : selectTemplate(tpl)
                 }
-                className={`group cursor-pointer flex flex-col rounded-2xl border p-4 gap-3 transition-all hover:shadow-md hover:-translate-y-0.5 ${
+                className={`group cursor-pointer flex flex-col rounded-2xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
                   isSelected
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-border/60 bg-card hover:border-primary/40"
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border/60 hover:border-primary/40"
                 }`}
               >
-                {/* Mini preview row */}
-                <div className="flex items-center gap-1.5">
-                  {Array.from({ length: Math.max(reqImages + optImages, 1) }, (_, idx) => (
-                    <div
-                      key={idx}
-                      className={`h-10 aspect-[9/16] rounded-lg border flex items-center justify-center ${
-                        idx < reqImages
-                          ? "border-secondary/40 bg-secondary/10"
-                          : "border-border bg-muted/60"
-                      }`}
-                    >
-                      <ImageUp className={`w-3 h-3 ${idx < reqImages ? "text-secondary" : "text-muted-foreground/60"}`} />
+                {/* Image area */}
+                {hasBothImages ? (
+                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-muted">
+                    {/* After image (base layer, visible by default) */}
+                    <img
+                      src={tpl.example_after_url!}
+                      alt={`${tpl.name} — après`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {/* Before image (overlay, clips on hover via CSS) */}
+                    <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                      <img
+                        src={tpl.example_before_url!}
+                        alt={`${tpl.name} — avant`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
-                  ))}
-                  <span className="text-muted-foreground/50 text-[10px] mx-0.5">→</span>
-                  <div className="h-10 aspect-[9/16] rounded-lg border border-primary/30 bg-primary/5 flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-primary" />
+                    {/* Divider line */}
+                    <div className="absolute inset-y-0 right-0 group-hover:right-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none" />
+                    {/* Labels */}
+                    <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Avant
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Après
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : tpl.example_after_url ? (
+                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-muted">
+                    <img
+                      src={tpl.example_after_url}
+                      alt={tpl.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative aspect-[9/16] w-full bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-primary/30" />
+                  </div>
+                )}
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
+                {/* Text overlay at bottom */}
+                <div className="p-3 bg-card">
                   <p className="text-sm font-semibold truncate">{tpl.name}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mt-0.5">
-                    {tpl.description}
-                  </p>
+                  <span
+                    className={`text-[11px] font-semibold transition-all ${
+                      isSelected
+                        ? "text-primary"
+                        : "text-primary/0 group-hover:text-primary/100"
+                    }`}
+                  >
+                    {isSelected ? "Sélectionné ✓" : "Essayer →"}
+                  </span>
                 </div>
-
-                {/* Action hint */}
-                <span
-                  className={`text-[11px] font-semibold transition-all ${
-                    isSelected
-                      ? "text-primary"
-                      : "text-primary/0 group-hover:text-primary/100"
-                  }`}
-                >
-                  {isSelected ? "Sélectionné ✓" : "Essayer →"}
-                </span>
               </div>
             );
           })}

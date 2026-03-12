@@ -58,7 +58,10 @@ export function useCreateTemplate() {
 export function useUpdateTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: {
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
       id: string;
       name?: string;
       description?: string;
@@ -84,6 +87,30 @@ export function useDeleteTemplate() {
     mutationFn: async (id: string) => {
       const res = await authFetch(`/api/templates/${id}`, {
         method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+    },
+  });
+}
+
+export function useUploadTemplateImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      field,
+      image,
+    }: {
+      id: string;
+      field: "example_before_url" | "example_after_url";
+      image: string;
+    }) => {
+      const res = await authFetch(`/api/templates/${id}/upload-image`, {
+        method: "POST",
+        body: JSON.stringify({ field, image }),
       });
       return res.json();
     },

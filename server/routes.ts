@@ -7,6 +7,8 @@ import { validateRequest } from "./lib/validate";
 import {
   insertPromptTemplateSchema,
   updatePromptTemplateSchema,
+  insertCategorySchema,
+  updateCategorySchema,
 } from "@shared/schema";
 import { logger } from "./lib/logger";
 import {
@@ -107,6 +109,135 @@ export async function registerRoutes(
   app.get(api.health.path, (_req, res) => {
     res.json({ status: "ok" });
   });
+
+  // =============================================
+  // CATEGORY ENDPOINTS
+  // =============================================
+
+  // GET /api/categories
+  app.get(api.categories.list.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("role")
+        .eq("id", authReq.userId)
+        .single();
+
+      let query = supabaseAdmin
+        .from("categories")
+        .select("*")
+        .order("display_order", { ascending: true });
+
+      if (profile?.role !== "admin") {
+        query = query.eq("is_active", true);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      logger.error({ err: error }, "Error listing categories");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/categories (Admin only)
+  app.post(
+    api.categories.create.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(insertCategorySchema),
+    async (req, res) => {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data, error } = await supabaseAdmin
+          .from("categories")
+          .insert(req.body)
+          .select()
+          .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error creating category");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // PATCH /api/categories/:id (Admin only)
+  app.patch(
+    api.categories.update.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(updateCategorySchema),
+    async (req, res) => {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data, error } = await supabaseAdmin
+          .from("categories")
+          .update(req.body)
+          .eq("id", req.params.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        res.json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error updating category");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // DELETE /api/categories/:id (Admin only)
+  app.delete(
+    api.categories.delete.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+
+        // Check if any active template uses this category
+        const { data: category } = await supabaseAdmin
+          .from("categories")
+          .select("slug")
+          .eq("id", req.params.id)
+          .single();
+
+        if (category) {
+          const { data: usedBy } = await supabaseAdmin
+            .from("prompt_templates")
+            .select("id")
+            .eq("category", category.slug)
+            .eq("is_active", true)
+            .limit(1);
+
+          if (usedBy && usedBy.length > 0) {
+            return res.status(400).json({
+              message:
+                "Cette catégorie est utilisée par des templates actifs. Désactivez-les d'abord.",
+            });
+          }
+        }
+
+        const { error } = await supabaseAdmin
+          .from("categories")
+          .delete()
+          .eq("id", req.params.id);
+
+        if (error) throw error;
+        res.json({ message: "Catégorie supprimée" });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error deleting category");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   // =============================================
   // TEMPLATE ENDPOINTS
@@ -231,6 +362,53 @@ export async function registerRoutes(
         res.json({ message: "Template supprimé" });
       } catch (error: any) {
         logger.error({ err: error }, "Error deleting template");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // POST /api/templates/:id/upload-image (Admin only)
+  const uploadImageSchema = z.object({
+    field: z.enum(["example_before_url", "example_after_url"]),
+    image: z.string().min(1),
+  });
+
+  app.post(
+    api.templates.uploadImage.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(uploadImageSchema),
+    async (req, res) => {
+      try {
+        const { field, image } = req.body;
+        const templateId = req.params.id;
+
+        const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!match) {
+          return res.status(400).json({ message: "Format d'image invalide" });
+        }
+
+        const contentType = match[1];
+        const base64Data = match[2];
+        const buffer = Buffer.from(base64Data, "base64");
+        const ext = contentType.split("/")[1] || "jpg";
+        const key = `templates/${templateId}/${field}.${ext}`;
+
+        const { uploadToR2 } = await import("./lib/r2-client");
+        const publicUrl = await uploadToR2(key, buffer, contentType);
+
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data, error } = await supabaseAdmin
+          .from("prompt_templates")
+          .update({ [field]: publicUrl, updated_at: new Date().toISOString() })
+          .eq("id", templateId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        res.json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error uploading template image");
         res.status(500).json({ message: error.message });
       }
     },
