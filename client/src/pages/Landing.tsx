@@ -7,7 +7,7 @@ import Footer from "@/components/marketing/Footer";
 
 export default function Landing() {
   return (
-    <div className="bg-background relative overflow-hidden">
+    <div className="relative overflow-hidden">
       {/* Noise texture overlay - hidden on mobile for performance */}
       <svg
         className="fixed inset-0 w-full h-full pointer-events-none hidden md:block"

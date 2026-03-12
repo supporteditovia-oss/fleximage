@@ -33,7 +33,7 @@ export default function ImageMarquee() {
     <section className="py-16 md:py-24 overflow-hidden">
       <div className="max-w-3xl mx-auto px-4 mb-10">
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
-          Des résultats bluffants
+          Des résultats <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">bluffants</span>
         </h2>
         <p className="text-sm md:text-base text-muted-foreground text-center mt-2">
           Quelques exemples de pranks générés par nos utilisateurs

@@ -24,13 +24,60 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
+function TypewriterInput({
+  prompt,
+  onPromptChange,
+  onShuffle,
+  onSubmit,
+}: {
+  prompt: string;
+  onPromptChange: (value: string) => void;
+  onShuffle: () => void;
+  onSubmit: () => void;
+}) {
+  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
+  return (
+    <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+      <input
+        type="text"
+        value={prompt}
+        onChange={(e) => onPromptChange(e.target.value)}
+        placeholder={placeholderText || "Décris ton prank…"}
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+      />
+      <button
+        onClick={onShuffle}
+        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+        title="Idée aléatoire"
+      >
+        <Shuffle className="w-4 h-4" />
+      </button>
+      <button
+        className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
+        onClick={onSubmit}
+        title="Créer"
+      >
+        <ArrowRight className="w-4 h-4" />
+      </button>
+      <Button
+        size="sm"
+        className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+        onClick={onSubmit}
+      >
+        Créer
+      </Button>
+    </div>
+  );
+}
+
+const MemoizedTypewriterInput = React.memo(TypewriterInput);
+
 export default function HeroSection() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = React.useState("");
   const [images, setImages] = React.useState<(string | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
-  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -80,8 +127,9 @@ export default function HeroSection() {
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
       {/* Abstract Background Shapes */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-3xl -z-10" />
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10" />
 
       <motion.div
         variants={containerVariants}
@@ -96,16 +144,16 @@ export default function HeroSection() {
             variants={itemVariants}
             className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
           >
-            Crée des <span className="text-primary">pranks</span> hyper réalistes
+            Crée des <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">pranks</span> hyper réalistes
           </motion.h1>
           <motion.div
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
             className="hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
-          >
+          > 
             <svg
               viewBox="0 0 512 512"
               preserveAspectRatio="xMidYMid meet"
-              className="animate-arrow-bounce h-[92px] md:h-[112px] w-auto text-primary"
+              className="animate-arrow-bounce h-[92px] md:h-[112px] w-auto text-secondary"
             >
               <g
                 transform="translate(512,512) scale(-0.1,-0.1)"
@@ -204,36 +252,12 @@ export default function HeroSection() {
             variants={itemVariants}
             className="relative z-10 w-full flex justify-center px-4"
           >
-            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={placeholderText || "Décris ton prank…"}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
-              />
-              <button
-                onClick={shuffleIdea}
-                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
-                title="Idée aléatoire"
-              >
-                <Shuffle className="w-4 h-4" />
-              </button>
-              <button
-                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all"
-                onClick={() => navigate("/register")}
-                title="Créer"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <Button
-                size="sm"
-                className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-                onClick={() => navigate("/register")}
-              >
-                Créer
-              </Button>
-            </div>
+            <MemoizedTypewriterInput
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              onShuffle={shuffleIdea}
+              onSubmit={() => navigate("/register")}
+            />
           </motion.div>
 
           {/* Idées de pranks trigger */}
@@ -243,7 +267,7 @@ export default function HeroSection() {
           >
             <button
               onClick={() => setAccordionOpen(!accordionOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/40 bg-card/90 backdrop-blur text-sm font-semibold text-foreground hover:border-primary/50 hover:text-primary active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/40 bg-card/90 backdrop-blur text-sm font-semibold text-foreground hover:border-secondary/50 hover:text-secondary active:scale-95 transition-all"
             >
               <Sparkles className="w-4 h-4" />
               Idées de pranks
@@ -275,7 +299,7 @@ export default function HeroSection() {
                             setPrompt(chip.example);
                             setAccordionOpen(false);
                           }}
-                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-white hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                         >
                           <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate">{chip.label}</span>
@@ -318,7 +342,7 @@ export default function HeroSection() {
                           setPrompt(chip.example);
                           setAccordionOpen(false);
                         }}
-                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-gray-200 bg-white hover:border-primary/50 hover:bg-primary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-gray-200 bg-white hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                       >
                         <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{chip.label}</span>

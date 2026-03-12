@@ -6,7 +6,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
     <button
       onClick={() => setOpen(!open)}
-      className="w-full text-left rounded-2xl border border-border bg-card px-5 py-4 shadow-sm hover:shadow-md transition-all"
+      className="w-full text-left rounded-2xl border border-border bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-secondary/40 transition-all"
     >
       <div className="flex items-center justify-between gap-4">
         <span className="text-sm font-semibold">{question}</span>
@@ -55,7 +55,7 @@ export default function FaqSection() {
     <section className="py-16 md:py-24 px-4">
       <div className="max-w-2xl mx-auto">
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center mb-10">
-          Questions fréquentes
+          Questions <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">fréquentes</span>
         </h2>
         <div className="space-y-3">
           {faqs.map((faq, i) => (

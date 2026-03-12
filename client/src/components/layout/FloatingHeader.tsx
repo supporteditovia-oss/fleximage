@@ -109,7 +109,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 <Link href="/register">
                   <Button
                     size="sm"
-                    className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform"
+                    className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform bg-gradient-to-r from-primary to-secondary hover:opacity-90"
                   >
                     Commencer
                   </Button>

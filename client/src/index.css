@@ -4,6 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Fix: react-remove-scroll-bar injects a dynamic <style> with
+ *   body[data-scroll-locked] { margin-right: 17px !important; }
+ * Since both use !important, the later (injected) one wins at equal specificity.
+ * Double-attribute selector gives us HIGHER specificity to always win.
+ * html overflow-y:scroll keeps the scrollbar visible so there's no gap to compensate.
+ */
+html {
+  overflow-y: scroll !important;
+}
+body[data-scroll-locked][data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
 :root {
   /* Vibrant SaaS Palette - Light Mode Only */
   --font-sans: "DM Sans", sans-serif;
@@ -18,16 +33,16 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 223 100% 59%;
+  --primary: 20 100% 50%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 25 100% 50%;
+  --secondary: 23 100% 63%;
   --secondary-foreground: 0 0% 100%;
 
   --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
 
-  --accent: 25 100% 50%;
+  --accent: 23 100% 63%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
@@ -35,7 +50,7 @@
 
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 223 100% 59%;
+  --ring: 20 100% 50%;
 
   --radius: 0.75rem;
 
@@ -46,19 +61,20 @@
   --sidebar-accent: 240 4.8% 95.9%;
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 223 100% 59%;
+  --sidebar-ring: 20 100% 50%;
 }
 
 @layer base {
-  html {
-    overflow-y: scroll;
-  }
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
+    background-image:
+      linear-gradient(rgba(255, 85, 2, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 85, 2, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 
   h1,
@@ -157,6 +173,36 @@
   initial-value: 0deg;
 }
 
+/* Drag-and-drop crosshatch pattern on hover */
+.dnd-hover {
+  position: relative;
+}
+.dnd-hover > *:not([type="file"]) {
+  position: relative;
+  z-index: 6;
+}
+.dnd-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 8px,
+      rgba(255, 85, 2, 0.07) 8px,
+      rgba(255, 85, 2, 0.07) 9px
+    );
+}
+.dnd-hover:hover::after {
+  opacity: 1;
+}
+
 @keyframes glow-rotate {
   to { --glow-angle: 360deg; }
 }
@@ -182,6 +228,7 @@
   mask-composite: exclude;
   animation: glow-rotate 3s linear infinite;
   pointer-events: none;
+  will-change: transform;
 }
 
 /* Animated glowing border for required image slots (red/orange) */
