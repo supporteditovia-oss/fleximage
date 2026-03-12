@@ -79,6 +79,7 @@ export function TemplateFormDialog({
   const [isActive, setIsActive] = useState(true);
   const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
   const [textFields, setTextFields] = useState<TextFieldSlot[]>([]);
+  const [keywords, setKeywords] = useState("");
   const [beforePreview, setBeforePreview] = useState<string | null>(null);
   const [afterPreview, setAfterPreview] = useState<string | null>(null);
   const [beforeFile, setBeforeFile] = useState<File | null>(null);
@@ -98,6 +99,7 @@ export function TemplateFormDialog({
       setPromptText(template.prompt_text);
       setCategory(template.category || "");
       setIsActive(template.is_active);
+      setKeywords(template.keywords || "");
       setImageSlots(parseJson<ImageSlot[]>(template.image_slots, []));
       setTextFields(parseJson<TextFieldSlot[]>(template.text_fields, []));
       setBeforePreview(template.example_before_url || null);
@@ -109,6 +111,7 @@ export function TemplateFormDialog({
       setPromptText("");
       setCategory("");
       setIsActive(true);
+      setKeywords("");
       setImageSlots([]);
       setTextFields([]);
       setBeforePreview(null);
@@ -200,6 +203,7 @@ export function TemplateFormDialog({
       prompt_text: promptText,
       category: category || null,
       is_active: isActive,
+      keywords: keywords.trim() || null,
       image_slots:
         imageSlots.length > 0 ? JSON.stringify(imageSlots) : undefined,
       text_fields:
@@ -686,6 +690,21 @@ export function TemplateFormDialog({
                 </div>
               </div>
             </div>
+          </fieldset>
+
+          {/* ── SECTION 4: Mots-clés ── */}
+          <fieldset className="space-y-3 rounded-lg border p-4">
+            <legend className="px-2 text-sm font-semibold">Mots-clés</legend>
+            <Input
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              placeholder="Ex: drôle, embarrassant, bureau, collègue…"
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground">
+              Séparez les mots-clés par des virgules. Ils permettent de
+              retrouver ce template via la barre de recherche.
+            </p>
           </fieldset>
 
           <DialogFooter>

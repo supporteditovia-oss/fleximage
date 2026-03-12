@@ -113,9 +113,21 @@ export default function Generate() {
       reader.readAsDataURL(file);
     });
 
-  const filtered = (templates || []).filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const filtered = (templates || []).filter((t) => {
+    const q = normalize(search);
+    if (!q) return true;
+    return (
+      normalize(t.name).includes(q) ||
+      (t.keywords && normalize(t.keywords).includes(q)) ||
+      (t.category && normalize(t.category).includes(q))
+    );
+  });
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {

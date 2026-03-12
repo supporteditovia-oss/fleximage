@@ -40,8 +40,11 @@ export function useCreateTemplate() {
       name: string;
       description?: string;
       prompt_text: string;
-      category: string;
+      category: string | null;
       is_active?: boolean;
+      keywords?: string | null;
+      image_slots?: string;
+      text_fields?: string;
     }) => {
       const res = await authFetch("/api/templates", {
         method: "POST",
@@ -66,8 +69,11 @@ export function useUpdateTemplate() {
       name?: string;
       description?: string;
       prompt_text?: string;
-      category?: string;
+      category?: string | null;
       is_active?: boolean;
+      keywords?: string | null;
+      image_slots?: string;
+      text_fields?: string;
     }) => {
       const res = await authFetch(`/api/templates/${id}`, {
         method: "PATCH",

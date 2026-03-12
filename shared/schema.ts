@@ -88,6 +88,7 @@ export const promptTemplates = pgTable("prompt_templates", {
   text_fields: text("text_fields"),
   example_before_url: text("example_before_url"),
   example_after_url: text("example_after_url"),
+  keywords: text("keywords"),
   created_by: uuid("created_by").references(() => profiles.id, {
     onDelete: "set null",
   }),
@@ -107,6 +108,7 @@ export const insertPromptTemplateSchema = createInsertSchema(promptTemplates, {
   text_fields: z.string().max(2000).optional(),
   example_before_url: z.string().max(500).optional(),
   example_after_url: z.string().max(500).optional(),
+  keywords: z.string().max(1000).optional().nullable(),
 });
 
 export const updatePromptTemplateSchema = insertPromptTemplateSchema
