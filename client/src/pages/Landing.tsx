@@ -8,9 +8,9 @@ import Footer from "@/components/marketing/Footer";
 export default function Landing() {
   return (
     <div className="bg-background relative overflow-hidden">
-      {/* Noise texture overlay */}
+      {/* Noise texture overlay - hidden on mobile for performance */}
       <svg
-        className="fixed inset-0 w-full h-full pointer-events-none"
+        className="fixed inset-0 w-full h-full pointer-events-none hidden md:block"
         style={{ zIndex: 9999, opacity: 0.04, mixBlendMode: "multiply" as const }}
       >
         <filter id="noise">

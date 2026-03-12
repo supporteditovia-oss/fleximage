@@ -28,7 +28,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
         className={`bg-white/80 backdrop-blur-xl border border-border/50 pointer-events-auto flex items-center justify-between rounded-full w-full shadow-xl shadow-black/5 transition-all duration-300 ${
-          scrolled ? "md:max-w-[37%] px-4 py-1.5 opacity-90" : "md:max-w-[40%] px-6 py-3"
+          scrolled ? "max-w-[92%] md:max-w-[37%] px-4 py-1.5 opacity-90" : "max-w-[92%] md:max-w-[40%] px-5 py-2.5 md:px-6 md:py-3"
         }`}
       >
         <div className="flex items-center gap-2">

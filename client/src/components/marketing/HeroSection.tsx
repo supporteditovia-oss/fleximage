@@ -80,7 +80,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative h-screen max-h-screen overflow-hidden flex flex-col items-center px-4">
+    <section className="relative min-h-[100svh] flex flex-col items-center px-4">
       {/* Abstract Background Shapes */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-3xl -z-10" />
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl -z-10" />
@@ -91,7 +91,7 @@ export default function HeroSection() {
         animate="visible"
         className="flex flex-col items-center justify-center w-full h-full"
       >
-        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-10 md:pt-14">
+        <div className="w-full flex flex-col items-center gap-3 md:gap-6 pt-20 md:pt-24">
         {/* Title area */}
         <div className="relative flex flex-col items-center justify-center">
           <motion.h1
@@ -121,7 +121,7 @@ export default function HeroSection() {
         </div>
 
         {/* Bottom group: drop zone + input + prank ideas */}
-        <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
+        <div className="flex flex-col items-center gap-2 md:gap-4 w-full mt-[0.25rem] md:mt-[3rem] pb-6 md:pb-10">
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
@@ -131,7 +131,7 @@ export default function HeroSection() {
               {images.map((img, i) => (
                 <div
                   key={i}
-                  className="relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
+                  className="relative flex-shrink-1 min-w-0 h-[min(35vh,280px)] md:h-[min(47vh,420px)] aspect-[9/16]"
                 >
                   {img ? (
                     <>
@@ -311,7 +311,7 @@ export default function HeroSection() {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[20px] px-5 pb-8 pt-3 shadow-2xl"
+                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[20px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
               >
                 <div className="flex justify-center mb-4">
                   <div className="w-10 h-1 rounded-full bg-gray-300" />
