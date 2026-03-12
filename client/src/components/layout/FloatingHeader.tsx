@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Coins } from "lucide-react";
 
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
@@ -13,23 +12,18 @@ interface FloatingHeaderProps {
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
   const { user, profile } = useAuth();
   const isMobile = useIsMobile();
-  const [scrolled, setScrolled] = React.useState(false);
   const [hidden, setHidden] = React.useState(false);
   const lastScrollY = React.useRef(0);
 
   React.useEffect(() => {
+    if (!isMobile) return;
     const onScroll = () => {
       const currentY = window.scrollY;
-      setScrolled(currentY > 30);
-
-      if (isMobile) {
-        if (currentY > lastScrollY.current && currentY > 60) {
-          setHidden(true);
-        } else if (currentY < lastScrollY.current) {
-          setHidden(false);
-        }
+      if (currentY > lastScrollY.current && currentY > 60) {
+        setHidden(true);
+      } else if (currentY < lastScrollY.current) {
+        setHidden(false);
       }
-
       lastScrollY.current = currentY;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -53,42 +47,31 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   const logoHref = variant === "app" ? "/generate" : "/";
 
   return (
-    <div className={`fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none transition-all duration-300 ${
+    <div className={`fixed top-6 left-0 right-0 z-50 px-5 md:px-8 pointer-events-none transition-all duration-300 ${
       hidden ? "-translate-y-24 opacity-0" : "translate-y-0 opacity-100"
     }`}>
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className={`bg-white/80 backdrop-blur-xl border border-border/50 pointer-events-auto flex items-center justify-between rounded-full w-full shadow-xl shadow-black/5 transition-all duration-300 ${
-          scrolled ? "max-w-[92%] md:max-w-[37%] px-4 py-1.5 opacity-90" : "max-w-[92%] md:max-w-[40%] px-5 py-2.5 md:px-6 md:py-3"
-        }`}
+        className="relative flex items-center justify-center w-full"
       >
-        <div className="flex items-center gap-2">
-          <Link
-            href={logoHref}
-            className="flex items-center gap-2 pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <span
-              className="inline-block text-xl font-extrabold tracking-tight select-none"
-              style={{
-                WebkitTextStroke: "1.5px black",
-                paintOrder: "stroke fill",
-              }}
-            >
-              <span className="text-secondary">Turbo</span>
-              <span className="text-primary">Prank</span>
-            </span>
-          </Link>
-        </div>
+        {/* Logo — centered */}
+        <Link
+          href={logoHref}
+          className="pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <img src="/assets/turboprank.png" alt="TurboPrank" className="md:h-16 h-14 object-contain" />
+        </Link>
 
+        {/* Right side */}
         {variant === "app" ? (
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            <Coins className="w-4 h-4 text-yellow-500" />
+          <div className="absolute right-0 flex items-center gap-1.5 text-sm font-semibold text-foreground pointer-events-auto rounded-full border border-border/40 bg-card/80 backdrop-blur-xl px-3 py-1.5 shadow-lg shadow-black/10">
+            <img src="/assets/jeton.png" alt="Credits" className="w-5 h-5" />
             <span>{profile?.credits ?? 0}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="absolute right-0 flex items-center gap-3 pointer-events-auto">
             {user ? (
               <Link href="/app">
                 <Button size="sm" className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform">

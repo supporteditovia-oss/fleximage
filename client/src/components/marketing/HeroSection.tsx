@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
-  ImageUp,
   ChevronDown,
   Plus,
   X,
@@ -202,7 +201,7 @@ export default function HeroSection() {
                       className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
                         draggedIndex === i
                           ? "border-primary bg-primary/10 border-solid"
-                          : "border-transparent bg-card/80 hover:bg-primary/5"
+                          : "border-transparent bg-card hover:bg-primary/5"
                       }`}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragLeave={handleDragLeave}
@@ -225,10 +224,10 @@ export default function HeroSection() {
                         ) : (
                           <>
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                              <ImageUp className="w-7 h-7 text-primary transition-colors" />
+                              <Plus className="w-7 h-7 text-primary transition-colors" />
                             </div>
-                            <p className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                              Clique ou glisse une image ici
+                            <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
+                              Met ton image ici
                             </p>
                           </>
                         )
@@ -287,7 +286,7 @@ export default function HeroSection() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="p-3 rounded-2xl border border-border/40 bg-white shadow-xl"
+                  className="p-3 rounded-2xl border border-border/40 bg-card shadow-xl"
                 >
                   <div className="grid grid-cols-3 gap-1.5">
                     {prankChips.map((chip) => {
@@ -299,7 +298,7 @@ export default function HeroSection() {
                             setPrompt(chip.example);
                             setAccordionOpen(false);
                           }}
-                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-white hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-card hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                         >
                           <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate">{chip.label}</span>
@@ -326,10 +325,10 @@ export default function HeroSection() {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[20px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
+                className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[20px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
               >
                 <div className="flex justify-center mb-3">
-                  <div className="w-10 h-1 rounded-full bg-gray-300" />
+                  <div className="w-10 h-1 rounded-full bg-muted" />
                 </div>
                 <h3 className="text-base font-semibold text-center mb-4">Idées de pranks</h3>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -342,7 +341,7 @@ export default function HeroSection() {
                           setPrompt(chip.example);
                           setAccordionOpen(false);
                         }}
-                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-gray-200 bg-white hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-border bg-card hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
                       >
                         <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{chip.label}</span>

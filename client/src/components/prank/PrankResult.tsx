@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
@@ -23,6 +30,7 @@ interface PrankResultProps {
 
 export function PrankResult({ resultUrls, prankId }: PrankResultProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [shareGuide, setShareGuide] = useState<{
     platform: string;
     imageIndex: number;
@@ -85,7 +93,10 @@ export function PrankResult({ resultUrls, prankId }: PrankResultProps) {
       snapchat: "Snapchat",
       instagram: "Instagram",
     };
-    setShareGuide({ platform: names[platform], imageIndex });
+    // Small delay to ensure dropdown closes properly before opening dialog
+    setTimeout(() => {
+      setShareGuide({ platform: names[platform], imageIndex });
+    }, 0);
   }
 
   return (
@@ -142,44 +153,85 @@ export function PrankResult({ resultUrls, prankId }: PrankResultProps) {
         ))}
       </div>
 
-      {/* Share tutorial dialog */}
-      <Dialog
-        open={!!shareGuide}
-        onOpenChange={(open) => !open && setShareGuide(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Pour partager l'image directement :
-            </p>
-            <ol className="text-sm space-y-2 list-decimal list-inside">
-              <li>Télécharge l'image avec le bouton ci-dessous</li>
-              <li>
-                Ouvre{" "}
-                <span className="font-semibold">{shareGuide?.platform}</span>
-              </li>
-              <li>
-                Choisis une conversation et envoie l'image depuis ta galerie
-              </li>
-            </ol>
-            <Button
-              className="w-full"
-              onClick={async () => {
-                if (shareGuide) {
-                  await handleDownload(shareGuide.imageIndex);
-                  toast({ title: "Image téléchargée !" });
-                }
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Télécharger l'image
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Share tutorial — Conditional rendering based on screen size */}
+      {!isMobile ? (
+        <Dialog
+          open={!!shareGuide}
+          onOpenChange={(open) => !open && setShareGuide(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Pour partager l'image directement :
+              </p>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>
+                  Ouvre{" "}
+                  <span className="font-semibold">{shareGuide?.platform}</span>
+                </li>
+                <li>
+                  Choisis une conversation et envoie l'image depuis ta galerie
+                </li>
+              </ol>
+              <Button
+                className="w-full rounded-full"
+                onClick={async () => {
+                  if (shareGuide) {
+                    await handleDownload(shareGuide.imageIndex);
+                    toast({ title: "Image téléchargée !" });
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Télécharger l'image
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Drawer
+          open={!!shareGuide}
+          onOpenChange={(open) => !open && setShareGuide(null)}
+        >
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
+            </DrawerHeader>
+            <div className="space-y-4 px-4 pb-6">
+              <p className="text-sm text-muted-foreground">
+                Pour partager l'image directement :
+              </p>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>
+                  Ouvre{" "}
+                  <span className="font-semibold">{shareGuide?.platform}</span>
+                </li>
+                <li>
+                  Choisis une conversation et envoie l'image depuis ta galerie
+                </li>
+              </ol>
+              <Button
+                className="w-full rounded-full"
+                onClick={async () => {
+                  if (shareGuide) {
+                    await handleDownload(shareGuide.imageIndex);
+                    toast({ title: "Image téléchargée !" });
+                    setShareGuide(null);
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Télécharger l'image
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
     </>
   );
 }

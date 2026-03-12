@@ -90,7 +90,7 @@ export function BottomDock() {
       "fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
       hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
     )}>
-      <nav className="w-full md:max-w-[360px] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-white/50">
+      <nav className="w-full md:max-w-[360px] bg-card/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] dock-nav border border-border/50">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}
           <Link href="/history" className={dockItemClass(isActive("/history"))}>
@@ -135,7 +135,7 @@ export function BottomDock() {
               side="top"
               align="center"
               sideOffset={12}
-              className="p-1.5 rounded-2xl min-w-[200px] bg-white/95 backdrop-blur-xl border border-black/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+              className="p-1.5 rounded-2xl min-w-[200px] bg-card/95 backdrop-blur-xl border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
             >
               <DropdownMenuItem
                 asChild

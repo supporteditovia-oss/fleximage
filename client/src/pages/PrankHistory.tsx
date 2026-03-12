@@ -14,16 +14,6 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -186,7 +176,10 @@ export default function PrankHistory() {
       instagram: "Instagram",
       tiktok: "TikTok",
     };
-    setShareGuide({ platform: names[platform], prankId, imageIndex });
+    // Small delay to ensure dropdown closes properly before opening dialog
+    setTimeout(() => {
+      setShareGuide({ platform: names[platform], prankId, imageIndex });
+    }, 0);
   }
 
   async function handleDelete() {
@@ -219,8 +212,8 @@ export default function PrankHistory() {
       )}
 
       {isLoading ? (
-        <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 max-w-3xl mx-auto">
+          {[...Array(6)].map((_, i) => (
             <div key={i} className="aspect-[9/16] rounded-xl overflow-hidden relative">
               <Skeleton className="absolute inset-0 w-full h-full" />
               <div className="absolute inset-x-0 bottom-0 p-3 space-y-2">
@@ -237,25 +230,26 @@ export default function PrankHistory() {
           ))}
         </div>
       ) : !pranks?.length ? (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center px-4">
-          <div className="rounded-full bg-muted p-6 mb-6">
-            <Sparkles className="h-12 w-12 text-muted-foreground/60" />
-          </div>
-          <h2 className="text-xl font-semibold mb-2">Tu n'as pas encore de prank</h2>
+        <div className="flex flex-col items-center justify-center h-[calc(100dvh-15rem)] text-center px-4">
+          <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
+            <span className="relative inline-block">
+              Tu n'as pas encore de prank
+              <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+            </span>
+          </h2>
           <p className="text-muted-foreground mb-8 max-w-sm">
             Crée ton premier prank et retrouve-le ici dans ton historique.
           </p>
           <Button
-            size="lg"
             onClick={() => navigate("/generate")}
-            className="gap-2"
+            className="gap-2 rounded-3xl h-11 px-8 text-sm font-semibold shadow-lg shadow-black/5 active:scale-[0.98] transition-transform"
           >
             <Sparkles className="h-4 w-4" />
             Je crée mon prank
           </Button>
         </div>
       ) : (
-        <div className="grid gap-1.5 grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto">
+        <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 max-w-3xl mx-auto">
           {pranks.map((prank) => {
             const urls = getResultUrls(prank.result_urls);
             const inputUrls = getInputUrls(prank.input_urls);
@@ -411,7 +405,7 @@ export default function PrankHistory() {
                   className="flex flex-col items-center gap-2 rounded-xl p-3 transition-all active:scale-95"
                 >
                   <div
-                    className="flex h-14 w-14 items-center justify-center rounded-full text-primary shadow-md bg-white border border-border/30"
+                    className="flex h-14 w-14 items-center justify-center rounded-full text-primary shadow-md bg-card border border-border/30"
                   >
                     {platform.icon}
                   </div>
@@ -444,7 +438,7 @@ export default function PrankHistory() {
                   className="flex flex-col items-center gap-2.5 rounded-xl p-3 transition-all hover:bg-muted active:scale-95"
                 >
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-primary shadow-sm bg-white border border-border/30"
+                    className="flex h-12 w-12 items-center justify-center rounded-full text-primary shadow-sm bg-card border border-border/30"
                   >
                     {platform.icon}
                   </div>
@@ -456,96 +450,238 @@ export default function PrankHistory() {
         </Dialog>
       )}
 
-      {/* Image viewer dialog */}
-      <Dialog
-        open={!!selectedImage}
-        onOpenChange={(open) => !open && setSelectedImage(null)}
-      >
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-3xl max-h-[90vh] p-2 sm:p-4 flex flex-col">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Prank généré</DialogTitle>
-          </DialogHeader>
-          {selectedImage && (
-            <div className="flex-1 min-h-0 flex items-center justify-center">
-              <img
-                src={selectedImage}
-                alt="Prank généré"
-                className="max-w-full max-h-[calc(90vh-3rem)] object-contain rounded-lg"
-              />
+      {/* Image viewer — Drawer on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Drawer
+          open={!!selectedImage}
+          onOpenChange={(open) => !open && setSelectedImage(null)}
+        >
+          <DrawerContent>
+            <div className="relative">
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-0 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <DrawerHeader className="text-center">
+                <DrawerTitle>Prank généré</DrawerTitle>
+                <DrawerDescription className="sr-only">Aperçu de l'image</DrawerDescription>
+              </DrawerHeader>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            {selectedImage && (
+              <div className="flex items-center justify-center px-4 pb-6">
+                <img
+                  src={selectedImage}
+                  alt="Prank généré"
+                  className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                />
+              </div>
+            )}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={!!selectedImage}
+          onOpenChange={(open) => !open && setSelectedImage(null)}
+        >
+          <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-3xl max-h-[90vh] p-2 sm:p-4 flex flex-col">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Prank généré</DialogTitle>
+            </DialogHeader>
+            {selectedImage && (
+              <div className="flex-1 min-h-0 flex items-center justify-center">
+                <img
+                  src={selectedImage}
+                  alt="Prank généré"
+                  className="max-w-full max-h-[calc(90vh-3rem)] object-contain rounded-lg"
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* Delete confirmation */}
-      <AlertDialog
-        open={!!deletingId}
-        onOpenChange={(o) => !o && setDeletingId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce prank ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. Le prank sera définitivement
-              supprimé de votre historique.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletePrank.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Share tutorial dialog */}
-      <Dialog
-        open={!!shareGuide}
-        onOpenChange={(open) => !open && setShareGuide(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      {/* Delete confirmation — Drawer on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Drawer
+          open={!!deletingId}
+          onOpenChange={(open) => !open && setDeletingId(null)}
+        >
+          <DrawerContent>
+            <div className="relative">
+              <button
+                onClick={() => setDeletingId(null)}
+                className="absolute top-0 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <DrawerHeader className="text-center">
+                <DrawerTitle>Supprimer ce prank ?</DrawerTitle>
+                <DrawerDescription>
+                  Cette action est irréversible
+                </DrawerDescription>
+              </DrawerHeader>
+            </div>
+            <div className="px-4 pb-6 pt-2">
+              <p className="text-sm text-muted-foreground mb-4">
+                Le prank sera définitivement supprimé de ton historique.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-full border-border/40"
+                  onClick={() => setDeletingId(null)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={deletePrank.isPending}
+                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full border-0"
+                >
+                  {deletePrank.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={!!deletingId}
+          onOpenChange={(open) => !open && setDeletingId(null)}
+        >
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Supprimer ce prank ?</DialogTitle>
+              <DialogDescription>
+                Cette action est irréversible
+              </DialogDescription>
+            </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Pour partager l'image directement :
+              Le prank sera définitivement supprimé de ton historique.
             </p>
-            <ol className="text-sm space-y-2 list-decimal list-inside">
-              <li>Télécharge l'image avec le bouton ci-dessous</li>
-              <li>
-                Ouvre{" "}
-                <span className="font-semibold">{shareGuide?.platform}</span>
-              </li>
-              <li>
-                Choisis une conversation et envoie l'image depuis ta galerie
-              </li>
-            </ol>
-            <Button
-              className="w-full"
-              onClick={async () => {
-                if (shareGuide) {
-                  await handleDownload(
-                    shareGuide.prankId,
-                    shareGuide.imageIndex,
-                  );
-                  toast({ title: "Image téléchargée !" });
-                }
-              }}
-            >
-              <Download className="mr-1.5 h-4 w-4" />
-              Télécharger l'image
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-full border-border/40"
+                onClick={() => setDeletingId(null)}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleDelete}
+                disabled={deletePrank.isPending}
+                className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full border-0"
+              >
+                {deletePrank.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Supprimer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Share tutorial — Drawer on mobile, Dialog on desktop */}
+      {isMobile ? (
+        <Drawer
+          open={!!shareGuide}
+          onOpenChange={(open) => !open && setShareGuide(null)}
+        >
+          <DrawerContent>
+            <div className="relative">
+              <button
+                onClick={() => setShareGuide(null)}
+                className="absolute top-0 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <DrawerHeader className="text-center">
+                <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
+                <DrawerDescription className="sr-only">Instructions de partage</DrawerDescription>
+              </DrawerHeader>
+            </div>
+            <div className="space-y-4 px-4 pb-6">
+              <p className="text-sm text-muted-foreground">
+                Pour partager l'image directement :
+              </p>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>
+                  Ouvre{" "}
+                  <span className="font-semibold">{shareGuide?.platform}</span>
+                </li>
+                <li>
+                  Choisis une conversation et envoie l'image depuis ta galerie
+                </li>
+              </ol>
+              <Button
+                className="w-full rounded-full"
+                onClick={async () => {
+                  if (shareGuide) {
+                    await handleDownload(
+                      shareGuide.prankId,
+                      shareGuide.imageIndex,
+                    );
+                    toast({ title: "Image téléchargée !" });
+                    setShareGuide(null);
+                  }
+                }}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Télécharger l'image
+              </Button>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={!!shareGuide}
+          onOpenChange={(open) => !open && setShareGuide(null)}
+        >
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
+              <DialogDescription className="sr-only">Instructions de partage</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Pour partager l'image directement :
+              </p>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>
+                  Ouvre{" "}
+                  <span className="font-semibold">{shareGuide?.platform}</span>
+                </li>
+                <li>
+                  Choisis une conversation et envoie l'image depuis ta galerie
+                </li>
+              </ol>
+              <Button
+                className="w-full rounded-full"
+                onClick={async () => {
+                  if (shareGuide) {
+                    await handleDownload(
+                      shareGuide.prankId,
+                      shareGuide.imageIndex,
+                    );
+                    toast({ title: "Image téléchargée !" });
+                  }
+                }}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Télécharger l'image
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

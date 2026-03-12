@@ -1,27 +1,27 @@
 import * as React from "react";
 
 const row1 = [
-  { bg: "bg-gradient-to-br from-blue-100 to-blue-200", label: "PV Stationnement" },
-  { bg: "bg-gradient-to-br from-pink-100 to-pink-200", label: "Échographie" },
-  { bg: "bg-gradient-to-br from-amber-100 to-amber-200", label: "Ticket Loto" },
-  { bg: "bg-gradient-to-br from-green-100 to-green-200", label: "Lettre Officielle" },
-  { bg: "bg-gradient-to-br from-purple-100 to-purple-200", label: "Rupture SMS" },
-  { bg: "bg-gradient-to-br from-red-100 to-red-200", label: "Convocation" },
+  { bg: "bg-gradient-to-br from-blue-900/40 to-blue-800/30", label: "PV Stationnement" },
+  { bg: "bg-gradient-to-br from-pink-900/40 to-pink-800/30", label: "Échographie" },
+  { bg: "bg-gradient-to-br from-amber-900/40 to-amber-800/30", label: "Ticket Loto" },
+  { bg: "bg-gradient-to-br from-green-900/40 to-green-800/30", label: "Lettre Officielle" },
+  { bg: "bg-gradient-to-br from-purple-900/40 to-purple-800/30", label: "Rupture SMS" },
+  { bg: "bg-gradient-to-br from-red-900/40 to-red-800/30", label: "Convocation" },
 ];
 
 const row2 = [
-  { bg: "bg-gradient-to-br from-teal-100 to-teal-200", label: "Diplôme Raté" },
-  { bg: "bg-gradient-to-br from-orange-100 to-orange-200", label: "Invitation VIP" },
-  { bg: "bg-gradient-to-br from-indigo-100 to-indigo-200", label: "Achat Immobilier" },
-  { bg: "bg-gradient-to-br from-rose-100 to-rose-200", label: "Flirt Suspect" },
-  { bg: "bg-gradient-to-br from-cyan-100 to-cyan-200", label: "Retrait Permis" },
-  { bg: "bg-gradient-to-br from-lime-100 to-lime-200", label: "Découvert Banque" },
+  { bg: "bg-gradient-to-br from-teal-900/40 to-teal-800/30", label: "Diplôme Raté" },
+  { bg: "bg-gradient-to-br from-orange-900/40 to-orange-800/30", label: "Invitation VIP" },
+  { bg: "bg-gradient-to-br from-indigo-900/40 to-indigo-800/30", label: "Achat Immobilier" },
+  { bg: "bg-gradient-to-br from-rose-900/40 to-rose-800/30", label: "Flirt Suspect" },
+  { bg: "bg-gradient-to-br from-cyan-900/40 to-cyan-800/30", label: "Retrait Permis" },
+  { bg: "bg-gradient-to-br from-lime-900/40 to-lime-800/30", label: "Découvert Banque" },
 ];
 
 function MarqueeCard({ bg, label }: { bg: string; label: string }) {
   return (
     <div className={`flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl ${bg} flex items-end p-4`}>
-      <span className="text-xs font-semibold text-foreground/70 bg-white/60 backdrop-blur rounded-full px-3 py-1">
+      <span className="text-xs font-semibold text-foreground/70 bg-white/10 backdrop-blur rounded-full px-3 py-1">
         {label}
       </span>
     </div>

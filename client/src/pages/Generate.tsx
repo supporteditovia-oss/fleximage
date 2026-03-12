@@ -13,6 +13,7 @@ import {
   Sparkles,
   ChevronDown,
   Star,
+  Shuffle,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { useGenerateDirectPrank } from "@/hooks/use-pranks";
@@ -21,7 +22,7 @@ import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
-import { prankIdeas } from "@/lib/prank-data";
+import { prankIdeas, prankChips } from "@/lib/prank-data";
 import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
 
 function parseImageSlots(template: PromptTemplate | null): ImageSlot[] {
@@ -62,6 +63,11 @@ export default function Generate() {
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
+
+  const shuffleIdea = () => {
+    const random = prankChips[Math.floor(Math.random() * prankChips.length)];
+    setPrompt(random.example);
+  };
 
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
@@ -267,8 +273,12 @@ export default function Generate() {
       {/* Image upload zone + prompt */}
       <div
         ref={topRef}
-        className="flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-6rem)] pt-4 pb-4"
+        className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-6rem)] pt-4 pb-4"
       >
+        {/* Background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
@@ -331,10 +341,10 @@ export default function Generate() {
                         )}
                       <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
                         !selectedTemplate
-                          ? "border-transparent bg-card/80 hover:bg-primary/5"
+                          ? "border-transparent bg-card hover:bg-primary/5"
                           : isRequired
-                            ? "border-dashed border-border/60 bg-card/80 hover:border-destructive/60 hover:bg-destructive/5"
-                            : "border-dashed border-border/60 bg-card/80 hover:border-primary/60 hover:bg-primary/5"
+                            ? "border-dashed border-border/60 bg-card hover:border-destructive/60 hover:bg-destructive/5"
+                            : "border-dashed border-border/60 bg-card hover:border-primary/60 hover:bg-primary/5"
                       }`}>
                         <input
                           type="file"
@@ -370,10 +380,10 @@ export default function Generate() {
                         ) : images.length === 1 && i === 0 ? (
                           <>
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                              <ImageUp className="w-7 h-7 text-primary transition-colors" />
+                              <Plus className="w-7 h-7 text-primary transition-colors" />
                             </div>
-                            <p className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                              Clique ou glisse une image ici
+                            <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
+                              Met ton image ici
                             </p>
                           </>
                         ) : (
@@ -403,6 +413,13 @@ export default function Generate() {
                     className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
                   />
                   <button
+                    onClick={shuffleIdea}
+                    className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+                    title="Idée aléatoire"
+                  >
+                    <Shuffle className="w-4 h-4" />
+                  </button>
+                  <button
                     className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
                     onClick={handleGenerate}
                     disabled={generateDirect.isPending}
@@ -424,22 +441,23 @@ export default function Generate() {
                 </div>
               )}
 
-              {/* Template mode: text fields + generate */}
+              {/* Template mode: fields overflow upward over image + generate button */}
               {selectedTemplate &&
                 (() => {
                   const fields = parseTextFields(selectedTemplate);
                   return (
-                    <div className="flex items-center gap-2 md:gap-3 w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5">
-                      {fields.length > 0 ? (
-                        <div className="flex flex-col gap-2 flex-1">
+                    <div className="relative w-full">
+                      {/* Parameter fields — positioned absolutely, growing upward over the image */}
+                      {fields.length > 0 && (
+                        <div className="absolute bottom-full left-0 right-0 flex flex-col gap-2 pb-2.5">
                           {fields.map((field, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <label className="text-sm font-medium text-foreground shrink-0">
-                                {field.label || `Texte ${idx + 1}`} :
+                            <div key={idx} className="flex flex-col w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 pt-2 pb-2.5 md:pt-2.5 md:pb-3 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                              <span className="text-[10px] font-semibold text-muted-foreground/70 mb-0.5">
+                                {field.label || `Texte ${idx + 1}`}
                                 {field.required && (
                                   <span className="text-destructive ml-0.5">*</span>
                                 )}
-                              </label>
+                              </span>
                               <input
                                 type="text"
                                 value={textValues[idx] || ""}
@@ -449,33 +467,28 @@ export default function Generate() {
                                     [idx]: e.target.value,
                                   }))
                                 }
-                                className="flex-1 bg-transparent text-sm outline-none"
+                                placeholder={`Entrer ${field.label?.toLowerCase() || "une valeur"}…`}
+                                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
                                 required={field.required}
                               />
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <span className="flex-1 text-sm text-muted-foreground/70">Prêt à générer</span>
                       )}
-                      <button
-                        className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+                      {/* Generate button */}
+                      <Button
+                        className="w-full rounded-3xl h-11 text-sm font-semibold shadow-lg shadow-black/5 active:scale-[0.98] transition-transform"
                         onClick={handleGenerate}
                         disabled={generateDirect.isPending}
                       >
                         {generateDirect.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Création…
+                          </>
                         ) : (
-                          <SendHorizonal className="w-4 h-4" />
+                          "Créer"
                         )}
-                      </button>
-                      <Button
-                        size="sm"
-                        className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-                        onClick={handleGenerate}
-                        disabled={generateDirect.isPending}
-                      >
-                        {generateDirect.isPending ? "Création…" : "Créer"}
                       </Button>
                     </div>
                   );

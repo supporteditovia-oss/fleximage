@@ -20,48 +20,48 @@ body[data-scroll-locked][data-scroll-locked] {
 }
 
 :root {
-  /* Vibrant SaaS Palette - Light Mode Only */
+  /* Dark SaaS Palette — Cyan/Turquoise */
   --font-sans: "DM Sans", sans-serif;
   --font-display: "Outfit", sans-serif;
 
-  --background: 0 0% 96%;
-  --foreground: 222 47% 11%;
+  --background: 230 60% 2%;
+  --foreground: 180 10% 92%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card: 230 40% 5%;
+  --card-foreground: 180 10% 92%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover: 230 40% 5%;
+  --popover-foreground: 180 10% 92%;
 
-  --primary: 20 100% 50%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 173 96% 58%;
+  --primary-foreground: 230 60% 2%;
 
-  --secondary: 23 100% 63%;
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 172 100% 66%;
+  --secondary-foreground: 230 60% 2%;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 230 30% 10%;
+  --muted-foreground: 220 10% 55%;
 
-  --accent: 23 100% 63%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 172 100% 66%;
+  --accent-foreground: 230 60% 2%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 20 100% 50%;
+  --border: 220 20% 14%;
+  --input: 220 20% 14%;
+  --ring: 173 96% 58%;
 
   --radius: 0.75rem;
 
-  --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 20 100% 50%;
+  --sidebar-background: 230 50% 4%;
+  --sidebar-foreground: 180 10% 75%;
+  --sidebar-primary: 173 96% 58%;
+  --sidebar-primary-foreground: 230 60% 2%;
+  --sidebar-accent: 230 30% 10%;
+  --sidebar-accent-foreground: 180 10% 92%;
+  --sidebar-border: 220 20% 12%;
+  --sidebar-ring: 173 96% 58%;
 }
 
 @layer base {
@@ -72,8 +72,8 @@ body[data-scroll-locked][data-scroll-locked] {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     background-image:
-      linear-gradient(rgba(255, 85, 2, 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 85, 2, 0.08) 1px, transparent 1px);
+      linear-gradient(rgba(46, 250, 229, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(46, 250, 229, 0.06) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 
@@ -90,7 +90,7 @@ body[data-scroll-locked][data-scroll-locked] {
 
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-lg;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-lg;
   }
 
   .dock-nav {
@@ -195,8 +195,8 @@ body[data-scroll-locked][data-scroll-locked] {
       45deg,
       transparent,
       transparent 8px,
-      rgba(255, 85, 2, 0.07) 8px,
-      rgba(255, 85, 2, 0.07) 9px
+      rgba(46, 250, 229, 0.07) 8px,
+      rgba(46, 250, 229, 0.07) 9px
     );
 }
 .dnd-hover:hover::after {
