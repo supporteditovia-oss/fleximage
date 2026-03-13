@@ -21,6 +21,9 @@ export default function AuthPage() {
 
   const isLogin = location === "/login";
 
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: "", color: "bg-muted" };
     if (pass.length < 6)
@@ -45,6 +48,15 @@ export default function AuthPage() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!isLogin && !isValidEmail(email)) {
+      toast({
+        variant: "destructive",
+        title: "Email invalide",
+        description: "Veuillez entrer une adresse email valide.",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -67,11 +79,6 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        toast({
-          title: "Compte créé",
-          description:
-            "Veuillez vérifier vos emails pour confirmer votre inscription.",
-        });
         setLocation("/login");
       }
     } catch (error: any) {
@@ -218,11 +225,16 @@ export default function AuthPage() {
                   </div>
                 )}
               </div>
+              {!isLogin && (
+                <p className="text-[11px] text-muted-foreground/70 text-center">
+                  En vous inscrivant, vous acceptez nos{" "}
+                  <a href="/cgu" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">CGU</a>
+                </p>
+              )}
               <Button
                 type="submit"
                 className="w-full h-11 text-sm font-semibold rounded-full border-0 shadow-none active:scale-95 transition-transform"
                 disabled={isLoading}
-                data-testid="button-auth-submit"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLogin ? "Se connecter" : "S'inscrire"}

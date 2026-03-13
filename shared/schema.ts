@@ -23,6 +23,7 @@ export const profiles = pgTable("profiles", {
   subscription_status: text("subscription_status"),
   has_accepted_terms: boolean("has_accepted_terms").default(false).notNull(),
   credits: integer("credits").default(0).notNull(),
+  generation_count: integer("generation_count").default(0).notNull(),
   last_active_at: timestamp("last_active_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -135,6 +136,7 @@ export const generatedPranks = pgTable("generated_pranks", {
     .default("waiting")
     .notNull(),
   result_urls: text("result_urls"),
+  watermarked_urls: text("watermarked_urls"),
   input_urls: text("input_urls"),
   fail_message: text("fail_message"),
   cost_time: text("cost_time"),
@@ -170,3 +172,46 @@ export const favoriteTemplates = pgTable("favorite_templates", {
 });
 
 export type FavoriteTemplate = typeof favoriteTemplates.$inferSelect;
+
+// --- Generation IP Tracking ---
+export const generationIps = pgTable("generation_ips", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ip_address: text("ip_address").notNull(),
+  user_id: uuid("user_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  prank_id: uuid("prank_id").references(() => generatedPranks.id, {
+    onDelete: "set null",
+  }),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type GenerationIp = typeof generationIps.$inferSelect;
+
+// --- Subscriptions ---
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  stripe_subscription_id: text("stripe_subscription_id").notNull(),
+  stripe_customer_id: text("stripe_customer_id").notNull(),
+  status: text("status").default("active").notNull(),
+  price_id: text("price_id").notNull(),
+  current_period_start: timestamp("current_period_start", {
+    withTimezone: true,
+  }),
+  current_period_end: timestamp("current_period_end", { withTimezone: true }),
+  cancel_at_period_end: boolean("cancel_at_period_end").default(false),
+  canceled_at: timestamp("canceled_at", { withTimezone: true }),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;

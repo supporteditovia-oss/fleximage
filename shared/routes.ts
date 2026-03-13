@@ -72,6 +72,10 @@ export const api = {
       method: "POST" as const,
       path: "/api/templates/:id/upload-image",
     },
+    marquee: {
+      method: "GET" as const,
+      path: "/api/templates/marquee",
+    },
   },
   pranks: {
     generate: {
@@ -98,11 +102,19 @@ export const api = {
       method: "DELETE" as const,
       path: "/api/pranks/:prankId",
     },
+    canGenerate: {
+      method: "GET" as const,
+      path: "/api/pranks/can-generate",
+    },
   },
   admin: {
     credits: {
       method: "POST" as const,
       path: "/api/admin/credits",
+    },
+    updateUser: {
+      method: "PATCH" as const,
+      path: "/api/admin/users/:id",
     },
   },
   categories: {
@@ -121,6 +133,24 @@ export const api = {
     delete: {
       method: "DELETE" as const,
       path: "/api/categories/:id",
+    },
+  },
+  stripe: {
+    createCheckout: {
+      method: "POST" as const,
+      path: "/api/stripe/create-checkout",
+    },
+    createPortal: {
+      method: "POST" as const,
+      path: "/api/stripe/create-portal",
+    },
+    webhook: {
+      method: "POST" as const,
+      path: "/api/stripe/webhook",
+    },
+    verifySession: {
+      method: "POST" as const,
+      path: "/api/stripe/verify-session",
     },
   },
   favorites: {

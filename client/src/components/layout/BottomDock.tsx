@@ -87,7 +87,7 @@ export function BottomDock() {
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
+      "bottom-dock fixed bottom-0 left-0 right-0 z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
       hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
     )}>
       <nav className="w-full md:max-w-[360px] bg-card/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] dock-nav border border-border/50">

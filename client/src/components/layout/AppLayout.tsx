@@ -3,35 +3,6 @@ import { TermsGuard } from "./TermsGuard";
 import { BottomDock } from "./BottomDock";
 import FloatingHeader from "@/components/layout/FloatingHeader";
 
-function SubscriptionGuard() {
-  const { profile, isLoading, signOut } = useAuth();
-
-  if (isLoading) return null;
-  if (!profile) return null;
-  if (profile.role === "admin") return null;
-  if (profile.is_subscriber) return null;
-
-  return (
-    <div className="fixed inset-0 z-[90] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 text-foreground">
-      <div className="bg-card border shadow-lg max-w-lg w-full p-6 rounded-lg space-y-4">
-        <h2 className="text-xl font-bold">Abonnement requis</h2>
-        <p className="text-muted-foreground text-sm">
-          Un abonnement actif est nécessaire pour accéder à l'application.
-          Veuillez souscrire à un abonnement pour continuer.
-        </p>
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={signOut}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
-          >
-            Se déconnecter
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
 

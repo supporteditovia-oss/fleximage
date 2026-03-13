@@ -18,7 +18,12 @@ import {
 } from "./lib/auth-middleware";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
-import { downloadAndStoreImages } from "./lib/image-storage";
+import { downloadAndStoreImages, downloadAndStoreImagesWithWatermark } from "./lib/image-storage";
+import { generateLimiter } from "./lib/rate-limiter";
+import {
+  checkGenerationLimits,
+  recordGeneration,
+} from "./lib/generation-limits";
 
 /**
  * Extract image URLs from the Kie.ai resultJson, regardless of the exact structure.
@@ -243,6 +248,30 @@ export async function registerRoutes(
   // TEMPLATE ENDPOINTS
   // =============================================
 
+  // GET /api/templates/marquee - Public endpoint for landing page marquee
+  app.get(api.templates.marquee.path, async (_req, res) => {
+    try {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data, error } = await supabaseAdmin
+        .from("prompt_templates")
+        .select("name, example_before_url, example_after_url")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Keep templates that have at least the after image
+      const filtered = (data ?? [])
+        .filter((t) => t.example_after_url)
+        .slice(0, 12);
+
+      res.json(filtered);
+    } catch (error: any) {
+      logger.error({ err: error }, "Error fetching marquee templates");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // GET /api/templates - List templates (admin sees all, users see active only)
   app.get(api.templates.list.path, requireAuth, async (req, res) => {
     try {
@@ -428,6 +457,7 @@ export async function registerRoutes(
   app.post(
     api.pranks.generate.path,
     requireAuth,
+    generateLimiter,
     validateRequest(generatePrankBodySchema),
     async (req, res) => {
       try {
@@ -435,7 +465,14 @@ export async function registerRoutes(
         const { template_id, placeholders, aspect_ratio } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
 
-        // 1. Check credits
+        // 0. Check generation limits (account)
+        const limitResult = await checkGenerationLimits(authReq.userId);
+        if (!limitResult.allowed) {
+          return res.status(403).json({ message: limitResult.reason });
+        }
+        const isFreeGeneration = !limitResult.isSubscriber && limitResult.generationCount === 0;
+
+        // 1. Check credits (skip for first free generation)
         const { data: userProfile, error: profileErr } = await supabaseAdmin
           .from("profiles")
           .select("credits")
@@ -446,7 +483,7 @@ export async function registerRoutes(
           return res.status(403).json({ message: "Profil introuvable" });
         }
 
-        if (userProfile.credits < 5) {
+        if (!isFreeGeneration && userProfile.credits < 5) {
           return res.status(403).json({
             message:
               "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
@@ -496,17 +533,19 @@ export async function registerRoutes(
           });
         }
 
-        // 4. Deduct 5 credits atomically
-        const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
-          p_user_id: authReq.userId,
-          p_amount: 5,
-        });
+        // 4. Deduct 5 credits atomically (skip for first free generation)
+        if (!isFreeGeneration) {
+          const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
+            p_user_id: authReq.userId,
+            p_amount: 5,
+          });
 
-        if (deductErr) {
-          logger.error({ err: deductErr }, "Failed to deduct credits");
-          return res
-            .status(500)
-            .json({ message: "Erreur lors de la déduction des crédits" });
+          if (deductErr) {
+            logger.error({ err: deductErr }, "Failed to deduct credits");
+            return res
+              .status(500)
+              .json({ message: "Erreur lors de la déduction des crédits" });
+          }
         }
 
         // 5. Store in generated_pranks
@@ -525,10 +564,14 @@ export async function registerRoutes(
 
         if (insertErr) throw insertErr;
 
+        // Record generation for limit tracking
+        await recordGeneration(authReq.userId);
+
         res.status(201).json({
           id: prank.id,
           taskId: kieResponse.data.taskId,
           status: "waiting",
+          isSubscriber: limitResult.isSubscriber,
         });
       } catch (error: any) {
         logger.error({ err: error }, "Error generating prank");
@@ -548,6 +591,7 @@ export async function registerRoutes(
   app.post(
     api.pranks.generateDirect.path,
     requireAuth,
+    generateLimiter,
     validateRequest(generateDirectBodySchema),
     async (req, res) => {
       try {
@@ -555,7 +599,14 @@ export async function registerRoutes(
         const { prompt, aspect_ratio, images, template_id } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
 
-        // 1. Check credits
+        // 0. Check generation limits (account)
+        const limitResult = await checkGenerationLimits(authReq.userId);
+        if (!limitResult.allowed) {
+          return res.status(403).json({ message: limitResult.reason });
+        }
+        const isFreeGeneration = !limitResult.isSubscriber && limitResult.generationCount === 0;
+
+        // 1. Check credits (skip for first free generation)
         const { data: userProfile, error: profileErr } = await supabaseAdmin
           .from("profiles")
           .select("credits")
@@ -566,7 +617,7 @@ export async function registerRoutes(
           return res.status(403).json({ message: "Profil introuvable" });
         }
 
-        if (userProfile.credits < 5) {
+        if (!isFreeGeneration && userProfile.credits < 5) {
           return res.status(403).json({
             message:
               "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
@@ -620,17 +671,19 @@ export async function registerRoutes(
           });
         }
 
-        // 4. Deduct 5 credits
-        const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
-          p_user_id: authReq.userId,
-          p_amount: 5,
-        });
+        // 4. Deduct 5 credits (skip for first free generation)
+        if (!isFreeGeneration) {
+          const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
+            p_user_id: authReq.userId,
+            p_amount: 5,
+          });
 
-        if (deductErr) {
-          logger.error({ err: deductErr }, "Failed to deduct credits");
-          return res
-            .status(500)
-            .json({ message: "Erreur lors de la déduction des crédits" });
+          if (deductErr) {
+            logger.error({ err: deductErr }, "Failed to deduct credits");
+            return res
+              .status(500)
+              .json({ message: "Erreur lors de la déduction des crédits" });
+          }
         }
 
         // 5. Store in generated_pranks
@@ -650,10 +703,14 @@ export async function registerRoutes(
 
         if (insertErr) throw insertErr;
 
+        // Record generation for limit tracking
+        await recordGeneration(authReq.userId);
+
         res.status(201).json({
           id: prank.id,
           taskId: kieResponse.data.taskId,
           status: "waiting",
+          isSubscriber: limitResult.isSubscriber,
         });
       } catch (error: any) {
         logger.error({ err: error }, "Error generating direct prank");
@@ -661,6 +718,24 @@ export async function registerRoutes(
       }
     },
   );
+
+  // GET /api/pranks/can-generate
+  app.get(api.pranks.canGenerate.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const result = await checkGenerationLimits(authReq.userId);
+      res.json({
+        canGenerate: result.allowed,
+        isSubscriber: result.isSubscriber,
+        generationCount: result.generationCount,
+        freeLimit: 1,
+        reason: result.reason,
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error checking generation eligibility");
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   // GET /api/pranks/:taskId/status
   app.get(api.pranks.status.path, requireAuth, async (req, res) => {
@@ -683,12 +758,25 @@ export async function registerRoutes(
 
       // If already terminal, return cached result
       if (prank.status === "success" || prank.status === "fail") {
+        // Check subscriber status for watermark decision
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("is_subscriber, role")
+          .eq("id", authReq.userId)
+          .single();
+        const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+
+        const originals = prank.result_urls ? JSON.parse(prank.result_urls) : [];
+        const watermarkedList = prank.watermarked_urls ? JSON.parse(prank.watermarked_urls) : originals;
+
         return res.json({
           prankId: prank.id,
           status: prank.status,
-          resultUrls: prank.result_urls ? JSON.parse(prank.result_urls) : [],
+          resultUrls: isSubscriber ? originals : watermarkedList,
           failMessage: prank.fail_message,
           costTime: prank.cost_time,
+          isSubscriber,
+          requiresPaywall: !isSubscriber,
         });
       }
 
@@ -700,6 +788,7 @@ export async function registerRoutes(
         kieStatus.data.state === "fail"
       ) {
         let resultUrls: string[] = [];
+        let watermarkedUrls: string[] = [];
         if (kieStatus.data.state === "success" && kieStatus.data.resultJson) {
           try {
             const parsed = JSON.parse(kieStatus.data.resultJson);
@@ -715,10 +804,12 @@ export async function registerRoutes(
             );
           }
 
-          // Re-upload images to R2 for permanent storage
+          // Re-upload images to R2 with watermarked versions
           if (resultUrls.length > 0) {
             try {
-              resultUrls = await downloadAndStoreImages(prank.id, resultUrls);
+              const stored = await downloadAndStoreImagesWithWatermark(prank.id, resultUrls);
+              resultUrls = stored.originals;
+              watermarkedUrls = stored.watermarked;
             } catch (err) {
               logger.error(
                 { err, prankId: prank.id },
@@ -728,12 +819,21 @@ export async function registerRoutes(
           }
         }
 
+        // Check subscriber status
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("is_subscriber, role")
+          .eq("id", authReq.userId)
+          .single();
+        const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+
         // Update record
         await supabaseAdmin
           .from("generated_pranks")
           .update({
             status: kieStatus.data.state,
             result_urls: JSON.stringify(resultUrls),
+            watermarked_urls: watermarkedUrls.length > 0 ? JSON.stringify(watermarkedUrls) : null,
             fail_message: kieStatus.data.failMsg || null,
             cost_time: kieStatus.data.costTime
               ? String(kieStatus.data.costTime)
@@ -745,9 +845,11 @@ export async function registerRoutes(
         return res.json({
           prankId: prank.id,
           status: kieStatus.data.state,
-          resultUrls,
+          resultUrls: isSubscriber ? resultUrls : (watermarkedUrls.length > 0 ? watermarkedUrls : resultUrls),
           failMessage: kieStatus.data.failMsg,
           costTime: kieStatus.data.costTime,
+          isSubscriber,
+          requiresPaywall: !isSubscriber,
         });
       }
 
@@ -758,6 +860,8 @@ export async function registerRoutes(
         resultUrls: [],
         failMessage: null,
         costTime: null,
+        isSubscriber: false,
+        requiresPaywall: false,
       });
     } catch (error: any) {
       logger.error({ err: error }, "Error checking prank status");
@@ -770,6 +874,17 @@ export async function registerRoutes(
     try {
       const authReq = req as AuthenticatedRequest;
       const supabaseAdmin = getSupabaseAdmin();
+
+      // Non-subscribers have no history access
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("is_subscriber, role")
+        .eq("id", authReq.userId)
+        .single();
+      const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+      if (!isSubscriber) {
+        return res.json([]);
+      }
 
       const { data, error } = await supabaseAdmin
         .from("generated_pranks")
@@ -800,7 +915,7 @@ export async function registerRoutes(
 
       const { data: prank, error } = await supabaseAdmin
         .from("generated_pranks")
-        .select("result_urls")
+        .select("result_urls, watermarked_urls")
         .eq("id", prankId)
         .eq("user_id", authReq.userId)
         .single();
@@ -809,9 +924,21 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Prank non trouvé" });
       }
 
+      // Check subscriber status — non-subscribers get watermarked version
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("is_subscriber, role")
+        .eq("id", authReq.userId)
+        .single();
+      const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+
+      const urlsSource = isSubscriber
+        ? prank.result_urls
+        : (prank.watermarked_urls || prank.result_urls);
+
       let urls: string[];
       try {
-        urls = JSON.parse(prank.result_urls);
+        urls = JSON.parse(urlsSource);
       } catch {
         return res.status(500).json({ message: "URLs invalides" });
       }
@@ -908,6 +1035,38 @@ export async function registerRoutes(
     },
   );
 
+  // PATCH /api/admin/users/:id (Admin only) — update any user profile
+  const updateUserBodySchema = z.object({
+    is_subscriber: z.boolean().optional(),
+    role: z.enum(["user", "admin"]).optional(),
+    credits: z.number().int().min(0).optional(),
+  });
+
+  app.patch(
+    api.admin.updateUser.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(updateUserBodySchema),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data, error } = await supabaseAdmin
+          .from("profiles")
+          .update(req.body)
+          .eq("id", id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        res.json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error updating user profile");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
   // =============================================
   // FAVORITES ENDPOINTS
   // =============================================
@@ -968,6 +1127,262 @@ export async function registerRoutes(
       res.json({ message: "Favori retiré" });
     } catch (error: any) {
       logger.error({ err: error }, "Error removing favorite");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // =============================================
+  // STRIPE BILLING
+  // =============================================
+
+  // POST /api/stripe/create-checkout — Initiate subscription checkout
+  app.post(api.stripe.createCheckout.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { getStripe, getStripePriceId } = await import("./lib/stripe");
+      const stripe = getStripe();
+      const priceId = getStripePriceId();
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("stripe_customer_id, email, is_subscriber")
+        .eq("id", authReq.userId)
+        .single();
+
+      if (profile?.is_subscriber) {
+        return res
+          .status(400)
+          .json({ message: "Tu as déjà un abonnement actif." });
+      }
+
+      const sessionParams: Record<string, any> = {
+        mode: "subscription",
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=success`,
+        cancel_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=cancel`,
+        metadata: {
+          user_id: authReq.userId,
+          price_id: priceId,
+        },
+        subscription_data: {
+          metadata: {
+            user_id: authReq.userId,
+          },
+        },
+      };
+
+      if (profile?.stripe_customer_id) {
+        sessionParams.customer = profile.stripe_customer_id;
+      } else {
+        sessionParams.customer_email = profile?.email || undefined;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
+      res.json({ url: session.url });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error creating checkout session");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/stripe/create-portal — Manage subscription via Stripe Customer Portal
+  app.post(api.stripe.createPortal.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { getStripe } = await import("./lib/stripe");
+      const stripe = getStripe();
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("id", authReq.userId)
+        .single();
+
+      if (!profile?.stripe_customer_id) {
+        return res
+          .status(400)
+          .json({ message: "Aucun abonnement Stripe trouvé." });
+      }
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: profile.stripe_customer_id,
+        return_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/settings`,
+      });
+
+      res.json({ url: portalSession.url });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error creating portal session");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/stripe/verify-session — Fallback: verify subscription directly with Stripe
+  // Called by client on checkout return, in case webhook didn't fire
+  app.post(api.stripe.verifySession.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { getStripe } = await import("./lib/stripe");
+      const stripe = getStripe();
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("stripe_customer_id, is_subscriber")
+        .eq("id", authReq.userId)
+        .single();
+
+      // Already a subscriber — nothing to do
+      if (profile?.is_subscriber) {
+        return res.json({ status: "active", already: true });
+      }
+
+      // Find the customer by email if no stripe_customer_id yet
+      let customerId = profile?.stripe_customer_id;
+      if (!customerId) {
+        const { data: authProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("email")
+          .eq("id", authReq.userId)
+          .single();
+
+        if (authProfile?.email) {
+          const customers = await stripe.customers.list({
+            email: authProfile.email,
+            limit: 1,
+          });
+          if (customers.data.length > 0) {
+            customerId = customers.data[0].id;
+          }
+        }
+      }
+
+      if (!customerId) {
+        return res.json({ status: "no_customer" });
+      }
+
+      // Check for active subscriptions on this customer
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        limit: 1,
+      });
+
+      if (subscriptions.data.length === 0) {
+        return res.json({ status: "no_active_subscription" });
+      }
+
+      const subscription = subscriptions.data[0];
+
+      // Activate: update profile
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          subscription_status: "active",
+          is_subscriber: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", authReq.userId);
+
+      // Add credits
+      await supabaseAdmin.rpc("add_credits", {
+        p_user_id: authReq.userId,
+        p_amount: 50,
+      });
+
+      // Upsert subscription record
+      await supabaseAdmin
+        .from("subscriptions")
+        .upsert(
+          {
+            user_id: authReq.userId,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: customerId,
+            status: "active",
+            price_id: (subscription.items.data[0]?.price as any)?.id || "",
+          },
+          { onConflict: "stripe_subscription_id" },
+        );
+
+      logger.info(
+        { userId: authReq.userId, subscriptionId: subscription.id },
+        "Subscription activated via verify-session fallback",
+      );
+
+      res.json({ status: "activated" });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error verifying session");
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // POST /api/stripe/webhook — Stripe webhook (NO auth, raw body)
+  app.post(api.stripe.webhook.path, async (req, res) => {
+    try {
+      const { getStripe, getStripeWebhookSecret } = await import(
+        "./lib/stripe"
+      );
+      const {
+        handleCheckoutCompleted,
+        handleInvoicePaid,
+        handleSubscriptionDeleted,
+        handleSubscriptionUpdated,
+      } = await import("./lib/stripe-webhooks");
+
+      const stripe = getStripe();
+      const sig = req.headers["stripe-signature"];
+
+      if (!sig) {
+        return res
+          .status(400)
+          .json({ message: "Missing stripe-signature header" });
+      }
+
+      let event;
+      try {
+        event = await stripe.webhooks.constructEventAsync(
+          req.body,
+          sig,
+          getStripeWebhookSecret(),
+        );
+      } catch (err: any) {
+        logger.warn({ err }, "Webhook signature verification failed");
+        return res
+          .status(400)
+          .json({ message: `Webhook Error: ${err.message}` });
+      }
+
+      logger.info({ type: event.type, id: event.id }, "Stripe webhook received");
+
+      switch (event.type) {
+        case "checkout.session.completed":
+          await handleCheckoutCompleted(
+            event.data.object as any,
+          );
+          break;
+        case "invoice.paid":
+          await handleInvoicePaid(event.data.object as any);
+          break;
+        case "customer.subscription.deleted":
+          await handleSubscriptionDeleted(
+            event.data.object as any,
+          );
+          break;
+        case "customer.subscription.updated":
+          await handleSubscriptionUpdated(
+            event.data.object as any,
+          );
+          break;
+        default:
+          logger.info({ type: event.type }, "Unhandled webhook event type");
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error processing webhook");
       res.status(500).json({ message: error.message });
     }
   });

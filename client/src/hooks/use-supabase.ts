@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Profile, UpdateProfileRequest } from "@shared/schema";
 import { useAuth } from "./use-auth";
+import { authFetch } from "@/lib/api";
 
 /**
  * Hook for fetching and managing the current user's profile
@@ -29,15 +30,15 @@ export function useProfile() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: UpdateProfileRequest }) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const res = await authFetch(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Erreur serveur" }));
+        throw new Error(err.message || "Erreur serveur");
+      }
+      return res.json();
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["profile", variables.id] });

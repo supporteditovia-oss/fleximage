@@ -22,10 +22,10 @@ export const prankChips: { id: string; icon: ElementType; label: string; example
 ];
 
 export const prankIdeas = [
-  "Flirte avec ma copine…",
-  "Ces deux personnes s'embrassent…",
-  "Mon pote a gagné au loto…",
-  "Un PV sur la voiture de mon père…",
-  "Ma sœur se fait virer de son boulot…",
-  "Mon coloc a acheté une villa…",
+  "Met un PV sur ma voiture…",
+  "Fais en sorte que mon pote s'embrasse avec…",
+  "Fais gagner mon pote au loto…",
+  "Fait une fausse convocation a la police…",
+  "Crée une fausse lettre de licenciement…",
+  "Met le bordel dans cette maison…",
 ];

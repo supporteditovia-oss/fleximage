@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   ImageUp,
   SendHorizonal,
@@ -14,15 +14,24 @@ import {
   ChevronDown,
   Star,
   Shuffle,
+  ArrowRight,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { useTemplates } from "@/hooks/use-templates";
 import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
+import { PrankResult } from "@/components/prank/PrankResult";
+import { PaywallOverlay } from "@/components/prank/PaywallOverlay";
 import { useToast } from "@/hooks/use-toast";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
+import { useGenerationEligibility } from "@/hooks/use-generation-limits";
+import { useAuth } from "@/hooks/use-auth";
+import { getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
+import { getPaywalledResult, clearPaywalledResult } from "@/lib/paywalled-result";
 import { prankIdeas, prankChips } from "@/lib/prank-data";
+import { useQueryClient } from "@tanstack/react-query";
+import { authFetch } from "@/lib/api";
 import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
 
 function parseImageSlots(template: PromptTemplate | null): ImageSlot[] {
@@ -55,6 +64,13 @@ export default function Generate() {
   const [selectedTemplate, setSelectedTemplate] =
     useState<PromptTemplate | null>(null);
   const [textValues, setTextValues] = useState<Record<number, string>>({});
+  const [autoGenerateReady, setAutoGenerateReady] = useState(false);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  // Transition backdrop that persists behind GenerationLoader to prevent flash
+  const [transitionBg, setTransitionBg] = useState(false);
+  const [savedPaywall, setSavedPaywall] = useState<{ resultUrls: string[]; prankId: string } | null>(null);
+  const [unlockedPrank, setUnlockedPrank] = useState<{ resultUrls: string[]; prankId: string } | null>(null);
+  const [unlockingPrank, setUnlockingPrank] = useState(false);
   const generateDirect = useGenerateDirectPrank();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
   const { data: favoriteIds = [] } = useFavorites();
@@ -63,6 +79,118 @@ export default function Generate() {
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useTypewriterPlaceholder(prompt, prankIdeas);
+  const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Handle Stripe checkout return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      // Read paywalled result BEFORE clearing so we can re-fetch unlocked version
+      const paywalled = getPaywalledResult();
+      // Clean URL
+      window.history.replaceState({}, "", "/generate");
+      // Clear paywall state
+      clearPaywalledResult();
+      setSavedPaywall(null);
+
+      // Verify session, then fetch unlocked prank if we have one
+      const onVerified = () => {
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        refetchEligibility();
+
+        if (paywalled) {
+          setUnlockingPrank(true);
+          // Re-fetch the prank status — user is now subscriber, server returns originals
+          authFetch(`/api/pranks/${encodeURIComponent(paywalled.taskId)}/status`)
+            .then((r) => r.json())
+            .then((statusData) => {
+              if (statusData.status === "success" && statusData.resultUrls?.length) {
+                setUnlockedPrank({ resultUrls: statusData.resultUrls, prankId: statusData.prankId });
+              } else {
+                toast({
+                  title: "Abonnement activé !",
+                  description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+                });
+              }
+            })
+            .catch(() => {
+              toast({
+                title: "Abonnement activé !",
+                description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+              });
+            })
+            .finally(() => setUnlockingPrank(false));
+        } else {
+          toast({
+            title: "Abonnement activé !",
+            description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+          });
+        }
+      };
+
+      authFetch("/api/stripe/verify-session", { method: "POST" })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("[Checkout] verify-session result:", data);
+          onVerified();
+        })
+        .catch((err) => {
+          console.error("[Checkout] verify-session error:", err);
+          onVerified();
+        });
+    }
+  }, []);
+
+  // On mount, check if there's a saved paywalled result to re-show
+  useEffect(() => {
+    if (profile?.is_subscriber) {
+      // Subscriber: clear any saved paywall data
+      clearPaywalledResult();
+      return;
+    }
+    const saved = getPaywalledResult();
+    if (saved) {
+      setSavedPaywall({ resultUrls: saved.resultUrls, prankId: saved.prankId });
+    }
+  }, [profile?.is_subscriber]);
+
+  // Signal AppLayout to hide chrome (header/dock) while fullscreen overlay is active
+  // useLayoutEffect runs synchronously before browser paint — prevents header flash
+  useLayoutEffect(() => {
+    if (pendingLoading || taskId) {
+      document.body.setAttribute("data-fullscreen-overlay", "true");
+    } else {
+      document.body.removeAttribute("data-fullscreen-overlay");
+    }
+    return () => document.body.removeAttribute("data-fullscreen-overlay");
+  }, [pendingLoading, taskId]);
+
+  // Restore pending prank from IndexedDB (hero → register → generate flow)
+  useEffect(() => {
+    let cancelled = false;
+    getPendingPrank().then((pending) => {
+      if (cancelled) return;
+      if (!pending) {
+        console.log("[Generate] No pending prank found");
+        setPendingLoading(false);
+        return;
+      }
+      console.log("[Generate] Pending prank found:", { prompt: pending.prompt, images: pending.images.length });
+      clearPendingPrank();
+      if (pending.prompt) setPrompt(pending.prompt);
+      if (pending.images.length > 0) {
+        const restored = pending.images.map((file) => ({
+          url: URL.createObjectURL(file),
+          file,
+        }));
+        setImages(restored);
+      }
+      setAutoGenerateReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -153,6 +281,16 @@ export default function Generate() {
     });
 
   const handleGenerate = async () => {
+    // Check generation eligibility (free limit)
+    if (eligibility && !eligibility.canGenerate) {
+      toast({
+        variant: "destructive",
+        title: "Limite atteinte",
+        description: "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
+      });
+      return;
+    }
+
     if (!prompt.trim()) {
       toast({
         variant: "destructive",
@@ -213,6 +351,7 @@ export default function Generate() {
         template_id: selectedTemplate?.id,
       });
       setTaskId(result.taskId);
+      refetchEligibility();
     } catch (error: any) {
       let message = error.message;
       try {
@@ -237,33 +376,136 @@ export default function Generate() {
     setImages([null]);
     setSelectedTemplate(null);
     setTextValues({});
+    refetchEligibility();
   };
 
-  // -- Generation in progress / result view --
+  // Auto-generate when pending prank data has been restored
+  useEffect(() => {
+    if (!autoGenerateReady) return;
+    setAutoGenerateReady(false);
+    console.log("[Generate] Auto-generate ready, prompt:", JSON.stringify(prompt.slice(0, 50)));
+    if (!prompt.trim()) {
+      console.log("[Generate] Empty prompt, skipping auto-generate");
+      setPendingLoading(false);
+      return;
+    }
+    // Activate transition backdrop before starting generation
+    setTransitionBg(true);
+    console.log("[Generate] Starting handleGenerate...");
+    handleGenerate()
+      .then(() => console.log("[Generate] handleGenerate resolved, taskId:", taskId))
+      .catch((err) => console.error("[Generate] handleGenerate rejected:", err))
+      .finally(() => {
+        console.log("[Generate] handleGenerate finally, setting pendingLoading=false");
+        setPendingLoading(false);
+        // Keep backdrop behind GenerationLoader long enough for its fade-in (400ms)
+        setTimeout(() => setTransitionBg(false), 600);
+      });
+  }, [autoGenerateReady]);
+
+  // -- Transition backdrop: sits behind GenerationLoader (z-100) to prevent flash --
+  const transitionBackdrop = transitionBg
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[99]"
+          style={{ backgroundColor: "hsl(var(--background))" }}
+        />,
+        document.body,
+      )
+    : null;
+
+  // Debug: log which render branch we're taking
+  console.log("[Generate] Render:", { taskId: !!taskId, pendingLoading, transitionBg, savedPaywall: !!savedPaywall });
+
+  // -- Fullscreen overlays rendered via portal to escape AppLayout's fade-in wrapper --
+  const portalOverlay = taskId
+    ? createPortal(
+        <GenerationProgress
+          taskId={taskId}
+          inputImageUrl={images[0]?.url}
+          onRetry={handleGenerate}
+          onReset={handleReset}
+        />,
+        document.body,
+      )
+    : pendingLoading
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[100]"
+            style={{ backgroundColor: "hsl(var(--background))" }}
+          />,
+          document.body,
+        )
+      : null;
+
+  // -- Generation in progress: show portal overlay, hide form beneath --
   if (taskId) {
+    return <>{transitionBackdrop}{portalOverlay}</>;
+  }
+
+  // -- Loading pending prank from hero flow --
+  if (pendingLoading) {
+    return <>{transitionBackdrop}{portalOverlay}</>;
+  }
+
+  // -- Loading unlocked prank after payment --
+  if (unlockingPrank) {
     return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="font-display text-3xl font-bold">
-            Génération en cours
-          </h1>
-          {selectedTemplate ? (
-            <p className="text-muted-foreground mt-1 text-sm">
-              {selectedTemplate.name}
-            </p>
-          ) : (
-            <p className="text-muted-foreground mt-1 text-sm">{prompt}</p>
-          )}
+      <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-300">
+        <div className="h-7 w-48 rounded-full bg-muted animate-pulse" />
+        <div className="w-full max-w-[260px] aspect-[9/16] rounded-2xl bg-muted animate-pulse" />
+        <div className="h-11 w-56 rounded-full bg-muted animate-pulse" />
+      </div>
+    );
+  }
+
+  // -- Unlocked prank after successful payment --
+  if (unlockedPrank) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-500">
+        <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
+          <span className="relative inline-block">
+            Voici ton prank !
+            <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path>
+            </svg>
+          </span>
+        </h1>
+
+        <div className="relative min-h-0 flex items-center justify-center">
+          <PrankResult
+            resultUrls={unlockedPrank.resultUrls}
+            prankId={unlockedPrank.prankId}
+          />
         </div>
-        <Card>
-          <CardContent className="pt-6">
-            <GenerationProgress
-              taskId={taskId}
-              onRetry={handleGenerate}
-              onReset={handleReset}
-            />
-          </CardContent>
-        </Card>
+
+        <Button
+          onClick={() => {
+            setUnlockedPrank(null);
+            handleReset();
+          }}
+          className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 shrink-0"
+        >
+          Créer un autre prank
+          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  // -- Persistent paywall for non-subscribers with a previous generation --
+  if (savedPaywall && !profile?.is_subscriber) {
+    return (
+      <div
+        className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500"
+        style={{
+          backgroundColor: "hsl(var(--background))",
+          backgroundImage:
+            "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      >
+        <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
       </div>
     );
   }
@@ -344,7 +586,7 @@ export default function Generate() {
                         {selectedTemplate && (
                           <span className="hero-image-slot--fast absolute -inset-[2px] rounded-2xl pointer-events-none" />
                         )}
-                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card hover:bg-primary/5`}>
+                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card`}>
                         <input
                           type="file"
                           accept="image/*"
@@ -605,7 +847,7 @@ export default function Generate() {
                   <>
                     {/* Mobile: split view — après (top) + avant (bottom) */}
                     <div className="md:hidden relative aspect-[2/3] w-full overflow-hidden">
-                      <div className="absolute inset-x-0 top-0 h-[calc(50%+1px)] overflow-hidden">
+                      <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
                         <img
                           src={tpl.example_after_url!}
                           alt={`${tpl.name} — après`}
@@ -616,7 +858,8 @@ export default function Generate() {
                           Après
                         </span>
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 h-[calc(50%+1px)] overflow-hidden">
+                      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
+                      <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
                         <img
                           src={tpl.example_before_url!}
                           alt={`${tpl.name} — avant`}

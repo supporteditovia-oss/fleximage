@@ -1,19 +1,12 @@
 import { useEffect, useRef } from "react";
 
-const TYPE_SPEED = 70;
-const DELETE_SPEED = 40;
-const PAUSE_AFTER_TYPE = 1800;
+const TYPE_SPEED = 80;
+const DELETE_SPEED = 45;
+const PAUSE_AFTER_TYPE = 2000;
 
 /**
- * Typewriter placeholder that animates directly via the DOM —
- * zero React re-renders, no state updates, smooth on heavy pages.
- *
- * Uses setTimeout (fires only when needed, not every frame like rAF).
- * Pauses automatically via IntersectionObserver when the input scrolls
- * out of view — so it won't burn CPU on the landing page marquee section.
- *
- * Attach the returned ref to your <input>.
- * When `prompt` is non-empty the typewriter pauses and the placeholder resets.
+ * Typewriter placeholder with smooth frame-rate synced animation on mobile.
+ * Uses requestAnimationFrame for jitter-free rendering on all devices.
  */
 export function useTypewriterPlaceholder(
   prompt: string,
@@ -34,10 +27,12 @@ export function useTypewriterPlaceholder(
     let charIndex = 0;
     let deleting = false;
     let timer: ReturnType<typeof setTimeout>;
+    let rafId: number;
     let visible = true;
     let pausedAt: { charIndex: number; deleting: boolean } | null = null;
+    let lastUpdateTime = 0;
 
-    const tick = () => {
+    const tick = (currentTime: number) => {
       if (!inputRef.current) return;
 
       // If not visible, save state and stop scheduling
@@ -46,6 +41,16 @@ export function useTypewriterPlaceholder(
         return;
       }
 
+      const timeSinceLastUpdate = currentTime - lastUpdateTime;
+      const speed = deleting ? DELETE_SPEED : TYPE_SPEED;
+
+      // Only update if enough time has passed
+      if (timeSinceLastUpdate < speed) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      lastUpdateTime = currentTime;
       const currentIdea = ideas[ideaIndexRef.current];
 
       if (!deleting) {
@@ -54,11 +59,12 @@ export function useTypewriterPlaceholder(
         if (charIndex === currentIdea.length) {
           timer = setTimeout(() => {
             deleting = true;
-            tick();
+            lastUpdateTime = 0;
+            rafId = requestAnimationFrame(tick);
           }, PAUSE_AFTER_TYPE);
           return;
         }
-        timer = setTimeout(tick, TYPE_SPEED);
+        rafId = requestAnimationFrame(tick);
       } else {
         charIndex--;
         if (charIndex === 0) {
@@ -68,11 +74,13 @@ export function useTypewriterPlaceholder(
           const nextIdea = ideas[ideaIndexRef.current];
           charIndex = 1;
           inputRef.current.placeholder = nextIdea.slice(0, 1);
-          timer = setTimeout(tick, TYPE_SPEED);
+          lastUpdateTime = 0;
+          rafId = requestAnimationFrame(tick);
           return;
         }
         inputRef.current.placeholder = currentIdea.slice(0, charIndex);
-        timer = setTimeout(tick, DELETE_SPEED);
+        lastUpdateTime = 0;
+        rafId = requestAnimationFrame(tick);
       }
     };
 
@@ -88,7 +96,8 @@ export function useTypewriterPlaceholder(
             charIndex = pausedAt.charIndex;
             deleting = pausedAt.deleting;
             pausedAt = null;
-            tick();
+            lastUpdateTime = 0;
+            rafId = requestAnimationFrame(tick);
           }
         },
         { threshold: 0 },
@@ -96,10 +105,11 @@ export function useTypewriterPlaceholder(
       observer.observe(el);
     }
 
-    tick();
+    rafId = requestAnimationFrame(tick);
 
     return () => {
       clearTimeout(timer);
+      cancelAnimationFrame(rafId);
       observer?.disconnect();
     };
   }, [prompt, ideas]);

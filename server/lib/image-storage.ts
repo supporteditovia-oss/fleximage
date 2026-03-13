@@ -1,5 +1,6 @@
 import { uploadToR2 } from "./r2-client";
 import { logger } from "./logger";
+import { applyWatermark } from "./watermark";
 
 /**
  * Download images from Kie.ai URLs and re-upload them to R2.
@@ -43,6 +44,62 @@ export async function downloadAndStoreImages(
   }
 
   return r2Urls;
+}
+
+/**
+ * Download images, store originals AND watermarked versions in R2.
+ * Returns both sets of URLs.
+ */
+export async function downloadAndStoreImagesWithWatermark(
+  prankId: string,
+  kieUrls: string[],
+): Promise<{ originals: string[]; watermarked: string[] }> {
+  const originals: string[] = [];
+  const watermarked: string[] = [];
+
+  for (let i = 0; i < kieUrls.length; i++) {
+    const kieUrl = kieUrls[i];
+    try {
+      const response = await fetch(kieUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download image: HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const extension = getExtensionFromContentType(contentType);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Store original
+      const originalKey = `pranks/${prankId}/${i}${extension}`;
+      const originalUrl = await uploadToR2(originalKey, buffer, contentType);
+      originals.push(originalUrl);
+
+      // Create and store watermarked version
+      const watermarkedBuffer = await applyWatermark(buffer);
+      const watermarkedKey = `pranks/${prankId}/${i}_wm${extension}`;
+      const watermarkedUrl = await uploadToR2(
+        watermarkedKey,
+        watermarkedBuffer,
+        contentType,
+      );
+      watermarked.push(watermarkedUrl);
+
+      logger.info(
+        { prankId, index: i },
+        "Image stored with watermark",
+      );
+    } catch (error) {
+      logger.error(
+        { err: error, prankId, index: i, kieUrl },
+        "Failed to process image, keeping original URL",
+      );
+      originals.push(kieUrl);
+      watermarked.push(kieUrl);
+    }
+  }
+
+  return { originals, watermarked };
 }
 
 function getExtensionFromContentType(contentType: string): string {

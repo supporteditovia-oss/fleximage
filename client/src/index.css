@@ -19,6 +19,13 @@ body[data-scroll-locked][data-scroll-locked] {
   padding-right: 0 !important;
 }
 
+/* Hide AppLayout chrome (header/dock) when a fullscreen overlay is active (e.g. generation loader) */
+body[data-fullscreen-overlay] .floating-header,
+body[data-fullscreen-overlay] .bottom-dock {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 :root {
   /* Dark SaaS Palette — Cyan/Turquoise */
   --font-sans: "DM Sans", sans-serif;
@@ -103,46 +110,6 @@ body[data-prank-viewer] .dock-nav {
   display: none;
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes marquee-reverse {
-  0% {
-    transform: translateX(-50%);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-.animate-marquee {
-  animation: marquee 20s linear infinite;
-}
-
-.animate-marquee-reverse {
-  animation: marquee-reverse 20s linear infinite;
-}
-
-@media (min-width: 768px) {
-  .animate-marquee {
-    animation: marquee 30s linear infinite;
-  }
-  .animate-marquee-reverse {
-    animation: marquee-reverse 30s linear infinite;
-  }
-}
-
-.marquee-row:hover .animate-marquee,
-.marquee-row:hover .animate-marquee-reverse {
-  animation-play-state: paused;
-}
-
 /* Floating emoji animation */
 @keyframes emoji-float {
   0%, 100% {
@@ -220,4 +187,16 @@ body[data-prank-viewer] .dock-nav {
   animation: glow-spin 1.5s linear infinite, glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
   will-change: transform, opacity;
+}
+
+/* ── Generation Loader ── */
+
+@keyframes loader-logo-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+.loader-logo-pulse {
+  animation: loader-logo-pulse 3.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
 }

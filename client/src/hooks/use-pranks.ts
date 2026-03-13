@@ -24,8 +24,11 @@ interface PrankStatusResponse {
   prankId: string;
   status: "waiting" | "success" | "fail";
   resultUrls: string[];
+  watermarkedUrls?: string[];
   failMessage: string | null;
   costTime: number | null;
+  isSubscriber?: boolean;
+  requiresPaywall?: boolean;
 }
 
 interface PrankHistoryItem {

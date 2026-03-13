@@ -1,11 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
+import { notifyDiscord } from "./discord";
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
   userRole: string;
 }
+
+// Track users we've already notified this server lifetime to avoid duplicates
+const notifiedSignups = new Set<string>();
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -22,7 +26,33 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "Token invalide ou expiré" });
   }
 
-  (req as AuthenticatedRequest).userId = data.user.id;
+  const userId = data.user.id;
+  (req as AuthenticatedRequest).userId = userId;
+
+  // Detect new signups (email + Google) — fire-and-forget
+  if (!notifiedSignups.has(userId)) {
+    notifiedSignups.add(userId);
+    Promise.resolve(
+      supabaseAdmin
+        .from("profiles")
+        .select("generation_count, email, created_at")
+        .eq("id", userId)
+        .single(),
+    )
+      .then(({ data: profile }) => {
+        if (!profile) return;
+        const createdAt = new Date(profile.created_at).getTime();
+        const now = Date.now();
+        // Only notify if profile was created in the last 2 minutes
+        if (profile.generation_count === 0 && now - createdAt < 2 * 60 * 1000) {
+          notifyDiscord(
+            `🆕 **Nouvel inscrit !** ${profile.email || userId} vient de rejoindre TurboPrank.`,
+          );
+        }
+      })
+      .catch(() => {});
+  }
+
   next();
 }
 

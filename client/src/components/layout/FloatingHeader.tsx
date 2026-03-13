@@ -47,7 +47,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   const logoHref = variant === "app" ? "/generate" : "/";
 
   return (
-    <div className={`fixed top-6 left-0 right-0 z-50 px-5 md:px-8 pointer-events-none transition-all duration-300 ${
+    <div className={`floating-header fixed top-6 left-0 right-0 z-50 px-5 md:px-8 pointer-events-none transition-all duration-300 ${
       hidden ? "-translate-y-24 opacity-0" : "translate-y-0 opacity-100"
     }`}>
       <motion.header

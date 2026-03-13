@@ -1,28 +1,23 @@
-import { supabase } from "./supabase";
+import { authFetch } from "./api";
 
 /**
- * Stripe utility for future integration
- * This prepares the ground for Replit's managed Stripe integration.
+ * Create a Stripe Checkout session and return the URL to redirect to.
  */
-
-export const STRIPE_CONFIG = {
-  STRIPE_PUBLIC_KEY: import.meta.env.VITE_STRIPE_PUBLIC_KEY || "",
-};
-
-export async function getSubscriptionStatus(userId: string) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("is_subscriber, subscription_status")
-    .eq("id", userId)
-    .single();
-
-  if (error) return null;
-  return data;
+export async function createCheckoutSession(): Promise<string | null> {
+  const res = await authFetch("/api/stripe/create-checkout", {
+    method: "POST",
+  });
+  const data = await res.json();
+  return data.url || null;
 }
 
-// Placeholder for Stripe Checkout flow
-export async function createCheckoutSession(priceId: string) {
-  // This will be implemented when the Stripe connector is fully setup
-  console.log("Creating checkout session for:", priceId);
-  return null;
+/**
+ * Create a Stripe Customer Portal session and return the URL.
+ */
+export async function createPortalSession(): Promise<string | null> {
+  const res = await authFetch("/api/stripe/create-portal", {
+    method: "POST",
+  });
+  const data = await res.json();
+  return data.url || null;
 }

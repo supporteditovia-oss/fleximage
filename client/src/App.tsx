@@ -17,7 +17,10 @@ import PrankHistory from "@/pages/PrankHistory";
 import Settings from "@/pages/Settings";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
+import CGV from "@/pages/CGV";
 import Confidentialite from "@/pages/Confidentialite";
+import DebugGenerate from "@/pages/DebugGenerate";
+
 import { Loader2 } from "lucide-react";
 import { AUTH_CONFIG } from "@/config/auth";
 
@@ -27,7 +30,7 @@ function AuthCallback() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: "hsl(var(--background))" }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -54,7 +57,7 @@ function ProtectedRoute({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: "hsl(var(--background))" }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -83,6 +86,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/templates": "Templates — TurboPrank",
   "/mentions-legales": "Mentions légales — TurboPrank",
   "/cgu": "CGU — TurboPrank",
+  "/cgv": "CGV — TurboPrank",
   "/confidentialite": "Politique de confidentialité — TurboPrank",
 };
 
@@ -100,6 +104,7 @@ function Router() {
       <Route path={AUTH_CONFIG.LANDING_PATH} component={Landing} />
       <Route path="/mentions-legales" component={MentionsLegales} />
       <Route path="/cgu" component={CGU} />
+      <Route path="/cgv" component={CGV} />
       <Route path="/confidentialite" component={Confidentialite} />
 
       <Route path={AUTH_CONFIG.LOGIN_PATH}>
@@ -116,6 +121,10 @@ function Router() {
 
       <Route path="/generate">
         <ProtectedRoute component={Generate} />
+      </Route>
+
+      <Route path="/debug-generate">
+        <ProtectedRoute component={DebugGenerate} />
       </Route>
 
       <Route path="/history">

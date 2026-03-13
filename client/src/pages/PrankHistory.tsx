@@ -20,8 +20,6 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  Clock,
-  XCircle,
   Trash2,
   Loader2,
   Download,
@@ -31,17 +29,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
-
-const STATUS_CONFIG = {
-  waiting: {
-    label: "En cours",
-    icon: Clock,
-  },
-  fail: {
-    label: "Échoué",
-    icon: XCircle,
-  },
-};
 
 const SHARE_PLATFORMS = [
   {
@@ -211,7 +198,11 @@ export default function PrankHistory() {
     setDeletingId(null);
   }
 
-  const hasPranks = !isLoading && pranks && pranks.length > 0;
+  // Only show successful pranks (hide pending/failed)
+  const successPranks = pranks?.filter(
+    (p) => p.status === "success" && getResultUrls(p.result_urls).length > 0,
+  );
+  const hasPranks = !isLoading && successPranks && successPranks.length > 0;
 
   return (
     <div className="space-y-16 pt-10">
@@ -243,7 +234,7 @@ export default function PrankHistory() {
             </div>
           ))}
         </div>
-      ) : !pranks?.length ? (
+      ) : !successPranks?.length ? (
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-15rem)] text-center px-4">
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
             <span className="relative inline-block">
@@ -264,69 +255,49 @@ export default function PrankHistory() {
         </div>
       ) : (
         <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 max-w-3xl mx-auto">
-          {pranks.map((prank) => {
+          {successPranks.map((prank) => {
             const urls = getResultUrls(prank.result_urls);
             const inputUrls = getInputUrls(prank.input_urls);
-            const isSuccess = prank.status === "success" && urls.length > 0;
             const hasInputImage = inputUrls.length > 0;
-            const statusInfo =
-              prank.status !== "success"
-                ? STATUS_CONFIG[prank.status as keyof typeof STATUS_CONFIG]
-                : null;
 
             return (
               <div
                 key={prank.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
-                onClick={() => isSuccess && setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })}
+                onClick={() => setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })}
               >
-                {isSuccess ? (
-                  <>
-                    {/* Result image (après) — always visible, with hover zoom */}
-                    <img
-                      src={urls[0]}
-                      alt="Prank généré"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-                      loading="lazy"
-                    />
+                {/* Result image (après) — always visible, with hover zoom */}
+                <img
+                  src={urls[0]}
+                  alt="Prank généré"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                  loading="lazy"
+                />
 
-                    {/* Before/after — desktop only: hover clip-path reveal */}
-                    {hasInputImage && (
-                      <div className="hidden md:block absolute inset-0">
-                        <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
-                          <img
-                            src={inputUrls[0]}
-                            alt="Image d'origine"
-                            className="absolute inset-0 w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                        {/* Divider line */}
-                        <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
-                        {/* Labels */}
-                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                          <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            Avant
-                          </span>
-                        </div>
-                        <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
-                          <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            Après
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    {statusInfo && (
-                      <>
-                        <statusInfo.icon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
-                        <span className="text-xs text-muted-foreground">
-                          {statusInfo.label}
-                        </span>
-                      </>
-                    )}
+                {/* Before/after — desktop only: hover clip-path reveal */}
+                {hasInputImage && (
+                  <div className="hidden md:block absolute inset-0">
+                    <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                      <img
+                        src={inputUrls[0]}
+                        alt="Image d'origine"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    {/* Divider line */}
+                    <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
+                    {/* Labels */}
+                    <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Avant
+                      </span>
+                    </div>
+                    <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Après
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -356,8 +327,8 @@ export default function PrankHistory() {
                     )}
                   </div>
 
-                  {isSuccess && (
-                    <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -379,7 +350,6 @@ export default function PrankHistory() {
                         <Share2 className="h-4 w-4" />
                       </button>
                     </div>
-                  )}
                 </div>
               </div>
             );

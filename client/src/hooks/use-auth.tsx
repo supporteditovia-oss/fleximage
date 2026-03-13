@@ -20,6 +20,9 @@ type Profile = {
   is_subscriber: boolean;
   has_accepted_terms: boolean;
   credits: number;
+  generation_count: number;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
 };
 
 type AuthContextType = {
@@ -100,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             is_subscriber: false,
             has_accepted_terms: false,
             credits: 0,
+            stripe_subscription_id: null,
           } as Profile;
         }
 

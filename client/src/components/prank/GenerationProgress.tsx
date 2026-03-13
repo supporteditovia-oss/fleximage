@@ -1,29 +1,59 @@
-import { Loader2, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { XCircle, RotateCcw, ArrowRight } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { usePrankStatus } from "@/hooks/use-pranks";
 import { PrankResult } from "./PrankResult";
+import { GenerationLoader } from "./GenerationLoader";
+import { PaywallOverlay } from "./PaywallOverlay";
+import { savePaywalledResult } from "@/lib/paywalled-result";
 
 interface GenerationProgressProps {
   taskId: string;
+  inputImageUrl?: string;
   onRetry: () => void;
   onReset: () => void;
 }
 
 export function GenerationProgress({
   taskId,
+  inputImageUrl,
   onRetry,
   onReset,
 }: GenerationProgressProps) {
   const { data, isLoading, error } = usePrankStatus(taskId);
+  const [revealDone, setRevealDone] = useState(false);
+  const [showResult, setShowResult] = useState(false);
 
-  if (isLoading && !data) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-12">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground">Connexion au serveur...</p>
-      </div>
-    );
-  }
+  // Wait for loader exit animation before showing result
+  useEffect(() => {
+    if (revealDone) {
+      const timer = setTimeout(() => setShowResult(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [revealDone]);
+
+  // Save paywalled result to localStorage so it persists across page visits
+  useEffect(() => {
+    if (data?.status === "success" && data.requiresPaywall) {
+      savePaywalledResult({
+        taskId,
+        prankId: data.prankId,
+        resultUrls: data.resultUrls,
+      });
+    }
+  }, [data?.status, data?.requiresPaywall, taskId, data?.prankId, data?.resultUrls]);
+
+  // Determine loader status
+  const loaderStatus =
+    !data || isLoading ? "connecting" : data.status === "success" ? "success" : "waiting";
+
+  const isGenerating =
+    loaderStatus === "connecting" || loaderStatus === "waiting" || loaderStatus === "success";
+
+  // Show the immersive loader for connecting/waiting/success (until reveal completes)
+  const showLoader = isGenerating && !revealDone && !error && data?.status !== "fail";
 
   if (error) {
     return (
@@ -41,24 +71,7 @@ export function GenerationProgress({
     );
   }
 
-  if (!data || data.status === "waiting") {
-    return (
-      <div className="flex flex-col items-center gap-4 py-12">
-        <div className="relative">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-        <div className="text-center space-y-1">
-          <p className="font-medium">Génération en cours...</p>
-          <p className="text-sm text-muted-foreground">
-            Votre prank est en train d'être créé par l'IA. Cela peut prendre
-            quelques instants.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (data.status === "fail") {
+  if (data?.status === "fail") {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <XCircle className="h-10 w-10 text-destructive" />
@@ -80,20 +93,71 @@ export function GenerationProgress({
     );
   }
 
-  // Success
+  const requiresPaywall = !!data?.requiresPaywall;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 justify-center">
-        <CheckCircle2 className="h-5 w-5 text-green-500" />
-        <p className="font-medium text-green-600">Prank généré avec succès !</p>
-      </div>
-      <PrankResult resultUrls={data.resultUrls} prankId={data.prankId} />
-      <div className="flex justify-center">
-        <Button variant="outline" onClick={onReset}>
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Créer un autre prank
-        </Button>
-      </div>
-    </div>
+    <>
+      {/* Immersive fullscreen loader via portal-like fixed overlay */}
+      <AnimatePresence>
+        {showLoader && (
+          <GenerationLoader
+            status={loaderStatus}
+            inputImageUrl={inputImageUrl}
+            resultUrls={data?.resultUrls}
+            onRevealComplete={() => setRevealDone(true)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* After reveal: show the result */}
+      {showResult && data?.status === "success" && createPortal(
+        <div
+          className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500"
+          style={{
+            backgroundColor: "hsl(var(--background))",
+            backgroundImage:
+              "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        >
+          {requiresPaywall ? (
+            <>
+              {/* Paywall: show watermarked image with overlay card */}
+              <PaywallOverlay imageUrl={data.resultUrls[0]} />
+            </>
+          ) : (
+            <>
+              {/* Title with SVG underline */}
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
+                <span className="relative inline-block">
+                  Voici ton prank !
+                  <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path>
+                  </svg>
+                </span>
+              </h1>
+
+              {/* Prank result with download/share actions */}
+              <div className="relative min-h-0 flex items-center justify-center">
+                <PrankResult
+                  resultUrls={data.resultUrls}
+                  prankId={data.prankId}
+                />
+              </div>
+
+              {/* CTA button */}
+              <Button
+                onClick={onReset}
+                className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 shrink-0"
+              >
+                Créer un autre prank
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Button>
+            </>
+          )}
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

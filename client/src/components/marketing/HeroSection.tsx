@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { prankChips, prankIdeas } from "@/lib/prank-data";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
+import { savePendingPrank } from "@/lib/pending-prank";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,7 +27,7 @@ const itemVariants = {
 export default function HeroSection() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = React.useState("");
-  const [images, setImages] = React.useState<(string | null)[]>([null]);
+  const [images, setImages] = React.useState<({ url: string; file: File } | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
   const typewriterRef = useTypewriterPlaceholder(prompt, prankIdeas);
@@ -39,8 +40,8 @@ export default function HeroSection() {
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
     setImages((prev) => {
-      const next: (string | null)[] = [...prev];
-      next[index] = url;
+      const next: ({ url: string; file: File } | null)[] = [...prev];
+      next[index] = { url, file };
       const allFilled = !next.includes(null);
       if (allFilled && next.length < 3) {
         next.push(null);
@@ -76,6 +77,20 @@ export default function HeroSection() {
     }
   };
 
+  const handleSubmit = async () => {
+    const files = images.filter(
+      (img): img is { url: string; file: File } => img !== null,
+    );
+    if (files.length > 0 || prompt.trim()) {
+      await savePendingPrank({
+        prompt,
+        images: files.map((f) => f.file),
+        timestamp: Date.now(),
+      });
+    }
+    navigate("/register");
+  };
+
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
       {/* Abstract Background Shapes */}
@@ -98,24 +113,26 @@ export default function HeroSection() {
           >
             Crée des <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">pranks</span> hyper réalistes
           </motion.h1>
-          <motion.div
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
-            className="hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
-          >
-            <svg
-              viewBox="0 0 512 512"
-              preserveAspectRatio="xMidYMid meet"
-              className="animate-arrow-bounce h-[92px] md:h-[112px] w-auto text-secondary"
+          {!images.some((img) => img !== null) && (
+            <motion.div
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
+              className="hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
             >
-              <g
-                transform="translate(512,512) scale(-0.1,-0.1)"
-                fill="currentColor"
-                stroke="none"
+              <svg
+                viewBox="0 0 512 512"
+                preserveAspectRatio="xMidYMid meet"
+                className="animate-arrow-bounce h-[92px] md:h-[112px] w-auto text-secondary"
               >
-                <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
-              </g>
-            </svg>
-          </motion.div>
+                <g
+                  transform="translate(512,512) scale(-0.1,-0.1)"
+                  fill="currentColor"
+                  stroke="none"
+                >
+                  <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
+                </g>
+              </svg>
+            </motion.div>
+          )}
         </div>
 
         {/* Bottom group: drop zone + input + prank ideas */}
@@ -134,7 +151,7 @@ export default function HeroSection() {
                   {img ? (
                     <>
                       <img
-                        src={img}
+                        src={img.url}
                         alt={`Image ${i + 1}`}
                         className="absolute inset-0 w-full h-full object-cover rounded-2xl"
                       />
@@ -154,7 +171,7 @@ export default function HeroSection() {
                       className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
                         draggedIndex === i
                           ? "border-primary bg-primary/10 border-solid"
-                          : "border-transparent bg-card hover:bg-primary/5"
+                          : "border-transparent bg-card"
                       }`}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragLeave={handleDragLeave}
@@ -222,7 +239,7 @@ export default function HeroSection() {
               </button>
               <button
                 className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-black bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
-                onClick={() => navigate("/register")}
+                onClick={handleSubmit}
                 title="Créer"
               >
                 <ArrowRight className="w-4 h-4" />
@@ -230,7 +247,7 @@ export default function HeroSection() {
               <Button
                 size="sm"
                 className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-                onClick={() => navigate("/register")}
+                onClick={handleSubmit}
               >
                 Créer
               </Button>

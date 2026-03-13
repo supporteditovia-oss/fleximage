@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
+import { authFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import {
   User,
   Mail,
   Crown,
+  CreditCard,
   ChevronRight,
   X,
 } from "lucide-react";
@@ -49,6 +51,7 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertProfileSchema.pick({ full_name: true })),
@@ -114,6 +117,27 @@ export default function Settings() {
         title: "Erreur",
         description: error.message,
       });
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await authFetch("/api/stripe/create-portal", {
+        method: "POST",
+      });
+      const { url } = await res.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message,
+      });
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -267,15 +291,24 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-wider px-1">
           Abonnement
         </h2>
-        <div className="rounded-2xl border border-border/40 bg-card/90 backdrop-blur overflow-hidden">
+        <div className="rounded-2xl border border-border/40 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
           <div className="flex items-center gap-3 px-4 py-3.5">
             <Crown className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Abonnement</p>
+              <p className="text-[11px] text-muted-foreground/50">
+                {profile?.is_subscriber
+                  ? "4,90€/semaine"
+                  : "Aucun abonnement actif"}
+              </p>
             </div>
             {profile?.is_subscriber ? (
               <span className="text-xs font-semibold text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full">
                 Actif
+              </span>
+            ) : profile?.stripe_customer_id ? (
+              <span className="text-xs font-semibold text-orange-400 bg-orange-400/10 px-2.5 py-1 rounded-full">
+                Annulé
               </span>
             ) : (
               <span className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
@@ -283,6 +316,29 @@ export default function Settings() {
               </span>
             )}
           </div>
+
+          {(profile?.is_subscriber || profile?.stripe_customer_id) && (
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors disabled:opacity-70"
+            >
+              <CreditCard className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
+              <span className="flex-1 text-sm font-medium">
+                {portalLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Redirection...
+                  </span>
+                ) : profile?.is_subscriber ? (
+                  "Gérer mon abonnement"
+                ) : (
+                  "Réactiver mon abonnement"
+                )}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40" />
+            </button>
+          )}
         </div>
       </section>
 

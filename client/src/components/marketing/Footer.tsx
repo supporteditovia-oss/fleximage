@@ -1,5 +1,3 @@
-import { Link } from "wouter";
-
 export default function Footer() {
   return (
     <footer className="py-8 border-t border-border">
@@ -9,15 +7,18 @@ export default function Footer() {
         </div>
 
         <nav className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-          <Link href="/mentions-legales" className="hover:text-primary transition-colors">
+          <a href="/mentions-legales" className="hover:text-primary transition-colors">
             Mentions Légales
-          </Link>
-          <Link href="/cgu" className="hover:text-primary transition-colors">
+          </a>
+          <a href="/cgu" className="hover:text-primary transition-colors">
             CGU
-          </Link>
-          <Link href="/confidentialite" className="hover:text-primary transition-colors">
+          </a>
+          <a href="/cgv" className="hover:text-primary transition-colors">
+            CGV
+          </a>
+          <a href="/confidentialite" className="hover:text-primary transition-colors">
             Confidentialité
-          </Link>
+          </a>
         </nav>
 
         <p className="text-sm text-muted-foreground">
