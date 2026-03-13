@@ -4,16 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
@@ -117,37 +108,63 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-2xl shadow-black/5 border-border/60">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-display font-bold text-center">
-            {isLogin ? "Bon retour parmi nous" : "Créer un compte"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin
-              ? "Entrez vos identifiants pour vous connecter"
-              : "Entrez votre email pour commencer"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      {/* Logo */}
+      <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
+        <img
+          src="/assets/turboprank.png"
+          alt="TurboPrank"
+          className="h-10 md:h-14 object-contain"
+        />
+      </Link>
+
+      {/* Card with glow */}
+      <div className="relative w-full max-w-md">
+        {/* Hero-style background glow blobs */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-[250px] h-[250px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
+
+        <div className="relative rounded-2xl border border-border bg-card p-8 md:p-10">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="font-display text-2xl md:text-3xl font-bold">
+              {isLogin ? "Bon retour parmi nous" : "Créer un compte"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              {isLogin
+                ? "Entrez vos identifiants pour vous connecter"
+                : "Entrez votre email pour commencer"}
+            </p>
+          </div>
+
           <div className="space-y-4">
+            {/* Google button */}
             <Button
               type="button"
               variant="outline"
-              className="w-full h-11 text-base font-semibold"
+              className="w-full h-11 text-sm font-semibold rounded-full active:scale-95 transition-transform"
               onClick={handleGoogleAuth}
               disabled={isLoading}
               data-testid="button-google-auth"
             >
-              <SiGoogle className="mr-2 h-5 w-5" />
+              <SiGoogle className="mr-2 h-4 w-4" />
               {isLogin ? "Se connecter avec Google" : "S'inscrire avec Google"}
             </Button>
 
-            <Separator className="my-4" />
+            <div className="relative my-6">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+                ou
+              </span>
+            </div>
 
+            {/* Form */}
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -155,12 +172,14 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-11 rounded-xl"
                   data-testid="input-email"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Mot de passe
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -168,14 +187,12 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="h-11 pr-10"
+                    className="h-11 pr-10 rounded-xl"
                     data-testid="input-password"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground no-default-hover-elevate no-default-active-elevate"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                     data-testid="button-toggle-password"
                   >
@@ -184,7 +201,7 @@ export default function AuthPage() {
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
-                  </Button>
+                  </button>
                 </div>
                 {!isLogin && password && (
                   <div className="space-y-1.5 mt-2">
@@ -192,9 +209,9 @@ export default function AuthPage() {
                       <span className="text-muted-foreground">Robustesse:</span>
                       <span className="font-medium">{strength.label}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-300 ${strength.color}`}
+                        className={`h-full transition-all duration-300 rounded-full ${strength.color}`}
                         style={{ width: `${(strength.score / 5) * 100}%` }}
                       />
                     </div>
@@ -203,7 +220,7 @@ export default function AuthPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20"
+                className="w-full h-11 text-sm font-semibold rounded-full border-0 shadow-none active:scale-95 transition-transform"
                 disabled={isLoading}
                 data-testid="button-auth-submit"
               >
@@ -212,19 +229,20 @@ export default function AuthPage() {
               </Button>
             </form>
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation(isLogin ? "/register" : "/login")}
-            className="text-muted-foreground hover:text-primary transition-colors h-auto p-0 hover:bg-transparent"
-          >
-            {isLogin
-              ? "Pas encore de compte ? S'inscrire"
-              : "Déjà un compte ? Se connecter"}
-          </Button>
-        </CardFooter>
-      </Card>
+
+          {/* Footer toggle */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setLocation(isLogin ? "/register" : "/login")}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              {isLogin
+                ? "Pas encore de compte ? S'inscrire"
+                : "Déjà un compte ? Se connecter"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

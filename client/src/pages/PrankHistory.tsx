@@ -15,7 +15,8 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -25,7 +26,7 @@ import {
   Loader2,
   Download,
   Share2,
-  Sparkles,
+  ArrowRight,
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -92,7 +93,10 @@ export default function PrankHistory() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedPrank, setSelectedPrank] = useState<{
+    imageUrl: string;
+    prankId: string;
+  } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<{
     prankId: string;
@@ -103,6 +107,16 @@ export default function PrankHistory() {
     prankId: string;
     imageIndex: number;
   } | null>(null);
+
+  // Hide the bottom dock when the prank viewer is open
+  useEffect(() => {
+    if (selectedPrank) {
+      document.body.setAttribute("data-prank-viewer", "");
+    } else {
+      document.body.removeAttribute("data-prank-viewer");
+    }
+    return () => document.body.removeAttribute("data-prank-viewer");
+  }, [selectedPrank]);
 
   function getResultUrls(resultUrlsStr: string | null): string[] {
     if (!resultUrlsStr) return [];
@@ -242,10 +256,10 @@ export default function PrankHistory() {
           </p>
           <Button
             onClick={() => navigate("/generate")}
-            className="gap-2 rounded-3xl h-11 px-8 text-sm font-semibold shadow-lg shadow-black/5 active:scale-[0.98] transition-transform"
+            className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2"
           >
-            <Sparkles className="h-4 w-4" />
             Je crée mon prank
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
         </div>
       ) : (
@@ -264,7 +278,7 @@ export default function PrankHistory() {
               <div
                 key={prank.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
-                onClick={() => isSuccess && setSelectedImage(urls[0])}
+                onClick={() => isSuccess && setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })}
               >
                 {isSuccess ? (
                   <>
@@ -450,56 +464,121 @@ export default function PrankHistory() {
         </Dialog>
       )}
 
-      {/* Image viewer — Drawer on mobile, Dialog on desktop */}
+      {/* Image viewer — Drawer on mobile, overlay on desktop */}
       {isMobile ? (
         <Drawer
-          open={!!selectedImage}
-          onOpenChange={(open) => !open && setSelectedImage(null)}
+          open={!!selectedPrank}
+          onOpenChange={(open) => !open && setSelectedPrank(null)}
         >
           <DrawerContent>
-            <div className="relative">
-              <button
-                onClick={() => setSelectedImage(null)}
-                className="absolute top-0 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors z-10"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <DrawerHeader className="text-center">
-                <DrawerTitle>Prank généré</DrawerTitle>
-                <DrawerDescription className="sr-only">Aperçu de l'image</DrawerDescription>
-              </DrawerHeader>
-            </div>
-            {selectedImage && (
-              <div className="flex items-center justify-center px-4 pb-6">
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>Prank généré</DrawerTitle>
+              <DrawerDescription>Aperçu de l'image</DrawerDescription>
+            </DrawerHeader>
+            {selectedPrank && (
+              <div className="relative px-4 pb-6 pt-2">
                 <img
-                  src={selectedImage}
+                  src={selectedPrank.imageUrl}
                   alt="Prank généré"
-                  className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                  className="w-full rounded-2xl object-contain"
                 />
+                {/* Top left — close */}
+                <button
+                  onClick={() => setSelectedPrank(null)}
+                  className="absolute top-4 left-6 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {/* Top right — delete */}
+                <button
+                  onClick={() => {
+                    setDeletingId(selectedPrank.prankId);
+                    setSelectedPrank(null);
+                  }}
+                  className="absolute top-4 right-6 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                {/* Bottom center — download & share */}
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => handleDownload(selectedPrank.prankId)}
+                    className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+                    title="Télécharger"
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShareDialog({ prankId: selectedPrank.prankId, imageIndex: 0 });
+                      setSelectedPrank(null);
+                    }}
+                    className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+                    title="Partager"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             )}
           </DrawerContent>
         </Drawer>
-      ) : (
-        <Dialog
-          open={!!selectedImage}
-          onOpenChange={(open) => !open && setSelectedImage(null)}
-        >
-          <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-3xl max-h-[90vh] p-2 sm:p-4 flex flex-col">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Prank généré</DialogTitle>
-            </DialogHeader>
-            {selectedImage && (
-              <div className="flex-1 min-h-0 flex items-center justify-center">
-                <img
-                  src={selectedImage}
-                  alt="Prank généré"
-                  className="max-w-full max-h-[calc(90vh-3rem)] object-contain rounded-lg"
-                />
+      ) : selectedPrank && (
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setSelectedPrank(null)}
+            />
+            {/* Image with overlaid buttons */}
+            <div className="relative max-w-3xl max-h-[85vh] z-10">
+              <img
+                src={selectedPrank.imageUrl}
+                alt="Prank généré"
+                className="max-w-full max-h-[85vh] rounded-2xl object-contain"
+              />
+              {/* Top left — close */}
+              <button
+                onClick={() => setSelectedPrank(null)}
+                className="absolute top-2 left-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {/* Top right — delete */}
+              <button
+                onClick={() => {
+                  setDeletingId(selectedPrank.prankId);
+                  setSelectedPrank(null);
+                }}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              {/* Bottom center — download & share */}
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
+                <button
+                  onClick={() => handleDownload(selectedPrank.prankId)}
+                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                  title="Télécharger"
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setShareDialog({ prankId: selectedPrank.prankId, imageIndex: 0 });
+                    setSelectedPrank(null);
+                  }}
+                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                  title="Partager"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            </div>
+          </div>,
+          document.body
+        )
       )}
 
       {/* Delete confirmation — Drawer on mobile, Dialog on desktop */}

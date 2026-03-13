@@ -62,7 +62,7 @@ export default function Generate() {
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
-  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
+  const placeholderRef = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -299,15 +299,20 @@ export default function Generate() {
                   >
                     {/* Template header — above first image slot */}
                     {selectedTemplate && i === 0 && (
-                      <div className="absolute bottom-full left-0 right-0 pb-2 flex items-center justify-between z-10">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          {selectedTemplate.icon && icons[selectedTemplate.icon as keyof typeof icons] && (() => {
-                            const LucideIcon = icons[selectedTemplate.icon as keyof typeof icons];
-                            return <LucideIcon className="w-4 h-4 text-primary shrink-0" />;
-                          })()}
-                          <span className="text-sm font-semibold truncate">
-                            {selectedTemplate.name}
+                      <div className="absolute bottom-full left-0 right-0 pb-2 flex items-end justify-between z-10">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                            Template
                           </span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {selectedTemplate.icon && icons[selectedTemplate.icon as keyof typeof icons] && (() => {
+                              const LucideIcon = icons[selectedTemplate.icon as keyof typeof icons];
+                              return <LucideIcon className="w-4 h-4 text-primary shrink-0" />;
+                            })()}
+                            <span className="text-base font-bold truncate">
+                              {selectedTemplate.name}
+                            </span>
+                          </div>
                         </div>
                         <button
                           onClick={deselectTemplate}
@@ -336,16 +341,10 @@ export default function Generate() {
                         {!selectedTemplate && (
                           <span className="hero-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
                         )}
-                        {selectedTemplate && isRequired && (
-                          <span className="required-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                        {selectedTemplate && (
+                          <span className="hero-image-slot--fast absolute inset-0 rounded-2xl pointer-events-none z-10" />
                         )}
-                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
-                        !selectedTemplate
-                          ? "border-transparent bg-card hover:bg-primary/5"
-                          : isRequired
-                            ? "border-dashed border-border/60 bg-card hover:border-destructive/60 hover:bg-destructive/5"
-                            : "border-dashed border-border/60 bg-card hover:border-primary/60 hover:bg-primary/5"
-                      }`}>
+                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card hover:bg-primary/5`}>
                         <input
                           type="file"
                           accept="image/*"
@@ -361,8 +360,8 @@ export default function Generate() {
                             const label = slots[i]?.label || "";
                             return (
                               <>
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isRequired ? "bg-destructive/10 group-hover:bg-destructive/15" : "bg-primary/10 group-hover:bg-primary/15"}`}>
-                                  <ImageUp className={`w-7 h-7 transition-colors ${isRequired ? "text-destructive" : "text-primary"}`} />
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
+                                  <Plus className="w-7 h-7 transition-colors text-primary" />
                                 </div>
                                 <div className="text-center px-2">
                                   <p className="text-[11px] font-semibold text-foreground">
@@ -406,10 +405,11 @@ export default function Generate() {
               {!selectedTemplate && (
                 <div className="flex items-center gap-2 md:gap-3 w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
                   <input
+                    ref={placeholderRef}
                     type="text"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder={placeholderText || "Décris ton prank…"}
+                    placeholder="Décris ton prank…"
                     className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
                   />
                   <button

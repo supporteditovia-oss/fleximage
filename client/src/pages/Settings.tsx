@@ -213,7 +213,7 @@ export default function Settings() {
                 control={form.control}
                 name="full_name"
                 render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 px-4 py-3.5">
+                  <FormItem className="flex items-center gap-3 px-4 py-3.5 space-y-0">
                     <User className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <FormControl>

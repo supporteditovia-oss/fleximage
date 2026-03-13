@@ -23,60 +23,13 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-function TypewriterInput({
-  prompt,
-  onPromptChange,
-  onShuffle,
-  onSubmit,
-}: {
-  prompt: string;
-  onPromptChange: (value: string) => void;
-  onShuffle: () => void;
-  onSubmit: () => void;
-}) {
-  const placeholderText = useTypewriterPlaceholder(prompt, prankIdeas);
-  return (
-    <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-      <input
-        type="text"
-        value={prompt}
-        onChange={(e) => onPromptChange(e.target.value)}
-        placeholder={placeholderText || "Décris ton prank…"}
-        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
-      />
-      <button
-        onClick={onShuffle}
-        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
-        title="Idée aléatoire"
-      >
-        <Shuffle className="w-4 h-4" />
-      </button>
-      <button
-        className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
-        onClick={onSubmit}
-        title="Créer"
-      >
-        <ArrowRight className="w-4 h-4" />
-      </button>
-      <Button
-        size="sm"
-        className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
-        onClick={onSubmit}
-      >
-        Créer
-      </Button>
-    </div>
-  );
-}
-
-const MemoizedTypewriterInput = React.memo(TypewriterInput);
-
 export default function HeroSection() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = React.useState("");
   const [images, setImages] = React.useState<(string | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
+  const typewriterRef = useTypewriterPlaceholder(prompt, prankIdeas);
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -136,7 +89,7 @@ export default function HeroSection() {
         animate="visible"
         className="flex flex-col items-center justify-center w-full flex-1"
       >
-        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-10 md:pt-14">
+        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-14 md:pt-14">
         {/* Title area */}
         <div className="relative flex flex-col items-center justify-center">
           <motion.h1
@@ -251,12 +204,37 @@ export default function HeroSection() {
             variants={itemVariants}
             className="relative z-10 w-full flex justify-center px-4"
           >
-            <MemoizedTypewriterInput
-              prompt={prompt}
-              onPromptChange={setPrompt}
-              onShuffle={shuffleIdea}
-              onSubmit={() => navigate("/register")}
-            />
+            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+              <input
+                ref={typewriterRef}
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Décris ton prank…"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+              />
+              <button
+                onClick={shuffleIdea}
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+                title="Idée aléatoire"
+              >
+                <Shuffle className="w-4 h-4" />
+              </button>
+              <button
+                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-black bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
+                onClick={() => navigate("/register")}
+                title="Créer"
+              >
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <Button
+                size="sm"
+                className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+                onClick={() => navigate("/register")}
+              >
+                Créer
+              </Button>
+            </div>
           </motion.div>
 
           {/* Idées de pranks trigger */}

@@ -98,6 +98,11 @@ body[data-scroll-locked][data-scroll-locked] {
   }
 }
 
+/* Hide dock when prank viewer is open */
+body[data-prank-viewer] .dock-nav {
+  display: none;
+}
+
 @keyframes marquee {
   0% {
     transform: translateX(0);
@@ -207,6 +212,11 @@ body[data-scroll-locked][data-scroll-locked] {
   to { --glow-angle: 360deg; }
 }
 
+@keyframes glow-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .hero-image-slot::before {
   content: '';
   position: absolute;
@@ -216,9 +226,9 @@ body[data-scroll-locked][data-scroll-locked] {
   background: conic-gradient(
     from var(--glow-angle),
     transparent 0%,
-    transparent 60%,
-    hsl(var(--primary) / 0.5) 75%,
-    hsl(var(--primary)) 85%,
+    transparent 75%,
+    hsl(var(--primary) / 0.5) 85%,
+    hsl(var(--primary)) 90%,
     hsl(var(--primary) / 0.5) 95%,
     transparent 100%
   );
@@ -226,13 +236,13 @@ body[data-scroll-locked][data-scroll-locked] {
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: glow-rotate 3s linear infinite;
+  animation: glow-rotate 3s linear infinite, glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
   will-change: transform;
 }
 
-/* Animated glowing border for required image slots (red/orange) */
-.required-image-slot::before {
+/* Same glow but faster rotation for template mode */
+.hero-image-slot--fast::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -241,16 +251,17 @@ body[data-scroll-locked][data-scroll-locked] {
   background: conic-gradient(
     from var(--glow-angle),
     transparent 0%,
-    transparent 60%,
-    hsl(0 80% 60% / 0.5) 75%,
-    hsl(0 80% 55%) 85%,
-    hsl(0 80% 60% / 0.5) 95%,
+    transparent 75%,
+    hsl(var(--primary) / 0.5) 85%,
+    hsl(var(--primary)) 90%,
+    hsl(var(--primary) / 0.5) 95%,
     transparent 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: glow-rotate 3s linear infinite;
+  animation: glow-rotate 1.5s linear infinite, glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
+  will-change: transform;
 }

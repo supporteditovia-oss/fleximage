@@ -10,7 +10,7 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const isMobile = useIsMobile();
   const [hidden, setHidden] = React.useState(false);
   const lastScrollY = React.useRef(0);
@@ -61,7 +61,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
           href={logoHref}
           className="pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity"
         >
-          <img src="/assets/turboprank.png" alt="TurboPrank" className="md:h-16 h-14 object-contain" />
+          <img src="/assets/turboprank.png" alt="TurboPrank" className="h-10 md:h-16 object-contain" />
         </Link>
 
         {/* Right side */}
@@ -70,7 +70,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <img src="/assets/jeton.png" alt="Credits" className="w-5 h-5" />
             <span>{profile?.credits ?? 0}</span>
           </div>
-        ) : (
+        ) : !isLoading && (
           <div className="absolute right-0 flex items-center gap-3 pointer-events-auto">
             {user ? (
               <Link href="/app">
@@ -92,7 +92,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 <Link href="/register">
                   <Button
                     size="sm"
-                    className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                    className="rounded-full px-3 md:px-5 text-xs md:text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform bg-gradient-to-r from-primary to-secondary hover:opacity-90"
                   >
                     Commencer
                   </Button>
