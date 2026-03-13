@@ -1,12 +1,16 @@
 import { useEffect, useRef } from "react";
 
-const TYPE_INTERVAL = 70; // ms per character when typing
-const DELETE_INTERVAL = 40; // ms per character when deleting
-const PAUSE_AFTER_TYPE = 1800; // ms to wait after finishing a word
+const TYPE_SPEED = 70;
+const DELETE_SPEED = 40;
+const PAUSE_AFTER_TYPE = 1800;
 
 /**
- * Typewriter placeholder driven by requestAnimationFrame —
- * frame-aligned DOM writes, no setTimeout jank.
+ * Typewriter placeholder that animates directly via the DOM —
+ * zero React re-renders, no state updates, smooth on heavy pages.
+ *
+ * Uses setTimeout (fires only when needed, not every frame like rAF).
+ * Pauses automatically via IntersectionObserver when the input scrolls
+ * out of view — so it won't burn CPU on the landing page marquee section.
  *
  * Attach the returned ref to your <input>.
  * When `prompt` is non-empty the typewriter pauses and the placeholder resets.
@@ -29,29 +33,18 @@ export function useTypewriterPlaceholder(
 
     let charIndex = 0;
     let deleting = false;
-    let lastTime = 0;
-    let pauseUntil = 0;
-    let rafId: number;
+    let timer: ReturnType<typeof setTimeout>;
+    let visible = true;
+    let pausedAt: { charIndex: number; deleting: boolean } | null = null;
 
-    const step = (timestamp: number) => {
+    const tick = () => {
       if (!inputRef.current) return;
 
-      // Handle pause after finishing typing
-      if (pauseUntil > 0) {
-        if (timestamp < pauseUntil) {
-          rafId = requestAnimationFrame(step);
-          return;
-        }
-        pauseUntil = 0;
-        deleting = true;
-      }
-
-      const interval = deleting ? DELETE_INTERVAL : TYPE_INTERVAL;
-      if (timestamp - lastTime < interval) {
-        rafId = requestAnimationFrame(step);
+      // If not visible, save state and stop scheduling
+      if (!visible) {
+        pausedAt = { charIndex, deleting };
         return;
       }
-      lastTime = timestamp;
 
       const currentIdea = ideas[ideaIndexRef.current];
 
@@ -59,25 +52,56 @@ export function useTypewriterPlaceholder(
         charIndex++;
         inputRef.current.placeholder = currentIdea.slice(0, charIndex);
         if (charIndex === currentIdea.length) {
-          pauseUntil = timestamp + PAUSE_AFTER_TYPE;
+          timer = setTimeout(() => {
+            deleting = true;
+            tick();
+          }, PAUSE_AFTER_TYPE);
+          return;
         }
+        timer = setTimeout(tick, TYPE_SPEED);
       } else {
         charIndex--;
         if (charIndex === 0) {
           deleting = false;
-          ideaIndexRef.current = (ideaIndexRef.current + 1) % ideas.length;
+          ideaIndexRef.current =
+            (ideaIndexRef.current + 1) % ideas.length;
+          const nextIdea = ideas[ideaIndexRef.current];
           charIndex = 1;
-          inputRef.current.placeholder = ideas[ideaIndexRef.current].slice(0, 1);
-        } else {
-          inputRef.current.placeholder = currentIdea.slice(0, charIndex);
+          inputRef.current.placeholder = nextIdea.slice(0, 1);
+          timer = setTimeout(tick, TYPE_SPEED);
+          return;
         }
+        inputRef.current.placeholder = currentIdea.slice(0, charIndex);
+        timer = setTimeout(tick, DELETE_SPEED);
       }
-
-      rafId = requestAnimationFrame(step);
     };
 
-    rafId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafId);
+    // Pause/resume when scrolling in/out of view
+    let observer: IntersectionObserver | undefined;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          const wasVisible = visible;
+          visible = entry.isIntersecting;
+          // Resume from where we left off
+          if (visible && !wasVisible && pausedAt) {
+            charIndex = pausedAt.charIndex;
+            deleting = pausedAt.deleting;
+            pausedAt = null;
+            tick();
+          }
+        },
+        { threshold: 0 },
+      );
+      observer.observe(el);
+    }
+
+    tick();
+
+    return () => {
+      clearTimeout(timer);
+      observer?.disconnect();
+    };
   }, [prompt, ideas]);
 
   return inputRef;
