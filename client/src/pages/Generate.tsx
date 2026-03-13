@@ -339,10 +339,10 @@ export default function Generate() {
                     ) : (
                       <>
                         {!selectedTemplate && (
-                          <span className="hero-image-slot absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                          <span className="hero-image-slot absolute -inset-[2px] rounded-2xl pointer-events-none" />
                         )}
                         {selectedTemplate && (
-                          <span className="hero-image-slot--fast absolute inset-0 rounded-2xl pointer-events-none z-10" />
+                          <span className="hero-image-slot--fast absolute -inset-[2px] rounded-2xl pointer-events-none" />
                         )}
                       <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card hover:bg-primary/5`}>
                         <input
