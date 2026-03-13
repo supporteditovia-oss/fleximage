@@ -14,12 +14,12 @@ export default function CtaSection() {
         <p className="text-sm md:text-base text-muted-foreground mt-3 max-w-md mx-auto">
           Rejoins des milliers d'utilisateurs et commence à générer des images bluffantes en quelques secondes.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex justify-center">
           <Button
             onClick={() => navigate("/register")}
             className="rounded-full h-12 px-10 text-base font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 group"
           >
-            Commencer gratuitement
+            Commencer
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </Button>
         </div>
