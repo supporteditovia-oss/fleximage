@@ -13,16 +13,6 @@ import {
 import { prankChips, prankIdeas } from "@/lib/prank-data";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 },
-};
-
 export default function HeroSection() {
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = React.useState("");
@@ -83,25 +73,20 @@ export default function HeroSection() {
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10" />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex flex-col items-center justify-center w-full flex-1"
-      >
+      <div className="flex flex-col items-center justify-center w-full flex-1">
         <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-14 md:pt-14">
         {/* Title area */}
         <div className="relative flex flex-col items-center justify-center">
-          <motion.h1
-            variants={itemVariants}
-            className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
+          <h1
+            className="hero-fade-in font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
+            style={{ animationDelay: "0ms" }}
           >
             Crée des <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">pranks</span> hyper réalistes
-          </motion.h1>
-          <motion.div
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
-            className="hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
-          > 
+          </h1>
+          <div
+            className="hero-fade-in hidden min-[380px]:block absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none"
+            style={{ animationDelay: "100ms", opacity: 0.7, animationFillMode: "backwards" }}
+          >
             <svg
               viewBox="0 0 512 512"
               preserveAspectRatio="xMidYMid meet"
@@ -115,15 +100,15 @@ export default function HeroSection() {
                 <path d="M1016 4325 c-11 -11 -14 -28 -11 -58 3 -23 10 -89 16 -147 25 -243 85 -516 167 -760 156 -465 380 -843 747 -1259 375 -427 866 -703 1595 -895 l125 -33 -60 -13 c-290 -59 -695 -192 -711 -234 -12 -30 47 -115 98 -142 37 -19 68 -18 125 7 196 86 588 187 868 224 136 18 146 26 115 90 -13 27 -39 59 -60 74 -44 30 -248 330 -385 565 -116 199 -111 192 -161 216 -83 41 -110 6 -65 -84 31 -63 218 -368 303 -493 35 -53 44 -73 33 -73 -24 0 -281 65 -452 115 -493 144 -836 321 -1102 569 -239 225 -432 476 -599 781 -222 406 -358 852 -402 1324 -15 160 -31 191 -113 226 -45 19 -52 19 -71 0z" />
               </g>
             </svg>
-          </motion.div>
+          </div>
         </div>
 
         {/* Bottom group: drop zone + input + prank ideas */}
         <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
           {/* Image upload grid */}
-          <motion.div
-            variants={itemVariants}
-            className="w-full flex justify-center px-4 -mb-7 md:-mb-8"
+          <div
+            className="hero-fade-in w-full flex justify-center px-4 -mb-7 md:-mb-8"
+            style={{ animationDelay: "200ms" }}
           >
             <div className="flex items-end justify-center gap-2 md:gap-3 w-full max-w-md">
               {images.map((img, i) => (
@@ -197,12 +182,12 @@ export default function HeroSection() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
           {/* Text input */}
-          <motion.div
-            variants={itemVariants}
-            className="relative z-10 w-full flex justify-center px-4"
+          <div
+            className="hero-fade-in relative z-10 w-full flex justify-center px-4"
+            style={{ animationDelay: "300ms" }}
           >
             <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
               <input
@@ -235,12 +220,12 @@ export default function HeroSection() {
                 Créer
               </Button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Idées de pranks trigger */}
-          <motion.div
-            variants={itemVariants}
-            className="relative w-full flex justify-center px-4"
+          <div
+            className="hero-fade-in relative w-full flex justify-center px-4"
+            style={{ animationDelay: "400ms" }}
           >
             <button
               onClick={() => setAccordionOpen(!accordionOpen)}
@@ -287,7 +272,7 @@ export default function HeroSection() {
                 </motion.div>
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Mobile bottom sheet overlay */}
           {accordionOpen && (
@@ -340,7 +325,7 @@ export default function HeroSection() {
           )}
         </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
