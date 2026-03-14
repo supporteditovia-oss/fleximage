@@ -1,4 +1,10 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -28,7 +34,10 @@ import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
 import { getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
-import { getPaywalledResult, clearPaywalledResult } from "@/lib/paywalled-result";
+import {
+  getPaywalledResult,
+  clearPaywalledResult,
+} from "@/lib/paywalled-result";
 import { prankIdeas, prankChips } from "@/lib/prank-data";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
@@ -68,8 +77,14 @@ export default function Generate() {
   const [pendingLoading, setPendingLoading] = useState(true);
   // Transition backdrop that persists behind GenerationLoader to prevent flash
   const [transitionBg, setTransitionBg] = useState(false);
-  const [savedPaywall, setSavedPaywall] = useState<{ resultUrls: string[]; prankId: string } | null>(null);
-  const [unlockedPrank, setUnlockedPrank] = useState<{ resultUrls: string[]; prankId: string } | null>(null);
+  const [savedPaywall, setSavedPaywall] = useState<{
+    resultUrls: string[];
+    prankId: string;
+  } | null>(null);
+  const [unlockedPrank, setUnlockedPrank] = useState<{
+    resultUrls: string[];
+    prankId: string;
+  } | null>(null);
   const [unlockingPrank, setUnlockingPrank] = useState(false);
   const generateDirect = useGenerateDirectPrank();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
@@ -79,7 +94,8 @@ export default function Generate() {
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useTypewriterPlaceholder(prompt, prankIdeas);
-  const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
+  const { data: eligibility, refetch: refetchEligibility } =
+    useGenerationEligibility();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
@@ -103,29 +119,40 @@ export default function Generate() {
         if (paywalled) {
           setUnlockingPrank(true);
           // Re-fetch the prank status — user is now subscriber, server returns originals
-          authFetch(`/api/pranks/${encodeURIComponent(paywalled.taskId)}/status`)
+          authFetch(
+            `/api/pranks/${encodeURIComponent(paywalled.taskId)}/status`,
+          )
             .then((r) => r.json())
             .then((statusData) => {
-              if (statusData.status === "success" && statusData.resultUrls?.length) {
-                setUnlockedPrank({ resultUrls: statusData.resultUrls, prankId: statusData.prankId });
+              if (
+                statusData.status === "success" &&
+                statusData.resultUrls?.length
+              ) {
+                setUnlockedPrank({
+                  resultUrls: statusData.resultUrls,
+                  prankId: statusData.prankId,
+                });
               } else {
                 toast({
                   title: "Abonnement activé !",
-                  description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+                  description:
+                    "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
                 });
               }
             })
             .catch(() => {
               toast({
                 title: "Abonnement activé !",
-                description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+                description:
+                  "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
               });
             })
             .finally(() => setUnlockingPrank(false));
         } else {
           toast({
             title: "Abonnement activé !",
-            description: "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+            description:
+              "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
           });
         }
       };
@@ -177,7 +204,10 @@ export default function Generate() {
         setPendingLoading(false);
         return;
       }
-      console.log("[Generate] Pending prank found:", { prompt: pending.prompt, images: pending.images.length });
+      console.log("[Generate] Pending prank found:", {
+        prompt: pending.prompt,
+        images: pending.images.length,
+      });
       clearPendingPrank();
       if (pending.prompt) setPrompt(pending.prompt);
       if (pending.images.length > 0) {
@@ -189,7 +219,9 @@ export default function Generate() {
       }
       setAutoGenerateReady(true);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const shuffleIdea = () => {
@@ -286,7 +318,8 @@ export default function Generate() {
       toast({
         variant: "destructive",
         title: "Limite atteinte",
-        description: "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
+        description:
+          "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
       });
       return;
     }
@@ -383,7 +416,10 @@ export default function Generate() {
   useEffect(() => {
     if (!autoGenerateReady) return;
     setAutoGenerateReady(false);
-    console.log("[Generate] Auto-generate ready, prompt:", JSON.stringify(prompt.slice(0, 50)));
+    console.log(
+      "[Generate] Auto-generate ready, prompt:",
+      JSON.stringify(prompt.slice(0, 50)),
+    );
     if (!prompt.trim()) {
       console.log("[Generate] Empty prompt, skipping auto-generate");
       setPendingLoading(false);
@@ -393,10 +429,14 @@ export default function Generate() {
     setTransitionBg(true);
     console.log("[Generate] Starting handleGenerate...");
     handleGenerate()
-      .then(() => console.log("[Generate] handleGenerate resolved, taskId:", taskId))
+      .then(() =>
+        console.log("[Generate] handleGenerate resolved, taskId:", taskId),
+      )
       .catch((err) => console.error("[Generate] handleGenerate rejected:", err))
       .finally(() => {
-        console.log("[Generate] handleGenerate finally, setting pendingLoading=false");
+        console.log(
+          "[Generate] handleGenerate finally, setting pendingLoading=false",
+        );
         setPendingLoading(false);
         // Keep backdrop behind GenerationLoader long enough for its fade-in (400ms)
         setTimeout(() => setTransitionBg(false), 600);
@@ -415,7 +455,12 @@ export default function Generate() {
     : null;
 
   // Debug: log which render branch we're taking
-  console.log("[Generate] Render:", { taskId: !!taskId, pendingLoading, transitionBg, savedPaywall: !!savedPaywall });
+  console.log("[Generate] Render:", {
+    taskId: !!taskId,
+    pendingLoading,
+    transitionBg,
+    savedPaywall: !!savedPaywall,
+  });
 
   // -- Fullscreen overlays rendered via portal to escape AppLayout's fade-in wrapper --
   const portalOverlay = taskId
@@ -440,12 +485,22 @@ export default function Generate() {
 
   // -- Generation in progress: show portal overlay, hide form beneath --
   if (taskId) {
-    return <>{transitionBackdrop}{portalOverlay}</>;
+    return (
+      <>
+        {transitionBackdrop}
+        {portalOverlay}
+      </>
+    );
   }
 
   // -- Loading pending prank from hero flow --
   if (pendingLoading) {
-    return <>{transitionBackdrop}{portalOverlay}</>;
+    return (
+      <>
+        {transitionBackdrop}
+        {portalOverlay}
+      </>
+    );
   }
 
   // -- Loading unlocked prank after payment --
@@ -466,8 +521,19 @@ export default function Generate() {
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
           <span className="relative inline-block">
             Voici ton prank !
-            <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path>
+            <svg
+              className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+              viewBox="0 0 100 12"
+              fill="none"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 8 Q 50 2 98 8"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeLinecap="round"
+              ></path>
             </svg>
           </span>
         </h1>
@@ -524,119 +590,130 @@ export default function Generate() {
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
-          <div
-            className="w-full flex justify-center -mb-7 md:-mb-8"
-          >
+          <div className="w-full flex justify-center -mb-7 md:-mb-8">
             <div className="flex flex-col w-full max-w-md">
               <div className="flex items-end justify-center gap-2 md:gap-3 w-full">
-              {images.map((img, i) => {
-                const slots = parseImageSlots(selectedTemplate);
-                const isRequired = selectedTemplate
-                  ? (slots[i]?.required ?? false)
-                  : false;
-                return (
-                  <div
-                    key={i}
-                    className="relative flex-shrink-1 min-w-0 h-[min(52vh,440px)] md:h-[min(58vh,520px)] aspect-[9/16] flex flex-col"
-                  >
-                    {/* Template header — above first image slot */}
-                    {selectedTemplate && i === 0 && (
-                      <div className="absolute bottom-full left-0 right-0 pb-2 flex items-end justify-between z-10">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                            Template
-                          </span>
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {selectedTemplate.icon && icons[selectedTemplate.icon as keyof typeof icons] && (() => {
-                              const LucideIcon = icons[selectedTemplate.icon as keyof typeof icons];
-                              return <LucideIcon className="w-4 h-4 text-primary shrink-0" />;
-                            })()}
-                            <span className="text-base font-bold truncate">
-                              {selectedTemplate.name}
+                {images.map((img, i) => {
+                  const slots = parseImageSlots(selectedTemplate);
+                  const isRequired = selectedTemplate
+                    ? (slots[i]?.required ?? false)
+                    : false;
+                  return (
+                    <div
+                      key={i}
+                      className="relative flex-shrink-1 min-w-0 h-[min(52vh,440px)] md:h-[min(58vh,520px)] aspect-[9/16] flex flex-col"
+                    >
+                      {/* Template header — above first image slot */}
+                      {selectedTemplate && i === 0 && (
+                        <div className="absolute bottom-full left-0 right-0 pb-2 flex items-end justify-between z-10">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                              Template
                             </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={deselectTemplate}
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    {img ? (
-                      <>
-                        <img
-                          src={img.url}
-                          alt={`Image ${i + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover rounded-2xl"
-                        />
-                        <button
-                          onClick={() => removeSlot(i)}
-                          className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {!selectedTemplate && (
-                          <span className="hero-image-slot absolute -inset-[2px] rounded-2xl pointer-events-none" />
-                        )}
-                        {selectedTemplate && (
-                          <span className="hero-image-slot--fast absolute -inset-[2px] rounded-2xl pointer-events-none" />
-                        )}
-                      <label className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card`}>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageSelect(i, file);
-                          }}
-                        />
-                        {selectedTemplate ? (
-                          (() => {
-                            const slots = parseImageSlots(selectedTemplate);
-                            const label = slots[i]?.label || "";
-                            return (
-                              <>
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
-                                  <Plus className="w-7 h-7 transition-colors text-primary" />
-                                </div>
-                                <div className="text-center px-2">
-                                  <p className="text-[11px] font-semibold text-foreground">
-                                    {label
-                                      ? `Photo ${label}`
-                                      : "Dépose ton image"}
-                                  </p>
-                                  <p className="text-[10px] mt-0.5 text-muted-foreground/70">
-                                    {isRequired ? "Obligatoire" : "Optionnel"}
-                                  </p>
-                                </div>
-                              </>
-                            );
-                          })()
-                        ) : images.length === 1 && i === 0 ? (
-                          <>
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                              <Plus className="w-7 h-7 text-primary transition-colors" />
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {selectedTemplate.icon &&
+                                icons[
+                                  selectedTemplate.icon as keyof typeof icons
+                                ] &&
+                                (() => {
+                                  const LucideIcon =
+                                    icons[
+                                      selectedTemplate.icon as keyof typeof icons
+                                    ];
+                                  return (
+                                    <LucideIcon className="w-4 h-4 text-primary shrink-0" />
+                                  );
+                                })()}
+                              <span className="text-base font-bold truncate">
+                                {selectedTemplate.name}
+                              </span>
                             </div>
-                            <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                              Met ton image ici
-                            </p>
-                          </>
-                        ) : (
-                          <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                        )}
-                      </label>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                          </div>
+                          <button
+                            onClick={deselectTemplate}
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      {img ? (
+                        <>
+                          <img
+                            src={img.url}
+                            alt={`Image ${i + 1}`}
+                            className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+                          />
+                          <button
+                            onClick={() => removeSlot(i)}
+                            className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {!selectedTemplate && (
+                            <span className="hero-image-slot absolute -inset-[2px] rounded-2xl pointer-events-none" />
+                          )}
+                          {selectedTemplate && (
+                            <span className="hero-image-slot--fast absolute -inset-[2px] rounded-2xl pointer-events-none" />
+                          )}
+                          <label
+                            className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card`}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageSelect(i, file);
+                              }}
+                            />
+                            {selectedTemplate ? (
+                              (() => {
+                                const slots = parseImageSlots(selectedTemplate);
+                                const label = slots[i]?.label || "";
+                                return (
+                                  <>
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
+                                      <Plus className="w-7 h-7 transition-colors text-primary" />
+                                    </div>
+                                    <div className="text-center px-2">
+                                      <p className="text-[11px] font-semibold text-foreground">
+                                        {label
+                                          ? `Photo ${label}`
+                                          : "Dépose ton image"}
+                                      </p>
+                                      <p className="text-[10px] mt-0.5 text-muted-foreground/70">
+                                        {isRequired
+                                          ? "Obligatoire"
+                                          : "Optionnel"}
+                                      </p>
+                                    </div>
+                                  </>
+                                );
+                              })()
+                            ) : images.length === 1 && i === 0 ? (
+                              <>
+                                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                                  <Plus className="w-7 h-7 text-primary transition-colors" />
+                                </div>
+                                <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
+                                  Met ton image ici
+                                </p>
+                              </>
+                            ) : (
+                              <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                            )}
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -693,11 +770,16 @@ export default function Generate() {
                       {fields.length > 0 && (
                         <div className="absolute bottom-full left-0 right-0 flex flex-col gap-2 pb-2.5">
                           {fields.map((field, idx) => (
-                            <div key={idx} className="flex flex-col w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 pt-2 pb-2.5 md:pt-2.5 md:pb-3 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                            <div
+                              key={idx}
+                              className="flex flex-col w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 pt-2 pb-2.5 md:pt-2.5 md:pb-3 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all"
+                            >
                               <span className="text-[10px] font-semibold text-muted-foreground/70 mb-0.5">
                                 {field.label || `Texte ${idx + 1}`}
                                 {field.required && (
-                                  <span className="text-destructive ml-0.5">*</span>
+                                  <span className="text-destructive ml-0.5">
+                                    *
+                                  </span>
                                 )}
                               </span>
                               <input
@@ -759,7 +841,20 @@ export default function Generate() {
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
           <span className="relative inline-block">
             Choisis parmi les pranks existants
-            <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+            <svg
+              className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+              viewBox="0 0 100 12"
+              fill="none"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 8 Q 50 2 98 8"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeLinecap="round"
+              ></path>
+            </svg>
           </span>
         </h2>
 
@@ -830,7 +925,10 @@ export default function Generate() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleFavorite.mutate({ templateId: tpl.id, isFavorite: isFav });
+                    toggleFavorite.mutate({
+                      templateId: tpl.id,
+                      isFavorite: isFav,
+                    });
                   }}
                   className="absolute top-1.5 right-1.5 z-20 w-7 h-7 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
                 >
@@ -917,7 +1015,9 @@ export default function Generate() {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between gap-1 px-2.5 py-2.5 bg-card">
-                  <p className="text-xs font-semibold leading-tight line-clamp-2">{tpl.name}</p>
+                  <p className="text-xs font-semibold leading-tight line-clamp-2">
+                    {tpl.name}
+                  </p>
                   <ChevronDown
                     className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${
                       isSelected

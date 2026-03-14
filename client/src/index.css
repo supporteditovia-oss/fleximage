@@ -113,7 +113,8 @@ body[data-prank-viewer] .dock-nav {
 
 /* Floating emoji animation */
 @keyframes emoji-float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
   50% {
@@ -127,7 +128,8 @@ body[data-prank-viewer] .dock-nav {
 
 /* Handdrawn arrow bounce */
 @keyframes arrow-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -142,12 +144,19 @@ body[data-prank-viewer] .dock-nav {
 /* Animated glowing border for hero image slot */
 
 @keyframes glow-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .hero-image-slot,
@@ -156,7 +165,7 @@ body[data-prank-viewer] .dock-nav {
 }
 
 .hero-image-slot::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -100%;
   background: conic-gradient(
@@ -167,14 +176,16 @@ body[data-prank-viewer] .dock-nav {
     hsl(var(--primary) / 0.5) 95%,
     transparent 100%
   );
-  animation: glow-spin 3s linear infinite, glow-pulse 2s ease-in-out infinite;
+  animation:
+    glow-spin 3s linear infinite,
+    glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
   will-change: transform, opacity;
 }
 
 /* Same glow but faster rotation for template mode */
 .hero-image-slot--fast::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -100%;
   background: conic-gradient(
@@ -185,7 +196,9 @@ body[data-prank-viewer] .dock-nav {
     hsl(var(--primary) / 0.5) 95%,
     transparent 100%
   );
-  animation: glow-spin 1.5s linear infinite, glow-pulse 2s ease-in-out infinite;
+  animation:
+    glow-spin 1.5s linear infinite,
+    glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
   will-change: transform, opacity;
 }
@@ -193,8 +206,13 @@ body[data-prank-viewer] .dock-nav {
 /* ── Generation Loader ── */
 
 @keyframes loader-logo-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.04); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 .loader-logo-pulse {

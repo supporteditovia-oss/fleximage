@@ -18,7 +18,10 @@ import {
 } from "./lib/auth-middleware";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
-import { downloadAndStoreImages, downloadAndStoreImagesWithWatermark } from "./lib/image-storage";
+import {
+  downloadAndStoreImages,
+  downloadAndStoreImagesWithWatermark,
+} from "./lib/image-storage";
 import { generateLimiter } from "./lib/rate-limiter";
 import {
   checkGenerationLimits,
@@ -470,7 +473,8 @@ export async function registerRoutes(
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
-        const isFreeGeneration = !limitResult.isSubscriber && limitResult.generationCount === 0;
+        const isFreeGeneration =
+          !limitResult.isSubscriber && limitResult.generationCount === 0;
 
         // 1. Check credits (skip for first free generation)
         const { data: userProfile, error: profileErr } = await supabaseAdmin
@@ -535,10 +539,13 @@ export async function registerRoutes(
 
         // 4. Deduct 5 credits atomically (skip for first free generation)
         if (!isFreeGeneration) {
-          const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
-            p_user_id: authReq.userId,
-            p_amount: 5,
-          });
+          const { error: deductErr } = await supabaseAdmin.rpc(
+            "deduct_credits",
+            {
+              p_user_id: authReq.userId,
+              p_amount: 5,
+            },
+          );
 
           if (deductErr) {
             logger.error({ err: deductErr }, "Failed to deduct credits");
@@ -604,7 +611,8 @@ export async function registerRoutes(
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
-        const isFreeGeneration = !limitResult.isSubscriber && limitResult.generationCount === 0;
+        const isFreeGeneration =
+          !limitResult.isSubscriber && limitResult.generationCount === 0;
 
         // 1. Check credits (skip for first free generation)
         const { data: userProfile, error: profileErr } = await supabaseAdmin
@@ -673,10 +681,13 @@ export async function registerRoutes(
 
         // 4. Deduct 5 credits (skip for first free generation)
         if (!isFreeGeneration) {
-          const { error: deductErr } = await supabaseAdmin.rpc("deduct_credits", {
-            p_user_id: authReq.userId,
-            p_amount: 5,
-          });
+          const { error: deductErr } = await supabaseAdmin.rpc(
+            "deduct_credits",
+            {
+              p_user_id: authReq.userId,
+              p_amount: 5,
+            },
+          );
 
           if (deductErr) {
             logger.error({ err: deductErr }, "Failed to deduct credits");
@@ -764,10 +775,15 @@ export async function registerRoutes(
           .select("is_subscriber, role")
           .eq("id", authReq.userId)
           .single();
-        const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+        const isSubscriber =
+          profile?.is_subscriber || profile?.role === "admin";
 
-        const originals = prank.result_urls ? JSON.parse(prank.result_urls) : [];
-        const watermarkedList = prank.watermarked_urls ? JSON.parse(prank.watermarked_urls) : originals;
+        const originals = prank.result_urls
+          ? JSON.parse(prank.result_urls)
+          : [];
+        const watermarkedList = prank.watermarked_urls
+          ? JSON.parse(prank.watermarked_urls)
+          : originals;
 
         return res.json({
           prankId: prank.id,
@@ -807,7 +823,10 @@ export async function registerRoutes(
           // Re-upload images to R2 with watermarked versions
           if (resultUrls.length > 0) {
             try {
-              const stored = await downloadAndStoreImagesWithWatermark(prank.id, resultUrls);
+              const stored = await downloadAndStoreImagesWithWatermark(
+                prank.id,
+                resultUrls,
+              );
               resultUrls = stored.originals;
               watermarkedUrls = stored.watermarked;
             } catch (err) {
@@ -825,7 +844,8 @@ export async function registerRoutes(
           .select("is_subscriber, role")
           .eq("id", authReq.userId)
           .single();
-        const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
+        const isSubscriber =
+          profile?.is_subscriber || profile?.role === "admin";
 
         // Update record
         await supabaseAdmin
@@ -833,7 +853,10 @@ export async function registerRoutes(
           .update({
             status: kieStatus.data.state,
             result_urls: JSON.stringify(resultUrls),
-            watermarked_urls: watermarkedUrls.length > 0 ? JSON.stringify(watermarkedUrls) : null,
+            watermarked_urls:
+              watermarkedUrls.length > 0
+                ? JSON.stringify(watermarkedUrls)
+                : null,
             fail_message: kieStatus.data.failMsg || null,
             cost_time: kieStatus.data.costTime
               ? String(kieStatus.data.costTime)
@@ -845,7 +868,11 @@ export async function registerRoutes(
         return res.json({
           prankId: prank.id,
           status: kieStatus.data.state,
-          resultUrls: isSubscriber ? resultUrls : (watermarkedUrls.length > 0 ? watermarkedUrls : resultUrls),
+          resultUrls: isSubscriber
+            ? resultUrls
+            : watermarkedUrls.length > 0
+              ? watermarkedUrls
+              : resultUrls,
           failMessage: kieStatus.data.failMsg,
           costTime: kieStatus.data.costTime,
           isSubscriber,
@@ -934,7 +961,7 @@ export async function registerRoutes(
 
       const urlsSource = isSubscriber
         ? prank.result_urls
-        : (prank.watermarked_urls || prank.result_urls);
+        : prank.watermarked_urls || prank.result_urls;
 
       let urls: string[];
       try {
@@ -1086,7 +1113,8 @@ export async function registerRoutes(
         if (profileError) throw profileError;
 
         // Delete the auth user entry
-        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+        const { error: authError } =
+          await supabaseAdmin.auth.admin.deleteUser(id);
         if (authError) throw authError;
 
         res.json({ message: "Utilisateur supprimé" });
@@ -1324,18 +1352,16 @@ export async function registerRoutes(
       });
 
       // Upsert subscription record
-      await supabaseAdmin
-        .from("subscriptions")
-        .upsert(
-          {
-            user_id: authReq.userId,
-            stripe_subscription_id: subscription.id,
-            stripe_customer_id: customerId,
-            status: "active",
-            price_id: (subscription.items.data[0]?.price as any)?.id || "",
-          },
-          { onConflict: "stripe_subscription_id" },
-        );
+      await supabaseAdmin.from("subscriptions").upsert(
+        {
+          user_id: authReq.userId,
+          stripe_subscription_id: subscription.id,
+          stripe_customer_id: customerId,
+          status: "active",
+          price_id: (subscription.items.data[0]?.price as any)?.id || "",
+        },
+        { onConflict: "stripe_subscription_id" },
+      );
 
       logger.info(
         { userId: authReq.userId, subscriptionId: subscription.id },
@@ -1352,9 +1378,8 @@ export async function registerRoutes(
   // POST /api/stripe/webhook — Stripe webhook (NO auth, raw body)
   app.post(api.stripe.webhook.path, async (req, res) => {
     try {
-      const { getStripe, getStripeWebhookSecret } = await import(
-        "./lib/stripe"
-      );
+      const { getStripe, getStripeWebhookSecret } =
+        await import("./lib/stripe");
       const {
         handleCheckoutCompleted,
         handleInvoicePaid,
@@ -1385,26 +1410,23 @@ export async function registerRoutes(
           .json({ message: `Webhook Error: ${err.message}` });
       }
 
-      logger.info({ type: event.type, id: event.id }, "Stripe webhook received");
+      logger.info(
+        { type: event.type, id: event.id },
+        "Stripe webhook received",
+      );
 
       switch (event.type) {
         case "checkout.session.completed":
-          await handleCheckoutCompleted(
-            event.data.object as any,
-          );
+          await handleCheckoutCompleted(event.data.object as any);
           break;
         case "invoice.paid":
           await handleInvoicePaid(event.data.object as any);
           break;
         case "customer.subscription.deleted":
-          await handleSubscriptionDeleted(
-            event.data.object as any,
-          );
+          await handleSubscriptionDeleted(event.data.object as any);
           break;
         case "customer.subscription.updated":
-          await handleSubscriptionUpdated(
-            event.data.object as any,
-          );
+          await handleSubscriptionUpdated(event.data.object as any);
           break;
         default:
           logger.info({ type: event.type }, "Unhandled webhook event type");
