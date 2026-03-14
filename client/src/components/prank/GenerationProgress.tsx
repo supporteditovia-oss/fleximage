@@ -43,17 +43,30 @@ export function GenerationProgress({
         resultUrls: data.resultUrls,
       });
     }
-  }, [data?.status, data?.requiresPaywall, taskId, data?.prankId, data?.resultUrls]);
+  }, [
+    data?.status,
+    data?.requiresPaywall,
+    taskId,
+    data?.prankId,
+    data?.resultUrls,
+  ]);
 
   // Determine loader status
   const loaderStatus =
-    !data || isLoading ? "connecting" : data.status === "success" ? "success" : "waiting";
+    !data || isLoading
+      ? "connecting"
+      : data.status === "success"
+        ? "success"
+        : "waiting";
 
   const isGenerating =
-    loaderStatus === "connecting" || loaderStatus === "waiting" || loaderStatus === "success";
+    loaderStatus === "connecting" ||
+    loaderStatus === "waiting" ||
+    loaderStatus === "success";
 
   // Show the immersive loader for connecting/waiting/success (until reveal completes)
-  const showLoader = isGenerating && !revealDone && !error && data?.status !== "fail";
+  const showLoader =
+    isGenerating && !revealDone && !error && data?.status !== "fail";
 
   if (error) {
     return (
@@ -110,54 +123,67 @@ export function GenerationProgress({
       </AnimatePresence>
 
       {/* After reveal: show the result */}
-      {showResult && data?.status === "success" && createPortal(
-        <div
-          className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500"
-          style={{
-            backgroundColor: "hsl(var(--background))",
-            backgroundImage:
-              "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        >
-          {requiresPaywall ? (
-            <>
-              {/* Paywall: show watermarked image with overlay card */}
-              <PaywallOverlay imageUrl={data.resultUrls[0]} />
-            </>
-          ) : (
-            <>
-              {/* Title with SVG underline */}
-              <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
-                <span className="relative inline-block">
-                  Voici ton prank !
-                  <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path>
-                  </svg>
-                </span>
-              </h1>
+      {showResult &&
+        data?.status === "success" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-4 overflow-hidden px-4 py-6 animate-in fade-in duration-500"
+            style={{
+              backgroundColor: "hsl(var(--background))",
+              backgroundImage:
+                "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          >
+            {requiresPaywall ? (
+              <>
+                {/* Paywall: show watermarked image with overlay card */}
+                <PaywallOverlay imageUrl={data.resultUrls[0]} />
+              </>
+            ) : (
+              <>
+                {/* Title with SVG underline */}
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
+                  <span className="relative inline-block">
+                    Voici ton prank !
+                    <svg
+                      className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+                      viewBox="0 0 100 12"
+                      fill="none"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M2 8 Q 50 2 98 8"
+                        stroke="currentColor"
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                      ></path>
+                    </svg>
+                  </span>
+                </h1>
 
-              {/* Prank result with download/share actions */}
-              <div className="relative min-h-0 flex items-center justify-center">
-                <PrankResult
-                  resultUrls={data.resultUrls}
-                  prankId={data.prankId}
-                />
-              </div>
+                {/* Prank result with download/share actions */}
+                <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
+                  <PrankResult
+                    resultUrls={data.resultUrls}
+                    prankId={data.prankId}
+                  />
+                </div>
 
-              {/* CTA button */}
-              <Button
-                onClick={onReset}
-                className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 shrink-0"
-              >
-                Créer un autre prank
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </Button>
-            </>
-          )}
-        </div>,
-        document.body,
-      )}
+                {/* CTA button */}
+                <Button
+                  onClick={onReset}
+                  className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 shrink-0"
+                >
+                  Créer un autre prank
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </Button>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

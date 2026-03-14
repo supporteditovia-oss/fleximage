@@ -64,7 +64,11 @@ interface PrankResultProps {
   hideActions?: boolean;
 }
 
-export function PrankResult({ resultUrls, prankId, hideActions = false }: PrankResultProps) {
+export function PrankResult({
+  resultUrls,
+  prankId,
+  hideActions = false,
+}: PrankResultProps) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [shareDialog, setShareDialog] = useState<{ imageIndex: number } | null>(
@@ -150,27 +154,27 @@ export function PrankResult({ resultUrls, prankId, hideActions = false }: PrankR
             <img
               src={url}
               alt={`Prank généré ${index + 1}`}
-              className="max-h-[calc(100dvh-15rem)] max-w-[60vw] md:max-w-[min(320px,45vw)] w-auto object-contain rounded-2xl"
+              className="max-h-[calc(100dvh-15rem)] max-w-[45vw] md:max-w-[min(320px,45vw)] w-auto object-contain rounded-2xl"
               loading="lazy"
             />
             {/* Bottom gradient with action buttons */}
             {!hideActions && (
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
-              <button
-                onClick={() => handleDownload(index)}
-                className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                title="Télécharger"
-              >
-                <Download className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setShareDialog({ imageIndex: index })}
-                className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                title="Partager"
-              >
-                <Share2 className="h-5 w-5" />
-              </button>
-            </div>
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
+                <button
+                  onClick={() => handleDownload(index)}
+                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                  title="Télécharger"
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setShareDialog({ imageIndex: index })}
+                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                  title="Partager"
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
+              </div>
             )}
           </div>
         ))}
@@ -307,9 +311,7 @@ export function PrankResult({ resultUrls, prankId, hideActions = false }: PrankR
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>
-                  Envoyer sur {shareGuide?.platform}
-                </DrawerTitle>
+                <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
                 <DrawerDescription className="sr-only">
                   Instructions de partage
                 </DrawerDescription>

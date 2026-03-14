@@ -15,18 +15,11 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Trash2,
-  Loader2,
-  Download,
-  Share2,
-  ArrowRight,
-  X,
-} from "lucide-react";
+import { Trash2, Loader2, Download, Share2, ArrowRight, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
 
@@ -94,16 +87,6 @@ export default function PrankHistory() {
     prankId: string;
     imageIndex: number;
   } | null>(null);
-
-  // Hide the bottom dock when the prank viewer is open
-  useEffect(() => {
-    if (selectedPrank) {
-      document.body.setAttribute("data-prank-viewer", "");
-    } else {
-      document.body.removeAttribute("data-prank-viewer");
-    }
-    return () => document.body.removeAttribute("data-prank-viewer");
-  }, [selectedPrank]);
 
   function getResultUrls(resultUrlsStr: string | null): string[] {
     if (!resultUrlsStr) return [];
@@ -211,7 +194,20 @@ export default function PrankHistory() {
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
           <span className="relative inline-block">
             Historique des Pranks
-            <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+            <svg
+              className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+              viewBox="0 0 100 12"
+              fill="none"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2 8 Q 50 2 98 8"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeLinecap="round"
+              ></path>
+            </svg>
           </span>
         </h1>
       )}
@@ -219,7 +215,10 @@ export default function PrankHistory() {
       {isLoading ? (
         <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 max-w-3xl mx-auto">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="aspect-[9/16] rounded-xl overflow-hidden relative">
+            <div
+              key={i}
+              className="aspect-[9/16] rounded-xl overflow-hidden relative"
+            >
               <Skeleton className="absolute inset-0 w-full h-full" />
               <div className="absolute inset-x-0 bottom-0 p-3 space-y-2">
                 <Skeleton className="h-4 w-2/3 rounded-md" />
@@ -239,7 +238,20 @@ export default function PrankHistory() {
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
             <span className="relative inline-block">
               Tu n'as pas encore de prank
-              <svg className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50" viewBox="0 0 100 12" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 50 2 98 8" stroke="currentColor" strokeWidth="5" strokeLinecap="round"></path></svg>
+              <svg
+                className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+                viewBox="0 0 100 12"
+                fill="none"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 8 Q 50 2 98 8"
+                  stroke="currentColor"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                ></path>
+              </svg>
             </span>
           </h2>
           <p className="text-muted-foreground mb-8 max-w-sm">
@@ -264,7 +276,9 @@ export default function PrankHistory() {
               <div
                 key={prank.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
-                onClick={() => setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })}
+                onClick={() =>
+                  setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })
+                }
               >
                 {/* Result image (après) — always visible, with hover zoom */}
                 <img
@@ -329,27 +343,27 @@ export default function PrankHistory() {
 
                   {/* Action buttons */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(prank.id);
-                        }}
-                        className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                        title="Télécharger"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShareDialog({ prankId: prank.id, imageIndex: 0 });
-                        }}
-                        className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                        title="Partager"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(prank.id);
+                      }}
+                      className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                      title="Télécharger"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareDialog({ prankId: prank.id, imageIndex: 0 });
+                      }}
+                      className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                      title="Partager"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -384,13 +398,15 @@ export default function PrankHistory() {
                   key={platform.id}
                   onClick={() =>
                     shareDialog &&
-                    handleShare(shareDialog.prankId, shareDialog.imageIndex, platform.id)
+                    handleShare(
+                      shareDialog.prankId,
+                      shareDialog.imageIndex,
+                      platform.id,
+                    )
                   }
                   className="flex flex-col items-center gap-2 rounded-xl p-3 transition-all active:scale-95"
                 >
-                  <div
-                    className="flex h-14 w-14 items-center justify-center rounded-full text-primary shadow-md bg-card border border-border/30"
-                  >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full text-primary shadow-md bg-card border border-border/30">
                     {platform.icon}
                   </div>
                   <span className="text-xs font-medium">{platform.name}</span>
@@ -406,7 +422,9 @@ export default function PrankHistory() {
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle className="text-center">Partage ton prank</DialogTitle>
+              <DialogTitle className="text-center">
+                Partage ton prank
+              </DialogTitle>
               <DialogDescription className="text-center">
                 Envoie-le à tes potes sur leur réseau préféré
               </DialogDescription>
@@ -417,13 +435,15 @@ export default function PrankHistory() {
                   key={platform.id}
                   onClick={() =>
                     shareDialog &&
-                    handleShare(shareDialog.prankId, shareDialog.imageIndex, platform.id)
+                    handleShare(
+                      shareDialog.prankId,
+                      shareDialog.imageIndex,
+                      platform.id,
+                    )
                   }
                   className="flex flex-col items-center gap-2.5 rounded-xl p-3 transition-all hover:bg-muted active:scale-95"
                 >
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-primary shadow-sm bg-card border border-border/30"
-                  >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full text-primary shadow-sm bg-card border border-border/30">
                     {platform.icon}
                   </div>
                   <span className="text-xs font-medium">{platform.name}</span>
@@ -480,7 +500,10 @@ export default function PrankHistory() {
                   </button>
                   <button
                     onClick={() => {
-                      setShareDialog({ prankId: selectedPrank.prankId, imageIndex: 0 });
+                      setShareDialog({
+                        prankId: selectedPrank.prankId,
+                        imageIndex: 0,
+                      });
                       setSelectedPrank(null);
                     }}
                     className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
@@ -493,7 +516,8 @@ export default function PrankHistory() {
             )}
           </DrawerContent>
         </Drawer>
-      ) : selectedPrank && (
+      ) : (
+        selectedPrank &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
@@ -536,7 +560,10 @@ export default function PrankHistory() {
                 </button>
                 <button
                   onClick={() => {
-                    setShareDialog({ prankId: selectedPrank.prankId, imageIndex: 0 });
+                    setShareDialog({
+                      prankId: selectedPrank.prankId,
+                      imageIndex: 0,
+                    });
                     setSelectedPrank(null);
                   }}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
@@ -547,7 +574,7 @@ export default function PrankHistory() {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )
       )}
 
@@ -652,7 +679,9 @@ export default function PrankHistory() {
               </button>
               <DrawerHeader className="text-center">
                 <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
-                <DrawerDescription className="sr-only">Instructions de partage</DrawerDescription>
+                <DrawerDescription className="sr-only">
+                  Instructions de partage
+                </DrawerDescription>
               </DrawerHeader>
             </div>
             <div className="space-y-4 px-4 pb-6">
@@ -696,7 +725,9 @@ export default function PrankHistory() {
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
-              <DialogDescription className="sr-only">Instructions de partage</DialogDescription>
+              <DialogDescription className="sr-only">
+                Instructions de partage
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">

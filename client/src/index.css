@@ -106,11 +106,6 @@ body[data-fullscreen-overlay] .bottom-dock {
   }
 }
 
-/* Hide dock when prank viewer is open */
-body[data-prank-viewer] .dock-nav {
-  display: none;
-}
-
 /* Floating emoji animation */
 @keyframes emoji-float {
   0%,
