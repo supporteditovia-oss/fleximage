@@ -79,10 +79,12 @@ body[data-fullscreen-overlay] .bottom-dock {
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
+    overflow-x: hidden;
     background-image:
       linear-gradient(rgba(46, 250, 229, 0.06) 1px, transparent 1px),
       linear-gradient(90deg, rgba(46, 250, 229, 0.06) 1px, transparent 1px);
     background-size: 40px 40px;
+    background-position: 20px 20px;
   }
 
   h1,

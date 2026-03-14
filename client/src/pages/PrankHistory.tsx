@@ -454,85 +454,21 @@ export default function PrankHistory() {
         </Dialog>
       )}
 
-      {/* Image viewer — Drawer on mobile, overlay on desktop */}
-      {isMobile ? (
-        <Drawer
-          open={!!selectedPrank}
-          onOpenChange={(open) => !open && setSelectedPrank(null)}
-        >
-          <DrawerContent>
-            <DrawerHeader className="sr-only">
-              <DrawerTitle>Prank généré</DrawerTitle>
-              <DrawerDescription>Aperçu de l'image</DrawerDescription>
-            </DrawerHeader>
-            {selectedPrank && (
-              <div className="flex flex-col items-center px-4 pb-6 pt-2">
-                <div className="relative">
-                  <img
-                    src={selectedPrank.imageUrl}
-                    alt="Prank généré"
-                    className="max-h-[60vh] w-auto rounded-2xl object-contain"
-                  />
-                  {/* Top left — close */}
-                  <button
-                    onClick={() => setSelectedPrank(null)}
-                    className="absolute top-2 left-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  {/* Top right — delete */}
-                  <button
-                    onClick={() => {
-                      setDeletingId(selectedPrank.prankId);
-                      setSelectedPrank(null);
-                    }}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                  {/* Bottom — download & share overlay */}
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
-                  <button
-                    onClick={() => handleDownload(selectedPrank.prankId)}
-                    className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                    title="Télécharger"
-                  >
-                    <Download className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShareDialog({
-                        prankId: selectedPrank.prankId,
-                        imageIndex: 0,
-                      });
-                      setSelectedPrank(null);
-                    }}
-                    className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                    title="Partager"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        selectedPrank &&
+      {/* Image viewer — fullscreen overlay on both mobile and desktop */}
+      {selectedPrank &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setSelectedPrank(null)}
             />
             {/* Image with overlaid buttons */}
-            <div className="relative max-w-3xl max-h-[85vh] z-10">
+            <div className="relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh]">
               <img
                 src={selectedPrank.imageUrl}
                 alt="Prank généré"
-                className="max-w-full max-h-[85vh] rounded-2xl object-contain"
+                className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
               />
               {/* Top left — close */}
               <button
@@ -577,8 +513,7 @@ export default function PrankHistory() {
             </div>
           </div>,
           document.body,
-        )
-      )}
+        )}
 
       {/* Delete confirmation — Drawer on mobile, Dialog on desktop */}
       {isMobile ? (
