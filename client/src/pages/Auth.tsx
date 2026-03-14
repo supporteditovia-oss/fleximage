@@ -15,7 +15,6 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [acceptedTOS, setAcceptedTOS] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -169,7 +168,10 @@ export default function AuthPage() {
             {/* Form */}
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                <Label
+                  htmlFor="email"
+                  className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
+                >
                   Email
                 </Label>
                 <Input
@@ -184,7 +186,10 @@ export default function AuthPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                <Label
+                  htmlFor="password"
+                  className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
+                >
                   Mot de passe
                 </Label>
                 <div className="relative">
@@ -228,7 +233,14 @@ export default function AuthPage() {
               {!isLogin && (
                 <p className="text-[11px] text-muted-foreground/70 text-center">
                   En vous inscrivant, vous acceptez nos{" "}
-                  <a href="/cgu" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">CGU</a>
+                  <a
+                    href="/cgu"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    CGU
+                  </a>
                 </p>
               )}
               <Button

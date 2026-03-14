@@ -1067,6 +1067,36 @@ export async function registerRoutes(
     },
   );
 
+  // DELETE /api/admin/users/:id (Admin only) — delete a user and their auth entry
+  app.delete(
+    api.admin.deleteUser.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        // Delete profile first (cascade will handle related data)
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .delete()
+          .eq("id", id);
+
+        if (profileError) throw profileError;
+
+        // Delete the auth user entry
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+        if (authError) throw authError;
+
+        res.json({ message: "Utilisateur supprimé" });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error deleting user");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
   // =============================================
   // FAVORITES ENDPOINTS
   // =============================================

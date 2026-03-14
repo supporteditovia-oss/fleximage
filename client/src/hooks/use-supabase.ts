@@ -29,13 +29,21 @@ export function useProfile() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: UpdateProfileRequest }) => {
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: UpdateProfileRequest;
+    }) => {
       const res = await authFetch(`/api/admin/users/${id}`, {
         method: "PATCH",
         body: JSON.stringify(updates),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Erreur serveur" }));
+        const err = await res
+          .json()
+          .catch(() => ({ message: "Erreur serveur" }));
         throw new Error(err.message || "Erreur serveur");
       }
       return res.json();
@@ -48,12 +56,15 @@ export function useProfile() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      const res = await authFetch(`/api/admin/users/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res
+          .json()
+          .catch(() => ({ message: "Erreur serveur" }));
+        throw new Error(err.message || "Erreur serveur");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -81,18 +92,39 @@ export function useAdminMetrics() {
     queryKey: ["admin-metrics"],
     queryFn: async () => {
       const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const thisWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString();
-      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const today = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      ).toISOString();
+      const thisWeek = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - now.getDay(),
+      ).toISOString();
+      const thisMonth = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        1,
+      ).toISOString();
 
       const [
         { count: todayCount },
         { count: weekCount },
-        { count: monthCount }
+        { count: monthCount },
       ] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", today),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", thisWeek),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", thisMonth),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", today),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", thisWeek),
+        supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", thisMonth),
       ]);
 
       return {
@@ -117,7 +149,7 @@ export function useUserGrowth() {
     queryFn: async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const { data, error } = await supabase
         .from("profiles")
         .select("created_at")
@@ -128,7 +160,7 @@ export function useUserGrowth() {
 
       // Group by date
       const counts: Record<string, number> = {};
-      data?.forEach(profile => {
+      data?.forEach((profile) => {
         const date = new Date(profile.created_at).toLocaleDateString();
         counts[date] = (counts[date] || 0) + 1;
       });
@@ -140,7 +172,10 @@ export function useUserGrowth() {
         d.setDate(d.getDate() - i);
         const dateStr = d.toLocaleDateString();
         chartData.push({
-          date: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          date: d.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          }),
           count: counts[dateStr] || 0,
         });
       }

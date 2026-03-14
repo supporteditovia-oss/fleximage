@@ -13,6 +13,7 @@
  */
 html {
   overflow-y: scroll !important;
+  overflow-x: hidden;
 }
 body[data-scroll-locked][data-scroll-locked] {
   margin-right: 0 !important;

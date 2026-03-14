@@ -116,6 +116,10 @@ export const api = {
       method: "PATCH" as const,
       path: "/api/admin/users/:id",
     },
+    deleteUser: {
+      method: "DELETE" as const,
+      path: "/api/admin/users/:id",
+    },
   },
   categories: {
     list: {

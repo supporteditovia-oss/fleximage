@@ -515,7 +515,7 @@ export default function Generate() {
       {/* Image upload zone + prompt */}
       <div
         ref={topRef}
-        className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-6rem)] pt-4 pb-4"
+        className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4 overflow-hidden"
       >
         {/* Background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
@@ -525,7 +525,7 @@ export default function Generate() {
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
           <div
-            className="w-full flex justify-center px-4 -mb-7 md:-mb-8"
+            className="w-full flex justify-center -mb-7 md:-mb-8"
           >
             <div className="flex flex-col w-full max-w-md">
               <div className="flex items-end justify-center gap-2 md:gap-3 w-full">
@@ -641,7 +641,7 @@ export default function Generate() {
           </div>
 
           {/* Unified input bar */}
-          <div className="relative z-10 w-full flex justify-center px-4">
+          <div className="relative z-10 w-full flex justify-center">
             <div className="flex flex-col gap-2 w-full max-w-md">
               {/* Free mode: single text input */}
               {!selectedTemplate && (

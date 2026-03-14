@@ -59,14 +59,16 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
     <img
       src={src}
       alt={alt}
-      loading="lazy"
-      decoding="async"
       className="absolute inset-0 w-full h-full object-cover"
     />
   );
 }
 
-const MarqueeCard = React.memo(function MarqueeCard({ template }: { template: MarqueeTemplate }) {
+const MarqueeCard = React.memo(function MarqueeCard({
+  template,
+}: {
+  template: MarqueeTemplate;
+}) {
   const hasBefore = !!template.example_before_url;
 
   if (!hasBefore) {
@@ -74,7 +76,10 @@ const MarqueeCard = React.memo(function MarqueeCard({ template }: { template: Ma
       <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl overflow-hidden relative bg-muted/30">
         <CardImage src={template.example_after_url} alt={template.name} />
         <div className="absolute bottom-2 left-2 right-2 z-10">
-          <span className="text-[11px] font-semibold text-white truncate block" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>
+          <span
+            className="text-[11px] font-semibold text-white truncate block"
+            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+          >
             {template.name}
           </span>
         </div>
@@ -85,11 +90,17 @@ const MarqueeCard = React.memo(function MarqueeCard({ template }: { template: Ma
   return (
     <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl overflow-hidden relative bg-muted/30">
       <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
-        <CardImage src={template.example_before_url!} alt={`${template.name} — avant`} />
+        <CardImage
+          src={template.example_before_url!}
+          alt={`${template.name} — avant`}
+        />
       </div>
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
       <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
-        <CardImage src={template.example_after_url} alt={`${template.name} — après`} />
+        <CardImage
+          src={template.example_after_url}
+          alt={`${template.name} — après`}
+        />
       </div>
       <div className="absolute top-2 right-2 z-10">
         <span className="text-[10px] font-medium text-white/80 bg-black/50 rounded-full px-2 py-0.5">
@@ -102,7 +113,10 @@ const MarqueeCard = React.memo(function MarqueeCard({ template }: { template: Ma
         </span>
       </div>
       <div className="absolute bottom-2 left-2 right-2 z-10">
-        <span className="text-[11px] font-semibold text-white truncate block" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>
+        <span
+          className="text-[11px] font-semibold text-white truncate block"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+        >
           {template.name}
         </span>
       </div>
@@ -120,7 +134,11 @@ function PlaceholderCard() {
   );
 }
 
-function MarqueeRow({ items, reverse, placeholders }: {
+function MarqueeRow({
+  items,
+  reverse,
+  placeholders,
+}: {
   items: MarqueeTemplate[];
   reverse: boolean;
   placeholders: boolean;
@@ -170,7 +188,9 @@ export default function ImageMarquee() {
   const hasData = templates && templates.length > 0;
 
   const mid = hasData ? Math.ceil(templates.length / 2) : 0;
-  const row1 = hasData ? padToMin(templates.slice(0, mid), MIN_CARDS_PER_ROW) : [];
+  const row1 = hasData
+    ? padToMin(templates.slice(0, mid), MIN_CARDS_PER_ROW)
+    : [];
   const row2 = hasData ? padToMin(templates.slice(mid), MIN_CARDS_PER_ROW) : [];
 
   return (

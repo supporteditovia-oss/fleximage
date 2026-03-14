@@ -1,5 +1,4 @@
 import { useAuth } from "@/hooks/use-auth";
-import { TermsGuard } from "./TermsGuard";
 import { BottomDock } from "./BottomDock";
 import FloatingHeader from "@/components/layout/FloatingHeader";
 
@@ -21,7 +20,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <TermsGuard />
       <FloatingHeader variant="app" />
       <main className="flex-1 px-4 md:px-8 pt-20 pb-28">
         <div className="mx-auto max-w-full md:max-w-[60vw] animate-in fade-in slide-in-from-bottom-4 duration-500">
