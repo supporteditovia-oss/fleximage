@@ -154,7 +154,7 @@ export function PrankResult({
             <img
               src={url}
               alt={`Prank généré ${index + 1}`}
-              className="max-h-[calc(100dvh-15rem)] max-w-[45vw] md:max-w-[min(320px,45vw)] w-auto object-contain rounded-2xl"
+              className="max-h-[calc(100dvh-13rem)] w-auto object-contain rounded-2xl"
               loading="lazy"
             />
             {/* Bottom gradient with action buttons */}

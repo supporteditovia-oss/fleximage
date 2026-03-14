@@ -51,6 +51,13 @@ export function GenerationProgress({
     data?.resultUrls,
   ]);
 
+  // Show dock again when result is displayed (remove fullscreen overlay flag)
+  useEffect(() => {
+    if (showResult) {
+      document.body.removeAttribute("data-fullscreen-overlay");
+    }
+  }, [showResult]);
+
   // Determine loader status
   const loaderStatus =
     !data || isLoading
@@ -127,13 +134,7 @@ export function GenerationProgress({
         data?.status === "success" &&
         createPortal(
           <div
-            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-4 overflow-hidden px-4 py-6 animate-in fade-in duration-500"
-            style={{
-              backgroundColor: "hsl(var(--background))",
-              backgroundImage:
-                "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
-              backgroundSize: "40px 40px",
-            }}
+            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-3 overflow-hidden px-4 py-6 pb-24 animate-in fade-in duration-500 bg-background"
           >
             {requiresPaywall ? (
               <>
@@ -164,7 +165,7 @@ export function GenerationProgress({
                 </h1>
 
                 {/* Prank result with download/share actions */}
-                <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
+                <div className="relative min-h-0 flex items-center justify-center overflow-hidden">
                   <PrankResult
                     resultUrls={data.resultUrls}
                     prankId={data.prankId}

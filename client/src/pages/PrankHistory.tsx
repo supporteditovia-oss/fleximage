@@ -466,34 +466,35 @@ export default function PrankHistory() {
               <DrawerDescription>Aperçu de l'image</DrawerDescription>
             </DrawerHeader>
             {selectedPrank && (
-              <div className="relative px-4 pb-6 pt-2">
-                <img
-                  src={selectedPrank.imageUrl}
-                  alt="Prank généré"
-                  className="w-full rounded-2xl object-contain"
-                />
-                {/* Top left — close */}
-                <button
-                  onClick={() => setSelectedPrank(null)}
-                  className="absolute top-4 left-6 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                {/* Top right — delete */}
-                <button
-                  onClick={() => {
-                    setDeletingId(selectedPrank.prankId);
-                    setSelectedPrank(null);
-                  }}
-                  className="absolute top-4 right-6 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-                {/* Bottom center — download & share */}
-                <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="flex flex-col items-center px-4 pb-6 pt-2">
+                <div className="relative">
+                  <img
+                    src={selectedPrank.imageUrl}
+                    alt="Prank généré"
+                    className="max-h-[60vh] w-auto rounded-2xl object-contain"
+                  />
+                  {/* Top left — close */}
+                  <button
+                    onClick={() => setSelectedPrank(null)}
+                    className="absolute top-2 left-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  {/* Top right — delete */}
+                  <button
+                    onClick={() => {
+                      setDeletingId(selectedPrank.prankId);
+                      setSelectedPrank(null);
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  {/* Bottom — download & share overlay */}
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
                   <button
                     onClick={() => handleDownload(selectedPrank.prankId)}
-                    className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+                    className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                     title="Télécharger"
                   >
                     <Download className="h-5 w-5" />
@@ -506,11 +507,12 @@ export default function PrankHistory() {
                       });
                       setSelectedPrank(null);
                     }}
-                    className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
+                    className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                     title="Partager"
                   >
                     <Share2 className="h-5 w-5" />
                   </button>
+                  </div>
                 </div>
               </div>
             )}

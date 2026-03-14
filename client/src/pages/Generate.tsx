@@ -517,7 +517,7 @@ export default function Generate() {
   // -- Unlocked prank after successful payment --
   if (unlockedPrank) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 min-h-[calc(100vh-12rem)] py-6 animate-in fade-in duration-500">
+      <div className="flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] py-6 animate-in fade-in duration-500">
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
           <span className="relative inline-block">
             Voici ton prank !
@@ -538,7 +538,7 @@ export default function Generate() {
           </span>
         </h1>
 
-        <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
+        <div className="relative min-h-0 flex items-center justify-center overflow-hidden">
           <PrankResult
             resultUrls={unlockedPrank.resultUrls}
             prankId={unlockedPrank.prankId}
@@ -563,13 +563,7 @@ export default function Generate() {
   if (savedPaywall && !profile?.is_subscriber) {
     return (
       <div
-        className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500"
-        style={{
-          backgroundColor: "hsl(var(--background))",
-          backgroundImage:
-            "linear-gradient(rgba(46,250,229,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(46,250,229,0.06) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
+        className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500 bg-background"
       >
         <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
       </div>
