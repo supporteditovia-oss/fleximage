@@ -145,16 +145,16 @@ export function PrankResult({
 
   return (
     <>
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-4 max-h-full">
         {resultUrls.map((url, index) => (
           <div
             key={index}
-            className="relative rounded-2xl overflow-hidden max-h-full"
+            className="relative rounded-2xl overflow-hidden max-h-full flex items-center justify-center"
           >
             <img
               src={url}
               alt={`Prank généré ${index + 1}`}
-              className="max-h-[calc(100dvh-13rem)] w-auto object-contain rounded-2xl"
+              className="max-h-[calc(100dvh-18rem)] w-auto object-contain rounded-2xl"
               loading="lazy"
             />
             {/* Bottom gradient with action buttons */}

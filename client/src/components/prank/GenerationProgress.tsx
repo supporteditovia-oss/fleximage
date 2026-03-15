@@ -134,7 +134,7 @@ export function GenerationProgress({
         data?.status === "success" &&
         createPortal(
           <div
-            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-3 overflow-hidden px-4 py-6 pb-24 animate-in fade-in duration-500 bg-background"
+            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-3 overflow-y-auto px-4 py-6 pb-24 animate-in fade-in duration-500 bg-background"
           >
             {requiresPaywall ? (
               <>
@@ -165,7 +165,7 @@ export function GenerationProgress({
                 </h1>
 
                 {/* Prank result with download/share actions */}
-                <div className="relative min-h-0 flex items-center justify-center overflow-hidden">
+                <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
                   <PrankResult
                     resultUrls={data.resultUrls}
                     prankId={data.prankId}

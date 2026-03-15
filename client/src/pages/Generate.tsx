@@ -538,7 +538,7 @@ export default function Generate() {
           </span>
         </h1>
 
-        <div className="relative min-h-0 flex items-center justify-center overflow-hidden">
+        <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
           <PrankResult
             resultUrls={unlockedPrank.resultUrls}
             prankId={unlockedPrank.prankId}
