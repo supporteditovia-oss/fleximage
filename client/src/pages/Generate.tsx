@@ -197,30 +197,45 @@ export default function Generate() {
   // Restore pending prank from IndexedDB (hero → register → generate flow)
   useEffect(() => {
     let cancelled = false;
-    getPendingPrank().then((pending) => {
-      if (cancelled) return;
-      if (!pending) {
-        console.log("[Generate] No pending prank found");
+    // Safety timeout: if IndexedDB hangs (e.g. mobile Safari), force pendingLoading off
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        console.warn(
+          "[Generate] Pending prank timeout — forcing pendingLoading=false",
+        );
         setPendingLoading(false);
-        return;
       }
-      console.log("[Generate] Pending prank found:", {
-        prompt: pending.prompt,
-        images: pending.images.length,
+    }, 5000);
+    getPendingPrank()
+      .then((pending) => {
+        if (cancelled) return;
+        if (!pending) {
+          console.log("[Generate] No pending prank found");
+          setPendingLoading(false);
+          return;
+        }
+        console.log("[Generate] Pending prank found:", {
+          prompt: pending.prompt,
+          images: pending.images.length,
+        });
+        clearPendingPrank();
+        if (pending.prompt) setPrompt(pending.prompt);
+        if (pending.images.length > 0) {
+          const restored = pending.images.map((file) => ({
+            url: URL.createObjectURL(file),
+            file,
+          }));
+          setImages(restored);
+        }
+        setAutoGenerateReady(true);
+      })
+      .catch((err) => {
+        console.error("[Generate] getPendingPrank error:", err);
+        if (!cancelled) setPendingLoading(false);
       });
-      clearPendingPrank();
-      if (pending.prompt) setPrompt(pending.prompt);
-      if (pending.images.length > 0) {
-        const restored = pending.images.map((file) => ({
-          url: URL.createObjectURL(file),
-          file,
-        }));
-        setImages(restored);
-      }
-      setAutoGenerateReady(true);
-    });
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
   }, []);
 
@@ -476,9 +491,16 @@ export default function Generate() {
     : pendingLoading
       ? createPortal(
           <div
-            className="fixed inset-0 z-[100]"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
             style={{ backgroundColor: "hsl(var(--background))" }}
-          />,
+          >
+            <img
+              src="/assets/turboprank.png"
+              alt="TurboPrank"
+              className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
+            />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>,
           document.body,
         )
       : null;
@@ -562,9 +584,7 @@ export default function Generate() {
   // -- Persistent paywall for non-subscribers with a previous generation --
   if (savedPaywall && !profile?.is_subscriber) {
     return (
-      <div
-        className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500 bg-background"
-      >
+      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500 bg-background">
         <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
       </div>
     );
