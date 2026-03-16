@@ -1,23 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, Loader2, Lock } from "lucide-react";
 import { authFetch } from "@/lib/api";
+import { posthog } from "@/lib/posthog";
 
 interface PaywallOverlayProps {
   imageUrl: string;
+  isFake?: boolean;
 }
 
-export function PaywallOverlay({ imageUrl }: PaywallOverlayProps) {
+export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    posthog.capture("paywall_view", { isFake: !!isFake });
+  }, [isFake]);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
+    posthog.capture("checkout_initiated", { isFake: !!isFake });
     try {
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
       });
       const { url } = await res.json();
       if (url) {
+        // Wait briefly so PostHog has time to send the tracking event before navigation
+        await new Promise((resolve) => setTimeout(resolve, 800));
         window.location.href = url;
       }
     } catch (error) {
@@ -29,12 +38,16 @@ export function PaywallOverlay({ imageUrl }: PaywallOverlayProps) {
   return (
     <div className="relative rounded-2xl overflow-hidden w-full max-w-sm mx-auto h-[min(65vh,600px)] aspect-[9/16] shadow-xl">
 
-      {/* Watermarked image */}
-      <img
-        src={imageUrl}
-        alt="Prank généré"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {/* Watermarked/Blurred image or generic blurred background */}
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt="Prank généré"
+          className={`absolute inset-0 w-full h-full object-cover origin-center ${isFake ? "blur-[40px] brightness-50 scale-125" : ""}`}
+        />
+      ) : (
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/60 via-purple-500/60 to-blue-500/60 blur-[40px] scale-125 opacity-60" />
+      )}
 
       {/* Gradient overlay: transparent top → dark bottom */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-30% to-black/90 pointer-events-none" />

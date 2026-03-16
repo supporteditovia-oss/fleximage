@@ -90,13 +90,24 @@ const PAGE_TITLES: Record<string, string> = {
   "/confidentialite": "Politique de confidentialité — TurboPrank",
 };
 
+import { PostHogProvider } from "posthog-js/react";
+import { posthog } from "@/lib/posthog";
+import { usePostHog } from "posthog-js/react";
+
 function Router() {
   const { user } = useAuth();
   const [location] = useLocation();
+  const posthogInstance = usePostHog();
 
   React.useEffect(() => {
     document.title = PAGE_TITLES[location] || "TurboPrank";
-  }, [location]);
+    if (posthogInstance) {
+      posthogInstance.capture("$pageview");
+      if (location === AUTH_CONFIG.LANDING_PATH) {
+        posthogInstance.capture("landing_page_view");
+      }
+    }
+  }, [location, posthogInstance]);
 
   return (
     <Switch>
@@ -154,14 +165,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <PostHogProvider client={posthog}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Router />
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </PostHogProvider>
   );
 }
 

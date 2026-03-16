@@ -24,6 +24,11 @@ export function useTypewriterPlaceholder(
       return;
     }
 
+    if (!ideas || ideas.length === 0) {
+      el.placeholder = "Décris ton prank…";
+      return;
+    }
+
     let charIndex = 0;
     let deleting = false;
     let timer: ReturnType<typeof setTimeout>;

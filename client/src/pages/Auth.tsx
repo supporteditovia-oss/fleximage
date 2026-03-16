@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { translateSupabaseError } from "@/lib/error-translator";
+import { posthog } from "@/lib/posthog";
 
 export default function AuthPage() {
   const [location, setLocation] = useLocation();
@@ -60,14 +61,19 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        
+        if (data?.user?.id) {
+          posthog.identify(data.user.id, { email: data.user.email });
+        }
+        
         toast({ title: "Bon retour !", description: "Connexion réussie." });
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -78,6 +84,12 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
+        
+        if (data?.user?.id) {
+          posthog.identify(data.user.id, { email: data.user.email });
+        }
+        
+        posthog.capture("signup_completed", { method: "email" });
         setLocation("/login");
       }
     } catch (error: any) {

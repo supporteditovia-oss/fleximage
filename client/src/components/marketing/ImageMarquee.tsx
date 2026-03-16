@@ -21,16 +21,43 @@ function padToMin<T>(items: T[], min: number): T[] {
 
 function useMarquee(reverse: boolean) {
   const ref = React.useRef<HTMLDivElement>(null);
+  const isVisibleRef = React.useRef(true);
+
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisibleRef.current = entry.isIntersecting;
+      },
+      { rootMargin: "100px" }
+    );
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    let offset = reverse ? -(el.scrollWidth / 2) : 0;
+    let offset = 0;
+    // For reverse direction, we start at 0 and go positive until we hit half scrollWidth
+    // Wait for a frame to let scrollWidth compute properly
+    requestAnimationFrame(() => {
+      if (el && reverse) {
+        offset = -(el.scrollWidth / 2);
+      }
+    });
     let rafId: number;
     let last: number | null = null;
 
     const step = (now: number) => {
+      if (!isVisibleRef.current) {
+        last = now; // Prevent jumping when it becomes visible again
+        rafId = requestAnimationFrame(step);
+        return;
+      }
+
       if (last !== null) {
         // Normalize speed to 60fps regardless of actual refresh rate
         const delta = (now - last) / 16.667;
@@ -59,6 +86,8 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className="absolute inset-0 w-full h-full object-cover"
     />
   );

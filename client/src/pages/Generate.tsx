@@ -27,11 +27,14 @@ import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { useTemplates } from "@/hooks/use-templates";
 import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
+import { GenerationLoader } from "@/components/prank/GenerationLoader";
 import { PrankResult } from "@/components/prank/PrankResult";
 import { PaywallOverlay } from "@/components/prank/PaywallOverlay";
 import { useToast } from "@/hooks/use-toast";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
+import { posthog } from "@/lib/posthog";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useAuth } from "@/hooks/use-auth";
 import { getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
 import {
@@ -77,6 +80,9 @@ export default function Generate() {
   const [pendingLoading, setPendingLoading] = useState(true);
   // Transition backdrop that persists behind GenerationLoader to prevent flash
   const [transitionBg, setTransitionBg] = useState(false);
+  const [isFakeGenerating, setIsFakeGenerating] = useState(false);
+  const [fakeLoaderStatus, setFakeLoaderStatus] = useState<"connecting" | "waiting" | "success">("connecting");
+  const [showFakePaywall, setShowFakePaywall] = useState(false);
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     prankId: string;
@@ -98,6 +104,7 @@ export default function Generate() {
     useGenerationEligibility();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const isNewOnboarding = useFeatureFlagEnabled("new_onboarding_flow");
 
   // Handle Stripe checkout return
   useEffect(() => {
@@ -110,6 +117,7 @@ export default function Generate() {
       // Clear paywall state
       clearPaywalledResult();
       setSavedPaywall(null);
+      sessionStorage.removeItem("fake_paywall_reached");
 
       // Verify session, then fetch unlocked prank if we have one
       const onVerified = () => {
@@ -161,6 +169,7 @@ export default function Generate() {
         .then((res) => res.json())
         .then((data) => {
           console.log("[Checkout] verify-session result:", data);
+          posthog.capture("subscription_created");
           onVerified();
         })
         .catch((err) => {
@@ -218,7 +227,6 @@ export default function Generate() {
           prompt: pending.prompt,
           images: pending.images.length,
         });
-        clearPendingPrank();
         if (pending.prompt) setPrompt(pending.prompt);
         if (pending.images.length > 0) {
           const restored = pending.images.map((file) => ({
@@ -377,6 +385,9 @@ export default function Generate() {
     }
 
     try {
+      // Clear pending prank now that a real generation is starting
+      clearPendingPrank();
+
       const files = images.filter(
         (img): img is { url: string; file: File } => img !== null,
       );
@@ -398,6 +409,7 @@ export default function Generate() {
         images: base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedTemplate?.id,
       });
+      posthog.capture("prank_created", { isFake: false, template_id: selectedTemplate?.id });
       setTaskId(result.taskId);
       refetchEligibility();
     } catch (error: any) {
@@ -405,7 +417,7 @@ export default function Generate() {
       try {
         const parsed = JSON.parse(error.message);
         message = parsed.message || error.message;
-      } catch {}
+      } catch { }
       // If we got HTML back (server error), show a clean message
       if (message.includes("<!DOCTYPE") || message.includes("<html")) {
         message = "Erreur serveur. Veuillez réessayer.";
@@ -427,6 +439,11 @@ export default function Generate() {
     refetchEligibility();
   };
 
+  // Store checkout state early before URL gets cleaned
+  const [isReturningFromCheckout] = useState(() => {
+    return new URLSearchParams(window.location.search).get("checkout") === "success";
+  });
+
   // Auto-generate when pending prank data has been restored
   useEffect(() => {
     if (!autoGenerateReady) return;
@@ -440,6 +457,23 @@ export default function Generate() {
       setPendingLoading(false);
       return;
     }
+
+    if (isNewOnboarding && !isReturningFromCheckout) {
+      if (sessionStorage.getItem("fake_paywall_reached") === "true") {
+        console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
+        setPendingLoading(false);
+        setShowFakePaywall(true);
+        return;
+      }
+
+      console.log("[Generate] Starting FAKE generation flow...");
+      setPendingLoading(false);
+      posthog.capture("prank_created", { isFake: true, template_id: selectedTemplate?.id });
+      document.body.setAttribute("data-fullscreen-overlay", "true");
+      setIsFakeGenerating(true);
+      return;
+    }
+
     // Activate transition backdrop before starting generation
     setTransitionBg(true);
     console.log("[Generate] Starting handleGenerate...");
@@ -458,12 +492,21 @@ export default function Generate() {
       });
   }, [autoGenerateReady]);
 
+  useEffect(() => {
+    if (isFakeGenerating) {
+      setFakeLoaderStatus("connecting");
+      const t1 = setTimeout(() => setFakeLoaderStatus("waiting"), 4000);
+      const t2 = setTimeout(() => setFakeLoaderStatus("success"), 15000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, [isFakeGenerating]);
+
   // -- Transition backdrop: sits behind GenerationLoader (z-100) to prevent flash --
   const transitionBackdrop = transitionBg
     ? createPortal(
-        <div className="fixed inset-0 z-[99] bg-background bg-grid" />,
-        document.body,
-      )
+      <div className="fixed inset-0 z-[99] bg-background bg-grid" />,
+      document.body,
+    )
     : null;
 
   // Debug: log which render branch we're taking
@@ -472,34 +515,51 @@ export default function Generate() {
     pendingLoading,
     transitionBg,
     savedPaywall: !!savedPaywall,
+    isFakeGenerating,
+    fakeLoaderStatus,
+    showFakePaywall
   });
 
   // -- Fullscreen overlays rendered via portal to escape AppLayout's fade-in wrapper --
   const portalOverlay = taskId
     ? createPortal(
-        <GenerationProgress
-          taskId={taskId}
-          inputImageUrl={images[0]?.url}
-          onRetry={handleGenerate}
-          onReset={handleReset}
-        />,
-        document.body,
-      )
+      <GenerationProgress
+        taskId={taskId}
+        inputImageUrl={images[0]?.url}
+        onRetry={handleGenerate}
+        onReset={handleReset}
+      />,
+      document.body,
+    )
     : pendingLoading
       ? createPortal(
-          <div
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
-          >
-            <img
-              src="/assets/turboprank.png"
-              alt="TurboPrank"
-              className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
-            />
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>,
-          document.body,
-        )
+        <div
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
+        >
+          <img
+            src="/assets/turboprank.png"
+            alt="TurboPrank"
+            className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
+          />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>,
+        document.body,
+      )
       : null;
+
+  const fakeLoaderOverlay = isFakeGenerating ? createPortal(
+    <GenerationLoader
+      status={fakeLoaderStatus}
+      inputImageUrl={images[0]?.url}
+      onRevealComplete={() => {
+        setIsFakeGenerating(false);
+        sessionStorage.setItem("fake_paywall_reached", "true");
+        setShowFakePaywall(true);
+        document.body.removeAttribute("data-fullscreen-overlay");
+      }}
+    />,
+    document.body
+  ) : null;
 
   // -- Generation in progress: show portal overlay, hide form beneath --
   if (taskId) {
@@ -508,6 +568,24 @@ export default function Generate() {
         {transitionBackdrop}
         {portalOverlay}
       </>
+    );
+  }
+
+  if (isFakeGenerating) {
+    return (
+      <>
+        {transitionBackdrop}
+        {fakeLoaderOverlay}
+      </>
+    );
+  }
+
+  // -- Fake Paywall from new onboarding --
+  if (showFakePaywall) {
+    return (
+      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid">
+        <PaywallOverlay isFake={true} imageUrl={images[0]?.url || ""} />
+      </div>
     );
   }
 
@@ -593,10 +671,13 @@ export default function Generate() {
         ref={topRef}
         className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4"
       >
-        {/* Background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
+        {/* Mobile Lightweight Background Glow (no blur) */}
+        <div className="md:hidden absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,_var(--tw-gradient-stops))] from-primary/15 via-secondary/5 to-transparent -z-10 pointer-events-none" />
+
+        {/* Abstract Background Shapes (hidden on mobile to save GPU) */}
+        <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           {/* Image upload grid — overlaps input via negative margin */}
@@ -623,12 +704,12 @@ export default function Generate() {
                             <div className="flex items-center gap-1.5 min-w-0">
                               {selectedTemplate.icon &&
                                 icons[
-                                  selectedTemplate.icon as keyof typeof icons
+                                selectedTemplate.icon as keyof typeof icons
                                 ] &&
                                 (() => {
                                   const LucideIcon =
                                     icons[
-                                      selectedTemplate.icon as keyof typeof icons
+                                    selectedTemplate.icon as keyof typeof icons
                                     ];
                                   return (
                                     <LucideIcon className="w-4 h-4 text-primary shrink-0" />
@@ -943,11 +1024,10 @@ export default function Generate() {
                   className="absolute top-1.5 right-1.5 z-20 w-7 h-7 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
                 >
                   <Star
-                    className={`w-3.5 h-3.5 transition-colors ${
-                      isFav
+                    className={`w-3.5 h-3.5 transition-colors ${isFav
                         ? "fill-yellow-400 text-yellow-400"
                         : "text-white/70 hover:text-white"
-                    }`}
+                      }`}
                   />
                 </button>
                 {/* Image area */}
@@ -1029,11 +1109,10 @@ export default function Generate() {
                     {tpl.name}
                   </p>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${
-                      isSelected
+                    className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${isSelected
                         ? "text-primary"
                         : "text-muted-foreground/40 group-hover:text-primary"
-                    }`}
+                      }`}
                   />
                 </div>
               </div>

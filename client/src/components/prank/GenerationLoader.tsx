@@ -35,11 +35,11 @@ export function GenerationLoader({
 
   // When success arrives, transition to result
   useEffect(() => {
-    if (status === "success" && resultUrls?.length && phase === "logo") {
+    if (status === "success" && phase === "logo") {
       const timer = setTimeout(() => setPhase("result"), 600);
       return () => clearTimeout(timer);
     }
-  }, [status, resultUrls, phase]);
+  }, [status, phase]);
 
   const handleRevealDone = useCallback(() => {
     if (onRevealComplete) {

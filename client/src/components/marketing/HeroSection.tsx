@@ -36,7 +36,8 @@ export default function HeroSection() {
   const [images, setImages] = React.useState<({ url: string; file: File } | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
-  const typewriterRef = useTypewriterPlaceholder(prompt, prankIdeas);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const typewriterRef = useTypewriterPlaceholder(prompt, isMobile ? Object.freeze([]) as unknown as string[] : prankIdeas);
   const { user } = useAuth();
   const generateDirect = useGenerateDirectPrank();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
@@ -158,10 +159,13 @@ export default function HeroSection() {
 
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
-      {/* Abstract Background Shapes */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10" />
+      {/* Mobile Lightweight Background Glow (no blur) */}
+      <div className="md:hidden absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,_var(--tw-gradient-stops))] from-primary/15 via-secondary/5 to-transparent -z-10 pointer-events-none" />
+
+      {/* Abstract Background Shapes (hidden on mobile to save GPU) */}
+      <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
+      <div className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10" />
+      <div className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10" />
 
       <motion.div
         variants={containerVariants}
@@ -292,7 +296,7 @@ export default function HeroSection() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Décris ton prank…"
+                placeholder={isMobile ? "Décris ton prank…" : ""}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
               />
               <button
