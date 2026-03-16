@@ -672,7 +672,7 @@ export default function Generate() {
         className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4"
       >
         {/* Mobile Lightweight Background Glow (no blur) */}
-        <div className="md:hidden absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,_var(--tw-gradient-stops))] from-primary/15 via-secondary/5 to-transparent -z-10 pointer-events-none" />
+        <div className="md:hidden absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,_var(--tw-gradient-stops))] from-primary/10 via-secondary/5 to-transparent -z-10 pointer-events-none" />
 
         {/* Abstract Background Shapes (hidden on mobile to save GPU) */}
         <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />

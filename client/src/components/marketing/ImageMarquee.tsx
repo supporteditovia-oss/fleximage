@@ -19,67 +19,9 @@ function padToMin<T>(items: T[], min: number): T[] {
   return result;
 }
 
-function useMarquee(reverse: boolean) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const isVisibleRef = React.useRef(true);
-
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        isVisibleRef.current = entry.isIntersecting;
-      },
-      { rootMargin: "100px" }
-    );
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    let offset = 0;
-    // For reverse direction, we start at 0 and go positive until we hit half scrollWidth
-    // Wait for a frame to let scrollWidth compute properly
-    requestAnimationFrame(() => {
-      if (el && reverse) {
-        offset = -(el.scrollWidth / 2);
-      }
-    });
-    let rafId: number;
-    let last: number | null = null;
-
-    const step = (now: number) => {
-      if (!isVisibleRef.current) {
-        last = now; // Prevent jumping when it becomes visible again
-        rafId = requestAnimationFrame(step);
-        return;
-      }
-
-      if (last !== null) {
-        // Normalize speed to 60fps regardless of actual refresh rate
-        const delta = (now - last) / 16.667;
-        if (reverse) {
-          offset += SPEED * delta;
-          if (offset >= 0) offset = -(el.scrollWidth / 2);
-        } else {
-          offset -= SPEED * delta;
-          if (offset <= -(el.scrollWidth / 2)) offset = 0;
-        }
-        el.style.transform = `translate3d(${offset}px, 0, 0)`;
-      }
-      last = now;
-      rafId = requestAnimationFrame(step);
-    };
-
-    rafId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(rafId);
-  }, [reverse]);
-
-  return ref;
-}
+// Custom infinite CSS animation for marquee is now handling the scrolling instead of JS
+// The Tailwind config needs to have `animate-marquee` defined or we use inline styles.
+// For robust infinite scroll, we simply set up the track so it can loop seamlessly.
 
 function CardImage({ src, alt }: { src: string; alt: string }) {
   return (
@@ -172,31 +114,31 @@ function MarqueeRow({
   reverse: boolean;
   placeholders: boolean;
 }) {
-  const ref = useMarquee(reverse);
   const placeholderCount = 6;
+  const content = placeholders
+    ? Array.from({ length: placeholderCount }, (_, i) => (
+        <PlaceholderCard key={`p-${i}`} />
+      ))
+    : items.map((t, i) => <MarqueeCard key={`c-${i}`} template={t} />);
 
   return (
-    <div className="overflow-hidden">
-      <div
-        ref={ref}
-        className="flex gap-4"
-        style={{ willChange: "transform", backfaceVisibility: "hidden" }}
+    <div className="flex overflow-hidden relative user-select-none gap-[1rem] group [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div 
+        className="flex shrink-0 justify-around gap-[1rem] min-w-full"
+        style={{
+          animation: `scroll ${placeholders ? 30 : 60}s linear infinite ${reverse ? "reverse" : "normal"}`,
+        }}
       >
-        {placeholders
-          ? [...Array(2)].map((_, d) => (
-              <React.Fragment key={d}>
-                {Array.from({ length: placeholderCount }, (_, i) => (
-                  <PlaceholderCard key={`p-${d}-${i}`} />
-                ))}
-              </React.Fragment>
-            ))
-          : [...Array(2)].map((_, d) => (
-              <React.Fragment key={d}>
-                {items.map((t, i) => (
-                  <MarqueeCard key={`c-${d}-${i}`} template={t} />
-                ))}
-              </React.Fragment>
-            ))}
+        {content}
+      </div>
+      <div 
+        className="flex shrink-0 justify-around gap-[1rem] min-w-full"
+        aria-hidden="true"
+        style={{
+          animation: `scroll ${placeholders ? 30 : 60}s linear infinite ${reverse ? "reverse" : "normal"}`,
+        }}
+      >
+        {content}
       </div>
     </div>
   );

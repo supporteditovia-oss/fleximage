@@ -32,51 +32,50 @@ export function BottomDock() {
   const lastScrollY = useRef(0);
 
   useEffect(() => {
-    let lastY = 0;
-    const thresh = 10;
-    let ticking = false;
-
-    // Detect actual scroll direction via touch/wheel delta to avoid rubber-banding issues
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          if (currentY <= 0) {
-            setHidden(false); // top of page
-          } else if (currentY > lastY + thresh) {
-            setHidden(true); // scrolling down
-          } else if (currentY < lastY - thresh) {
-            setHidden(false); // scrolling up
-          }
-          lastY = currentY;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    const handleResize = () => {
+    // We only care about visualViewport events to sync with the browser UI
+    // Note: window.innerHeight is usually the maximum available height (when URL bar is hidden)
+    // visualViewport.height is the actual visible height right now.
+          
+    const handleResizeOrScroll = () => {
       const vv = window.visualViewport;
       if (!vv) return;
-      // If viewport shrinks by more than 20% (keyboard), hide dock
-      if (vv.height < window.innerHeight * 0.8) {
+      
+      const maxH = window.innerHeight;
+      const currentH = vv.height;
+      
+      // 1. Keyboard open: height drops significantly (e.g. < 80% of innerHeight)
+      if (currentH < maxH * 0.8) {
         setHidden(true);
-      } else if (window.scrollY <= lastY + thresh) {
-        // If viewport is full size again, show dock (unless we were already actively scrolling down)
+        return;
+      }
+      
+      // 2. Browser UI collapsed (URL bar hidden): currentH is roughly equal to maxH
+      // In this state, the user is scrolling down and the browser gave us maximum screen space
+      if (currentH >= maxH - 5) {
+        setHidden(true);
+        return;
+      }
+      
+      // 3. Browser UI expanded (URL bar visible): currentH is significantly less than maxH
+      // In this state, the user is scrolling up or stopped
+      if (currentH < maxH - 5) {
         setHidden(false);
+        return;
       }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    
+    // Listen to resize and scroll on visualViewport (scroll on vv fires when UI expands/collapses usually)
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
+      window.visualViewport.addEventListener("resize", handleResizeOrScroll);
+      window.visualViewport.addEventListener("scroll", handleResizeOrScroll);
+      // Run once on mount
+      handleResizeOrScroll();
     }
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
+        window.visualViewport.removeEventListener("resize", handleResizeOrScroll);
+        window.visualViewport.removeEventListener("scroll", handleResizeOrScroll);
       }
     };
   }, []);
