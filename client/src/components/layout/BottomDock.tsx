@@ -32,37 +32,52 @@ export function BottomDock() {
   const lastScrollY = useRef(0);
 
   useEffect(() => {
-    const onScroll = () => {
+    let lastY = 0;
+    const thresh = 10;
+    let ticking = false;
+
+    // Detect actual scroll direction via touch/wheel delta to avoid rubber-banding issues
+    const handleScroll = () => {
       const currentY = window.scrollY;
-      if (currentY > lastScrollY.current && currentY > 50) {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (currentY <= 0) {
+            setHidden(false); // top of page
+          } else if (currentY > lastY + thresh) {
+            setHidden(true); // scrolling down
+          } else if (currentY < lastY - thresh) {
+            setHidden(false); // scrolling up
+          }
+          lastY = currentY;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    const handleResize = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      // If viewport shrinks by more than 20% (keyboard), hide dock
+      if (vv.height < window.innerHeight * 0.8) {
         setHidden(true);
-      } else {
+      } else if (window.scrollY <= lastY + thresh) {
+        // If viewport is full size again, show dock (unless we were already actively scrolling down)
         setHidden(false);
       }
-      lastScrollY.current = currentY;
     };
 
-    const onFocusIn = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") {
-        setHidden(true);
-      }
-    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+    }
 
-    const onFocusOut = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") {
-        setHidden(false);
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
+      window.removeEventListener("scroll", handleScroll);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+      }
     };
   }, []);
 
