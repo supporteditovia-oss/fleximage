@@ -32,35 +32,47 @@ export function BottomDock() {
   const lastScrollY = useRef(0);
 
   useEffect(() => {
-    // We only care about visualViewport events to sync with the browser UI
-    // Note: window.innerHeight is usually the maximum available height (when URL bar is hidden)
-    // visualViewport.height is the actual visible height right now.
+    let maxHeight = window.innerHeight;
+    let lastY = window.scrollY;
+    const thresh = 10;
           
     const handleResizeOrScroll = () => {
       const vv = window.visualViewport;
       if (!vv) return;
       
-      const maxH = window.innerHeight;
+      const currentY = window.scrollY;
       const currentH = vv.height;
+      if (currentH > maxHeight) maxHeight = currentH;
       
-      // 1. Keyboard open: height drops significantly (e.g. < 80% of innerHeight)
-      if (currentH < maxH * 0.8) {
+      // 1. Keyboard open: height drops significantly (e.g. < 80% of max seen height)
+      if (currentH < maxHeight * 0.8) {
         setHidden(true);
+        lastY = currentY;
         return;
       }
       
-      // 2. Browser UI collapsed (URL bar hidden): currentH is roughly equal to maxH
-      // In this state, the user is scrolling down and the browser gave us maximum screen space
-      if (currentH >= maxH - 5) {
-        setHidden(true);
-        return;
-      }
-      
-      // 3. Browser UI expanded (URL bar visible): currentH is significantly less than maxH
-      // In this state, the user is scrolling up or stopped
-      if (currentH < maxH - 5) {
+      // 2. Top of page: always show dock
+      if (currentY <= 50) {
         setHidden(false);
+        lastY = currentY;
         return;
+      }
+      
+      // 3. Browser UI expanded (URL bar visible): height is significantly less than max
+      // This is a very strong signal on mobile that the user scrolled up or tapped the top
+      if (currentH < maxHeight - 15) {
+        setHidden(false);
+        lastY = currentY;
+        return;
+      }
+      
+      // 4. Fallback to scroll delta for desktop or when URL bar is fully collapsed
+      if (currentY > lastY + thresh) {
+        setHidden(true); // scrolling down
+        lastY = currentY;
+      } else if (currentY < lastY - thresh) {
+        setHidden(false); // scrolling up
+        lastY = currentY;
       }
     };
 
