@@ -240,10 +240,6 @@ export default function HeroSection() {
               <button
                 className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-black bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
                 onClick={handleSubmit}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  handleSubmit();
-                }}
                 title="Créer"
               >
                 <ArrowRight className="w-4 h-4" />
