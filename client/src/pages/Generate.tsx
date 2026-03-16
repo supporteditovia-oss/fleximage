@@ -453,18 +453,15 @@ export default function Generate() {
           "[Generate] handleGenerate finally, setting pendingLoading=false",
         );
         setPendingLoading(false);
-        // Keep backdrop behind GenerationLoader long enough for its fade-in (400ms)
-        setTimeout(() => setTransitionBg(false), 600);
+        // Keep backdrop behind GenerationLoader long enough for its fade-in (1000ms+ margin)
+        setTimeout(() => setTransitionBg(false), 1500);
       });
   }, [autoGenerateReady]);
 
   // -- Transition backdrop: sits behind GenerationLoader (z-100) to prevent flash --
   const transitionBackdrop = transitionBg
     ? createPortal(
-        <div
-          className="fixed inset-0 z-[99]"
-          style={{ backgroundColor: "hsl(var(--background))" }}
-        />,
+        <div className="fixed inset-0 z-[99] bg-background bg-grid" />,
         document.body,
       )
     : null;
@@ -491,8 +488,7 @@ export default function Generate() {
     : pendingLoading
       ? createPortal(
           <div
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
-            style={{ backgroundColor: "hsl(var(--background))" }}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
           >
             <img
               src="/assets/turboprank.png"

@@ -13,6 +13,12 @@ import {
 import { prankChips, prankIdeas } from "@/lib/prank-data";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingPrank } from "@/lib/pending-prank";
+import { useAuth } from "@/hooks/use-auth";
+import { useGenerateDirectPrank } from "@/hooks/use-pranks";
+import { useGenerationEligibility } from "@/hooks/use-generation-limits";
+import { useToast } from "@/hooks/use-toast";
+import { GenerationProgress } from "@/components/prank/GenerationProgress";
+import { createPortal } from "react-dom";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -31,6 +37,19 @@ export default function HeroSection() {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
   const typewriterRef = useTypewriterPlaceholder(prompt, prankIdeas);
+  const { user } = useAuth();
+  const generateDirect = useGenerateDirectPrank();
+  const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
+  const { toast } = useToast();
+  const [taskId, setTaskId] = React.useState<string | null>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
   const shuffleIdea = () => {
     const random = prankChips[Math.floor(Math.random() * prankChips.length)];
@@ -81,18 +100,60 @@ export default function HeroSection() {
     const files = images.filter(
       (img): img is { url: string; file: File } => img !== null,
     );
-    if (files.length > 0 || prompt.trim()) {
-      try {
-        await savePendingPrank({
-          prompt,
-          images: files.map((f) => f.file),
-          timestamp: Date.now(),
+
+    if (user) {
+      if (eligibility && !eligibility.canGenerate) {
+        toast({
+          variant: "destructive",
+          title: "Limite atteinte",
+          description: "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
         });
-      } catch (error) {
-        console.error("Ignored IDB save error:", error);
+        return;
       }
+      if (!prompt.trim() && files.length === 0) {
+        toast({ variant: "destructive", title: "Erreur", description: "Décris ton prank ou ajoute une image." });
+        return;
+      }
+      try {
+        const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
+        const result = await generateDirect.mutateAsync({
+          prompt: prompt.trim() || "Surprends-moi",
+          aspect_ratio: "9:16",
+          images: base64Images.length > 0 ? base64Images : undefined,
+        });
+        setTaskId(result.taskId);
+        refetchEligibility();
+      } catch (error: any) {
+        let message = error.message;
+        try {
+          const parsed = JSON.parse(error.message);
+          message = parsed.message || error.message;
+        } catch {}
+        if (message.includes("<!DOCTYPE") || message.includes("<html")) {
+          message = "Erreur serveur. Veuillez réessayer.";
+        }
+        toast({ variant: "destructive", title: "Erreur", description: message });
+      }
+    } else {
+      if (files.length > 0 || prompt.trim()) {
+        try {
+          await savePendingPrank({
+            prompt,
+            images: files.map((f) => f.file),
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.error("Ignored IDB save error:", error);
+        }
+      }
+      navigate("/register");
     }
-    navigate("/register");
+  };
+
+  const handleReset = () => {
+    setTaskId(null);
+    setPrompt("");
+    setImages([null]);
   };
 
   return (
@@ -362,6 +423,15 @@ export default function HeroSection() {
         </div>
         </div>
       </motion.div>
+      {taskId && createPortal(
+        <GenerationProgress
+          taskId={taskId}
+          inputImageUrl={images[0]?.url}
+          onRetry={handleSubmit}
+          onReset={handleReset}
+        />,
+        document.body
+      )}
     </section>
   );
 }
