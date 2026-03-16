@@ -82,16 +82,18 @@ export function GenerationLoader({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <motion.img
-            src={inputImageUrl}
-            alt="Input"
-            className="max-h-[70vh] max-w-[85vw] md:max-w-[40vw] object-contain rounded-2xl"
-            animate={{
-              filter: isBlurring ? "blur(24px) brightness(0.7)" : "blur(0px) brightness(1)",
-              scale: isBlurring ? 1.05 : 1,
-            }}
-            transition={{ duration: 1.8, ease: [0.4, 0, 0.2, 1] }}
-          />
+          <div className="relative max-h-[70vh] max-w-[85vw] md:max-w-[40vw] rounded-2xl overflow-hidden">
+            <motion.img
+              src={inputImageUrl}
+              alt="Input"
+              className="w-full h-full object-contain"
+              animate={{
+                filter: isBlurring ? "blur(24px) brightness(0.7)" : "blur(0px) brightness(1)",
+                scale: isBlurring ? 1.08 : 1,
+              }}
+              transition={{ duration: 1.8, ease: [0.4, 0, 0.2, 1] }}
+            />
+          </div>
         </motion.div>
       )}
 

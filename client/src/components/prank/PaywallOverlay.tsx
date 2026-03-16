@@ -27,13 +27,13 @@ export function PaywallOverlay({ imageUrl }: PaywallOverlayProps) {
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden w-full max-w-sm mx-auto">
+    <div className="relative rounded-2xl overflow-hidden w-full max-w-sm mx-auto max-h-[calc(100dvh-10rem)]">
 
       {/* Watermarked image */}
       <img
         src={imageUrl}
         alt="Prank généré"
-        className="w-full object-cover relative"
+        className="w-full max-h-[60dvh] object-cover relative"
       />
 
       {/* Gradient overlay: transparent top → dark bottom */}

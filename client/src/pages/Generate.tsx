@@ -539,7 +539,7 @@ export default function Generate() {
   // -- Unlocked prank after successful payment --
   if (unlockedPrank) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] py-6 animate-in fade-in duration-500">
+      <div className="flex flex-col items-center justify-center gap-3 h-[calc(100dvh-10rem)] py-4 animate-in fade-in duration-500 overflow-hidden">
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
           <span className="relative inline-block">
             Voici ton prank !
@@ -584,7 +584,7 @@ export default function Generate() {
   // -- Persistent paywall for non-subscribers with a previous generation --
   if (savedPaywall && !profile?.is_subscriber) {
     return (
-      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 animate-in fade-in duration-500 bg-background">
+      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pb-24 animate-in fade-in duration-500 bg-background">
         <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
       </div>
     );
