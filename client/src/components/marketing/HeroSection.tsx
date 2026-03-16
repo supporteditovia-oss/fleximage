@@ -82,11 +82,15 @@ export default function HeroSection() {
       (img): img is { url: string; file: File } => img !== null,
     );
     if (files.length > 0 || prompt.trim()) {
-      await savePendingPrank({
-        prompt,
-        images: files.map((f) => f.file),
-        timestamp: Date.now(),
-      });
+      try {
+        await savePendingPrank({
+          prompt,
+          images: files.map((f) => f.file),
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        console.error("Ignored IDB save error:", error);
+      }
     }
     navigate("/register");
   };

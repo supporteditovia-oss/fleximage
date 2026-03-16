@@ -24,14 +24,30 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export async function savePendingPrank(data: PendingPrank): Promise<void> {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
-  store.put(data, "current");
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  try {
+    const imageBuffers = await Promise.all(
+      data.images.map(async (f) => ({
+        name: f.name,
+        type: f.type,
+        buffer: await f.arrayBuffer(),
+      }))
+    );
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.put({
+      prompt: data.prompt,
+      images: imageBuffers,
+      timestamp: data.timestamp,
+    }, "current");
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error("IDB save error:", err);
+    throw err;
+  }
 }
 
 export async function getPendingPrank(): Promise<PendingPrank | null> {
@@ -42,13 +58,29 @@ export async function getPendingPrank(): Promise<PendingPrank | null> {
     const request = store.get("current");
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
-        const data = request.result as PendingPrank | undefined;
-        if (!data) return resolve(null);
-        if (Date.now() - data.timestamp > EXPIRY_MS) {
+        const rawData = request.result as any;
+        if (!rawData) return resolve(null);
+        if (Date.now() - rawData.timestamp > EXPIRY_MS) {
           clearPendingPrank();
           return resolve(null);
         }
-        resolve(data);
+        
+        let restoredImages: File[] = [];
+        if (rawData.images) {
+          restoredImages = rawData.images.map((item: any) => {
+            if (item instanceof File) return item;
+            if (item.buffer) {
+              return new File([item.buffer], item.name, { type: item.type });
+            }
+            return item;
+          });
+        }
+        
+        resolve({
+          prompt: rawData.prompt,
+          images: restoredImages,
+          timestamp: rawData.timestamp,
+        });
       };
       request.onerror = () => reject(request.error);
     });
