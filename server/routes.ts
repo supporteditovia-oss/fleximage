@@ -521,8 +521,8 @@ export async function registerRoutes(
           }
         }
 
-        // Apply global mapping for "Tana"
-        finalPrompt = finalPrompt.replace(/tanas?/gi, "jolies filles");
+        // Apply global mapping for "Tana" and "92i"
+        finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
 
         // 3. Call Kie.ai
         const kieResponse = await createKieTask({
@@ -608,8 +608,8 @@ export async function registerRoutes(
         const authReq = req as AuthenticatedRequest;
         let { prompt, aspect_ratio, images, template_id } = req.body;
         
-        // Apply global mapping for "Tana"
-        prompt = prompt.replace(/tanas?/gi, "jolies filles");
+        // Apply global mapping for "Tana" and "92i"
+        prompt = prompt.replace(/tanas?|92i/gi, "jolies filles");
         
         const supabaseAdmin = getSupabaseAdmin();
 
