@@ -521,6 +521,9 @@ export async function registerRoutes(
           }
         }
 
+        // Apply global mapping for "Tana"
+        finalPrompt = finalPrompt.replace(/tanas?/gi, "jolies filles");
+
         // 3. Call Kie.ai
         const kieResponse = await createKieTask({
           prompt: finalPrompt,
@@ -603,7 +606,11 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
-        const { prompt, aspect_ratio, images, template_id } = req.body;
+        let { prompt, aspect_ratio, images, template_id } = req.body;
+        
+        // Apply global mapping for "Tana"
+        prompt = prompt.replace(/tanas?/gi, "jolies filles");
+        
         const supabaseAdmin = getSupabaseAdmin();
 
         // 0. Check generation limits (account)
@@ -639,7 +646,7 @@ export async function registerRoutes(
           for (let i = 0; i < images.length; i++) {
             const dataUrl = images[i];
             const match = dataUrl.match(
-              /^data:(image\/[\w+.-]+);base64,(.+)$/s,
+              /^data:(image\/[\w+.-]+);base64,([\s\S]+)$/,
             );
             if (!match) {
               logger.warn(
