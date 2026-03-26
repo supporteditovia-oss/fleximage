@@ -120,6 +120,14 @@ export const api = {
       method: "DELETE" as const,
       path: "/api/admin/users/:id",
     },
+    getSettings: {
+      method: "GET" as const,
+      path: "/api/admin/settings",
+    },
+    updateSettings: {
+      method: "PATCH" as const,
+      path: "/api/admin/settings",
+    },
   },
   categories: {
     list: {

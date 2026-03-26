@@ -1,0 +1,249 @@
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
+import {
+  Search,
+  X,
+  Loader2,
+  Sparkles,
+  ChevronDown,
+  Star,
+} from "lucide-react";
+import { useTemplates } from "@/hooks/use-templates";
+import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
+import type { PromptTemplate } from "@shared/schema";
+
+interface TemplateGalleryProps {
+  selectedTemplateId: string | null;
+  onSelectTemplate: (tpl: PromptTemplate) => void;
+  onDeselectTemplate: () => void;
+}
+
+export function TemplateGallery({
+  selectedTemplateId,
+  onSelectTemplate,
+  onDeselectTemplate,
+}: TemplateGalleryProps) {
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { data: templates, isLoading: templatesLoading } = useTemplates();
+  const { data: favoriteIds = [] } = useFavorites();
+  const toggleFavorite = useToggleFavorite();
+
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const filtered = (templates || [])
+    .filter((t) => {
+      const q = normalize(search);
+      if (!q) return true;
+      return (
+        normalize(t.name).includes(q) ||
+        (t.keywords && normalize(t.keywords).includes(q)) ||
+        (t.category && normalize(t.category).includes(q))
+      );
+    })
+    .sort((a, b) => {
+      const aFav = favoriteIds.includes(a.id) ? 0 : 1;
+      const bFav = favoriteIds.includes(b.id) ? 0 : 1;
+      return aFav - bFav;
+    });
+
+  return (
+    <div className="flex flex-col gap-6 scroll-mt-20 max-w-3xl mx-auto">
+      <h2 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
+        <span className="relative inline-block">
+          Choisis parmi les pranks existants
+          <svg
+            className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
+            viewBox="0 0 100 12"
+            fill="none"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M2 8 Q 50 2 98 8"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+            ></path>
+          </svg>
+        </span>
+      </h2>
+
+      {/* Search bar — expands on focus */}
+      <motion.div
+        animate={{ width: searchOpen ? "100%" : "75%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="mx-auto flex items-center gap-2 md:gap-3 rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 focus-within:shadow-lg transition-colors cursor-text"
+        onClick={() => {
+          setSearchOpen(true);
+          searchInputRef.current?.focus();
+        }}
+      >
+        <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Recherche un prank…"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+          onFocus={() => setSearchOpen(true)}
+          onBlur={() => {
+            if (!search) setSearchOpen(false);
+          }}
+        />
+        {search && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSearch("");
+              searchInputRef.current?.focus();
+            }}
+            className="shrink-0"
+          >
+            <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+          </button>
+        )}
+      </motion.div>
+
+      {/* Prank grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {templatesLoading && (
+          <div className="col-span-full flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!templatesLoading && filtered.length === 0 && (
+          <p className="col-span-full text-center text-muted-foreground text-sm py-8">
+            Aucun prank trouvé.
+          </p>
+        )}
+        {filtered.map((tpl) => {
+          const isSelected = selectedTemplateId === tpl.id;
+          const isFav = favoriteIds.includes(tpl.id);
+          const hasBothImages =
+            !!tpl.example_before_url && !!tpl.example_after_url;
+
+          return (
+            <div
+              key={tpl.id}
+              onClick={() =>
+                isSelected ? onDeselectTemplate() : onSelectTemplate(tpl)
+              }
+              className="group relative cursor-pointer flex flex-col rounded-xl overflow-hidden bg-muted transition-all hover:shadow-lg hover:-translate-y-0.5"
+            >
+              {/* Favorite star */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite.mutate({
+                    templateId: tpl.id,
+                    isFavorite: isFav,
+                  });
+                }}
+                className="absolute top-1.5 right-1.5 z-20 w-7 h-7 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-colors"
+              >
+                <Star
+                  className={`w-3.5 h-3.5 transition-colors ${isFav
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-white/70 hover:text-white"
+                    }`}
+                />
+              </button>
+              {/* Image area */}
+              {hasBothImages ? (
+                <>
+                  {/* Mobile: split view — après (top) + avant (bottom) */}
+                  <div className="md:hidden relative aspect-[2/3] w-full overflow-hidden">
+                    <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
+                      <img
+                        src={tpl.example_after_url!}
+                        alt={`${tpl.name} — après`}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        loading="lazy"
+                      />
+                      <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
+                        Après
+                      </span>
+                    </div>
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
+                    <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
+                      <img
+                        src={tpl.example_before_url!}
+                        alt={`${tpl.name} — avant`}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        loading="lazy"
+                      />
+                      <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
+                        Avant
+                      </span>
+                    </div>
+                  </div>
+                  {/* Desktop: hover clip-path effect */}
+                  <div className="hidden md:block relative aspect-[2/3] w-full overflow-hidden">
+                    <img
+                      src={tpl.example_after_url!}
+                      alt={`${tpl.name} — après`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
+                      <img
+                        src={tpl.example_before_url!}
+                        alt={`${tpl.name} — avant`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
+                    <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Avant
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        Après
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : tpl.example_after_url ? (
+                <div className="relative aspect-[2/3] w-full overflow-hidden">
+                  <img
+                    src={tpl.example_after_url}
+                    alt={tpl.name}
+                    className="block w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ) : (
+                <div className="relative aspect-[2/3] w-full bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-primary/30" />
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between gap-1 px-2.5 py-2.5 bg-card">
+                <p className="text-xs font-semibold leading-tight line-clamp-2">
+                  {tpl.name}
+                </p>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${isSelected
+                      ? "text-primary"
+                      : "text-muted-foreground/40 group-hover:text-primary"
+                    }`}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

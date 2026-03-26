@@ -5,7 +5,6 @@ interface GenerationEligibility {
   canGenerate: boolean;
   isSubscriber: boolean;
   generationCount: number;
-  freeLimit: number;
   reason?: string;
 }
 

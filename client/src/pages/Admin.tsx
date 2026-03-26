@@ -3,23 +3,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldCheck, Users, Mail, Clock, ShieldAlert, Trash2, Crown, TrendingUp, BarChart3, Search, Filter } from "lucide-react";
+import { ShieldCheck, Users, ShieldAlert, Trash2, Crown, TrendingUp, BarChart3, Search, Coins, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Profile } from "@shared/schema";
-import { useState, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   XAxis,
   YAxis,
@@ -40,11 +43,83 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+const PAGE_SIZE = 20;
+
 /**
- * Hook for fetching all profiles (Admin only)
+ * Hook for paginated profile fetching (Admin only)
+ */
+function usePaginatedProfiles({
+  page,
+  searchQuery,
+  roleFilter,
+  subscriberFilter,
+  sortBy,
+  sortDirection,
+}: {
+  page: number;
+  searchQuery: string;
+  roleFilter: string;
+  subscriberFilter: string;
+  sortBy: string;
+  sortDirection: "asc" | "desc";
+}) {
+  const { isAdmin } = useAuth();
+
+  return useQuery<{ profiles: Profile[]; totalCount: number }>({
+    queryKey: ["profiles-paginated", page, searchQuery, roleFilter, subscriberFilter, sortBy, sortDirection],
+    queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      // Build query
+      let query = supabase
+        .from("profiles")
+        .select("*", { count: "exact" });
+
+      // Apply filters
+      if (roleFilter !== "all") {
+        query = query.eq("role", roleFilter);
+      }
+      if (subscriberFilter === "subscriber") {
+        query = query.eq("is_subscriber", true);
+      } else if (subscriberFilter === "non-subscriber") {
+        query = query.eq("is_subscriber", false);
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim();
+        query = query.or(`email.ilike.%${q}%,full_name.ilike.%${q}%`);
+      }
+
+      // Apply sorting
+      const sortColumn = sortBy === "subscriber" ? "is_subscriber" : sortBy === "name" ? "full_name" : "created_at";
+      query = query.order(sortColumn, { ascending: sortDirection === "asc" });
+
+      // Apply pagination
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      const profiles = (data || []).map(p => ({
+        ...p,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at
+      })) as Profile[];
+
+      return { profiles, totalCount: count || 0 };
+    },
+    enabled: isAdmin,
+    staleTime: 1000 * 30, // 30 seconds
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+/**
+ * Hook for fetching all profiles (Admin only) - kept for dashboard stats
  */
 export function useAllProfiles() {
   const { isAdmin } = useAuth();
@@ -58,9 +133,7 @@ export function useAllProfiles() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      // Ensure the return data matches the expected Profile type
-      // specifically handling the camelCase vs snake_case mapping from Supabase
+
       return (data || []).map(p => ({
         ...p,
         createdAt: p.created_at,
@@ -108,6 +181,7 @@ export default function AdminPage() {
       ) : (
         <>
           <AdminStats metrics={metrics} profiles={profiles} />
+          <OneshotApiSettings />
           <GrowthChart data={growthData} />
         </>
       )}
@@ -116,31 +190,52 @@ export default function AdminPage() {
 }
 
 /**
- * Dedicated User Management Page
+ * Dedicated User Management Page with pagination
  */
 function UsersManagementPage() {
-  const { data: profiles, isLoading } = useAllProfiles();
   const { updateProfile, deleteProfile } = useProfile();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [subscriberFilter, setSubscriberFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [sortBy, setSortBy] = useState("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(0);
+    // Simple debounce
+    const timer = setTimeout(() => setDebouncedSearch(value), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const filteredProfiles = useMemo(() => {
-    if (!profiles) return [];
-    const query = searchQuery.toLowerCase().trim();
-    return profiles.filter((p: Profile) => {
-      const matchesRole = roleFilter === "all" || p.role === roleFilter;
-      const matchesSearch = !query || 
-        p.email?.toLowerCase().includes(query) || 
-        p.full_name?.toLowerCase().includes(query);
-      return matchesRole && matchesSearch;
-    });
-  }, [profiles, searchQuery, roleFilter]);
+  const { data, isLoading, isFetching } = usePaginatedProfiles({
+    page: currentPage,
+    searchQuery: debouncedSearch,
+    roleFilter,
+    subscriberFilter,
+    sortBy,
+    sortDirection,
+  });
+
+  const profiles = data?.profiles || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Credit dialog state
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
+  const [creditAmount, setCreditAmount] = useState("");
 
   const handleToggleSubscriber = async (id: string, current: boolean) => {
     try {
       await updateProfile({ id, updates: { is_subscriber: !current } });
+      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       toast({ title: "Profil mis à jour", description: "Le statut d'abonné a été modifié." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la mise à jour", description: error.message });
@@ -151,6 +246,7 @@ function UsersManagementPage() {
     try {
       const newRole = currentRole === "admin" ? "user" : "admin";
       await updateProfile({ id, updates: { role: newRole as "user" | "admin" } });
+      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       toast({ title: "Rôle mis à jour", description: `L'utilisateur est maintenant ${newRole === 'admin' ? 'Administrateur' : 'Utilisateur'}.` });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la mise à jour", description: error.message });
@@ -160,38 +256,322 @@ function UsersManagementPage() {
   const handleDeleteUser = async (id: string) => {
     try {
       await deleteProfile(id);
+      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       toast({ title: "Utilisateur supprimé", description: "L'utilisateur a été retiré avec succès." });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la suppression", description: error.message });
     }
   };
 
+  const handleAddCredits = async () => {
+    if (!creditTarget || !creditAmount) return;
+    const amount = parseInt(creditAmount, 10);
+    if (isNaN(amount) || amount === 0) {
+      toast({ variant: "destructive", title: "Montant invalide", description: "Veuillez entrer un nombre valide." });
+      return;
+    }
+    try {
+      const newCredits = (creditTarget.credits || 0) + amount;
+      await updateProfile({ id: creditTarget.id, updates: { credits: newCredits } });
+      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
+      toast({ title: "Jetons ajoutés", description: `${amount > 0 ? '+' : ''}${amount} jetons pour ${creditTarget.full_name || creditTarget.email}.` });
+      setCreditDialogOpen(false);
+      setCreditTarget(null);
+      setCreditAmount("");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Échec", description: error.message });
+    }
+  };
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection(column === "date" ? "desc" : "asc");
+    }
+    setCurrentPage(0);
+  };
+
+  const handleFilterChange = (type: "role" | "subscriber", value: string) => {
+    if (type === "role") setRoleFilter(value);
+    else setSubscriberFilter(value);
+    setCurrentPage(0);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-display font-bold tracking-tight">Gestion des Utilisateurs</h1>
-        <p className="text-muted-foreground text-lg">
-          Consultez et modifiez les comptes utilisateurs du système.
-        </p>
+    <div className="space-y-5 pt-2">
+      {/* Page header — matches AdminTemplates */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold font-display">Utilisateurs</h1>
+            {!isLoading && (
+              <Badge variant="secondary" className="text-xs tabular-nums">
+                {totalCount}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Consultez et modifiez les comptes utilisateurs du système.
+          </p>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
+      {/* Search + filters — flat, like AdminTemplates */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input 
+            placeholder="Rechercher un utilisateur..." 
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10"
+          />
         </div>
-      ) : (
-        <UserManagement 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          roleFilter={roleFilter}
-          setRoleFilter={setRoleFilter}
-          profiles={filteredProfiles}
-          onToggleRole={handleToggleRole}
-          onToggleSubscriber={handleToggleSubscriber}
-          onDelete={handleDeleteUser}
-        />
-      )}
+        <div className="flex flex-wrap gap-1.5">
+          {/* Role pills */}
+          {[
+            { value: "all", label: "Tous" },
+            { value: "user", label: "Utilisateurs" },
+            { value: "admin", label: "Admins" },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleFilterChange("role", opt.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                roleFilter === opt.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <span className="w-px h-5 bg-border/60 self-center mx-1" />
+          {/* Subscriber pills */}
+          {[
+            { value: "all", label: "Tous statuts" },
+            { value: "subscriber", label: "Abonnés" },
+            { value: "non-subscriber", label: "Gratuit" },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleFilterChange("subscriber", opt.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                subscriberFilter === opt.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Table Card — matches AdminTemplates */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="space-y-3 p-6">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !profiles.length ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Aucun utilisateur ne correspond à la recherche.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <button onClick={() => handleSort("name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Utilisateur
+                      <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead>Rôle</TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("subscriber")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Abonné
+                      <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead>Jetons</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {profiles.map((profile: Profile) => (
+                  <TableRow key={profile.id} className={isFetching ? "opacity-60 transition-opacity" : "transition-opacity"}>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-sm">{profile.full_name || "N/A"}</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {profile.email}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60">
+                          {profile.createdAt ? format(new Date(profile.createdAt), "dd/MM/yyyy") : ""}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <button 
+                        onClick={() => handleToggleRole(profile.id, profile.role)}
+                        className="transition-transform active:scale-95"
+                      >
+                        <Badge 
+                          variant={profile.role === 'admin' ? "default" : "secondary"}
+                          className="cursor-pointer hover:opacity-80 transition-opacity text-xs"
+                        >
+                          {profile.role === 'admin' ? 'Admin' : 'User'}
+                        </Badge>
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <Switch 
+                        checked={profile.is_subscriber} 
+                        onCheckedChange={() => handleToggleSubscriber(profile.id, !!profile.is_subscriber)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-mono tabular-nums">{profile.credits || 0}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setCreditTarget(profile);
+                            setCreditAmount("");
+                            setCreditDialogOpen(true);
+                          }}
+                          title="Gérer les jetons"
+                        >
+                          <Coins className="h-3.5 w-3.5" />
+                        </Button>
+                        <DeleteUserDialog profile={profile} onDelete={() => handleDeleteUser(profile.id)} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border/60">
+              <p className="text-xs text-muted-foreground">
+                {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} sur {totalCount}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage === 0}
+                  onClick={() => setCurrentPage(0)}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage === 0}
+                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground px-2 tabular-nums">
+                  {currentPage + 1} / {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage >= totalPages - 1}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={currentPage >= totalPages - 1}
+                  onClick={() => setCurrentPage(totalPages - 1)}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Credit Dialog */}
+      <Dialog open={creditDialogOpen} onOpenChange={(open) => {
+        setCreditDialogOpen(open);
+        if (!open) { setCreditTarget(null); setCreditAmount(""); }
+      }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-amber-500" />
+              Gérer les jetons
+            </DialogTitle>
+            <DialogDescription>
+              Ajouter ou retirer des jetons pour {creditTarget?.full_name || creditTarget?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Solde actuel</p>
+                <p className="text-lg font-bold font-mono tabular-nums">{creditTarget?.credits || 0} jetons</p>
+              </div>
+              <Coins className="h-8 w-8 text-amber-500/30" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="credit-amount">Montant à ajouter</Label>
+              <Input
+                id="credit-amount"
+                type="number"
+                placeholder="Ex: 50 ou -10"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Nombre positif pour ajouter, négatif pour retirer.
+              </p>
+            </div>
+            {creditAmount && !isNaN(parseInt(creditAmount, 10)) && (
+              <div className="p-3 rounded-lg border border-border/60 text-center">
+                <p className="text-xs text-muted-foreground">Nouveau solde</p>
+                <p className="text-lg font-bold font-mono tabular-nums">
+                  {(creditTarget?.credits || 0) + parseInt(creditAmount, 10)} jetons
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleAddCredits} disabled={!creditAmount || isNaN(parseInt(creditAmount, 10))}>
+              <Coins className="mr-2 h-4 w-4" />
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -214,6 +594,157 @@ function AccessDenied({ setLocation }: { setLocation: any }) {
         Retour à l'application
       </Button>
     </div>
+  );
+}
+
+/**
+ * OneshotAPI / Kie AI Settings Card
+ */
+function OneshotApiSettings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading } = useQuery<{ forceKieAi: boolean; fallbackTimeoutMs: number }>({
+    queryKey: ["admin-settings"],
+    queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/settings", {
+        headers: { Authorization: `Bearer ${session.session?.access_token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      return res.json();
+    },
+    staleTime: 10_000,
+  });
+
+  const [forceKieAi, setForceKieAi] = useState(false);
+  const [timeoutSec, setTimeoutSec] = useState("105");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setForceKieAi(settings.forceKieAi);
+      setTimeoutSec(String(Math.round(settings.fallbackTimeoutMs / 1000)));
+    }
+  }, [settings]);
+
+  const handleToggle = async (checked: boolean) => {
+    setForceKieAi(checked);
+    setSaving(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
+        body: JSON.stringify({ forceKieAi: checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      toast({
+        title: checked ? "Mode Full Kie AI activé" : "OneshotAPI activé",
+        description: checked
+          ? "Toutes les générations passent par Kie AI."
+          : "Les générations passent par OneshotAPI avec fallback Kie AI.",
+      });
+    } catch (err: any) {
+      setForceKieAi(!checked);
+      toast({ variant: "destructive", title: "Erreur", description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTimeoutSave = async () => {
+    const ms = parseInt(timeoutSec, 10) * 1000;
+    if (isNaN(ms) || ms < 30000 || ms > 600000) {
+      toast({ variant: "destructive", title: "Valeur invalide", description: "Le timeout doit être entre 30 et 600 secondes." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
+        body: JSON.stringify({ fallbackTimeoutMs: ms }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      toast({ title: "Timeout mis à jour", description: `Fallback Kie AI après ${timeoutSec}s.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erreur", description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-40 w-full" />;
+  }
+
+  return (
+    <Card className="border-border/60">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div className="space-y-1">
+          <CardTitle className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
+            OneshotAPI
+          </CardTitle>
+          <CardDescription>Configuration du moteur de génération d'images.</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {/* Force Kie AI toggle */}
+        <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">Mode Full Kie AI</Label>
+            <p className="text-xs text-muted-foreground">
+              Quand activé, toutes les générations passent exclusivement par Kie AI (OneshotAPI ignoré).
+            </p>
+          </div>
+          <Switch
+            checked={forceKieAi}
+            onCheckedChange={handleToggle}
+            disabled={saving}
+          />
+        </div>
+
+        {/* Fallback timeout */}
+        <div className="rounded-lg border border-border/60 p-4 space-y-3">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">Timeout fallback Kie AI</Label>
+            <p className="text-xs text-muted-foreground">
+              Durée (en secondes) avant de basculer automatiquement sur Kie AI si OneshotAPI n'a pas répondu.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              min={30}
+              max={600}
+              value={timeoutSec}
+              onChange={(e) => setTimeoutSec(e.target.value)}
+              className="w-28 font-mono"
+              disabled={saving}
+            />
+            <span className="text-sm text-muted-foreground">secondes</span>
+            <Button
+              size="sm"
+              onClick={handleTimeoutSave}
+              disabled={saving || timeoutSec === String(Math.round((settings?.fallbackTimeoutMs || 105000) / 1000))}
+            >
+              Sauvegarder
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -245,6 +776,25 @@ function StatCard({ title, value, icon, description }: any) {
 }
 
 function GrowthChart({ data }: any) {
+  if (!data || data.length === 0) {
+    return (
+      <Card className="border-border/60">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle>Aperçu de la Croissance</CardTitle>
+            <CardDescription>Évolution des inscriptions sur les 30 derniers jours.</CardDescription>
+          </div>
+          <BarChart3 className="h-5 w-5 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+            Aucune donnée de croissance disponible.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-border/60">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -302,121 +852,11 @@ function GrowthChart({ data }: any) {
   );
 }
 
-function UserManagement({ searchQuery, setSearchQuery, roleFilter, setRoleFilter, profiles, onToggleRole, onToggleSubscriber, onDelete }: any) {
-  return (
-    <Card className="border-border/60">
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <CardTitle>Gestion des Utilisateurs</CardTitle>
-          <CardDescription>Liste de tous les utilisateurs inscrits dans le système.</CardDescription>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Rechercher nom ou email..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full sm:w-[150px] h-9">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Tous les rôles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les rôles</SelectItem>
-              <SelectItem value="user">Utilisateurs</SelectItem>
-              <SelectItem value="admin">Administrateurs</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Utilisateur</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead>Abonné</TableHead>
-                <TableHead>Dernière activité</TableHead>
-                <TableHead>Inscription</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {profiles.length > 0 ? (
-                profiles.map((profile: Profile) => (
-                  <TableRow key={profile.id}>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium">{profile.full_name || "N/A"}</span>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {profile.email}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <button 
-                        onClick={() => onToggleRole(profile.id, profile.role)}
-                        className="transition-transform active:scale-95"
-                      >
-                        <Badge 
-                          variant={profile.role === 'admin' ? "default" : "secondary"}
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          {profile.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-                        </Badge>
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch 
-                          checked={profile.is_subscriber} 
-                          onCheckedChange={() => onToggleSubscriber(profile.id, !!profile.is_subscriber)}
-                        />
-                        {profile.is_subscriber && <Crown className="h-3 w-3 text-amber-500" />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {profile.last_active_at ? format(new Date(profile.last_active_at), "d MMM, HH:mm") : "Jamais"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{profile.createdAt ? format(new Date(profile.createdAt), "dd/MM/yyyy") : "N/A"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DeleteUserDialog profile={profile} onDelete={() => onDelete(profile.id)} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    Aucun utilisateur trouvé.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function DeleteUserDialog({ profile, onDelete }: any) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
           <Trash2 className="h-4 w-4" />
         </Button>
       </AlertDialogTrigger>

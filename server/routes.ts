@@ -19,6 +19,14 @@ import {
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
 import {
+  createOneshotJob,
+  getOneshotJobStatus,
+  getOneshotApiConfig,
+  getAppSettings,
+  uploadToOneshotApi,
+  invalidateSettingsCache,
+} from "./lib/oneshot-api-client";
+import {
   downloadAndStoreImages,
   downloadAndStoreImagesWithWatermark,
 } from "./lib/image-storage";
@@ -468,30 +476,10 @@ export async function registerRoutes(
         const { template_id, placeholders, aspect_ratio } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
 
-        // 0. Check generation limits (account)
+        // 0. Check generation limits & credits
         const limitResult = await checkGenerationLimits(authReq.userId);
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
-        }
-        const isFreeGeneration =
-          !limitResult.isSubscriber && limitResult.generationCount === 0;
-
-        // 1. Check credits (skip for first free generation)
-        const { data: userProfile, error: profileErr } = await supabaseAdmin
-          .from("profiles")
-          .select("credits")
-          .eq("id", authReq.userId)
-          .single();
-
-        if (profileErr || !userProfile) {
-          return res.status(403).json({ message: "Profil introuvable" });
-        }
-
-        if (!isFreeGeneration && userProfile.credits < 5) {
-          return res.status(403).json({
-            message:
-              "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
-          });
         }
 
         // 2. Fetch template
@@ -524,24 +512,47 @@ export async function registerRoutes(
         // Apply global mapping for "Tana" and "92i"
         finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
 
-        // 3. Call Kie.ai
-        const kieResponse = await createKieTask({
-          prompt: finalPrompt,
-          aspect_ratio: aspect_ratio || "1:1",
-        });
+        // 3. Call Image API
+        const oneshotConfig = getOneshotApiConfig();
+        const appSettings = await getAppSettings();
+        let externalTaskId: string;
 
-        if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-          logger.error(
-            { response: kieResponse },
-            "Kie.ai createTask unexpected response",
-          );
-          return res.status(502).json({
-            message: "Erreur lors de la création de la tâche de génération",
+        if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
+          try {
+            const oneshotResponse = await createOneshotJob(finalPrompt, {
+              aspectRatio: aspect_ratio || "1:1",
+            });
+            if (oneshotResponse && oneshotResponse.id) {
+              externalTaskId = `custom_${oneshotResponse.id}`;
+            } else {
+              throw new Error("Invalid response from OneshotAPI");
+            }
+          } catch (err) {
+            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            const kieResponse = await createKieTask({
+              prompt: finalPrompt,
+              aspect_ratio: aspect_ratio || "1:1",
+            });
+            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+              return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+            }
+            externalTaskId = kieResponse.data.taskId;
+          }
+        } else {
+          const kieResponse = await createKieTask({
+            prompt: finalPrompt,
+            aspect_ratio: aspect_ratio || "1:1",
           });
+          if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+            logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+            return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+          }
+          externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits atomically (skip for first free generation)
-        if (!isFreeGeneration) {
+        // 4. Deduct 5 credits atomically (admins bypass)
+        if (!limitResult.isAdmin) {
           const { error: deductErr } = await supabaseAdmin.rpc(
             "deduct_credits",
             {
@@ -565,7 +576,7 @@ export async function registerRoutes(
             user_id: authReq.userId,
             template_id,
             final_prompt: finalPrompt,
-            kie_task_id: kieResponse.data.taskId,
+            kie_task_id: externalTaskId,
             status: "waiting",
             aspect_ratio,
           })
@@ -579,7 +590,7 @@ export async function registerRoutes(
 
         res.status(201).json({
           id: prank.id,
-          taskId: kieResponse.data.taskId,
+          taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
         });
@@ -613,30 +624,10 @@ export async function registerRoutes(
         
         const supabaseAdmin = getSupabaseAdmin();
 
-        // 0. Check generation limits (account)
+        // 0. Check generation limits & credits
         const limitResult = await checkGenerationLimits(authReq.userId);
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
-        }
-        const isFreeGeneration =
-          !limitResult.isSubscriber && limitResult.generationCount === 0;
-
-        // 1. Check credits (skip for first free generation)
-        const { data: userProfile, error: profileErr } = await supabaseAdmin
-          .from("profiles")
-          .select("credits")
-          .eq("id", authReq.userId)
-          .single();
-
-        if (profileErr || !userProfile) {
-          return res.status(403).json({ message: "Profil introuvable" });
-        }
-
-        if (!isFreeGeneration && userProfile.credits < 5) {
-          return res.status(403).json({
-            message:
-              "Crédits insuffisants. Il vous faut au moins 5 jetons pour générer un prank.",
-          });
         }
 
         // 2. Upload images to R2 and get public URLs
@@ -665,29 +656,73 @@ export async function registerRoutes(
           }
         }
 
-        // 3. Call Kie.ai
-        logger.info(
-          { imageCount: imageUrls.length, imageUrls },
-          "Calling Kie.ai with images",
-        );
-        const kieResponse = await createKieTask({
-          prompt,
-          aspect_ratio: aspect_ratio || "9:16",
-          ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-        });
+        // 3. Call Image API
+        const oneshotConfig = getOneshotApiConfig();
+        const appSettings = await getAppSettings();
+        let externalTaskId: string;
 
-        if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-          logger.error(
-            { response: kieResponse },
-            "Kie.ai createTask unexpected response",
-          );
-          return res.status(502).json({
-            message: "Erreur lors de la création de la tâche de génération",
+        if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
+          try {
+            // Upload images to OneshotAPI servers if any
+            let referenceFileIds: string[] = [];
+            if (imageUrls.length > 0) {
+              logger.info({ imageCount: imageUrls.length }, "Uploading images to OneshotAPI");
+              for (const publicUrl of imageUrls) {
+                try {
+                  const imgResp = await fetch(publicUrl);
+                  if (!imgResp.ok) throw new Error(`Failed to download ${publicUrl}`);
+                  const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+                  const arrBuf = await imgResp.arrayBuffer();
+                  const buffer = Buffer.from(arrBuf);
+                  const filename = publicUrl.split("/").pop() || "image.jpg";
+                  const fileId = await uploadToOneshotApi(buffer, filename, contentType);
+                  referenceFileIds.push(fileId);
+                } catch (uploadErr) {
+                  logger.error({ err: uploadErr, publicUrl }, "Failed to upload image to OneshotAPI");
+                }
+              }
+            }
+
+            logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
+            const oneshotResponse = await createOneshotJob(prompt, {
+              aspectRatio: aspect_ratio || "9:16",
+              ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+            });
+            if (oneshotResponse && oneshotResponse.id) {
+              externalTaskId = `custom_${oneshotResponse.id}`;
+            } else {
+              throw new Error("Invalid response from OneshotAPI");
+            }
+          } catch (err) {
+            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            const kieResponse = await createKieTask({
+              prompt,
+              aspect_ratio: aspect_ratio || "9:16",
+              ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+            });
+            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+              return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+            }
+            externalTaskId = kieResponse.data.taskId;
+          }
+        } else {
+          logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
+          const kieResponse = await createKieTask({
+            prompt,
+            aspect_ratio: aspect_ratio || "9:16",
+            ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
           });
+
+          if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+            logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+            return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+          }
+          externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits (skip for first free generation)
-        if (!isFreeGeneration) {
+        // 4. Deduct 5 credits (admins bypass)
+        if (!limitResult.isAdmin) {
           const { error: deductErr } = await supabaseAdmin.rpc(
             "deduct_credits",
             {
@@ -711,7 +746,7 @@ export async function registerRoutes(
             user_id: authReq.userId,
             template_id: template_id || null,
             final_prompt: prompt,
-            kie_task_id: kieResponse.data.taskId,
+            kie_task_id: externalTaskId,
             status: "waiting",
             aspect_ratio,
             input_urls: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
@@ -726,7 +761,7 @@ export async function registerRoutes(
 
         res.status(201).json({
           id: prank.id,
-          taskId: kieResponse.data.taskId,
+          taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
         });
@@ -746,7 +781,6 @@ export async function registerRoutes(
         canGenerate: result.allowed,
         isSubscriber: result.isSubscriber,
         generationCount: result.generationCount,
-        freeLimit: 1,
         reason: result.reason,
       });
     } catch (error: any) {
@@ -766,7 +800,7 @@ export async function registerRoutes(
       const { data: prank, error: fetchErr } = await supabaseAdmin
         .from("generated_pranks")
         .select("*")
-        .eq("kie_task_id", taskId)
+        .ilike("kie_task_id", `%${taskId}%`)
         .eq("user_id", authReq.userId)
         .single();
 
@@ -795,35 +829,110 @@ export async function registerRoutes(
         return res.json({
           prankId: prank.id,
           status: prank.status,
-          resultUrls: isSubscriber ? originals : watermarkedList,
+          resultUrls: originals,
           failMessage: prank.fail_message,
           costTime: prank.cost_time,
           isSubscriber,
-          requiresPaywall: !isSubscriber,
+          requiresPaywall: false,
         });
       }
 
-      // Poll Kie.ai
-      const kieStatus = await getKieTaskStatus(taskId);
+      const activeTaskId = prank.kie_task_id.split(",").pop() as string;
+      const isCustomApi = activeTaskId.startsWith("custom_");
+
+      let apiStatus: "waiting" | "success" | "fail" = "waiting";
+      let apiResultJson: any = null;
+      let apiFailMsg: string | null = null;
+      let apiCostTime: number | null = null;
+      
+      if (isCustomApi) {
+        const jobId = activeTaskId.replace("custom_", "");
+        let customStatus: any;
+        try {
+          customStatus = await getOneshotJobStatus(jobId);
+        } catch (err) {
+          logger.error({ err }, "Failed to poll OneshotAPI");
+          customStatus = { status: "failed", error: "Polling error" };
+        }
+        
+        const currentSettings = await getAppSettings();
+        const ageInMs = Date.now() - new Date(prank.created_at).getTime();
+        const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
+
+        if (customStatus.status === "completed" || customStatus.status === "success") {
+          apiStatus = "success";
+          apiResultJson = JSON.stringify(customStatus);
+        } else if (customStatus.status === "failed" || customStatus.status === "fail" || isTimeout) {
+           logger.info({ prankId: prank.id, isTimeout }, "Custom API failed or timeout, triggering Kie AI fallback");
+           try {
+             const aspect_ratio = prank.aspect_ratio || "9:16";
+             const imageUrls = prank.input_urls ? JSON.parse(prank.input_urls) : [];
+             const fallbackKieResponse = await createKieTask({
+               prompt: prank.final_prompt,
+               aspect_ratio,
+               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+             });
+             
+             if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
+               const newKieTaskIdString = `${prank.kie_task_id},${fallbackKieResponse.data.taskId}`;
+               await supabaseAdmin
+                 .from("generated_pranks")
+                 .update({ kie_task_id: newKieTaskIdString, updated_at: new Date().toISOString() })
+                 .eq("id", prank.id);
+                 
+               return res.json({
+                 prankId: prank.id,
+                 status: "waiting",
+                 resultUrls: [],
+                 failMessage: null,
+                 costTime: null,
+                 isSubscriber: false,
+                 requiresPaywall: false,
+               });
+             } else {
+               apiStatus = "fail";
+               apiFailMsg = "Fallback Kie.ai create failed";
+             }
+           } catch (fallbackErr: any) {
+             logger.error({ err: fallbackErr }, "Kie fallback also failed");
+             apiStatus = "fail";
+             apiFailMsg = fallbackErr.message || "Kie fallback failed";
+           }
+        }
+      } else {
+        try {
+          const kieStatus = await getKieTaskStatus(activeTaskId);
+          apiStatus = kieStatus.data.state;
+          if (kieStatus.data.resultJson) {
+            apiResultJson = kieStatus.data.resultJson;
+          }
+          apiFailMsg = kieStatus.data.failMsg;
+          apiCostTime = kieStatus.data.costTime;
+        } catch (err: any) {
+           logger.error({ err }, "Failed to poll Kie.ai");
+           apiStatus = "fail";
+           apiFailMsg = "Polling error";
+        }
+      }
 
       if (
-        kieStatus.data.state === "success" ||
-        kieStatus.data.state === "fail"
+        apiStatus === "success" ||
+        apiStatus === "fail"
       ) {
         let resultUrls: string[] = [];
         let watermarkedUrls: string[] = [];
-        if (kieStatus.data.state === "success" && kieStatus.data.resultJson) {
+        if (apiStatus === "success" && apiResultJson) {
           try {
-            const parsed = JSON.parse(kieStatus.data.resultJson);
+            const parsed = typeof apiResultJson === "string" ? JSON.parse(apiResultJson) : apiResultJson;
             logger.info(
-              { resultJson: parsed, rawResultJson: kieStatus.data.resultJson },
-              "Kie.ai resultJson parsed",
+              { resultJson: parsed, rawResultJson: apiResultJson },
+              "API resultJson parsed",
             );
             resultUrls = extractImageUrls(parsed);
           } catch (parseErr) {
             logger.error(
-              { err: parseErr, rawResultJson: kieStatus.data.resultJson },
-              "Failed to parse Kie.ai resultJson",
+              { err: parseErr, rawResultJson: apiResultJson },
+              "Failed to parse API resultJson",
             );
           }
 
@@ -858,15 +967,15 @@ export async function registerRoutes(
         await supabaseAdmin
           .from("generated_pranks")
           .update({
-            status: kieStatus.data.state,
+            status: apiStatus as any,
             result_urls: JSON.stringify(resultUrls),
             watermarked_urls:
               watermarkedUrls.length > 0
                 ? JSON.stringify(watermarkedUrls)
                 : null,
-            fail_message: kieStatus.data.failMsg || null,
-            cost_time: kieStatus.data.costTime
-              ? String(kieStatus.data.costTime)
+            fail_message: apiFailMsg || null,
+            cost_time: apiCostTime
+              ? String(apiCostTime)
               : null,
             updated_at: new Date().toISOString(),
           })
@@ -874,16 +983,12 @@ export async function registerRoutes(
 
         return res.json({
           prankId: prank.id,
-          status: kieStatus.data.state,
-          resultUrls: isSubscriber
-            ? resultUrls
-            : watermarkedUrls.length > 0
-              ? watermarkedUrls
-              : resultUrls,
-          failMessage: kieStatus.data.failMsg,
-          costTime: kieStatus.data.costTime,
+          status: apiStatus,
+          resultUrls: resultUrls,
+          failMessage: apiFailMsg,
+          costTime: apiCostTime,
           isSubscriber,
-          requiresPaywall: !isSubscriber,
+          requiresPaywall: false,
         });
       }
 
@@ -1445,6 +1550,66 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message });
     }
   });
+
+  // =============================================
+  // ADMIN SETTINGS ENDPOINTS
+  // =============================================
+
+  // GET /api/admin/settings
+  app.get(
+    api.admin.getSettings.path,
+    requireAuth,
+    requireAdmin,
+    async (_req, res) => {
+      try {
+        const settings = await getAppSettings();
+        res.json(settings);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error fetching admin settings");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // PATCH /api/admin/settings
+  const updateSettingsSchema = z.object({
+    forceKieAi: z.boolean().optional(),
+    fallbackTimeoutMs: z.number().int().min(30000).max(600000).optional(),
+  });
+
+  app.patch(
+    api.admin.updateSettings.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(updateSettingsSchema),
+    async (req, res) => {
+      try {
+        const supabaseAdmin = getSupabaseAdmin();
+        const { forceKieAi, fallbackTimeoutMs } = req.body;
+
+        if (forceKieAi !== undefined) {
+          await supabaseAdmin
+            .from("app_settings")
+            .upsert({ key: "force_kie_ai", value: String(forceKieAi), updated_at: new Date().toISOString() }, { onConflict: "key" });
+        }
+
+        if (fallbackTimeoutMs !== undefined) {
+          await supabaseAdmin
+            .from("app_settings")
+            .upsert({ key: "fallback_timeout_ms", value: String(fallbackTimeoutMs), updated_at: new Date().toISOString() }, { onConflict: "key" });
+        }
+
+        // Bust cache so next request uses fresh values
+        invalidateSettingsCache();
+
+        const settings = await getAppSettings();
+        res.json(settings);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error updating admin settings");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   return httpServer;
 }

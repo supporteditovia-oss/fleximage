@@ -1,11 +1,10 @@
 import { getSupabaseAdmin } from "./supabase-admin";
 
-const FREE_GENERATION_LIMIT = 1;
-
 export interface LimitCheckResult {
   allowed: boolean;
   reason?: string;
   isSubscriber: boolean;
+  isAdmin: boolean;
   generationCount: number;
 }
 
@@ -26,32 +25,38 @@ export async function checkGenerationLimits(
       allowed: false,
       reason: "Profil introuvable",
       isSubscriber: false,
+      isAdmin: false,
       generationCount: 0,
     };
   }
 
-  // Admins and subscribers bypass limits
-  if (profile.is_subscriber || profile.role === "admin") {
+  // Admins bypass all limits
+  if (profile.role === "admin") {
     return {
       allowed: true,
       isSubscriber: true,
+      isAdmin: true,
       generationCount: profile.generation_count,
     };
   }
 
-  // 2. Check user generation count
-  if (profile.generation_count >= FREE_GENERATION_LIMIT) {
+  // Everyone (including subscribers) must have credits to generate
+  if (profile.credits < 5) {
     return {
       allowed: false,
-      reason: "Limite de générations gratuites atteinte",
-      isSubscriber: false,
+      reason: profile.is_subscriber
+        ? "Tu n'as plus de crédits. Tes crédits seront rechargés au prochain renouvellement."
+        : "Crédits insuffisants. Abonne-toi pour obtenir des crédits et générer des pranks.",
+      isSubscriber: profile.is_subscriber,
+      isAdmin: false,
       generationCount: profile.generation_count,
     };
   }
 
   return {
     allowed: true,
-    isSubscriber: false,
+    isSubscriber: profile.is_subscriber,
+    isAdmin: false,
     generationCount: profile.generation_count,
   };
 }
@@ -63,5 +68,3 @@ export async function recordGeneration(
   // Increment generation_count on profile
   await supabase.rpc("increment_generation_count", { p_user_id: userId });
 }
-
-export { FREE_GENERATION_LIMIT };

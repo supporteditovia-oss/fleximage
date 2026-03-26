@@ -158,11 +158,15 @@ export function useUserGrowth() {
 
       if (error) throw error;
 
-      // Group by date
+      // Helper: format any date to a local YYYY-MM-DD key
+      const toLocalKey = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+      // Group by local date key
       const counts: Record<string, number> = {};
-      data?.forEach((profile) => {
-        const date = new Date(profile.created_at).toLocaleDateString();
-        counts[date] = (counts[date] || 0) + 1;
+      (data || []).forEach((profile) => {
+        const key = toLocalKey(new Date(profile.created_at));
+        counts[key] = (counts[key] || 0) + 1;
       });
 
       // Fill missing days and format for Recharts
@@ -170,13 +174,13 @@ export function useUserGrowth() {
       for (let i = 29; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString();
+        const key = toLocalKey(d);
         chartData.push({
           date: d.toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
           }),
-          count: counts[dateStr] || 0,
+          count: counts[key] || 0,
         });
       }
 
@@ -185,3 +189,4 @@ export function useUserGrowth() {
     enabled: isAdmin,
   });
 }
+

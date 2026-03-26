@@ -46,7 +46,14 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
           className={`absolute inset-0 w-full h-full object-cover origin-center ${isFake ? "blur-[40px] brightness-50 scale-125" : ""}`}
         />
       ) : (
-        <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/60 via-purple-500/60 to-blue-500/60 blur-[40px] scale-125 opacity-60" />
+        <div
+          className="absolute inset-0 w-full h-full"
+          style={{
+            background: "linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(var(--background)) 40%, hsl(var(--muted)) 70%, hsl(var(--primary) / 0.1) 100%)",
+            filter: "blur(30px) brightness(0.5)",
+            transform: "scale(1.25)",
+          }}
+        />
       )}
 
       {/* Gradient overlay: transparent top → dark bottom */}
