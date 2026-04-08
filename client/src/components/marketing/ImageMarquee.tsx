@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 interface MarqueeTemplate {
   name: string;
@@ -37,8 +38,12 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
 
 const MarqueeCard = React.memo(function MarqueeCard({
   template,
+  beforeLabel,
+  afterLabel,
 }: {
   template: MarqueeTemplate;
+  beforeLabel: string;
+  afterLabel: string;
 }) {
   const hasBefore = !!template.example_before_url;
 
@@ -63,24 +68,24 @@ const MarqueeCard = React.memo(function MarqueeCard({
       <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
         <CardImage
           src={template.example_before_url!}
-          alt={`${template.name} — avant`}
+          alt={`${template.name} - ${beforeLabel}`}
         />
       </div>
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
       <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
         <CardImage
           src={template.example_after_url}
-          alt={`${template.name} — après`}
+          alt={`${template.name} - ${afterLabel}`}
         />
       </div>
       <div className="absolute top-2 right-2 z-10">
         <span className="text-[10px] font-medium text-white/80 bg-black/50 rounded-full px-2 py-0.5">
-          Avant
+          {beforeLabel}
         </span>
       </div>
       <div className="absolute top-[calc(50%+6px)] right-2 z-10">
         <span className="text-[10px] font-medium text-white/80 bg-black/50 rounded-full px-2 py-0.5">
-          Après
+          {afterLabel}
         </span>
       </div>
       <div className="absolute bottom-2 left-2 right-2 z-10">
@@ -109,17 +114,28 @@ function MarqueeRow({
   items,
   reverse,
   placeholders,
+  beforeLabel,
+  afterLabel,
 }: {
   items: MarqueeTemplate[];
   reverse: boolean;
   placeholders: boolean;
+  beforeLabel: string;
+  afterLabel: string;
 }) {
   const placeholderCount = 6;
   const content = placeholders
     ? Array.from({ length: placeholderCount }, (_, i) => (
         <PlaceholderCard key={`p-${i}`} />
       ))
-    : items.map((t, i) => <MarqueeCard key={`c-${i}`} template={t} />);
+    : items.map((t, i) => (
+        <MarqueeCard
+          key={`c-${i}`}
+          template={t}
+          beforeLabel={beforeLabel}
+          afterLabel={afterLabel}
+        />
+      ));
 
   return (
     <div className="flex overflow-hidden relative user-select-none gap-[1rem] group [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
@@ -145,11 +161,13 @@ function MarqueeRow({
 }
 
 export default function ImageMarquee() {
+  const { t } = useTranslation();
+
   const { data: templates } = useQuery<MarqueeTemplate[]>({
     queryKey: ["marquee-templates"],
     queryFn: async () => {
       const res = await fetch("/api/templates/marquee");
-      if (!res.ok) throw new Error("Failed to fetch marquee templates");
+      if (!res.ok) throw new Error(t("marquee.fetchError"));
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -168,19 +186,31 @@ export default function ImageMarquee() {
     <section className="py-16 md:py-24 overflow-hidden">
       <div className="max-w-3xl mx-auto px-4 mb-10">
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
-          Des résultats{" "}
+          {t("marquee.titlePrefix")} {" "}
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            bluffants
+            {t("marquee.titleGradient")}
           </span>
         </h2>
         <p className="text-sm md:text-base text-muted-foreground text-center mt-2">
-          Quelques exemples de pranks générés par nos utilisateurs
+          {t("marquee.subtitle")}
         </p>
       </div>
 
-      <MarqueeRow items={row1} reverse={false} placeholders={!hasData} />
+      <MarqueeRow
+        items={row1}
+        reverse={false}
+        placeholders={!hasData}
+        beforeLabel={t("marquee.before")}
+        afterLabel={t("marquee.after")}
+      />
       <div className="h-4" />
-      <MarqueeRow items={row2} reverse={true} placeholders={!hasData} />
+      <MarqueeRow
+        items={row2}
+        reverse={true}
+        placeholders={!hasData}
+        beforeLabel={t("marquee.before")}
+        afterLabel={t("marquee.after")}
+      />
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Ban, Flame, Loader2, Unlock, Zap } from "lucide-react";
 import { authFetch } from "@/lib/api";
 import { posthog } from "@/lib/posthog";
+import { useTranslation } from "react-i18next";
 
 interface PaywallOverlayProps {
   imageUrl: string;
@@ -12,6 +13,7 @@ interface PaywallOverlayProps {
 export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [monthlyPranksCount, setMonthlyPranksCount] = useState(12847);
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     posthog.capture("paywall_view", { isFake: !!isFake });
@@ -86,7 +88,7 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
       {imageUrl ? (
         <img
           src={imageUrl}
-          alt="Prank généré"
+          alt={t("paywall.imageAlt")}
           className={`absolute inset-0 w-full h-full object-cover origin-center ${isFake ? "blur-[40px] brightness-50 scale-125" : ""}`}
         />
       ) : (
@@ -106,10 +108,10 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
       {/* Centered lock message */}
       <div className="absolute inset-x-0 top-[47%] z-10 -translate-y-1/2 flex flex-col items-center px-6 text-center pointer-events-none">
         <h2 className="font-display text-2xl font-bold text-white text-center">
-          Ton prank est prêt !
+          {t("paywall.title")}
         </h2>
         <p className="text-sm text-white/70 text-center mt-1">
-          Ton image est prête… mais elle est verrouillée 🔒
+          {t("paywall.subtitle")} 🔒
         </p>
       </div>
 
@@ -126,26 +128,36 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-rose-300/25 bg-rose-500/20">
               <Ban className="h-4 w-4 text-rose-300" />
             </div>
-            <p className="text-[15px] font-bold text-white leading-none">Sans filigrane</p>
+            <p className="text-[15px] font-bold text-white leading-none">
+              {t("paywall.benefits.noWatermark")}
+            </p>
           </li>
 
           <li className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-amber-300/25 bg-amber-500/20">
               <Zap className="h-4 w-4 text-amber-300" />
             </div>
-            <p className="text-[15px] font-bold text-white leading-none">Résultat instantané</p>
+            <p className="text-[15px] font-bold text-white leading-none">
+              {t("paywall.benefits.instantResult")}
+            </p>
           </li>
 
           <li className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-orange-300/25 bg-orange-500/20">
               <Flame className="h-4 w-4 text-orange-300" />
             </div>
-            <p className="text-[15px] font-bold text-white leading-none">Accès à tous les templates</p>
+            <p className="text-[15px] font-bold text-white leading-none">
+              {t("paywall.benefits.allTemplates")}
+            </p>
           </li>
         </ul>
 
         <p className="text-sm text-white/80 mb-3 text-center">
-          🔥 {monthlyPranksCount.toLocaleString("fr-FR")} pranks envoyés ce mois
+          {t("paywall.monthlySent", {
+            count: new Intl.NumberFormat(i18n.resolvedLanguage ?? "fr").format(
+              monthlyPranksCount,
+            ),
+          })}
         </p>
 
         {/* CTA Button with pulse animation */}
@@ -158,19 +170,19 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
           {isLoading ? (
             <span className="paywall-cta-label-stable flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Redirection...
+              {t("common.actions.redirecting")}
             </span>
           ) : (
             <span className="paywall-cta-label-stable flex items-center justify-center gap-2">
               <Unlock className="w-4 h-4" strokeWidth={3} />
-              Debloquer mon prank
+              {t("paywall.unlockCta")}
             </span>
           )}
         </motion.button>
 
         {/* Price line */}
         <p className="text-xs text-white/50 mt-2.5 text-center">
-          4,90€/semaine · Résiliable à tout moment
+          {t("paywall.priceLine")}
         </p>
       </motion.div>
     </div>

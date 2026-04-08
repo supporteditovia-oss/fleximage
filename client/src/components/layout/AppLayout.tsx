@@ -1,9 +1,11 @@
 import { useAuth } from "@/hooks/use-auth";
 import { BottomDock } from "./BottomDock";
 import FloatingHeader from "@/components/layout/FloatingHeader";
+import { useTranslation } from "react-i18next";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
@@ -11,7 +13,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-muted-foreground font-medium animate-pulse">
-            Chargement de la plateforme...
+            {t("layout.loadingPlatform")}
           </p>
         </div>
       </div>

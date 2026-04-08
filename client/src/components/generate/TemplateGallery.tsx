@@ -11,6 +11,7 @@ import {
 import { useTemplates } from "@/hooks/use-templates";
 import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import type { PromptTemplate } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 interface TemplateGalleryProps {
   selectedTemplateId: string | null;
@@ -23,6 +24,7 @@ export function TemplateGallery({
   onSelectTemplate,
   onDeselectTemplate,
 }: TemplateGalleryProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +58,7 @@ export function TemplateGallery({
     <div className="flex flex-col gap-6 scroll-mt-20 max-w-3xl mx-auto">
       <h2 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
         <span className="relative inline-block">
-          Choisis parmi les pranks existants
+          {t("templateGallery.title")}
           <svg
             className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
             viewBox="0 0 100 12"
@@ -90,7 +92,7 @@ export function TemplateGallery({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Recherche un prank…"
+          placeholder={t("templateGallery.searchPlaceholder")}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
           onFocus={() => setSearchOpen(true)}
           onBlur={() => {
@@ -120,7 +122,7 @@ export function TemplateGallery({
         )}
         {!templatesLoading && filtered.length === 0 && (
           <p className="col-span-full text-center text-muted-foreground text-sm py-8">
-            Aucun prank trouvé.
+            {t("templateGallery.empty")}
           </p>
         )}
         {filtered.map((tpl) => {
@@ -163,24 +165,24 @@ export function TemplateGallery({
                     <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
                       <img
                         src={tpl.example_after_url!}
-                        alt={`${tpl.name} — après`}
+                        alt={`${tpl.name} - ${t("templateGallery.after")}`}
                         className="absolute inset-0 w-full h-full object-cover object-center"
                         loading="lazy"
                       />
                       <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
-                        Après
+                        {t("templateGallery.after")}
                       </span>
                     </div>
                     <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
                     <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
                       <img
                         src={tpl.example_before_url!}
-                        alt={`${tpl.name} — avant`}
+                        alt={`${tpl.name} - ${t("templateGallery.before")}`}
                         className="absolute inset-0 w-full h-full object-cover object-center"
                         loading="lazy"
                       />
                       <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
-                        Avant
+                        {t("templateGallery.before")}
                       </span>
                     </div>
                   </div>
@@ -188,14 +190,14 @@ export function TemplateGallery({
                   <div className="hidden md:block relative aspect-[2/3] w-full overflow-hidden">
                     <img
                       src={tpl.example_after_url!}
-                      alt={`${tpl.name} — après`}
+                      alt={`${tpl.name} - ${t("templateGallery.after")}`}
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
                     />
                     <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
                       <img
                         src={tpl.example_before_url!}
-                        alt={`${tpl.name} — avant`}
+                        alt={`${tpl.name} - ${t("templateGallery.before")}`}
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -203,12 +205,12 @@ export function TemplateGallery({
                     <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
                     <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Avant
+                        {t("templateGallery.before")}
                       </span>
                     </div>
                     <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                       <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Après
+                        {t("templateGallery.after")}
                       </span>
                     </div>
                   </div>

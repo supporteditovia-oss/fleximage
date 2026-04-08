@@ -11,7 +11,7 @@ import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { GenerationLoader } from "@/components/prank/GenerationLoader";
 import { PaywallOverlay } from "@/components/prank/PaywallOverlay";
-import { ImageUploadGrid } from "@/components/generate/ImageUploadGrid";
+import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { UnlockedPrankView } from "@/components/generate/UnlockedPrankView";
@@ -29,8 +29,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import { parseImageSlots, parseTextFields } from "@/lib/template-utils";
 import type { PromptTemplate } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 export default function Generate() {
+  const { t } = useTranslation();
   // ── Form state ──────────────────────────────────────────────
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([
@@ -109,17 +111,15 @@ export default function Generate() {
                 });
               } else {
                 toast({
-                  title: "Abonnement activé !",
-                  description:
-                    "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+                  title: t("settings.subscription.title"),
+                  description: t("settings.subscription.manage"),
                 });
               }
             })
             .catch(() => {
               toast({
-                title: "Abonnement activé !",
-                description:
-                  "Tu as 50 crédits. Crée ton premier prank sans filigrane !",
+                title: t("settings.subscription.title"),
+                description: t("settings.subscription.manage"),
               });
             })
             .finally(() => setUnlockingPrank(false));
@@ -288,9 +288,8 @@ export default function Generate() {
     if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
       toast({
         variant: "destructive",
-        title: "Crédits insuffisants",
-        description:
-          "Tu n'as pas assez de crédits pour générer. Abonne-toi pour en obtenir !",
+        title: t("generate.insufficientCreditsTitle"),
+        description: t("generate.insufficientCreditsDescription"),
       });
       return;
     }
@@ -298,8 +297,8 @@ export default function Generate() {
     if (!prompt.trim()) {
       toast({
         variant: "destructive",
-        title: "Prompt vide",
-        description: "Décris ton prank avant de lancer la génération.",
+        title: t("generate.emptyPromptTitle"),
+        description: t("generate.emptyPromptDescription"),
       });
       return;
     }
@@ -311,8 +310,12 @@ export default function Generate() {
         if (slots[i].required && !images[i]) {
           toast({
             variant: "destructive",
-            title: "Image manquante",
-            description: `L'image « ${slots[i].label || `Image ${i + 1}`} » est obligatoire.`,
+            title: t("generate.missingImageTitle"),
+            description: t("generate.missingImageDescription", {
+              label:
+                slots[i].label ||
+                t("generate.imageFallbackLabel", { index: i + 1 }),
+            }),
           });
           return;
         }
@@ -323,8 +326,12 @@ export default function Generate() {
         if (fields[i].required && !textValues[i]?.trim()) {
           toast({
             variant: "destructive",
-            title: "Champ manquant",
-            description: `Le champ « ${fields[i].label || `Texte ${i + 1}`} » est obligatoire.`,
+            title: t("generate.missingFieldTitle"),
+            description: t("generate.missingFieldDescription", {
+              label:
+                fields[i].label ||
+                t("generate.textFallbackLabel", { index: i + 1 }),
+            }),
           });
           return;
         }
@@ -364,11 +371,11 @@ export default function Generate() {
         message = parsed.message || error.message;
       } catch { }
       if (message.includes("<!DOCTYPE") || message.includes("<html")) {
-        message = "Erreur serveur. Veuillez réessayer.";
+        message = t("generate.serverRetry");
       }
       toast({
         variant: "destructive",
-        title: "Erreur",
+        title: t("common.messages.error"),
         description: message,
       });
     }
@@ -630,7 +637,7 @@ export default function Generate() {
             }
             className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-1"
           >
-            Voir les templates
+            {t("generate.viewTemplates")}
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>

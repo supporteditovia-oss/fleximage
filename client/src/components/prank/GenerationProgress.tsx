@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { usePrankStatus } from "@/hooks/use-pranks";
 import { PrankResult } from "./PrankResult";
 import { GenerationLoader } from "./GenerationLoader";
+import { useTranslation } from "react-i18next";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -20,6 +21,7 @@ export function GenerationProgress({
   onRetry,
   onReset,
 }: GenerationProgressProps) {
+  const { t } = useTranslation();
   const { data, isLoading, error } = usePrankStatus(taskId);
   const [revealDone, setRevealDone] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -60,12 +62,12 @@ export function GenerationProgress({
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <XCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">Erreur de connexion</p>
+        <p className="text-destructive font-medium">{t("progress.connectionError")}</p>
         <p className="text-sm text-muted-foreground">{error.message}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Recommencer
+            {t("progress.restart")}
           </Button>
         </div>
       </div>
@@ -77,18 +79,18 @@ export function GenerationProgress({
       <div className="flex flex-col items-center gap-4 py-12">
         <XCircle className="h-10 w-10 text-destructive" />
         <div className="text-center space-y-1">
-          <p className="text-destructive font-medium">Échec de la génération</p>
+          <p className="text-destructive font-medium">{t("progress.generationFailed")}</p>
           <p className="text-sm text-muted-foreground">
             {data.failMessage ||
-              "Une erreur est survenue lors de la génération."}
+              t("progress.generationFailedDefault")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onReset}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Recommencer
+            {t("progress.restart")}
           </Button>
-          <Button onClick={onRetry}>Réessayer</Button>
+          <Button onClick={onRetry}>{t("progress.retry")}</Button>
         </div>
       </div>
     );
@@ -118,7 +120,7 @@ export function GenerationProgress({
             {/* Title with SVG underline */}
             <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
               <span className="relative inline-block">
-                Voici ton prank !
+                {t("progress.resultTitle")}
                 <svg
                   className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
                   viewBox="0 0 100 12"
@@ -149,7 +151,7 @@ export function GenerationProgress({
               onClick={onReset}
               className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2 shrink-0"
             >
-              Créer un autre prank
+              {t("progress.createAnother")}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </div>,

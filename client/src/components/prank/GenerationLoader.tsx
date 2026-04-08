@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
@@ -15,6 +16,7 @@ export function GenerationLoader({
   resultUrls,
   onRevealComplete,
 }: GenerationLoaderProps) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<"dissolve" | "blur" | "logo" | "result">(
     "dissolve",
   );
@@ -85,7 +87,7 @@ export function GenerationLoader({
           <div className="relative h-[min(60vh,500px)] md:h-[70vh] aspect-[9/16] rounded-2xl overflow-hidden shadow-xl">
             <motion.img
               src={inputImageUrl}
-              alt="Input"
+              alt={t("progress.inputAlt")}
               className="absolute inset-0 w-full h-full object-cover"
               animate={{
                 filter: isBlurring ? "blur(24px) brightness(0.7)" : "blur(0px) brightness(1)",

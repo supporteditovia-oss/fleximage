@@ -10,6 +10,12 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { translateSupabaseError } from "@/lib/error-translator";
 import { posthog } from "@/lib/posthog";
+import { useTranslation } from "react-i18next";
+import {
+  DEFAULT_LOCALE,
+  resolvePreferredLocale,
+  SIGNUP_LOCALE_STORAGE_KEY,
+} from "@shared/locales";
 
 export default function AuthPage() {
   const [location, setLocation] = useLocation();
@@ -18,16 +24,27 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
 
   const isLogin = location === "/login";
 
   const isValidEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+  const getSignupLocale = () =>
+    resolvePreferredLocale(
+      i18n.resolvedLanguage ?? window.navigator.language,
+      DEFAULT_LOCALE,
+    );
+
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { score: 0, label: "", color: "bg-muted" };
     if (pass.length < 6)
-      return { score: 1, label: "Trop court", color: "bg-destructive" };
+      return {
+        score: 1,
+        label: t("auth.strength.short"),
+        color: "bg-destructive",
+      };
 
     let score = 1;
     if (pass.length > 8) score++;
@@ -36,11 +53,16 @@ export default function AuthPage() {
     if (/[^A-Za-z0-9]/.test(pass)) score++;
 
     if (score <= 2)
-      return { score: 2, label: "Faible", color: "bg-orange-500" };
+      return { score: 2, label: t("auth.strength.weak"), color: "bg-orange-500" };
     if (score <= 3)
-      return { score: 3, label: "Moyenne", color: "bg-yellow-500" };
-    if (score <= 4) return { score: 4, label: "Forte", color: "bg-green-500" };
-    return { score: 5, label: "Excellente", color: "bg-emerald-600" };
+      return { score: 3, label: t("auth.strength.medium"), color: "bg-yellow-500" };
+    if (score <= 4)
+      return { score: 4, label: t("auth.strength.strong"), color: "bg-green-500" };
+    return {
+      score: 5,
+      label: t("auth.strength.excellent"),
+      color: "bg-emerald-600",
+    };
   };
 
   const strength = getPasswordStrength(password);
@@ -51,8 +73,8 @@ export default function AuthPage() {
     if (!isLogin && !isValidEmail(email)) {
       toast({
         variant: "destructive",
-        title: "Email invalide",
-        description: "Veuillez entrer une adresse email valide.",
+        title: t("auth.invalidEmailTitle"),
+        description: t("auth.invalidEmailDescription"),
       });
       return;
     }
@@ -71,8 +93,14 @@ export default function AuthPage() {
           posthog.identify(data.user.id, { email: data.user.email });
         }
         
-        toast({ title: "Bon retour !", description: "Connexion réussie." });
+        toast({
+          title: t("auth.signInSuccessTitle"),
+          description: t("auth.signInSuccessDescription"),
+        });
       } else {
+        const signupLocale = getSignupLocale();
+        window.localStorage.setItem(SIGNUP_LOCALE_STORAGE_KEY, signupLocale);
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -80,6 +108,7 @@ export default function AuthPage() {
             emailRedirectTo: `${window.location.origin}/app`,
             data: {
               has_accepted_terms: true,
+              preferred_locale: signupLocale,
             },
           },
         });
@@ -93,6 +122,10 @@ export default function AuthPage() {
         setLocation("/login");
       }
     } catch (error: any) {
+      if (!isLogin) {
+        window.localStorage.removeItem(SIGNUP_LOCALE_STORAGE_KEY);
+      }
+
       const translated = translateSupabaseError(error);
       toast({
         variant: "destructive",
@@ -106,15 +139,28 @@ export default function AuthPage() {
 
   const handleGoogleAuth = async () => {
     setIsLoading(true);
+
+    const signupLocale = getSignupLocale();
+    if (!isLogin) {
+      window.localStorage.setItem(SIGNUP_LOCALE_STORAGE_KEY, signupLocale);
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/app`,
+          queryParams: {
+            hl: signupLocale,
+          },
         },
       });
       if (error) throw error;
     } catch (error: any) {
+      if (!isLogin) {
+        window.localStorage.removeItem(SIGNUP_LOCALE_STORAGE_KEY);
+      }
+
       const translated = translateSupabaseError(error);
       toast({
         variant: "destructive",
@@ -147,12 +193,12 @@ export default function AuthPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl md:text-3xl font-bold">
-              {isLogin ? "Bon retour parmi nous" : "Créer un compte"}
+              {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
               {isLogin
-                ? "Entrez vos identifiants pour vous connecter"
-                : "Entrez votre email pour commencer"}
+                ? t("auth.subtitleLogin")
+                : t("auth.subtitleRegister")}
             </p>
           </div>
 
@@ -167,13 +213,13 @@ export default function AuthPage() {
               data-testid="button-google-auth"
             >
               <SiGoogle className="mr-2 h-4 w-4" />
-              {isLogin ? "Se connecter avec Google" : "S'inscrire avec Google"}
+              {isLogin ? t("auth.googleLogin") : t("auth.googleSignup")}
             </Button>
 
             <div className="relative my-6">
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-                ou
+                {t("auth.separator")}
               </span>
             </div>
 
@@ -184,12 +230,12 @@ export default function AuthPage() {
                   htmlFor="email"
                   className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
                 >
-                  Email
+                  {t("auth.fields.email")}
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="nom@exemple.com"
+                  placeholder={t("auth.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -202,7 +248,7 @@ export default function AuthPage() {
                   htmlFor="password"
                   className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
                 >
-                  Mot de passe
+                  {t("auth.fields.password")}
                 </Label>
                 <div className="relative">
                   <Input
@@ -230,7 +276,7 @@ export default function AuthPage() {
                 {!isLogin && password && (
                   <div className="space-y-1.5 mt-2">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Robustesse:</span>
+                      <span className="text-muted-foreground">{t("auth.passwordStrength")}</span>
                       <span className="font-medium">{strength.label}</span>
                     </div>
                     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
@@ -244,14 +290,14 @@ export default function AuthPage() {
               </div>
               {!isLogin && (
                 <p className="text-[11px] text-muted-foreground/70 text-center">
-                  En vous inscrivant, vous acceptez nos{" "}
+                  {t("auth.acceptTermsPrefix")}{" "}
                   <a
                     href="/cgu"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    CGU
+                    {t("auth.termsLink")}
                   </a>
                 </p>
               )}
@@ -261,7 +307,7 @@ export default function AuthPage() {
                 disabled={isLoading}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLogin ? "Se connecter" : "S'inscrire"}
+                {isLogin ? t("auth.submit.login") : t("auth.submit.register")}
               </Button>
             </form>
           </div>
@@ -273,8 +319,8 @@ export default function AuthPage() {
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               {isLogin
-                ? "Pas encore de compte ? S'inscrire"
-                : "Déjà un compte ? Se connecter"}
+                ? t("auth.toggle.noAccount")
+                : t("auth.toggle.hasAccount")}
             </button>
           </div>
         </div>

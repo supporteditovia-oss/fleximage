@@ -18,18 +18,20 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
-
-const adminNavItems = [
-  { href: "/admin", label: "Aperçu Admin", icon: ShieldCheck },
-  { href: "/admin/users", label: "Utilisateurs", icon: Users },
-  { href: "/admin/templates", label: "Templates", icon: FileText },
-];
+import { useTranslation } from "react-i18next";
 
 export function BottomDock() {
   const [location] = useLocation();
   const { user, profile, isAdmin, signOut } = useAuth();
+  const { t } = useTranslation();
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
+
+  const adminNavItems = [
+    { href: "/admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
+    { href: "/admin/users", label: t("layout.dock.users"), icon: Users },
+    { href: "/admin/templates", label: t("layout.dock.templates"), icon: FileText },
+  ];
 
   useEffect(() => {
     let maxHeight = window.innerHeight;
@@ -123,7 +125,7 @@ export function BottomDock() {
             <div className={dockIconClass(isActive("/history"))}>
               <History className="h-6 w-6 md:h-5 md:w-5" />
             </div>
-            <span>Historique</span>
+            <span>{t("layout.dock.history")}</span>
           </Link>
 
           {/* Créer - center */}
@@ -134,7 +136,7 @@ export function BottomDock() {
             <div className={dockIconClass(isActive("/generate"))}>
               <Plus className="h-6 w-6 md:h-5 md:w-5" />
             </div>
-            <span>Créer</span>
+            <span>{t("layout.dock.create")}</span>
           </Link>
 
           {/* Compte */}
@@ -154,7 +156,7 @@ export function BottomDock() {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                <span>Compte</span>
+                <span>{t("layout.dock.account")}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -174,7 +176,7 @@ export function BottomDock() {
                   <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
                     <SettingsIcon className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">Paramètres</span>
+                  <span className="font-medium">{t("layout.dock.settings")}</span>
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (
@@ -223,7 +225,7 @@ export function BottomDock() {
                   <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-transparent transition-all duration-200 group-hover/item:bg-destructive/10">
                     <LogOut className="h-4 w-4" />
                   </div>
-                  <span className="font-medium">Déconnexion</span>
+                  <span className="font-medium">{t("layout.dock.signOut")}</span>
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>

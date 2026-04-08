@@ -3,6 +3,12 @@ import { supabase } from "@/lib/supabase";
 import { Profile, UpdateProfileRequest } from "@shared/schema";
 import { useAuth } from "./use-auth";
 import { authFetch } from "@/lib/api";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type AppLocale } from "@shared/locales";
+
+type SelfProfileUpdateRequest = {
+  full_name?: string | null;
+  preferred_locale?: AppLocale;
+};
 
 /**
  * Hook for fetching and managing the current user's profile
@@ -54,6 +60,38 @@ export function useProfile() {
     },
   });
 
+  const updateOwnProfileMutation = useMutation({
+    mutationFn: async (updates: SelfProfileUpdateRequest) => {
+      const locale = updates.preferred_locale;
+
+      if (locale && !SUPPORTED_LOCALES.includes(locale)) {
+        throw new Error(`Invalid locale. Allowed values: ${SUPPORTED_LOCALES.join(", ")}`);
+      }
+
+      const payload: SelfProfileUpdateRequest = {
+        preferred_locale: locale ?? DEFAULT_LOCALE,
+      };
+
+      if (Object.prototype.hasOwnProperty.call(updates, "full_name")) {
+        const normalizedName = updates.full_name?.trim();
+        payload.full_name = normalizedName ? normalizedName : null;
+      }
+
+      const res = await authFetch("/api/profiles/me", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+
+      return res.json();
+    },
+    onSuccess: () => {
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await authFetch(`/api/admin/users/${id}`, {
@@ -77,6 +115,8 @@ export function useProfile() {
     ...query,
     updateProfile: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
+    updateOwnProfile: updateOwnProfileMutation.mutateAsync,
+    isUpdatingOwnProfile: updateOwnProfileMutation.isPending,
     deleteProfile: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
   };

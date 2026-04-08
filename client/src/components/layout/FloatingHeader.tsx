@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
@@ -11,6 +12,7 @@ interface FloatingHeaderProps {
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
   const { user, profile, isLoading } = useAuth();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [hidden, setHidden] = React.useState(false);
   const lastScrollY = React.useRef(0);
@@ -75,7 +77,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             {user ? (
               <Link href="/app">
                 <Button size="sm" className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform">
-                  App
+                  {t("layout.header.app")}
                 </Button>
               </Link>
             ) : (
@@ -86,7 +88,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                     size="sm"
                     className="rounded-full hidden sm:flex text-muted-foreground hover:text-foreground"
                   >
-                    Connexion
+                    {t("layout.header.login")}
                   </Button>
                 </Link>
                 <Link href="/register">
@@ -94,7 +96,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                     size="sm"
                     className="rounded-full px-3 md:px-5 text-xs md:text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform bg-gradient-to-r from-primary to-secondary hover:opacity-90"
                   >
-                    Commencer
+                    {t("layout.header.start")}
                   </Button>
                 </Link>
               </>

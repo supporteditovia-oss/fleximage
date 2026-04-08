@@ -30,6 +30,26 @@ export const api = {
     },
   },
   profiles: {
+    me: {
+      get: {
+        method: "GET" as const,
+        path: "/api/profiles/me",
+        responses: {
+          200: insertProfileSchema,
+          401: errorSchemas.unauthorized,
+          404: errorSchemas.notFound,
+        },
+      },
+      update: {
+        method: "PATCH" as const,
+        path: "/api/profiles/me",
+        responses: {
+          200: insertProfileSchema,
+          400: errorSchemas.validation,
+          401: errorSchemas.unauthorized,
+        },
+      },
+    },
     get: {
       method: "GET" as const,
       path: "/api/profiles/:id",

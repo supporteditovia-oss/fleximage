@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Trash2, Loader2, Download, Share2, ArrowRight, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 const SHARE_PLATFORMS = [
   {
@@ -71,6 +72,7 @@ export default function PrankHistory() {
   const { data: pranks, isLoading } = usePrankHistory();
   const deletePrank = useDeletePrank();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
   const [selectedPrank, setSelectedPrank] = useState<{
@@ -127,7 +129,10 @@ export default function PrankHistory() {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch {
-      toast({ title: "Erreur lors du téléchargement", variant: "destructive" });
+      toast({
+        title: t("history.downloadError"),
+        variant: "destructive",
+      });
     }
   }
 
@@ -170,10 +175,10 @@ export default function PrankHistory() {
     if (!deletingId) return;
     try {
       await deletePrank.mutateAsync(deletingId);
-      toast({ title: "Prank supprimé" });
+      toast({ title: t("history.deleted") });
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: t("history.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -193,7 +198,7 @@ export default function PrankHistory() {
       {hasPranks && (
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
           <span className="relative inline-block">
-            Historique des Pranks
+            {t("history.pageTitle")}
             <svg
               className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
               viewBox="0 0 100 12"
@@ -237,7 +242,7 @@ export default function PrankHistory() {
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-15rem)] text-center px-4">
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
             <span className="relative inline-block">
-              Tu n'as pas encore de prank
+              {t("history.emptyTitle")}
               <svg
                 className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
                 viewBox="0 0 100 12"
@@ -255,13 +260,13 @@ export default function PrankHistory() {
             </span>
           </h2>
           <p className="text-muted-foreground mb-8 max-w-sm">
-            Crée ton premier prank et retrouve-le ici dans ton historique.
+            {t("history.emptyDescription")}
           </p>
           <Button
             onClick={() => navigate("/generate")}
             className="group rounded-full h-11 px-8 text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform gap-2"
           >
-            Je crée mon prank
+            {t("history.emptyCta")}
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
         </div>
@@ -283,7 +288,7 @@ export default function PrankHistory() {
                 {/* Result image (après) — always visible, with hover zoom */}
                 <img
                   src={urls[0]}
-                  alt="Prank généré"
+                  alt={t("history.generatedAlt")}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   loading="lazy"
                 />
@@ -294,7 +299,7 @@ export default function PrankHistory() {
                     <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
                       <img
                         src={inputUrls[0]}
-                        alt="Image d'origine"
+                        alt={t("history.originalAlt")}
                         className="absolute inset-0 w-full h-full object-cover"
                         loading="lazy"
                       />
@@ -304,12 +309,12 @@ export default function PrankHistory() {
                     {/* Labels */}
                     <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
                       <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Avant
+                        {t("history.before")}
                       </span>
                     </div>
                     <div className="absolute top-2 left-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300 z-10">
                       <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        Après
+                        {t("history.after")}
                       </span>
                     </div>
                   </div>
@@ -349,7 +354,7 @@ export default function PrankHistory() {
                         handleDownload(prank.id);
                       }}
                       className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                      title="Télécharger"
+                      title={t("history.download")}
                     >
                       <Download className="h-4 w-4" />
                     </button>
@@ -359,7 +364,7 @@ export default function PrankHistory() {
                         setShareDialog({ prankId: prank.id, imageIndex: 0 });
                       }}
                       className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                      title="Partager"
+                      title={t("history.share")}
                     >
                       <Share2 className="h-4 w-4" />
                     </button>
@@ -386,9 +391,9 @@ export default function PrankHistory() {
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>Partage ton prank</DrawerTitle>
+                <DrawerTitle>{t("history.shareTitle")}</DrawerTitle>
                 <DrawerDescription>
-                  Envoie-le à tes potes sur leur réseau préféré
+                  {t("history.shareDescription")}
                 </DrawerDescription>
               </DrawerHeader>
             </div>
@@ -423,10 +428,10 @@ export default function PrankHistory() {
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle className="text-center">
-                Partage ton prank
+                {t("history.shareTitle")}
               </DialogTitle>
               <DialogDescription className="text-center">
-                Envoie-le à tes potes sur leur réseau préféré
+                {t("history.shareDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-4 gap-3 pt-2">
@@ -467,7 +472,7 @@ export default function PrankHistory() {
             <div className="relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh]">
               <img
                 src={selectedPrank.imageUrl}
-                alt="Prank généré"
+                alt={t("history.generatedAlt")}
                 className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
               />
               {/* Top left — close */}
@@ -492,7 +497,7 @@ export default function PrankHistory() {
                 <button
                   onClick={() => handleDownload(selectedPrank.prankId)}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title="Télécharger"
+                  title={t("history.download")}
                 >
                   <Download className="h-5 w-5" />
                 </button>
@@ -505,7 +510,7 @@ export default function PrankHistory() {
                     setSelectedPrank(null);
                   }}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title="Partager"
+                  title={t("history.share")}
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
@@ -530,15 +535,15 @@ export default function PrankHistory() {
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>Supprimer ce prank ?</DrawerTitle>
+                <DrawerTitle>{t("history.deleteTitle")}</DrawerTitle>
                 <DrawerDescription>
-                  Cette action est irréversible
+                  {t("history.deleteDescription")}
                 </DrawerDescription>
               </DrawerHeader>
             </div>
             <div className="px-4 pb-6 pt-2">
               <p className="text-sm text-muted-foreground mb-4">
-                Le prank sera définitivement supprimé de ton historique.
+                {t("history.deleteBody")}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -546,7 +551,7 @@ export default function PrankHistory() {
                   className="flex-1 rounded-full border-border/40"
                   onClick={() => setDeletingId(null)}
                 >
-                  Annuler
+                  {t("common.actions.cancel")}
                 </Button>
                 <Button
                   onClick={handleDelete}
@@ -556,7 +561,7 @@ export default function PrankHistory() {
                   {deletePrank.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Supprimer
+                  {t("common.actions.delete")}
                 </Button>
               </div>
             </div>
@@ -569,13 +574,13 @@ export default function PrankHistory() {
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>Supprimer ce prank ?</DialogTitle>
+              <DialogTitle>{t("history.deleteTitle")}</DialogTitle>
               <DialogDescription>
-                Cette action est irréversible
+                {t("history.deleteDescription")}
               </DialogDescription>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Le prank sera définitivement supprimé de ton historique.
+              {t("history.deleteBody")}
             </p>
             <div className="flex gap-2 pt-2">
               <Button
@@ -583,7 +588,7 @@ export default function PrankHistory() {
                 className="flex-1 rounded-full border-border/40"
                 onClick={() => setDeletingId(null)}
               >
-                Annuler
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 onClick={handleDelete}
@@ -593,7 +598,7 @@ export default function PrankHistory() {
                 {deletePrank.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Supprimer
+                {t("common.actions.delete")}
               </Button>
             </div>
           </DialogContent>
@@ -615,25 +620,26 @@ export default function PrankHistory() {
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
+                <DrawerTitle>
+                  {t("history.sendTo", { platform: shareGuide?.platform })}
+                </DrawerTitle>
                 <DrawerDescription className="sr-only">
-                  Instructions de partage
+                  {t("history.shareInstructionsLabel")}
                 </DrawerDescription>
               </DrawerHeader>
             </div>
             <div className="space-y-4 px-4 pb-6">
               <p className="text-sm text-muted-foreground">
-                Pour partager l'image directement :
+                {t("history.shareInstructionsIntro")}
               </p>
               <ol className="text-sm space-y-2 list-decimal list-inside">
-                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>{t("history.shareStep1")}</li>
                 <li>
-                  Ouvre{" "}
-                  <span className="font-semibold">{shareGuide?.platform}</span>
+                  {t("history.shareStep2", {
+                    platform: shareGuide?.platform,
+                  })}
                 </li>
-                <li>
-                  Choisis une conversation et envoie l'image depuis ta galerie
-                </li>
+                <li>{t("history.shareStep3")}</li>
               </ol>
               <Button
                 className="w-full rounded-full"
@@ -643,13 +649,13 @@ export default function PrankHistory() {
                       shareGuide.prankId,
                       shareGuide.imageIndex,
                     );
-                    toast({ title: "Image téléchargée !" });
+                    toast({ title: t("history.imageDownloaded") });
                     setShareGuide(null);
                   }
                 }}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                Télécharger l'image
+                {t("history.downloadImage")}
               </Button>
             </div>
           </DrawerContent>
@@ -661,24 +667,25 @@ export default function PrankHistory() {
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
+              <DialogTitle>
+                {t("history.sendTo", { platform: shareGuide?.platform })}
+              </DialogTitle>
               <DialogDescription className="sr-only">
-                Instructions de partage
+                {t("history.shareInstructionsLabel")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Pour partager l'image directement :
+                {t("history.shareInstructionsIntro")}
               </p>
               <ol className="text-sm space-y-2 list-decimal list-inside">
-                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>{t("history.shareStep1")}</li>
                 <li>
-                  Ouvre{" "}
-                  <span className="font-semibold">{shareGuide?.platform}</span>
+                  {t("history.shareStep2", {
+                    platform: shareGuide?.platform,
+                  })}
                 </li>
-                <li>
-                  Choisis une conversation et envoie l'image depuis ta galerie
-                </li>
+                <li>{t("history.shareStep3")}</li>
               </ol>
               <Button
                 className="w-full rounded-full"
@@ -688,12 +695,12 @@ export default function PrankHistory() {
                       shareGuide.prankId,
                       shareGuide.imageIndex,
                     );
-                    toast({ title: "Image téléchargée !" });
+                    toast({ title: t("history.imageDownloaded") });
                   }
                 }}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                Télécharger l'image
+                {t("history.downloadImage")}
               </Button>
             </div>
           </DialogContent>

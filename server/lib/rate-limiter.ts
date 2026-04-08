@@ -1,5 +1,6 @@
 import rateLimit from "express-rate-limit";
 import type { Request } from "express";
+import { resolveLocaleFromRequest, tBackend } from "./i18n";
 
 export function extractClientIp(req: Request): string {
   const forwarded = req.headers["x-forwarded-for"];
@@ -19,7 +20,12 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => extractClientIp(req),
-  message: { message: "Trop de requêtes. Veuillez réessayer plus tard." },
+  handler: (req, res, _next, options) => {
+    const locale = resolveLocaleFromRequest(req);
+    res.status(options.statusCode).json({
+      message: tBackend(locale, "rateLimit.tooManyRequests"),
+    });
+  },
 });
 
 // Strict limiter for generation endpoints: 50 requests per hour per IP
@@ -29,5 +35,10 @@ export const generateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => extractClientIp(req),
-  message: { message: "Trop de requêtes de génération. Veuillez réessayer plus tard." },
+  handler: (req, res, _next, options) => {
+    const locale = resolveLocaleFromRequest(req);
+    res.status(options.statusCode).json({
+      message: tBackend(locale, "rateLimit.tooManyGenerationRequests"),
+    });
+  },
 });

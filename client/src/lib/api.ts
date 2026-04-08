@@ -1,4 +1,10 @@
 import { supabase } from "./supabase";
+import i18n from "@/i18n";
+import {
+  APP_LOCALE_STORAGE_KEY,
+  DEFAULT_LOCALE,
+  resolvePreferredLocale,
+} from "@shared/locales";
 
 export async function authFetch(
   url: string,
@@ -9,6 +15,14 @@ export async function authFetch(
   } = await supabase.auth.getSession();
 
   const headers = new Headers(options.headers);
+  const storedLocale = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+  const locale = resolvePreferredLocale(
+    i18n.resolvedLanguage ?? storedLocale,
+    DEFAULT_LOCALE,
+  );
+
+  headers.set("x-locale", locale);
+
   if (session?.access_token) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
@@ -20,7 +34,9 @@ export async function authFetch(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    let message = `Erreur ${res.status}`;
+    let message = i18n.t("errors.generic.serverDefault", {
+      defaultValue: "Server error",
+    });
     if (text) {
       try {
         const json = JSON.parse(text);

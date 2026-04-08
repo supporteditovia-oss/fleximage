@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { SUPPORTED_LOCALES } from "@shared/locales";
 
 import { validateRequest } from "./lib/validate";
 import {
@@ -35,6 +36,11 @@ import {
   checkGenerationLimits,
   recordGeneration,
 } from "./lib/generation-limits";
+import {
+  resolveLocaleFromProfile,
+  resolveLocaleFromRequest,
+  tBackend,
+} from "./lib/i18n";
 
 /**
  * Extract image URLs from the Kie.ai resultJson, regardless of the exact structure.
@@ -127,6 +133,78 @@ export async function registerRoutes(
   });
 
   // =============================================
+  // PROFILE (SELF-SERVICE)
+  // =============================================
+
+  const updateOwnProfileSchema = z.object({
+    full_name: z.string().min(2).max(100).nullable().optional(),
+    preferred_locale: z.enum(SUPPORTED_LOCALES).optional(),
+  });
+
+  app.get(api.profiles.me.get.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .eq("id", authReq.userId)
+        .single();
+
+      if (error || !data) {
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "profiles.notFound") });
+      }
+
+      data.preferred_locale = resolveLocaleFromProfile(data.preferred_locale);
+      res.json(data);
+    } catch (error: any) {
+      logger.error({ err: error }, "Error fetching own profile");
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
+  app.patch(
+    api.profiles.me.update.path,
+    requireAuth,
+    validateRequest(updateOwnProfileSchema),
+    async (req, res) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const supabaseAdmin = getSupabaseAdmin();
+        const updates = {
+          ...req.body,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data, error } = await supabaseAdmin
+          .from("profiles")
+          .update(updates)
+          .eq("id", authReq.userId)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        data.preferred_locale = resolveLocaleFromProfile(data.preferred_locale);
+        res.json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "Error updating own profile");
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
+      }
+    },
+  );
+
+  // =============================================
   // CATEGORY ENDPOINTS
   // =============================================
 
@@ -156,7 +234,10 @@ export async function registerRoutes(
       res.json(data);
     } catch (error: any) {
       logger.error({ err: error }, "Error listing categories");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -260,7 +341,7 @@ export async function registerRoutes(
   // =============================================
 
   // GET /api/templates/marquee - Public endpoint for landing page marquee
-  app.get(api.templates.marquee.path, async (_req, res) => {
+  app.get(api.templates.marquee.path, async (req, res) => {
     try {
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
@@ -279,7 +360,10 @@ export async function registerRoutes(
       res.json(filtered);
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching marquee templates");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -309,13 +393,17 @@ export async function registerRoutes(
       res.json(data);
     } catch (error: any) {
       logger.error({ err: error }, "Error listing templates");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
   // GET /api/templates/:id
   app.get(api.templates.get.path, requireAuth, async (req, res) => {
     try {
+      const locale = resolveLocaleFromRequest(req);
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("prompt_templates")
@@ -324,12 +412,17 @@ export async function registerRoutes(
         .single();
 
       if (error || !data) {
-        return res.status(404).json({ message: "Template non trouvé" });
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "templates.notFound") });
       }
       res.json(data);
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching template");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -475,9 +568,10 @@ export async function registerRoutes(
         const authReq = req as AuthenticatedRequest;
         const { template_id, placeholders, aspect_ratio } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
+        const locale = resolveLocaleFromRequest(req);
 
         // 0. Check generation limits & credits
-        const limitResult = await checkGenerationLimits(authReq.userId);
+        const limitResult = await checkGenerationLimits(authReq.userId, locale);
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
@@ -493,7 +587,7 @@ export async function registerRoutes(
         if (tplErr || !template) {
           return res
             .status(404)
-            .json({ message: "Template non trouvé ou inactif" });
+            .json({ message: tBackend(locale, "templates.notFoundOrInactive") });
         }
 
         // 2. Build final prompt by replacing placeholders
@@ -535,7 +629,9 @@ export async function registerRoutes(
             });
             if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
               logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-              return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+              return res
+                .status(502)
+                .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
             }
             externalTaskId = kieResponse.data.taskId;
           }
@@ -546,7 +642,9 @@ export async function registerRoutes(
           });
           if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
             logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-            return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+            return res
+              .status(502)
+              .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
           }
           externalTaskId = kieResponse.data.taskId;
         }
@@ -565,7 +663,7 @@ export async function registerRoutes(
             logger.error({ err: deductErr }, "Failed to deduct credits");
             return res
               .status(500)
-              .json({ message: "Erreur lors de la déduction des crédits" });
+              .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
           }
         }
 
@@ -596,7 +694,10 @@ export async function registerRoutes(
         });
       } catch (error: any) {
         logger.error({ err: error }, "Error generating prank");
-        res.status(500).json({ message: error.message });
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
       }
     },
   );
@@ -618,6 +719,7 @@ export async function registerRoutes(
       try {
         const authReq = req as AuthenticatedRequest;
         let { prompt, aspect_ratio, images, template_id } = req.body;
+        const locale = resolveLocaleFromRequest(req);
         
         // Apply global mapping for "Tana" and "92i"
         prompt = prompt.replace(/tanas?|92i/gi, "jolies filles");
@@ -625,7 +727,7 @@ export async function registerRoutes(
         const supabaseAdmin = getSupabaseAdmin();
 
         // 0. Check generation limits & credits
-        const limitResult = await checkGenerationLimits(authReq.userId);
+        const limitResult = await checkGenerationLimits(authReq.userId, locale);
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
@@ -702,7 +804,9 @@ export async function registerRoutes(
             });
             if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
               logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-              return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+              return res
+                .status(502)
+                .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
             }
             externalTaskId = kieResponse.data.taskId;
           }
@@ -716,7 +820,9 @@ export async function registerRoutes(
 
           if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
             logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-            return res.status(502).json({ message: "Erreur lors de la création de la tâche de génération" });
+            return res
+              .status(502)
+              .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
           }
           externalTaskId = kieResponse.data.taskId;
         }
@@ -735,7 +841,7 @@ export async function registerRoutes(
             logger.error({ err: deductErr }, "Failed to deduct credits");
             return res
               .status(500)
-              .json({ message: "Erreur lors de la déduction des crédits" });
+              .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
           }
         }
 
@@ -767,7 +873,10 @@ export async function registerRoutes(
         });
       } catch (error: any) {
         logger.error({ err: error }, "Error generating direct prank");
-        res.status(500).json({ message: error.message });
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
       }
     },
   );
@@ -776,7 +885,8 @@ export async function registerRoutes(
   app.get(api.pranks.canGenerate.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const result = await checkGenerationLimits(authReq.userId);
+      const locale = resolveLocaleFromRequest(req);
+      const result = await checkGenerationLimits(authReq.userId, locale);
       res.json({
         canGenerate: result.allowed,
         isSubscriber: result.isSubscriber,
@@ -785,7 +895,10 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       logger.error({ err: error }, "Error checking generation eligibility");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -793,6 +906,7 @@ export async function registerRoutes(
   app.get(api.pranks.status.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const { taskId } = req.params;
       const supabaseAdmin = getSupabaseAdmin();
 
@@ -805,7 +919,9 @@ export async function registerRoutes(
         .single();
 
       if (fetchErr || !prank) {
-        return res.status(404).json({ message: "Tâche non trouvée" });
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "pranks.taskNotFound") });
       }
 
       // If already terminal, return cached result
@@ -852,7 +968,10 @@ export async function registerRoutes(
           customStatus = await getOneshotJobStatus(jobId);
         } catch (err) {
           logger.error({ err }, "Failed to poll OneshotAPI");
-          customStatus = { status: "failed", error: "Polling error" };
+          customStatus = {
+            status: "failed",
+            error: tBackend(locale, "pranks.pollingError"),
+          };
         }
         
         const currentSettings = await getAppSettings();
@@ -891,12 +1010,12 @@ export async function registerRoutes(
                });
              } else {
                apiStatus = "fail";
-               apiFailMsg = "Fallback Kie.ai create failed";
+               apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
              }
            } catch (fallbackErr: any) {
              logger.error({ err: fallbackErr }, "Kie fallback also failed");
              apiStatus = "fail";
-             apiFailMsg = fallbackErr.message || "Kie fallback failed";
+             apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
            }
         }
       } else {
@@ -911,7 +1030,7 @@ export async function registerRoutes(
         } catch (err: any) {
            logger.error({ err }, "Failed to poll Kie.ai");
            apiStatus = "fail";
-           apiFailMsg = "Polling error";
+            apiFailMsg = tBackend(locale, "pranks.pollingError");
         }
       }
 
@@ -1004,7 +1123,10 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       logger.error({ err: error }, "Error checking prank status");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1036,7 +1158,10 @@ export async function registerRoutes(
       res.json(data);
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching prank history");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1044,12 +1169,15 @@ export async function registerRoutes(
   app.get(api.pranks.download.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const { prankId, imageIndex } = req.params;
       const index = parseInt(imageIndex, 10);
       const supabaseAdmin = getSupabaseAdmin();
 
       if (isNaN(index) || index < 0) {
-        return res.status(400).json({ message: "Index d'image invalide" });
+        return res
+          .status(400)
+          .json({ message: tBackend(locale, "pranks.invalidImageIndex") });
       }
 
       const { data: prank, error } = await supabaseAdmin
@@ -1060,7 +1188,9 @@ export async function registerRoutes(
         .single();
 
       if (error || !prank || !prank.result_urls) {
-        return res.status(404).json({ message: "Prank non trouvé" });
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "pranks.notFound") });
       }
 
       // Check subscriber status — non-subscribers get watermarked version
@@ -1079,11 +1209,15 @@ export async function registerRoutes(
       try {
         urls = JSON.parse(urlsSource);
       } catch {
-        return res.status(500).json({ message: "URLs invalides" });
+        return res
+          .status(500)
+          .json({ message: tBackend(locale, "pranks.invalidUrls") });
       }
 
       if (index >= urls.length) {
-        return res.status(404).json({ message: "Image non trouvée" });
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "pranks.imageNotFound") });
       }
 
       const imageUrl = urls[index];
@@ -1091,7 +1225,7 @@ export async function registerRoutes(
       if (!imageResponse.ok) {
         return res
           .status(502)
-          .json({ message: "Impossible de récupérer l'image" });
+          .json({ message: tBackend(locale, "pranks.fetchImageFailed") });
       }
 
       const contentType =
@@ -1115,7 +1249,10 @@ export async function registerRoutes(
       res.send(Buffer.from(arrayBuffer));
     } catch (error: any) {
       logger.error({ err: error }, "Error downloading prank image");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1136,7 +1273,10 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ err: error }, "Error deleting prank");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1256,7 +1396,10 @@ export async function registerRoutes(
       res.json(data.map((f: { template_id: string }) => f.template_id));
     } catch (error: any) {
       logger.error({ err: error }, "Error listing favorites");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1264,6 +1407,7 @@ export async function registerRoutes(
   app.post(api.favorites.add.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const supabaseAdmin = getSupabaseAdmin();
 
       const { error } = await supabaseAdmin
@@ -1274,10 +1418,13 @@ export async function registerRoutes(
         );
 
       if (error) throw error;
-      res.json({ message: "Favori ajouté" });
+      res.json({ message: tBackend(locale, "favorites.added") });
     } catch (error: any) {
       logger.error({ err: error }, "Error adding favorite");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1285,6 +1432,7 @@ export async function registerRoutes(
   app.delete(api.favorites.remove.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const supabaseAdmin = getSupabaseAdmin();
 
       const { error } = await supabaseAdmin
@@ -1294,10 +1442,13 @@ export async function registerRoutes(
         .eq("template_id", req.params.templateId);
 
       if (error) throw error;
-      res.json({ message: "Favori retiré" });
+      res.json({ message: tBackend(locale, "favorites.removed") });
     } catch (error: any) {
       logger.error({ err: error }, "Error removing favorite");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1309,6 +1460,7 @@ export async function registerRoutes(
   app.post(api.stripe.createCheckout.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const { getStripe, getStripePriceId } = await import("./lib/stripe");
       const stripe = getStripe();
       const priceId = getStripePriceId();
@@ -1323,7 +1475,7 @@ export async function registerRoutes(
       if (profile?.is_subscriber) {
         return res
           .status(400)
-          .json({ message: "Tu as déjà un abonnement actif." });
+          .json({ message: tBackend(locale, "stripe.alreadySubscribed") });
       }
 
       const sessionParams: Record<string, any> = {
@@ -1352,7 +1504,10 @@ export async function registerRoutes(
       res.json({ url: session.url });
     } catch (error: any) {
       logger.error({ err: error }, "Error creating checkout session");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1360,6 +1515,7 @@ export async function registerRoutes(
   app.post(api.stripe.createPortal.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const { getStripe } = await import("./lib/stripe");
       const stripe = getStripe();
       const supabaseAdmin = getSupabaseAdmin();
@@ -1373,7 +1529,7 @@ export async function registerRoutes(
       if (!profile?.stripe_customer_id) {
         return res
           .status(400)
-          .json({ message: "Aucun abonnement Stripe trouvé." });
+          .json({ message: tBackend(locale, "stripe.noStripeSubscription") });
       }
 
       const portalSession = await stripe.billingPortal.sessions.create({
@@ -1384,7 +1540,10 @@ export async function registerRoutes(
       res.json({ url: portalSession.url });
     } catch (error: any) {
       logger.error({ err: error }, "Error creating portal session");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 
@@ -1483,7 +1642,10 @@ export async function registerRoutes(
       res.json({ status: "activated" });
     } catch (error: any) {
       logger.error({ err: error }, "Error verifying session");
-      res.status(500).json({ message: error.message });
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
 

@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 const SHARE_PLATFORMS = [
   {
@@ -70,6 +71,7 @@ export function PrankResult({
   hideActions = false,
 }: PrankResultProps) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [shareDialog, setShareDialog] = useState<{ imageIndex: number } | null>(
     null,
@@ -81,7 +83,7 @@ export function PrankResult({
 
   if (!resultUrls.length) {
     return (
-      <p className="text-center text-muted-foreground">Aucune image générée.</p>
+      <p className="text-center text-muted-foreground">{t("result.noImage")}</p>
     );
   }
 
@@ -106,7 +108,7 @@ export function PrankResult({
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch {
-      toast({ title: "Erreur lors du téléchargement", variant: "destructive" });
+      toast({ title: t("result.downloadError"), variant: "destructive" });
     }
   }
 
@@ -153,7 +155,7 @@ export function PrankResult({
           >
             <img
               src={url}
-              alt={`Prank généré ${index + 1}`}
+              alt={t("result.generatedAlt", { index: index + 1 })}
               className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
               loading="lazy"
             />
@@ -163,14 +165,14 @@ export function PrankResult({
                 <button
                   onClick={() => handleDownload(index)}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title="Télécharger"
+                  title={t("result.download")}
                 >
                   <Download className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => setShareDialog({ imageIndex: index })}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title="Partager"
+                  title={t("result.share")}
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
@@ -195,9 +197,9 @@ export function PrankResult({
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>Partage ton prank</DrawerTitle>
+                <DrawerTitle>{t("result.shareTitle")}</DrawerTitle>
                 <DrawerDescription>
-                  Envoie-le à tes potes sur leur réseau préféré
+                  {t("result.shareDescription")}
                 </DrawerDescription>
               </DrawerHeader>
             </div>
@@ -228,10 +230,10 @@ export function PrankResult({
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle className="text-center">
-                Partage ton prank
+                {t("result.shareTitle")}
               </DialogTitle>
               <DialogDescription className="text-center">
-                Envoie-le à tes potes sur leur réseau préféré
+                {t("result.shareDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-4 gap-3 pt-2">
@@ -263,36 +265,35 @@ export function PrankResult({
         >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>Envoyer sur {shareGuide?.platform}</DialogTitle>
+              <DialogTitle>
+                {t("result.sendTo", { platform: shareGuide?.platform })}
+              </DialogTitle>
               <DialogDescription className="sr-only">
-                Instructions de partage
+                {t("result.shareInstructionsLabel")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Pour partager l'image directement :
+                {t("result.shareInstructionsIntro")}
               </p>
               <ol className="text-sm space-y-2 list-decimal list-inside">
-                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>{t("result.shareStep1")}</li>
                 <li>
-                  Ouvre{" "}
-                  <span className="font-semibold">{shareGuide?.platform}</span>
+                  {t("result.shareStep2", { platform: shareGuide?.platform })}
                 </li>
-                <li>
-                  Choisis une conversation et envoie l'image depuis ta galerie
-                </li>
+                <li>{t("result.shareStep3")}</li>
               </ol>
               <Button
                 className="w-full rounded-full"
                 onClick={async () => {
                   if (shareGuide) {
                     await handleDownload(shareGuide.imageIndex);
-                    toast({ title: "Image téléchargée !" });
+                    toast({ title: t("result.imageDownloaded") });
                   }
                 }}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                Télécharger l'image
+                {t("result.downloadImage")}
               </Button>
             </div>
           </DialogContent>
@@ -311,38 +312,37 @@ export function PrankResult({
                 <X className="w-4 h-4" />
               </button>
               <DrawerHeader className="text-center">
-                <DrawerTitle>Envoyer sur {shareGuide?.platform}</DrawerTitle>
+                <DrawerTitle>
+                  {t("result.sendTo", { platform: shareGuide?.platform })}
+                </DrawerTitle>
                 <DrawerDescription className="sr-only">
-                  Instructions de partage
+                  {t("result.shareInstructionsLabel")}
                 </DrawerDescription>
               </DrawerHeader>
             </div>
             <div className="space-y-4 px-4 pb-6">
               <p className="text-sm text-muted-foreground">
-                Pour partager l'image directement :
+                {t("result.shareInstructionsIntro")}
               </p>
               <ol className="text-sm space-y-2 list-decimal list-inside">
-                <li>Télécharge l'image avec le bouton ci-dessous</li>
+                <li>{t("result.shareStep1")}</li>
                 <li>
-                  Ouvre{" "}
-                  <span className="font-semibold">{shareGuide?.platform}</span>
+                  {t("result.shareStep2", { platform: shareGuide?.platform })}
                 </li>
-                <li>
-                  Choisis une conversation et envoie l'image depuis ta galerie
-                </li>
+                <li>{t("result.shareStep3")}</li>
               </ol>
               <Button
                 className="w-full rounded-full"
                 onClick={async () => {
                   if (shareGuide) {
                     await handleDownload(shareGuide.imageIndex);
-                    toast({ title: "Image téléchargée !" });
+                    toast({ title: t("result.imageDownloaded") });
                     setShareGuide(null);
                   }
                 }}
               >
                 <Download className="mr-1.5 h-4 w-4" />
-                Télécharger l'image
+                {t("result.downloadImage")}
               </Button>
             </div>
           </DrawerContent>

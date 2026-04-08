@@ -10,7 +10,10 @@ import {
   Sparkles,
   ArrowRight,
 } from "lucide-react";
-import { prankChips, prankIdeas } from "@/lib/prank-data";
+import {
+  getPrankChipsForLocale,
+  getPrankIdeasForLocale,
+} from "@/lib/prank-data";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingPrank } from "@/lib/pending-prank";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +22,7 @@ import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -31,13 +35,26 @@ const itemVariants = {
 };
 
 export default function HeroSection() {
+  const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const [prompt, setPrompt] = React.useState("");
   const [images, setImages] = React.useState<({ url: string; file: File } | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [accordionOpen, setAccordionOpen] = React.useState(false);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const typewriterRef = useTypewriterPlaceholder(prompt, isMobile ? Object.freeze([]) as unknown as string[] : prankIdeas);
+  const prankIdeas = React.useMemo(
+    () => getPrankIdeasForLocale(i18n.resolvedLanguage),
+    [i18n.resolvedLanguage],
+  );
+  const prankChips = React.useMemo(
+    () => getPrankChipsForLocale(i18n.resolvedLanguage),
+    [i18n.resolvedLanguage],
+  );
+  const typewriterRef = useTypewriterPlaceholder(
+    prompt,
+    isMobile ? (Object.freeze([]) as unknown as string[]) : prankIdeas,
+    t("promptInput.describePlaceholder"),
+  );
   const { user } = useAuth();
   const generateDirect = useGenerateDirectPrank();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
@@ -106,19 +123,23 @@ export default function HeroSection() {
       if (eligibility && !eligibility.canGenerate) {
         toast({
           variant: "destructive",
-          title: "Limite atteinte",
-          description: "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
+          title: t("hero.limitReachedTitle"),
+          description: t("hero.limitReachedDescription"),
         });
         return;
       }
       if (!prompt.trim() && files.length === 0) {
-        toast({ variant: "destructive", title: "Erreur", description: "Décris ton prank ou ajoute une image." });
+        toast({
+          variant: "destructive",
+          title: t("hero.emptyPromptTitle"),
+          description: t("hero.emptyPromptDescription"),
+        });
         return;
       }
       try {
         const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
         const result = await generateDirect.mutateAsync({
-          prompt: prompt.trim() || "Surprends-moi",
+          prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
         });
@@ -131,9 +152,13 @@ export default function HeroSection() {
           message = parsed.message || error.message;
         } catch {}
         if (message.includes("<!DOCTYPE") || message.includes("<html")) {
-          message = "Erreur serveur. Veuillez réessayer.";
+          message = t("hero.serverRetry");
         }
-        toast({ variant: "destructive", title: "Erreur", description: message });
+        toast({
+          variant: "destructive",
+          title: t("hero.emptyPromptTitle"),
+          description: message,
+        });
       }
     } else {
       if (files.length > 0 || prompt.trim()) {
@@ -180,7 +205,11 @@ export default function HeroSection() {
             variants={itemVariants}
             className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
           >
-            Crée des <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">pranks</span> hyper réalistes
+            {t("hero.titlePrefix")}{" "}
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              {t("hero.titleGradient")}
+            </span>{" "}
+            {t("hero.titleSuffix")}
           </motion.h1>
           {!images.some((img) => img !== null) && (
             <motion.div
@@ -221,7 +250,7 @@ export default function HeroSection() {
                     <>
                       <img
                         src={img.url}
-                        alt={`Image ${i + 1}`}
+                        alt={t("imageUpload.imageAlt", { index: i + 1 })}
                         className="absolute inset-0 w-full h-full object-cover rounded-2xl"
                       />
                       <button
@@ -258,7 +287,7 @@ export default function HeroSection() {
                       {images.length === 1 && i === 0 ? (
                         draggedIndex === i ? (
                           <p className="text-sm font-semibold text-primary text-center px-2 whitespace-nowrap">
-                            Lâche ici 👇
+                            {t("hero.dropHere")} 👇
                           </p>
                         ) : (
                           <>
@@ -266,7 +295,7 @@ export default function HeroSection() {
                               <Plus className="w-7 h-7 text-primary transition-colors" />
                             </div>
                             <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                              Met ton image ici
+                              {t("hero.dropImage")}
                             </p>
                           </>
                         )
@@ -296,20 +325,20 @@ export default function HeroSection() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={isMobile ? "Décris ton prank…" : ""}
+                placeholder={isMobile ? t("promptInput.describePlaceholder") : ""}
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
               />
               <button
                 onClick={shuffleIdea}
                 className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
-                title="Idée aléatoire"
+                title={t("hero.randomIdea")}
               >
                 <Shuffle className="w-4 h-4" />
               </button>
               <button
                 className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-black bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
                 onClick={handleSubmit}
-                title="Créer"
+                title={t("hero.create")}
               >
                 <ArrowRight className="w-4 h-4" />
               </button>
@@ -318,7 +347,7 @@ export default function HeroSection() {
                 className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
                 onClick={handleSubmit}
               >
-                Créer
+                {t("hero.create")}
               </Button>
             </div>
           </motion.div>
@@ -333,7 +362,7 @@ export default function HeroSection() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/40 bg-card/90 backdrop-blur text-sm font-semibold text-foreground hover:border-secondary/50 hover:text-secondary active:scale-95 transition-all"
             >
               <Sparkles className="w-4 h-4" />
-              Idées de pranks
+              {t("hero.prankIdeas")}
               <motion.span
                 animate={{ rotate: accordionOpen ? 180 : 0 }}
                 transition={{ duration: 0.25 }}
@@ -394,7 +423,7 @@ export default function HeroSection() {
                 <div className="flex justify-center mb-3">
                   <div className="w-10 h-1 rounded-full bg-muted" />
                 </div>
-                <h3 className="text-base font-semibold text-center mb-4">Idées de pranks</h3>
+                <h3 className="text-base font-semibold text-center mb-4">{t("hero.prankIdeas")}</h3>
                 <div className="grid grid-cols-3 gap-1.5">
                   {prankChips.map((chip) => {
                     const Icon = chip.icon;

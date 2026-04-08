@@ -20,9 +20,17 @@ import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
 import Confidentialite from "@/pages/Confidentialite";
 import DebugGenerate from "@/pages/DebugGenerate";
+import { supabase } from "@/lib/supabase";
 
 import { Loader2 } from "lucide-react";
 import { AUTH_CONFIG } from "@/config/auth";
+import { useTranslation } from "react-i18next";
+import {
+  APP_LOCALE_STORAGE_KEY,
+  DEFAULT_LOCALE,
+  resolvePreferredLocale,
+  SIGNUP_LOCALE_STORAGE_KEY,
+} from "@shared/locales";
 
 // OAuth callback handler — waits for Supabase to parse the hash fragment
 function AuthCallback() {
@@ -74,20 +82,20 @@ function ProtectedRoute({
   );
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  "/": "TurboPrank — Crée des pranks personnalisés avec l'IA",
-  "/login": "Connexion — TurboPrank",
-  "/register": "Inscription — TurboPrank",
-  "/generate": "Crée ton prank — TurboPrank",
-  "/history": "Historique — TurboPrank",
-  "/settings": "Paramètres — TurboPrank",
-  "/admin": "Admin — TurboPrank",
-  "/admin/users": "Utilisateurs — TurboPrank",
-  "/admin/templates": "Templates — TurboPrank",
-  "/mentions-legales": "Mentions légales — TurboPrank",
-  "/cgu": "CGU — TurboPrank",
-  "/cgv": "CGV — TurboPrank",
-  "/confidentialite": "Politique de confidentialité — TurboPrank",
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  "/": "meta:titles.home",
+  "/login": "meta:titles.login",
+  "/register": "meta:titles.register",
+  "/generate": "meta:titles.generate",
+  "/history": "meta:titles.history",
+  "/settings": "meta:titles.settings",
+  "/admin": "meta:titles.admin",
+  "/admin/users": "meta:titles.adminUsers",
+  "/admin/templates": "meta:titles.adminTemplates",
+  "/mentions-legales": "meta:titles.legal",
+  "/cgu": "meta:titles.cgu",
+  "/cgv": "meta:titles.cgv",
+  "/confidentialite": "meta:titles.privacy",
 };
 
 import { PostHogProvider } from "posthog-js/react";
@@ -95,19 +103,96 @@ import { posthog } from "@/lib/posthog";
 import { usePostHog } from "posthog-js/react";
 
 function Router() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [location] = useLocation();
   const posthogInstance = usePostHog();
+  const { t, i18n } = useTranslation();
 
   React.useEffect(() => {
-    document.title = PAGE_TITLES[location] || "TurboPrank";
+    if (!user || !profile) {
+      return;
+    }
+
+    const pendingSignupLocale = window.localStorage.getItem(
+      SIGNUP_LOCALE_STORAGE_KEY,
+    );
+
+    if (!pendingSignupLocale) {
+      return;
+    }
+
+    const signupLocale = resolvePreferredLocale(
+      pendingSignupLocale,
+      DEFAULT_LOCALE,
+    );
+    const currentProfileLocale = resolvePreferredLocale(
+      profile.preferred_locale,
+      DEFAULT_LOCALE,
+    );
+
+    if (signupLocale === currentProfileLocale) {
+      window.localStorage.removeItem(SIGNUP_LOCALE_STORAGE_KEY);
+      return;
+    }
+
+    let isActive = true;
+
+    const syncSignupLocaleToProfile = async () => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          preferred_locale: signupLocale,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error || !isActive) {
+        return;
+      }
+
+      window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, signupLocale);
+      window.localStorage.removeItem(SIGNUP_LOCALE_STORAGE_KEY);
+
+      if (signupLocale !== i18n.resolvedLanguage) {
+        void i18n.changeLanguage(signupLocale);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+    };
+
+    void syncSignupLocaleToProfile();
+
+    return () => {
+      isActive = false;
+    };
+  }, [i18n, profile?.preferred_locale, user?.id]);
+
+  React.useEffect(() => {
+    if (!user || !profile?.preferred_locale) {
+      return;
+    }
+
+    const preferredLocale = resolvePreferredLocale(
+      profile.preferred_locale,
+      DEFAULT_LOCALE,
+    );
+
+    if (preferredLocale !== i18n.resolvedLanguage) {
+      void i18n.changeLanguage(preferredLocale);
+    }
+
+    window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, preferredLocale);
+  }, [i18n, profile?.preferred_locale, user]);
+
+  React.useEffect(() => {
+    document.title = t(PAGE_TITLE_KEYS[location] || "meta:appName");
     if (posthogInstance) {
       posthogInstance.capture("$pageview");
       if (location === AUTH_CONFIG.LANDING_PATH) {
         posthogInstance.capture("landing_page_view");
       }
     }
-  }, [location, posthogInstance]);
+  }, [location, posthogInstance, t]);
 
   return (
     <Switch>

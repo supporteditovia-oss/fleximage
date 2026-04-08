@@ -11,6 +11,7 @@ const PAUSE_AFTER_TYPE = 2000;
 export function useTypewriterPlaceholder(
   prompt: string,
   ideas: string[],
+  fallbackPlaceholder: string,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
   const ideaIndexRef = useRef(0);
@@ -20,12 +21,12 @@ export function useTypewriterPlaceholder(
     if (!el) return;
 
     if (prompt) {
-      el.placeholder = "Décris ton prank…";
+      el.placeholder = fallbackPlaceholder;
       return;
     }
 
     if (!ideas || ideas.length === 0) {
-      el.placeholder = "Décris ton prank…";
+      el.placeholder = fallbackPlaceholder;
       return;
     }
 
@@ -117,7 +118,7 @@ export function useTypewriterPlaceholder(
       cancelAnimationFrame(rafId);
       observer?.disconnect();
     };
-  }, [prompt, ideas]);
+  }, [prompt, ideas, fallbackPlaceholder]);
 
   return inputRef;
 }

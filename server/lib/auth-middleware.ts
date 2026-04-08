@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
+import { resolveLocaleFromRequest, tBackend } from "./i18n";
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
@@ -12,9 +13,12 @@ export interface AuthenticatedRequest extends Request {
 const notifiedSignups = new Set<string>();
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const locale = resolveLocaleFromRequest(req);
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Token d'authentification manquant" });
+    return res.status(401).json({
+      message: tBackend(locale, "auth.missingToken"),
+    });
   }
 
   const token = authHeader.replace("Bearer ", "");
@@ -23,7 +27,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !data.user) {
     logger.warn({ error }, "Invalid auth token");
-    return res.status(401).json({ message: "Token invalide ou expiré" });
+    return res.status(401).json({
+      message: tBackend(locale, "auth.invalidToken"),
+    });
   }
 
   const userId = data.user.id;
@@ -57,6 +63,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const locale = resolveLocaleFromRequest(req);
   const authReq = req as AuthenticatedRequest;
   const supabaseAdmin = getSupabaseAdmin();
 
@@ -67,7 +74,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     .single();
 
   if (error || data?.role !== "admin") {
-    return res.status(403).json({ message: "Accès réservé aux administrateurs" });
+    return res.status(403).json({ message: tBackend(locale, "auth.adminOnly") });
   }
 
   authReq.userRole = "admin";

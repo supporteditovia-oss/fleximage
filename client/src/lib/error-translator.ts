@@ -1,82 +1,101 @@
-export function translateSupabaseError(error: any): { title: string; description: string } {
-  const code = error?.code || error?.message;
-  
-  const errorMap: Record<string, { title: string; description: string }> = {
-    "Invalid login credentials": {
-      title: "Identifiants invalides",
-      description: "L'email ou le mot de passe est incorrect. Veuillez réessayer."
-    },
-    "User already registered": {
-      title: "Compte existant",
-      description: "Un utilisateur est déjà inscrit avec cette adresse email."
-    },
-    "Password should be at least 6 characters": {
-      title: "Mot de passe trop court",
-      description: "Le mot de passe doit contenir au moins 6 caractères."
-    },
-    "Email not confirmed": {
-      title: "Email non confirmé",
-      description: "Veuillez vérifier votre boîte de réception et confirmer votre email."
-    },
-    "Network request failed": {
-      title: "Erreur réseau",
-      description: "Impossible de contacter le serveur. Vérifiez votre connexion internet."
-    },
-    "Too many requests": {
-      title: "Trop de tentatives",
-      description: "Veuillez patienter un moment avant de réessayer."
-    },
-    "Signup disabled": {
-      title: "Inscriptions fermées",
-      description: "Les nouvelles inscriptions sont temporairement désactivées."
-    },
-    "Rate limit exceeded": {
-      title: "Limite atteinte",
-      description: "Vous avez effectué trop de tentatives. Veuillez réessayer plus tard."
-    },
-    "User not found": {
-      title: "Utilisateur introuvable",
-      description: "Aucun compte n'est associé à cette adresse email."
-    },
-    "Invalid email": {
-      title: "Email invalide",
-      description: "Le format de l'adresse email n'est pas correct."
-    },
-    "Database error saving next challenge": {
-      title: "Erreur de base de données",
-      description: "Un problème est survenu lors de l'enregistrement de vos données. Veuillez réessayer."
-    },
-    "anonymous_provider_disabled": {
-      title: "Connexion anonyme désactivée",
-      description: "Les connexions anonymes ne sont pas autorisées sur cette application."
-    },
-    "Confirmation_token_not_found": {
-      title: "Lien expiré",
-      description: "Le lien de confirmation a expiré ou a déjà été utilisé."
-    },
-    "Provider disabled": {
-      title: "Service indisponible",
-      description: "La connexion via ce fournisseur (ex: Google) est actuellement désactivée."
-    }
-  };
+import i18n from "@/i18n";
 
+type ErrorTranslationEntry = {
+  titleKey: string;
+  descriptionKey: string;
+};
+
+const errorMap: Record<string, ErrorTranslationEntry> = {
+  "Invalid login credentials": {
+    titleKey: "errors.auth.invalidLoginCredentials.title",
+    descriptionKey: "errors.auth.invalidLoginCredentials.description",
+  },
+  "User already registered": {
+    titleKey: "errors.auth.userAlreadyRegistered.title",
+    descriptionKey: "errors.auth.userAlreadyRegistered.description",
+  },
+  "Password should be at least 6 characters": {
+    titleKey: "errors.auth.passwordTooShort.title",
+    descriptionKey: "errors.auth.passwordTooShort.description",
+  },
+  "Email not confirmed": {
+    titleKey: "errors.auth.emailNotConfirmed.title",
+    descriptionKey: "errors.auth.emailNotConfirmed.description",
+  },
+  "Network request failed": {
+    titleKey: "errors.auth.networkFailed.title",
+    descriptionKey: "errors.auth.networkFailed.description",
+  },
+  "Too many requests": {
+    titleKey: "errors.auth.tooManyRequests.title",
+    descriptionKey: "errors.auth.tooManyRequests.description",
+  },
+  "Signup disabled": {
+    titleKey: "errors.auth.signupDisabled.title",
+    descriptionKey: "errors.auth.signupDisabled.description",
+  },
+  "Rate limit exceeded": {
+    titleKey: "errors.auth.rateLimitExceeded.title",
+    descriptionKey: "errors.auth.rateLimitExceeded.description",
+  },
+  "User not found": {
+    titleKey: "errors.auth.userNotFound.title",
+    descriptionKey: "errors.auth.userNotFound.description",
+  },
+  "Invalid email": {
+    titleKey: "errors.auth.invalidEmail.title",
+    descriptionKey: "errors.auth.invalidEmail.description",
+  },
+  "Database error saving next challenge": {
+    titleKey: "errors.auth.databaseError.title",
+    descriptionKey: "errors.auth.databaseError.description",
+  },
+  anonymous_provider_disabled: {
+    titleKey: "errors.auth.anonymousDisabled.title",
+    descriptionKey: "errors.auth.anonymousDisabled.description",
+  },
+  Confirmation_token_not_found: {
+    titleKey: "errors.auth.confirmationTokenNotFound.title",
+    descriptionKey: "errors.auth.confirmationTokenNotFound.description",
+  },
+  "Provider disabled": {
+    titleKey: "errors.auth.providerDisabled.title",
+    descriptionKey: "errors.auth.providerDisabled.description",
+  },
+};
+
+function translateEntry(entry: ErrorTranslationEntry): {
+  title: string;
+  description: string;
+} {
+  return {
+    title: i18n.t(entry.titleKey),
+    description: i18n.t(entry.descriptionKey),
+  };
+}
+
+export function translateSupabaseError(error: any): {
+  title: string;
+  description: string;
+} {
   if (error?.status === 429 || error?.code === "over_query_limit") {
-    return errorMap["Too many requests"];
+    return translateEntry(errorMap["Too many requests"]);
   }
 
   const message = error?.message || "";
+
   for (const key in errorMap) {
     if (message.includes(key) || error?.code === key) {
-      return errorMap[key];
+      return translateEntry(errorMap[key]);
     }
   }
 
   if (message.toLowerCase().includes("email")) {
-    return errorMap["Invalid email"];
+    return translateEntry(errorMap["Invalid email"]);
   }
 
   return {
-    title: "Une erreur est survenue",
-    description: message || "Une erreur inattendue s'est produite. Veuillez contacter le support si le problème persiste."
+    title: i18n.t("errors.generic.title"),
+    description: message || i18n.t("errors.generic.description"),
   };
 }

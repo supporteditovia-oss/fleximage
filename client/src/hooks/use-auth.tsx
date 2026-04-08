@@ -11,11 +11,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { AUTH_CONFIG } from "@/config/auth";
+import { DEFAULT_LOCALE, type AppLocale } from "@shared/locales";
 
 type Profile = {
   id: string;
   email: string | null;
   full_name: string | null;
+  preferred_locale: AppLocale;
   role: "user" | "admin";
   is_subscriber: boolean;
   has_accepted_terms: boolean;
@@ -99,10 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return {
             id: user.id,
             email: user.email ?? null,
+            full_name: null,
+            preferred_locale: DEFAULT_LOCALE,
             role: "user",
             is_subscriber: false,
             has_accepted_terms: false,
             credits: 0,
+            generation_count: 0,
+            stripe_customer_id: null,
             stripe_subscription_id: null,
           } as Profile;
         }

@@ -1,4 +1,8 @@
+import { useTranslation } from "react-i18next";
+
 export default function Footer() {
+  const { t } = useTranslation();
+
   return (
     <footer className="py-8 border-t border-border">
       <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4 text-center">
@@ -8,21 +12,21 @@ export default function Footer() {
 
         <nav className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
           <a href="/mentions-legales" className="hover:text-primary transition-colors">
-            Mentions Légales
+            {t("footer.legal")}
           </a>
           <a href="/cgu" className="hover:text-primary transition-colors">
-            CGU
+            {t("footer.cgu")}
           </a>
           <a href="/cgv" className="hover:text-primary transition-colors">
-            CGV
+            {t("footer.cgv")}
           </a>
           <a href="/confidentialite" className="hover:text-primary transition-colors">
-            Confidentialité
+            {t("footer.privacy")}
           </a>
         </nav>
 
         <p className="text-sm text-muted-foreground">
-          © 2026 TurboPRANK. Tous droits réservés.
+          {t("footer.copyright", { year: new Date().getFullYear() })}
         </p>
       </div>
     </footer>

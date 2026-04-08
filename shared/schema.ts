@@ -8,12 +8,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "./locales";
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   email: text("email"),
   full_name: text("full_name"),
   avatar_url: text("avatar_url"),
+  preferred_locale: text("preferred_locale", { enum: SUPPORTED_LOCALES })
+    .default(DEFAULT_LOCALE)
+    .notNull(),
   role: text("role", { enum: ["user", "admin"] })
     .default("user")
     .notNull(),
@@ -32,6 +36,7 @@ export const profiles = pgTable("profiles", {
 export const insertProfileSchema = createInsertSchema(profiles, {
   email: z.string().email(),
   full_name: z.string().min(2).max(100).optional(),
+  preferred_locale: z.enum(SUPPORTED_LOCALES).optional().default(DEFAULT_LOCALE),
 });
 
 export const updateProfileSchema = insertProfileSchema.partial();

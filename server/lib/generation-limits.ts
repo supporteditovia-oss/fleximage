@@ -1,4 +1,6 @@
 import { getSupabaseAdmin } from "./supabase-admin";
+import { DEFAULT_LOCALE, type AppLocale } from "@shared/locales";
+import { tBackend } from "./i18n";
 
 export interface LimitCheckResult {
   allowed: boolean;
@@ -10,6 +12,7 @@ export interface LimitCheckResult {
 
 export async function checkGenerationLimits(
   userId: string,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<LimitCheckResult> {
   const supabase = getSupabaseAdmin();
 
@@ -23,7 +26,7 @@ export async function checkGenerationLimits(
   if (!profile) {
     return {
       allowed: false,
-      reason: "Profil introuvable",
+      reason: tBackend(locale, "limits.profileNotFound"),
       isSubscriber: false,
       isAdmin: false,
       generationCount: 0,
@@ -45,8 +48,8 @@ export async function checkGenerationLimits(
     return {
       allowed: false,
       reason: profile.is_subscriber
-        ? "Tu n'as plus de crédits. Tes crédits seront rechargés au prochain renouvellement."
-        : "Crédits insuffisants. Abonne-toi pour obtenir des crédits et générer des pranks.",
+        ? tBackend(locale, "limits.noCreditsSubscriber")
+        : tBackend(locale, "limits.noCreditsNonSubscriber"),
       isSubscriber: profile.is_subscriber,
       isAdmin: false,
       generationCount: profile.generation_count,

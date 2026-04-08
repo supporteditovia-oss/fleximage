@@ -15,10 +15,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     last_active_at TIMESTAMP WITH TIME ZONE,
     full_name TEXT,
     avatar_url TEXT,
+    preferred_locale TEXT DEFAULT 'fr' NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
 
-    CONSTRAINT profiles_role_check CHECK (role IN ('user', 'admin'))
+    CONSTRAINT profiles_role_check CHECK (role IN ('user', 'admin')),
+    CONSTRAINT profiles_preferred_locale_check CHECK (preferred_locale IN ('fr', 'en', 'es', 'de'))
 );
 
 -- Assurer la présence des colonnes même si la table existe déjà
@@ -33,7 +35,20 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='profiles' AND COLUMN_NAME='is_subscriber') THEN
         ALTER TABLE public.profiles ADD COLUMN is_subscriber BOOLEAN DEFAULT FALSE NOT NULL;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='profiles' AND COLUMN_NAME='preferred_locale') THEN
+      ALTER TABLE public.profiles ADD COLUMN preferred_locale TEXT DEFAULT 'fr' NOT NULL;
+    END IF;
 END $$;
+
+  DO $$
+  BEGIN
+    ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_preferred_locale_check;
+    ALTER TABLE public.profiles
+      ADD CONSTRAINT profiles_preferred_locale_check
+      CHECK (preferred_locale IN ('fr', 'en', 'es', 'de'));
+  EXCEPTION
+    WHEN duplicate_object THEN NULL;
+  END $$;
 
 -- 2. ROW LEVEL SECURITY (RLS) - DÉSACTIVER PUIS RÉACTIVER POUR NETTOYER
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -68,6 +83,8 @@ RETURNS TRIGGER AS $$
 DECLARE
     extracted_name TEXT;
     extracted_avatar TEXT;
+  extracted_locale TEXT;
+  normalized_locale TEXT;
 BEGIN
     extracted_name := COALESCE(
         NEW.raw_user_meta_data->>'full_name',
@@ -80,15 +97,40 @@ BEGIN
         NEW.raw_user_meta_data->>'picture'
     );
 
+    extracted_locale := COALESCE(
+      NEW.raw_user_meta_data->>'preferred_locale',
+      NEW.raw_user_meta_data->>'locale',
+      NEW.raw_user_meta_data->>'language'
+    );
+
+    normalized_locale := split_part(
+      split_part(lower(COALESCE(extracted_locale, 'fr')), ';', 1),
+      '-',
+      1
+    );
+
+    IF normalized_locale NOT IN ('fr', 'en', 'es', 'de') THEN
+      normalized_locale := 'fr';
+    END IF;
+
     -- Utilisation de INSERT ... ON CONFLICT pour éviter les erreurs si le profil existe déjà
-    INSERT INTO public.profiles (id, email, full_name, avatar_url, role, has_accepted_terms)
+    INSERT INTO public.profiles (
+      id,
+      email,
+      full_name,
+      avatar_url,
+      role,
+      has_accepted_terms,
+      preferred_locale
+    )
     VALUES (
         NEW.id, 
         NEW.email, 
         extracted_name,
         extracted_avatar,
         'user',
-        COALESCE((NEW.raw_user_meta_data->>'has_accepted_terms')::boolean, false)
+      COALESCE((NEW.raw_user_meta_data->>'has_accepted_terms')::boolean, false),
+      normalized_locale
     )
     ON CONFLICT (id) DO UPDATE SET
         email = EXCLUDED.email,
