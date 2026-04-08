@@ -229,3 +229,52 @@ body[data-fullscreen-overlay] .bottom-dock {
     transform: translateX(calc(-100% - 1rem));
   }
 }
+
+/* ── Paywall CTA Pulse ── */
+@keyframes paywall-cta-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+@keyframes paywall-cta-label-stable {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9804);
+  }
+}
+
+.paywall-cta-pulse {
+  animation: paywall-cta-pulse 1.8s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.paywall-cta-pulse:active {
+  animation: none;
+}
+
+.paywall-cta-pulse .paywall-cta-label-stable {
+  animation: paywall-cta-label-stable 1.8s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paywall-cta-pulse {
+    animation: none;
+  }
+
+  .paywall-cta-pulse .paywall-cta-label-stable {
+    animation: none;
+  }
+}

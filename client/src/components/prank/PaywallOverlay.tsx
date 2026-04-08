@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, Loader2, Lock } from "lucide-react";
+import { Ban, Flame, Loader2, Unlock, Zap } from "lucide-react";
 import { authFetch } from "@/lib/api";
 import { posthog } from "@/lib/posthog";
 
@@ -11,10 +11,54 @@ interface PaywallOverlayProps {
 
 export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [monthlyPranksCount, setMonthlyPranksCount] = useState(12847);
 
   useEffect(() => {
     posthog.capture("paywall_view", { isFake: !!isFake });
   }, [isFake]);
+
+  useEffect(() => {
+    const baseCount = 12847;
+    let timeoutId: number | null = null;
+    let cancelled = false;
+
+    const scheduleNextTick = () => {
+      if (cancelled) return;
+
+      const isPause = Math.random() < 0.22;
+      const delay = isPause
+        ? 2800 + Math.floor(Math.random() * 2200)
+        : 1200 + Math.floor(Math.random() * 1600);
+
+      timeoutId = window.setTimeout(() => {
+        setMonthlyPranksCount((current) => {
+          if (isPause) return current;
+
+          const isBurst = Math.random() < 0.16;
+          const step = isBurst
+            ? 3 + Math.floor(Math.random() * 4)
+            : 1 + Math.floor(Math.random() * 2);
+
+          const next = current + step;
+          if (next > baseCount + 250) {
+            return baseCount + Math.floor(Math.random() * 50);
+          }
+          return next;
+        });
+
+        scheduleNextTick();
+      }, delay);
+    };
+
+    scheduleNextTick();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -59,6 +103,16 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
       {/* Gradient overlay: transparent top → dark bottom */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-30% to-black/90 pointer-events-none" />
 
+      {/* Centered lock message */}
+      <div className="absolute inset-x-0 top-[47%] z-10 -translate-y-1/2 flex flex-col items-center px-6 text-center pointer-events-none">
+        <h2 className="font-display text-2xl font-bold text-white text-center">
+          Ton prank est prêt !
+        </h2>
+        <p className="text-sm text-white/70 text-center mt-1">
+          Ton image est prête… mais elle est verrouillée 🔒
+        </p>
+      </div>
+
       {/* Card pinned at the bottom */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -66,50 +120,53 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
         className="absolute bottom-0 left-0 right-0 z-20 p-5 pt-3 flex flex-col items-center"
       >
-        {/* Title */}
-        <h2 className="font-display text-lg font-bold text-white text-center">
-          Débloque ton prank !
-        </h2>
+        {/* Benefits */}
+        <ul className="space-y-2.5 mb-6 w-full mt-2">
+          <li className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-rose-300/25 bg-rose-500/20">
+              <Ban className="h-4 w-4 text-rose-300" />
+            </div>
+            <p className="text-[15px] font-bold text-white leading-none">Sans filigrane</p>
+          </li>
 
-        {/* Subtitle */}
-        <p className="text-sm text-white/70 text-center mt-1 mb-3">
-          Ton image est prête mais protégée.
-        </p>
+          <li className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-amber-300/25 bg-amber-500/20">
+              <Zap className="h-4 w-4 text-amber-300" />
+            </div>
+            <p className="text-[15px] font-bold text-white leading-none">Résultat instantané</p>
+          </li>
 
-        {/* Bullets */}
-        <ul className="space-y-1.5 mb-4 w-full">
-          {[
-            "HD sans filigrane",
-            "Générations illimitées",
-            "Tous les templates",
-          ].map((benefit) => (
-            <li key={benefit} className="flex items-center gap-2 text-sm text-white">
-              <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                <Check className="w-2.5 h-2.5 text-primary" />
-              </div>
-              {benefit}
-            </li>
-          ))}
+          <li className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-orange-300/25 bg-orange-500/20">
+              <Flame className="h-4 w-4 text-orange-300" />
+            </div>
+            <p className="text-[15px] font-bold text-white leading-none">Accès à tous les templates</p>
+          </li>
         </ul>
 
+        <p className="text-sm text-white/80 mb-3 text-center">
+          🔥 {monthlyPranksCount.toLocaleString("fr-FR")} pranks envoyés ce mois
+        </p>
+
         {/* CTA Button with pulse animation */}
-        <button
+        <motion.button
           onClick={handleSubscribe}
           disabled={isLoading}
-          className="w-full flex items-center justify-center font-bold text-primary-foreground text-sm py-3.5 rounded-full bg-primary transition-all hover:brightness-110 active:scale-95 disabled:opacity-70"
+          whileTap={!isLoading ? { scale: 0.95, y: 1 } : undefined}
+          className={`relative w-full overflow-hidden ring-1 ring-primary/70 flex items-center justify-center font-bold tracking-tight text-primary-foreground text-base py-4 rounded-full bg-primary transform-gpu cursor-pointer select-none transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:opacity-70 disabled:cursor-not-allowed ${!isLoading ? "paywall-cta-pulse" : ""}`}
         >
           {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
+            <span className="paywall-cta-label-stable flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               Redirection...
             </span>
           ) : (
-            <span className="flex items-center justify-center gap-2">
-              <Lock className="w-4 h-4" strokeWidth={3} />
-              Débloquer mon prank
+            <span className="paywall-cta-label-stable flex items-center justify-center gap-2">
+              <Unlock className="w-4 h-4" strokeWidth={3} />
+              Debloquer mon prank
             </span>
           )}
-        </button>
+        </motion.button>
 
         {/* Price line */}
         <p className="text-xs text-white/50 mt-2.5 text-center">

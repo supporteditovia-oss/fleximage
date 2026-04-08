@@ -79,6 +79,8 @@ export default function Generate() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
+      posthog.capture("subscription_created", { source: "checkout_return" });
+
       const paywalled = getPaywalledResult();
       window.history.replaceState({}, "", "/generate");
       clearPaywalledResult();
@@ -135,7 +137,6 @@ export default function Generate() {
         .then((res) => res.json())
         .then((data) => {
           console.log("[Checkout] verify-session result:", data);
-          posthog.capture("subscription_created");
           onVerified();
         })
         .catch((err) => {
