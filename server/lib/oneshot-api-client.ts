@@ -53,10 +53,8 @@ export interface OneshotJobPayload {
   model: "nano-banana";
   prompt: string;
   options?: {
+    modelVariant?: "fast" | "quality";
     aspectRatio?: string;
-    flowModel?: string;
-    multiplier?: string;
-    referenceImageUrls?: string[];
     referenceFileIds?: string[];
   };
 }
@@ -138,7 +136,6 @@ export async function createOneshotJob(
   prompt: string,
   options?: {
     aspectRatio?: string;
-    referenceImageUrls?: string[];
     referenceFileIds?: string[];
   },
 ): Promise<any> {
@@ -149,16 +146,12 @@ export async function createOneshotJob(
 
   const payload: OneshotJobPayload = {
     model: "nano-banana",
-    prompt: prompt,
+    prompt,
     options: {
-      aspectRatio: options?.aspectRatio || "9:16",
-      flowModel: "Nano Banana 2",
-      multiplier: "x1",
+      modelVariant: "fast",
+      aspectRatio: "9:16",
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }
-        : {}),
-      ...(options?.referenceImageUrls && options.referenceImageUrls.length > 0
-        ? { referenceImageUrls: options.referenceImageUrls }
         : {}),
     },
   };
