@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { XCircle, RotateCcw, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { usePrankStatus } from "@/hooks/use-pranks";
+import { useToast } from "@/hooks/use-toast";
 import { PrankResult } from "./PrankResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
@@ -11,20 +13,21 @@ import { useTranslation } from "react-i18next";
 interface GenerationProgressProps {
   taskId: string;
   inputImageUrl?: string;
-  onRetry: () => void;
   onReset: () => void;
 }
 
 export function GenerationProgress({
   taskId,
   inputImageUrl,
-  onRetry,
   onReset,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const { data, isLoading, error } = usePrankStatus(taskId);
   const [revealDone, setRevealDone] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const hasHandledFailure = useRef(false);
 
   // Wait for loader exit animation before showing result
   useEffect(() => {
@@ -49,6 +52,35 @@ export function GenerationProgress({
         ? "success"
         : "waiting";
 
+  useEffect(() => {
+    if (hasHandledFailure.current) return;
+
+    if (error) {
+      hasHandledFailure.current = true;
+      document.body.removeAttribute("data-fullscreen-overlay");
+      toast({
+        variant: "destructive",
+        title: t("progress.connectionError"),
+        description: error.message,
+      });
+      onReset();
+      navigate("/generate");
+      return;
+    }
+
+    if (data?.status === "fail") {
+      hasHandledFailure.current = true;
+      document.body.removeAttribute("data-fullscreen-overlay");
+      toast({
+        variant: "destructive",
+        title: t("progress.generationFailed"),
+        description: data.failMessage || t("progress.generationFailedDefault"),
+      });
+      onReset();
+      navigate("/generate");
+    }
+  }, [data?.status, data?.failMessage, error, navigate, onReset, t, toast]);
+
   const isGenerating =
     loaderStatus === "connecting" ||
     loaderStatus === "waiting" ||
@@ -58,42 +90,8 @@ export function GenerationProgress({
   const showLoader =
     isGenerating && !revealDone && !error && data?.status !== "fail";
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-12">
-        <XCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">{t("progress.connectionError")}</p>
-        <p className="text-sm text-muted-foreground">{error.message}</p>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onReset}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {t("progress.restart")}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (data?.status === "fail") {
-    return (
-      <div className="flex flex-col items-center gap-4 py-12">
-        <XCircle className="h-10 w-10 text-destructive" />
-        <div className="text-center space-y-1">
-          <p className="text-destructive font-medium">{t("progress.generationFailed")}</p>
-          <p className="text-sm text-muted-foreground">
-            {data.failMessage ||
-              t("progress.generationFailedDefault")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onReset}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {t("progress.restart")}
-          </Button>
-          <Button onClick={onRetry}>{t("progress.retry")}</Button>
-        </div>
-      </div>
-    );
+  if (error || data?.status === "fail") {
+    return null;
   }
 
   return (

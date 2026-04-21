@@ -477,7 +477,6 @@ export default function Generate() {
       <GenerationProgress
         taskId={taskId}
         inputImageUrl={images[0]?.url}
-        onRetry={handleGenerate}
         onReset={handleReset}
       />,
       document.body,

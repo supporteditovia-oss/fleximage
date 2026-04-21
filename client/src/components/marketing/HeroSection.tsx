@@ -460,7 +460,6 @@ export default function HeroSection() {
         <GenerationProgress
           taskId={taskId}
           inputImageUrl={images[0]?.url}
-          onRetry={handleSubmit}
           onReset={handleReset}
         />,
         document.body
