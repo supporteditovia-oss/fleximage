@@ -176,7 +176,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bullets: [
               { text: "Images HD sans filigrane" },
-              { text: "50 credits de generation par periode d'abonnement" },
+              { text: "100 credits de generation par periode d'abonnement" },
               { text: "Acces a l'ensemble des templates disponibles" },
               { text: "Historique complet des generations" },
               { text: "Telechargement et partage des images" },
@@ -637,7 +637,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: ["Paid subscription includes:"],
             bullets: [
               { text: "High-definition unwatermarked images" },
-              { text: "50 generation credits per billing period" },
+              { text: "100 generation credits per billing period" },
               { text: "Access to all available templates" },
               { text: "Full generation history" },
               { text: "Image download and sharing" },
@@ -1083,7 +1083,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: ["La suscripcion de pago incluye:"],
             bullets: [
               { text: "Imagenes en alta definicion sin marca de agua" },
-              { text: "50 creditos por periodo de suscripcion" },
+              { text: "100 creditos por periodo de suscripcion" },
               { text: "Acceso a todas las plantillas" },
               { text: "Historial completo de generaciones" },
               { text: "Descarga y comparticion de imagenes" },

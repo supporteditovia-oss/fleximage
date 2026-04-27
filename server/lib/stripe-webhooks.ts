@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
 
-const CREDITS_PER_CYCLE = 50;
+const CREDITS_PER_CYCLE = 100;
 
 /**
  * checkout.session.completed
