@@ -721,12 +721,15 @@ export default function Generate() {
             isGenerating={generateDirect.isPending || generateVideo.isPending}
           />
 
-          {/* Voir les templates link */}
           <button
             onClick={() =>
               galleryRef.current?.scrollIntoView({ behavior: "smooth" })
             }
-            className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-1"
+            className={`relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-1 ${
+              generationMode === "video" ? "invisible pointer-events-none" : ""
+            }`}
+            aria-hidden={generationMode === "video"}
+            tabIndex={generationMode === "video" ? -1 : 0}
           >
             {t("generate.viewTemplates")}
             <ChevronDown className="w-3.5 h-3.5" />
