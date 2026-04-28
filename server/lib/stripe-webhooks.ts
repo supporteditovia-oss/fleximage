@@ -3,8 +3,22 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
 import { captureServerEvent } from "./posthog";
+import { getPlanForPriceId, getStripePlanConfig, type BillingInterval, type StripePlanType } from "./stripe";
 
-const CREDITS_PER_CYCLE = 100;
+function parsePlanMetadata(metadata: Stripe.Metadata | null | undefined, priceId: string) {
+  const fallback = getPlanForPriceId(priceId);
+  const planType = metadata?.plan_type === "video" ? "video" : fallback.planType;
+  const credits = Number(metadata?.credits_per_cycle);
+  const billingInterval = metadata?.billing_interval === "month" ? "month" : fallback.billingInterval;
+
+  return {
+    ...getStripePlanConfig(planType),
+    priceId: priceId || fallback.priceId,
+    creditsPerCycle: Number.isFinite(credits) && credits > 0 ? credits : fallback.creditsPerCycle,
+    billingInterval: billingInterval as BillingInterval,
+    planType: planType as StripePlanType,
+  };
+}
 
 /**
  * checkout.session.completed
@@ -24,6 +38,8 @@ export async function handleCheckoutCompleted(
 
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
+  const priceId = session.metadata?.price_id || "";
+  const planConfig = parsePlanMetadata(session.metadata, priceId);
 
   if (!customerId || !subscriptionId) {
     logger.warn(
@@ -58,7 +74,7 @@ export async function handleCheckoutCompleted(
   // Add initial credits
   const { error: creditErr } = await supabase.rpc("add_credits", {
     p_user_id: userId,
-    p_amount: CREDITS_PER_CYCLE,
+    p_amount: planConfig.creditsPerCycle,
   });
 
   if (creditErr) {
@@ -69,13 +85,19 @@ export async function handleCheckoutCompleted(
   }
 
   // Create subscription record
-  const { error: subErr } = await supabase.from("subscriptions").insert({
-    user_id: userId,
-    stripe_subscription_id: subscriptionId,
-    stripe_customer_id: customerId,
-    status: "active",
-    price_id: session.metadata?.price_id || "",
-  });
+  const { error: subErr } = await supabase.from("subscriptions").upsert(
+    {
+      user_id: userId,
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: customerId,
+      status: "active",
+      price_id: planConfig.priceId,
+      plan_type: planConfig.planType,
+      credits_per_cycle: planConfig.creditsPerCycle,
+      billing_interval: planConfig.billingInterval,
+    },
+    { onConflict: "stripe_subscription_id" },
+  );
 
   if (subErr) {
     logger.error(
@@ -90,7 +112,10 @@ export async function handleCheckoutCompleted(
     stripe_session_id: session.id,
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
-    price_id: session.metadata?.price_id || null,
+    price_id: planConfig.priceId,
+    plan_type: planConfig.planType,
+    credits_per_cycle: planConfig.creditsPerCycle,
+    billing_interval: planConfig.billingInterval,
     source: "stripe_webhook",
   });
 
@@ -122,41 +147,43 @@ export async function handleInvoicePaid(
         : (invoice as any).parent?.subscription_details?.subscription;
   if (!subscriptionId) return;
 
-  // billing_reason === 'subscription_create' means first invoice (already handled)
-  if (invoice.billing_reason === "subscription_create") {
+  if (invoice.billing_reason !== "subscription_cycle") {
     logger.info(
-      { subscriptionId },
-      "Skipping first invoice (handled by checkout)",
+      { subscriptionId, billingReason: invoice.billing_reason },
+      "Skipping non-renewal invoice",
     );
     return;
   }
 
   const supabase = getSupabaseAdmin();
 
-  // Find user by subscription ID
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
+  // Find subscription by Stripe subscription ID
+  const { data: subscriptionRow } = await supabase
+    .from("subscriptions")
+    .select("user_id, price_id, credits_per_cycle")
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
-  if (!profile) {
+  if (!subscriptionRow) {
     logger.warn(
       { subscriptionId },
-      "No profile found for subscription on invoice.paid",
+      "No subscription row found on invoice.paid",
     );
     return;
   }
 
+  const planConfig = getPlanForPriceId(subscriptionRow.price_id || "");
+  const creditsPerCycle = subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
+
   // Add renewal credits
   const { error } = await supabase.rpc("add_credits", {
-    p_user_id: profile.id,
-    p_amount: CREDITS_PER_CYCLE,
+    p_user_id: subscriptionRow.user_id,
+    p_amount: creditsPerCycle,
   });
 
   if (error) {
     logger.error(
-      { err: error, userId: profile.id },
+      { err: error, userId: subscriptionRow.user_id },
       "Failed to add renewal credits",
     );
   }
@@ -176,7 +203,7 @@ export async function handleInvoicePaid(
     .eq("stripe_subscription_id", subscriptionId);
 
   logger.info(
-    { userId: profile.id, subscriptionId },
+    { userId: subscriptionRow.user_id, subscriptionId, creditsPerCycle },
     "Renewal credits added",
   );
 }
@@ -250,6 +277,12 @@ export async function handleSubscriptionUpdated(
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
+  const { data: prevSubscription } = await supabase
+    .from("subscriptions")
+    .select("plan_type, credits_per_cycle")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
   const wasInactive =
     prevProfile?.subscription_status === "canceled" ||
     prevProfile?.subscription_status === "past_due" ||
@@ -271,11 +304,41 @@ export async function handleSubscriptionUpdated(
     );
   }
 
-  // Reactivation: add credits when going from canceled/inactive to active
-  if (isActive && wasInactive && prevProfile?.id) {
+  const priceId = subscription.items.data[0]?.price?.id || "";
+  const planConfig = getPlanForPriceId(priceId);
+
+  const planChanged = !!prevSubscription?.plan_type && prevSubscription.plan_type !== planConfig.planType;
+
+  if (isActive && prevProfile?.id && planChanged) {
+    const { error: creditErr } = await supabase
+      .from("profiles")
+      .update({
+        credits: planConfig.creditsPerCycle,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", prevProfile.id);
+
+    if (creditErr) {
+      logger.error(
+        { err: creditErr, userId: prevProfile.id, subscriptionId },
+        "Failed to replace credits after plan change",
+      );
+    } else {
+      logger.info(
+        {
+          userId: prevProfile.id,
+          subscriptionId,
+          previousPlan: prevSubscription.plan_type,
+          newPlan: planConfig.planType,
+          credits: planConfig.creditsPerCycle,
+        },
+        "Credits replaced after plan change",
+      );
+    }
+  } else if (isActive && wasInactive && prevProfile?.id) {
     const { error: creditErr } = await supabase.rpc("add_credits", {
       p_user_id: prevProfile.id,
-      p_amount: CREDITS_PER_CYCLE,
+      p_amount: planConfig.creditsPerCycle,
     });
 
     if (creditErr) {
@@ -301,6 +364,10 @@ export async function handleSubscriptionUpdated(
     .from("subscriptions")
     .update({
       status,
+      price_id: planConfig.priceId,
+      plan_type: planConfig.planType,
+      credits_per_cycle: planConfig.creditsPerCycle,
+      billing_interval: planConfig.billingInterval,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(isActive && wasInactive && { canceled_at: null }),
       ...(periodStart && {

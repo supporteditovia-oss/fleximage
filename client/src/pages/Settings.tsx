@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
 import { authFetch } from "@/lib/api";
 import { setAppLanguage } from "@/i18n";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import {
   Loader2,
   AlertTriangle,
@@ -64,6 +66,29 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+
+  const { data: activeSubscription } = useQuery({
+    queryKey: ["active-subscription", profile?.id, profile?.stripe_subscription_id],
+    queryFn: async () => {
+      if (!profile?.id || !profile?.stripe_subscription_id) return null;
+
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("plan_type")
+        .eq("user_id", profile.id)
+        .eq("stripe_subscription_id", profile.stripe_subscription_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as { plan_type: "image" | "video" } | null;
+    },
+    enabled: !!profile?.is_subscriber && !!profile?.stripe_subscription_id,
+  });
+
+  const subscriptionPrice = activeSubscription?.plan_type === "video"
+    ? t("settings.subscription.videoPrice")
+    : t("settings.subscription.price");
 
   const form = useForm({
     resolver: zodResolver(
@@ -385,7 +410,7 @@ export default function Settings() {
               <p className="text-sm font-medium">{t("settings.subscription.title")}</p>
               <p className="text-[11px] text-muted-foreground/50">
                 {profile?.is_subscriber
-                  ? t("settings.subscription.price")
+                  ? subscriptionPrice
                   : t("settings.subscription.noneActive")}
               </p>
             </div>

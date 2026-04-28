@@ -37,15 +37,20 @@ export async function authFetch(
     let message = i18n.t("errors.generic.serverDefault", {
       defaultValue: "Server error",
     });
+    let code: string | undefined;
     if (text) {
       try {
         const json = JSON.parse(text);
         message = json.message || json.details || message;
+        code = json.code;
       } catch {
         if (!text.startsWith("<")) message = text;
       }
     }
-    throw new Error(message);
+    const error = new Error(message) as Error & { code?: string; status?: number };
+    error.code = code;
+    error.status = res.status;
+    throw error;
   }
 
   return res;

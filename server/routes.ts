@@ -45,6 +45,7 @@ import {
   resolveLocaleFromRequest,
   tBackend,
 } from "./lib/i18n";
+import { registerStripeRoutes } from "./stripe-routes";
 
 /**
  * Extract image URLs from the Kie.ai resultJson, regardless of the exact structure.
@@ -897,6 +898,30 @@ export async function registerRoutes(
         const locale = resolveLocaleFromRequest(req);
         const supabaseAdmin = getSupabaseAdmin();
 
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("role")
+          .eq("id", authReq.userId)
+          .single();
+        const isAdmin = profile?.role === "admin";
+
+        if (!isAdmin) {
+          const { data: videoSubscription } = await supabaseAdmin
+            .from("subscriptions")
+            .select("id")
+            .eq("user_id", authReq.userId)
+            .eq("plan_type", "video")
+            .in("status", ["active", "trialing"])
+            .maybeSingle();
+
+          if (!videoSubscription) {
+            return res.status(403).json({
+              code: "VIDEO_PLAN_REQUIRED",
+              message: tBackend(locale, "stripe.videoPlanRequired"),
+            });
+          }
+        }
+
         // 1. Check generation limits (30 credits for video)
         const limitResult = await checkGenerationLimits(
           authReq.userId,
@@ -1462,6 +1487,7 @@ export async function registerRoutes(
     is_subscriber: z.boolean().optional(),
     role: z.enum(["user", "admin"]).optional(),
     credits: z.number().int().min(0).optional(),
+    admin_plan: z.enum(["free", "image", "video"]).optional(),
   });
 
   app.patch(
@@ -1472,15 +1498,65 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const { id } = req.params;
+        const { admin_plan, ...profileUpdates } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
+
+        if (admin_plan) {
+          if (admin_plan === "free") {
+            profileUpdates.is_subscriber = false;
+            profileUpdates.subscription_status = "canceled";
+          } else {
+            const { getStripePlanConfig } = await import("./lib/stripe");
+            const planConfig = getStripePlanConfig(admin_plan);
+
+            profileUpdates.is_subscriber = true;
+            profileUpdates.subscription_status = "active";
+
+            const { data: profile } = await supabaseAdmin
+              .from("profiles")
+              .select("stripe_subscription_id, stripe_customer_id")
+              .eq("id", id)
+              .single();
+
+            await supabaseAdmin.from("subscriptions").upsert(
+              {
+                user_id: id,
+                stripe_subscription_id: profile?.stripe_subscription_id || `admin_override_${id}`,
+                stripe_customer_id: profile?.stripe_customer_id || `admin_override_${id}`,
+                status: "active",
+                price_id: planConfig.priceId,
+                plan_type: planConfig.planType,
+                credits_per_cycle: planConfig.creditsPerCycle,
+                billing_interval: planConfig.billingInterval,
+                canceled_at: null,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "stripe_subscription_id" },
+            );
+          }
+        }
+
         const { data, error } = await supabaseAdmin
           .from("profiles")
-          .update(req.body)
+          .update(profileUpdates)
           .eq("id", id)
           .select()
           .single();
 
         if (error) throw error;
+
+        if (admin_plan === "free") {
+          await supabaseAdmin
+            .from("subscriptions")
+            .update({
+              status: "canceled",
+              canceled_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", id)
+            .in("status", ["active", "trialing"]);
+        }
+
         res.json(data);
       } catch (error: any) {
         logger.error({ err: error }, "Error updating user profile");
@@ -1598,263 +1674,7 @@ export async function registerRoutes(
   // =============================================
   // STRIPE BILLING
   // =============================================
-
-  // POST /api/stripe/create-checkout — Initiate subscription checkout
-  app.post(api.stripe.createCheckout.path, requireAuth, async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const locale = resolveLocaleFromRequest(req);
-      const { getStripe, getStripePriceId } = await import("./lib/stripe");
-      const stripe = getStripe();
-      const priceId = getStripePriceId();
-      const supabaseAdmin = getSupabaseAdmin();
-
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("stripe_customer_id, email, is_subscriber")
-        .eq("id", authReq.userId)
-        .single();
-
-      if (profile?.is_subscriber) {
-        return res
-          .status(400)
-          .json({ message: tBackend(locale, "stripe.alreadySubscribed") });
-      }
-
-      const sessionParams: Record<string, any> = {
-        mode: "subscription",
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=success`,
-        cancel_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=cancel`,
-        metadata: {
-          user_id: authReq.userId,
-          price_id: priceId,
-        },
-        subscription_data: {
-          metadata: {
-            user_id: authReq.userId,
-          },
-        },
-      };
-
-      if (profile?.stripe_customer_id) {
-        sessionParams.customer = profile.stripe_customer_id;
-      } else {
-        sessionParams.customer_email = profile?.email || undefined;
-      }
-
-      const session = await stripe.checkout.sessions.create(sessionParams);
-      res.json({ url: session.url });
-    } catch (error: any) {
-      logger.error({ err: error }, "Error creating checkout session");
-      const locale = resolveLocaleFromRequest(req);
-      res
-        .status(500)
-        .json({ message: tBackend(locale, "common.internalServerError") });
-    }
-  });
-
-  // POST /api/stripe/create-portal — Manage subscription via Stripe Customer Portal
-  app.post(api.stripe.createPortal.path, requireAuth, async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const locale = resolveLocaleFromRequest(req);
-      const { getStripe } = await import("./lib/stripe");
-      const stripe = getStripe();
-      const supabaseAdmin = getSupabaseAdmin();
-
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("stripe_customer_id")
-        .eq("id", authReq.userId)
-        .single();
-
-      if (!profile?.stripe_customer_id) {
-        return res
-          .status(400)
-          .json({ message: tBackend(locale, "stripe.noStripeSubscription") });
-      }
-
-      const portalSession = await stripe.billingPortal.sessions.create({
-        customer: profile.stripe_customer_id,
-        return_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/settings`,
-      });
-
-      res.json({ url: portalSession.url });
-    } catch (error: any) {
-      logger.error({ err: error }, "Error creating portal session");
-      const locale = resolveLocaleFromRequest(req);
-      res
-        .status(500)
-        .json({ message: tBackend(locale, "common.internalServerError") });
-    }
-  });
-
-  // POST /api/stripe/verify-session — Fallback: verify subscription directly with Stripe
-  // Called by client on checkout return, in case webhook didn't fire
-  app.post(api.stripe.verifySession.path, requireAuth, async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const { getStripe } = await import("./lib/stripe");
-      const stripe = getStripe();
-      const supabaseAdmin = getSupabaseAdmin();
-
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("stripe_customer_id, is_subscriber")
-        .eq("id", authReq.userId)
-        .single();
-
-      // Already a subscriber — nothing to do
-      if (profile?.is_subscriber) {
-        return res.json({ status: "active", already: true });
-      }
-
-      // Find the customer by email if no stripe_customer_id yet
-      let customerId = profile?.stripe_customer_id;
-      if (!customerId) {
-        const { data: authProfile } = await supabaseAdmin
-          .from("profiles")
-          .select("email")
-          .eq("id", authReq.userId)
-          .single();
-
-        if (authProfile?.email) {
-          const customers = await stripe.customers.list({
-            email: authProfile.email,
-            limit: 1,
-          });
-          if (customers.data.length > 0) {
-            customerId = customers.data[0].id;
-          }
-        }
-      }
-
-      if (!customerId) {
-        return res.json({ status: "no_customer" });
-      }
-
-      // Check for active subscriptions on this customer
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "active",
-        limit: 1,
-      });
-
-      if (subscriptions.data.length === 0) {
-        return res.json({ status: "no_active_subscription" });
-      }
-
-      const subscription = subscriptions.data[0];
-
-      // Activate: update profile
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscription.id,
-          subscription_status: "active",
-          is_subscriber: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", authReq.userId);
-
-      // Add credits
-      await supabaseAdmin.rpc("add_credits", {
-        p_user_id: authReq.userId,
-        p_amount: 50,
-      });
-
-      // Upsert subscription record
-      await supabaseAdmin.from("subscriptions").upsert(
-        {
-          user_id: authReq.userId,
-          stripe_subscription_id: subscription.id,
-          stripe_customer_id: customerId,
-          status: "active",
-          price_id: (subscription.items.data[0]?.price as any)?.id || "",
-        },
-        { onConflict: "stripe_subscription_id" },
-      );
-
-      logger.info(
-        { userId: authReq.userId, subscriptionId: subscription.id },
-        "Subscription activated via verify-session fallback",
-      );
-
-      res.json({ status: "activated" });
-    } catch (error: any) {
-      logger.error({ err: error }, "Error verifying session");
-      const locale = resolveLocaleFromRequest(req);
-      res
-        .status(500)
-        .json({ message: tBackend(locale, "common.internalServerError") });
-    }
-  });
-
-  // POST /api/stripe/webhook — Stripe webhook (NO auth, raw body)
-  app.post(api.stripe.webhook.path, async (req, res) => {
-    try {
-      const { getStripe, getStripeWebhookSecret } =
-        await import("./lib/stripe");
-      const {
-        handleCheckoutCompleted,
-        handleInvoicePaid,
-        handleSubscriptionDeleted,
-        handleSubscriptionUpdated,
-      } = await import("./lib/stripe-webhooks");
-
-      const stripe = getStripe();
-      const sig = req.headers["stripe-signature"];
-
-      if (!sig) {
-        return res
-          .status(400)
-          .json({ message: "Missing stripe-signature header" });
-      }
-
-      let event;
-      try {
-        event = await stripe.webhooks.constructEventAsync(
-          req.body,
-          sig,
-          getStripeWebhookSecret(),
-        );
-      } catch (err: any) {
-        logger.warn({ err }, "Webhook signature verification failed");
-        return res
-          .status(400)
-          .json({ message: `Webhook Error: ${err.message}` });
-      }
-
-      logger.info(
-        { type: event.type, id: event.id },
-        "Stripe webhook received",
-      );
-
-      switch (event.type) {
-        case "checkout.session.completed":
-          await handleCheckoutCompleted(event.data.object as any);
-          break;
-        case "invoice.paid":
-          await handleInvoicePaid(event.data.object as any);
-          break;
-        case "customer.subscription.deleted":
-          await handleSubscriptionDeleted(event.data.object as any);
-          break;
-        case "customer.subscription.updated":
-          await handleSubscriptionUpdated(event.data.object as any);
-          break;
-        default:
-          logger.info({ type: event.type }, "Unhandled webhook event type");
-      }
-
-      res.json({ received: true });
-    } catch (error: any) {
-      logger.error({ err: error }, "Error processing webhook");
-      res.status(500).json({ message: error.message });
-    }
-  });
+  registerStripeRoutes(app);
 
   // =============================================
   // ADMIN SETTINGS ENDPOINTS

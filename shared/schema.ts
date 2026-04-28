@@ -205,6 +205,9 @@ export const subscriptions = pgTable("subscriptions", {
   stripe_customer_id: text("stripe_customer_id").notNull(),
   status: text("status").default("active").notNull(),
   price_id: text("price_id").notNull(),
+  plan_type: text("plan_type").default("image").notNull(),
+  credits_per_cycle: integer("credits_per_cycle").default(100).notNull(),
+  billing_interval: text("billing_interval").default("week").notNull(),
   current_period_start: timestamp("current_period_start", {
     withTimezone: true,
   }),

@@ -22,6 +22,10 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Profile } from "@shared/schema";
+
+type AdminProfile = Profile & {
+  subscriptions?: Array<{ plan_type: string; status: string }>;
+};
 import { useState, useCallback, useEffect } from "react";
 import {
   XAxis,
@@ -68,7 +72,7 @@ function usePaginatedProfiles({
 }) {
   const { isAdmin } = useAuth();
 
-  return useQuery<{ profiles: Profile[]; totalCount: number }>({
+  return useQuery<{ profiles: AdminProfile[]; totalCount: number }>({
     queryKey: ["profiles-paginated", page, searchQuery, roleFilter, subscriberFilter, sortBy, sortDirection],
     queryFn: async () => {
       const from = page * PAGE_SIZE;
@@ -77,7 +81,7 @@ function usePaginatedProfiles({
       // Build query
       let query = supabase
         .from("profiles")
-        .select("*", { count: "exact" });
+        .select("*, subscriptions(plan_type,status)", { count: "exact" });
 
       // Apply filters
       if (roleFilter !== "all") {
@@ -110,7 +114,7 @@ function usePaginatedProfiles({
         updatedAt: p.updated_at
       })) as Profile[];
 
-      return { profiles, totalCount: count || 0 };
+      return { profiles: profiles as AdminProfile[], totalCount: count || 0 };
     },
     enabled: isAdmin,
     staleTime: 1000 * 30, // 30 seconds
@@ -232,11 +236,12 @@ function UsersManagementPage() {
   const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
 
-  const handleToggleSubscriber = async (id: string, current: boolean) => {
+  const handleChangePlan = async (id: string, plan: "free" | "image" | "video") => {
     try {
-      await updateProfile({ id, updates: { is_subscriber: !current } });
+      await updateProfile({ id, updates: { admin_plan: plan } as any });
       queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
-      toast({ title: "Profil mis à jour", description: "Le statut d'abonné a été modifié." });
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      toast({ title: "Plan mis à jour", description: `Le plan utilisateur est maintenant ${plan === "free" ? "Gratuit" : plan === "image" ? "Image" : "Vidéo"}.` });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la mise à jour", description: error.message });
     }
@@ -394,18 +399,20 @@ function UsersManagementPage() {
                     </button>
                   </TableHead>
                   <TableHead>Rôle</TableHead>
-                  <TableHead>
-                    <button onClick={() => handleSort("subscriber")} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Abonné
-                      <ArrowUpDown className="h-3 w-3" />
-                    </button>
-                  </TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead>Jetons</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {profiles.map((profile: Profile) => (
+                {profiles.map((profile: AdminProfile) => {
+                  const currentPlan = profile.subscriptions?.some((subscription) => subscription.status === "active" && subscription.plan_type === "video")
+                    ? "video"
+                    : profile.is_subscriber
+                      ? "image"
+                      : "free";
+
+                  return (
                   <TableRow key={profile.id} className={isFetching ? "opacity-60 transition-opacity" : "transition-opacity"}>
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
@@ -432,10 +439,15 @@ function UsersManagementPage() {
                       </button>
                     </TableCell>
                     <TableCell>
-                      <Switch 
-                        checked={profile.is_subscriber} 
-                        onCheckedChange={() => handleToggleSubscriber(profile.id, !!profile.is_subscriber)}
-                      />
+                      <select
+                        value={currentPlan}
+                        onChange={(e) => handleChangePlan(profile.id, e.target.value as "free" | "image" | "video")}
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      >
+                        <option value="free">Gratuit</option>
+                        <option value="image">Image</option>
+                        <option value="video">Vidéo</option>
+                      </select>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-mono tabular-nums">{profile.credits || 0}</span>
@@ -459,7 +471,8 @@ function UsersManagementPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}

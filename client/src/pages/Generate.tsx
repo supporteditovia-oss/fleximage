@@ -52,6 +52,8 @@ export default function Generate() {
   const [isFakeGenerating, setIsFakeGenerating] = useState(false);
   const [fakeLoaderStatus, setFakeLoaderStatus] = useState<"connecting" | "waiting" | "success">("connecting");
   const [showFakePaywall, setShowFakePaywall] = useState(false);
+  const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<"image" | "video">("video");
+  const [paywallUpgradeMode, setPaywallUpgradeMode] = useState(false);
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     prankId: string;
@@ -92,9 +94,25 @@ export default function Generate() {
       sessionStorage.removeItem("fake_paywall_reached");
       clearPaywallImage();
 
-      const onVerified = async () => {
+      const waitForWebhookActivation = async () => {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const res = await authFetch("/api/stripe/verify-session", { method: "POST" });
+          const data = await res.json();
+          console.log("[Checkout] verify-session result:", data);
+          if (data.active) return true;
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        }
+        return false;
+      };
+
+      const onVerified = async (isActive: boolean) => {
         queryClient.invalidateQueries({ queryKey: ["profile"] });
         await refetchEligibility();
+
+        if (!isActive) {
+          setPendingLoading(false);
+          return;
+        }
 
         if (paywalled) {
           setUnlockingPrank(true);
@@ -135,15 +153,11 @@ export default function Generate() {
         }
       };
 
-      authFetch("/api/stripe/verify-session", { method: "POST" })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("[Checkout] verify-session result:", data);
-          onVerified();
-        })
+      waitForWebhookActivation()
+        .then((isActive) => onVerified(isActive))
         .catch((err) => {
           console.error("[Checkout] verify-session error:", err);
-          onVerified();
+          onVerified(false);
         });
     }
   }, []);
@@ -360,6 +374,7 @@ export default function Generate() {
           images: base64Images.length > 0 ? base64Images : undefined,
         });
         posthog.capture("prank_created", { isFake: false, resultType: "video" });
+        setPaywallDefaultPlan("video");
         setTaskId(result.taskId);
         refetchEligibility();
         return;
@@ -397,6 +412,16 @@ export default function Generate() {
       } catch { }
       if (message.includes("<!DOCTYPE") || message.includes("<html")) {
         message = t("generate.serverRetry");
+      }
+      const normalizedMessage = message
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      if (generationMode === "video" && (error.code === "VIDEO_PLAN_REQUIRED" || normalizedMessage.includes("video"))) {
+        setPaywallDefaultPlan("video");
+        setPaywallUpgradeMode(!!profile?.is_subscriber);
+        setShowFakePaywall(true);
+        return;
       }
       toast({
         variant: "destructive",
@@ -441,6 +466,7 @@ export default function Generate() {
       if (sessionStorage.getItem("fake_paywall_reached") === "true") {
         console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
         setPendingLoading(false);
+        setPaywallUpgradeMode(false);
         setShowFakePaywall(true);
         return;
       }
@@ -531,6 +557,7 @@ export default function Generate() {
       onRevealComplete={() => {
         setIsFakeGenerating(false);
         sessionStorage.setItem("fake_paywall_reached", "true");
+        setPaywallUpgradeMode(false);
         setShowFakePaywall(true);
         document.body.removeAttribute("data-fullscreen-overlay");
       }}
@@ -592,7 +619,7 @@ export default function Generate() {
     const paywallImageUrl = images[0]?.url || getPaywallImage() || "";
     return (
       <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid">
-        <PaywallOverlay isFake={true} imageUrl={paywallImageUrl} />
+        <PaywallOverlay isFake={true} imageUrl={paywallImageUrl} defaultPlan={paywallDefaultPlan} upgradeMode={paywallUpgradeMode} />
       </div>
     );
   }
