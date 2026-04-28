@@ -14,12 +14,14 @@ interface GenerationProgressProps {
   taskId: string;
   inputImageUrl?: string;
   onReset: () => void;
+  resultType?: "image" | "video";
 }
 
 export function GenerationProgress({
   taskId,
   inputImageUrl,
   onReset,
+  resultType = "image",
 }: GenerationProgressProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -141,6 +143,7 @@ export function GenerationProgress({
               <PrankResult
                 resultUrls={data.resultUrls}
                 prankId={data.prankId}
+                resultType={data.resultType ?? resultType}
               />
             </div>
 

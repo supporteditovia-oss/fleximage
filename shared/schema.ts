@@ -220,3 +220,10 @@ export const subscriptions = pgTable("subscriptions", {
 });
 
 export type Subscription = typeof subscriptions.$inferSelect;
+
+// --- Video generation ---
+export const generateVideoBodySchema = z.object({
+  prompt: z.string().min(1).max(2000),
+  aspect_ratio: z.string().optional(),
+  images: z.array(z.string()).max(1).optional(),
+});

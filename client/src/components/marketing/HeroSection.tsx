@@ -17,7 +17,7 @@ import {
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingPrank } from "@/lib/pending-prank";
 import { useAuth } from "@/hooks/use-auth";
-import { useGenerateDirectPrank } from "@/hooks/use-pranks";
+import { useGenerateDirectPrank, useGenerateVideoPrank } from "@/hooks/use-pranks";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
@@ -57,9 +57,11 @@ export default function HeroSection() {
   );
   const { user } = useAuth();
   const generateDirect = useGenerateDirectPrank();
+  const generateVideo = useGenerateVideoPrank();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
   const [taskId, setTaskId] = React.useState<string | null>(null);
+  const [generationMode, setGenerationMode] = React.useState<"image" | "video">("image");
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -138,11 +140,14 @@ export default function HeroSection() {
       }
       try {
         const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
-        const result = await generateDirect.mutateAsync({
+        const payload = {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
-        });
+        };
+        const result = generationMode === "video"
+          ? await generateVideo.mutateAsync(payload)
+          : await generateDirect.mutateAsync(payload);
         setTaskId(result.taskId);
         refetchEligibility();
       } catch (error: any) {
@@ -166,6 +171,7 @@ export default function HeroSection() {
           await savePendingPrank({
             prompt,
             images: files.map((f) => f.file),
+            generationMode,
             timestamp: Date.now(),
           });
         } catch (error) {
@@ -180,6 +186,7 @@ export default function HeroSection() {
     setTaskId(null);
     setPrompt("");
     setImages([null]);
+    setGenerationMode("image");
   };
 
   return (
@@ -235,6 +242,46 @@ export default function HeroSection() {
 
         {/* Bottom group: drop zone + input + prank ideas */}
         <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
+          <motion.div variants={itemVariants} className="flex justify-center px-4">
+            <div
+              role="tablist"
+              aria-label="Generation mode"
+              className="relative grid grid-cols-2 rounded-full border border-border/60 bg-muted/40 p-0.5 shadow-sm backdrop-blur-md"
+            >
+              <div
+                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-gradient-to-b from-primary to-primary/85 shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-transform duration-300 ${
+                  generationMode === "video" ? "translate-x-full" : "translate-x-0"
+                }`}
+              />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={generationMode === "image"}
+                onClick={() => setGenerationMode("image")}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  generationMode === "image"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground/75 hover:text-muted-foreground"
+                }`}
+              >
+                {t("generate.modeImage")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={generationMode === "video"}
+                onClick={() => setGenerationMode("video")}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  generationMode === "video"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground/75 hover:text-muted-foreground"
+                }`}
+              >
+                {t("generate.modeVideo")}
+              </button>
+            </div>
+          </motion.div>
+
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
@@ -461,6 +508,7 @@ export default function HeroSection() {
           taskId={taskId}
           inputImageUrl={images[0]?.url}
           onReset={handleReset}
+          resultType={generationMode}
         />,
         document.body
       )}

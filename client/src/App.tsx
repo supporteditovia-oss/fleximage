@@ -98,9 +98,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/confidentialite": "meta:titles.privacy",
 };
 
-import { PostHogProvider } from "posthog-js/react";
+import { PostHogProvider, usePostHog } from "posthog-js/react";
 import { posthog } from "@/lib/posthog";
-import { usePostHog } from "posthog-js/react";
 
 function Router() {
   const { user, profile } = useAuth();

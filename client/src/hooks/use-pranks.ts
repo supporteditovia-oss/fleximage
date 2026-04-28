@@ -14,6 +14,12 @@ interface GenerateDirectInput {
   template_id?: string;
 }
 
+interface GenerateVideoInput {
+  prompt: string;
+  aspect_ratio?: string;
+  images?: string[];
+}
+
 interface GeneratePrankResponse {
   id: string;
   taskId: string;
@@ -29,6 +35,7 @@ interface PrankStatusResponse {
   costTime: number | null;
   isSubscriber?: boolean;
   requiresPaywall?: boolean;
+  resultType?: "image" | "video";
 }
 
 interface PrankHistoryItem {
@@ -70,6 +77,23 @@ export function useGenerateDirectPrank() {
   return useMutation<GeneratePrankResponse, Error, GenerateDirectInput>({
     mutationFn: async (data) => {
       const res = await authFetch("/api/pranks/generate-direct", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useGenerateVideoPrank() {
+  const queryClient = useQueryClient();
+  return useMutation<GeneratePrankResponse, Error, GenerateVideoInput>({
+    mutationFn: async (data) => {
+      const res = await authFetch("/api/pranks/generate-video", {
         method: "POST",
         body: JSON.stringify(data),
       });

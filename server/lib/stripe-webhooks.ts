@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
+import { captureServerEvent } from "./posthog";
 
 const CREDITS_PER_CYCLE = 100;
 
@@ -84,6 +85,14 @@ export async function handleCheckoutCompleted(
   }
 
   logger.info({ userId, subscriptionId }, "Subscription activated via checkout");
+
+  await captureServerEvent(userId, "subscription_created_server", {
+    stripe_session_id: session.id,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    price_id: session.metadata?.price_id || null,
+    source: "stripe_webhook",
+  });
 
   // Discord notification
   const { data: notifProfile } = await supabase

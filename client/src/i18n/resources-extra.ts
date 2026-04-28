@@ -36,6 +36,8 @@ export const extraResources = {
       serverRetry: "Erreur serveur. Veuillez reessayer.",
     },
     generate: {
+      modeImage: "Image",
+      modeVideo: "Video",
       viewTemplates: "Voir les templates",
       insufficientCreditsTitle: "Credits insuffisants",
       insufficientCreditsDescription:
@@ -225,6 +227,8 @@ export const extraResources = {
       serverRetry: "Server error. Please try again.",
     },
     generate: {
+      modeImage: "Image",
+      modeVideo: "Video",
       viewTemplates: "View templates",
       insufficientCreditsTitle: "Not enough credits",
       insufficientCreditsDescription:
@@ -413,6 +417,8 @@ export const extraResources = {
       serverRetry: "Error del servidor. Intentalo de nuevo.",
     },
     generate: {
+      modeImage: "Imagen",
+      modeVideo: "Video",
       viewTemplates: "Ver plantillas",
       insufficientCreditsTitle: "Creditos insuficientes",
       insufficientCreditsDescription:
@@ -601,6 +607,8 @@ export const extraResources = {
       serverRetry: "Serverfehler. Bitte versuche es erneut.",
     },
     generate: {
+      modeImage: "Bild",
+      modeVideo: "Video",
       viewTemplates: "Vorlagen ansehen",
       insufficientCreditsTitle: "Nicht genug Credits",
       insufficientCreditsDescription:

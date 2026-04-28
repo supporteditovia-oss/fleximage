@@ -71,8 +71,6 @@ export function PaywallOverlay({ imageUrl, isFake }: PaywallOverlayProps) {
       });
       const { url } = await res.json();
       if (url) {
-        // Wait briefly so PostHog has time to send the tracking event before navigation
-        await new Promise((resolve) => setTimeout(resolve, 800));
         window.location.href = url;
       }
     } catch (error) {

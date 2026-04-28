@@ -88,11 +88,11 @@ export default function AuthPage() {
           password,
         });
         if (error) throw error;
-        
+
         if (data?.user?.id) {
           posthog.identify(data.user.id, { email: data.user.email });
         }
-        
+
         toast({
           title: t("auth.signInSuccessTitle"),
           description: t("auth.signInSuccessDescription"),
@@ -113,11 +113,11 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        
+
         if (data?.user?.id) {
           posthog.identify(data.user.id, { email: data.user.email });
         }
-        
+
         posthog.capture("signup_completed", { method: "email" });
         setLocation("/login");
       }

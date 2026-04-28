@@ -63,12 +63,14 @@ interface PrankResultProps {
   resultUrls: string[];
   prankId: string;
   hideActions?: boolean;
+  resultType?: "image" | "video";
 }
 
 export function PrankResult({
   resultUrls,
   prankId,
   hideActions = false,
+  resultType = "image",
 }: PrankResultProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -94,11 +96,14 @@ export function PrankResult({
       );
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
-      const ext = blob.type.includes("png")
-        ? "png"
-        : blob.type.includes("webp")
-          ? "webp"
-          : "jpg";
+      const isVideo = blob.type.startsWith("video/") || blob.type === "application/octet-stream";
+      const ext = isVideo
+        ? "mp4"
+        : blob.type.includes("png")
+          ? "png"
+          : blob.type.includes("webp")
+            ? "webp"
+            : "jpg";
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -153,30 +158,41 @@ export function PrankResult({
             key={index}
             className="relative rounded-2xl overflow-hidden max-h-full flex items-center justify-center"
           >
-            <img
-              src={url}
-              alt={t("result.generatedAlt", { index: index + 1 })}
-              className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
-              loading="lazy"
-            />
-            {/* Bottom gradient with action buttons */}
-            {!hideActions && (
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
-                <button
-                  onClick={() => handleDownload(index)}
-                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title={t("result.download")}
-                >
-                  <Download className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setShareDialog({ imageIndex: index })}
-                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title={t("result.share")}
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-              </div>
+            {resultType === "video" ? (
+              <video
+                src={url}
+                controls
+                playsInline
+                className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
+              />
+            ) : (
+              <>
+                <img
+                  src={url}
+                  alt={t("result.generatedAlt", { index: index + 1 })}
+                  className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
+                  loading="lazy"
+                />
+                {/* Bottom gradient with action buttons */}
+                {!hideActions && (
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
+                    <button
+                      onClick={() => handleDownload(index)}
+                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                      title={t("result.download")}
+                    >
+                      <Download className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setShareDialog({ imageIndex: index })}
+                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                      title={t("result.share")}
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}

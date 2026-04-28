@@ -106,6 +106,10 @@ export const api = {
       method: "POST" as const,
       path: "/api/pranks/generate-direct",
     },
+    generateVideo: {
+      method: "POST" as const,
+      path: "/api/pranks/generate-video",
+    },
     status: {
       method: "GET" as const,
       path: "/api/pranks/:taskId/status",

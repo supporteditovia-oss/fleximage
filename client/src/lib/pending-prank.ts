@@ -3,9 +3,12 @@ const STORE_NAME = "pending_prank";
 const DB_VERSION = 1;
 const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
+export type PendingPrankGenerationMode = "image" | "video";
+
 export interface PendingPrank {
   prompt: string;
   images: File[];
+  generationMode?: PendingPrankGenerationMode;
   timestamp: number;
 }
 
@@ -38,6 +41,7 @@ export async function savePendingPrank(data: PendingPrank): Promise<void> {
     store.put({
       prompt: data.prompt,
       images: imageBuffers,
+      generationMode: data.generationMode ?? "image",
       timestamp: data.timestamp,
     }, "current");
     await new Promise<void>((resolve, reject) => {
@@ -79,6 +83,7 @@ export async function getPendingPrank(): Promise<PendingPrank | null> {
         resolve({
           prompt: rawData.prompt,
           images: restoredImages,
+          generationMode: rawData.generationMode === "video" ? "video" : "image",
           timestamp: rawData.timestamp,
         });
       };

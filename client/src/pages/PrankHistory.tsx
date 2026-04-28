@@ -76,8 +76,9 @@ export default function PrankHistory() {
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
   const [selectedPrank, setSelectedPrank] = useState<{
-    imageUrl: string;
+    url: string;
     prankId: string;
+    resultType: "image" | "video";
   } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<{
@@ -106,6 +107,10 @@ export default function PrankHistory() {
     } catch {
       return [];
     }
+  }
+
+  function isVideoPrank(taskId: string): boolean {
+    return taskId.split(",").pop()?.startsWith("video_") ?? false;
   }
 
   async function handleDownload(prankId: string, imageIndex: number = 0) {
@@ -275,23 +280,33 @@ export default function PrankHistory() {
           {successPranks.map((prank) => {
             const urls = getResultUrls(prank.result_urls);
             const inputUrls = getInputUrls(prank.input_urls);
-            const hasInputImage = inputUrls.length > 0;
+            const resultType = isVideoPrank(prank.kie_task_id) ? "video" : "image";
+            const hasInputImage = resultType === "image" && inputUrls.length > 0;
 
             return (
               <div
                 key={prank.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
                 onClick={() =>
-                  setSelectedPrank({ imageUrl: urls[0], prankId: prank.id })
+                  setSelectedPrank({ url: urls[0], prankId: prank.id, resultType })
                 }
               >
-                {/* Result image (après) — always visible, with hover zoom */}
-                <img
-                  src={urls[0]}
-                  alt={t("history.generatedAlt")}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
+                {resultType === "video" ? (
+                  <video
+                    src={urls[0]}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <img
+                    src={urls[0]}
+                    alt={t("history.generatedAlt")}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                )}
 
                 {/* Before/after — desktop only: hover clip-path reveal */}
                 {hasInputImage && (
@@ -468,13 +483,23 @@ export default function PrankHistory() {
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setSelectedPrank(null)}
             />
-            {/* Image with overlaid buttons */}
-            <div className="relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh]">
-              <img
-                src={selectedPrank.imageUrl}
-                alt={t("history.generatedAlt")}
-                className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
-              />
+            {/* Media with actions */}
+            <div className={`relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh] ${selectedPrank.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
+              {selectedPrank.resultType === "video" ? (
+                <video
+                  src={selectedPrank.url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
+                />
+              ) : (
+                <img
+                  src={selectedPrank.url}
+                  alt={t("history.generatedAlt")}
+                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
+                />
+              )}
               {/* Top left — close */}
               <button
                 onClick={() => setSelectedPrank(null)}
@@ -493,7 +518,10 @@ export default function PrankHistory() {
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
               {/* Bottom center — download & share */}
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
+              <div className={selectedPrank.resultType === "video"
+                ? "flex items-center justify-center gap-3"
+                : "absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl"
+              }>
                 <button
                   onClick={() => handleDownload(selectedPrank.prankId)}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"

@@ -13,6 +13,7 @@ export interface LimitCheckResult {
 export async function checkGenerationLimits(
   userId: string,
   locale: AppLocale = DEFAULT_LOCALE,
+  creditCost: number = 5,
 ): Promise<LimitCheckResult> {
   const supabase = getSupabaseAdmin();
 
@@ -44,7 +45,7 @@ export async function checkGenerationLimits(
   }
 
   // Everyone (including subscribers) must have credits to generate
-  if (profile.credits < 5) {
+  if (profile.credits < creditCost) {
     return {
       allowed: false,
       reason: profile.is_subscriber

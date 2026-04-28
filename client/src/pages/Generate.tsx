@@ -7,7 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, ChevronDown } from "lucide-react";
-import { useGenerateDirectPrank } from "@/hooks/use-pranks";
+import { useGenerateDirectPrank, useGenerateVideoPrank } from "@/hooks/use-pranks";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
 import { GenerationLoader } from "@/components/prank/GenerationLoader";
 import { PaywallOverlay } from "@/components/prank/PaywallOverlay";
@@ -17,8 +17,8 @@ import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { UnlockedPrankView } from "@/components/generate/UnlockedPrankView";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
-import { posthog } from "@/lib/posthog";
 import { useAuth } from "@/hooks/use-auth";
+import { posthog } from "@/lib/posthog";
 import { getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
 import {
   getPaywalledResult,
@@ -64,6 +64,10 @@ export default function Generate() {
 
   // ── Hooks ───────────────────────────────────────────────────
   const generateDirect = useGenerateDirectPrank();
+  const generateVideo = useGenerateVideoPrank();
+
+  // ── Mode state ─────────────────────────────────────────────
+  const [generationMode, setGenerationMode] = useState<"image" | "video">("image");
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -81,8 +85,6 @@ export default function Generate() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      posthog.capture("subscription_created", { source: "checkout_return" });
-
       const paywalled = getPaywalledResult();
       window.history.replaceState({}, "", "/generate");
       clearPaywalledResult();
@@ -188,7 +190,9 @@ export default function Generate() {
         console.log("[Generate] Pending prank found:", {
           prompt: pending.prompt,
           images: pending.images.length,
+          generationMode: pending.generationMode ?? "image",
         });
+        setGenerationMode(pending.generationMode ?? "image");
         if (pending.prompt) setPrompt(pending.prompt);
         if (pending.images.length > 0) {
           const restored = pending.images.map((file) => ({
@@ -303,8 +307,8 @@ export default function Generate() {
       return;
     }
 
-    // Validate required image slots
-    if (selectedTemplate) {
+    // Validate required image slots (image mode only — video mode skips templates)
+    if (generationMode === "image" && selectedTemplate) {
       const slots = parseImageSlots(selectedTemplate);
       for (let i = 0; i < slots.length; i++) {
         if (slots[i].required && !images[i]) {
@@ -341,6 +345,27 @@ export default function Generate() {
     try {
       clearPendingPrank();
 
+      // ── Video mode ───────────────────────────────────────────
+      if (generationMode === "video") {
+        const files = images.filter(
+          (img): img is { url: string; file: File } => img !== null,
+        );
+        const base64Images = await Promise.all(
+          files.map((img) => fileToBase64(img.file)),
+        );
+
+        const result = await generateVideo.mutateAsync({
+          prompt: prompt.trim(),
+          aspect_ratio: "9:16",
+          images: base64Images.length > 0 ? base64Images : undefined,
+        });
+        posthog.capture("prank_created", { isFake: false, resultType: "video" });
+        setTaskId(result.taskId);
+        refetchEligibility();
+        return;
+      }
+
+      // ── Image mode (existing logic) ──────────────────────────
       const files = images.filter(
         (img): img is { url: string; file: File } => img !== null,
       );
@@ -387,6 +412,7 @@ export default function Generate() {
     setImages([null]);
     setSelectedTemplate(null);
     setTextValues({});
+    setGenerationMode("image");
     refetchEligibility();
   };
 
@@ -478,6 +504,7 @@ export default function Generate() {
         taskId={taskId}
         inputImageUrl={images[0]?.url}
         onReset={handleReset}
+        resultType={generationMode}
       />,
       document.body,
     )
@@ -611,6 +638,44 @@ export default function Generate() {
 
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
+          <div
+            role="tablist"
+            aria-label="Generation mode"
+            className="relative grid grid-cols-2 rounded-full border border-border/60 bg-muted/40 p-0.5 shadow-sm backdrop-blur-md"
+          >
+            <div
+              className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-gradient-to-b from-primary to-primary/85 shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                generationMode === "video" ? "translate-x-full" : "translate-x-0"
+              }`}
+            />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={generationMode === "image"}
+              onClick={() => setGenerationMode("image")}
+              className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                generationMode === "image"
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground/75 hover:text-muted-foreground"
+              }`}
+            >
+              {t("generate.modeImage")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={generationMode === "video"}
+              onClick={() => setGenerationMode("video")}
+              className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                generationMode === "video"
+                  ? "text-primary-foreground"
+                  : "text-muted-foreground/75 hover:text-muted-foreground"
+              }`}
+            >
+              {t("generate.modeVideo")}
+            </button>
+          </div>
+
           <ImageUploadGrid
             images={images}
             selectedTemplate={selectedTemplate}
@@ -626,7 +691,7 @@ export default function Generate() {
             textValues={textValues}
             onTextValueChange={handleTextValueChange}
             onGenerate={handleGenerate}
-            isGenerating={generateDirect.isPending}
+            isGenerating={generateDirect.isPending || generateVideo.isPending}
           />
 
           {/* Voir les templates link */}
@@ -642,14 +707,16 @@ export default function Generate() {
         </div>
       </div>
 
-      {/* Template Gallery */}
-      <div ref={galleryRef}>
-        <TemplateGallery
-          selectedTemplateId={selectedTemplate?.id ?? null}
-          onSelectTemplate={selectTemplate}
-          onDeselectTemplate={deselectTemplate}
-        />
-      </div>
+      {/* Template Gallery — hidden in video mode */}
+      {generationMode === "image" && (
+        <div ref={galleryRef}>
+          <TemplateGallery
+            selectedTemplateId={selectedTemplate?.id ?? null}
+            onSelectTemplate={selectTemplate}
+            onDeselectTemplate={deselectTemplate}
+          />
+        </div>
+      )}
     </div>
   );
 }

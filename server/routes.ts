@@ -10,6 +10,7 @@ import {
   updatePromptTemplateSchema,
   insertCategorySchema,
   updateCategorySchema,
+  generateVideoBodySchema,
 } from "@shared/schema";
 import { logger } from "./lib/logger";
 import {
@@ -20,6 +21,11 @@ import {
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
 import {
+  createRunwayVideoTask,
+  getRunwayVideoStatus,
+  RunwayApiError,
+} from "./lib/kie-runway-client";
+import {
   createOneshotJob,
   getOneshotJobStatus,
   getOneshotApiConfig,
@@ -27,10 +33,8 @@ import {
   uploadToOneshotApi,
   invalidateSettingsCache,
 } from "./lib/oneshot-api-client";
-import {
-  downloadAndStoreImages,
-  downloadAndStoreImagesWithWatermark,
-} from "./lib/image-storage";
+import { downloadAndStoreImages } from "./lib/image-storage";
+import { uploadToR2 } from "./lib/r2-client";
 import { generateLimiter } from "./lib/rate-limiter";
 import {
   checkGenerationLimits,
@@ -649,22 +653,20 @@ export async function registerRoutes(
           externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits atomically (admins bypass)
-        if (!limitResult.isAdmin) {
-          const { error: deductErr } = await supabaseAdmin.rpc(
-            "deduct_credits",
-            {
-              p_user_id: authReq.userId,
-              p_amount: 5,
-            },
-          );
+        // 4. Deduct 5 credits atomically
+        const { error: deductErr } = await supabaseAdmin.rpc(
+          "deduct_credits",
+          {
+            p_user_id: authReq.userId,
+            p_amount: 5,
+          },
+        );
 
-          if (deductErr) {
-            logger.error({ err: deductErr }, "Failed to deduct credits");
-            return res
-              .status(500)
-              .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
-          }
+        if (deductErr) {
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
         }
 
         // 5. Store in generated_pranks
@@ -827,22 +829,20 @@ export async function registerRoutes(
           externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits (admins bypass)
-        if (!limitResult.isAdmin) {
-          const { error: deductErr } = await supabaseAdmin.rpc(
-            "deduct_credits",
-            {
-              p_user_id: authReq.userId,
-              p_amount: 5,
-            },
-          );
+        // 4. Deduct 5 credits
+        const { error: deductErr } = await supabaseAdmin.rpc(
+          "deduct_credits",
+          {
+            p_user_id: authReq.userId,
+            p_amount: 5,
+          },
+        );
 
-          if (deductErr) {
-            logger.error({ err: deductErr }, "Failed to deduct credits");
-            return res
-              .status(500)
-              .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
-          }
+        if (deductErr) {
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
         }
 
         // 5. Store in generated_pranks
@@ -873,6 +873,112 @@ export async function registerRoutes(
         });
       } catch (error: any) {
         logger.error({ err: error }, "Error generating direct prank");
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
+      }
+    },
+  );
+
+  // ── Video generation constants ────────────────────────────────
+  const VIDEO_CREDIT_COST = 30;
+
+  // POST /api/pranks/generate-video
+  app.post(
+    api.pranks.generateVideo.path,
+    requireAuth,
+    generateLimiter,
+    validateRequest(generateVideoBodySchema),
+    async (req, res) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const { prompt, images } = req.body;
+        const locale = resolveLocaleFromRequest(req);
+        const supabaseAdmin = getSupabaseAdmin();
+
+        // 1. Check generation limits (30 credits for video)
+        const limitResult = await checkGenerationLimits(
+          authReq.userId,
+          locale,
+          VIDEO_CREDIT_COST,
+        );
+        if (!limitResult.allowed) {
+          return res.status(403).json({ message: limitResult.reason });
+        }
+
+        // 2. Upload optional reference image to R2
+        let imageUrl: string | undefined;
+        if (images && images.length > 0) {
+          const dataUrl = images[0];
+          const match = dataUrl.match(
+            /^data:(image\/[\w+.-]+);base64,([\s\S]+)$/,
+          );
+          if (match) {
+            const contentType = match[1];
+            const base64Data = match[2];
+            const buffer = Buffer.from(base64Data, "base64");
+            const ext = contentType.split("/")[1] || "jpg";
+            const key = `inputs/${authReq.userId}/${Date.now()}-ref.${ext}`;
+            imageUrl = await uploadToR2(key, buffer, contentType);
+          }
+        }
+
+        // 3. Call KIE Runway API
+        const runwayResponse = await createRunwayVideoTask({
+          prompt,
+          image: imageUrl,
+        });
+
+        if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
+          const msg = (runwayResponse as any).msg || tBackend(locale, "pranks.taskCreateFailed");
+          return res.status(422).json({ message: msg });
+        }
+
+        // 4. Deduct 30 credits
+        const { error: deductErr } = await supabaseAdmin.rpc(
+          "deduct_credits",
+          {
+            p_user_id: authReq.userId,
+            p_amount: VIDEO_CREDIT_COST,
+          },
+        );
+        if (deductErr) {
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+        }
+
+        // 5. Store in generated_pranks
+        const { data: prank, error: insertErr } = await supabaseAdmin
+          .from("generated_pranks")
+          .insert({
+            user_id: authReq.userId,
+            template_id: null,
+            final_prompt: prompt,
+            kie_task_id: `video_${runwayResponse.data.task_id}`,
+            status: "waiting",
+            input_urls: imageUrl ? JSON.stringify([imageUrl]) : null,
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+
+        await recordGeneration(authReq.userId);
+
+        res.status(201).json({
+          id: prank.id,
+          taskId: `video_${runwayResponse.data.task_id}`,
+          status: "waiting",
+          isSubscriber: limitResult.isSubscriber,
+        });
+      } catch (error: any) {
+        if (error instanceof RunwayApiError) {
+          return res.status(422).json({ message: error.apiMsg });
+        }
+        logger.error({ err: error, stack: error?.stack }, "[VIDEO] Handler crashed");
         const locale = resolveLocaleFromRequest(req);
         res
           .status(500)
@@ -955,13 +1061,38 @@ export async function registerRoutes(
 
       const activeTaskId = prank.kie_task_id.split(",").pop() as string;
       const isCustomApi = activeTaskId.startsWith("custom_");
+      const isVideoTask = activeTaskId.startsWith("video_");
 
       let apiStatus: "waiting" | "success" | "fail" = "waiting";
       let apiResultJson: any = null;
       let apiFailMsg: string | null = null;
       let apiCostTime: number | null = null;
-      
-      if (isCustomApi) {
+      const resultType: "image" | "video" = isVideoTask ? "video" : "image";
+
+      if (isVideoTask) {
+        const runwayTaskId = activeTaskId.replace("video_", "");
+        try {
+          const runwayStatus = await getRunwayVideoStatus(runwayTaskId);
+          const sd = runwayStatus.data;
+          const state = sd.state ?? sd.status;
+          const videoUrl = sd.videoInfo?.videoUrl ?? sd.video_url;
+          apiStatus = state === "success" || state === "completed"
+            ? "success"
+            : state === "fail" || state === "failed"
+              ? "fail"
+              : "waiting";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+          if (sd.failMsg || sd.fail_reason) {
+            apiFailMsg = sd.failMsg ?? sd.fail_reason ?? null;
+          }
+        } catch (err) {
+          logger.error({ err }, "Failed to poll KIE Runway");
+          apiStatus = "fail";
+          apiFailMsg = tBackend(locale, "pranks.pollingError");
+        }
+      } else if (isCustomApi) {
         const jobId = activeTaskId.replace("custom_", "");
         let customStatus: any;
         try {
@@ -1043,11 +1174,27 @@ export async function registerRoutes(
         if (apiStatus === "success" && apiResultJson) {
           try {
             const parsed = typeof apiResultJson === "string" ? JSON.parse(apiResultJson) : apiResultJson;
-            logger.info(
-              { resultJson: parsed, rawResultJson: apiResultJson },
-              "API resultJson parsed",
-            );
-            resultUrls = extractImageUrls(parsed);
+
+            // ── Video: extract video URL and store to R2 ──────────
+            if (isVideoTask && (parsed as any).video_url) {
+              const videoUrl = (parsed as any).video_url as string;
+              try {
+                const response = await fetch(videoUrl);
+                if (!response.ok) throw new Error(`Failed to download video: ${response.status}`);
+                const contentType = response.headers.get("content-type") || "video/mp4";
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                const key = `pranks/${prank.id}/video.mp4`;
+                const { uploadToR2 } = await import("./lib/r2-client");
+                resultUrls = [await uploadToR2(key, buffer, contentType)];
+              } catch (err) {
+                logger.error({ err, videoUrl }, "Failed to store video to R2, using direct URL");
+                resultUrls = [videoUrl];
+              }
+            } else {
+              // ── Image: use existing extraction ────────────────────
+              resultUrls = extractImageUrls(parsed);
+            }
           } catch (parseErr) {
             logger.error(
               { err: parseErr, rawResultJson: apiResultJson },
@@ -1055,15 +1202,9 @@ export async function registerRoutes(
             );
           }
 
-          // Re-upload images to R2 with watermarked versions
-          if (resultUrls.length > 0) {
+          if (!isVideoTask && resultUrls.length > 0) {
             try {
-              const stored = await downloadAndStoreImagesWithWatermark(
-                prank.id,
-                resultUrls,
-              );
-              resultUrls = stored.originals;
-              watermarkedUrls = stored.watermarked;
+              resultUrls = await downloadAndStoreImages(prank.id, resultUrls);
             } catch (err) {
               logger.error(
                 { err, prankId: prank.id },
@@ -1108,6 +1249,7 @@ export async function registerRoutes(
           costTime: apiCostTime,
           isSubscriber,
           requiresPaywall: false,
+          resultType,
         });
       }
 
@@ -1120,6 +1262,7 @@ export async function registerRoutes(
         costTime: null,
         isSubscriber: false,
         requiresPaywall: false,
+        resultType,
       });
     } catch (error: any) {
       logger.error({ err: error }, "Error checking prank status");
