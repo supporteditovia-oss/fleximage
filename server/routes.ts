@@ -900,26 +900,16 @@ export async function registerRoutes(
 
         const { data: profile } = await supabaseAdmin
           .from("profiles")
-          .select("role")
+          .select("role, is_subscriber")
           .eq("id", authReq.userId)
           .single();
         const isAdmin = profile?.role === "admin";
 
-        if (!isAdmin) {
-          const { data: videoSubscription } = await supabaseAdmin
-            .from("subscriptions")
-            .select("id")
-            .eq("user_id", authReq.userId)
-            .eq("plan_type", "video")
-            .in("status", ["active", "trialing"])
-            .maybeSingle();
-
-          if (!videoSubscription) {
-            return res.status(403).json({
-              code: "VIDEO_PLAN_REQUIRED",
-              message: tBackend(locale, "stripe.videoPlanRequired"),
-            });
-          }
+        if (!isAdmin && !profile?.is_subscriber) {
+          return res.status(403).json({
+            code: "SUBSCRIPTION_REQUIRED",
+            message: tBackend(locale, "stripe.videoPlanRequired"),
+          });
         }
 
         // 1. Check generation limits (30 credits for video)
@@ -1487,7 +1477,7 @@ export async function registerRoutes(
     is_subscriber: z.boolean().optional(),
     role: z.enum(["user", "admin"]).optional(),
     credits: z.number().int().min(0).optional(),
-    admin_plan: z.enum(["free", "image", "video"]).optional(),
+    admin_plan: z.enum(["free", "weekly", "monthly", "image", "video"]).optional(),
   });
 
   app.patch(

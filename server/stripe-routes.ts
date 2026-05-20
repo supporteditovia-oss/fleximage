@@ -7,7 +7,11 @@ import { tBackend, resolveLocaleFromRequest } from "./lib/i18n";
 import { logger } from "./lib/logger";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { validateRequest } from "./lib/validate";
-import { getStripe, getStripePlanConfig, getStripeWebhookSecret } from "./lib/stripe";
+import {
+  getStripe,
+  getStripePlanConfig,
+  getStripeWebhookSecret,
+} from "./lib/stripe";
 import {
   handleCheckoutCompleted,
   handleInvoicePaid,
@@ -16,7 +20,7 @@ import {
 } from "./lib/stripe-webhooks";
 
 const createCheckoutBodySchema = z.object({
-  plan: z.enum(["image", "video"]).optional().default("image"),
+  plan: z.enum(["weekly", "monthly", "image", "video"]).optional().default("weekly"),
 });
 
 export function registerStripeRoutes(app: Express): void {
@@ -25,6 +29,9 @@ export function registerStripeRoutes(app: Express): void {
       const authReq = req as AuthenticatedRequest;
       const locale = resolveLocaleFromRequest(req);
       const stripe = getStripe();
+      if (req.body.plan === "monthly" && !process.env.STRIPE_MONTHLY_PRICE_ID) {
+        throw new Error("STRIPE_MONTHLY_PRICE_ID must be set for monthly checkout");
+      }
       const planConfig = getStripePlanConfig(req.body.plan);
       const priceId = planConfig.priceId;
       const supabaseAdmin = getSupabaseAdmin();
@@ -106,48 +113,7 @@ export function registerStripeRoutes(app: Express): void {
         return_url: returnUrl,
       };
 
-      let subscriptionId = profile.stripe_subscription_id;
-      if (req.body?.upgradeTo === "video" && !subscriptionId) {
-        const { data: activeSubscription } = await supabaseAdmin
-          .from("subscriptions")
-          .select("stripe_subscription_id")
-          .eq("user_id", authReq.userId)
-          .in("status", ["active", "trialing"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        subscriptionId = activeSubscription?.stripe_subscription_id;
-      }
-
-      if (req.body?.upgradeTo === "video" && subscriptionId) {
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const subscriptionItemId = subscription.items.data[0]?.id;
-        if (subscriptionItemId) {
-          sessionParams.flow_data = {
-            type: "subscription_update_confirm",
-            subscription_update_confirm: {
-              subscription: subscriptionId,
-              items: [
-                {
-                  id: subscriptionItemId,
-                  price: getStripePlanConfig("video").priceId,
-                  quantity: 1,
-                },
-              ],
-            },
-            after_completion: {
-              type: "redirect",
-              redirect: { return_url: returnUrl },
-            },
-          };
-        }
-      }
-
-      logger.info({
-        upgradeTo: req.body?.upgradeTo,
-        hasSubscriptionId: !!subscriptionId,
-        hasFlowData: !!sessionParams.flow_data,
-      }, "Creating Stripe portal session");
+      logger.info({ hasCustomer: !!profile.stripe_customer_id }, "Creating Stripe portal session");
 
       const portalSession = await stripe.billingPortal.sessions.create(sessionParams);
 

@@ -3,13 +3,24 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
 import { captureServerEvent } from "./posthog";
-import { getPlanForPriceId, getStripePlanConfig, type BillingInterval, type StripePlanType } from "./stripe";
+import {
+  getPlanForPriceId,
+  getStripe,
+  getStripePlanConfig,
+  normalizeStripePlanType,
+  type BillingInterval,
+  type StripePlanConfig,
+  type StripePlanType,
+} from "./stripe";
 
 function parsePlanMetadata(metadata: Stripe.Metadata | null | undefined, priceId: string) {
   const fallback = getPlanForPriceId(priceId);
-  const planType = metadata?.plan_type === "video" ? "video" : fallback.planType;
+  const planType = normalizeStripePlanType(metadata?.plan_type || fallback.planType);
   const credits = Number(metadata?.credits_per_cycle);
-  const billingInterval = metadata?.billing_interval === "month" ? "month" : fallback.billingInterval;
+  const billingInterval =
+    metadata?.billing_interval === "month" || metadata?.billing_interval === "week"
+      ? metadata.billing_interval
+      : fallback.billingInterval;
 
   return {
     ...getStripePlanConfig(planType),
@@ -18,6 +29,23 @@ function parsePlanMetadata(metadata: Stripe.Metadata | null | undefined, priceId
     billingInterval: billingInterval as BillingInterval,
     planType: planType as StripePlanType,
   };
+}
+
+function applyAuthoritativeBillingInterval(
+  planConfig: StripePlanConfig,
+  priceId: string,
+  billingInterval: BillingInterval | undefined,
+): StripePlanConfig {
+  if (billingInterval === "month") {
+    const monthlyConfig = getStripePlanConfig("monthly");
+    return {
+      ...monthlyConfig,
+      priceId: priceId || monthlyConfig.priceId,
+      billingInterval: "month",
+    };
+  }
+
+  return billingInterval ? { ...planConfig, billingInterval } : planConfig;
 }
 
 /**
@@ -38,8 +66,8 @@ export async function handleCheckoutCompleted(
 
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
-  const priceId = session.metadata?.price_id || "";
-  const planConfig = parsePlanMetadata(session.metadata, priceId);
+  let priceId = session.metadata?.price_id || "";
+  let billingIntervalFromStripe: BillingInterval | undefined;
 
   if (!customerId || !subscriptionId) {
     logger.warn(
@@ -48,6 +76,30 @@ export async function handleCheckoutCompleted(
     );
     return;
   }
+
+  try {
+    const stripe = getStripe();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["items.data.price"],
+    });
+    const price = subscription.items.data[0]?.price;
+    priceId = price?.id || priceId;
+    billingIntervalFromStripe =
+      price?.recurring?.interval === "month" || price?.recurring?.interval === "week"
+        ? price.recurring.interval
+        : undefined;
+  } catch (err) {
+    logger.warn(
+      { err, sessionId: session.id, subscriptionId },
+      "Could not retrieve Stripe subscription price, falling back to checkout metadata",
+    );
+  }
+
+  const planConfig = applyAuthoritativeBillingInterval(
+    parsePlanMetadata(session.metadata, priceId),
+    priceId,
+    billingIntervalFromStripe,
+  );
 
   const supabase = getSupabaseAdmin();
 
@@ -160,7 +212,7 @@ export async function handleInvoicePaid(
   // Find subscription by Stripe subscription ID
   const { data: subscriptionRow } = await supabase
     .from("subscriptions")
-    .select("user_id, price_id, credits_per_cycle")
+    .select("user_id, price_id, plan_type, credits_per_cycle")
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
@@ -173,7 +225,11 @@ export async function handleInvoicePaid(
   }
 
   const planConfig = getPlanForPriceId(subscriptionRow.price_id || "");
-  const creditsPerCycle = subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
+  const planType = normalizeStripePlanType(subscriptionRow.plan_type);
+  const creditsPerCycle =
+    planType === "monthly"
+      ? planConfig.creditsPerCycle
+      : subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
 
   // Add renewal credits
   const { error } = await supabase.rpc("add_credits", {
@@ -198,6 +254,7 @@ export async function handleInvoicePaid(
       current_period_end: invoice.period_end
         ? new Date(invoice.period_end * 1000).toISOString()
         : null,
+      credits_per_cycle: creditsPerCycle,
       updated_at: new Date().toISOString(),
     })
     .eq("stripe_subscription_id", subscriptionId);
@@ -304,10 +361,22 @@ export async function handleSubscriptionUpdated(
     );
   }
 
-  const priceId = subscription.items.data[0]?.price?.id || "";
-  const planConfig = getPlanForPriceId(priceId);
+  const price = subscription.items.data[0]?.price;
+  const priceId = price?.id || "";
+  const inferredBillingInterval =
+    price?.recurring?.interval === "month" || price?.recurring?.interval === "week"
+      ? price.recurring.interval
+      : undefined;
+  const planConfig = applyAuthoritativeBillingInterval(
+    getPlanForPriceId(priceId),
+    priceId,
+    inferredBillingInterval as BillingInterval | undefined,
+  );
 
-  const planChanged = !!prevSubscription?.plan_type && prevSubscription.plan_type !== planConfig.planType;
+  const previousPlanType = prevSubscription?.plan_type
+    ? normalizeStripePlanType(prevSubscription.plan_type)
+    : null;
+  const planChanged = !!previousPlanType && previousPlanType !== planConfig.planType;
 
   if (isActive && prevProfile?.id && planChanged) {
     const { error: creditErr } = await supabase
@@ -328,7 +397,7 @@ export async function handleSubscriptionUpdated(
         {
           userId: prevProfile.id,
           subscriptionId,
-          previousPlan: prevSubscription.plan_type,
+          previousPlan: previousPlanType,
           newPlan: planConfig.planType,
           credits: planConfig.creditsPerCycle,
         },

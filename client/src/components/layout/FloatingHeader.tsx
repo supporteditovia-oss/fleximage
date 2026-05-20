@@ -61,9 +61,13 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         {/* Logo — centered */}
         <Link
           href={logoHref}
-          className="pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity"
+          className="pointer-events-auto flex max-w-[42vw] shrink min-w-0 cursor-pointer hover:opacity-80 transition-opacity sm:max-w-[36vw] md:max-w-[260px]"
         >
-          <img src="/assets/turboprank.png" alt="TurboPrank" className="h-10 md:h-16 object-contain" />
+          <img
+            src="/assets/turboprank.png"
+            alt="TurboPrank"
+            className="h-[clamp(2rem,6svh,2.5rem)] w-auto max-w-full object-contain md:h-[clamp(2.25rem,6svh,4rem)]"
+          />
         </Link>
 
         {/* Right side */}

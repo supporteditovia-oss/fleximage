@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Profile } from "@shared/schema";
 
 type AdminProfile = Profile & {
-  subscriptions?: Array<{ plan_type: string; status: string }>;
+  subscriptions?: Array<{ plan_type: string; status: string; billing_interval?: string | null }>;
 };
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -81,7 +81,7 @@ function usePaginatedProfiles({
       // Build query
       let query = supabase
         .from("profiles")
-        .select("*, subscriptions(plan_type,status)", { count: "exact" });
+        .select("*, subscriptions(plan_type,status,billing_interval)", { count: "exact" });
 
       // Apply filters
       if (roleFilter !== "all") {
@@ -236,12 +236,12 @@ function UsersManagementPage() {
   const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
 
-  const handleChangePlan = async (id: string, plan: "free" | "image" | "video") => {
+  const handleChangePlan = async (id: string, plan: "free" | "weekly" | "monthly") => {
     try {
       await updateProfile({ id, updates: { admin_plan: plan } as any });
       queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      toast({ title: "Plan mis à jour", description: `Le plan utilisateur est maintenant ${plan === "free" ? "Gratuit" : plan === "image" ? "Image" : "Vidéo"}.` });
+      toast({ title: "Plan mis à jour", description: `Le plan utilisateur est maintenant ${plan === "free" ? "Gratuit" : plan === "weekly" ? "Hebdo" : "Mensuel"}.` });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la mise à jour", description: error.message });
     }
@@ -406,10 +406,13 @@ function UsersManagementPage() {
               </TableHeader>
               <TableBody>
                 {profiles.map((profile: AdminProfile) => {
-                  const currentPlan = profile.subscriptions?.some((subscription) => subscription.status === "active" && subscription.plan_type === "video")
-                    ? "video"
+                  const activeSubscription = profile.subscriptions?.find((subscription) => subscription.status === "active");
+                  const currentPlan = activeSubscription
+                    ? activeSubscription.plan_type === "monthly" || activeSubscription.plan_type === "video" || activeSubscription.billing_interval === "month"
+                      ? "monthly"
+                      : "weekly"
                     : profile.is_subscriber
-                      ? "image"
+                      ? "weekly"
                       : "free";
 
                   return (
@@ -441,12 +444,12 @@ function UsersManagementPage() {
                     <TableCell>
                       <select
                         value={currentPlan}
-                        onChange={(e) => handleChangePlan(profile.id, e.target.value as "free" | "image" | "video")}
+                        onChange={(e) => handleChangePlan(profile.id, e.target.value as "free" | "weekly" | "monthly")}
                         className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                       >
                         <option value="free">Gratuit</option>
-                        <option value="image">Image</option>
-                        <option value="video">Vidéo</option>
+                        <option value="weekly">Hebdo</option>
+                        <option value="monthly">Mensuel</option>
                       </select>
                     </TableCell>
                     <TableCell>

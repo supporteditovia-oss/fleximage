@@ -176,7 +176,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bullets: [
               { text: "Images HD sans filigrane" },
-              { text: "100 credits de generation par periode d'abonnement" },
+              { text: "100 credits avec la formule hebdomadaire ou 250 credits avec la formule mensuelle" },
               { text: "Acces a l'ensemble des templates disponibles" },
               { text: "Historique complet des generations" },
               { text: "Telechargement et partage des images" },
@@ -187,7 +187,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Prix",
             paragraphs: [
-              "Le prix de l'abonnement est de 4,90 EUR TTC par semaine.",
+              "Deux formules sont proposees : 2,90 EUR TTC par semaine ou 9,90 EUR TTC par mois.",
               "GUS se reserve le droit de modifier les prix a tout moment. Toute modification est applicable au prochain renouvellement.",
               "GUS beneficie de la franchise en base de TVA (article 293 B du CGI). TVA non applicable.",
             ],
@@ -197,7 +197,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Modalites de souscription",
             paragraphs: [
               "La souscription s'effectue en ligne sur turboprank.com. Le paiement est securise via Stripe (PCI-DSS).",
-              "L'abonnement est renouvele automatiquement chaque semaine.",
+              "L'abonnement est renouvele automatiquement selon la periode choisie : chaque semaine ou chaque mois.",
             ],
           },
           {
@@ -637,7 +637,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: ["Paid subscription includes:"],
             bullets: [
               { text: "High-definition unwatermarked images" },
-              { text: "100 generation credits per billing period" },
+              { text: "100 generation credits with the weekly plan or 250 credits with the monthly plan" },
               { text: "Access to all available templates" },
               { text: "Full generation history" },
               { text: "Image download and sharing" },
@@ -648,7 +648,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Pricing",
             paragraphs: [
-              "Subscription price is EUR 4.90 (tax included) per week.",
+              "Two plans are available: EUR 2.90 (tax included) per week or EUR 9.90 (tax included) per month.",
               "Prices may change at any time and apply from the next renewal.",
               "Under French tax rules (article 293 B CGI), VAT is not applicable.",
             ],
@@ -658,7 +658,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Subscription terms",
             paragraphs: [
               "Subscription is made online on turboprank.com. Payments are secured by Stripe (PCI-DSS).",
-              "The subscription renews automatically each week.",
+              "The subscription renews automatically according to the selected billing period: weekly or monthly.",
             ],
           },
           {
@@ -1083,7 +1083,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: ["La suscripcion de pago incluye:"],
             bullets: [
               { text: "Imagenes en alta definicion sin marca de agua" },
-              { text: "100 creditos por periodo de suscripcion" },
+              { text: "100 creditos con el plan semanal o 250 creditos con el plan mensual" },
               { text: "Acceso a todas las plantillas" },
               { text: "Historial completo de generaciones" },
               { text: "Descarga y comparticion de imagenes" },
@@ -1094,7 +1094,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Precio",
             paragraphs: [
-              "El precio es de 4,90 EUR por semana (impuestos incluidos).",
+              "Hay dos planes disponibles: 2,90 EUR por semana o 9,90 EUR por mes (impuestos incluidos).",
               "GUS puede modificar los precios. Los cambios se aplican en la siguiente renovacion.",
               "Segun el regimen fiscal frances (articulo 293 B CGI), el IVA no es aplicable.",
             ],
@@ -1104,7 +1104,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Suscripcion",
             paragraphs: [
               "La suscripcion se realiza online en turboprank.com. El pago se procesa de forma segura por Stripe (PCI-DSS).",
-              "La suscripcion se renueva automaticamente cada semana.",
+              "La suscripcion se renueva automaticamente segun el periodo elegido: semanal o mensual.",
             ],
           },
           {
@@ -1529,7 +1529,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: ["Das kostenpflichtige Abo umfasst:"],
             bullets: [
               { text: "HD-Bilder ohne Wasserzeichen" },
-              { text: "50 Generierungs-Credits pro Abrechnungszeitraum" },
+              { text: "100 Generierungs-Credits im Wochentarif oder 250 Credits im Monatstarif" },
               { text: "Zugriff auf alle Vorlagen" },
               { text: "Vollstandiger Verlauf" },
               { text: "Download und Teilen von Bildern" },
@@ -1540,7 +1540,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Preise",
             paragraphs: [
-              "Der Preis betragt 4,90 EUR pro Woche (inkl. Steuern).",
+              "Es gibt zwei Tarife: 2,90 EUR pro Woche oder 9,90 EUR pro Monat (inkl. Steuern).",
               "Preisanderungen sind jederzeit moglich und gelten ab der nachsten Verlangerung.",
               "Nach franzosischem Steuerrecht (Art. 293 B CGI) ist keine MwSt. auszuweisen.",
             ],
@@ -1550,7 +1550,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Abschluss",
             paragraphs: [
               "Der Abschluss erfolgt online auf turboprank.com. Zahlungen werden uber Stripe (PCI-DSS) sicher verarbeitet.",
-              "Das Abo verlangert sich automatisch jede Woche.",
+              "Das Abo verlangert sich automatisch je nach gewahltem Abrechnungszeitraum: wochentlich oder monatlich.",
             ],
           },
           {

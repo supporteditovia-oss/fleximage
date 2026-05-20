@@ -61,7 +61,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fetchImageFailed": "Impossible de recuperer l'image",
     "stripe.alreadySubscribed": "Tu as deja un abonnement actif.",
     "stripe.noStripeSubscription": "Aucun abonnement Stripe trouve.",
-    "stripe.videoPlanRequired": "La génération vidéo nécessite le plan vidéo.",
+    "stripe.videoPlanRequired": "La génération vidéo nécessite un abonnement actif.",
     "favorites.added": "Favori ajoute",
     "favorites.removed": "Favori retire",
     "common.internalServerError":
@@ -97,7 +97,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fetchImageFailed": "Unable to fetch image",
     "stripe.alreadySubscribed": "You already have an active subscription.",
     "stripe.noStripeSubscription": "No Stripe subscription found.",
-    "stripe.videoPlanRequired": "Video generation requires the video plan.",
+    "stripe.videoPlanRequired": "Video generation requires an active subscription.",
     "favorites.added": "Favorite added",
     "favorites.removed": "Favorite removed",
     "common.internalServerError":
@@ -131,7 +131,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fetchImageFailed": "No se pudo recuperar la imagen",
     "stripe.alreadySubscribed": "Ya tienes una suscripcion activa.",
     "stripe.noStripeSubscription": "No se encontro una suscripcion de Stripe.",
-    "stripe.videoPlanRequired": "La generación de video requiere el plan de video.",
+    "stripe.videoPlanRequired": "La generación de video requiere una suscripción activa.",
     "favorites.added": "Favorito agregado",
     "favorites.removed": "Favorito eliminado",
     "common.internalServerError":
@@ -168,7 +168,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fetchImageFailed": "Bild konnte nicht geladen werden",
     "stripe.alreadySubscribed": "Du hast bereits ein aktives Abonnement.",
     "stripe.noStripeSubscription": "Kein Stripe-Abonnement gefunden.",
-    "stripe.videoPlanRequired": "Videogenerierung erfordert den Video-Plan.",
+    "stripe.videoPlanRequired": "Videogenerierung erfordert ein aktives Abonnement.",
     "favorites.added": "Favorit hinzugefugt",
     "favorites.removed": "Favorit entfernt",
     "common.internalServerError":

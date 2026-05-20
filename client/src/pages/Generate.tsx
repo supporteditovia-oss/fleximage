@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
 import { posthog } from "@/lib/posthog";
-import { getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
+import { getPendingPrank, clearPendingPrank, savePendingPrank } from "@/lib/pending-prank";
 import {
   getPaywalledResult,
   clearPaywalledResult,
@@ -52,8 +52,7 @@ export default function Generate() {
   const [isFakeGenerating, setIsFakeGenerating] = useState(false);
   const [fakeLoaderStatus, setFakeLoaderStatus] = useState<"connecting" | "waiting" | "success">("connecting");
   const [showFakePaywall, setShowFakePaywall] = useState(false);
-  const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<"image" | "video">("video");
-  const [paywallUpgradeMode, setPaywallUpgradeMode] = useState(false);
+  const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<"weekly" | "monthly">("monthly");
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     prankId: string;
@@ -174,15 +173,19 @@ export default function Generate() {
     }
   }, [profile?.is_subscriber]);
 
+  const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
+  const isFullscreenOverlayActive =
+    pendingLoading || !!taskId || isFakeGenerating;
+
   // ── Hide header/dock while fullscreen overlay is active ─────
   useLayoutEffect(() => {
-    if (pendingLoading || taskId) {
+    if (isFullscreenOverlayActive) {
       document.body.setAttribute("data-fullscreen-overlay", "true");
     } else {
       document.body.removeAttribute("data-fullscreen-overlay");
     }
     return () => document.body.removeAttribute("data-fullscreen-overlay");
-  }, [pendingLoading, taskId]);
+  }, [isFullscreenOverlayActive]);
 
   // ── Restore pending prank from IndexedDB ────────────────────
   useEffect(() => {
@@ -300,18 +303,6 @@ export default function Generate() {
     });
 
   const handleGenerate = async () => {
-    // Skip client-side eligibility check when returning from checkout:
-    // the cached data is stale (user just got credits via Stripe).
-    // Server will still validate credits.
-    if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
-      toast({
-        variant: "destructive",
-        title: t("generate.insufficientCreditsTitle"),
-        description: t("generate.insufficientCreditsDescription"),
-      });
-      return;
-    }
-
     if (!prompt.trim()) {
       toast({
         variant: "destructive",
@@ -356,44 +347,80 @@ export default function Generate() {
       }
     }
 
+    const files = images.filter(
+      (img): img is { url: string; file: File } => img !== null,
+    );
+    let finalPrompt = prompt.trim();
+    if (generationMode === "image") {
+      const fields = parseTextFields(selectedTemplate);
+      fields.forEach((_, idx) => {
+        const val = textValues[idx] || "";
+        finalPrompt = finalPrompt.replaceAll(`{text${idx + 1}}`, val);
+      });
+    }
+
+    if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
+      try {
+        await savePendingPrank({
+          prompt: finalPrompt,
+          images: files.map((f) => f.file),
+          generationMode,
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        console.error("[Generate] Failed to save onboarding prank:", error);
+        toast({
+          variant: "destructive",
+          title: t("common.messages.error"),
+          description: t("generate.serverRetry"),
+        });
+        return;
+      }
+
+      setPendingLoading(false);
+      setShowFakePaywall(false);
+      posthog.capture("prank_created", { isFake: true, template_id: selectedTemplate?.id });
+      setIsFakeGenerating(true);
+      return;
+    }
+
+    // Skip client-side eligibility check when returning from checkout:
+    // the cached data is stale (user just got credits via Stripe).
+    // Server will still validate credits.
+    if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
+      toast({
+        variant: "destructive",
+        title: t("generate.insufficientCreditsTitle"),
+        description: t("generate.insufficientCreditsDescription"),
+      });
+      return;
+    }
+
     try {
       clearPendingPrank();
 
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
-        const files = images.filter(
-          (img): img is { url: string; file: File } => img !== null,
-        );
         const base64Images = await Promise.all(
           files.map((img) => fileToBase64(img.file)),
         );
 
         const result = await generateVideo.mutateAsync({
-          prompt: prompt.trim(),
+          prompt: finalPrompt,
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
         });
         posthog.capture("prank_created", { isFake: false, resultType: "video" });
-        setPaywallDefaultPlan("video");
+        setPaywallDefaultPlan("monthly");
         setTaskId(result.taskId);
         refetchEligibility();
         return;
       }
 
       // ── Image mode (existing logic) ──────────────────────────
-      const files = images.filter(
-        (img): img is { url: string; file: File } => img !== null,
-      );
       const base64Images = await Promise.all(
         files.map((img) => fileToBase64(img.file)),
       );
-
-      let finalPrompt = prompt.trim();
-      const fields = parseTextFields(selectedTemplate);
-      fields.forEach((_, idx) => {
-        const val = textValues[idx] || "";
-        finalPrompt = finalPrompt.replaceAll(`{text${idx + 1}}`, val);
-      });
 
       const result = await generateDirect.mutateAsync({
         prompt: finalPrompt,
@@ -417,9 +444,15 @@ export default function Generate() {
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
-      if (generationMode === "video" && (error.code === "VIDEO_PLAN_REQUIRED" || normalizedMessage.includes("video"))) {
-        setPaywallDefaultPlan("video");
-        setPaywallUpgradeMode(!!profile?.is_subscriber);
+      if (
+        generationMode === "video" &&
+        (error.code === "VIDEO_PLAN_REQUIRED" ||
+          error.code === "SUBSCRIPTION_REQUIRED" ||
+          normalizedMessage.includes("video")) &&
+        !profile?.is_subscriber &&
+        profile?.role !== "admin"
+      ) {
+        setPaywallDefaultPlan("monthly");
         setShowFakePaywall(true);
         return;
       }
@@ -466,7 +499,6 @@ export default function Generate() {
       if (sessionStorage.getItem("fake_paywall_reached") === "true") {
         console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
         setPendingLoading(false);
-        setPaywallUpgradeMode(false);
         setShowFakePaywall(true);
         return;
       }
@@ -474,7 +506,6 @@ export default function Generate() {
       console.log("[Generate] Starting FAKE generation flow...");
       setPendingLoading(false);
       posthog.capture("prank_created", { isFake: true, template_id: selectedTemplate?.id });
-      document.body.setAttribute("data-fullscreen-overlay", "true");
       setIsFakeGenerating(true);
       return;
     }
@@ -557,13 +588,17 @@ export default function Generate() {
       onRevealComplete={() => {
         setIsFakeGenerating(false);
         sessionStorage.setItem("fake_paywall_reached", "true");
-        setPaywallUpgradeMode(false);
         setShowFakePaywall(true);
-        document.body.removeAttribute("data-fullscreen-overlay");
       }}
     />,
     document.body
   ) : null;
+
+  const paywallOverlayClassName =
+    "fixed inset-0 z-30 overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
+
+  const paywallOverlayInnerClassName =
+    "absolute inset-x-0 top-20 bottom-24 flex items-stretch justify-center px-4 md:top-24 md:bottom-10";
 
   // ════════════════════════════════════════════════════════════
   // RENDER
@@ -610,17 +645,16 @@ export default function Generate() {
     );
   }
 
-  // -- Fake Paywall from onboarding OR persistent paywall for non-subscribers
-  const shouldShowPaywall = showFakePaywall || (
-    profile && !profile.is_subscriber && profile.role !== "admin"
-  );
-
-  if (shouldShowPaywall) {
+  // -- Fake Paywall from onboarding
+  if (showFakePaywall) {
     const paywallImageUrl = images[0]?.url || getPaywallImage() || "";
-    return (
-      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid">
-        <PaywallOverlay isFake={true} imageUrl={paywallImageUrl} defaultPlan={paywallDefaultPlan} upgradeMode={paywallUpgradeMode} />
-      </div>
+    return createPortal(
+      <div className={paywallOverlayClassName}>
+        <div className={paywallOverlayInnerClassName}>
+          <PaywallOverlay isFake={true} imageUrl={paywallImageUrl} defaultPlan={paywallDefaultPlan} />
+        </div>
+      </div>,
+      document.body,
     );
   }
 
@@ -639,11 +673,14 @@ export default function Generate() {
   }
 
   // -- Persistent paywall for non-subscribers with a previous generation
-  if (savedPaywall && !profile?.is_subscriber) {
-    return (
-      <div className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid">
-        <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
-      </div>
+  if (hasSavedPaywall) {
+    return createPortal(
+      <div className={paywallOverlayClassName}>
+        <div className={paywallOverlayInnerClassName}>
+          <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
+        </div>
+      </div>,
+      document.body,
     );
   }
 

@@ -74,21 +74,30 @@ export default function Settings() {
 
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("plan_type")
+        .select("plan_type, billing_interval")
         .eq("user_id", profile.id)
         .eq("stripe_subscription_id", profile.stripe_subscription_id)
         .eq("status", "active")
         .maybeSingle();
 
       if (error) throw error;
-      return data as { plan_type: "image" | "video" } | null;
+      return data as { plan_type: string; billing_interval: "week" | "month" | null } | null;
     },
     enabled: !!profile?.is_subscriber && !!profile?.stripe_subscription_id,
   });
 
-  const subscriptionPrice = activeSubscription?.plan_type === "video"
-    ? t("settings.subscription.videoPrice")
-    : t("settings.subscription.price");
+  const subscriptionPrice = (() => {
+    if (!activeSubscription) return t("settings.subscription.price");
+    if (activeSubscription.plan_type === "video") {
+      return t("settings.subscription.legacyVideoPrice");
+    }
+    if (activeSubscription.plan_type === "image") {
+      return t("settings.subscription.legacyImagePrice");
+    }
+    return activeSubscription.plan_type === "monthly" || activeSubscription.billing_interval === "month"
+      ? t("settings.subscription.videoPrice")
+      : t("settings.subscription.price");
+  })();
 
   const form = useForm({
     resolver: zodResolver(

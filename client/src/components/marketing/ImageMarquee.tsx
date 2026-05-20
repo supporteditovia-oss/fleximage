@@ -1,11 +1,16 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface MarqueeTemplate {
   name: string;
   example_before_url: string | null;
   example_after_url: string;
+}
+
+interface ImageMarqueeProps {
+  compactTop?: boolean;
 }
 
 const MIN_CARDS_PER_ROW = 8;
@@ -160,7 +165,7 @@ function MarqueeRow({
   );
 }
 
-export default function ImageMarquee() {
+export default function ImageMarquee({ compactTop = false }: ImageMarqueeProps) {
   const { t } = useTranslation();
 
   const { data: templates } = useQuery<MarqueeTemplate[]>({
@@ -183,7 +188,12 @@ export default function ImageMarquee() {
   const row2 = hasData ? padToMin(templates.slice(mid), MIN_CARDS_PER_ROW) : [];
 
   return (
-    <section className="py-16 md:py-24 overflow-hidden">
+    <section
+      className={cn(
+        "overflow-hidden",
+        compactTop ? "-mt-16 pb-16 pt-0 md:-mt-10 md:pb-24 md:pt-0" : "py-16 md:py-24",
+      )}
+    >
       <div className="max-w-3xl mx-auto px-4 mb-10">
         <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
           {t("marquee.titlePrefix")} {" "}

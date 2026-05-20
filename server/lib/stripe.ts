@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 
-export type StripePlanType = "image" | "video";
+export type StripePlanType = "weekly" | "monthly";
+export type LegacyStripePlanType = "image" | "video";
+export type StripePlanInput = StripePlanType | LegacyStripePlanType;
 export type BillingInterval = "week" | "month";
 
 export interface StripePlanConfig {
@@ -25,45 +27,106 @@ export function getStripe(): Stripe {
 }
 
 export function getStripePriceId(): string {
-  return getStripePriceIdForPlan("image");
+  return getStripePriceIdForPlan("weekly");
 }
 
-export function getStripePlanConfig(planType: StripePlanType): StripePlanConfig {
-  if (planType === "image") {
-    const priceId = process.env.STRIPE_IMAGE_PRICE_ID || process.env.STRIPE_PRICE_ID;
+export function normalizeStripePlanType(planType: string | null | undefined): StripePlanType {
+  if (planType === "monthly" || planType === "video") return "monthly";
+  return "weekly";
+}
+
+function splitPriceIds(value: string | undefined): string[] {
+  return (value || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+function getPlanPriceIds(planType: StripePlanType): string[] {
+  if (planType === "monthly") {
+    return [
+      process.env.STRIPE_MONTHLY_PRICE_ID,
+      process.env.STRIPE_VIDEO_PRICE_ID,
+      ...splitPriceIds(process.env.STRIPE_MONTHLY_LEGACY_PRICE_IDS),
+      ...splitPriceIds(process.env.STRIPE_VIDEO_LEGACY_PRICE_IDS),
+    ].filter(Boolean) as string[];
+  }
+
+  return [
+    process.env.STRIPE_WEEKLY_PRICE_ID,
+    process.env.STRIPE_IMAGE_PRICE_ID,
+    process.env.STRIPE_PRICE_ID,
+    ...splitPriceIds(process.env.STRIPE_WEEKLY_LEGACY_PRICE_IDS),
+    ...splitPriceIds(process.env.STRIPE_IMAGE_LEGACY_PRICE_IDS),
+  ].filter(Boolean) as string[];
+}
+
+export function getStripePlanConfig(planType: StripePlanInput): StripePlanConfig {
+  const normalizedPlanType = normalizeStripePlanType(planType);
+
+  if (normalizedPlanType === "weekly") {
+    const priceId =
+      process.env.STRIPE_WEEKLY_PRICE_ID ||
+      process.env.STRIPE_IMAGE_PRICE_ID ||
+      process.env.STRIPE_PRICE_ID;
     if (!priceId) {
-      throw new Error("STRIPE_IMAGE_PRICE_ID or STRIPE_PRICE_ID must be set");
+      throw new Error(
+        "STRIPE_WEEKLY_PRICE_ID, STRIPE_IMAGE_PRICE_ID, or STRIPE_PRICE_ID must be set",
+      );
     }
     return {
-      planType: "image",
+      planType: "weekly",
       priceId,
       creditsPerCycle: 100,
       billingInterval: "week",
     };
   }
 
-  const priceId = process.env.STRIPE_VIDEO_PRICE_ID;
+  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
+  const priceId = monthlyPriceId || process.env.STRIPE_VIDEO_PRICE_ID;
   if (!priceId) {
-    throw new Error("STRIPE_VIDEO_PRICE_ID must be set");
+    throw new Error("STRIPE_MONTHLY_PRICE_ID or STRIPE_VIDEO_PRICE_ID must be set");
   }
   return {
-    planType: "video",
+    planType: "monthly",
     priceId,
-    creditsPerCycle: 200,
-    billingInterval: "week",
+    creditsPerCycle: 250,
+    billingInterval: monthlyPriceId ? "month" : "week",
   };
 }
 
-export function getStripePriceIdForPlan(planType: StripePlanType): string {
+export function getStripePriceIdForPlan(planType: StripePlanInput): string {
   return getStripePlanConfig(planType).priceId;
 }
 
 export function getPlanForPriceId(priceId: string): StripePlanConfig {
-  const videoPriceId = process.env.STRIPE_VIDEO_PRICE_ID;
-  if (videoPriceId && priceId === videoPriceId) {
-    return getStripePlanConfig("video");
+  if (priceId && getPlanPriceIds("monthly").includes(priceId)) {
+    const monthlyConfig = getStripePlanConfig("monthly");
+    const legacyWeeklyMonthlyIds = [
+      process.env.STRIPE_VIDEO_PRICE_ID,
+      ...splitPriceIds(process.env.STRIPE_VIDEO_LEGACY_PRICE_IDS),
+    ].filter(Boolean) as string[];
+
+    return {
+      ...monthlyConfig,
+      priceId,
+      billingInterval:
+        process.env.STRIPE_MONTHLY_PRICE_ID &&
+        priceId !== process.env.STRIPE_MONTHLY_PRICE_ID &&
+        legacyWeeklyMonthlyIds.includes(priceId)
+          ? "week"
+          : monthlyConfig.billingInterval,
+    };
   }
-  return getStripePlanConfig("image");
+
+  if (priceId && getPlanPriceIds("weekly").includes(priceId)) {
+    return {
+      ...getStripePlanConfig("weekly"),
+      priceId,
+    };
+  }
+
+  return getStripePlanConfig("weekly");
 }
 
 export function getStripeWebhookSecret(): string {
