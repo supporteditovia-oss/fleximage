@@ -21,6 +21,12 @@ body[data-scroll-locked][data-scroll-locked] {
 }
 
 /* Hide AppLayout chrome (header/dock) when a fullscreen overlay is active (e.g. generation loader) */
+html[data-fullscreen-overlay],
+body[data-fullscreen-overlay] {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
 body[data-fullscreen-overlay] .floating-header,
 body[data-fullscreen-overlay] .bottom-dock {
   opacity: 0 !important;

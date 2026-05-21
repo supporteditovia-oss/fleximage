@@ -187,16 +187,26 @@ export default function Generate() {
 
   const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
   const isFullscreenOverlayActive =
-    pendingLoading || !!taskId || isFakeGenerating;
+    pendingLoading ||
+    !!taskId ||
+    isFakeGenerating ||
+    showFakePaywall ||
+    hasSavedPaywall ||
+    unlockingPrank;
 
   // ── Hide header/dock while fullscreen overlay is active ─────
   useLayoutEffect(() => {
     if (isFullscreenOverlayActive) {
+      document.documentElement.setAttribute("data-fullscreen-overlay", "true");
       document.body.setAttribute("data-fullscreen-overlay", "true");
     } else {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
     }
-    return () => document.body.removeAttribute("data-fullscreen-overlay");
+    return () => {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-fullscreen-overlay");
+    };
   }, [isFullscreenOverlayActive]);
 
   // ── Restore pending prank from IndexedDB ────────────────────
@@ -608,10 +618,10 @@ export default function Generate() {
   ) : null;
 
   const paywallOverlayClassName =
-    "fixed inset-0 z-30 overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
+    "fixed inset-0 z-[100] overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
 
   const paywallOverlayInnerClassName =
-    "absolute inset-x-0 top-20 bottom-24 flex items-stretch justify-center px-4 md:top-24 md:bottom-10";
+    "absolute inset-x-0 top-20 bottom-4 flex items-stretch justify-center px-4 md:top-24 md:bottom-10";
 
   // ════════════════════════════════════════════════════════════
   // RENDER
