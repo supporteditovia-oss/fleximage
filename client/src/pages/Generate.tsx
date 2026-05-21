@@ -186,12 +186,12 @@ export default function Generate() {
   }, [profile?.is_subscriber]);
 
   const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
+  const isPaywallOverlayActive = showFakePaywall || hasSavedPaywall;
   const isFullscreenOverlayActive =
     pendingLoading ||
     !!taskId ||
     isFakeGenerating ||
-    showFakePaywall ||
-    hasSavedPaywall ||
+    isPaywallOverlayActive ||
     unlockingPrank;
 
   // ── Hide header/dock while fullscreen overlay is active ─────
@@ -203,11 +203,19 @@ export default function Generate() {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
     }
+
+    if (isPaywallOverlayActive) {
+      document.body.setAttribute("data-paywall-overlay", "true");
+    } else {
+      document.body.removeAttribute("data-paywall-overlay");
+    }
+
     return () => {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-paywall-overlay");
     };
-  }, [isFullscreenOverlayActive]);
+  }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
   // ── Restore pending prank from IndexedDB ────────────────────
   useEffect(() => {

@@ -33,6 +33,18 @@ body[data-fullscreen-overlay] .bottom-dock {
   pointer-events: none !important;
 }
 
+body[data-paywall-overlay] .floating-header {
+  opacity: 1 !important;
+  pointer-events: none !important;
+  transform: translateY(0) !important;
+  z-index: 110 !important;
+}
+
+body[data-paywall-overlay] .floating-header-credits {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 :root {
   /* Dark SaaS Palette — Cyan/Turquoise */
   --font-sans: "DM Sans", sans-serif;

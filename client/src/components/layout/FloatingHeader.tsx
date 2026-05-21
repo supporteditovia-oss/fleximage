@@ -72,7 +72,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
 
         {/* Right side */}
         {variant === "app" ? (
-          <div className="absolute right-0 flex items-center gap-1.5 text-sm font-semibold text-foreground pointer-events-auto rounded-full border border-border/40 bg-card/80 backdrop-blur-xl px-3 py-1.5 shadow-lg shadow-black/10">
+          <div className="floating-header-credits absolute right-0 flex items-center gap-1.5 text-sm font-semibold text-foreground pointer-events-auto rounded-full border border-border/40 bg-card/80 backdrop-blur-xl px-3 py-1.5 shadow-lg shadow-black/10">
             <img src="/assets/jeton.png" alt="Credits" className="w-5 h-5" />
             <span>{profile?.credits ?? 0}</span>
           </div>

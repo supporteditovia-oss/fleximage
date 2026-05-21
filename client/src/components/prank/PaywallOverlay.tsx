@@ -302,16 +302,16 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-30% to-black/90 pointer-events-none" />
 
       {!isChoosingPlan && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
-          className="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 items-center justify-center"
-        >
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-black/35 text-white backdrop-blur-md">
-            <Lock className="h-10 w-10 -translate-y-0.5" strokeWidth={2.8} />
-          </div>
-        </motion.div>
+        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+            className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-black/35 text-white backdrop-blur-md"
+          >
+            <Lock className="h-10 w-10" strokeWidth={2.8} />
+          </motion.div>
+        </div>
       )}
 
       {!isChoosingPlan && (
