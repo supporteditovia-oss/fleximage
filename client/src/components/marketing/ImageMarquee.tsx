@@ -191,7 +191,7 @@ export default function ImageMarquee({ compactTop = false }: ImageMarqueeProps) 
     <section
       className={cn(
         "overflow-hidden",
-        compactTop ? "-mt-16 pb-16 pt-0 md:-mt-10 md:pb-24 md:pt-0" : "py-16 md:py-24",
+        compactTop ? "-mt-8 pb-16 pt-0 md:-mt-10 md:pb-24 md:pt-0" : "py-16 md:py-24",
       )}
     >
       <div className="max-w-3xl mx-auto px-4 mb-10">

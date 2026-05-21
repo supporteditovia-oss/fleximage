@@ -27,13 +27,13 @@ export default function HeroHeadline({
     <div className={cn("relative flex flex-col items-center justify-center", className)}>
       <motion.h1
         variants={variants}
-        className="font-display text-[2.28rem] min-[380px]:text-[2.55rem] min-[430px]:text-[2.75rem] md:text-6xl font-bold leading-[1.04] md:leading-[1.1] tracking-tight text-center"
+        className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
       >
         {t("hero.titlePrefix")}{" "}
         <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
           {t("hero.titleGradient")}
-        </span>
-        <span className="block md:inline"> {t("hero.titleSuffix")}</span>
+        </span>{" "}
+        {t("hero.titleSuffix")}
       </motion.h1>
       {subtitle && (
         <motion.p
@@ -47,7 +47,7 @@ export default function HeroHeadline({
         <motion.div
           variants={{ hidden: { opacity: 0 }, visible: { opacity: 0.7 } }}
           className={cn(
-            "absolute top-full -mt-1 right-4 min-[500px]:right-16 md:-mt-2 md:right-0 md:mr-40 pointer-events-none",
+            "absolute top-[38.2px] md:top-full md:-mt-2 right-0 mr-2 min-[500px]:mr-16 md:mr-40 pointer-events-none",
             showMobileArrow ? "hidden min-[380px]:block" : "hidden md:block",
             arrowClassName,
           )}
