@@ -31,6 +31,18 @@ import { parseImageSlots, parseTextFields } from "@/lib/template-utils";
 import type { PromptTemplate } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 
+const FAKE_LOADER_MIN_DELAY_MS = 10_000;
+const FAKE_LOADER_MAX_DELAY_MS = 20_000;
+
+function getRandomFakeLoaderDelay() {
+  return (
+    FAKE_LOADER_MIN_DELAY_MS +
+    Math.floor(
+      Math.random() * (FAKE_LOADER_MAX_DELAY_MS - FAKE_LOADER_MIN_DELAY_MS + 1),
+    )
+  );
+}
+
 export default function Generate() {
   const { t } = useTranslation();
   // ── Form state ──────────────────────────────────────────────
@@ -529,8 +541,9 @@ export default function Generate() {
   useEffect(() => {
     if (isFakeGenerating) {
       setFakeLoaderStatus("connecting");
+      const successDelay = getRandomFakeLoaderDelay();
       const t1 = setTimeout(() => setFakeLoaderStatus("waiting"), 4000);
-      const t2 = setTimeout(() => setFakeLoaderStatus("success"), 15000);
+      const t2 = setTimeout(() => setFakeLoaderStatus("success"), successDelay);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [isFakeGenerating]);
