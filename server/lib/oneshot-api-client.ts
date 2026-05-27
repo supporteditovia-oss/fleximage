@@ -1,6 +1,81 @@
 import { logger } from "./logger";
 import { getSupabaseAdmin } from "./supabase-admin";
 
+export const GOOGLE_AI_PROMPT_FLAGGED_ERROR = "Prompt flaggé par Google AI";
+
+function collectErrorText(input: unknown): string {
+  if (input == null) return "";
+  if (typeof input === "string") return input;
+  if (input instanceof Error) {
+    const extra = input as Error & {
+      body?: unknown;
+      details?: unknown;
+      code?: unknown;
+      cause?: unknown;
+    };
+    return [
+      input.message,
+      collectErrorText(extra.body),
+      collectErrorText(extra.details),
+      collectErrorText(extra.code),
+      collectErrorText(extra.cause),
+    ].join(" ");
+  }
+  if (typeof input === "object") {
+    try {
+      return JSON.stringify(input);
+    } catch {
+      return String(input);
+    }
+  }
+  return String(input);
+}
+
+export function isGoogleAiPromptFlagged(input: unknown): boolean {
+  const normalized = collectErrorText(input)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const flaggedMessage = GOOGLE_AI_PROMPT_FLAGGED_ERROR.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return (
+    normalized.includes(flaggedMessage) ||
+    (normalized.includes("prompt") &&
+      normalized.includes("flagg") &&
+      normalized.includes("google ai"))
+  );
+}
+
+function extractOneshotErrorMessage(text: string): string | null {
+  if (!text.trim()) return null;
+
+  try {
+    const parsed = JSON.parse(text);
+    const message =
+      parsed?.message ||
+      parsed?.details ||
+      parsed?.error?.message ||
+      parsed?.error;
+    return typeof message === "string" ? message : text;
+  } catch {
+    return text;
+  }
+}
+
+function createOneshotError(status: number, text: string): Error {
+  const message = extractOneshotErrorMessage(text);
+  const error = new Error(
+    message
+      ? `OneshotAPI error: ${status}: ${message}`
+      : `OneshotAPI error: ${status}`,
+  ) as Error & { status?: number; body?: string };
+  error.status = status;
+  error.body = text;
+  return error;
+}
+
 // ─── Configuration ───────────────────────────────────────────────
 export function getOneshotApiConfig() {
   return {
@@ -168,7 +243,7 @@ export async function createOneshotJob(
   if (!response.ok) {
     const text = await response.text();
     logger.error({ status: response.status, body: text }, "OneshotAPI createJob failed");
-    throw new Error(`OneshotAPI error: ${response.status}`);
+    throw createOneshotError(response.status, text);
   }
 
   const rawText = await response.text();
@@ -197,7 +272,7 @@ export async function getOneshotJobStatus(jobId: string): Promise<any> {
   if (!response.ok) {
     const text = await response.text();
     logger.error({ status: response.status, body: text, jobId }, "OneshotAPI getStatus failed");
-    throw new Error(`OneshotAPI error: ${response.status}`);
+    throw createOneshotError(response.status, text);
   }
 
   const rawText = await response.text();

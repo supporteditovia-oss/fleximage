@@ -32,6 +32,7 @@ import {
   getAppSettings,
   uploadToOneshotApi,
   invalidateSettingsCache,
+  isGoogleAiPromptFlagged,
 } from "./lib/oneshot-api-client";
 import { downloadAndStoreImages } from "./lib/image-storage";
 import { uploadToR2 } from "./lib/r2-client";
@@ -627,6 +628,17 @@ export async function registerRoutes(
               throw new Error("Invalid response from OneshotAPI");
             }
           } catch (err) {
+            if (isGoogleAiPromptFlagged(err)) {
+              logger.warn(
+                { err },
+                "OneshotAPI rejected prompt, skipping Kie AI fallback",
+              );
+              return res.status(422).json({
+                code: "PROMPT_POLICY_VIOLATION",
+                message: tBackend(locale, "pranks.policyViolation"),
+              });
+            }
+
             logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
@@ -799,6 +811,17 @@ export async function registerRoutes(
               throw new Error("Invalid response from OneshotAPI");
             }
           } catch (err) {
+            if (isGoogleAiPromptFlagged(err)) {
+              logger.warn(
+                { err },
+                "OneshotAPI rejected prompt, skipping Kie AI fallback",
+              );
+              return res.status(422).json({
+                code: "PROMPT_POLICY_VIOLATION",
+                message: tBackend(locale, "pranks.policyViolation"),
+              });
+            }
+
             logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             const kieResponse = await createKieTask({
               prompt,
@@ -1116,53 +1139,73 @@ export async function registerRoutes(
           logger.error({ err }, "Failed to poll OneshotAPI");
           customStatus = {
             status: "failed",
-            error: tBackend(locale, "pranks.pollingError"),
+            error: isGoogleAiPromptFlagged(err)
+              ? err instanceof Error
+                ? err.message
+                : String(err)
+              : tBackend(locale, "pranks.pollingError"),
           };
         }
         
         const currentSettings = await getAppSettings();
         const ageInMs = Date.now() - new Date(prank.created_at).getTime();
         const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
+        const isCustomApiFailed =
+          customStatus.status === "failed" || customStatus.status === "fail";
+        const isPolicyViolation =
+          isCustomApiFailed && isGoogleAiPromptFlagged(customStatus);
 
         if (customStatus.status === "completed" || customStatus.status === "success") {
           apiStatus = "success";
           apiResultJson = JSON.stringify(customStatus);
-        } else if (customStatus.status === "failed" || customStatus.status === "fail" || isTimeout) {
-           logger.info({ prankId: prank.id, isTimeout }, "Custom API failed or timeout, triggering Kie AI fallback");
-           try {
-             const aspect_ratio = prank.aspect_ratio || "9:16";
-             const imageUrls = prank.input_urls ? JSON.parse(prank.input_urls) : [];
-             const fallbackKieResponse = await createKieTask({
-               prompt: prank.final_prompt,
-               aspect_ratio,
-               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-             });
+        } else if (isCustomApiFailed || isTimeout) {
+          if (isPolicyViolation) {
+            logger.warn(
+              { prankId: prank.id, jobId },
+              "OneshotAPI rejected prompt, skipping Kie AI fallback",
+            );
+            apiStatus = "fail";
+            apiFailMsg = tBackend(locale, "pranks.policyViolation");
+          } else {
+            logger.info(
+              { prankId: prank.id, isTimeout },
+              "Custom API failed or timeout, triggering Kie AI fallback",
+            );
+            try {
+              const aspect_ratio = prank.aspect_ratio || "9:16";
+              const imageUrls = prank.input_urls ? JSON.parse(prank.input_urls) : [];
+              const fallbackKieResponse = await createKieTask({
+                prompt: prank.final_prompt,
+                aspect_ratio,
+                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+              });
              
-             if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
-               const newKieTaskIdString = `${prank.kie_task_id},${fallbackKieResponse.data.taskId}`;
-               await supabaseAdmin
-                 .from("generated_pranks")
-                 .update({ kie_task_id: newKieTaskIdString, updated_at: new Date().toISOString() })
-                 .eq("id", prank.id);
+              if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
+                const newKieTaskIdString = `${prank.kie_task_id},${fallbackKieResponse.data.taskId}`;
+                await supabaseAdmin
+                  .from("generated_pranks")
+                  .update({ kie_task_id: newKieTaskIdString, updated_at: new Date().toISOString() })
+                  .eq("id", prank.id);
                  
-               return res.json({
-                 prankId: prank.id,
-                 status: "waiting",
-                 resultUrls: [],
-                 failMessage: null,
-                 costTime: null,
-                 isSubscriber: false,
-                 requiresPaywall: false,
-               });
-             } else {
-               apiStatus = "fail";
-               apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
-             }
-           } catch (fallbackErr: any) {
-             logger.error({ err: fallbackErr }, "Kie fallback also failed");
-             apiStatus = "fail";
-             apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
-           }
+                return res.json({
+                  prankId: prank.id,
+                  status: "waiting",
+                  resultUrls: [],
+                  failMessage: null,
+                  costTime: null,
+                  isSubscriber: false,
+                  requiresPaywall: false,
+                });
+              } else {
+                apiStatus = "fail";
+                apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
+              }
+            } catch (fallbackErr: any) {
+              logger.error({ err: fallbackErr }, "Kie fallback also failed");
+              apiStatus = "fail";
+              apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
+            }
+          }
         }
       } else {
         try {

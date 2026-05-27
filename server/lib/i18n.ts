@@ -33,6 +33,7 @@ export type BackendMessageKey =
   | "common.internalServerError"
   | "pranks.pollingError"
   | "pranks.fallbackFailed"
+  | "pranks.policyViolation"
   | "rateLimit.tooManyRequests"
   | "rateLimit.tooManyGenerationRequests";
 
@@ -69,6 +70,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.pollingError": "Erreur lors du suivi de la generation",
     "pranks.fallbackFailed":
       "La generation a echoue apres la tentative de secours",
+    "pranks.policyViolation":
+      "Votre prank enfreint les règles de création.",
     "rateLimit.tooManyRequests":
       "Trop de requetes. Veuillez reessayer plus tard.",
     "rateLimit.tooManyGenerationRequests":
@@ -104,6 +107,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "An unexpected error occurred. Please try again.",
     "pranks.pollingError": "Failed to check generation status",
     "pranks.fallbackFailed": "Generation failed after fallback",
+    "pranks.policyViolation": "Your prank violates the creation rules.",
     "rateLimit.tooManyRequests": "Too many requests. Please try again later.",
     "rateLimit.tooManyGenerationRequests":
       "Too many generation requests. Please try again later.",
@@ -140,6 +144,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "Error al comprobar el estado de la generacion",
     "pranks.fallbackFailed":
       "La generacion fallo despues del modo de respaldo",
+    "pranks.policyViolation":
+      "Tu broma infringe las reglas de creacion.",
     "rateLimit.tooManyRequests":
       "Demasiadas solicitudes. Intentalo de nuevo mas tarde.",
     "rateLimit.tooManyGenerationRequests":
@@ -176,6 +182,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.pollingError":
       "Der Generierungsstatus konnte nicht gepruft werden",
     "pranks.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
+    "pranks.policyViolation":
+      "Dein Streich verstoesst gegen die Erstellungsregeln.",
     "rateLimit.tooManyRequests":
       "Zu viele Anfragen. Bitte versuche es spaeter erneut.",
     "rateLimit.tooManyGenerationRequests":
