@@ -27,7 +27,7 @@ export default function HeroHeadline({
     <div className={cn("relative flex flex-col items-center justify-center", className)}>
       <motion.h1
         variants={variants}
-        className="font-display text-4xl md:text-6xl font-bold leading-[1.1] tracking-tight text-center"
+        className="mx-auto max-w-[20rem] text-balance text-center font-display text-[2rem] font-bold leading-[1.08] md:max-w-5xl md:text-6xl"
       >
         {t("hero.titlePrefix")}{" "}
         <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">

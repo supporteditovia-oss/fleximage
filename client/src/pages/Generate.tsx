@@ -18,7 +18,6 @@ import { UnlockedPrankView } from "@/components/generate/UnlockedPrankView";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
-import { posthog } from "@/lib/posthog";
 import { getPendingPrank, clearPendingPrank, savePendingPrank } from "@/lib/pending-prank";
 import {
   getPaywalledResult,
@@ -409,7 +408,6 @@ export default function Generate() {
 
       setPendingLoading(false);
       setShowFakePaywall(false);
-      posthog.capture("prank_created", { isFake: true, template_id: selectedTemplate?.id });
       setIsFakeGenerating(true);
       return;
     }
@@ -440,7 +438,6 @@ export default function Generate() {
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
         });
-        posthog.capture("prank_created", { isFake: false, resultType: "video" });
         setPaywallDefaultPlan("monthly");
         setTaskId(result.taskId);
         refetchEligibility();
@@ -458,7 +455,6 @@ export default function Generate() {
         images: base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedTemplate?.id,
       });
-      posthog.capture("prank_created", { isFake: false, template_id: selectedTemplate?.id });
       setTaskId(result.taskId);
       refetchEligibility();
     } catch (error: any) {
@@ -535,7 +531,6 @@ export default function Generate() {
 
       console.log("[Generate] Starting FAKE generation flow...");
       setPendingLoading(false);
-      posthog.capture("prank_created", { isFake: true, template_id: selectedTemplate?.id });
       setIsFakeGenerating(true);
       return;
     }
@@ -602,8 +597,8 @@ export default function Generate() {
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
         >
           <img
-            src="/assets/turboprank.png"
-            alt="TurboPrank"
+            src="/assets/larpking.png"
+            alt="LarpKing"
             className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
           />
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -670,7 +665,7 @@ export default function Generate() {
     return (
       <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-300">
         <div className="h-7 w-48 rounded-full bg-muted animate-pulse" />
-        <div className="w-full max-w-[260px] aspect-[9/16] rounded-2xl bg-muted animate-pulse" />
+        <div className="w-full max-w-[260px] aspect-[9/16] rounded-lg bg-muted animate-pulse" />
         <div className="h-11 w-56 rounded-full bg-muted animate-pulse" />
       </div>
     );
@@ -723,23 +718,17 @@ export default function Generate() {
         ref={topRef}
         className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4"
       >
-        {/* Mobile Lightweight Background Glow */}
-        <div className="md:hidden absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,_var(--tw-gradient-stops))] from-primary/10 via-secondary/5 to-transparent -z-10 pointer-events-none" />
-
-        {/* Abstract Background Shapes (hidden on mobile) */}
-        <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(255,255,255,0.78)_0_28%,transparent_28%_100%),linear-gradient(78deg,transparent_0_62%,rgba(0,0,0,0.04)_62%_76%,transparent_76%_100%)]" />
 
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           <div
             role="tablist"
             aria-label="Generation mode"
-            className="relative grid grid-cols-2 rounded-full border border-border/60 bg-muted/40 p-0.5 shadow-sm backdrop-blur-md"
+            className="relative grid grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
           >
             <div
-              className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-gradient-to-b from-primary to-primary/85 shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 generationMode === "video" ? "translate-x-full" : "translate-x-0"
               }`}
             />
@@ -793,7 +782,7 @@ export default function Generate() {
             onClick={() =>
               galleryRef.current?.scrollIntoView({ behavior: "smooth" })
             }
-            className={`relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-1 ${
+            className={`relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mt-1 ${
               generationMode === "video" ? "invisible pointer-events-none" : ""
             }`}
             aria-hidden={generationMode === "video"}

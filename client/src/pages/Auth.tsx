@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { translateSupabaseError } from "@/lib/error-translator";
-import { posthog } from "@/lib/posthog";
 import { useTranslation } from "react-i18next";
 import {
   DEFAULT_LOCALE,
@@ -89,10 +88,6 @@ export default function AuthPage() {
         });
         if (error) throw error;
 
-        if (data?.user?.id) {
-          posthog.identify(data.user.id, { email: data.user.email });
-        }
-
         toast({
           title: t("auth.signInSuccessTitle"),
           description: t("auth.signInSuccessDescription"),
@@ -114,11 +109,6 @@ export default function AuthPage() {
         });
         if (error) throw error;
 
-        if (data?.user?.id) {
-          posthog.identify(data.user.id, { email: data.user.email });
-        }
-
-        posthog.capture("signup_completed", { method: "email" });
         setLocation("/login");
       }
     } catch (error: any) {
@@ -176,20 +166,17 @@ export default function AuthPage() {
       {/* Logo */}
       <Link href="/" className="mb-8 hover:opacity-80 transition-opacity">
         <img
-          src="/assets/turboprank.png"
-          alt="TurboPrank"
+          src="/assets/larpking.png"
+          alt="LarpKing"
           className="h-10 md:h-14 object-contain"
         />
       </Link>
 
-      {/* Card with glow */}
+      {/* Auth card */}
       <div className="relative w-full max-w-md">
-        {/* Hero-style background glow blobs */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-secondary/3 rounded-full blur-3xl -z-10 pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-[250px] h-[250px] bg-secondary/2 rounded-full blur-3xl -z-10 pointer-events-none" />
+        <div className="absolute inset-x-0 -top-10 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent -z-10 pointer-events-none" />
 
-        <div className="relative rounded-2xl border border-border bg-card p-8 md:p-10">
+        <div className="relative rounded-lg border border-border bg-card p-8 shadow-sm md:p-10">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl md:text-3xl font-bold">
@@ -228,7 +215,7 @@ export default function AuthPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
-                  className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
+                  className="text-xs uppercase text-muted-foreground font-semibold"
                 >
                   {t("auth.fields.email")}
                 </Label>
@@ -239,14 +226,14 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-lg"
                   data-testid="input-email"
                 />
               </div>
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
-                  className="text-xs uppercase tracking-wider text-muted-foreground font-semibold"
+                  className="text-xs uppercase text-muted-foreground font-semibold"
                 >
                   {t("auth.fields.password")}
                 </Label>
@@ -257,7 +244,7 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="h-11 pr-10 rounded-xl"
+                    className="h-11 pr-10 rounded-lg"
                     data-testid="input-password"
                   />
                   <button
@@ -316,7 +303,7 @@ export default function AuthPage() {
           <div className="mt-8 text-center">
             <button
               onClick={() => setLocation(isLogin ? "/register" : "/login")}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {isLogin
                 ? t("auth.toggle.noAccount")

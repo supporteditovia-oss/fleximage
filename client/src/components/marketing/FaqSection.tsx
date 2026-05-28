@@ -7,7 +7,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
     <button
       onClick={() => setOpen(!open)}
-      className="w-full text-left rounded-2xl border border-border bg-card px-5 py-4 shadow-sm hover:shadow-md hover:border-secondary/40 transition-all"
+      className="w-full text-left rounded-lg border border-border bg-card px-5 py-4 shadow-sm hover:border-foreground/30 hover:shadow-md transition-all"
     >
       <div className="flex items-center justify-between gap-4">
         <span className="text-sm font-semibold">{question}</span>
@@ -27,7 +27,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export default function FaqSection() {
   const { t } = useTranslation();
   const faqIds = [
-    "turboprank",
+    "larpking",
     "realistic",
     "legal",
     "pricing",

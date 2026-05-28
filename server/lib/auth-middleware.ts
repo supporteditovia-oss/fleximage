@@ -52,7 +52,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         // Only notify if profile was created in the last 2 minutes
         if (profile.generation_count === 0 && now - createdAt < 2 * 60 * 1000) {
           notifyDiscord(
-            `🆕 **Nouvel inscrit !** ${profile.email || userId} vient de rejoindre TurboPrank.`,
+            `🆕 **Nouvel inscrit !** ${profile.email || userId} vient de rejoindre LarpKing.`,
           );
         }
       })

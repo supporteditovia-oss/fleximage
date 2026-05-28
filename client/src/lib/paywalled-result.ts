@@ -1,4 +1,4 @@
-const STORAGE_KEY = "turboprank_paywalled_result";
+const STORAGE_KEY = "larpking_paywalled_result";
 
 export interface PaywalledResult {
   taskId: string;

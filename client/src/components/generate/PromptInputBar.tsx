@@ -54,7 +54,7 @@ export function PromptInputBar({
       <div className="flex flex-col gap-2 w-full max-w-md">
         {/* Free mode: single text input */}
         {!selectedTemplate && (
-          <div className="flex items-center gap-2 md:gap-3 w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+          <div className="flex items-center gap-2 md:gap-3 w-full rounded-lg border border-border/80 bg-white/85 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-foreground/10 transition-all">
             <input
               ref={placeholderRef}
               type="text"
@@ -65,7 +65,7 @@ export function PromptInputBar({
             />
             <button
               onClick={shuffleIdea}
-              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+              className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
               title={t("promptInput.randomIdea")}
             >
               <Shuffle className="w-4 h-4" />
@@ -104,7 +104,7 @@ export function PromptInputBar({
                     {fields.map((field, idx) => (
                       <div
                         key={idx}
-                        className="flex flex-col w-full rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 pt-2 pb-2.5 md:pt-2.5 md:pb-3 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all"
+                        className="flex flex-col w-full rounded-lg border border-border/80 bg-white/85 backdrop-blur px-3 md:px-5 pt-2 pb-2.5 md:pt-2.5 md:pb-3 shadow-sm shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-foreground/10 transition-all"
                       >
                         <span className="text-[10px] font-semibold text-muted-foreground/70 mb-0.5">
                           {field.label ||
@@ -135,7 +135,7 @@ export function PromptInputBar({
                 )}
                 {/* Generate button */}
                 <Button
-                  className="w-full rounded-3xl h-11 text-sm font-semibold shadow-lg shadow-black/5 active:scale-[0.98] transition-transform"
+                  className="w-full rounded-lg h-11 text-sm font-semibold shadow-sm shadow-black/5 active:scale-[0.98] transition-transform"
                   onClick={onGenerate}
                   disabled={isGenerating}
                 >

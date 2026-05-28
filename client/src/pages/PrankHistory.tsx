@@ -491,13 +491,13 @@ export default function PrankHistory() {
                   controls
                   autoPlay
                   playsInline
-                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
+                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-lg object-contain"
                 />
               ) : (
                 <img
                   src={selectedPrank.url}
                   alt={t("history.generatedAlt")}
-                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-2xl object-contain"
+                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-lg object-contain"
                 />
               )}
               {/* Top left — close */}

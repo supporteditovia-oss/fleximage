@@ -46,48 +46,48 @@ body[data-paywall-overlay] .floating-header-credits {
 }
 
 :root {
-  /* Dark SaaS Palette — Cyan/Turquoise */
+  /* LarpKing grayscale palette */
   --font-sans: "DM Sans", sans-serif;
   --font-display: "Outfit", sans-serif;
 
-  --background: 230 60% 2%;
-  --foreground: 180 10% 92%;
+  --background: 0 0% 96%;
+  --foreground: 0 0% 7%;
 
-  --card: 230 40% 5%;
-  --card-foreground: 180 10% 92%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 7%;
 
-  --popover: 230 40% 5%;
-  --popover-foreground: 180 10% 92%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 7%;
 
-  --primary: 173 96% 58%;
-  --primary-foreground: 230 60% 2%;
+  --primary: 0 0% 6%;
+  --primary-foreground: 0 0% 98%;
 
-  --secondary: 172 100% 66%;
-  --secondary-foreground: 230 60% 2%;
+  --secondary: 0 0% 34%;
+  --secondary-foreground: 0 0% 98%;
 
-  --muted: 230 30% 10%;
-  --muted-foreground: 220 10% 55%;
+  --muted: 0 0% 89%;
+  --muted-foreground: 0 0% 38%;
 
-  --accent: 172 100% 66%;
-  --accent-foreground: 230 60% 2%;
+  --accent: 0 0% 84%;
+  --accent-foreground: 0 0% 8%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 20% 14%;
-  --input: 220 20% 14%;
-  --ring: 173 96% 58%;
+  --border: 0 0% 78%;
+  --input: 0 0% 78%;
+  --ring: 0 0% 14%;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  --sidebar-background: 230 50% 4%;
-  --sidebar-foreground: 180 10% 75%;
-  --sidebar-primary: 173 96% 58%;
-  --sidebar-primary-foreground: 230 60% 2%;
-  --sidebar-accent: 230 30% 10%;
-  --sidebar-accent-foreground: 180 10% 92%;
-  --sidebar-border: 220 20% 12%;
-  --sidebar-ring: 173 96% 58%;
+  --sidebar-background: 0 0% 94%;
+  --sidebar-foreground: 0 0% 18%;
+  --sidebar-primary: 0 0% 6%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 88%;
+  --sidebar-accent-foreground: 0 0% 8%;
+  --sidebar-border: 0 0% 76%;
+  --sidebar-ring: 0 0% 14%;
 }
 
 @layer base {
@@ -113,19 +113,21 @@ body[data-paywall-overlay] .floating-header-credits {
 
 @layer utilities {
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-lg;
+    @apply bg-white/70 backdrop-blur-md border border-black/10 shadow-sm;
   }
 
   .dock-nav {
-    @apply rounded-[40px_40px_0_0];
+    @apply rounded-t-lg;
   }
 
   .bg-grid {
+    background-color: hsl(var(--background));
     background-image:
-      linear-gradient(rgba(46, 250, 229, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(46, 250, 229, 0.06) 1px, transparent 1px);
-    background-size: 40px 40px;
-    background-position: 20px 20px;
+      linear-gradient(112deg, rgb(255 255 255 / 0.78) 0 25%, transparent 25% 100%),
+      linear-gradient(74deg, transparent 0 58%, rgb(0 0 0 / 0.035) 58% 72%, transparent 72% 100%),
+      repeating-radial-gradient(circle at 0 0, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 4px);
+    background-size: 100% 100%, 100% 100%, 7px 7px;
+    background-position: 0 0;
   }
 }
 

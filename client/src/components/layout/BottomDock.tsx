@@ -101,7 +101,7 @@ export function BottomDock() {
 
   const dockItemClass = (active: boolean) =>
     cn(
-      "group flex flex-col items-center gap-0.5 px-3 py-1 rounded-2xl text-[11px] font-medium transition-all duration-200 min-w-[56px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5 md:text-xs",
+      "group flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 min-w-[56px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5 md:text-xs",
       active
         ? "text-primary scale-110"
         : "text-muted-foreground hover:text-foreground hover:scale-105",
@@ -109,7 +109,7 @@ export function BottomDock() {
 
   const dockIconClass = (active: boolean) =>
     cn(
-      "flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 md:w-9 md:h-9",
+      "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 md:w-9 md:h-9",
       active ? "bg-primary/10 shadow-sm" : "group-hover:bg-muted/60",
     );
 
@@ -118,7 +118,7 @@ export function BottomDock() {
       "bottom-dock fixed bottom-0 left-0 w-full z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
       hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
     )}>
-      <nav className="w-full md:max-w-[360px] bg-card/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] dock-nav border border-border/50">
+      <nav className="w-full md:max-w-[360px] bg-white/85 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-border/80">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}
           <Link href="/history" className={dockItemClass(isActive("/history"))}>
@@ -148,7 +148,7 @@ export function BottomDock() {
                   "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <div className="flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-2xl transition-all duration-200 group-hover:bg-muted/60">
+                <div className="flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-lg transition-all duration-200 group-hover:bg-muted/60">
                   <Avatar className="h-7 w-7 md:h-6 md:w-6">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
                     <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
@@ -163,17 +163,17 @@ export function BottomDock() {
               side="top"
               align="center"
               sideOffset={12}
-              className="p-1.5 rounded-2xl min-w-[200px] bg-card/95 backdrop-blur-xl border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+              className="p-1.5 rounded-lg min-w-[200px] bg-card/95 backdrop-blur-xl border border-border/80 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
             >
               <DropdownMenuItem
                 asChild
-                className="group/item rounded-xl px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
+                className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
               >
                 <Link
                   href="/settings"
                   className="flex w-full items-center gap-3"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
                     <SettingsIcon className="h-4 w-4" />
                   </div>
                   <span className="font-medium">{t("layout.dock.settings")}</span>
@@ -189,7 +189,7 @@ export function BottomDock() {
                         key={item.href}
                         asChild
                         className={cn(
-                          "group/item rounded-xl px-3 py-2.5 cursor-pointer bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200",
+                          "group/item rounded-lg px-3 py-2.5 cursor-pointer bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200",
                           isActive(item.href)
                             ? "text-primary"
                             : "text-muted-foreground hover:text-foreground focus:text-foreground",
@@ -201,7 +201,7 @@ export function BottomDock() {
                         >
                           <div
                             className={cn(
-                              "flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200",
+                              "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200",
                               isActive(item.href)
                                 ? "bg-primary/10 shadow-sm"
                                 : "bg-transparent group-hover/item:bg-muted/60",
@@ -218,11 +218,11 @@ export function BottomDock() {
               )}
               <div className="my-1 h-px bg-border/40 mx-2" />
               <DropdownMenuItem
-                className="group/item rounded-xl px-3 py-2.5 cursor-pointer text-destructive/70 hover:text-destructive focus:text-destructive bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
+                className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-destructive/70 hover:text-destructive focus:text-destructive bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
                 onClick={() => signOut()}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-transparent transition-all duration-200 group-hover/item:bg-destructive/10">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-destructive/10">
                     <LogOut className="h-4 w-4" />
                   </div>
                   <span className="font-medium">{t("layout.dock.signOut")}</span>

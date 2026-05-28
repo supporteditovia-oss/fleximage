@@ -156,26 +156,26 @@ export function PrankResult({
         {resultUrls.map((url, index) => (
           <div
             key={index}
-            className="relative rounded-2xl overflow-hidden max-h-full flex items-center justify-center"
+            className="relative rounded-lg overflow-hidden max-h-full flex items-center justify-center"
           >
             {resultType === "video" ? (
               <video
                 src={url}
                 controls
                 playsInline
-                className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
+                className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-lg shadow-xl"
               />
             ) : (
               <>
                 <img
                   src={url}
                   alt={t("result.generatedAlt", { index: index + 1 })}
-                  className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-2xl shadow-xl"
+                  className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-lg shadow-xl"
                   loading="lazy"
                 />
                 {/* Bottom gradient with action buttons */}
                 {!hideActions && (
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl">
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg">
                     <button
                       onClick={() => handleDownload(index)}
                       className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"

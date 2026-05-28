@@ -54,7 +54,7 @@ const MarqueeCard = React.memo(function MarqueeCard({
 
   if (!hasBefore) {
     return (
-      <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl overflow-hidden relative bg-muted/30">
+      <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/30">
         <CardImage src={template.example_after_url} alt={template.name} />
         <div className="absolute bottom-2 left-2 right-2 z-10">
           <span
@@ -69,7 +69,7 @@ const MarqueeCard = React.memo(function MarqueeCard({
   }
 
   return (
-    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl overflow-hidden relative bg-muted/30">
+    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/30">
       <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
         <CardImage
           src={template.example_before_url!}
@@ -107,7 +107,7 @@ const MarqueeCard = React.memo(function MarqueeCard({
 
 function PlaceholderCard() {
   return (
-    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-2xl overflow-hidden relative bg-muted/20">
+    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/20">
       <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] bg-muted/20" />
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/10" />
       <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] bg-muted/15" />

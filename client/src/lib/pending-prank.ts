@@ -1,4 +1,4 @@
-const DB_NAME = "turboprank";
+const DB_NAME = "larpking";
 const STORE_NAME = "pending_prank";
 const DB_VERSION = 1;
 const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes

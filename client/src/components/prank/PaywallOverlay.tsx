@@ -9,7 +9,6 @@ import {
   Unlock,
 } from "lucide-react";
 import { authFetch } from "@/lib/api";
-import { posthog } from "@/lib/posthog";
 import { useTranslation } from "react-i18next";
 
 type PaywallPlan = "weekly" | "monthly";
@@ -33,10 +32,6 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
   const [monthlyPranksCount, setMonthlyPranksCount] = useState(12847);
   const { t, i18n } = useTranslation();
-
-  useEffect(() => {
-    posthog.capture("paywall_view", { isFake: !!isFake, default_plan: defaultPlan, selected_plan: defaultPlan });
-  }, [isFake, defaultPlan]);
 
   useEffect(() => {
     setSelectedPlan(defaultPlan);
@@ -89,7 +84,6 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
 
   const handleSubscribe = async () => {
     setIsLoading(true);
-    posthog.capture("checkout_initiated", { isFake: !!isFake, plan: selectedPlan });
     try {
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
@@ -108,10 +102,6 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
   const handlePrimaryAction = () => {
     if (!isChoosingPlan) {
       setIsChoosingPlan(true);
-      posthog.capture("paywall_plan_selection_opened", {
-        isFake: !!isFake,
-        default_plan: defaultPlan,
-      });
       return;
     }
 
@@ -278,7 +268,7 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
   }
 
   return (
-    <div className="relative mx-auto h-[min(92%,620px)] max-h-full min-h-0 w-full max-w-[360px] self-center overflow-hidden rounded-2xl shadow-xl">
+    <div className="relative mx-auto h-[min(92%,620px)] max-h-full min-h-0 w-full max-w-[360px] self-center overflow-hidden rounded-lg shadow-xl">
 
       {/* Watermarked/Blurred image or generic blurred background */}
       {imageUrl ? (

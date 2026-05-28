@@ -84,7 +84,7 @@ export function GenerationLoader({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <div className="relative h-[min(60vh,500px)] md:h-[70vh] aspect-[9/16] rounded-2xl overflow-hidden shadow-xl">
+          <div className="relative h-[min(60vh,500px)] md:h-[70vh] aspect-[9/16] rounded-lg overflow-hidden shadow-xl">
             <motion.img
               src={inputImageUrl}
               alt={t("progress.inputAlt")}
@@ -111,8 +111,8 @@ export function GenerationLoader({
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
             <img
-              src="/assets/turboprank.png"
-              alt="TurboPrank"
+              src="/assets/larpking.png"
+              alt="LarpKing"
               className="h-24 md:h-32 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
             />
             {/* Spinner + Elapsed timer */}

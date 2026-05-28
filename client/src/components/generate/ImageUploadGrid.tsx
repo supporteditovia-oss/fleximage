@@ -41,7 +41,7 @@ export function ImageUploadGrid({
                 {selectedTemplate && i === 0 && (
                   <div className="absolute bottom-full left-0 right-0 pb-2 flex items-end justify-between z-10">
                     <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                      <span className="text-[11px] font-semibold text-muted-foreground/70 uppercase">
                         {t("imageUpload.template")}
                       </span>
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -68,7 +68,7 @@ export function ImageUploadGrid({
                     <img
                       src={img.url}
                       alt={t("imageUpload.imageAlt", { index: i + 1 })}
-                      className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
                     />
                     <button
                       onClick={() => onRemoveSlot(i)}
@@ -81,13 +81,13 @@ export function ImageUploadGrid({
                 ) : (
                   <>
                     {!selectedTemplate && (
-                      <span className="hero-image-slot absolute -inset-[2px] rounded-2xl pointer-events-none" />
+                      <span className="hero-image-slot absolute -inset-[2px] rounded-lg pointer-events-none" />
                     )}
                     {selectedTemplate && (
-                      <span className="hero-image-slot--fast absolute -inset-[2px] rounded-2xl pointer-events-none" />
+                      <span className="hero-image-slot--fast absolute -inset-[2px] rounded-lg pointer-events-none" />
                     )}
 
-                    <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all border-transparent bg-card">
+                    <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all border-foreground/25 bg-white/80">
                       <input
                         type="file"
                         accept="image/*"
@@ -98,7 +98,7 @@ export function ImageUploadGrid({
                         }}
                       />
 
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
                         <Plus className="w-7 h-7 transition-colors text-primary" />
                       </div>
 

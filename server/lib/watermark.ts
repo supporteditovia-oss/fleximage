@@ -9,8 +9,8 @@ async function getLogoBuffer(): Promise<Buffer> {
   if (logoCacheBuffer) return logoCacheBuffer;
 
   const candidates = [
-    path.resolve(process.cwd(), "client/public/assets/turboprank.png"),
-    path.resolve(process.cwd(), "dist/public/assets/turboprank.png"),
+    path.resolve(process.cwd(), "client/public/assets/larpking.png"),
+    path.resolve(process.cwd(), "dist/public/assets/larpking.png"),
   ];
 
   for (const p of candidates) {
@@ -20,7 +20,7 @@ async function getLogoBuffer(): Promise<Buffer> {
     }
   }
 
-  throw new Error("TurboPrank logo not found");
+  throw new Error("LarpKing logo not found");
 }
 
 export async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {

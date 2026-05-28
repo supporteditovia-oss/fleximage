@@ -73,7 +73,7 @@ export default function DebugGenerate() {
 
       {/* Status */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">IndexedDB Status</h2>
+        <h2 className="text-sm font-semibold uppercase text-muted-foreground">IndexedDB Status</h2>
         <div className="flex items-center gap-2">
           <span
             className={`w-3 h-3 rounded-full ${
@@ -89,7 +89,7 @@ export default function DebugGenerate() {
 
       {/* Actions */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Actions</h2>
+        <h2 className="text-sm font-semibold uppercase text-muted-foreground">Actions</h2>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleSaveFake}
@@ -117,7 +117,7 @@ export default function DebugGenerate() {
 
       {/* Logs */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Log</h2>
+        <h2 className="text-sm font-semibold uppercase text-muted-foreground">Log</h2>
         <div className="font-mono text-xs space-y-0.5 max-h-60 overflow-y-auto">
           {logs.length === 0 && <p className="text-muted-foreground">No logs yet...</p>}
           {logs.map((entry, i) => (

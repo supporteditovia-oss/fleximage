@@ -218,7 +218,7 @@ export default function Settings() {
           <div className="space-y-2">
             <Label
               htmlFor="confirm-delete"
-              className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+              className="text-xs font-bold uppercase text-muted-foreground"
             >
               {t("settings.deleteDialog.confirmLabel")}
             </Label>
@@ -284,10 +284,10 @@ export default function Settings() {
 
       {/* Profile section */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-wider px-1">
+        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.profile")}
         </h2>
-        <div className="rounded-2xl border border-border/40 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
+        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
           {/* Name field */}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -315,7 +315,7 @@ export default function Settings() {
                       disabled={
                         form.formState.isSubmitting || !form.formState.isDirty
                       }
-                      className="text-xs text-primary hover:text-primary font-semibold shrink-0 h-auto py-1 px-2"
+                      className="text-xs text-foreground hover:text-foreground font-semibold shrink-0 h-auto py-1 px-2"
                     >
                       {form.formState.isSubmitting ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -360,7 +360,7 @@ export default function Settings() {
                                   <span>
                                     {t(`settings.language.options.${locale}`)}
                                   </span>
-                                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                                  <span className="text-[10px] uppercase text-muted-foreground/70">
                                     {locale}
                                   </span>
                                 </span>
@@ -378,7 +378,7 @@ export default function Settings() {
                       disabled={
                         form.formState.isSubmitting || !form.formState.isDirty
                       }
-                      className="text-xs text-primary hover:text-primary font-semibold shrink-0 h-auto py-1 px-2"
+                      className="text-xs text-foreground hover:text-foreground font-semibold shrink-0 h-auto py-1 px-2"
                     >
                       {form.formState.isSubmitting ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -409,10 +409,10 @@ export default function Settings() {
 
       {/* Subscription section */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-wider px-1">
+        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.subscription")}
         </h2>
-        <div className="rounded-2xl border border-border/40 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
+        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
           <div className="flex items-center gap-3 px-4 py-3.5">
             <Crown className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
             <div className="flex-1 min-w-0">
@@ -465,10 +465,10 @@ export default function Settings() {
 
       {/* Account actions */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-wider px-1">
+        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.account")}
         </h2>
-        <div className="rounded-2xl border border-border/40 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
+        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
           {/* Sign out */}
           <button
             onClick={() => signOut()}

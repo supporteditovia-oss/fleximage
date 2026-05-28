@@ -80,7 +80,7 @@ export function TemplateGallery({
       <motion.div
         animate={{ width: searchOpen ? "100%" : "75%" }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="mx-auto flex items-center gap-2 md:gap-3 rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 focus-within:shadow-lg transition-colors cursor-text"
+        className="mx-auto flex items-center gap-2 md:gap-3 rounded-lg border border-border/80 bg-white/85 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm hover:border-foreground/30 focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-foreground/10 focus-within:shadow-lg transition-colors cursor-text"
         onClick={() => {
           setSearchOpen(true);
           searchInputRef.current?.focus();
@@ -137,7 +137,7 @@ export function TemplateGallery({
               onClick={() =>
                 isSelected ? onDeselectTemplate() : onSelectTemplate(tpl)
               }
-              className="group relative cursor-pointer flex flex-col rounded-xl overflow-hidden bg-muted transition-all hover:shadow-lg hover:-translate-y-0.5"
+              className="group relative cursor-pointer flex flex-col rounded-lg overflow-hidden bg-muted transition-all hover:shadow-lg hover:-translate-y-0.5"
             >
               {/* Favorite star */}
               <button
@@ -152,7 +152,7 @@ export function TemplateGallery({
               >
                 <Star
                   className={`w-3.5 h-3.5 transition-colors ${isFav
-                      ? "fill-yellow-400 text-yellow-400"
+                      ? "fill-white text-white"
                       : "text-white/70 hover:text-white"
                     }`}
                 />
@@ -238,7 +238,7 @@ export function TemplateGallery({
                 <ChevronDown
                   className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${isSelected
                       ? "text-primary"
-                      : "text-muted-foreground/40 group-hover:text-primary"
+                      : "text-muted-foreground/40 group-hover:text-foreground"
                     }`}
                 />
               </div>

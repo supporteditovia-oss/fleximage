@@ -64,20 +64,20 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
           className="pointer-events-auto flex max-w-[42vw] shrink min-w-0 cursor-pointer hover:opacity-80 transition-opacity sm:max-w-[36vw] md:max-w-[260px]"
         >
           <img
-            src="/assets/turboprank.png"
-            alt="TurboPrank"
+            src="/assets/larpking.png"
+            alt="LarpKing"
             className="h-[clamp(2rem,6svh,2.5rem)] w-auto max-w-full object-contain md:h-[clamp(2.25rem,6svh,4rem)]"
           />
         </Link>
 
         {/* Right side */}
         {variant === "app" ? (
-          <div className="floating-header-credits absolute right-0 flex items-center gap-1.5 text-sm font-semibold text-foreground pointer-events-auto rounded-full border border-border/40 bg-card/80 backdrop-blur-xl px-3 py-1.5 shadow-lg shadow-black/10">
+          <div className="floating-header-credits absolute right-0 flex items-center gap-1.5 text-sm font-semibold text-foreground pointer-events-auto rounded-full border border-border/80 bg-white/85 backdrop-blur-xl px-3 py-1.5 shadow-sm shadow-black/10">
             <img src="/assets/jeton.png" alt="Credits" className="w-5 h-5" />
             <span>{profile?.credits ?? 0}</span>
           </div>
         ) : !isLoading && (
-          <div className="absolute right-0 flex items-center gap-3 pointer-events-auto">
+          <div className="absolute right-0 hidden items-center justify-end gap-3 pointer-events-auto sm:flex">
             {user ? (
               <Link href="/app">
                 <Button size="sm" className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform">
@@ -98,7 +98,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 <Link href="/register">
                   <Button
                     size="sm"
-                    className="rounded-full px-3 md:px-5 text-xs md:text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                    className="rounded-full px-5 text-sm font-semibold border-0 bg-primary shadow-none transition-transform active:scale-95 hover:opacity-90"
                   >
                     {t("layout.header.start")}
                   </Button>

@@ -192,13 +192,7 @@ export default function HeroSection() {
 
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
-      {/* Mobile Lightweight Background Glow (no blur) */}
-      <div className="md:hidden absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,_var(--tw-gradient-stops))] from-primary/15 via-secondary/5 to-transparent -z-10 pointer-events-none" />
-
-      {/* Abstract Background Shapes (hidden on mobile to save GPU) */}
-      <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
-      <div className="hidden md:block absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/3 rounded-full blur-3xl -z-10" />
-      <div className="hidden md:block absolute bottom-0 left-0 w-[350px] h-[350px] bg-secondary/2 rounded-full blur-3xl -z-10" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(255,255,255,0.78)_0_28%,transparent_28%_100%),linear-gradient(78deg,transparent_0_62%,rgba(0,0,0,0.04)_62%_76%,transparent_76%_100%)]" />
 
       <motion.div
         variants={containerVariants}
@@ -218,10 +212,10 @@ export default function HeroSection() {
             <div
               role="tablist"
               aria-label="Generation mode"
-              className="relative grid grid-cols-2 rounded-full border border-border/60 bg-muted/40 p-0.5 shadow-sm backdrop-blur-md"
+              className="relative grid grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
             >
               <div
-                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-gradient-to-b from-primary to-primary/85 shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-transform duration-300 ${
+                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-transform duration-300 ${
                   generationMode === "video" ? "translate-x-full" : "translate-x-0"
                 }`}
               />
@@ -270,7 +264,7 @@ export default function HeroSection() {
                       <img
                         src={img.url}
                         alt={t("imageUpload.imageAlt", { index: i + 1 })}
-                        className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+                        className="absolute inset-0 w-full h-full object-cover rounded-lg"
                       />
                       <button
                         onClick={() => removeSlot(i)}
@@ -282,13 +276,13 @@ export default function HeroSection() {
                   ) : (
                     <>
                       {draggedIndex !== i && (
-                        <span className="hero-image-slot absolute -inset-[2px] rounded-2xl pointer-events-none" />
+                        <span className="hero-image-slot absolute -inset-[2px] rounded-lg pointer-events-none" />
                       )}
                     <label
-                      className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 cursor-pointer transition-all ${
+                      className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all ${
                         draggedIndex === i
                           ? "border-primary bg-primary/10 border-solid"
-                          : "border-transparent bg-card"
+                          : "border-foreground/25 bg-white/80"
                       }`}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragLeave={handleDragLeave}
@@ -310,7 +304,7 @@ export default function HeroSection() {
                           </p>
                         ) : (
                           <>
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                               <Plus className="w-7 h-7 text-primary transition-colors" />
                             </div>
                             <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
@@ -322,7 +316,7 @@ export default function HeroSection() {
                         draggedIndex === i ? (
                           <p className="text-xs font-semibold text-primary">👇</p>
                         ) : (
-                          <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <Plus className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors" />
                         )
                       )}
                     </label>
@@ -338,7 +332,7 @@ export default function HeroSection() {
             variants={itemVariants}
             className="relative z-10 w-full flex justify-center px-4"
           >
-            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-3xl border border-border/40 bg-card/90 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-lg shadow-black/5 hover:border-border/60 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-lg border border-border/80 bg-white/85 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-foreground/10 transition-all">
               <input
                 ref={typewriterRef}
                 type="text"
@@ -349,13 +343,13 @@ export default function HeroSection() {
               />
               <button
                 onClick={shuffleIdea}
-                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 active:scale-90 transition-all"
+                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
                 title={t("hero.randomIdea")}
               >
                 <Shuffle className="w-4 h-4" />
               </button>
               <button
-                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-black bg-gradient-to-r from-primary to-secondary active:scale-95 transition-all"
+                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all"
                 onClick={handleSubmit}
                 title={t("hero.create")}
               >
@@ -378,7 +372,7 @@ export default function HeroSection() {
           >
             <button
               onClick={() => setAccordionOpen(!accordionOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/40 bg-card/90 backdrop-blur text-sm font-semibold text-foreground hover:border-secondary/50 hover:text-secondary active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/80 bg-white/85 backdrop-blur text-sm font-semibold text-foreground hover:border-foreground/40 hover:text-foreground active:scale-95 transition-all"
             >
               <Sparkles className="w-4 h-4" />
               {t("hero.prankIdeas")}
@@ -398,7 +392,7 @@ export default function HeroSection() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="p-3 rounded-2xl border border-border/40 bg-card shadow-xl"
+                  className="p-3 rounded-lg border border-border/80 bg-card shadow-xl"
                 >
                   <div className="grid grid-cols-3 gap-1.5">
                     {prankChips.map((chip) => {
@@ -410,7 +404,7 @@ export default function HeroSection() {
                             setPrompt(chip.example);
                             setAccordionOpen(false);
                           }}
-                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/40 bg-card hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/80 bg-card hover:border-foreground/40 hover:bg-muted text-foreground text-xs font-medium transition-all focus:outline-none"
                         >
                           <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate">{chip.label}</span>
@@ -437,7 +431,7 @@ export default function HeroSection() {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute bottom-0 left-0 right-0 bg-card rounded-t-[20px] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
+                className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
               >
                 <div className="flex justify-center mb-3">
                   <div className="w-10 h-1 rounded-full bg-muted" />
@@ -453,7 +447,7 @@ export default function HeroSection() {
                           setPrompt(chip.example);
                           setAccordionOpen(false);
                         }}
-                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-border bg-card hover:border-secondary/50 hover:bg-secondary/5 text-foreground text-xs font-medium transition-all focus:outline-none"
+                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-border bg-card hover:border-foreground/40 hover:bg-muted text-foreground text-xs font-medium transition-all focus:outline-none"
                       >
                         <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                         <span className="truncate">{chip.label}</span>

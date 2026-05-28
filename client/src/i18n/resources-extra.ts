@@ -148,15 +148,15 @@ export const extraResources = {
       titlePrefix: "Questions",
       titleGradient: "fréquentes",
       items: {
-        turboprankQ: "C'est quoi TurboPrank ?",
-        turboprankA:
-          "TurboPrank est un outil qui utilise l'IA pour générer des images de pranks hyper réalistes en quelques secondes. Upload ta photo, décris ton idée, et l'IA fait le reste.",
+        larpkingQ: "C'est quoi LarpKing ?",
+        larpkingA:
+          "LarpKing est un outil qui utilise l'IA pour générer des images de pranks hyper réalistes en quelques secondes. Upload ta photo, décris ton idée, et l'IA fait le reste.",
         realisticQ: "Les images générées sont-elles réalistes ?",
         realisticA:
           "Oui, notre IA est entraînée pour produire des résultats très convaincants. Parfait pour faire des blagues à tes proches !",
         legalQ: "C'est légal ?",
         legalA:
-          "TurboPrank est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
+          "LarpKing est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
         pricingQ: "Combien ça coûte ?",
         pricingA:
           "Tu peux créer tes premiers pranks gratuitement. Des crédits supplémentaires sont disponibles via nos forfaits accessibles.",
@@ -179,7 +179,7 @@ export const extraResources = {
       cgu: "CGU",
       cgv: "CGV",
       privacy: "Confidentialité",
-      copyright: "© {{year}} TurboPRANK. Tous droits réservés.",
+      copyright: "© {{year}} LARPKING. Tous droits réservés.",
     },
     marquee: {
       before: "Avant",
@@ -348,15 +348,15 @@ export const extraResources = {
       titlePrefix: "Frequently",
       titleGradient: "asked questions",
       items: {
-        turboprankQ: "What is TurboPrank?",
-        turboprankA:
-          "TurboPrank is an AI tool that generates realistic prank images in seconds. Upload your photo, describe your idea, and the AI does the rest.",
+        larpkingQ: "What is LarpKing?",
+        larpkingA:
+          "LarpKing is an AI tool that generates realistic prank images in seconds. Upload your photo, describe your idea, and the AI does the rest.",
         realisticQ: "Are generated images realistic?",
         realisticA:
           "Yes. Our AI is trained to produce highly convincing results. Perfect for fun pranks with friends.",
         legalQ: "Is it legal?",
         legalA:
-          "TurboPrank is made for fun between friends. Harassment, defamation, fraud, or abuse are strictly prohibited and against our terms.",
+          "LarpKing is made for fun between friends. Harassment, defamation, fraud, or abuse are strictly prohibited and against our terms.",
         pricingQ: "How much does it cost?",
         pricingA:
           "You can create your first pranks for free. Additional credits are available through affordable plans.",
@@ -379,7 +379,7 @@ export const extraResources = {
       cgu: "Terms",
       cgv: "Sales terms",
       privacy: "Privacy",
-      copyright: "© {{year}} TurboPRANK. All rights reserved.",
+      copyright: "© {{year}} LARPKING. All rights reserved.",
     },
     marquee: {
       before: "Before",
@@ -548,15 +548,15 @@ export const extraResources = {
       titlePrefix: "Preguntas",
       titleGradient: "frecuentes",
       items: {
-        turboprankQ: "Que es TurboPrank?",
-        turboprankA:
-          "TurboPrank es una herramienta de IA que genera imagenes de bromas realistas en segundos. Sube tu foto, describe tu idea y la IA hace el resto.",
+        larpkingQ: "Que es LarpKing?",
+        larpkingA:
+          "LarpKing es una herramienta de IA que genera imagenes de bromas realistas en segundos. Sube tu foto, describe tu idea y la IA hace el resto.",
         realisticQ: "Las imagenes generadas son realistas?",
         realisticA:
           "Si. Nuestra IA esta entrenada para producir resultados convincentes. Perfecto para bromas entre amigos.",
         legalQ: "Es legal?",
         legalA:
-          "TurboPrank esta pensado para diversion entre amigos. El acoso, la difamacion, el fraude o usos maliciosos estan estrictamente prohibidos.",
+          "LarpKing esta pensado para diversion entre amigos. El acoso, la difamacion, el fraude o usos maliciosos estan estrictamente prohibidos.",
         pricingQ: "Cuanto cuesta?",
         pricingA:
           "Puedes crear tus primeras bromas gratis. Hay creditos adicionales disponibles en nuestros planes.",
@@ -579,7 +579,7 @@ export const extraResources = {
       cgu: "Terminos",
       cgv: "Condiciones de venta",
       privacy: "Privacidad",
-      copyright: "© {{year}} TurboPRANK. Todos los derechos reservados.",
+      copyright: "© {{year}} LARPKING. Todos los derechos reservados.",
     },
     marquee: {
       before: "Antes",
@@ -748,15 +748,15 @@ export const extraResources = {
       titlePrefix: "Haufige",
       titleGradient: "Fragen",
       items: {
-        turboprankQ: "Was ist TurboPrank?",
-        turboprankA:
-          "TurboPrank ist ein KI-Tool, das in Sekunden realistische Streichbilder erstellt. Lade dein Foto hoch, beschreibe deine Idee und die KI erledigt den Rest.",
+        larpkingQ: "Was ist LarpKing?",
+        larpkingA:
+          "LarpKing ist ein KI-Tool, das in Sekunden realistische Streichbilder erstellt. Lade dein Foto hoch, beschreibe deine Idee und die KI erledigt den Rest.",
         realisticQ: "Sind die Ergebnisse realistisch?",
         realisticA:
           "Ja. Unsere KI ist auf ueberzeugende Ergebnisse trainiert. Perfekt fuer harmlose Streiche mit Freunden.",
         legalQ: "Ist das legal?",
         legalA:
-          "TurboPrank ist fuer Unterhaltung gedacht. Belaestigung, Verleumdung, Betrug oder missbrauchende Nutzung sind strikt verboten.",
+          "LarpKing ist fuer Unterhaltung gedacht. Belaestigung, Verleumdung, Betrug oder missbrauchende Nutzung sind strikt verboten.",
         pricingQ: "Was kostet es?",
         pricingA:
           "Du kannst deine ersten Streiche kostenlos erstellen. Weitere Credits gibt es ueber unsere Pakete.",
@@ -779,7 +779,7 @@ export const extraResources = {
       cgu: "Nutzungsbedingungen",
       cgv: "Verkaufsbedingungen",
       privacy: "Datenschutz",
-      copyright: "© {{year}} TurboPRANK. Alle Rechte vorbehalten.",
+      copyright: "© {{year}} LARPKING. Alle Rechte vorbehalten.",
     },
     marquee: {
       before: "Vorher",

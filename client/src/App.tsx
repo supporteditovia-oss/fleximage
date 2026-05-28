@@ -98,13 +98,9 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/confidentialite": "meta:titles.privacy",
 };
 
-import { PostHogProvider, usePostHog } from "posthog-js/react";
-import { posthog } from "@/lib/posthog";
-
 function Router() {
   const { user, profile } = useAuth();
   const [location] = useLocation();
-  const posthogInstance = usePostHog();
   const { t, i18n } = useTranslation();
 
   React.useEffect(() => {
@@ -185,13 +181,7 @@ function Router() {
 
   React.useEffect(() => {
     document.title = t(PAGE_TITLE_KEYS[location] || "meta:appName");
-    if (posthogInstance) {
-      posthogInstance.capture("$pageview");
-      if (location === AUTH_CONFIG.LANDING_PATH) {
-        posthogInstance.capture("landing_page_view");
-      }
-    }
-  }, [location, posthogInstance, t]);
+  }, [location, t]);
 
   return (
     <Switch>
@@ -249,16 +239,14 @@ function Router() {
 
 function App() {
   return (
-    <PostHogProvider client={posthog}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Router />
-            <Toaster />
-          </TooltipProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </PostHogProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -45,7 +45,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objet",
             paragraphs: [
-              "Les presentes Conditions Generales d'Utilisation (CGU) definissent les modalites d'utilisation du service TurboPrank, accessible sur turboprank.com.",
+              "Les presentes Conditions Generales d'Utilisation (CGU) definissent les modalites d'utilisation du service LarpKing, accessible sur larpking.fr.",
               "Le service est edite par GUS, auto-entrepreneur (SIRET : 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, France.",
             ],
           },
@@ -53,7 +53,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Acceptation des CGU",
             paragraphs: [
-              "L'inscription a TurboPrank implique l'acceptation pleine et entiere des presentes CGU.",
+              "L'inscription a LarpKing implique l'acceptation pleine et entiere des presentes CGU.",
               "En utilisant le service, vous reconnaissez avoir lu ces conditions et les accepter sans reserve.",
             ],
           },
@@ -61,7 +61,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Description du service",
             paragraphs: [
-              "TurboPrank est un service en ligne de generation d'images par intelligence artificielle a vocation humoristique.",
+              "LarpKing est un service en ligne de generation d'images par intelligence artificielle a vocation humoristique.",
               "Le service propose une premiere generation gratuite avec filigrane. L'acces aux images sans filigrane et aux fonctions avancees est soumis a un abonnement payant (voir CGV).",
             ],
           },
@@ -70,7 +70,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Inscription et compte utilisateur",
             paragraphs: [
               "L'acces au service necessite la creation d'un compte. L'utilisateur s'engage a fournir des informations exactes et a conserver ses identifiants de maniere confidentielle.",
-              "L'utilisateur peut supprimer son compte a tout moment depuis ses parametres ou en contactant prankturbo@gmail.com.",
+              "L'utilisateur peut supprimer son compte a tout moment depuis ses parametres ou en contactant contact@larpking.fr.",
             ],
           },
           {
@@ -111,7 +111,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Propriete intellectuelle",
             paragraphs: [
-              "Le service TurboPrank, son interface, ses textes, graphismes et logiciels sont proteges par les lois relatives a la propriete intellectuelle.",
+              "Le service LarpKing, son interface, ses textes, graphismes et logiciels sont proteges par les lois relatives a la propriete intellectuelle.",
               "L'utilisateur conserve les droits sur les contenus qu'il soumet, sous reserve de respecter les presentes CGU et la legislation applicable.",
             ],
           },
@@ -152,7 +152,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contact",
             paragraphs: [
-              "Pour toute question relative aux presentes CGU, contactez-nous a : prankturbo@gmail.com.",
+              "Pour toute question relative aux presentes CGU, contactez-nous a : contact@larpking.fr.",
             ],
           },
         ],
@@ -164,7 +164,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objet",
             paragraphs: [
-              "Les presentes Conditions Generales de Vente (CGV) regissent la souscription et l'utilisation des services payants TurboPrank.",
+              "Les presentes Conditions Generales de Vente (CGV) regissent la souscription et l'utilisation des services payants LarpKing.",
               "Le service est edite par GUS, auto-entrepreneur (SIRET : 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, France.",
             ],
           },
@@ -196,7 +196,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "4",
             title: "4. Modalites de souscription",
             paragraphs: [
-              "La souscription s'effectue en ligne sur turboprank.com. Le paiement est securise via Stripe (PCI-DSS).",
+              "La souscription s'effectue en ligne sur larpking.fr. Le paiement est securise via Stripe (PCI-DSS).",
               "L'abonnement est renouvele automatiquement selon la periode choisie : chaque semaine ou chaque mois.",
             ],
           },
@@ -212,7 +212,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Resiliation",
             paragraphs: [
-              "L'utilisateur peut resilier son abonnement a tout moment depuis ses parametres ou par email a prankturbo@gmail.com.",
+              "L'utilisateur peut resilier son abonnement a tout moment depuis ses parametres ou par email a contact@larpking.fr.",
               "La resiliation prend effet a la fin de la periode en cours. Aucun remboursement au prorata n'est effectue.",
             ],
           },
@@ -220,7 +220,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Remboursements",
             paragraphs: [
-              "Les demandes de remboursement peuvent etre adressees a prankturbo@gmail.com dans les 14 jours suivant la souscription, sous reserve qu'aucun credit n'ait ete consomme.",
+              "Les demandes de remboursement peuvent etre adressees a contact@larpking.fr dans les 14 jours suivant la souscription, sous reserve qu'aucun credit n'ait ete consomme.",
               "Chaque demande est etudiee au cas par cas.",
             ],
           },
@@ -236,7 +236,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "9",
             title: "9. Service client",
             paragraphs: [
-              "Pour toute question sur l'abonnement, la facturation ou un remboursement, contactez : prankturbo@gmail.com.",
+              "Pour toute question sur l'abonnement, la facturation ou un remboursement, contactez : contact@larpking.fr.",
               "Nous nous engageons a repondre sous 48 heures.",
             ],
           },
@@ -270,7 +270,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Adresse",
                 text: "11 rue de Bourgogne, 38000 Grenoble, France",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -278,7 +278,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Donnees collectees",
             paragraphs: [
-              "Dans le cadre du service TurboPrank, nous collectons :",
+              "Dans le cadre du service LarpKing, nous collectons :",
             ],
             bullets: [
               {
@@ -304,7 +304,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Finalites du traitement",
             bullets: [
-              { text: "Fourniture et gestion du service TurboPrank" },
+              { text: "Fourniture et gestion du service LarpKing" },
               { text: "Gestion des comptes utilisateurs" },
               { text: "Traitement des paiements et des abonnements" },
               { text: "Amelioration du service et de l'experience utilisateur" },
@@ -371,7 +371,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Cookies",
             paragraphs: [
-              "TurboPrank utilise uniquement des cookies necessaires au fonctionnement du service (authentification, session).",
+              "LarpKing utilise uniquement des cookies necessaires au fonctionnement du service (authentification, session).",
               "Aucun cookie publicitaire n'est utilise.",
             ],
           },
@@ -397,7 +397,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bulletStyle: "disc",
             paragraphs: [
-              "Pour exercer ces droits : prankturbo@gmail.com. Reponse sous 30 jours.",
+              "Pour exercer ces droits : contact@larpking.fr. Reponse sous 30 jours.",
               "Vous pouvez aussi deposer une reclamation aupres de la CNIL : cnil.fr.",
             ],
           },
@@ -420,7 +420,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contact",
             paragraphs: [
-              "Pour toute question relative a la protection des donnees : prankturbo@gmail.com.",
+              "Pour toute question relative a la protection des donnees : contact@larpking.fr.",
             ],
           },
         ],
@@ -432,7 +432,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Editeur du site",
             paragraphs: [
-              "Le site turboprank.com est edite par :",
+              "Le site larpking.fr est edite par :",
             ],
             bullets: [
               { label: "Nom", text: "GUS" },
@@ -445,7 +445,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Adresse",
                 text: "11 rue de Bourgogne, 38000 Grenoble, France",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -453,7 +453,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Directeur de la publication",
             paragraphs: [
-              "Le directeur de la publication est GUS, joignable a l'adresse prankturbo@gmail.com.",
+              "Le directeur de la publication est GUS, joignable a l'adresse contact@larpking.fr.",
             ],
           },
           {
@@ -490,7 +490,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Contact",
             paragraphs: [
-              "Pour toute question relative aux mentions legales : prankturbo@gmail.com.",
+              "Pour toute question relative aux mentions legales : contact@larpking.fr.",
             ],
           },
         ],
@@ -508,7 +508,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Purpose",
             paragraphs: [
-              "These Terms of Use define the conditions for using TurboPrank, available at turboprank.com.",
+              "These Terms of Use define the conditions for using LarpKing, available at larpking.fr.",
               "The service is operated by GUS, sole proprietor (SIRET: 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, France.",
             ],
           },
@@ -524,7 +524,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Service description",
             paragraphs: [
-              "TurboPrank is an online AI image generation service intended for humor and entertainment.",
+              "LarpKing is an online AI image generation service intended for humor and entertainment.",
               "The first generation can be free with a watermark. Access to unwatermarked images and advanced features requires a paid subscription (see Sales Terms).",
             ],
           },
@@ -533,7 +533,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Account registration",
             paragraphs: [
               "Access requires an account. You must provide accurate information and keep your credentials confidential.",
-              "You may delete your account at any time from settings or by contacting prankturbo@gmail.com.",
+              "You may delete your account at any time from settings or by contacting contact@larpking.fr.",
             ],
           },
           {
@@ -574,7 +574,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Intellectual property",
             paragraphs: [
-              "TurboPrank's interface, software, texts, and graphics are protected by intellectual property laws.",
+              "LarpKing's interface, software, texts, and graphics are protected by intellectual property laws.",
               "You keep ownership of submitted content, subject to compliance with these Terms and applicable law.",
             ],
           },
@@ -615,7 +615,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contact",
             paragraphs: [
-              "For questions about these Terms, contact: prankturbo@gmail.com.",
+              "For questions about these Terms, contact: contact@larpking.fr.",
             ],
           },
         ],
@@ -627,7 +627,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Purpose",
             paragraphs: [
-              "These Sales Terms govern subscription and use of TurboPrank paid services.",
+              "These Sales Terms govern subscription and use of LarpKing paid services.",
               "The service is operated by GUS, sole proprietor (SIRET: 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, France.",
             ],
           },
@@ -657,7 +657,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "4",
             title: "4. Subscription terms",
             paragraphs: [
-              "Subscription is made online on turboprank.com. Payments are secured by Stripe (PCI-DSS).",
+              "Subscription is made online on larpking.fr. Payments are secured by Stripe (PCI-DSS).",
               "The subscription renews automatically according to the selected billing period: weekly or monthly.",
             ],
           },
@@ -673,7 +673,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Cancellation",
             paragraphs: [
-              "You can cancel anytime from account settings or by email at prankturbo@gmail.com.",
+              "You can cancel anytime from account settings or by email at contact@larpking.fr.",
               "Cancellation takes effect at the end of the current billing period. No prorated refund is provided.",
             ],
           },
@@ -681,7 +681,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Refunds",
             paragraphs: [
-              "Refund requests can be sent to prankturbo@gmail.com within 14 days from subscription, provided no credits were used.",
+              "Refund requests can be sent to contact@larpking.fr within 14 days from subscription, provided no credits were used.",
               "Each request is reviewed case by case.",
             ],
           },
@@ -697,7 +697,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "9",
             title: "9. Customer support",
             paragraphs: [
-              "For subscription, billing, or refund questions, contact: prankturbo@gmail.com.",
+              "For subscription, billing, or refund questions, contact: contact@larpking.fr.",
               "We aim to answer within 48 hours.",
             ],
           },
@@ -726,7 +726,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Address",
                 text: "11 rue de Bourgogne, 38000 Grenoble, France",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -757,7 +757,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Processing purposes",
             bullets: [
-              { text: "Providing and operating TurboPrank" },
+              { text: "Providing and operating LarpKing" },
               { text: "Managing user accounts" },
               { text: "Processing payments and subscriptions" },
               { text: "Improving service quality and user experience" },
@@ -822,7 +822,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Cookies",
             paragraphs: [
-              "TurboPrank only uses cookies strictly necessary for service operation (authentication and session).",
+              "LarpKing only uses cookies strictly necessary for service operation (authentication and session).",
               "No advertising cookies are used.",
             ],
           },
@@ -848,7 +848,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bulletStyle: "disc",
             paragraphs: [
-              "To exercise your rights: prankturbo@gmail.com. We respond within 30 days.",
+              "To exercise your rights: contact@larpking.fr. We respond within 30 days.",
               "You can also file a complaint with the CNIL: cnil.fr.",
             ],
           },
@@ -871,7 +871,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contact",
             paragraphs: [
-              "For any privacy question, contact: prankturbo@gmail.com.",
+              "For any privacy question, contact: contact@larpking.fr.",
             ],
           },
         ],
@@ -882,7 +882,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "1",
             title: "1. Website publisher",
-            paragraphs: ["The website turboprank.com is published by:"],
+            paragraphs: ["The website larpking.fr is published by:"],
             bullets: [
               { label: "Name", text: "GUS" },
               { label: "Status", text: "Sole proprietor" },
@@ -891,7 +891,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Address",
                 text: "11 rue de Bourgogne, 38000 Grenoble, France",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -899,7 +899,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Publication director",
             paragraphs: [
-              "The publication director is GUS, reachable at prankturbo@gmail.com.",
+              "The publication director is GUS, reachable at contact@larpking.fr.",
             ],
           },
           {
@@ -936,7 +936,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Contact",
             paragraphs: [
-              "For any legal notice question, contact: prankturbo@gmail.com.",
+              "For any legal notice question, contact: contact@larpking.fr.",
             ],
           },
         ],
@@ -954,7 +954,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objeto",
             paragraphs: [
-              "Estas Condiciones Generales de Uso regulan el uso de TurboPrank, disponible en turboprank.com.",
+              "Estas Condiciones Generales de Uso regulan el uso de LarpKing, disponible en larpking.fr.",
               "El servicio es operado por GUS, autonomo (SIRET: 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, Francia.",
             ],
           },
@@ -962,7 +962,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Aceptacion",
             paragraphs: [
-              "El registro en TurboPrank implica la aceptacion plena de estas condiciones.",
+              "El registro en LarpKing implica la aceptacion plena de estas condiciones.",
               "Al usar el servicio, confirmas que has leido y aceptado estas condiciones.",
             ],
           },
@@ -970,7 +970,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Descripcion del servicio",
             paragraphs: [
-              "TurboPrank es un servicio online de generacion de imagenes con IA para entretenimiento.",
+              "LarpKing es un servicio online de generacion de imagenes con IA para entretenimiento.",
               "La primera generacion puede ser gratuita con marca de agua. El acceso sin marca y funciones avanzadas requiere suscripcion de pago.",
             ],
           },
@@ -979,7 +979,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Cuenta de usuario",
             paragraphs: [
               "Para usar el servicio debes crear una cuenta y proporcionar datos correctos.",
-              "Puedes eliminar tu cuenta en cualquier momento desde ajustes o escribiendo a prankturbo@gmail.com.",
+              "Puedes eliminar tu cuenta en cualquier momento desde ajustes o escribiendo a contact@larpking.fr.",
             ],
           },
           {
@@ -1020,7 +1020,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Propiedad intelectual",
             paragraphs: [
-              "La interfaz, software y contenidos de TurboPrank estan protegidos por leyes de propiedad intelectual.",
+              "La interfaz, software y contenidos de LarpKing estan protegidos por leyes de propiedad intelectual.",
               "El usuario conserva sus derechos sobre los contenidos enviados, respetando estas condiciones y la ley.",
             ],
           },
@@ -1061,7 +1061,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contacto",
             paragraphs: [
-              "Para cualquier consulta sobre estas condiciones: prankturbo@gmail.com.",
+              "Para cualquier consulta sobre estas condiciones: contact@larpking.fr.",
             ],
           },
         ],
@@ -1073,7 +1073,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objeto",
             paragraphs: [
-              "Estas Condiciones de Venta regulan la suscripcion y uso de los servicios de pago de TurboPrank.",
+              "Estas Condiciones de Venta regulan la suscripcion y uso de los servicios de pago de LarpKing.",
               "El servicio es operado por GUS, autonomo (SIRET: 100 452 200 00015), Grenoble, Francia.",
             ],
           },
@@ -1103,7 +1103,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "4",
             title: "4. Suscripcion",
             paragraphs: [
-              "La suscripcion se realiza online en turboprank.com. El pago se procesa de forma segura por Stripe (PCI-DSS).",
+              "La suscripcion se realiza online en larpking.fr. El pago se procesa de forma segura por Stripe (PCI-DSS).",
               "La suscripcion se renueva automaticamente segun el periodo elegido: semanal o mensual.",
             ],
           },
@@ -1119,7 +1119,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Cancelacion",
             paragraphs: [
-              "Puedes cancelar en cualquier momento desde ajustes o por email a prankturbo@gmail.com.",
+              "Puedes cancelar en cualquier momento desde ajustes o por email a contact@larpking.fr.",
               "La cancelacion surte efecto al final del periodo actual. No hay reembolso prorrateado.",
             ],
           },
@@ -1143,7 +1143,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "9",
             title: "9. Atencion al cliente",
             paragraphs: [
-              "Para dudas sobre suscripcion, facturacion o reembolsos: prankturbo@gmail.com.",
+              "Para dudas sobre suscripcion, facturacion o reembolsos: contact@larpking.fr.",
               "Objetivo de respuesta: 48 horas.",
             ],
           },
@@ -1172,7 +1172,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Direccion",
                 text: "11 rue de Bourgogne, 38000 Grenoble, Francia",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -1203,7 +1203,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Finalidades",
             bullets: [
-              { text: "Prestar y gestionar TurboPrank" },
+              { text: "Prestar y gestionar LarpKing" },
               { text: "Gestionar cuentas de usuario" },
               { text: "Procesar pagos y suscripciones" },
               { text: "Mejorar el servicio y la experiencia" },
@@ -1268,7 +1268,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Cookies",
             paragraphs: [
-              "TurboPrank solo usa cookies necesarias para autenticacion y sesion.",
+              "LarpKing solo usa cookies necesarias para autenticacion y sesion.",
               "No se usan cookies publicitarias.",
             ],
           },
@@ -1294,7 +1294,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bulletStyle: "disc",
             paragraphs: [
-              "Para ejercer tus derechos: prankturbo@gmail.com. Respondemos en 30 dias.",
+              "Para ejercer tus derechos: contact@larpking.fr. Respondemos en 30 dias.",
               "Tambien puedes reclamar ante la CNIL: cnil.fr.",
             ],
           },
@@ -1317,7 +1317,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Contacto",
             paragraphs: [
-              "Para cualquier consulta sobre privacidad: prankturbo@gmail.com.",
+              "Para cualquier consulta sobre privacidad: contact@larpking.fr.",
             ],
           },
         ],
@@ -1328,7 +1328,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "1",
             title: "1. Editor del sitio",
-            paragraphs: ["El sitio turboprank.com es editado por:"],
+            paragraphs: ["El sitio larpking.fr es editado por:"],
             bullets: [
               { label: "Nombre", text: "GUS" },
               { label: "Estado", text: "Autonomo" },
@@ -1337,7 +1337,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Direccion",
                 text: "11 rue de Bourgogne, 38000 Grenoble, Francia",
               },
-              { label: "Email", text: "prankturbo@gmail.com" },
+              { label: "Email", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -1345,7 +1345,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Director de publicacion",
             paragraphs: [
-              "El director de publicacion es GUS, contacto: prankturbo@gmail.com.",
+              "El director de publicacion es GUS, contacto: contact@larpking.fr.",
             ],
           },
           {
@@ -1382,7 +1382,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Contacto",
             paragraphs: [
-              "Para cualquier consulta legal: prankturbo@gmail.com.",
+              "Para cualquier consulta legal: contact@larpking.fr.",
             ],
           },
         ],
@@ -1400,7 +1400,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Gegenstand",
             paragraphs: [
-              "Diese Nutzungsbedingungen regeln die Nutzung von TurboPrank auf turboprank.com.",
+              "Diese Nutzungsbedingungen regeln die Nutzung von LarpKing auf larpking.fr.",
               "Der Dienst wird betrieben von GUS, Einzelunternehmer (SIRET: 100 452 200 00015), 11 rue de Bourgogne, 38000 Grenoble, Frankreich.",
             ],
           },
@@ -1408,7 +1408,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Annahme",
             paragraphs: [
-              "Die Registrierung bei TurboPrank setzt die vollstandige Annahme dieser Bedingungen voraus.",
+              "Die Registrierung bei LarpKing setzt die vollstandige Annahme dieser Bedingungen voraus.",
               "Mit der Nutzung bestaetigst du, dass du diese Bedingungen gelesen und akzeptiert hast.",
             ],
           },
@@ -1416,7 +1416,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Leistungsbeschreibung",
             paragraphs: [
-              "TurboPrank ist ein Online-Dienst zur KI-Bildgenerierung fur humoristische Zwecke.",
+              "LarpKing ist ein Online-Dienst zur KI-Bildgenerierung fur humoristische Zwecke.",
               "Eine erste Generierung kann kostenlos mit Wasserzeichen erfolgen. Zugriff ohne Wasserzeichen und auf erweiterte Funktionen erfordert ein kostenpflichtiges Abonnement.",
             ],
           },
@@ -1425,7 +1425,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "4. Benutzerkonto",
             paragraphs: [
               "Die Nutzung erfordert ein Konto. Nutzer mussen korrekte Angaben machen und Zugangsdaten vertraulich behandeln.",
-              "Das Konto kann jederzeit in den Einstellungen oder per E-Mail an prankturbo@gmail.com geloscht werden.",
+              "Das Konto kann jederzeit in den Einstellungen oder per E-Mail an contact@larpking.fr geloscht werden.",
             ],
           },
           {
@@ -1466,7 +1466,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Geistiges Eigentum",
             paragraphs: [
-              "Oberflache, Software und Inhalte von TurboPrank sind urheberrechtlich geschutzt.",
+              "Oberflache, Software und Inhalte von LarpKing sind urheberrechtlich geschutzt.",
               "Nutzer behalten Rechte an eingereichten Inhalten, sofern diese Bedingungen und geltendes Recht eingehalten werden.",
             ],
           },
@@ -1507,7 +1507,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Kontakt",
             paragraphs: [
-              "Bei Fragen zu diesen Bedingungen: prankturbo@gmail.com.",
+              "Bei Fragen zu diesen Bedingungen: contact@larpking.fr.",
             ],
           },
         ],
@@ -1519,7 +1519,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Gegenstand",
             paragraphs: [
-              "Diese Verkaufsbedingungen regeln Abschluss und Nutzung kostenpflichtiger TurboPrank-Dienste.",
+              "Diese Verkaufsbedingungen regeln Abschluss und Nutzung kostenpflichtiger LarpKing-Dienste.",
               "Der Dienst wird von GUS betrieben (SIRET: 100 452 200 00015), Grenoble, Frankreich.",
             ],
           },
@@ -1549,7 +1549,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "4",
             title: "4. Abschluss",
             paragraphs: [
-              "Der Abschluss erfolgt online auf turboprank.com. Zahlungen werden uber Stripe (PCI-DSS) sicher verarbeitet.",
+              "Der Abschluss erfolgt online auf larpking.fr. Zahlungen werden uber Stripe (PCI-DSS) sicher verarbeitet.",
               "Das Abo verlangert sich automatisch je nach gewahltem Abrechnungszeitraum: wochentlich oder monatlich.",
             ],
           },
@@ -1565,7 +1565,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Kundigung",
             paragraphs: [
-              "Eine Kundigung ist jederzeit uber die Einstellungen oder per E-Mail an prankturbo@gmail.com moglich.",
+              "Eine Kundigung ist jederzeit uber die Einstellungen oder per E-Mail an contact@larpking.fr moglich.",
               "Sie wird zum Ende des laufenden Abrechnungszeitraums wirksam. Eine anteilige Erstattung erfolgt nicht.",
             ],
           },
@@ -1589,7 +1589,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "9",
             title: "9. Kundendienst",
             paragraphs: [
-              "Bei Fragen zu Abo, Rechnung oder Erstattung: prankturbo@gmail.com.",
+              "Bei Fragen zu Abo, Rechnung oder Erstattung: contact@larpking.fr.",
               "Antwortziel: innerhalb von 48 Stunden.",
             ],
           },
@@ -1618,7 +1618,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Adresse",
                 text: "11 rue de Bourgogne, 38000 Grenoble, Frankreich",
               },
-              { label: "E-Mail", text: "prankturbo@gmail.com" },
+              { label: "E-Mail", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -1649,7 +1649,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "3",
             title: "3. Verarbeitungszwecke",
             bullets: [
-              { text: "Bereitstellung und Betrieb von TurboPrank" },
+              { text: "Bereitstellung und Betrieb von LarpKing" },
               { text: "Verwaltung von Benutzerkonten" },
               { text: "Zahlungs- und Aboverwaltung" },
               { text: "Verbesserung von Dienst und Nutzererlebnis" },
@@ -1716,7 +1716,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "7",
             title: "7. Cookies",
             paragraphs: [
-              "TurboPrank verwendet nur technisch notwendige Cookies fur Authentifizierung und Sitzung.",
+              "LarpKing verwendet nur technisch notwendige Cookies fur Authentifizierung und Sitzung.",
               "Es werden keine Werbe-Cookies eingesetzt.",
             ],
           },
@@ -1742,7 +1742,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             ],
             bulletStyle: "disc",
             paragraphs: [
-              "Zur Ausubung deiner Rechte: prankturbo@gmail.com. Antwort innerhalb von 30 Tagen.",
+              "Zur Ausubung deiner Rechte: contact@larpking.fr. Antwort innerhalb von 30 Tagen.",
               "Zusatzlich ist eine Beschwerde bei der CNIL moglich: cnil.fr.",
             ],
           },
@@ -1765,7 +1765,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "11",
             title: "11. Kontakt",
             paragraphs: [
-              "Bei Fragen zum Datenschutz: prankturbo@gmail.com.",
+              "Bei Fragen zum Datenschutz: contact@larpking.fr.",
             ],
           },
         ],
@@ -1776,7 +1776,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "1",
             title: "1. Anbieter",
-            paragraphs: ["Die Website turboprank.com wird betrieben von:"],
+            paragraphs: ["Die Website larpking.fr wird betrieben von:"],
             bullets: [
               { label: "Name", text: "GUS" },
               { label: "Status", text: "Einzelunternehmer" },
@@ -1785,7 +1785,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
                 label: "Adresse",
                 text: "11 rue de Bourgogne, 38000 Grenoble, Frankreich",
               },
-              { label: "E-Mail", text: "prankturbo@gmail.com" },
+              { label: "E-Mail", text: "contact@larpking.fr" },
             ],
             bulletStyle: "none",
           },
@@ -1793,7 +1793,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "2",
             title: "2. Verantwortlich fur Inhalte",
             paragraphs: [
-              "Verantwortlich fur die Veroffentlichung ist GUS, erreichbar unter prankturbo@gmail.com.",
+              "Verantwortlich fur die Veroffentlichung ist GUS, erreichbar unter contact@larpking.fr.",
             ],
           },
           {
@@ -1829,7 +1829,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "6",
             title: "6. Kontakt",
-            paragraphs: ["Bei Fragen zum Impressum: prankturbo@gmail.com."],
+            paragraphs: ["Bei Fragen zum Impressum: contact@larpking.fr."],
           },
         ],
       },

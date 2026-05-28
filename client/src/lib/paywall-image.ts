@@ -1,4 +1,4 @@
-const STORAGE_KEY = "turboprank_paywall_image";
+const STORAGE_KEY = "larpking_paywall_image";
 
 /**
  * Downscale + compress the user's prank image and persist it in localStorage.
