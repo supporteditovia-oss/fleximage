@@ -97,38 +97,38 @@ export const api = {
       path: "/api/templates/marquee",
     },
   },
-  pranks: {
+  larps: {
     generate: {
       method: "POST" as const,
-      path: "/api/pranks/generate",
+      path: "/api/larps/generate",
     },
     generateDirect: {
       method: "POST" as const,
-      path: "/api/pranks/generate-direct",
+      path: "/api/larps/generate-direct",
     },
     generateVideo: {
       method: "POST" as const,
-      path: "/api/pranks/generate-video",
+      path: "/api/larps/generate-video",
     },
     status: {
       method: "GET" as const,
-      path: "/api/pranks/:taskId/status",
+      path: "/api/larps/:taskId/status",
     },
     history: {
       method: "GET" as const,
-      path: "/api/pranks/history",
+      path: "/api/larps/history",
     },
     download: {
       method: "GET" as const,
-      path: "/api/pranks/:prankId/download/:imageIndex",
+      path: "/api/larps/:larpId/download/:imageIndex",
     },
     delete: {
       method: "DELETE" as const,
-      path: "/api/pranks/:prankId",
+      path: "/api/larps/:larpId",
     },
     canGenerate: {
       method: "GET" as const,
-      path: "/api/pranks/can-generate",
+      path: "/api/larps/can-generate",
     },
   },
   admin: {

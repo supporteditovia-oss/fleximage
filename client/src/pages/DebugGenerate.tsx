@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { savePendingPrank, getPendingPrank, clearPendingPrank } from "@/lib/pending-prank";
+import { savePendingLarp, getPendingLarp, clearPendingLarp } from "@/lib/pending-larp";
 
 interface LogEntry {
   time: number;
@@ -18,7 +18,7 @@ export default function DebugGenerate() {
 
   // Check IDB on mount
   useEffect(() => {
-    getPendingPrank().then((p) => {
+    getPendingLarp().then((p) => {
       setHasPending(!!p);
       log(`IDB check: ${p ? "FOUND pending LARP" : "no pending LARP"}`);
       if (p) {
@@ -44,7 +44,7 @@ export default function DebugGenerate() {
     const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), "image/png"));
     const file = new File([blob], "debug.png", { type: "image/png" });
 
-    await savePendingPrank({
+    await savePendingLarp({
       prompt: "Debug test LARP - mets cette personne dans l'espace",
       images: [file],
       timestamp: Date.now(),
@@ -54,7 +54,7 @@ export default function DebugGenerate() {
   };
 
   const handleClear = async () => {
-    await clearPendingPrank();
+    await clearPendingLarp();
     log("Cleared pending LARP from IDB");
     setHasPending(false);
   };

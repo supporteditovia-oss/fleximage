@@ -7,18 +7,18 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, ChevronDown } from "lucide-react";
-import { useGenerateDirectPrank, useGenerateVideoPrank } from "@/hooks/use-pranks";
-import { GenerationProgress } from "@/components/prank/GenerationProgress";
-import { GenerationLoader } from "@/components/prank/GenerationLoader";
-import { PaywallOverlay } from "@/components/prank/PaywallOverlay";
+import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
+import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateGallery } from "@/components/generate/TemplateGallery";
-import { UnlockedPrankView } from "@/components/generate/UnlockedPrankView";
+import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
-import { getPendingPrank, clearPendingPrank, savePendingPrank } from "@/lib/pending-prank";
+import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import {
   getPaywalledResult,
   clearPaywalledResult,
@@ -66,17 +66,17 @@ export default function Generate() {
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<"weekly" | "monthly">("monthly");
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
-    prankId: string;
+    larpId: string;
   } | null>(null);
-  const [unlockedPrank, setUnlockedPrank] = useState<{
+  const [unlockedLarp, setUnlockedLarp] = useState<{
     resultUrls: string[];
-    prankId: string;
+    larpId: string;
   } | null>(null);
-  const [unlockingPrank, setUnlockingPrank] = useState(false);
+  const [unlockingLarp, setUnlockingLarp] = useState(false);
 
   // ── Hooks ───────────────────────────────────────────────────
-  const generateDirect = useGenerateDirectPrank();
-  const generateVideo = useGenerateVideoPrank();
+  const generateDirect = useGenerateDirectLarp();
+  const generateVideo = useGenerateVideoLarp();
 
   // ── Mode state ─────────────────────────────────────────────
   const [generationMode, setGenerationMode] = useState<"image" | "video">("image");
@@ -125,9 +125,9 @@ export default function Generate() {
         }
 
         if (paywalled) {
-          setUnlockingPrank(true);
+          setUnlockingLarp(true);
           authFetch(
-            `/api/pranks/${encodeURIComponent(paywalled.taskId)}/status`,
+            `/api/larps/${encodeURIComponent(paywalled.taskId)}/status`,
           )
             .then((r) => r.json())
             .then((statusData) => {
@@ -135,9 +135,9 @@ export default function Generate() {
                 statusData.status === "success" &&
                 statusData.resultUrls?.length
               ) {
-                setUnlockedPrank({
+                setUnlockedLarp({
                   resultUrls: statusData.resultUrls,
-                  prankId: statusData.prankId,
+                  larpId: statusData.larpId,
                 });
               } else {
                 toast({
@@ -152,7 +152,7 @@ export default function Generate() {
                 description: t("settings.subscription.manage"),
               });
             })
-            .finally(() => setUnlockingPrank(false));
+            .finally(() => setUnlockingLarp(false));
         } else {
           // No paywalled result: trigger real generation from pending LARP
           // The pending LARP data was already restored into React state by the
@@ -180,7 +180,7 @@ export default function Generate() {
     }
     const saved = getPaywalledResult();
     if (saved) {
-      setSavedPaywall({ resultUrls: saved.resultUrls, prankId: saved.prankId });
+      setSavedPaywall({ resultUrls: saved.resultUrls, larpId: saved.larpId });
     }
   }, [profile?.is_subscriber]);
 
@@ -191,7 +191,7 @@ export default function Generate() {
     !!taskId ||
     isFakeGenerating ||
     isPaywallOverlayActive ||
-    unlockingPrank;
+    unlockingLarp;
 
   // ── Hide header/dock while fullscreen overlay is active ─────
   useLayoutEffect(() => {
@@ -225,7 +225,7 @@ export default function Generate() {
         setPendingLoading(false);
       }
     }, 5000);
-    getPendingPrank()
+    getPendingLarp()
       .then((pending) => {
         if (cancelled) return;
         if (!pending) {
@@ -262,7 +262,7 @@ export default function Generate() {
         // This ensures data persists through the fake loader → paywall → Stripe checkout flow.
       })
       .catch((err) => {
-        console.error("[Generate] getPendingPrank error:", err);
+        console.error("[Generate] getPendingLarp error:", err);
         if (!cancelled) setPendingLoading(false);
       });
     return () => {
@@ -390,7 +390,7 @@ export default function Generate() {
 
     if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
       try {
-        await savePendingPrank({
+        await savePendingLarp({
           prompt: finalPrompt,
           images: files.map((f) => f.file),
           generationMode,
@@ -425,7 +425,7 @@ export default function Generate() {
     }
 
     try {
-      clearPendingPrank();
+      clearPendingLarp();
 
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
@@ -661,7 +661,7 @@ export default function Generate() {
   }
 
   // -- Loading unlocked LARP after payment
-  if (unlockingPrank) {
+  if (unlockingLarp) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-300">
         <div className="h-7 w-48 rounded-full bg-muted animate-pulse" />
@@ -685,13 +685,13 @@ export default function Generate() {
   }
 
   // -- Unlocked LARP after successful payment
-  if (unlockedPrank) {
+  if (unlockedLarp) {
     return (
-      <UnlockedPrankView
-        resultUrls={unlockedPrank.resultUrls}
-        prankId={unlockedPrank.prankId}
+      <UnlockedLarpView
+        resultUrls={unlockedLarp.resultUrls}
+        larpId={unlockedLarp.larpId}
         onReset={() => {
-          setUnlockedPrank(null);
+          setUnlockedLarp(null);
           handleReset();
         }}
       />

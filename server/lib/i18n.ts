@@ -17,23 +17,23 @@ export type BackendMessageKey =
   | "profiles.notFound"
   | "templates.notFound"
   | "templates.notFoundOrInactive"
-  | "pranks.taskCreateFailed"
-  | "pranks.creditDeductionFailed"
-  | "pranks.taskNotFound"
-  | "pranks.invalidImageIndex"
-  | "pranks.notFound"
-  | "pranks.invalidUrls"
-  | "pranks.imageNotFound"
-  | "pranks.fetchImageFailed"
+  | "larps.taskCreateFailed"
+  | "larps.creditDeductionFailed"
+  | "larps.taskNotFound"
+  | "larps.invalidImageIndex"
+  | "larps.notFound"
+  | "larps.invalidUrls"
+  | "larps.imageNotFound"
+  | "larps.fetchImageFailed"
   | "stripe.alreadySubscribed"
   | "stripe.noStripeSubscription"
   | "stripe.videoPlanRequired"
   | "favorites.added"
   | "favorites.removed"
   | "common.internalServerError"
-  | "pranks.pollingError"
-  | "pranks.fallbackFailed"
-  | "pranks.policyViolation"
+  | "larps.pollingError"
+  | "larps.fallbackFailed"
+  | "larps.policyViolation"
   | "rateLimit.tooManyRequests"
   | "rateLimit.tooManyGenerationRequests";
 
@@ -51,15 +51,15 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "profiles.notFound": "Profil introuvable",
     "templates.notFound": "Template introuvable",
     "templates.notFoundOrInactive": "Template introuvable ou inactif",
-    "pranks.taskCreateFailed":
+    "larps.taskCreateFailed":
       "Erreur lors de la creation de la tache de generation",
-    "pranks.creditDeductionFailed": "Erreur lors de la deduction des credits",
-    "pranks.taskNotFound": "Tache introuvable",
-    "pranks.invalidImageIndex": "Index d'image invalide",
-    "pranks.notFound": "LARP introuvable",
-    "pranks.invalidUrls": "URLs invalides",
-    "pranks.imageNotFound": "Image introuvable",
-    "pranks.fetchImageFailed": "Impossible de recuperer l'image",
+    "larps.creditDeductionFailed": "Erreur lors de la deduction des credits",
+    "larps.taskNotFound": "Tache introuvable",
+    "larps.invalidImageIndex": "Index d'image invalide",
+    "larps.notFound": "LARP introuvable",
+    "larps.invalidUrls": "URLs invalides",
+    "larps.imageNotFound": "Image introuvable",
+    "larps.fetchImageFailed": "Impossible de recuperer l'image",
     "stripe.alreadySubscribed": "Tu as deja un abonnement actif.",
     "stripe.noStripeSubscription": "Aucun abonnement Stripe trouve.",
     "stripe.videoPlanRequired": "La génération vidéo nécessite un abonnement actif.",
@@ -67,10 +67,10 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "favorites.removed": "Favori retire",
     "common.internalServerError":
       "Une erreur inattendue est survenue. Veuillez reessayer.",
-    "pranks.pollingError": "Erreur lors du suivi de la generation",
-    "pranks.fallbackFailed":
+    "larps.pollingError": "Erreur lors du suivi de la generation",
+    "larps.fallbackFailed":
       "La generation a echoue apres la tentative de secours",
-    "pranks.policyViolation":
+    "larps.policyViolation":
       "Votre LARP enfreint les règles de création.",
     "rateLimit.tooManyRequests":
       "Trop de requetes. Veuillez reessayer plus tard.",
@@ -90,14 +90,14 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "profiles.notFound": "Profile not found",
     "templates.notFound": "Template not found",
     "templates.notFoundOrInactive": "Template not found or inactive",
-    "pranks.taskCreateFailed": "Failed to create generation task",
-    "pranks.creditDeductionFailed": "Failed to deduct credits",
-    "pranks.taskNotFound": "Task not found",
-    "pranks.invalidImageIndex": "Invalid image index",
-    "pranks.notFound": "LARP not found",
-    "pranks.invalidUrls": "Invalid URLs",
-    "pranks.imageNotFound": "Image not found",
-    "pranks.fetchImageFailed": "Unable to fetch image",
+    "larps.taskCreateFailed": "Failed to create generation task",
+    "larps.creditDeductionFailed": "Failed to deduct credits",
+    "larps.taskNotFound": "Task not found",
+    "larps.invalidImageIndex": "Invalid image index",
+    "larps.notFound": "LARP not found",
+    "larps.invalidUrls": "Invalid URLs",
+    "larps.imageNotFound": "Image not found",
+    "larps.fetchImageFailed": "Unable to fetch image",
     "stripe.alreadySubscribed": "You already have an active subscription.",
     "stripe.noStripeSubscription": "No Stripe subscription found.",
     "stripe.videoPlanRequired": "Video generation requires an active subscription.",
@@ -105,9 +105,9 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "favorites.removed": "Favorite removed",
     "common.internalServerError":
       "An unexpected error occurred. Please try again.",
-    "pranks.pollingError": "Failed to check generation status",
-    "pranks.fallbackFailed": "Generation failed after fallback",
-    "pranks.policyViolation": "Your LARP violates the creation rules.",
+    "larps.pollingError": "Failed to check generation status",
+    "larps.fallbackFailed": "Generation failed after fallback",
+    "larps.policyViolation": "Your LARP violates the creation rules.",
     "rateLimit.tooManyRequests": "Too many requests. Please try again later.",
     "rateLimit.tooManyGenerationRequests":
       "Too many generation requests. Please try again later.",
@@ -125,14 +125,14 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "profiles.notFound": "Perfil no encontrado",
     "templates.notFound": "Plantilla no encontrada",
     "templates.notFoundOrInactive": "Plantilla no encontrada o inactiva",
-    "pranks.taskCreateFailed": "Error al crear la tarea de generacion",
-    "pranks.creditDeductionFailed": "Error al descontar creditos",
-    "pranks.taskNotFound": "Tarea no encontrada",
-    "pranks.invalidImageIndex": "Indice de imagen invalido",
-    "pranks.notFound": "LARP no encontrado",
-    "pranks.invalidUrls": "URLs invalidas",
-    "pranks.imageNotFound": "Imagen no encontrada",
-    "pranks.fetchImageFailed": "No se pudo recuperar la imagen",
+    "larps.taskCreateFailed": "Error al crear la tarea de generacion",
+    "larps.creditDeductionFailed": "Error al descontar creditos",
+    "larps.taskNotFound": "Tarea no encontrada",
+    "larps.invalidImageIndex": "Indice de imagen invalido",
+    "larps.notFound": "LARP no encontrado",
+    "larps.invalidUrls": "URLs invalidas",
+    "larps.imageNotFound": "Imagen no encontrada",
+    "larps.fetchImageFailed": "No se pudo recuperar la imagen",
     "stripe.alreadySubscribed": "Ya tienes una suscripcion activa.",
     "stripe.noStripeSubscription": "No se encontro una suscripcion de Stripe.",
     "stripe.videoPlanRequired": "La generación de video requiere una suscripción activa.",
@@ -140,11 +140,11 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "favorites.removed": "Favorito eliminado",
     "common.internalServerError":
       "Se produjo un error inesperado. Intentalo de nuevo.",
-    "pranks.pollingError":
+    "larps.pollingError":
       "Error al comprobar el estado de la generacion",
-    "pranks.fallbackFailed":
+    "larps.fallbackFailed":
       "La generacion fallo despues del modo de respaldo",
-    "pranks.policyViolation":
+    "larps.policyViolation":
       "Tu LARP infringe las reglas de creacion.",
     "rateLimit.tooManyRequests":
       "Demasiadas solicitudes. Intentalo de nuevo mas tarde.",
@@ -164,14 +164,14 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "profiles.notFound": "Profil nicht gefunden",
     "templates.notFound": "Vorlage nicht gefunden",
     "templates.notFoundOrInactive": "Vorlage nicht gefunden oder inaktiv",
-    "pranks.taskCreateFailed": "Generierungsaufgabe konnte nicht erstellt werden",
-    "pranks.creditDeductionFailed": "Credits konnten nicht abgezogen werden",
-    "pranks.taskNotFound": "Aufgabe nicht gefunden",
-    "pranks.invalidImageIndex": "Ungueltiger Bildindex",
-    "pranks.notFound": "LARP nicht gefunden",
-    "pranks.invalidUrls": "Ungueltige URLs",
-    "pranks.imageNotFound": "Bild nicht gefunden",
-    "pranks.fetchImageFailed": "Bild konnte nicht geladen werden",
+    "larps.taskCreateFailed": "Generierungsaufgabe konnte nicht erstellt werden",
+    "larps.creditDeductionFailed": "Credits konnten nicht abgezogen werden",
+    "larps.taskNotFound": "Aufgabe nicht gefunden",
+    "larps.invalidImageIndex": "Ungueltiger Bildindex",
+    "larps.notFound": "LARP nicht gefunden",
+    "larps.invalidUrls": "Ungueltige URLs",
+    "larps.imageNotFound": "Bild nicht gefunden",
+    "larps.fetchImageFailed": "Bild konnte nicht geladen werden",
     "stripe.alreadySubscribed": "Du hast bereits ein aktives Abonnement.",
     "stripe.noStripeSubscription": "Kein Stripe-Abonnement gefunden.",
     "stripe.videoPlanRequired": "Videogenerierung erfordert ein aktives Abonnement.",
@@ -179,10 +179,10 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "favorites.removed": "Favorit entfernt",
     "common.internalServerError":
       "Es ist ein unerwarteter Fehler aufgetreten. Bitte versuche es erneut.",
-    "pranks.pollingError":
+    "larps.pollingError":
       "Der Generierungsstatus konnte nicht gepruft werden",
-    "pranks.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
-    "pranks.policyViolation":
+    "larps.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
+    "larps.policyViolation":
       "Dein LARP verstoesst gegen die Erstellungsregeln.",
     "rateLimit.tooManyRequests":
       "Zu viele Anfragen. Bitte versuche es spaeter erneut.",

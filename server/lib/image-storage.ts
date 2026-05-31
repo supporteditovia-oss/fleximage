@@ -8,7 +8,7 @@ import { applyWatermark } from "./watermark";
  * If an individual image fails, the original Kie.ai URL is kept as fallback.
  */
 export async function downloadAndStoreImages(
-  prankId: string,
+  larpId: string,
   kieUrls: string[]
 ): Promise<string[]> {
   const r2Urls: string[] = [];
@@ -26,17 +26,17 @@ export async function downloadAndStoreImages(
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      const key = `pranks/${prankId}/${i}${extension}`;
+      const key = `larps/${larpId}/${i}${extension}`;
       const r2Url = await uploadToR2(key, buffer, contentType);
       r2Urls.push(r2Url);
 
       logger.info(
-        { prankId, index: i, originalUrl: kieUrl, r2Url },
+        { larpId, index: i, originalUrl: kieUrl, r2Url },
         "Image re-uploaded to R2"
       );
     } catch (error) {
       logger.error(
-        { err: error, prankId, index: i, kieUrl },
+        { err: error, larpId, index: i, kieUrl },
         "Failed to re-upload image to R2, keeping original URL"
       );
       r2Urls.push(kieUrl);
@@ -51,7 +51,7 @@ export async function downloadAndStoreImages(
  * Returns both sets of URLs.
  */
 export async function downloadAndStoreImagesWithWatermark(
-  prankId: string,
+  larpId: string,
   kieUrls: string[],
 ): Promise<{ originals: string[]; watermarked: string[] }> {
   const originals: string[] = [];
@@ -71,13 +71,13 @@ export async function downloadAndStoreImagesWithWatermark(
       const buffer = Buffer.from(arrayBuffer);
 
       // Store original
-      const originalKey = `pranks/${prankId}/${i}${extension}`;
+      const originalKey = `larps/${larpId}/${i}${extension}`;
       const originalUrl = await uploadToR2(originalKey, buffer, contentType);
       originals.push(originalUrl);
 
       // Create and store watermarked version
       const watermarkedBuffer = await applyWatermark(buffer);
-      const watermarkedKey = `pranks/${prankId}/${i}_wm${extension}`;
+      const watermarkedKey = `larps/${larpId}/${i}_wm${extension}`;
       const watermarkedUrl = await uploadToR2(
         watermarkedKey,
         watermarkedBuffer,
@@ -86,12 +86,12 @@ export async function downloadAndStoreImagesWithWatermark(
       watermarked.push(watermarkedUrl);
 
       logger.info(
-        { prankId, index: i },
+        { larpId, index: i },
         "Image stored with watermark",
       );
     } catch (error) {
       logger.error(
-        { err: error, prankId, index: i, kieUrl },
+        { err: error, larpId, index: i, kieUrl },
         "Failed to process image, keeping original URL",
       );
       originals.push(kieUrl);

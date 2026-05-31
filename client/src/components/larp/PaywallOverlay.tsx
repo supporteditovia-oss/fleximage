@@ -30,7 +30,7 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
   const [isLoading, setIsLoading] = useState(false);
   const [isChoosingPlan, setIsChoosingPlan] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
-  const [monthlyPranksCount, setMonthlyPranksCount] = useState(12847);
+  const [monthlyLarpsCount, setMonthlyLarpsCount] = useState(12847);
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
         : 1200 + Math.floor(Math.random() * 1600);
 
       timeoutId = window.setTimeout(() => {
-        setMonthlyPranksCount((current) => {
+        setMonthlyLarpsCount((current) => {
           if (isPause) return current;
 
           const isBurst = Math.random() < 0.16;
@@ -109,9 +109,9 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
   };
 
   const ctaLabel = isChoosingPlan ? t("paywall.checkoutCta") : t("paywall.unlockCta");
-  const formattedPranksCount = new Intl.NumberFormat(
+  const formattedLarpsCount = new Intl.NumberFormat(
     i18n.resolvedLanguage ?? "fr",
-  ).format(monthlyPranksCount);
+  ).format(monthlyLarpsCount);
   const allowanceBenefitKey =
     selectedPlan === "weekly"
       ? "paywall.benefits.weeklyAllowance"
@@ -349,7 +349,7 @@ export function PaywallOverlay({ imageUrl, isFake, defaultPlan = "monthly" }: Pa
 
         <p className="mt-2 text-center text-xs text-white/80">
           {t("paywall.monthlySent", {
-            count: formattedPranksCount,
+            count: formattedLarpsCount,
           })}
         </p>
       </motion.div>

@@ -163,16 +163,26 @@ function normalizeKeywords(raw: unknown): string[] {
     .filter(Boolean);
 }
 
-function stringifyAssetList(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === "string") return value;
+function toAssetList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.length > 0 ? JSON.stringify(value) : null;
+    return value.filter((item): item is string => typeof item === "string");
   }
-  return null;
+
+  if (typeof value !== "string" || value.trim() === "") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
-function toLegacyStatus(
+function toClientGenerationStatus(
   status: string | null | undefined,
 ): "waiting" | "success" | "fail" {
   if (status === "succeeded" || status === "success") return "success";
@@ -211,7 +221,7 @@ function toTemplateDto(row: any) {
   };
 }
 
-function toLegacyPrankDto(row: any) {
+function toLarpDto(row: any) {
   const template = row.templates;
   const category =
     template?.template_categories?.slug ||
@@ -221,20 +231,21 @@ function toLegacyPrankDto(row: any) {
 
   return {
     id: row.id,
-    user_id: row.user_id,
-    template_id: row.template_id,
-    final_prompt: row.final_prompt,
-    kie_task_id: row.provider_task_id,
-    status: toLegacyStatus(row.status),
-    result_urls: stringifyAssetList(row.output_assets),
-    watermarked_urls: stringifyAssetList(row.watermarked_assets),
-    input_urls: stringifyAssetList(row.input_assets),
-    fail_message: row.fail_message,
-    cost_time: row.cost_time,
-    aspect_ratio: row.aspect_ratio,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    prompt_templates: template
+    userId: row.user_id,
+    templateId: row.template_id,
+    generationType: row.generation_type,
+    finalPrompt: row.final_prompt,
+    providerTaskId: row.provider_task_id,
+    status: toClientGenerationStatus(row.status),
+    outputAssets: toAssetList(row.output_assets),
+    watermarkedAssets: toAssetList(row.watermarked_assets),
+    inputAssets: toAssetList(row.input_assets),
+    failMessage: row.fail_message,
+    costTime: row.cost_time,
+    aspectRatio: row.aspect_ratio,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    template: template
       ? {
           name: template.name,
           category,
@@ -817,21 +828,21 @@ export async function registerRoutes(
   );
 
   // =============================================
-  // PRANK GENERATION ENDPOINTS
+  // LARP GENERATION ENDPOINTS
   // =============================================
 
-  const generatePrankBodySchema = z.object({
+  const generateLarpBodySchema = z.object({
     template_id: z.string().uuid(),
     placeholders: z.record(z.string()).optional(),
     aspect_ratio: z.string().optional().default("1:1"),
   });
 
-  // POST /api/pranks/generate
+  // POST /api/larps/generate
   app.post(
-    api.pranks.generate.path,
+    api.larps.generate.path,
     requireAuth,
     generateLimiter,
-    validateRequest(generatePrankBodySchema),
+    validateRequest(generateLarpBodySchema),
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
@@ -899,7 +910,7 @@ export async function registerRoutes(
               );
               return res.status(422).json({
                 code: "PROMPT_POLICY_VIOLATION",
-                message: tBackend(locale, "pranks.policyViolation"),
+                message: tBackend(locale, "larps.policyViolation"),
               });
             }
 
@@ -913,7 +924,7 @@ export async function registerRoutes(
               logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
               return res
                 .status(502)
-                .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
+                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
             }
             externalTaskId = kieResponse.data.taskId;
           }
@@ -927,13 +938,13 @@ export async function registerRoutes(
             logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
             return res
               .status(502)
-              .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
+              .json({ message: tBackend(locale, "larps.taskCreateFailed") });
           }
           externalTaskId = kieResponse.data.taskId;
         }
 
         // 4. Store in generations, then charge through the credit ledger.
-        const { data: prank, error: insertErr } = await supabaseAdmin
+        const { data: larp, error: insertErr } = await supabaseAdmin
           .from("generations")
           .insert({
             user_id: authReq.userId,
@@ -956,8 +967,8 @@ export async function registerRoutes(
           userId: authReq.userId,
           delta: -5,
           reason: "generation_charge",
-          generationId: prank.id,
-          idempotencyKey: `generation:${prank.id}:charge`,
+          generationId: larp.id,
+          idempotencyKey: `generation:${larp.id}:charge`,
           metadata: {
             source: "template_generation",
             provider,
@@ -974,24 +985,24 @@ export async function registerRoutes(
               updated_at: new Date().toISOString(),
               completed_at: new Date().toISOString(),
             })
-            .eq("id", prank.id);
+            .eq("id", larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+            .json({ message: tBackend(locale, "larps.creditDeductionFailed") });
         }
 
         // Record generation for limit tracking
         await recordGeneration(authReq.userId);
 
         res.status(201).json({
-          id: prank.id,
+          id: larp.id,
           taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
         });
       } catch (error: any) {
-        logger.error({ err: error }, "Error generating prank");
+        logger.error({ err: error }, "Error generating larp");
         const locale = resolveLocaleFromRequest(req);
         res
           .status(500)
@@ -1000,7 +1011,7 @@ export async function registerRoutes(
     },
   );
 
-  // POST /api/pranks/generate-direct (free prompt, no template)
+  // POST /api/larps/generate-direct (free prompt, no template)
   const generateDirectBodySchema = z.object({
     prompt: z.string().min(1).max(2000),
     aspect_ratio: z.string().optional().default("9:16"),
@@ -1009,7 +1020,7 @@ export async function registerRoutes(
   });
 
   app.post(
-    api.pranks.generateDirect.path,
+    api.larps.generateDirect.path,
     requireAuth,
     generateLimiter,
     validateRequest(generateDirectBodySchema),
@@ -1102,7 +1113,7 @@ export async function registerRoutes(
               );
               return res.status(422).json({
                 code: "PROMPT_POLICY_VIOLATION",
-                message: tBackend(locale, "pranks.policyViolation"),
+                message: tBackend(locale, "larps.policyViolation"),
               });
             }
 
@@ -1117,7 +1128,7 @@ export async function registerRoutes(
               logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
               return res
                 .status(502)
-                .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
+                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
             }
             externalTaskId = kieResponse.data.taskId;
           }
@@ -1134,13 +1145,13 @@ export async function registerRoutes(
             logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
             return res
               .status(502)
-              .json({ message: tBackend(locale, "pranks.taskCreateFailed") });
+              .json({ message: tBackend(locale, "larps.taskCreateFailed") });
           }
           externalTaskId = kieResponse.data.taskId;
         }
 
         // 4. Store in generations, then charge through the credit ledger.
-        const { data: prank, error: insertErr } = await supabaseAdmin
+        const { data: larp, error: insertErr } = await supabaseAdmin
           .from("generations")
           .insert({
             user_id: authReq.userId,
@@ -1164,8 +1175,8 @@ export async function registerRoutes(
           userId: authReq.userId,
           delta: -5,
           reason: "generation_charge",
-          generationId: prank.id,
-          idempotencyKey: `generation:${prank.id}:charge`,
+          generationId: larp.id,
+          idempotencyKey: `generation:${larp.id}:charge`,
           metadata: {
             source: "direct_generation",
             provider,
@@ -1182,24 +1193,24 @@ export async function registerRoutes(
               updated_at: new Date().toISOString(),
               completed_at: new Date().toISOString(),
             })
-            .eq("id", prank.id);
+            .eq("id", larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+            .json({ message: tBackend(locale, "larps.creditDeductionFailed") });
         }
 
         // Record generation for limit tracking
         await recordGeneration(authReq.userId);
 
         res.status(201).json({
-          id: prank.id,
+          id: larp.id,
           taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
         });
       } catch (error: any) {
-        logger.error({ err: error }, "Error generating direct prank");
+        logger.error({ err: error }, "Error generating direct larp");
         const locale = resolveLocaleFromRequest(req);
         res
           .status(500)
@@ -1211,9 +1222,9 @@ export async function registerRoutes(
   // ── Video generation constants ────────────────────────────────
   const VIDEO_CREDIT_COST = 30;
 
-  // POST /api/pranks/generate-video
+  // POST /api/larps/generate-video
   app.post(
-    api.pranks.generateVideo.path,
+    api.larps.generateVideo.path,
     requireAuth,
     generateLimiter,
     validateRequest(generateVideoBodySchema),
@@ -1272,13 +1283,13 @@ export async function registerRoutes(
         });
 
         if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
-          const msg = (runwayResponse as any).msg || tBackend(locale, "pranks.taskCreateFailed");
+          const msg = (runwayResponse as any).msg || tBackend(locale, "larps.taskCreateFailed");
           return res.status(422).json({ message: msg });
         }
 
         // 4. Store in generations, then charge through the credit ledger.
         const externalTaskId = `video_${runwayResponse.data.task_id}`;
-        const { data: prank, error: insertErr } = await supabaseAdmin
+        const { data: larp, error: insertErr } = await supabaseAdmin
           .from("generations")
           .insert({
             user_id: authReq.userId,
@@ -1301,8 +1312,8 @@ export async function registerRoutes(
           userId: authReq.userId,
           delta: -VIDEO_CREDIT_COST,
           reason: "generation_charge",
-          generationId: prank.id,
-          idempotencyKey: `generation:${prank.id}:charge`,
+          generationId: larp.id,
+          idempotencyKey: `generation:${larp.id}:charge`,
           metadata: {
             source: "video_generation",
             provider: "runway",
@@ -1318,17 +1329,17 @@ export async function registerRoutes(
               updated_at: new Date().toISOString(),
               completed_at: new Date().toISOString(),
             })
-            .eq("id", prank.id);
+            .eq("id", larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+            .json({ message: tBackend(locale, "larps.creditDeductionFailed") });
         }
 
         await recordGeneration(authReq.userId);
 
         res.status(201).json({
-          id: prank.id,
+          id: larp.id,
           taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
@@ -1346,8 +1357,8 @@ export async function registerRoutes(
     },
   );
 
-  // GET /api/pranks/can-generate
-  app.get(api.pranks.canGenerate.path, requireAuth, async (req, res) => {
+  // GET /api/larps/can-generate
+  app.get(api.larps.canGenerate.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const locale = resolveLocaleFromRequest(req);
@@ -1367,8 +1378,8 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/pranks/:taskId/status
-  app.get(api.pranks.status.path, requireAuth, async (req, res) => {
+  // GET /api/larps/:taskId/status
+  app.get(api.larps.status.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const locale = resolveLocaleFromRequest(req);
@@ -1376,21 +1387,21 @@ export async function registerRoutes(
       const supabaseAdmin = getSupabaseAdmin();
 
       // Verify this task belongs to the user
-      const { data: prank, error: fetchErr } = await supabaseAdmin
+      const { data: larp, error: fetchErr } = await supabaseAdmin
         .from("generations")
         .select("*")
         .ilike("provider_task_id", `%${taskId}%`)
         .eq("user_id", authReq.userId)
         .single();
 
-      if (fetchErr || !prank) {
+      if (fetchErr || !larp) {
         return res
           .status(404)
-          .json({ message: tBackend(locale, "pranks.taskNotFound") });
+          .json({ message: tBackend(locale, "larps.taskNotFound") });
       }
 
       // If already terminal, return cached result
-      if (prank.status === "succeeded" || prank.status === "failed") {
+      if (larp.status === "succeeded" || larp.status === "failed") {
         // Check subscriber status for watermark decision
         const { data: profile } = await supabaseAdmin
           .from("profiles")
@@ -1400,26 +1411,26 @@ export async function registerRoutes(
         const isSubscriber =
           profile?.is_subscriber || profile?.role === "admin";
 
-        const originals = Array.isArray(prank.output_assets)
-          ? prank.output_assets
+        const originals = Array.isArray(larp.output_assets)
+          ? larp.output_assets
           : [];
-        const watermarkedList = Array.isArray(prank.watermarked_assets)
-          ? prank.watermarked_assets
+        const watermarkedList = Array.isArray(larp.watermarked_assets)
+          ? larp.watermarked_assets
           : originals;
 
         return res.json({
-          prankId: prank.id,
-          status: toLegacyStatus(prank.status),
+          larpId: larp.id,
+          status: toClientGenerationStatus(larp.status),
           resultUrls: originals,
           watermarkedUrls: watermarkedList,
-          failMessage: prank.fail_message,
-          costTime: prank.cost_time,
+          failMessage: larp.fail_message,
+          costTime: larp.cost_time,
           isSubscriber,
           requiresPaywall: false,
         });
       }
 
-      const activeTaskId = (prank.provider_task_id || "").split(",").pop() as string;
+      const activeTaskId = (larp.provider_task_id || "").split(",").pop() as string;
       const isCustomApi = activeTaskId.startsWith("custom_");
       const isVideoTask = activeTaskId.startsWith("video_");
 
@@ -1450,7 +1461,7 @@ export async function registerRoutes(
         } catch (err) {
           logger.error({ err }, "Failed to poll KIE Runway");
           apiStatus = "fail";
-          apiFailMsg = tBackend(locale, "pranks.pollingError");
+          apiFailMsg = tBackend(locale, "larps.pollingError");
         }
       } else if (isCustomApi) {
         const jobId = activeTaskId.replace("custom_", "");
@@ -1465,12 +1476,12 @@ export async function registerRoutes(
               ? err instanceof Error
                 ? err.message
                 : String(err)
-              : tBackend(locale, "pranks.pollingError"),
+              : tBackend(locale, "larps.pollingError"),
           };
         }
         
         const currentSettings = await getAppSettings();
-        const ageInMs = Date.now() - new Date(prank.created_at).getTime();
+        const ageInMs = Date.now() - new Date(larp.created_at).getTime();
         const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
         const isCustomApiFailed =
           customStatus.status === "failed" || customStatus.status === "fail";
@@ -1483,27 +1494,27 @@ export async function registerRoutes(
         } else if (isCustomApiFailed || isTimeout) {
           if (isPolicyViolation) {
             logger.warn(
-              { prankId: prank.id, jobId },
+              { larpId: larp.id, jobId },
               "OneshotAPI rejected prompt, skipping Kie AI fallback",
             );
             apiStatus = "fail";
-            apiFailMsg = tBackend(locale, "pranks.policyViolation");
+            apiFailMsg = tBackend(locale, "larps.policyViolation");
           } else {
             logger.info(
-              { prankId: prank.id, isTimeout },
+              { larpId: larp.id, isTimeout },
               "Custom API failed or timeout, triggering Kie AI fallback",
             );
             try {
-              const aspect_ratio = prank.aspect_ratio || "9:16";
-              const imageUrls = Array.isArray(prank.input_assets) ? prank.input_assets : [];
+              const aspect_ratio = larp.aspect_ratio || "9:16";
+              const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
               const fallbackKieResponse = await createKieTask({
-                prompt: prank.final_prompt,
+                prompt: larp.final_prompt,
                 aspect_ratio,
                 ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
               });
              
               if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
-                const newKieTaskIdString = `${prank.provider_task_id},${fallbackKieResponse.data.taskId}`;
+                const newKieTaskIdString = `${larp.provider_task_id},${fallbackKieResponse.data.taskId}`;
                 await supabaseAdmin
                   .from("generations")
                   .update({
@@ -1511,10 +1522,10 @@ export async function registerRoutes(
                     provider_task_id: newKieTaskIdString,
                     updated_at: new Date().toISOString(),
                   })
-                  .eq("id", prank.id);
+                  .eq("id", larp.id);
                  
                 return res.json({
-                  prankId: prank.id,
+                  larpId: larp.id,
                   status: "waiting",
                   resultUrls: [],
                   failMessage: null,
@@ -1524,12 +1535,12 @@ export async function registerRoutes(
                 });
               } else {
                 apiStatus = "fail";
-                apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
+                apiFailMsg = tBackend(locale, "larps.fallbackFailed");
               }
             } catch (fallbackErr: any) {
               logger.error({ err: fallbackErr }, "Kie fallback also failed");
               apiStatus = "fail";
-              apiFailMsg = tBackend(locale, "pranks.fallbackFailed");
+              apiFailMsg = tBackend(locale, "larps.fallbackFailed");
             }
           }
         }
@@ -1545,7 +1556,7 @@ export async function registerRoutes(
         } catch (err: any) {
            logger.error({ err }, "Failed to poll Kie.ai");
            apiStatus = "fail";
-            apiFailMsg = tBackend(locale, "pranks.pollingError");
+            apiFailMsg = tBackend(locale, "larps.pollingError");
         }
       }
 
@@ -1568,7 +1579,7 @@ export async function registerRoutes(
                 const contentType = response.headers.get("content-type") || "video/mp4";
                 const arrayBuffer = await response.arrayBuffer();
                 const buffer = Buffer.from(arrayBuffer);
-                const key = `pranks/${prank.id}/video.mp4`;
+                const key = `larps/${larp.id}/video.mp4`;
                 const { uploadToR2 } = await import("./lib/r2-client");
                 resultUrls = [await uploadToR2(key, buffer, contentType)];
               } catch (err) {
@@ -1588,10 +1599,10 @@ export async function registerRoutes(
 
           if (!isVideoTask && resultUrls.length > 0) {
             try {
-              resultUrls = await downloadAndStoreImages(prank.id, resultUrls);
+              resultUrls = await downloadAndStoreImages(larp.id, resultUrls);
             } catch (err) {
               logger.error(
-                { err, prankId: prank.id },
+                { err, larpId: larp.id },
                 "Failed to re-upload images to R2, keeping original URLs",
               );
             }
@@ -1621,10 +1632,10 @@ export async function registerRoutes(
             updated_at: new Date().toISOString(),
             completed_at: new Date().toISOString(),
           })
-          .eq("id", prank.id);
+          .eq("id", larp.id);
 
         return res.json({
-          prankId: prank.id,
+          larpId: larp.id,
           status: apiStatus,
           resultUrls: resultUrls,
           failMessage: apiFailMsg,
@@ -1637,7 +1648,7 @@ export async function registerRoutes(
 
       // Still waiting
       res.json({
-        prankId: prank.id,
+        larpId: larp.id,
         status: "waiting",
         resultUrls: [],
         failMessage: null,
@@ -1647,7 +1658,7 @@ export async function registerRoutes(
         resultType,
       });
     } catch (error: any) {
-      logger.error({ err: error }, "Error checking prank status");
+      logger.error({ err: error }, "Error checking larp status");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)
@@ -1655,8 +1666,8 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/pranks/history
-  app.get(api.pranks.history.path, requireAuth, async (req, res) => {
+  // GET /api/larps/history
+  app.get(api.larps.history.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const supabaseAdmin = getSupabaseAdmin();
@@ -1680,9 +1691,9 @@ export async function registerRoutes(
         .limit(50);
 
       if (error) throw error;
-      res.json((data ?? []).map(toLegacyPrankDto));
+      res.json((data ?? []).map(toLarpDto));
     } catch (error: any) {
-      logger.error({ err: error }, "Error fetching prank history");
+      logger.error({ err: error }, "Error fetching larp history");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)
@@ -1690,37 +1701,37 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/pranks/:prankId/download/:imageIndex
-  app.get(api.pranks.download.path, requireAuth, async (req, res) => {
+  // GET /api/larps/:larpId/download/:imageIndex
+  app.get(api.larps.download.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
       const locale = resolveLocaleFromRequest(req);
-      const { prankId, imageIndex } = req.params;
+      const { larpId, imageIndex } = req.params;
       const index = parseInt(imageIndex, 10);
       const supabaseAdmin = getSupabaseAdmin();
 
       if (isNaN(index) || index < 0) {
         return res
           .status(400)
-          .json({ message: tBackend(locale, "pranks.invalidImageIndex") });
+          .json({ message: tBackend(locale, "larps.invalidImageIndex") });
       }
 
-      const { data: prank, error } = await supabaseAdmin
+      const { data: larp, error } = await supabaseAdmin
         .from("generations")
         .select("output_assets, watermarked_assets")
-        .eq("id", prankId)
+        .eq("id", larpId)
         .eq("user_id", authReq.userId)
         .single();
 
       if (
         error ||
-        !prank ||
-        !Array.isArray(prank.output_assets) ||
-        prank.output_assets.length === 0
+        !larp ||
+        !Array.isArray(larp.output_assets) ||
+        larp.output_assets.length === 0
       ) {
         return res
           .status(404)
-          .json({ message: tBackend(locale, "pranks.notFound") });
+          .json({ message: tBackend(locale, "larps.notFound") });
       }
 
       // Check subscriber status — non-subscribers get watermarked version
@@ -1732,15 +1743,15 @@ export async function registerRoutes(
       const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
 
       const urls = isSubscriber
-        ? prank.output_assets
-        : Array.isArray(prank.watermarked_assets) && prank.watermarked_assets.length > 0
-          ? prank.watermarked_assets
-          : prank.output_assets;
+        ? larp.output_assets
+        : Array.isArray(larp.watermarked_assets) && larp.watermarked_assets.length > 0
+          ? larp.watermarked_assets
+          : larp.output_assets;
 
       if (index >= urls.length) {
         return res
           .status(404)
-          .json({ message: tBackend(locale, "pranks.imageNotFound") });
+          .json({ message: tBackend(locale, "larps.imageNotFound") });
       }
 
       const imageUrl = urls[index];
@@ -1748,7 +1759,7 @@ export async function registerRoutes(
       if (!imageResponse.ok) {
         return res
           .status(502)
-          .json({ message: tBackend(locale, "pranks.fetchImageFailed") });
+          .json({ message: tBackend(locale, "larps.fetchImageFailed") });
       }
 
       const contentType =
@@ -1771,7 +1782,7 @@ export async function registerRoutes(
       const arrayBuffer = await imageResponse.arrayBuffer();
       res.send(Buffer.from(arrayBuffer));
     } catch (error: any) {
-      logger.error({ err: error }, "Error downloading prank image");
+      logger.error({ err: error }, "Error downloading larp image");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)
@@ -1779,23 +1790,23 @@ export async function registerRoutes(
     }
   });
 
-  // DELETE /api/pranks/:prankId
-  app.delete(api.pranks.delete.path, requireAuth, async (req, res) => {
+  // DELETE /api/larps/:larpId
+  app.delete(api.larps.delete.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const { prankId } = req.params;
+      const { larpId } = req.params;
       const supabaseAdmin = getSupabaseAdmin();
 
       const { error } = await supabaseAdmin
         .from("generations")
         .delete()
-        .eq("id", prankId)
+        .eq("id", larpId)
         .eq("user_id", authReq.userId);
 
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {
-      logger.error({ err: error }, "Error deleting prank");
+      logger.error({ err: error }, "Error deleting larp");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)

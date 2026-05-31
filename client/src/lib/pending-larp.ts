@@ -1,14 +1,14 @@
 const DB_NAME = "larpking";
-const STORE_NAME = "pending_prank";
+const STORE_NAME = "pending_larp";
 const DB_VERSION = 1;
 const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
-export type PendingPrankGenerationMode = "image" | "video";
+export type PendingLarpGenerationMode = "image" | "video";
 
-export interface PendingPrank {
+export interface PendingLarp {
   prompt: string;
   images: File[];
-  generationMode?: PendingPrankGenerationMode;
+  generationMode?: PendingLarpGenerationMode;
   timestamp: number;
 }
 
@@ -26,7 +26,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function savePendingPrank(data: PendingPrank): Promise<void> {
+export async function savePendingLarp(data: PendingLarp): Promise<void> {
   try {
     const imageBuffers = await Promise.all(
       data.images.map(async (f) => ({
@@ -54,7 +54,7 @@ export async function savePendingPrank(data: PendingPrank): Promise<void> {
   }
 }
 
-export async function getPendingPrank(): Promise<PendingPrank | null> {
+export async function getPendingLarp(): Promise<PendingLarp | null> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -65,7 +65,7 @@ export async function getPendingPrank(): Promise<PendingPrank | null> {
         const rawData = request.result as any;
         if (!rawData) return resolve(null);
         if (Date.now() - rawData.timestamp > EXPIRY_MS) {
-          clearPendingPrank();
+          clearPendingLarp();
           return resolve(null);
         }
         
@@ -94,7 +94,7 @@ export async function getPendingPrank(): Promise<PendingPrank | null> {
   }
 }
 
-export async function clearPendingPrank(): Promise<void> {
+export async function clearPendingLarp(): Promise<void> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");

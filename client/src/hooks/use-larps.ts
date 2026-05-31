@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 
-interface GeneratePrankInput {
+interface GenerateLarpInput {
   template_id: string;
   placeholders?: Record<string, string>;
   aspect_ratio?: string;
@@ -20,14 +20,14 @@ interface GenerateVideoInput {
   images?: string[];
 }
 
-interface GeneratePrankResponse {
+interface GenerateLarpResponse {
   id: string;
   taskId: string;
   status: string;
 }
 
-interface PrankStatusResponse {
-  prankId: string;
+interface LarpStatusResponse {
+  larpId: string;
   status: "waiting" | "success" | "fail";
   resultUrls: string[];
   watermarkedUrls?: string[];
@@ -38,79 +38,81 @@ interface PrankStatusResponse {
   resultType?: "image" | "video";
 }
 
-interface PrankHistoryItem {
+interface LarpHistoryItem {
   id: string;
-  user_id: string;
-  template_id: string | null;
-  final_prompt: string;
-  kie_task_id: string;
+  userId: string;
+  templateId: string | null;
+  generationType: "image" | "video";
+  finalPrompt: string;
+  providerTaskId: string | null;
   status: "waiting" | "success" | "fail";
-  result_urls: string | null;
-  input_urls: string | null;
-  fail_message: string | null;
-  cost_time: string | null;
-  aspect_ratio: string | null;
-  created_at: string;
-  updated_at: string;
-  prompt_templates: { name: string; category: string } | null;
+  outputAssets: string[];
+  watermarkedAssets: string[];
+  inputAssets: string[];
+  failMessage: string | null;
+  costTime: string | null;
+  aspectRatio: string | null;
+  createdAt: string;
+  updatedAt: string;
+  template: { name: string; category: string | null } | null;
 }
 
-export function useGeneratePrank() {
+export function useGenerateLarp() {
   const queryClient = useQueryClient();
-  return useMutation<GeneratePrankResponse, Error, GeneratePrankInput>({
+  return useMutation<GenerateLarpResponse, Error, GenerateLarpInput>({
     mutationFn: async (data) => {
-      const res = await authFetch("/api/pranks/generate", {
+      const res = await authFetch("/api/larps/generate", {
         method: "POST",
         body: JSON.stringify(data),
       });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["larp-history"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }
 
-export function useGenerateDirectPrank() {
+export function useGenerateDirectLarp() {
   const queryClient = useQueryClient();
-  return useMutation<GeneratePrankResponse, Error, GenerateDirectInput>({
+  return useMutation<GenerateLarpResponse, Error, GenerateDirectInput>({
     mutationFn: async (data) => {
-      const res = await authFetch("/api/pranks/generate-direct", {
+      const res = await authFetch("/api/larps/generate-direct", {
         method: "POST",
         body: JSON.stringify(data),
       });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["larp-history"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }
 
-export function useGenerateVideoPrank() {
+export function useGenerateVideoLarp() {
   const queryClient = useQueryClient();
-  return useMutation<GeneratePrankResponse, Error, GenerateVideoInput>({
+  return useMutation<GenerateLarpResponse, Error, GenerateVideoInput>({
     mutationFn: async (data) => {
-      const res = await authFetch("/api/pranks/generate-video", {
+      const res = await authFetch("/api/larps/generate-video", {
         method: "POST",
         body: JSON.stringify(data),
       });
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["larp-history"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }
 
-export function usePrankStatus(taskId: string | null) {
-  return useQuery<PrankStatusResponse>({
-    queryKey: ["prank-status", taskId],
+export function useLarpStatus(taskId: string | null) {
+  return useQuery<LarpStatusResponse>({
+    queryKey: ["larp-status", taskId],
     queryFn: async () => {
-      const res = await authFetch(`/api/pranks/${taskId}/status`);
+      const res = await authFetch(`/api/larps/${taskId}/status`);
       return res.json();
     },
     enabled: !!taskId,
@@ -124,22 +126,22 @@ export function usePrankStatus(taskId: string | null) {
   });
 }
 
-export function usePrankHistory() {
-  return useQuery<PrankHistoryItem[]>({
-    queryKey: ["prank-history"],
+export function useLarpHistory() {
+  return useQuery<LarpHistoryItem[]>({
+    queryKey: ["larp-history"],
     queryFn: async () => {
-      const res = await authFetch("/api/pranks/history");
+      const res = await authFetch("/api/larps/history");
       return res.json();
     },
   });
 }
 
-export function useDeletePrank() {
+export function useDeleteLarp() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (prankId: string) => {
+    mutationFn: async (larpId: string) => {
       const res = await authFetch(
-        `/api/pranks/${encodeURIComponent(prankId)}`,
+        `/api/larps/${encodeURIComponent(larpId)}`,
         {
           method: "DELETE",
         },
@@ -147,7 +149,7 @@ export function useDeletePrank() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["prank-history"] });
+      queryClient.invalidateQueries({ queryKey: ["larp-history"] });
     },
   });
 }

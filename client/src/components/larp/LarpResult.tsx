@@ -59,19 +59,19 @@ const SHARE_PLATFORMS = [
   },
 ];
 
-interface PrankResultProps {
+interface LarpResultProps {
   resultUrls: string[];
-  prankId: string;
+  larpId: string;
   hideActions?: boolean;
   resultType?: "image" | "video";
 }
 
-export function PrankResult({
+export function LarpResult({
   resultUrls,
-  prankId,
+  larpId,
   hideActions = false,
   resultType = "image",
-}: PrankResultProps) {
+}: LarpResultProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -92,7 +92,7 @@ export function PrankResult({
   async function handleDownload(imageIndex: number) {
     try {
       const res = await authFetch(
-        `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+        `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
       );
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -125,7 +125,7 @@ export function PrankResult({
     if (navigator.share && navigator.canShare) {
       try {
         const res = await authFetch(
-          `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+          `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
         const blob = await res.blob();
         const file = new File([blob], "larp.jpg", {

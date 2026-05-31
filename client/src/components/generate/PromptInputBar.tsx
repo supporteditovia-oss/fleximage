@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { parseTextFields } from "@/lib/template-utils";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import {
-  getPrankChipsForLocale,
-  getPrankIdeasForLocale,
-} from "@/lib/prank-data";
+  getLarpChipsForLocale,
+  getLarpIdeasForLocale,
+} from "@/lib/larp-data";
 import type { PromptTemplate } from "@shared/schema";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,22 +30,22 @@ export function PromptInputBar({
   isGenerating,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
-  const prankIdeas = useMemo(
-    () => getPrankIdeasForLocale(i18n.resolvedLanguage),
+  const larpIdeas = useMemo(
+    () => getLarpIdeasForLocale(i18n.resolvedLanguage),
     [i18n.resolvedLanguage],
   );
-  const prankChips = useMemo(
-    () => getPrankChipsForLocale(i18n.resolvedLanguage),
+  const larpChips = useMemo(
+    () => getLarpChipsForLocale(i18n.resolvedLanguage),
     [i18n.resolvedLanguage],
   );
   const placeholderRef = useTypewriterPlaceholder(
     prompt,
-    prankIdeas,
+    larpIdeas,
     t("promptInput.describePlaceholder"),
   );
 
   const shuffleIdea = () => {
-    const random = prankChips[Math.floor(Math.random() * prankChips.length)];
+    const random = larpChips[Math.floor(Math.random() * larpChips.length)];
     onPromptChange(random.example);
   };
 

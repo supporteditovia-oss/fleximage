@@ -15,22 +15,22 @@ import {
   normalizeLocale,
 } from "@shared/locales";
 
-type PrankChipDescriptor = {
+type LarpChipDescriptor = {
   id: string;
   icon: ElementType;
 };
 
-type PrankChipContent = {
+type LarpChipContent = {
   label: string;
   example: string;
 };
 
-type PrankLocaleContent = {
-  chips: Record<string, PrankChipContent>;
+type LarpLocaleContent = {
+  chips: Record<string, LarpChipContent>;
   ideas: string[];
 };
 
-const prankChipDescriptors: PrankChipDescriptor[] = [
+const larpChipDescriptors: LarpChipDescriptor[] = [
   { id: "chrome", icon: ShoppingBag },
   { id: "supercar", icon: Car },
   { id: "restaurant", icon: UtensilsCrossed },
@@ -41,7 +41,7 @@ const prankChipDescriptors: PrankChipDescriptor[] = [
   { id: "nightlife", icon: Sparkles },
 ];
 
-const prankContentByLocale: Record<AppLocale, PrankLocaleContent> = {
+const larpContentByLocale: Record<AppLocale, LarpLocaleContent> = {
   fr: {
     chips: {
       chrome: {
@@ -228,31 +228,31 @@ const prankContentByLocale: Record<AppLocale, PrankLocaleContent> = {
   },
 };
 
-function resolvePrankLocale(locale: string | null | undefined): AppLocale {
+function resolveLarpLocale(locale: string | null | undefined): AppLocale {
   return normalizeLocale(locale) ?? DEFAULT_LOCALE;
 }
 
-export function getPrankChipsForLocale(locale: string | null | undefined): {
+export function getLarpChipsForLocale(locale: string | null | undefined): {
   id: string;
   icon: ElementType;
   label: string;
   example: string;
 }[] {
-  const localizedContent = prankContentByLocale[resolvePrankLocale(locale)];
+  const localizedContent = larpContentByLocale[resolveLarpLocale(locale)];
 
-  return prankChipDescriptors.map((descriptor) => ({
+  return larpChipDescriptors.map((descriptor) => ({
     ...descriptor,
     label: localizedContent.chips[descriptor.id]?.label ?? descriptor.id,
     example: localizedContent.chips[descriptor.id]?.example ?? "",
   }));
 }
 
-export function getPrankIdeasForLocale(
+export function getLarpIdeasForLocale(
   locale: string | null | undefined,
 ): string[] {
-  return prankContentByLocale[resolvePrankLocale(locale)].ideas;
+  return larpContentByLocale[resolveLarpLocale(locale)].ideas;
 }
 
-export const prankChips = getPrankChipsForLocale(DEFAULT_LOCALE);
+export const larpChips = getLarpChipsForLocale(DEFAULT_LOCALE);
 
-export const prankIdeas = getPrankIdeasForLocale(DEFAULT_LOCALE);
+export const larpIdeas = getLarpIdeasForLocale(DEFAULT_LOCALE);

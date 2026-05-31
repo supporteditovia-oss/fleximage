@@ -13,7 +13,7 @@ import AuthPage from "@/pages/Auth";
 import AdminPage from "@/pages/Admin";
 import AdminTemplates from "@/pages/AdminTemplates";
 import Generate from "@/pages/Generate";
-import PrankHistory from "@/pages/PrankHistory";
+import LarpHistory from "@/pages/LarpHistory";
 import Settings from "@/pages/Settings";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
@@ -213,7 +213,7 @@ function Router() {
       </Route>
 
       <Route path="/history">
-        <ProtectedRoute component={PrankHistory} />
+        <ProtectedRoute component={LarpHistory} />
       </Route>
 
       <Route path="/settings">

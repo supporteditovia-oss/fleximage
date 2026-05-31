@@ -1,19 +1,19 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PrankResult } from "@/components/prank/PrankResult";
+import { LarpResult } from "@/components/larp/LarpResult";
 import { useTranslation } from "react-i18next";
 
-interface UnlockedPrankViewProps {
+interface UnlockedLarpViewProps {
   resultUrls: string[];
-  prankId: string;
+  larpId: string;
   onReset: () => void;
 }
 
-export function UnlockedPrankView({
+export function UnlockedLarpView({
   resultUrls,
-  prankId,
+  larpId,
   onReset,
-}: UnlockedPrankViewProps) {
+}: UnlockedLarpViewProps) {
   const { t } = useTranslation();
 
   return (
@@ -39,7 +39,7 @@ export function UnlockedPrankView({
       </h1>
 
       <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
-        <PrankResult resultUrls={resultUrls} prankId={prankId} />
+        <LarpResult resultUrls={resultUrls} larpId={larpId} />
       </div>
 
       <Button

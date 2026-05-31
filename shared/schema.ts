@@ -218,17 +218,17 @@ export const generations = pgTable("generations", {
   completed_at: timestamp("completed_at", { withTimezone: true }),
 });
 
-export const generatedPranks = generations;
+export const generatedLarps = generations;
 
 export type Generation = typeof generations.$inferSelect;
-export type GeneratedPrank = Generation;
+export type GeneratedLarp = Generation;
 
-export const insertGeneratedPrankSchema = z.object({
+export const insertGeneratedLarpSchema = z.object({
   final_prompt: z.string().min(1).max(2000),
   provider_task_id: z.string().min(1),
 });
 
-export type InsertGeneratedPrank = z.infer<typeof insertGeneratedPrankSchema>;
+export type InsertGeneratedLarp = z.infer<typeof insertGeneratedLarpSchema>;
 
 // --- Favorite Templates ---
 export const favoriteTemplates = pgTable("favorite_templates", {

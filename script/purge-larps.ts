@@ -13,7 +13,7 @@ type CliOptions = {
   execute: boolean;
 };
 
-type PrankRow = {
+type LarpRow = {
   id: string;
   user_id: string;
   created_at: string;
@@ -45,15 +45,15 @@ type SubscriptionRow = {
 
 const HELP_TEXT = [
   "Usage:",
-  "  bun run script/purge-pranks.ts --all [--execute]",
-  "  bun run script/purge-pranks.ts --all --free-only [--execute]",
-  "  bun run script/purge-pranks.ts --before YYYY-MM-DD [--user USER_UUID] [--execute]",
-  "  bun run script/purge-pranks.ts --user USER_UUID [--execute]",
+  "  bun run script/purge-larps.ts --all [--execute]",
+  "  bun run script/purge-larps.ts --all --free-only [--execute]",
+  "  bun run script/purge-larps.ts --before YYYY-MM-DD [--user USER_UUID] [--execute]",
+  "  bun run script/purge-larps.ts --user USER_UUID [--execute]",
   "",
   "Flags:",
-  "  --all             Target all prank rows and all pranks/ + inputs/ objects in R2",
-  "  --before DATE     Target pranks created before DATE (YYYY-MM-DD)",
-  "  --user UUID       Target pranks of one user",
+  "  --all             Target all larp rows and all larps/ + inputs/ objects in R2",
+  "  --before DATE     Target larps created before DATE (YYYY-MM-DD)",
+  "  --user UUID       Target larps of one user",
   "  --free-only       Keep only never-paid users (safe for paid users)",
   "  --execute         Perform real deletion (without this flag: dry-run)",
   "  --help            Show this help",
@@ -170,15 +170,15 @@ function extractR2KeyFromUrl(url: string): string | null {
     const parsed = new URL(normalized);
     const pathname = decodeURIComponent(parsed.pathname).replace(/^\/+/, "");
 
-    if (pathname.startsWith("pranks/") || pathname.startsWith("inputs/")) {
+    if (pathname.startsWith("larps/") || pathname.startsWith("inputs/")) {
       return pathname;
     }
 
     return null;
   } catch {
-    const markerPranks = normalized.indexOf("/pranks/");
-    if (markerPranks >= 0) {
-      return normalized.slice(markerPranks + 1);
+    const markerLarps = normalized.indexOf("/larps/");
+    if (markerLarps >= 0) {
+      return normalized.slice(markerLarps + 1);
     }
 
     const markerInputs = normalized.indexOf("/inputs/");
@@ -233,13 +233,13 @@ async function listKeysByPrefix(
   return keys;
 }
 
-async function fetchTargetPranks(
+async function fetchTargetLarps(
   supabase: ReturnType<typeof createClient>,
   options: CliOptions,
-): Promise<PrankRow[]> {
+): Promise<LarpRow[]> {
   const pageSize = 1000;
   let offset = 0;
-  const rows: PrankRow[] = [];
+  const rows: LarpRow[] = [];
 
   while (true) {
     let query = supabase
@@ -269,7 +269,7 @@ async function fetchTargetPranks(
       break;
     }
 
-    rows.push(...(data as PrankRow[]));
+    rows.push(...(data as LarpRow[]));
 
     if (data.length < pageSize) {
       break;
@@ -305,13 +305,13 @@ async function deleteR2Keys(
   return deleted;
 }
 
-async function deletePrankRows(
+async function deleteLarpRows(
   supabase: ReturnType<typeof createClient>,
-  prankIds: string[],
+  larpIds: string[],
 ): Promise<number> {
   let deleted = 0;
 
-  for (const idBatch of chunk(prankIds, 500)) {
+  for (const idBatch of chunk(larpIds, 500)) {
     const { error } = await supabase
       .from("generations")
       .delete()
@@ -404,12 +404,12 @@ async function run(): Promise<void> {
   });
 
   const modeLabel = options.execute ? "EXECUTE" : "DRY-RUN";
-  console.log(`[${modeLabel}] Fetching target prank rows...`);
-  const initialTargetPranks = await fetchTargetPranks(supabase, options);
-  let targetPranks = initialTargetPranks;
+  console.log(`[${modeLabel}] Fetching target larp rows...`);
+  const initialTargetLarps = await fetchTargetLarps(supabase, options);
+  let targetLarps = initialTargetLarps;
 
   if (options.freeOnly) {
-    const candidateUserIds = targetPranks.map((row) => row.user_id);
+    const candidateUserIds = targetLarps.map((row) => row.user_id);
     console.log(
       `[${modeLabel}] Applying free-only filter on ${new Set(candidateUserIds).size} users...`,
     );
@@ -419,54 +419,54 @@ async function run(): Promise<void> {
       candidateUserIds,
     );
 
-    targetPranks = targetPranks.filter((row) =>
+    targetLarps = targetLarps.filter((row) =>
       neverPaidUserIds.has(row.user_id),
     );
 
     console.log(
-      `[${modeLabel}] Free-only kept ${targetPranks.length}/${initialTargetPranks.length} prank rows`,
+      `[${modeLabel}] Free-only kept ${targetLarps.length}/${initialTargetLarps.length} larp rows`,
     );
   }
 
-  const prankIds = targetPranks.map((row) => row.id);
+  const larpIds = targetLarps.map((row) => row.id);
   const prefixSet = new Set<string>();
   const keySet = new Set<string>();
 
   if (options.all && !options.freeOnly) {
-    console.log(`[${modeLabel}] Listing keys for prefixes pranks/ and inputs/...`);
-    const [allPrankKeys, allInputKeys] = await Promise.all([
-      listKeysByPrefix(s3Client, env.r2BucketName, "pranks/"),
+    console.log(`[${modeLabel}] Listing keys for prefixes larps/ and inputs/...`);
+    const [allLarpKeys, allInputKeys] = await Promise.all([
+      listKeysByPrefix(s3Client, env.r2BucketName, "larps/"),
       listKeysByPrefix(s3Client, env.r2BucketName, "inputs/"),
     ]);
 
-    for (const key of allPrankKeys) {
+    for (const key of allLarpKeys) {
       keySet.add(key);
     }
     for (const key of allInputKeys) {
       keySet.add(key);
     }
   } else {
-    for (const prank of targetPranks) {
-      prefixSet.add(`pranks/${prank.id}/`);
+    for (const larp of targetLarps) {
+      prefixSet.add(`larps/${larp.id}/`);
 
-      for (const url of parseJsonUrls(prank.input_assets)) {
+      for (const url of parseJsonUrls(larp.input_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
 
-      for (const url of parseJsonUrls(prank.output_assets)) {
+      for (const url of parseJsonUrls(larp.output_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
 
-      for (const url of parseJsonUrls(prank.watermarked_assets)) {
+      for (const url of parseJsonUrls(larp.watermarked_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
     }
 
     console.log(
-      `[${modeLabel}] Listing keys in ${prefixSet.size} prank prefixes...`,
+      `[${modeLabel}] Listing keys in ${prefixSet.size} larp prefixes...`,
     );
 
     for (const prefix of prefixSet) {
@@ -480,7 +480,7 @@ async function run(): Promise<void> {
   const keys = Array.from(keySet);
 
   console.log("Summary:");
-  console.log(`  Target prank rows: ${prankIds.length}`);
+  console.log(`  Target larp rows: ${larpIds.length}`);
   console.log(`  Target R2 keys: ${keys.length}`);
   if (!options.execute) {
     console.log(
@@ -493,11 +493,11 @@ async function run(): Promise<void> {
   const deletedKeys = await deleteR2Keys(s3Client, env.r2BucketName, keys);
 
   console.log("Deleting generations rows...");
-  const deletedRows = await deletePrankRows(supabase, prankIds);
+  const deletedRows = await deleteLarpRows(supabase, larpIds);
 
   console.log("Done.");
   console.log(`  Deleted R2 keys: ${deletedKeys}`);
-  console.log(`  Deleted prank rows: ${deletedRows}`);
+  console.log(`  Deleted larp rows: ${deletedRows}`);
 }
 
 run().catch((error) => {

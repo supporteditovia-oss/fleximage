@@ -2,7 +2,7 @@ const STORAGE_KEY = "larpking_paywalled_result";
 
 export interface PaywalledResult {
   taskId: string;
-  prankId: string;
+  larpId: string;
   resultUrls: string[];
   savedAt: number;
 }

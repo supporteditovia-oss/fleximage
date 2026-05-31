@@ -17,14 +17,14 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
-const LIVE_PRANK_MIN_COUNT = 20_000;
-const LIVE_PRANK_MAX_COUNT = 30_000;
+const LIVE_LARP_MIN_COUNT = 20_000;
+const LIVE_LARP_MAX_COUNT = 30_000;
 const REVIEW_MIN_COUNT = 2_000;
 const REVIEW_MAX_COUNT = 5_000;
 
-const getInitialLivePrankCount = () =>
-  LIVE_PRANK_MIN_COUNT +
-  Math.floor(Math.random() * (LIVE_PRANK_MAX_COUNT - LIVE_PRANK_MIN_COUNT + 1));
+const getInitialLiveLarpCount = () =>
+  LIVE_LARP_MIN_COUNT +
+  Math.floor(Math.random() * (LIVE_LARP_MAX_COUNT - LIVE_LARP_MIN_COUNT + 1));
 
 const getInitialReviewCount = () =>
   REVIEW_MIN_COUNT +
@@ -34,25 +34,25 @@ export default function SimpleHeroSection() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const [livePrankCount, setLivePrankCount] = React.useState(
-    getInitialLivePrankCount,
+  const [liveLarpCount, setLiveLarpCount] = React.useState(
+    getInitialLiveLarpCount,
   );
   const [reviewCount] = React.useState(getInitialReviewCount);
 
   React.useEffect(() => {
     const interval = window.setInterval(() => {
-      setLivePrankCount((count) => count + 1 + Math.floor(Math.random() * 2));
+      setLiveLarpCount((count) => count + 1 + Math.floor(Math.random() * 2));
     }, 2600);
 
     return () => window.clearInterval(interval);
   }, []);
 
-  const formattedLivePrankCount = React.useMemo(
+  const formattedLiveLarpCount = React.useMemo(
     () =>
       new Intl.NumberFormat(i18n.resolvedLanguage || undefined).format(
-        livePrankCount,
+        liveLarpCount,
       ),
-    [i18n.resolvedLanguage, livePrankCount],
+    [i18n.resolvedLanguage, liveLarpCount],
   );
   const formattedReviewCount = React.useMemo(
     () =>
@@ -84,7 +84,7 @@ export default function SimpleHeroSection() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
             <span>
-              <span className="text-foreground">{formattedLivePrankCount}</span>{" "}
+              <span className="text-foreground">{formattedLiveLarpCount}</span>{" "}
               {t("hero.simpleLiveBadgeLabel")}
             </span>
           </div>

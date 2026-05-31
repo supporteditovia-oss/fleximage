@@ -149,15 +149,15 @@ ALTER TABLE public.prompt_templates
   ALTER COLUMN category DROP NOT NULL;
 
 -- =========================================================================================
--- 6. ADD input_urls column to generated_pranks
+-- 6. ADD input_urls column to generated_larps
 -- =========================================================================================
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
-      AND table_name = 'generated_pranks'
+      AND table_name = 'generated_larps'
       AND column_name = 'input_urls'
   ) THEN
-    ALTER TABLE public.generated_pranks ADD COLUMN input_urls TEXT;
+    ALTER TABLE public.generated_larps ADD COLUMN input_urls TEXT;
   END IF;
 END $$;

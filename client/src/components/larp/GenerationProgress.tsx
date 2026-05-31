@@ -4,9 +4,9 @@ import { ArrowRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { usePrankStatus } from "@/hooks/use-pranks";
+import { useLarpStatus } from "@/hooks/use-larps";
 import { useToast } from "@/hooks/use-toast";
-import { PrankResult } from "./PrankResult";
+import { LarpResult } from "./LarpResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
 
@@ -26,7 +26,7 @@ export function GenerationProgress({
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { data, isLoading, error } = usePrankStatus(taskId);
+  const { data, isLoading, error } = useLarpStatus(taskId);
   const [revealDone, setRevealDone] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const hasHandledFailure = useRef(false);
@@ -140,9 +140,9 @@ export function GenerationProgress({
 
             {/* LARP result with download/share actions */}
             <div className="relative min-h-0 min-w-0 flex items-center justify-center overflow-hidden py-2 shrink">
-              <PrankResult
+              <LarpResult
                 resultUrls={data.resultUrls}
-                prankId={data.prankId}
+                larpId={data.larpId}
                 resultType={data.resultType ?? resultType}
               />
             </div>

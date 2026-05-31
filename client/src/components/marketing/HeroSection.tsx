@@ -9,18 +9,18 @@ import {
   ArrowRight,
 } from "lucide-react";
 import {
-  getPrankChipsForLocale,
-  getPrankIdeasForLocale,
-} from "@/lib/prank-data";
+  getLarpChipsForLocale,
+  getLarpIdeasForLocale,
+} from "@/lib/larp-data";
 import HeroHeadline from "@/components/marketing/HeroHeadline";
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
-import { savePendingPrank } from "@/lib/pending-prank";
+import { savePendingLarp } from "@/lib/pending-larp";
 import { useAuth } from "@/hooks/use-auth";
-import { useGenerateDirectPrank } from "@/hooks/use-pranks";
+import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
-import { GenerationProgress } from "@/components/prank/GenerationProgress";
+import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -41,21 +41,21 @@ export default function HeroSection() {
   const [images, setImages] = React.useState<({ url: string; file: File } | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const prankIdeas = React.useMemo(
-    () => getPrankIdeasForLocale(i18n.resolvedLanguage),
+  const larpIdeas = React.useMemo(
+    () => getLarpIdeasForLocale(i18n.resolvedLanguage),
     [i18n.resolvedLanguage],
   );
-  const prankChips = React.useMemo(
-    () => getPrankChipsForLocale(i18n.resolvedLanguage),
+  const larpChips = React.useMemo(
+    () => getLarpChipsForLocale(i18n.resolvedLanguage),
     [i18n.resolvedLanguage],
   );
   const typewriterRef = useTypewriterPlaceholder(
     prompt,
-    isMobile ? (Object.freeze([]) as unknown as string[]) : prankIdeas,
+    isMobile ? (Object.freeze([]) as unknown as string[]) : larpIdeas,
     t("promptInput.describePlaceholder"),
   );
   const { user } = useAuth();
-  const generateDirect = useGenerateDirectPrank();
+  const generateDirect = useGenerateDirectLarp();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
   const [taskId, setTaskId] = React.useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function HeroSection() {
     });
 
   const shuffleIdea = () => {
-    const random = prankChips[Math.floor(Math.random() * prankChips.length)];
+    const random = larpChips[Math.floor(Math.random() * larpChips.length)];
     setPrompt(random.example);
   };
 
@@ -163,7 +163,7 @@ export default function HeroSection() {
     } else {
       if (files.length > 0 || prompt.trim()) {
         try {
-          await savePendingPrank({
+          await savePendingLarp({
             prompt,
             images: files.map((f) => f.file),
             generationMode: "image",

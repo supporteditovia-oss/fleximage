@@ -1,4 +1,4 @@
-import { usePrankHistory, useDeletePrank } from "@/hooks/use-pranks";
+import { useLarpHistory, useDeleteLarp } from "@/hooks/use-larps";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -68,55 +68,44 @@ const SHARE_PLATFORMS = [
   },
 ];
 
-export default function PrankHistory() {
-  const { data: pranks, isLoading } = usePrankHistory();
-  const deletePrank = useDeletePrank();
+export default function LarpHistory() {
+  const { data: larps, isLoading } = useLarpHistory();
+  const deleteLarp = useDeleteLarp();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
-  const [selectedPrank, setSelectedPrank] = useState<{
+  const [selectedLarp, setSelectedLarp] = useState<{
     url: string;
-    prankId: string;
+    larpId: string;
     resultType: "image" | "video";
   } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<{
-    prankId: string;
+    larpId: string;
     imageIndex: number;
   } | null>(null);
   const [shareGuide, setShareGuide] = useState<{
     platform: string;
-    prankId: string;
+    larpId: string;
     imageIndex: number;
   } | null>(null);
 
-  function getResultUrls(resultUrlsStr: string | null): string[] {
-    if (!resultUrlsStr) return [];
+  function getAssetUrls(assets: string[] | string | null | undefined): string[] {
+    if (!assets) return [];
+    if (Array.isArray(assets)) return assets;
     try {
-      return JSON.parse(resultUrlsStr);
+      const parsed = JSON.parse(assets);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   }
 
-  function getInputUrls(inputUrlsStr: string | null): string[] {
-    if (!inputUrlsStr) return [];
-    try {
-      return JSON.parse(inputUrlsStr);
-    } catch {
-      return [];
-    }
-  }
-
-  function isVideoPrank(taskId: string): boolean {
-    return taskId.split(",").pop()?.startsWith("video_") ?? false;
-  }
-
-  async function handleDownload(prankId: string, imageIndex: number = 0) {
+  async function handleDownload(larpId: string, imageIndex: number = 0) {
     try {
       const res = await authFetch(
-        `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+        `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
       );
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -142,7 +131,7 @@ export default function PrankHistory() {
   }
 
   async function handleShare(
-    prankId: string,
+    larpId: string,
     imageIndex: number,
     platform: "whatsapp" | "snapchat" | "instagram" | "tiktok",
   ) {
@@ -150,7 +139,7 @@ export default function PrankHistory() {
     if (navigator.share && navigator.canShare) {
       try {
         const res = await authFetch(
-          `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
+          `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
         const blob = await res.blob();
         const file = new File([blob], "larp.jpg", {
@@ -172,14 +161,14 @@ export default function PrankHistory() {
     };
     // Small delay to ensure dropdown closes properly before opening dialog
     setTimeout(() => {
-      setShareGuide({ platform: names[platform], prankId, imageIndex });
+      setShareGuide({ platform: names[platform], larpId, imageIndex });
     }, 0);
   }
 
   async function handleDelete() {
     if (!deletingId) return;
     try {
-      await deletePrank.mutateAsync(deletingId);
+      await deleteLarp.mutateAsync(deletingId);
       toast({ title: t("history.deleted") });
     } catch (error: any) {
       toast({
@@ -192,15 +181,16 @@ export default function PrankHistory() {
   }
 
   // Only show successful LARPs (hide pending/failed)
-  const successPranks = pranks?.filter(
-    (p) => p.status === "success" && getResultUrls(p.result_urls).length > 0,
+  const successLarps = larps?.filter(
+    (larp) =>
+      larp.status === "success" && getAssetUrls(larp.outputAssets).length > 0,
   );
-  const hasPranks = !isLoading && successPranks && successPranks.length > 0;
+  const hasLarps = !isLoading && successLarps && successLarps.length > 0;
 
   return (
     <div className="space-y-16 pt-10">
       {/* Title — hidden when empty */}
-      {hasPranks && (
+      {hasLarps && (
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
           <span className="relative inline-block">
             {t("history.pageTitle")}
@@ -243,7 +233,7 @@ export default function PrankHistory() {
             </div>
           ))}
         </div>
-      ) : !successPranks?.length ? (
+      ) : !successLarps?.length ? (
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-15rem)] text-center px-4">
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
             <span className="relative inline-block">
@@ -277,18 +267,19 @@ export default function PrankHistory() {
         </div>
       ) : (
         <div className="grid gap-1.5 grid-cols-2 sm:grid-cols-3 max-w-3xl mx-auto">
-          {successPranks.map((prank) => {
-            const urls = getResultUrls(prank.result_urls);
-            const inputUrls = getInputUrls(prank.input_urls);
-            const resultType = isVideoPrank(prank.kie_task_id) ? "video" : "image";
+          {successLarps.map((larp) => {
+            const urls = getAssetUrls(larp.outputAssets);
+            const inputUrls = getAssetUrls(larp.inputAssets);
+            const resultType =
+              larp.generationType === "video" ? "video" : "image";
             const hasInputImage = resultType === "image" && inputUrls.length > 0;
 
             return (
               <div
-                key={prank.id}
+                key={larp.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
                 onClick={() =>
-                  setSelectedPrank({ url: urls[0], prankId: prank.id, resultType })
+                  setSelectedLarp({ url: urls[0], larpId: larp.id, resultType })
                 }
               >
                 {resultType === "video" ? (
@@ -339,7 +330,7 @@ export default function PrankHistory() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setDeletingId(prank.id);
+                    setDeletingId(larp.id);
                   }}
                   className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-black/70"
                 >
@@ -349,14 +340,14 @@ export default function PrankHistory() {
                 {/* Bottom gradient overlay with name + action buttons */}
                 <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-3 pt-12 flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    {prank.prompt_templates?.name && (
+                    {larp.template?.name && (
                       <p className="text-white text-sm font-semibold truncate">
-                        {prank.prompt_templates.name}
+                        {larp.template.name}
                       </p>
                     )}
-                    {prank.fail_message && (
+                    {larp.failMessage && (
                       <p className="text-xs text-red-300 mt-0.5 line-clamp-1">
-                        {prank.fail_message}
+                        {larp.failMessage}
                       </p>
                     )}
                   </div>
@@ -366,7 +357,7 @@ export default function PrankHistory() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDownload(prank.id);
+                        handleDownload(larp.id);
                       }}
                       className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                       title={t("history.download")}
@@ -376,7 +367,7 @@ export default function PrankHistory() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShareDialog({ prankId: prank.id, imageIndex: 0 });
+                        setShareDialog({ larpId: larp.id, imageIndex: 0 });
                       }}
                       className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                       title={t("history.share")}
@@ -419,7 +410,7 @@ export default function PrankHistory() {
                   onClick={() =>
                     shareDialog &&
                     handleShare(
-                      shareDialog.prankId,
+                      shareDialog.larpId,
                       shareDialog.imageIndex,
                       platform.id,
                     )
@@ -456,7 +447,7 @@ export default function PrankHistory() {
                   onClick={() =>
                     shareDialog &&
                     handleShare(
-                      shareDialog.prankId,
+                      shareDialog.larpId,
                       shareDialog.imageIndex,
                       platform.id,
                     )
@@ -475,19 +466,19 @@ export default function PrankHistory() {
       )}
 
       {/* Image viewer — fullscreen overlay on both mobile and desktop */}
-      {selectedPrank &&
+      {selectedLarp &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setSelectedPrank(null)}
+              onClick={() => setSelectedLarp(null)}
             />
             {/* Media with actions */}
-            <div className={`relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh] ${selectedPrank.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
-              {selectedPrank.resultType === "video" ? (
+            <div className={`relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh] ${selectedLarp.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
+              {selectedLarp.resultType === "video" ? (
                 <video
-                  src={selectedPrank.url}
+                  src={selectedLarp.url}
                   controls
                   autoPlay
                   playsInline
@@ -495,14 +486,14 @@ export default function PrankHistory() {
                 />
               ) : (
                 <img
-                  src={selectedPrank.url}
+                  src={selectedLarp.url}
                   alt={t("history.generatedAlt")}
                   className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-lg object-contain"
                 />
               )}
               {/* Top left — close */}
               <button
-                onClick={() => setSelectedPrank(null)}
+                onClick={() => setSelectedLarp(null)}
                 className="absolute top-2 left-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -510,20 +501,20 @@ export default function PrankHistory() {
               {/* Top right — delete */}
               <button
                 onClick={() => {
-                  setDeletingId(selectedPrank.prankId);
-                  setSelectedPrank(null);
+                  setDeletingId(selectedLarp.larpId);
+                  setSelectedLarp(null);
                 }}
                 className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
               {/* Bottom center — download & share */}
-              <div className={selectedPrank.resultType === "video"
+              <div className={selectedLarp.resultType === "video"
                 ? "flex items-center justify-center gap-3"
                 : "absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl"
               }>
                 <button
-                  onClick={() => handleDownload(selectedPrank.prankId)}
+                  onClick={() => handleDownload(selectedLarp.larpId)}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                   title={t("history.download")}
                 >
@@ -532,10 +523,10 @@ export default function PrankHistory() {
                 <button
                   onClick={() => {
                     setShareDialog({
-                      prankId: selectedPrank.prankId,
+                      larpId: selectedLarp.larpId,
                       imageIndex: 0,
                     });
-                    setSelectedPrank(null);
+                    setSelectedLarp(null);
                   }}
                   className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                   title={t("history.share")}
@@ -583,10 +574,10 @@ export default function PrankHistory() {
                 </Button>
                 <Button
                   onClick={handleDelete}
-                  disabled={deletePrank.isPending}
+                  disabled={deleteLarp.isPending}
                   className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full border-0"
                 >
-                  {deletePrank.isPending && (
+                  {deleteLarp.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   {t("common.actions.delete")}
@@ -620,10 +611,10 @@ export default function PrankHistory() {
               </Button>
               <Button
                 onClick={handleDelete}
-                disabled={deletePrank.isPending}
+                disabled={deleteLarp.isPending}
                 className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full border-0"
               >
-                {deletePrank.isPending && (
+                {deleteLarp.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 {t("common.actions.delete")}
@@ -674,7 +665,7 @@ export default function PrankHistory() {
                 onClick={async () => {
                   if (shareGuide) {
                     await handleDownload(
-                      shareGuide.prankId,
+                      shareGuide.larpId,
                       shareGuide.imageIndex,
                     );
                     toast({ title: t("history.imageDownloaded") });
@@ -720,7 +711,7 @@ export default function PrankHistory() {
                 onClick={async () => {
                   if (shareGuide) {
                     await handleDownload(
-                      shareGuide.prankId,
+                      shareGuide.larpId,
                       shareGuide.imageIndex,
                     );
                     toast({ title: t("history.imageDownloaded") });

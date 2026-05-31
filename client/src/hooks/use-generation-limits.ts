@@ -12,7 +12,7 @@ export function useGenerationEligibility() {
   return useQuery<GenerationEligibility>({
     queryKey: ["generation-eligibility"],
     queryFn: async () => {
-      const res = await authFetch("/api/pranks/can-generate");
+      const res = await authFetch("/api/larps/can-generate");
       if (!res.ok) throw new Error("Failed to check generation eligibility");
       return res.json();
     },

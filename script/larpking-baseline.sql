@@ -1,6 +1,6 @@
 -- LarpKing database baseline
 -- Intended for an empty Supabase project, or a deliberate reset.
--- This removes the old prank-named schema and creates the LarpKing schema.
+-- This removes the old larp-named schema and creates the LarpKing schema.
 
 begin;
 
@@ -26,7 +26,7 @@ drop table if exists public.generation_rate_limits cascade;
 drop table if exists public.generation_events cascade;
 drop table if exists public.favorite_templates cascade;
 drop table if exists public.generations cascade;
-drop table if exists public.generated_pranks cascade;
+drop table if exists public.generated_larps cascade;
 drop table if exists public.generation_ips cascade;
 drop table if exists public.subscriptions cascade;
 drop table if exists public.templates cascade;

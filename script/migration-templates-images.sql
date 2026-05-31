@@ -7,7 +7,7 @@ ALTER TABLE public.prompt_templates
   ADD COLUMN IF NOT EXISTS output_label TEXT,
   ADD COLUMN IF NOT EXISTS image_labels TEXT;
 
--- Seed the 8 default prank templates
+-- Seed the 8 default larp templates
 INSERT INTO public.prompt_templates (name, description, prompt_text, category, is_active, required_images, optional_images, output_label, image_labels)
 VALUES
   ('Ticket d''amende', 'Un vrai PV de stationnement à ton nom', 'Génère une image ultra-réaliste d''un PV de stationnement officiel français posé sur un pare-brise. Le document doit comporter les logos officiels, un numéro de contravention, et un montant d''amende. Rendu photoréaliste, lumière naturelle extérieure.', 'situation', true, 1, 0, 'PV', '["ta voiture"]'),
