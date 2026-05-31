@@ -78,7 +78,7 @@ export default function DebugGenerate() {
           <span
             className={`w-3 h-3 rounded-full ${
               hasPending === null ? "bg-muted-foreground animate-pulse" :
-              hasPending ? "bg-green-500" : "bg-red-500"
+              hasPending ? "bg-[#42a5f6]" : "bg-red-500"
             }`}
           />
           <span className="text-sm font-medium">

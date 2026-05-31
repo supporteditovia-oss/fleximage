@@ -1,5 +1,7 @@
 import FloatingHeader from "@/components/layout/FloatingHeader";
 import HeroSection from "@/components/marketing/HeroSection";
+import LarpProSection from "@/components/marketing/LarpProSection";
+import UseCasesSection from "@/components/marketing/UseCasesSection";
 import ImageMarquee from "@/components/marketing/ImageMarquee";
 import FaqSection from "@/components/marketing/FaqSection";
 import CtaSection from "@/components/marketing/CtaSection";
@@ -10,7 +12,9 @@ export default function Landing() {
     <div className="relative overflow-hidden">
       <FloatingHeader />
       <HeroSection />
+      <LarpProSection />
       <ImageMarquee />
+      <UseCasesSection />
       <FaqSection />
       <CtaSection />
       <Footer />

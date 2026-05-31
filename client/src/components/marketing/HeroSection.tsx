@@ -3,11 +3,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
-  ChevronDown,
   Plus,
   X,
   Shuffle,
-  Sparkles,
   ArrowRight,
 } from "lucide-react";
 import {
@@ -15,10 +13,11 @@ import {
   getPrankIdeasForLocale,
 } from "@/lib/prank-data";
 import HeroHeadline from "@/components/marketing/HeroHeadline";
+import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingPrank } from "@/lib/pending-prank";
 import { useAuth } from "@/hooks/use-auth";
-import { useGenerateDirectPrank, useGenerateVideoPrank } from "@/hooks/use-pranks";
+import { useGenerateDirectPrank } from "@/hooks/use-pranks";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/prank/GenerationProgress";
@@ -41,7 +40,6 @@ export default function HeroSection() {
   const [prompt, setPrompt] = React.useState("");
   const [images, setImages] = React.useState<({ url: string; file: File } | null)[]>([null]);
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
-  const [accordionOpen, setAccordionOpen] = React.useState(false);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const prankIdeas = React.useMemo(
     () => getPrankIdeasForLocale(i18n.resolvedLanguage),
@@ -58,11 +56,9 @@ export default function HeroSection() {
   );
   const { user } = useAuth();
   const generateDirect = useGenerateDirectPrank();
-  const generateVideo = useGenerateVideoPrank();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
   const [taskId, setTaskId] = React.useState<string | null>(null);
-  const [generationMode, setGenerationMode] = React.useState<"image" | "video">("image");
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -146,9 +142,7 @@ export default function HeroSection() {
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
         };
-        const result = generationMode === "video"
-          ? await generateVideo.mutateAsync(payload)
-          : await generateDirect.mutateAsync(payload);
+        const result = await generateDirect.mutateAsync(payload);
         setTaskId(result.taskId);
         refetchEligibility();
       } catch (error: any) {
@@ -172,7 +166,7 @@ export default function HeroSection() {
           await savePendingPrank({
             prompt,
             images: files.map((f) => f.file),
-            generationMode,
+            generationMode: "image",
             timestamp: Date.now(),
           });
         } catch (error) {
@@ -187,67 +181,23 @@ export default function HeroSection() {
     setTaskId(null);
     setPrompt("");
     setImages([null]);
-    setGenerationMode("image");
   };
 
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(255,255,255,0.78)_0_28%,transparent_28%_100%),linear-gradient(78deg,transparent_0_62%,rgba(0,0,0,0.04)_62%_76%,transparent_76%_100%)]" />
+      <HeroBackgroundFrames />
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="flex flex-col items-center justify-center w-full flex-1"
+        className="relative z-10 flex flex-col items-center justify-center w-full flex-1"
       >
         <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-14 md:pt-14">
-        <HeroHeadline
-          variants={itemVariants}
-          showArrow={!images.some((img) => img !== null)}
-        />
+        <HeroHeadline variants={itemVariants} showArrow={false} />
 
-        {/* Bottom group: drop zone + input + prank ideas */}
+        {/* Bottom group: drop zone + input */}
         <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
-          <motion.div variants={itemVariants} className="flex justify-center px-4">
-            <div
-              role="tablist"
-              aria-label="Generation mode"
-              className="relative grid grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
-            >
-              <div
-                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-transform duration-300 ${
-                  generationMode === "video" ? "translate-x-full" : "translate-x-0"
-                }`}
-              />
-              <button
-                type="button"
-                role="tab"
-                aria-selected={generationMode === "image"}
-                onClick={() => setGenerationMode("image")}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  generationMode === "image"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground/75 hover:text-muted-foreground"
-                }`}
-              >
-                {t("generate.modeImage")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={generationMode === "video"}
-                onClick={() => setGenerationMode("video")}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  generationMode === "video"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground/75 hover:text-muted-foreground"
-                }`}
-              >
-                {t("generate.modeVideo")}
-              </button>
-            </div>
-          </motion.div>
-
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
@@ -275,9 +225,6 @@ export default function HeroSection() {
                     </>
                   ) : (
                     <>
-                      {draggedIndex !== i && (
-                        <span className="hero-image-slot absolute -inset-[2px] rounded-lg pointer-events-none" />
-                      )}
                     <label
                       className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all ${
                         draggedIndex === i
@@ -320,6 +267,9 @@ export default function HeroSection() {
                         )
                       )}
                     </label>
+                      {draggedIndex !== i && (
+                        <span className="hero-image-slot absolute inset-0 z-10 rounded-lg pointer-events-none" />
+                      )}
                     </>
                   )}
                 </div>
@@ -364,108 +314,6 @@ export default function HeroSection() {
               </Button>
             </div>
           </motion.div>
-
-          {/* Idées de pranks trigger */}
-          <motion.div
-            variants={itemVariants}
-            className="relative w-full flex justify-center px-4"
-          >
-            <button
-              onClick={() => setAccordionOpen(!accordionOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/80 bg-white/85 backdrop-blur text-sm font-semibold text-foreground hover:border-foreground/40 hover:text-foreground active:scale-95 transition-all"
-            >
-              <Sparkles className="w-4 h-4" />
-              {t("hero.prankIdeas")}
-              <motion.span
-                animate={{ rotate: accordionOpen ? 180 : 0 }}
-                transition={{ duration: 0.25 }}
-                className="inline-flex"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </motion.span>
-            </button>
-
-            {/* Desktop dropdown */}
-            {accordionOpen && (
-              <div className="hidden md:block absolute bottom-full mb-3 w-full max-w-md z-50">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="p-3 rounded-lg border border-border/80 bg-card shadow-xl"
-                >
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {prankChips.map((chip) => {
-                      const Icon = chip.icon;
-                      return (
-                        <button
-                          key={chip.id}
-                          onClick={() => {
-                            setPrompt(chip.example);
-                            setAccordionOpen(false);
-                          }}
-                          className="flex items-center gap-2 px-3 h-10 rounded-full border border-border/80 bg-card hover:border-foreground/40 hover:bg-muted text-foreground text-xs font-medium transition-all focus:outline-none"
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{chip.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Mobile bottom sheet overlay */}
-          {accordionOpen && (
-            <div className="md:hidden fixed inset-0 z-50">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 bg-black/40"
-                onClick={() => setAccordionOpen(false)}
-              />
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                className="absolute bottom-0 left-0 right-0 bg-card rounded-t-lg px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
-              >
-                <div className="flex justify-center mb-3">
-                  <div className="w-10 h-1 rounded-full bg-muted" />
-                </div>
-                <h3 className="text-base font-semibold text-center mb-4">{t("hero.prankIdeas")}</h3>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {prankChips.map((chip) => {
-                    const Icon = chip.icon;
-                    return (
-                      <button
-                        key={chip.id}
-                        onClick={() => {
-                          setPrompt(chip.example);
-                          setAccordionOpen(false);
-                        }}
-                        className="flex items-center gap-1.5 px-2.5 h-10 rounded-full border border-border bg-card hover:border-foreground/40 hover:bg-muted text-foreground text-xs font-medium transition-all focus:outline-none"
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{chip.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            </div>
-          )}
-
-          {/* Desktop overlay to close dropdown */}
-          {accordionOpen && (
-            <div
-              className="hidden md:block fixed inset-0 z-40"
-              onClick={() => setAccordionOpen(false)}
-            />
-          )}
         </div>
         </div>
       </motion.div>
@@ -474,7 +322,7 @@ export default function HeroSection() {
           taskId={taskId}
           inputImageUrl={images[0]?.url}
           onReset={handleReset}
-          resultType={generationMode}
+          resultType="image"
         />,
         document.body
       )}

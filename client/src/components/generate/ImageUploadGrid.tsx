@@ -80,13 +80,6 @@ export function ImageUploadGrid({
                   </>
                 ) : (
                   <>
-                    {!selectedTemplate && (
-                      <span className="hero-image-slot absolute -inset-[2px] rounded-lg pointer-events-none" />
-                    )}
-                    {selectedTemplate && (
-                      <span className="hero-image-slot--fast absolute -inset-[2px] rounded-lg pointer-events-none" />
-                    )}
-
                     <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all border-foreground/25 bg-white/80">
                       <input
                         type="file"
@@ -121,6 +114,12 @@ export function ImageUploadGrid({
                         </p>
                       )}
                     </label>
+                    {!selectedTemplate && (
+                      <span className="hero-image-slot absolute inset-0 z-10 rounded-lg pointer-events-none" />
+                    )}
+                    {selectedTemplate && (
+                      <span className="hero-image-slot--fast absolute inset-0 z-10 rounded-lg pointer-events-none" />
+                    )}
                   </>
                 )}
               </div>

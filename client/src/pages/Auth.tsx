@@ -56,11 +56,11 @@ export default function AuthPage() {
     if (score <= 3)
       return { score: 3, label: t("auth.strength.medium"), color: "bg-yellow-500" };
     if (score <= 4)
-      return { score: 4, label: t("auth.strength.strong"), color: "bg-green-500" };
+      return { score: 4, label: t("auth.strength.strong"), color: "bg-[#42a5f6]" };
     return {
       score: 5,
       label: t("auth.strength.excellent"),
-      color: "bg-emerald-600",
+      color: "bg-[#42a5f6]",
     };
   };
 

@@ -768,7 +768,7 @@ function AdminStats({ metrics, profiles }: any) {
   const adminsCount = profiles?.filter((p: any) => p.role === 'admin').length || 0;
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="Aujourd'hui" value={metrics?.today} icon={<TrendingUp className="h-4 w-4 text-green-500" />} description="Nouveaux inscrits" />
+      <StatCard title="Aujourd'hui" value={metrics?.today} icon={<TrendingUp className="h-4 w-4 text-[#42a5f6]" />} description="Nouveaux inscrits" />
       <StatCard title="Cette Semaine" value={metrics?.week} icon={<Users className="h-4 w-4 text-primary" />} description="Inscriptions 7j" />
       <StatCard title="Ce Mois" value={metrics?.month} icon={<Users className="h-4 w-4 text-muted-foreground" />} description="Inscriptions 30j" />
       <StatCard title="Admins" value={adminsCount} icon={<ShieldCheck className="h-4 w-4 text-primary" />} description="Administrateurs système" />

@@ -1,226 +1,126 @@
-import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-
-interface MarqueeTemplate {
-  name: string;
-  example_before_url: string | null;
-  example_after_url: string;
-}
+import RealOrFakeGame from "@/components/marketing/RealOrFakeGame";
 
 interface ImageMarqueeProps {
   compactTop?: boolean;
 }
 
-const MIN_CARDS_PER_ROW = 8;
-const SPEED = 0.5; // px per frame at 60fps
-
-function padToMin<T>(items: T[], min: number): T[] {
-  if (items.length === 0) return items;
-  const result: T[] = [];
-  while (result.length < min) {
-    result.push(...items);
-  }
-  return result;
-}
-
-// Custom infinite CSS animation for marquee is now handling the scrolling instead of JS
-// The Tailwind config needs to have `animate-marquee` defined or we use inline styles.
-// For robust infinite scroll, we simply set up the track so it can loop seamlessly.
-
-function CardImage({ src, alt }: { src: string; alt: string }) {
-  return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      className="absolute inset-0 w-full h-full object-cover"
-    />
-  );
-}
-
-const MarqueeCard = React.memo(function MarqueeCard({
-  template,
-  beforeLabel,
-  afterLabel,
-}: {
-  template: MarqueeTemplate;
-  beforeLabel: string;
-  afterLabel: string;
-}) {
-  const hasBefore = !!template.example_before_url;
-
-  if (!hasBefore) {
-    return (
-      <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/30">
-        <CardImage src={template.example_after_url} alt={template.name} />
-        <div className="absolute bottom-2 left-2 right-2 z-10">
-          <span
-            className="text-[11px] font-semibold text-white truncate block"
-            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
-          >
-            {template.name}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/30">
-      <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
-        <CardImage
-          src={template.example_before_url!}
-          alt={`${template.name} - ${beforeLabel}`}
-        />
-      </div>
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
-      <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
-        <CardImage
-          src={template.example_after_url}
-          alt={`${template.name} - ${afterLabel}`}
-        />
-      </div>
-      <div className="absolute top-2 right-2 z-10">
-        <span className="text-[10px] font-medium text-white/80 bg-black/50 rounded-full px-2 py-0.5">
-          {beforeLabel}
-        </span>
-      </div>
-      <div className="absolute top-[calc(50%+6px)] right-2 z-10">
-        <span className="text-[10px] font-medium text-white/80 bg-black/50 rounded-full px-2 py-0.5">
-          {afterLabel}
-        </span>
-      </div>
-      <div className="absolute bottom-2 left-2 right-2 z-10">
-        <span
-          className="text-[11px] font-semibold text-white truncate block"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
-        >
-          {template.name}
-        </span>
-      </div>
-    </div>
-  );
-});
-
-function PlaceholderCard() {
-  return (
-    <div className="flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden relative bg-muted/20">
-      <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] bg-muted/20" />
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/10" />
-      <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] bg-muted/15" />
-    </div>
-  );
-}
-
-function MarqueeRow({
-  items,
-  reverse,
-  placeholders,
-  beforeLabel,
-  afterLabel,
-}: {
-  items: MarqueeTemplate[];
-  reverse: boolean;
-  placeholders: boolean;
-  beforeLabel: string;
-  afterLabel: string;
-}) {
-  const placeholderCount = 6;
-  const content = placeholders
-    ? Array.from({ length: placeholderCount }, (_, i) => (
-        <PlaceholderCard key={`p-${i}`} />
-      ))
-    : items.map((t, i) => (
-        <MarqueeCard
-          key={`c-${i}`}
-          template={t}
-          beforeLabel={beforeLabel}
-          afterLabel={afterLabel}
-        />
-      ));
-
-  return (
-    <div className="flex overflow-hidden relative user-select-none gap-[1rem] group [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-      <div 
-        className="flex shrink-0 justify-around gap-[1rem] min-w-full"
-        style={{
-          animation: `scroll ${placeholders ? 30 : 60}s linear infinite ${reverse ? "reverse" : "normal"}`,
-        }}
-      >
-        {content}
-      </div>
-      <div 
-        className="flex shrink-0 justify-around gap-[1rem] min-w-full"
-        aria-hidden="true"
-        style={{
-          animation: `scroll ${placeholders ? 30 : 60}s linear infinite ${reverse ? "reverse" : "normal"}`,
-        }}
-      >
-        {content}
-      </div>
-    </div>
-  );
-}
+const MATRIX_STREAMS = [
+  {
+    value: "0101010011010110010010",
+    className: "left-[3%] text-[10px] opacity-30 md:text-xs",
+    delay: "-12s",
+    duration: "18s",
+  },
+  {
+    value: "LARPKING0010111010010",
+    className: "left-[11%] text-xs opacity-45 md:text-sm",
+    delay: "-6s",
+    duration: "15s",
+  },
+  {
+    value: "100110100111010011011",
+    className: "left-[19%] text-[10px] opacity-25 md:text-xs",
+    delay: "-18s",
+    duration: "22s",
+  },
+  {
+    value: "SYSTEM0101REALM1101",
+    className: "left-[29%] text-xs opacity-40 md:text-sm",
+    delay: "-3s",
+    duration: "17s",
+  },
+  {
+    value: "0010111100101101001110",
+    className: "left-[39%] text-[10px] opacity-30 md:text-xs",
+    delay: "-15s",
+    duration: "20s",
+  },
+  {
+    value: "AVATAR101101001011",
+    className: "left-[50%] text-xs opacity-50 md:text-sm",
+    delay: "-9s",
+    duration: "16s",
+  },
+  {
+    value: "101001101110010101001",
+    className: "left-[62%] text-[10px] opacity-25 md:text-xs",
+    delay: "-20s",
+    duration: "23s",
+  },
+  {
+    value: "PROMPT001101ENGINE",
+    className: "left-[72%] text-xs opacity-40 md:text-sm",
+    delay: "-4s",
+    duration: "18s",
+  },
+  {
+    value: "110010111001011010010",
+    className: "left-[83%] text-[10px] opacity-35 md:text-xs",
+    delay: "-11s",
+    duration: "19s",
+  },
+  {
+    value: "NEURAL01001101KING",
+    className: "left-[93%] text-xs opacity-45 md:text-sm",
+    delay: "-7s",
+    duration: "14s",
+  },
+] as const;
 
 export default function ImageMarquee({ compactTop = false }: ImageMarqueeProps) {
   const { t } = useTranslation();
 
-  const { data: templates } = useQuery<MarqueeTemplate[]>({
-    queryKey: ["marquee-templates"],
-    queryFn: async () => {
-      const res = await fetch("/api/templates/marquee");
-      if (!res.ok) throw new Error(t("marquee.fetchError"));
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const hasData = templates && templates.length > 0;
-
-  const mid = hasData ? Math.ceil(templates.length / 2) : 0;
-  const row1 = hasData
-    ? padToMin(templates.slice(0, mid), MIN_CARDS_PER_ROW)
-    : [];
-  const row2 = hasData ? padToMin(templates.slice(mid), MIN_CARDS_PER_ROW) : [];
-
   return (
     <section
       className={cn(
-        "overflow-hidden",
-        compactTop ? "-mt-4 pb-16 pt-0 md:-mt-10 md:pb-24 md:pt-0" : "py-16 md:py-24",
+        "relative isolate flex min-h-[100svh] h-[100svh] flex-col justify-center overflow-hidden border-y border-[#1f5f91] bg-[#02070c] text-[#d8edff]",
+        compactTop ? "-mt-4 pt-0 md:-mt-10 md:pt-0" : "",
       )}
     >
-      <div className="max-w-3xl mx-auto px-4 mb-10">
-        <h2 className="font-display text-2xl md:text-3xl font-bold text-center">
-          {t("marquee.titlePrefix")} {" "}
-          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            {t("marquee.titleGradient")}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,#02070c_0%,#061521_48%,#02070c_100%)]" />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] bg-grain opacity-[0.18] mix-blend-soft-light"
+        aria-hidden="true"
+      />
+      <div className="matrix-grid pointer-events-none absolute inset-0 -z-10 opacity-80" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[repeating-linear-gradient(to_bottom,rgb(66_165_246_/_0.06)_0px,rgb(66_165_246_/_0.06)_1px,transparent_1px,transparent_5px),linear-gradient(to_bottom,rgb(0_0_0_/_0.55),transparent_18%,transparent_78%,rgb(0_0_0_/_0.7))]" />
+      <div className="matrix-rain pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        {MATRIX_STREAMS.map((stream) => (
+          <span
+            key={stream.value}
+            className={cn(
+              "matrix-stream absolute top-0 font-mono font-semibold text-[#42a5f6]",
+              stream.className,
+            )}
+            style={{
+              animationDelay: stream.delay,
+              ["--matrix-duration" as string]: stream.duration,
+            }}
+          >
+            {stream.value}
           </span>
-        </h2>
-        <p className="text-sm md:text-base text-muted-foreground text-center mt-2">
-          {t("marquee.subtitle")}
-        </p>
+        ))}
       </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#42a5f6]/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#42a5f6]/55 to-transparent" />
 
-      <MarqueeRow
-        items={row1}
-        reverse={false}
-        placeholders={!hasData}
-        beforeLabel={t("marquee.before")}
-        afterLabel={t("marquee.after")}
-      />
-      <div className="h-4" />
-      <MarqueeRow
-        items={row2}
-        reverse={true}
-        placeholders={!hasData}
-        beforeLabel={t("marquee.before")}
-        afterLabel={t("marquee.after")}
-      />
+      <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center gap-[clamp(1.25rem,4svh,2.5rem)] px-4 py-[clamp(1rem,3svh,2rem)]">
+        <div className="max-w-3xl text-center">
+          <h2 className="font-display text-2xl font-bold tracking-normal text-[#f4faff] drop-shadow-[0_0_18px_rgb(66_165_246_/_0.48)] md:text-3xl">
+            {t("marquee.titlePrefix")}{" "}
+            <span className="bg-gradient-to-r from-[#d8edff] via-[#42a5f6] to-[#42a5f6] bg-clip-text text-transparent">
+              {t("marquee.titleGradient")}
+            </span>
+          </h2>
+          <p className="mt-2 text-sm text-[#9bd3ff] md:text-base">
+            {t("marquee.subtitle")}
+          </p>
+        </div>
+
+        <RealOrFakeGame />
+      </div>
     </section>
   );
 }

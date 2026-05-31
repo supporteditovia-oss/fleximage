@@ -424,7 +424,7 @@ export default function Settings() {
               </p>
             </div>
             {profile?.is_subscriber ? (
-              <span className="text-xs font-semibold text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold text-[#42a5f6] bg-[#42a5f6]/10 px-2.5 py-1 rounded-full">
                 {t("common.states.active")}
               </span>
             ) : profile?.stripe_customer_id ? (

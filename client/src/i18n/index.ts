@@ -76,6 +76,7 @@ if (!i18n.isInitialized) {
         "cta",
         "footer",
         "marquee",
+        "larpPro",
         "legalCommon",
         "notFound",
       ],
