@@ -149,15 +149,17 @@ ALTER TABLE public.prompt_templates
   ALTER COLUMN category DROP NOT NULL;
 
 -- =========================================================================================
--- 6. ADD input_urls column to generated_larps
+-- 6. ENSURE generation input assets column
 -- =========================================================================================
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public'
-      AND table_name = 'generated_larps'
-      AND column_name = 'input_urls'
+      AND table_name = 'generations'
+      AND column_name = 'input_assets'
   ) THEN
-    ALTER TABLE public.generated_larps ADD COLUMN input_urls TEXT;
+    ALTER TABLE public.generations
+      ADD COLUMN input_assets jsonb NOT NULL DEFAULT '[]'::jsonb
+      CHECK (jsonb_typeof(input_assets) = 'array');
   END IF;
 END $$;

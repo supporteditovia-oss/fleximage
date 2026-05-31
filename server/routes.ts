@@ -81,7 +81,6 @@ function extractImageUrls(parsed: unknown): string[] {
     // Try common known keys
     for (const key of [
       "resultUrls",
-      "result_urls",
       "images",
       "urls",
       "output",
