@@ -1,2 +1,6 @@
-[mcp_servers.supabase]
+[mcp_servers.supabase_larpking]
 url = "https://mcp.supabase.com/mcp?project_ref=tdsvhjuurnifmprdmlhw&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cstorage"
+
+[mcp_servers.stripe_larpking]
+args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'C:\Users\devin\.codex\scripts\stripe-mcp-from-env.ps1', 'C:\Users\devin\Documents\DEV\larpking\.env']
+command = 'powershell'

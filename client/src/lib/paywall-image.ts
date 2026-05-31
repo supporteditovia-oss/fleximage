@@ -1,7 +1,7 @@
 const STORAGE_KEY = "larpking_paywall_image";
 
 /**
- * Downscale + compress the user's prank image and persist it in localStorage.
+ * Downscale + compress the user's LARP image and persist it in localStorage.
  * The image is stored as a small JPEG base64 — it will only be displayed blurred,
  * so low resolution is fine and keeps localStorage usage minimal (~20-50 KB).
  */
@@ -33,7 +33,7 @@ export async function savePaywallImage(file: File): Promise<void> {
   }
 }
 
-/** Save a paywall image from a base64 data-URL (e.g. from prank generation input). */
+/** Save a paywall image from a base64 data-URL (e.g. from LARP generation input). */
 export function savePaywallImageFromDataUrl(dataUrl: string): void {
   try {
     localStorage.setItem(STORAGE_KEY, dataUrl);

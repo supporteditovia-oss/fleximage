@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/api";
 
 const PAGE_SIZE = 20;
 
@@ -271,14 +272,21 @@ function UsersManagementPage() {
   const handleAddCredits = async () => {
     if (!creditTarget || !creditAmount) return;
     const amount = parseInt(creditAmount, 10);
-    if (isNaN(amount) || amount === 0) {
+    if (isNaN(amount) || amount <= 0) {
       toast({ variant: "destructive", title: "Montant invalide", description: "Veuillez entrer un nombre valide." });
       return;
     }
     try {
-      const newCredits = (creditTarget.credits || 0) + amount;
-      await updateProfile({ id: creditTarget.id, updates: { credits: newCredits } });
+      const res = await authFetch("/api/admin/credits", {
+        method: "POST",
+        body: JSON.stringify({ user_id: creditTarget.id, amount }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Erreur serveur" }));
+        throw new Error(err.message || "Erreur serveur");
+      }
       queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["profile", creditTarget.id] });
       toast({ title: "Jetons ajoutés", description: `${amount > 0 ? '+' : ''}${amount} jetons pour ${creditTarget.full_name || creditTarget.email}.` });
       setCreditDialogOpen(false);
       setCreditTarget(null);

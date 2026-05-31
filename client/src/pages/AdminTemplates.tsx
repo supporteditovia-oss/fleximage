@@ -522,7 +522,7 @@ export default function AdminTemplates() {
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Gérez les modèles de prompts pour la génération de pranks.
+            Gérez les modèles de prompts pour la génération de LARPs.
           </p>
         </div>
         <div className="flex items-center gap-2">

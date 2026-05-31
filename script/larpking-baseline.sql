@@ -10,10 +10,12 @@ begin;
 
 create extension if not exists pgcrypto;
 
+drop event trigger if exists ensure_rls;
 drop trigger if exists on_auth_user_created on auth.users;
 
 drop schema if exists app_private cascade;
 
+drop function if exists public.rls_auto_enable() cascade;
 drop function if exists public.handle_new_user() cascade;
 drop function if exists public.apply_credit_delta(uuid, integer, text, uuid, uuid, text, jsonb) cascade;
 drop function if exists public.deduct_credits(uuid, integer) cascade;
@@ -266,7 +268,7 @@ create table public.generations (
   prompt text not null,
   final_prompt text not null,
   provider text
-    check (provider is null or provider in ('kie', 'runway', 'fallback')),
+    check (provider is null or provider in ('kie', 'runway', 'oneshot', 'fallback')),
   provider_task_id text,
   provider_attempts jsonb not null default '[]'::jsonb
     check (jsonb_typeof(provider_attempts) = 'array'),
@@ -303,7 +305,7 @@ create table public.generation_events (
   user_id uuid references public.profiles(id) on delete set null,
   event_type text not null,
   provider text
-    check (provider is null or provider in ('kie', 'runway', 'fallback')),
+    check (provider is null or provider in ('kie', 'runway', 'oneshot', 'fallback')),
   provider_task_id text,
   status_from text,
   status_to text,

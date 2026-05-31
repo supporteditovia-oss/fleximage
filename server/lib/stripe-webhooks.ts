@@ -47,6 +47,35 @@ function applyAuthoritativeBillingInterval(
   return billingInterval ? { ...planConfig, billingInterval } : planConfig;
 }
 
+async function applyCreditDelta(params: {
+  userId: string;
+  delta: number;
+  reason:
+    | "subscription_grant"
+    | "generation_charge"
+    | "admin_adjustment"
+    | "refund"
+    | "system_adjustment";
+  subscriptionId?: string | null;
+  idempotencyKey: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  if (params.delta === 0) return;
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.rpc("apply_credit_delta", {
+    p_user_id: params.userId,
+    p_delta: params.delta,
+    p_reason: params.reason,
+    p_generation_id: null,
+    p_subscription_id: params.subscriptionId ?? null,
+    p_idempotency_key: params.idempotencyKey,
+    p_metadata: params.metadata ?? {},
+  });
+
+  if (error) throw error;
+}
+
 /**
  * checkout.session.completed
  * First-time subscription: link Stripe customer, set subscriber, add credits.
@@ -122,39 +151,54 @@ export async function handleCheckoutCompleted(
     throw profileErr;
   }
 
-  // Add initial credits
-  const { error: creditErr } = await supabase.rpc("add_credits", {
-    p_user_id: userId,
-    p_amount: planConfig.creditsPerCycle,
-  });
-
-  if (creditErr) {
-    logger.error(
-      { err: creditErr, userId },
-      "Failed to add initial credits",
-    );
-  }
-
   // Create subscription record
-  const { error: subErr } = await supabase.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      stripe_subscription_id: subscriptionId,
-      stripe_customer_id: customerId,
-      status: "active",
-      price_id: planConfig.priceId,
-      plan_type: planConfig.planType,
-      credits_per_cycle: planConfig.creditsPerCycle,
-      billing_interval: planConfig.billingInterval,
-    },
-    { onConflict: "stripe_subscription_id" },
-  );
+  const { data: subscriptionRow, error: subErr } = await supabase
+    .from("subscriptions")
+    .upsert(
+      {
+        user_id: userId,
+        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: customerId,
+        status: "active",
+        price_id: planConfig.priceId,
+        plan_type: planConfig.planType,
+        credits_per_cycle: planConfig.creditsPerCycle,
+        billing_interval: planConfig.billingInterval,
+      },
+      { onConflict: "stripe_subscription_id" },
+    )
+    .select("id")
+    .single();
 
   if (subErr) {
     logger.error(
       { err: subErr, userId },
       "Failed to create subscription record",
     );
+    throw subErr;
+  }
+
+  try {
+    await applyCreditDelta({
+      userId,
+      delta: planConfig.creditsPerCycle,
+      reason: "subscription_grant",
+      subscriptionId: subscriptionRow?.id ?? null,
+      idempotencyKey: `stripe:checkout:${session.id}:credits`,
+      metadata: {
+        source: "checkout.session.completed",
+        checkout_session_id: session.id,
+        stripe_subscription_id: subscriptionId,
+        price_id: planConfig.priceId,
+        plan_type: planConfig.planType,
+      },
+    });
+  } catch (creditErr) {
+    logger.error(
+      { err: creditErr, userId },
+      "Failed to add initial credits",
+    );
+    throw creditErr;
   }
 
   logger.info({ userId, subscriptionId }, "Subscription activated via checkout");
@@ -200,7 +244,7 @@ export async function handleInvoicePaid(
   // Find subscription by Stripe subscription ID
   const { data: subscriptionRow } = await supabase
     .from("subscriptions")
-    .select("user_id, price_id, plan_type, credits_per_cycle")
+    .select("id, user_id, price_id, plan_type, credits_per_cycle")
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
@@ -219,17 +263,27 @@ export async function handleInvoicePaid(
       ? planConfig.creditsPerCycle
       : subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
 
-  // Add renewal credits
-  const { error } = await supabase.rpc("add_credits", {
-    p_user_id: subscriptionRow.user_id,
-    p_amount: creditsPerCycle,
-  });
-
-  if (error) {
+  try {
+    await applyCreditDelta({
+      userId: subscriptionRow.user_id,
+      delta: creditsPerCycle,
+      reason: "subscription_grant",
+      subscriptionId: subscriptionRow.id,
+      idempotencyKey: `stripe:invoice:${invoice.id}:credits`,
+      metadata: {
+        source: "invoice.paid",
+        stripe_invoice_id: invoice.id,
+        stripe_subscription_id: subscriptionId,
+        billing_reason: invoice.billing_reason,
+        price_id: subscriptionRow.price_id,
+      },
+    });
+  } catch (error) {
     logger.error(
       { err: error, userId: subscriptionRow.user_id },
       "Failed to add renewal credits",
     );
+    throw error;
   }
 
   // Update subscription record period
@@ -263,13 +317,18 @@ export async function handleSubscriptionDeleted(
   const supabase = getSupabaseAdmin();
   const subscriptionId = subscription.id;
 
-  // Update profile — remove subscriber status and reset credits to 0
+  const { data: previousProfile } = await supabase
+    .from("profiles")
+    .select("id, credits")
+    .eq("stripe_subscription_id", subscriptionId)
+    .single();
+
+  // Update profile status; remaining credits are cleared through the ledger below.
   const { error: profileErr } = await supabase
     .from("profiles")
     .update({
       is_subscriber: false,
       subscription_status: "canceled",
-      credits: 0,
       updated_at: new Date().toISOString(),
     })
     .eq("stripe_subscription_id", subscriptionId);
@@ -298,6 +357,27 @@ export async function handleSubscriptionDeleted(
     );
   }
 
+  if (previousProfile?.id && previousProfile.credits > 0) {
+    try {
+      await applyCreditDelta({
+        userId: previousProfile.id,
+        delta: -previousProfile.credits,
+        reason: "system_adjustment",
+        idempotencyKey: `stripe:subscription:${subscriptionId}:deleted:clear_credits`,
+        metadata: {
+          source: "customer.subscription.deleted",
+          stripe_subscription_id: subscriptionId,
+        },
+      });
+    } catch (creditErr) {
+      logger.error(
+        { err: creditErr, userId: previousProfile.id, subscriptionId },
+        "Failed to clear credits on cancellation",
+      );
+      throw creditErr;
+    }
+  }
+
   logger.info({ subscriptionId }, "Subscription canceled");
 }
 
@@ -318,13 +398,13 @@ export async function handleSubscriptionUpdated(
   // Check previous status to detect reactivation
   const { data: prevProfile } = await supabase
     .from("profiles")
-    .select("subscription_status, id")
+    .select("subscription_status, id, credits")
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
   const { data: prevSubscription } = await supabase
     .from("subscriptions")
-    .select("plan_type, credits_per_cycle")
+    .select("id, plan_type, credits_per_cycle")
     .eq("stripe_subscription_id", subscriptionId)
     .maybeSingle();
 
@@ -367,20 +447,22 @@ export async function handleSubscriptionUpdated(
   const planChanged = !!previousPlanType && previousPlanType !== planConfig.planType;
 
   if (isActive && prevProfile?.id && planChanged) {
-    const { error: creditErr } = await supabase
-      .from("profiles")
-      .update({
-        credits: planConfig.creditsPerCycle,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", prevProfile.id);
-
-    if (creditErr) {
-      logger.error(
-        { err: creditErr, userId: prevProfile.id, subscriptionId },
-        "Failed to replace credits after plan change",
-      );
-    } else {
+    const delta = planConfig.creditsPerCycle - (prevProfile.credits || 0);
+    try {
+      await applyCreditDelta({
+        userId: prevProfile.id,
+        delta,
+        reason: "subscription_grant",
+        subscriptionId: prevSubscription?.id ?? null,
+        idempotencyKey: `stripe:subscription:${subscriptionId}:plan:${planConfig.priceId}:credits`,
+        metadata: {
+          source: "customer.subscription.updated",
+          stripe_subscription_id: subscriptionId,
+          previous_plan: previousPlanType,
+          new_plan: planConfig.planType,
+          price_id: planConfig.priceId,
+        },
+      });
       logger.info(
         {
           userId: prevProfile.id,
@@ -389,25 +471,40 @@ export async function handleSubscriptionUpdated(
           newPlan: planConfig.planType,
           credits: planConfig.creditsPerCycle,
         },
-        "Credits replaced after plan change",
+        "Credits reconciled after plan change",
       );
+    } catch (creditErr) {
+      logger.error(
+        { err: creditErr, userId: prevProfile.id, subscriptionId },
+        "Failed to reconcile credits after plan change",
+      );
+      throw creditErr;
     }
   } else if (isActive && wasInactive && prevProfile?.id) {
-    const { error: creditErr } = await supabase.rpc("add_credits", {
-      p_user_id: prevProfile.id,
-      p_amount: planConfig.creditsPerCycle,
-    });
-
-    if (creditErr) {
-      logger.error(
-        { err: creditErr, userId: prevProfile.id },
-        "Failed to add reactivation credits",
-      );
-    } else {
+    try {
+      await applyCreditDelta({
+        userId: prevProfile.id,
+        delta: planConfig.creditsPerCycle,
+        reason: "subscription_grant",
+        subscriptionId: prevSubscription?.id ?? null,
+        idempotencyKey: `stripe:subscription:${subscriptionId}:reactivation:${planConfig.priceId}:credits`,
+        metadata: {
+          source: "customer.subscription.updated",
+          stripe_subscription_id: subscriptionId,
+          transition: "reactivation",
+          price_id: planConfig.priceId,
+        },
+      });
       logger.info(
         { userId: prevProfile.id, subscriptionId },
         "Reactivation credits added",
       );
+    } catch (creditErr) {
+      logger.error(
+        { err: creditErr, userId: prevProfile.id },
+        "Failed to add reactivation credits",
+      );
+      throw creditErr;
     }
   }
 

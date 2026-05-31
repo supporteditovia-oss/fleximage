@@ -17,9 +17,9 @@ type PrankRow = {
   id: string;
   user_id: string;
   created_at: string;
-  input_urls: string | null;
-  result_urls: string | null;
-  watermarked_urls: string | null;
+  input_assets: string[] | null;
+  output_assets: string[] | null;
+  watermarked_assets: string[] | null;
 };
 
 type EnvConfig = {
@@ -138,8 +138,14 @@ function getEnvConfig(): EnvConfig {
   };
 }
 
-function parseJsonUrls(raw: string | null): string[] {
+function parseJsonUrls(raw: string[] | string | null): string[] {
   if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    );
+  }
 
   try {
     const parsed = JSON.parse(raw);
@@ -237,9 +243,9 @@ async function fetchTargetPranks(
 
   while (true) {
     let query = supabase
-      .from("generated_pranks")
+      .from("generations")
       .select(
-        "id, user_id, created_at, input_urls, result_urls, watermarked_urls",
+        "id, user_id, created_at, input_assets, output_assets, watermarked_assets",
       )
       .order("created_at", { ascending: true });
 
@@ -307,7 +313,7 @@ async function deletePrankRows(
 
   for (const idBatch of chunk(prankIds, 500)) {
     const { error } = await supabase
-      .from("generated_pranks")
+      .from("generations")
       .delete()
       .in("id", idBatch);
 
@@ -443,17 +449,17 @@ async function run(): Promise<void> {
     for (const prank of targetPranks) {
       prefixSet.add(`pranks/${prank.id}/`);
 
-      for (const url of parseJsonUrls(prank.input_urls)) {
+      for (const url of parseJsonUrls(prank.input_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
 
-      for (const url of parseJsonUrls(prank.result_urls)) {
+      for (const url of parseJsonUrls(prank.output_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
 
-      for (const url of parseJsonUrls(prank.watermarked_urls)) {
+      for (const url of parseJsonUrls(prank.watermarked_assets)) {
         const key = extractR2KeyFromUrl(url);
         if (key) keySet.add(key);
       }
@@ -486,7 +492,7 @@ async function run(): Promise<void> {
   console.log("Deleting R2 objects...");
   const deletedKeys = await deleteR2Keys(s3Client, env.r2BucketName, keys);
 
-  console.log("Deleting generated_pranks rows...");
+  console.log("Deleting generations rows...");
   const deletedRows = await deletePrankRows(supabase, prankIds);
 
   console.log("Done.");

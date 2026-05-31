@@ -154,8 +154,8 @@ export default function Generate() {
             })
             .finally(() => setUnlockingPrank(false));
         } else {
-          // No paywalled result: trigger real generation from pending prank
-          // The pending prank data was already restored into React state by the
+          // No paywalled result: trigger real generation from pending LARP
+          // The pending LARP data was already restored into React state by the
           // restore effect but autoGenerateReady was NOT set (we skipped it for
           // checkout returns). Now that credits are verified, trigger generation.
           console.log("[Checkout] Credits verified, triggering auto-generate");
@@ -216,12 +216,12 @@ export default function Generate() {
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
-  // ── Restore pending prank from IndexedDB ────────────────────
+  // ── Restore pending LARP from IndexedDB ─────────────────────
   useEffect(() => {
     let cancelled = false;
     const timeout = setTimeout(() => {
       if (!cancelled) {
-        console.warn("[Generate] Pending prank timeout — forcing pendingLoading=false");
+        console.warn("[Generate] Pending LARP timeout — forcing pendingLoading=false");
         setPendingLoading(false);
       }
     }, 5000);
@@ -229,11 +229,11 @@ export default function Generate() {
       .then((pending) => {
         if (cancelled) return;
         if (!pending) {
-          console.log("[Generate] No pending prank found");
+          console.log("[Generate] No pending LARP found");
           setPendingLoading(false);
           return;
         }
-        console.log("[Generate] Pending prank found:", {
+        console.log("[Generate] Pending LARP found:", {
           prompt: pending.prompt,
           images: pending.images.length,
           generationMode: pending.generationMode ?? "image",
@@ -257,7 +257,7 @@ export default function Generate() {
           // Keep pendingLoading=true so the fullscreen loader stays visible
           // until the checkout handler triggers auto-generate.
         }
-        // NOTE: We do NOT clear the pending prank here.
+        // NOTE: We do NOT clear the pending LARP here.
         // It will be cleared when a real generation starts (in handleGenerate).
         // This ensures data persists through the fake loader → paywall → Stripe checkout flow.
       })
@@ -397,7 +397,7 @@ export default function Generate() {
           timestamp: Date.now(),
         });
       } catch (error) {
-        console.error("[Generate] Failed to save onboarding prank:", error);
+        console.error("[Generate] Failed to save onboarding LARP:", error);
         toast({
           variant: "destructive",
           title: t("common.messages.error"),
@@ -500,7 +500,7 @@ export default function Generate() {
     refetchEligibility();
   };
 
-  // ── Auto-generate when pending prank data has been restored ─
+  // ── Auto-generate when pending LARP data has been restored ──
   // We need `profile` to be loaded to decide fake vs real generation,
   // so we defer until auth is available.
   useEffect(() => {
@@ -650,7 +650,7 @@ export default function Generate() {
     );
   }
 
-  // -- Loading pending prank from hero flow
+  // -- Loading pending LARP from hero flow
   if (pendingLoading) {
     return (
       <>
@@ -660,7 +660,7 @@ export default function Generate() {
     );
   }
 
-  // -- Loading unlocked prank after payment
+  // -- Loading unlocked LARP after payment
   if (unlockingPrank) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-300">
@@ -684,7 +684,7 @@ export default function Generate() {
     );
   }
 
-  // -- Unlocked prank after successful payment
+  // -- Unlocked LARP after successful payment
   if (unlockedPrank) {
     return (
       <UnlockedPrankView
@@ -718,8 +718,6 @@ export default function Generate() {
         ref={topRef}
         className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4"
       >
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(255,255,255,0.78)_0_28%,transparent_28%_100%),linear-gradient(78deg,transparent_0_62%,rgba(0,0,0,0.04)_62%_76%,transparent_76%_100%)]" />
-
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
           <div

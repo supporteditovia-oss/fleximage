@@ -128,7 +128,7 @@ export default function PrankHistory() {
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = `prank-${randomSuffix}.${ext}`;
+      a.download = `larp-${randomSuffix}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -153,7 +153,7 @@ export default function PrankHistory() {
           `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
         );
         const blob = await res.blob();
-        const file = new File([blob], "prank.jpg", {
+        const file = new File([blob], "larp.jpg", {
           type: blob.type || "image/jpeg",
         });
         if (navigator.canShare({ files: [file] })) {
@@ -191,7 +191,7 @@ export default function PrankHistory() {
     setDeletingId(null);
   }
 
-  // Only show successful pranks (hide pending/failed)
+  // Only show successful LARPs (hide pending/failed)
   const successPranks = pranks?.filter(
     (p) => p.status === "success" && getResultUrls(p.result_urls).length > 0,
   );

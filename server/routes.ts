@@ -127,6 +127,248 @@ function extractImageUrls(parsed: unknown): string[] {
   return [];
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 80);
+}
+
+function parseJsonArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeKeywords(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof raw !== "string") return [];
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function stringifyAssetList(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.length > 0 ? JSON.stringify(value) : null;
+  }
+  return null;
+}
+
+function toLegacyStatus(
+  status: string | null | undefined,
+): "waiting" | "success" | "fail" {
+  if (status === "succeeded" || status === "success") return "success";
+  if (status === "failed" || status === "fail") return "fail";
+  return "waiting";
+}
+
+function toDbStatus(
+  status: "waiting" | "success" | "fail",
+): "processing" | "succeeded" | "failed" {
+  if (status === "success") return "succeeded";
+  if (status === "fail") return "failed";
+  return "processing";
+}
+
+function toTemplateDto(row: any) {
+  const inputSchema = row.input_schema || {};
+  const categorySlug =
+    row.template_categories?.slug ||
+    row.category_slug ||
+    row.category ||
+    null;
+
+  return {
+    ...row,
+    category: categorySlug,
+    image_slots:
+      inputSchema.image_slots && inputSchema.image_slots.length
+        ? JSON.stringify(inputSchema.image_slots)
+        : null,
+    text_fields:
+      inputSchema.text_fields && inputSchema.text_fields.length
+        ? JSON.stringify(inputSchema.text_fields)
+        : null,
+    keywords: Array.isArray(row.keywords) ? row.keywords.join(", ") : null,
+  };
+}
+
+function toLegacyPrankDto(row: any) {
+  const template = row.templates;
+  const category =
+    template?.template_categories?.slug ||
+    template?.category_slug ||
+    template?.category ||
+    null;
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    template_id: row.template_id,
+    final_prompt: row.final_prompt,
+    kie_task_id: row.provider_task_id,
+    status: toLegacyStatus(row.status),
+    result_urls: stringifyAssetList(row.output_assets),
+    watermarked_urls: stringifyAssetList(row.watermarked_assets),
+    input_urls: stringifyAssetList(row.input_assets),
+    fail_message: row.fail_message,
+    cost_time: row.cost_time,
+    aspect_ratio: row.aspect_ratio,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    prompt_templates: template
+      ? {
+          name: template.name,
+          category,
+        }
+      : null,
+  };
+}
+
+async function resolveCategoryId(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  categorySlug: string | null | undefined,
+): Promise<string | null> {
+  if (!categorySlug) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from("template_categories")
+    .select("id")
+    .eq("slug", categorySlug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
+async function getUniqueTemplateSlug(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  name: string,
+): Promise<string> {
+  const baseSlug = slugify(name) || "template";
+  let candidate = baseSlug;
+  let suffix = 2;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from("templates")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return candidate;
+
+    candidate = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+function buildTemplateInputSchema(body: any, current: any = {}) {
+  const next = { ...(current && typeof current === "object" ? current : {}) };
+
+  if (Object.prototype.hasOwnProperty.call(body, "image_slots")) {
+    next.image_slots = parseJsonArray(body.image_slots);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "text_fields")) {
+    next.text_fields = parseJsonArray(body.text_fields);
+  }
+
+  return next;
+}
+
+async function buildTemplatePayload(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  body: any,
+  currentInputSchema?: any,
+) {
+  const payload: Record<string, unknown> = {};
+
+  if (Object.prototype.hasOwnProperty.call(body, "name")) payload.name = body.name;
+  if (Object.prototype.hasOwnProperty.call(body, "description")) {
+    payload.description = body.description || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "prompt_text")) {
+    payload.prompt_text = body.prompt_text;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "is_active")) {
+    payload.is_active = body.is_active;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "generation_type")) {
+    payload.generation_type = body.generation_type;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "example_before_url")) {
+    payload.example_before_url = body.example_before_url || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "example_after_url")) {
+    payload.example_after_url = body.example_after_url || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "keywords")) {
+    payload.keywords = normalizeKeywords(body.keywords);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "icon")) {
+    payload.icon = body.icon || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "category")) {
+    payload.category_id = await resolveCategoryId(supabaseAdmin, body.category);
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(body, "image_slots") ||
+    Object.prototype.hasOwnProperty.call(body, "text_fields")
+  ) {
+    payload.input_schema = buildTemplateInputSchema(body, currentInputSchema);
+  }
+
+  return payload;
+}
+
+async function applyCreditDelta(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  params: {
+    userId: string;
+    delta: number;
+    reason:
+      | "subscription_grant"
+      | "generation_charge"
+      | "admin_adjustment"
+      | "refund"
+      | "system_adjustment";
+    generationId?: string | null;
+    subscriptionId?: string | null;
+    idempotencyKey?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  return supabaseAdmin.rpc("apply_credit_delta", {
+    p_user_id: params.userId,
+    p_delta: params.delta,
+    p_reason: params.reason,
+    p_generation_id: params.generationId ?? null,
+    p_subscription_id: params.subscriptionId ?? null,
+    p_idempotency_key: params.idempotencyKey ?? null,
+    p_metadata: params.metadata ?? {},
+  });
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -227,7 +469,7 @@ export async function registerRoutes(
         .single();
 
       let query = supabaseAdmin
-        .from("categories")
+        .from("template_categories")
         .select("*")
         .order("display_order", { ascending: true });
 
@@ -257,7 +499,7 @@ export async function registerRoutes(
       try {
         const supabaseAdmin = getSupabaseAdmin();
         const { data, error } = await supabaseAdmin
-          .from("categories")
+          .from("template_categories")
           .insert(req.body)
           .select()
           .single();
@@ -281,7 +523,7 @@ export async function registerRoutes(
       try {
         const supabaseAdmin = getSupabaseAdmin();
         const { data, error } = await supabaseAdmin
-          .from("categories")
+          .from("template_categories")
           .update(req.body)
           .eq("id", req.params.id)
           .select()
@@ -307,16 +549,16 @@ export async function registerRoutes(
 
         // Check if any active template uses this category
         const { data: category } = await supabaseAdmin
-          .from("categories")
-          .select("slug")
+          .from("template_categories")
+          .select("id")
           .eq("id", req.params.id)
           .single();
 
         if (category) {
           const { data: usedBy } = await supabaseAdmin
-            .from("prompt_templates")
+            .from("templates")
             .select("id")
-            .eq("category", category.slug)
+            .eq("category_id", category.id)
             .eq("is_active", true)
             .limit(1);
 
@@ -329,7 +571,7 @@ export async function registerRoutes(
         }
 
         const { error } = await supabaseAdmin
-          .from("categories")
+          .from("template_categories")
           .delete()
           .eq("id", req.params.id);
 
@@ -351,7 +593,7 @@ export async function registerRoutes(
     try {
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
-        .from("prompt_templates")
+        .from("templates")
         .select("name, example_before_url, example_after_url")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
@@ -386,8 +628,8 @@ export async function registerRoutes(
         .single();
 
       let query = supabaseAdmin
-        .from("prompt_templates")
-        .select("*")
+        .from("templates")
+        .select("*, template_categories(slug, name)")
         .order("created_at", { ascending: false });
 
       if (profile?.role !== "admin") {
@@ -396,7 +638,7 @@ export async function registerRoutes(
 
       const { data, error } = await query;
       if (error) throw error;
-      res.json(data);
+      res.json((data ?? []).map(toTemplateDto));
     } catch (error: any) {
       logger.error({ err: error }, "Error listing templates");
       const locale = resolveLocaleFromRequest(req);
@@ -412,8 +654,8 @@ export async function registerRoutes(
       const locale = resolveLocaleFromRequest(req);
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
-        .from("prompt_templates")
-        .select("*")
+        .from("templates")
+        .select("*, template_categories(slug, name)")
         .eq("id", req.params.id)
         .single();
 
@@ -422,7 +664,7 @@ export async function registerRoutes(
           .status(404)
           .json({ message: tBackend(locale, "templates.notFound") });
       }
-      res.json(data);
+      res.json(toTemplateDto(data));
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching template");
       const locale = resolveLocaleFromRequest(req);
@@ -442,15 +684,23 @@ export async function registerRoutes(
       try {
         const authReq = req as AuthenticatedRequest;
         const supabaseAdmin = getSupabaseAdmin();
+        const payload = await buildTemplatePayload(supabaseAdmin, req.body);
+        const slug = await getUniqueTemplateSlug(supabaseAdmin, req.body.name);
 
         const { data, error } = await supabaseAdmin
-          .from("prompt_templates")
-          .insert({ ...req.body, created_by: authReq.userId })
-          .select()
+          .from("templates")
+          .insert({
+            ...payload,
+            slug,
+            input_schema: payload.input_schema ?? {},
+            keywords: payload.keywords ?? [],
+            created_by: authReq.userId,
+          })
+          .select("*, template_categories(slug, name)")
           .single();
 
         if (error) throw error;
-        res.status(201).json(data);
+        res.status(201).json(toTemplateDto(data));
       } catch (error: any) {
         logger.error({ err: error }, "Error creating template");
         res.status(500).json({ message: error.message });
@@ -467,16 +717,29 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const supabaseAdmin = getSupabaseAdmin();
+        const { data: current, error: currentErr } = await supabaseAdmin
+          .from("templates")
+          .select("input_schema")
+          .eq("id", req.params.id)
+          .single();
+
+        if (currentErr) throw currentErr;
+
+        const payload = await buildTemplatePayload(
+          supabaseAdmin,
+          req.body,
+          current?.input_schema,
+        );
 
         const { data, error } = await supabaseAdmin
-          .from("prompt_templates")
-          .update({ ...req.body, updated_at: new Date().toISOString() })
+          .from("templates")
+          .update({ ...payload, updated_at: new Date().toISOString() })
           .eq("id", req.params.id)
-          .select()
+          .select("*, template_categories(slug, name)")
           .single();
 
         if (error) throw error;
-        res.json(data);
+        res.json(toTemplateDto(data));
       } catch (error: any) {
         logger.error({ err: error }, "Error updating template");
         res.status(500).json({ message: error.message });
@@ -493,7 +756,7 @@ export async function registerRoutes(
       try {
         const supabaseAdmin = getSupabaseAdmin();
         const { error } = await supabaseAdmin
-          .from("prompt_templates")
+          .from("templates")
           .delete()
           .eq("id", req.params.id);
 
@@ -538,14 +801,14 @@ export async function registerRoutes(
 
         const supabaseAdmin = getSupabaseAdmin();
         const { data, error } = await supabaseAdmin
-          .from("prompt_templates")
+          .from("templates")
           .update({ [field]: publicUrl, updated_at: new Date().toISOString() })
           .eq("id", templateId)
-          .select()
+          .select("*, template_categories(slug, name)")
           .single();
 
         if (error) throw error;
-        res.json(data);
+        res.json(toTemplateDto(data));
       } catch (error: any) {
         logger.error({ err: error }, "Error uploading template image");
         res.status(500).json({ message: error.message });
@@ -584,7 +847,7 @@ export async function registerRoutes(
 
         // 2. Fetch template
         const { data: template, error: tplErr } = await supabaseAdmin
-          .from("prompt_templates")
+          .from("templates")
           .select("*")
           .eq("id", template_id)
           .eq("is_active", true)
@@ -616,6 +879,7 @@ export async function registerRoutes(
         const oneshotConfig = getOneshotApiConfig();
         const appSettings = await getAppSettings();
         let externalTaskId: string;
+        let provider: "oneshot" | "kie" = "oneshot";
 
         if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
           try {
@@ -640,6 +904,7 @@ export async function registerRoutes(
             }
 
             logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
               aspect_ratio: aspect_ratio || "1:1",
@@ -653,6 +918,7 @@ export async function registerRoutes(
             externalTaskId = kieResponse.data.taskId;
           }
         } else {
+          provider = "kie";
           const kieResponse = await createKieTask({
             prompt: finalPrompt,
             aspect_ratio: aspect_ratio || "1:1",
@@ -666,37 +932,54 @@ export async function registerRoutes(
           externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits atomically
-        const { error: deductErr } = await supabaseAdmin.rpc(
-          "deduct_credits",
-          {
-            p_user_id: authReq.userId,
-            p_amount: 5,
-          },
-        );
-
-        if (deductErr) {
-          logger.error({ err: deductErr }, "Failed to deduct credits");
-          return res
-            .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
-        }
-
-        // 5. Store in generated_pranks
+        // 4. Store in generations, then charge through the credit ledger.
         const { data: prank, error: insertErr } = await supabaseAdmin
-          .from("generated_pranks")
+          .from("generations")
           .insert({
             user_id: authReq.userId,
             template_id,
+            generation_type: "image",
+            prompt: finalPrompt,
             final_prompt: finalPrompt,
-            kie_task_id: externalTaskId,
-            status: "waiting",
+            provider,
+            provider_task_id: externalTaskId,
+            status: "processing",
             aspect_ratio,
+            credit_cost: 5,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
+
+        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+          userId: authReq.userId,
+          delta: -5,
+          reason: "generation_charge",
+          generationId: prank.id,
+          idempotencyKey: `generation:${prank.id}:charge`,
+          metadata: {
+            source: "template_generation",
+            provider,
+            provider_task_id: externalTaskId,
+          },
+        });
+
+        if (deductErr) {
+          await supabaseAdmin
+            .from("generations")
+            .update({
+              status: "failed",
+              fail_message: "credit_deduction_failed",
+              updated_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", prank.id);
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+        }
 
         // Record generation for limit tracking
         await recordGeneration(authReq.userId);
@@ -777,6 +1060,7 @@ export async function registerRoutes(
         const oneshotConfig = getOneshotApiConfig();
         const appSettings = await getAppSettings();
         let externalTaskId: string;
+        let provider: "oneshot" | "kie" = "oneshot";
 
         if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
           try {
@@ -823,6 +1107,7 @@ export async function registerRoutes(
             }
 
             logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            provider = "kie";
             const kieResponse = await createKieTask({
               prompt,
               aspect_ratio: aspect_ratio || "9:16",
@@ -837,6 +1122,7 @@ export async function registerRoutes(
             externalTaskId = kieResponse.data.taskId;
           }
         } else {
+          provider = "kie";
           logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
           const kieResponse = await createKieTask({
             prompt,
@@ -853,38 +1139,55 @@ export async function registerRoutes(
           externalTaskId = kieResponse.data.taskId;
         }
 
-        // 4. Deduct 5 credits
-        const { error: deductErr } = await supabaseAdmin.rpc(
-          "deduct_credits",
-          {
-            p_user_id: authReq.userId,
-            p_amount: 5,
-          },
-        );
-
-        if (deductErr) {
-          logger.error({ err: deductErr }, "Failed to deduct credits");
-          return res
-            .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
-        }
-
-        // 5. Store in generated_pranks
+        // 4. Store in generations, then charge through the credit ledger.
         const { data: prank, error: insertErr } = await supabaseAdmin
-          .from("generated_pranks")
+          .from("generations")
           .insert({
             user_id: authReq.userId,
             template_id: template_id || null,
+            generation_type: "image",
+            prompt,
             final_prompt: prompt,
-            kie_task_id: externalTaskId,
-            status: "waiting",
+            provider,
+            provider_task_id: externalTaskId,
+            status: "processing",
             aspect_ratio,
-            input_urls: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
+            input_assets: imageUrls,
+            credit_cost: 5,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
+
+        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+          userId: authReq.userId,
+          delta: -5,
+          reason: "generation_charge",
+          generationId: prank.id,
+          idempotencyKey: `generation:${prank.id}:charge`,
+          metadata: {
+            source: "direct_generation",
+            provider,
+            provider_task_id: externalTaskId,
+          },
+        });
+
+        if (deductErr) {
+          await supabaseAdmin
+            .from("generations")
+            .update({
+              status: "failed",
+              fail_message: "credit_deduction_failed",
+              updated_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", prank.id);
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+        }
 
         // Record generation for limit tracking
         await recordGeneration(authReq.userId);
@@ -973,42 +1276,60 @@ export async function registerRoutes(
           return res.status(422).json({ message: msg });
         }
 
-        // 4. Deduct 30 credits
-        const { error: deductErr } = await supabaseAdmin.rpc(
-          "deduct_credits",
-          {
-            p_user_id: authReq.userId,
-            p_amount: VIDEO_CREDIT_COST,
-          },
-        );
-        if (deductErr) {
-          logger.error({ err: deductErr }, "Failed to deduct credits");
-          return res
-            .status(500)
-            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
-        }
-
-        // 5. Store in generated_pranks
+        // 4. Store in generations, then charge through the credit ledger.
+        const externalTaskId = `video_${runwayResponse.data.task_id}`;
         const { data: prank, error: insertErr } = await supabaseAdmin
-          .from("generated_pranks")
+          .from("generations")
           .insert({
             user_id: authReq.userId,
             template_id: null,
+            generation_type: "video",
+            prompt,
             final_prompt: prompt,
-            kie_task_id: `video_${runwayResponse.data.task_id}`,
-            status: "waiting",
-            input_urls: imageUrl ? JSON.stringify([imageUrl]) : null,
+            provider: "runway",
+            provider_task_id: externalTaskId,
+            status: "processing",
+            input_assets: imageUrl ? [imageUrl] : [],
+            credit_cost: VIDEO_CREDIT_COST,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
 
+        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+          userId: authReq.userId,
+          delta: -VIDEO_CREDIT_COST,
+          reason: "generation_charge",
+          generationId: prank.id,
+          idempotencyKey: `generation:${prank.id}:charge`,
+          metadata: {
+            source: "video_generation",
+            provider: "runway",
+            provider_task_id: externalTaskId,
+          },
+        });
+        if (deductErr) {
+          await supabaseAdmin
+            .from("generations")
+            .update({
+              status: "failed",
+              fail_message: "credit_deduction_failed",
+              updated_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", prank.id);
+          logger.error({ err: deductErr }, "Failed to deduct credits");
+          return res
+            .status(500)
+            .json({ message: tBackend(locale, "pranks.creditDeductionFailed") });
+        }
+
         await recordGeneration(authReq.userId);
 
         res.status(201).json({
           id: prank.id,
-          taskId: `video_${runwayResponse.data.task_id}`,
+          taskId: externalTaskId,
           status: "waiting",
           isSubscriber: limitResult.isSubscriber,
         });
@@ -1056,9 +1377,9 @@ export async function registerRoutes(
 
       // Verify this task belongs to the user
       const { data: prank, error: fetchErr } = await supabaseAdmin
-        .from("generated_pranks")
+        .from("generations")
         .select("*")
-        .ilike("kie_task_id", `%${taskId}%`)
+        .ilike("provider_task_id", `%${taskId}%`)
         .eq("user_id", authReq.userId)
         .single();
 
@@ -1069,7 +1390,7 @@ export async function registerRoutes(
       }
 
       // If already terminal, return cached result
-      if (prank.status === "success" || prank.status === "fail") {
+      if (prank.status === "succeeded" || prank.status === "failed") {
         // Check subscriber status for watermark decision
         const { data: profile } = await supabaseAdmin
           .from("profiles")
@@ -1079,17 +1400,18 @@ export async function registerRoutes(
         const isSubscriber =
           profile?.is_subscriber || profile?.role === "admin";
 
-        const originals = prank.result_urls
-          ? JSON.parse(prank.result_urls)
+        const originals = Array.isArray(prank.output_assets)
+          ? prank.output_assets
           : [];
-        const watermarkedList = prank.watermarked_urls
-          ? JSON.parse(prank.watermarked_urls)
+        const watermarkedList = Array.isArray(prank.watermarked_assets)
+          ? prank.watermarked_assets
           : originals;
 
         return res.json({
           prankId: prank.id,
-          status: prank.status,
+          status: toLegacyStatus(prank.status),
           resultUrls: originals,
+          watermarkedUrls: watermarkedList,
           failMessage: prank.fail_message,
           costTime: prank.cost_time,
           isSubscriber,
@@ -1097,7 +1419,7 @@ export async function registerRoutes(
         });
       }
 
-      const activeTaskId = prank.kie_task_id.split(",").pop() as string;
+      const activeTaskId = (prank.provider_task_id || "").split(",").pop() as string;
       const isCustomApi = activeTaskId.startsWith("custom_");
       const isVideoTask = activeTaskId.startsWith("video_");
 
@@ -1173,7 +1495,7 @@ export async function registerRoutes(
             );
             try {
               const aspect_ratio = prank.aspect_ratio || "9:16";
-              const imageUrls = prank.input_urls ? JSON.parse(prank.input_urls) : [];
+              const imageUrls = Array.isArray(prank.input_assets) ? prank.input_assets : [];
               const fallbackKieResponse = await createKieTask({
                 prompt: prank.final_prompt,
                 aspect_ratio,
@@ -1181,10 +1503,14 @@ export async function registerRoutes(
               });
              
               if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
-                const newKieTaskIdString = `${prank.kie_task_id},${fallbackKieResponse.data.taskId}`;
+                const newKieTaskIdString = `${prank.provider_task_id},${fallbackKieResponse.data.taskId}`;
                 await supabaseAdmin
-                  .from("generated_pranks")
-                  .update({ kie_task_id: newKieTaskIdString, updated_at: new Date().toISOString() })
+                  .from("generations")
+                  .update({
+                    provider: "fallback",
+                    provider_task_id: newKieTaskIdString,
+                    updated_at: new Date().toISOString(),
+                  })
                   .eq("id", prank.id);
                  
                 return res.json({
@@ -1283,19 +1609,17 @@ export async function registerRoutes(
 
         // Update record
         await supabaseAdmin
-          .from("generated_pranks")
+          .from("generations")
           .update({
-            status: apiStatus as any,
-            result_urls: JSON.stringify(resultUrls),
-            watermarked_urls:
-              watermarkedUrls.length > 0
-                ? JSON.stringify(watermarkedUrls)
-                : null,
+            status: toDbStatus(apiStatus),
+            output_assets: resultUrls,
+            watermarked_assets: watermarkedUrls.length > 0 ? watermarkedUrls : [],
             fail_message: apiFailMsg || null,
             cost_time: apiCostTime
               ? String(apiCostTime)
               : null,
             updated_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
           })
           .eq("id", prank.id);
 
@@ -1349,14 +1673,14 @@ export async function registerRoutes(
       }
 
       const { data, error } = await supabaseAdmin
-        .from("generated_pranks")
-        .select("*, prompt_templates(name, category)")
+        .from("generations")
+        .select("*, templates(name, template_categories(slug))")
         .eq("user_id", authReq.userId)
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      res.json(data);
+      res.json((data ?? []).map(toLegacyPrankDto));
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching prank history");
       const locale = resolveLocaleFromRequest(req);
@@ -1382,13 +1706,18 @@ export async function registerRoutes(
       }
 
       const { data: prank, error } = await supabaseAdmin
-        .from("generated_pranks")
-        .select("result_urls, watermarked_urls")
+        .from("generations")
+        .select("output_assets, watermarked_assets")
         .eq("id", prankId)
         .eq("user_id", authReq.userId)
         .single();
 
-      if (error || !prank || !prank.result_urls) {
+      if (
+        error ||
+        !prank ||
+        !Array.isArray(prank.output_assets) ||
+        prank.output_assets.length === 0
+      ) {
         return res
           .status(404)
           .json({ message: tBackend(locale, "pranks.notFound") });
@@ -1402,18 +1731,11 @@ export async function registerRoutes(
         .single();
       const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
 
-      const urlsSource = isSubscriber
-        ? prank.result_urls
-        : prank.watermarked_urls || prank.result_urls;
-
-      let urls: string[];
-      try {
-        urls = JSON.parse(urlsSource);
-      } catch {
-        return res
-          .status(500)
-          .json({ message: tBackend(locale, "pranks.invalidUrls") });
-      }
+      const urls = isSubscriber
+        ? prank.output_assets
+        : Array.isArray(prank.watermarked_assets) && prank.watermarked_assets.length > 0
+          ? prank.watermarked_assets
+          : prank.output_assets;
 
       if (index >= urls.length) {
         return res
@@ -1442,7 +1764,7 @@ export async function registerRoutes(
       res.setHeader("Content-Type", contentType);
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="prank-${randomSuffix}.${extension}"`,
+        `attachment; filename="larp-${randomSuffix}.${extension}"`,
       );
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
@@ -1465,7 +1787,7 @@ export async function registerRoutes(
       const supabaseAdmin = getSupabaseAdmin();
 
       const { error } = await supabaseAdmin
-        .from("generated_pranks")
+        .from("generations")
         .delete()
         .eq("id", prankId)
         .eq("user_id", authReq.userId);
@@ -1497,12 +1819,19 @@ export async function registerRoutes(
     validateRequest(addCreditsBodySchema),
     async (req, res) => {
       try {
+        const authReq = req as AuthenticatedRequest;
         const { user_id, amount } = req.body;
         const supabaseAdmin = getSupabaseAdmin();
 
-        const { data, error } = await supabaseAdmin.rpc("add_credits", {
-          p_user_id: user_id,
-          p_amount: amount,
+        const { data, error } = await applyCreditDelta(supabaseAdmin, {
+          userId: user_id,
+          delta: amount,
+          reason: "admin_adjustment",
+          idempotencyKey: `admin:${authReq.userId}:${user_id}:${Date.now()}`,
+          metadata: {
+            source: "admin_credit_adjustment",
+            admin_user_id: authReq.userId,
+          },
         });
 
         if (error) throw error;
@@ -1519,7 +1848,6 @@ export async function registerRoutes(
   const updateUserBodySchema = z.object({
     is_subscriber: z.boolean().optional(),
     role: z.enum(["user", "admin"]).optional(),
-    credits: z.number().int().min(0).optional(),
     admin_plan: z.enum(["free", "weekly", "monthly", "image", "video"]).optional(),
   });
 

@@ -710,7 +710,7 @@ export function TemplateFormDialog({
               Images d'illustration
             </legend>
             <p className="text-xs text-muted-foreground">
-              Photos d'exemple affichées dans la galerie de pranks (avant / après).
+              Photos d'exemple affichées dans la galerie de LARPs (avant / après).
             </p>
             <div className="grid grid-cols-2 gap-3">
               {/* Before */}

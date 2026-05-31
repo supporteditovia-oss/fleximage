@@ -47,7 +47,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "limits.noCreditsSubscriber":
       "Tu n'as plus de crédits. Tes crédits seront rechargés au prochain renouvellement.",
     "limits.noCreditsNonSubscriber":
-      "Crédits insuffisants. Abonne-toi pour obtenir des crédits et générer des pranks.",
+      "Crédits insuffisants. Abonne-toi pour obtenir des crédits et générer des LARPs.",
     "profiles.notFound": "Profil introuvable",
     "templates.notFound": "Template introuvable",
     "templates.notFoundOrInactive": "Template introuvable ou inactif",
@@ -56,7 +56,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.creditDeductionFailed": "Erreur lors de la deduction des credits",
     "pranks.taskNotFound": "Tache introuvable",
     "pranks.invalidImageIndex": "Index d'image invalide",
-    "pranks.notFound": "Prank introuvable",
+    "pranks.notFound": "LARP introuvable",
     "pranks.invalidUrls": "URLs invalides",
     "pranks.imageNotFound": "Image introuvable",
     "pranks.fetchImageFailed": "Impossible de recuperer l'image",
@@ -71,7 +71,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fallbackFailed":
       "La generation a echoue apres la tentative de secours",
     "pranks.policyViolation":
-      "Votre prank enfreint les règles de création.",
+      "Votre LARP enfreint les règles de création.",
     "rateLimit.tooManyRequests":
       "Trop de requetes. Veuillez reessayer plus tard.",
     "rateLimit.tooManyGenerationRequests":
@@ -86,7 +86,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "limits.noCreditsSubscriber":
       "You are out of credits. Your credits will be reloaded at your next renewal.",
     "limits.noCreditsNonSubscriber":
-      "Insufficient credits. Subscribe to get credits and generate pranks.",
+      "Insufficient credits. Subscribe to get credits and generate LARPs.",
     "profiles.notFound": "Profile not found",
     "templates.notFound": "Template not found",
     "templates.notFoundOrInactive": "Template not found or inactive",
@@ -94,7 +94,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.creditDeductionFailed": "Failed to deduct credits",
     "pranks.taskNotFound": "Task not found",
     "pranks.invalidImageIndex": "Invalid image index",
-    "pranks.notFound": "Prank not found",
+    "pranks.notFound": "LARP not found",
     "pranks.invalidUrls": "Invalid URLs",
     "pranks.imageNotFound": "Image not found",
     "pranks.fetchImageFailed": "Unable to fetch image",
@@ -107,7 +107,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "An unexpected error occurred. Please try again.",
     "pranks.pollingError": "Failed to check generation status",
     "pranks.fallbackFailed": "Generation failed after fallback",
-    "pranks.policyViolation": "Your prank violates the creation rules.",
+    "pranks.policyViolation": "Your LARP violates the creation rules.",
     "rateLimit.tooManyRequests": "Too many requests. Please try again later.",
     "rateLimit.tooManyGenerationRequests":
       "Too many generation requests. Please try again later.",
@@ -121,7 +121,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "limits.noCreditsSubscriber":
       "No te quedan créditos. Tus créditos se recargarán en la próxima renovación.",
     "limits.noCreditsNonSubscriber":
-      "Créditos insuficientes. Suscríbete para obtener créditos y generar bromas.",
+      "Créditos insuficientes. Suscríbete para obtener créditos y generar LARPs.",
     "profiles.notFound": "Perfil no encontrado",
     "templates.notFound": "Plantilla no encontrada",
     "templates.notFoundOrInactive": "Plantilla no encontrada o inactiva",
@@ -129,7 +129,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.creditDeductionFailed": "Error al descontar creditos",
     "pranks.taskNotFound": "Tarea no encontrada",
     "pranks.invalidImageIndex": "Indice de imagen invalido",
-    "pranks.notFound": "Broma no encontrada",
+    "pranks.notFound": "LARP no encontrado",
     "pranks.invalidUrls": "URLs invalidas",
     "pranks.imageNotFound": "Imagen no encontrada",
     "pranks.fetchImageFailed": "No se pudo recuperar la imagen",
@@ -145,7 +145,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.fallbackFailed":
       "La generacion fallo despues del modo de respaldo",
     "pranks.policyViolation":
-      "Tu broma infringe las reglas de creacion.",
+      "Tu LARP infringe las reglas de creacion.",
     "rateLimit.tooManyRequests":
       "Demasiadas solicitudes. Intentalo de nuevo mas tarde.",
     "rateLimit.tooManyGenerationRequests":
@@ -160,7 +160,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "limits.noCreditsSubscriber":
       "Du hast keine Credits mehr. Deine Credits werden bei der nächsten Verlängerung aufgeladen.",
     "limits.noCreditsNonSubscriber":
-      "Nicht genügend Credits. Abonniere, um Credits zu erhalten und Streiche zu generieren.",
+      "Nicht genügend Credits. Abonniere, um Credits zu erhalten und LARPs zu generieren.",
     "profiles.notFound": "Profil nicht gefunden",
     "templates.notFound": "Vorlage nicht gefunden",
     "templates.notFoundOrInactive": "Vorlage nicht gefunden oder inaktiv",
@@ -168,7 +168,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "pranks.creditDeductionFailed": "Credits konnten nicht abgezogen werden",
     "pranks.taskNotFound": "Aufgabe nicht gefunden",
     "pranks.invalidImageIndex": "Ungueltiger Bildindex",
-    "pranks.notFound": "Streich nicht gefunden",
+    "pranks.notFound": "LARP nicht gefunden",
     "pranks.invalidUrls": "Ungueltige URLs",
     "pranks.imageNotFound": "Bild nicht gefunden",
     "pranks.fetchImageFailed": "Bild konnte nicht geladen werden",
@@ -183,7 +183,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "Der Generierungsstatus konnte nicht gepruft werden",
     "pranks.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
     "pranks.policyViolation":
-      "Dein Streich verstoesst gegen die Erstellungsregeln.",
+      "Dein LARP verstoesst gegen die Erstellungsregeln.",
     "rateLimit.tooManyRequests":
       "Zu viele Anfragen. Bitte versuche es spaeter erneut.",
     "rateLimit.tooManyGenerationRequests":

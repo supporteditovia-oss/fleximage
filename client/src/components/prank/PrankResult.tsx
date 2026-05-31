@@ -107,7 +107,7 @@ export function PrankResult({
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = `prank-${randomSuffix}.${ext}`;
+      a.download = `larp-${randomSuffix}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -128,7 +128,7 @@ export function PrankResult({
           `/api/pranks/${encodeURIComponent(prankId)}/download/${imageIndex}`,
         );
         const blob = await res.blob();
-        const file = new File([blob], "prank.jpg", {
+        const file = new File([blob], "larp.jpg", {
           type: blob.type || "image/jpeg",
         });
         if (navigator.canShare({ files: [file] })) {

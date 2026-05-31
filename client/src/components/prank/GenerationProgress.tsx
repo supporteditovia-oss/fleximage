@@ -138,7 +138,7 @@ export function GenerationProgress({
               </span>
             </h1>
 
-            {/* Prank result with download/share actions */}
+            {/* LARP result with download/share actions */}
             <div className="relative min-h-0 min-w-0 flex items-center justify-center overflow-hidden py-2 shrink">
               <PrankResult
                 resultUrls={data.resultUrls}

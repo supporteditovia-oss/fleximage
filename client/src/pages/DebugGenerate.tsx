@@ -20,7 +20,7 @@ export default function DebugGenerate() {
   useEffect(() => {
     getPendingPrank().then((p) => {
       setHasPending(!!p);
-      log(`IDB check: ${p ? "FOUND pending prank" : "no pending prank"}`);
+      log(`IDB check: ${p ? "FOUND pending LARP" : "no pending LARP"}`);
       if (p) {
         log(`  prompt: "${p.prompt}"`);
         log(`  images: ${p.images.length}`);
@@ -45,17 +45,17 @@ export default function DebugGenerate() {
     const file = new File([blob], "debug.png", { type: "image/png" });
 
     await savePendingPrank({
-      prompt: "Debug test prank - met cette personne dans l'espace",
+      prompt: "Debug test LARP - mets cette personne dans l'espace",
       images: [file],
       timestamp: Date.now(),
     });
-    log("Saved fake pending prank to IDB");
+    log("Saved fake pending LARP to IDB");
     setHasPending(true);
   };
 
   const handleClear = async () => {
     await clearPendingPrank();
-    log("Cleared pending prank from IDB");
+    log("Cleared pending LARP from IDB");
     setHasPending(false);
   };
 
@@ -82,7 +82,7 @@ export default function DebugGenerate() {
             }`}
           />
           <span className="text-sm font-medium">
-            {hasPending === null ? "Checking..." : hasPending ? "Pending prank found" : "No pending prank"}
+            {hasPending === null ? "Checking..." : hasPending ? "Pending LARP found" : "No pending LARP"}
           </span>
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function DebugGenerate() {
             onClick={handleSaveFake}
             className="px-4 py-2 text-sm font-semibold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
           >
-            1. Save fake pending prank
+            1. Save fake pending LARP
           </button>
           <button
             onClick={handleNavigate}
@@ -107,7 +107,7 @@ export default function DebugGenerate() {
             onClick={handleClear}
             className="px-4 py-2 text-sm font-semibold rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-95 transition-all"
           >
-            Clear pending prank
+            Clear pending LARP
           </button>
         </div>
         <p className="text-xs text-muted-foreground">

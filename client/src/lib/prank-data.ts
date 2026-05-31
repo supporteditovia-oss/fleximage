@@ -1,12 +1,12 @@
 import {
-  Ticket,
-  Baby,
-  MessageCircle,
-  FileText,
-  Trophy,
-  ShieldAlert,
-  Landmark,
+  BarChart3,
   Car,
+  Landmark,
+  Plane,
+  ShoppingBag,
+  Sparkles,
+  Trophy,
+  UtensilsCrossed,
 } from "lucide-react";
 import type { ElementType } from "react";
 import {
@@ -31,191 +31,199 @@ type PrankLocaleContent = {
 };
 
 const prankChipDescriptors: PrankChipDescriptor[] = [
-  { id: "ticket", icon: Ticket },
-  { id: "echo", icon: Baby },
-  { id: "sms", icon: MessageCircle },
-  { id: "lettre", icon: FileText },
-  { id: "loto", icon: Trophy },
-  { id: "police", icon: ShieldAlert },
-  { id: "banque", icon: Landmark },
-  { id: "permis", icon: Car },
+  { id: "chrome", icon: ShoppingBag },
+  { id: "supercar", icon: Car },
+  { id: "restaurant", icon: UtensilsCrossed },
+  { id: "monaco", icon: Landmark },
+  { id: "jet", icon: Plane },
+  { id: "dashboard", icon: BarChart3 },
+  { id: "watch", icon: Trophy },
+  { id: "nightlife", icon: Sparkles },
 ];
 
 const prankContentByLocale: Record<AppLocale, PrankLocaleContent> = {
   fr: {
     chips: {
-      ticket: {
-        label: "Ticket d'amende",
-        example: "Envoie-moi un PV de stationnement realiste a mon nom",
+      chrome: {
+        label: "Chrome Hearts",
+        example: "Fais-moi sortir de Chrome Hearts avec trois sacs et une tenue full black",
       },
-      echo: {
-        label: "Fausse grossesse",
-        example: "Cree une fausse echographie pour surprendre mon pere",
+      supercar: {
+        label: "Supercar",
+        example: "Mets-moi au volant d'une Lamborghini devant le Casino de Monte-Carlo",
       },
-      sms: {
-        label: "Rupture SMS",
-        example: "Une capture d'ecran de rupture par SMS drole",
+      restaurant: {
+        label: "Restaurant luxe",
+        example: "Fais-moi diner chez Caviar Kaspia avec montre apparente et flash discret",
       },
-      lettre: {
-        label: "Licenciement",
-        example: "Une lettre de licenciement officielle et convaincante",
+      monaco: {
+        label: "Monaco",
+        example: "Mets-moi devant l'Hotel de Paris Monaco en outfit quiet luxury",
       },
-      loto: {
-        label: "Jackpot loto",
-        example: "Un ticket gagnant au loto a 2 millions d'euros",
+      jet: {
+        label: "Jet prive",
+        example: "Fais-moi monter dans un jet prive direction Dubai, ambiance ultra VIP",
       },
-      police: {
-        label: "Convocation police",
-        example: "Une fausse convocation au commissariat",
+      dashboard: {
+        label: "Dashboard revenus",
+        example: "Cree un dashboard Shopify a 87k cette semaine sur mon laptop",
       },
-      banque: {
-        label: "Decouvert banque",
-        example: "Un releve bancaire avec un decouvert enorme",
+      watch: {
+        label: "Montre hype",
+        example: "Mets-moi une Rolex Daytona au poignet avec ticket de caisse Goyard",
       },
-      permis: {
-        label: "Retrait de permis",
-        example: "Une lettre de retrait de permis de conduire",
+      nightlife: {
+        label: "Table VIP",
+        example: "Fais-moi en table VIP a Saint-Tropez avec bouteilles et baddies",
       },
     },
     ideas: [
-      "Met un PV sur ma voiture...",
-      "Fais en sorte que mon pote s'embrasse avec...",
-      "Fais gagner mon pote au loto...",
-      "Fais une fausse convocation a la police...",
-      "Cree une fausse lettre de licenciement...",
-      "Met le bordel dans cette maison...",
+      "Fais-moi sortir de Chrome Hearts avec trois sacs...",
+      "Mets-moi au volant d'une Lamborghini a Monaco...",
+      "Fais-moi diner chez Caviar Kaspia...",
+      "Mets-moi devant le Casino de Monte-Carlo...",
+      "Fais-moi monter dans un jet prive direction Dubai...",
+      "Cree un dashboard Shopify a 87k cette semaine...",
+      "Mets-moi une Rolex Daytona au poignet...",
+      "Fais-moi en table VIP a Saint-Tropez...",
     ],
   },
   en: {
     chips: {
-      ticket: {
-        label: "Parking ticket",
-        example: "Generate a realistic parking ticket with my name",
+      chrome: {
+        label: "Chrome Hearts",
+        example: "Make me walk out of Chrome Hearts with three bags and a full black fit",
       },
-      echo: {
-        label: "Fake pregnancy",
-        example: "Create a fake ultrasound image to prank my dad",
+      supercar: {
+        label: "Supercar",
+        example: "Put me behind the wheel of a Lamborghini outside Casino de Monte-Carlo",
       },
-      sms: {
-        label: "Breakup text",
-        example: "A funny breakup text screenshot",
+      restaurant: {
+        label: "Luxury dinner",
+        example: "Make me dine at Caviar Kaspia with a visible watch and subtle flash",
       },
-      lettre: {
-        label: "Dismissal letter",
-        example: "An official and convincing dismissal letter",
+      monaco: {
+        label: "Monaco",
+        example: "Put me outside Hotel de Paris Monaco in a quiet luxury outfit",
       },
-      loto: {
-        label: "Lottery jackpot",
-        example: "A winning lottery ticket worth 2 million euros",
+      jet: {
+        label: "Private jet",
+        example: "Make me board a private jet to Dubai with an ultra VIP mood",
       },
-      police: {
-        label: "Police summons",
-        example: "A fake police station summons",
+      dashboard: {
+        label: "Revenue dashboard",
+        example: "Create a Shopify dashboard showing 87k this week on my laptop",
       },
-      banque: {
-        label: "Bank overdraft",
-        example: "A bank statement with a huge overdraft",
+      watch: {
+        label: "Hype watch",
+        example: "Put a Rolex Daytona on my wrist with a Goyard receipt",
       },
-      permis: {
-        label: "License suspension",
-        example: "A driving license suspension letter",
+      nightlife: {
+        label: "VIP table",
+        example: "Make me at a Saint-Tropez VIP table with bottles and baddies",
       },
     },
     ideas: [
-      "Put a fake ticket on my car...",
-      "Make my friend look like they kissed...",
-      "Make my friend win the lottery...",
-      "Create a fake police summons...",
-      "Create a fake dismissal letter...",
-      "Make this house look like chaos...",
+      "Make me walk out of Chrome Hearts with three bags...",
+      "Put me behind the wheel of a Lamborghini in Monaco...",
+      "Make me dine at Caviar Kaspia...",
+      "Put me outside Casino de Monte-Carlo...",
+      "Make me board a private jet to Dubai...",
+      "Create a Shopify dashboard showing 87k this week...",
+      "Put a Rolex Daytona on my wrist...",
+      "Make me at a Saint-Tropez VIP table...",
     ],
   },
   es: {
     chips: {
-      ticket: {
-        label: "Multa de trafico",
-        example: "Genera una multa de aparcamiento realista con mi nombre",
+      chrome: {
+        label: "Chrome Hearts",
+        example: "Hazme salir de Chrome Hearts con tres bolsas y un outfit full black",
       },
-      echo: {
-        label: "Falso embarazo",
-        example: "Crea una ecografia falsa para sorprender a mi padre",
+      supercar: {
+        label: "Supercoche",
+        example: "Ponme al volante de un Lamborghini frente al Casino de Monte-Carlo",
       },
-      sms: {
-        label: "Ruptura por SMS",
-        example: "Una captura divertida de ruptura por SMS",
+      restaurant: {
+        label: "Cena de lujo",
+        example: "Hazme cenar en Caviar Kaspia con reloj visible y flash sutil",
       },
-      lettre: {
-        label: "Despido",
-        example: "Una carta de despido oficial y convincente",
+      monaco: {
+        label: "Monaco",
+        example: "Ponme delante del Hotel de Paris Monaco con outfit quiet luxury",
       },
-      loto: {
-        label: "Jackpot loteria",
-        example: "Un billete de loteria ganador de 2 millones de euros",
+      jet: {
+        label: "Jet privado",
+        example: "Hazme subir a un jet privado rumbo a Dubai, ambiente ultra VIP",
       },
-      police: {
-        label: "Citacion policial",
-        example: "Una falsa citacion a comisaria",
+      dashboard: {
+        label: "Dashboard ingresos",
+        example: "Crea un dashboard de Shopify con 87k esta semana en mi laptop",
       },
-      banque: {
-        label: "Descubierto bancario",
-        example: "Un extracto bancario con un descubierto enorme",
+      watch: {
+        label: "Reloj hype",
+        example: "Ponme un Rolex Daytona en la muneca con recibo de Goyard",
       },
-      permis: {
-        label: "Retirada de carnet",
-        example: "Una carta de retirada del permiso de conducir",
+      nightlife: {
+        label: "Mesa VIP",
+        example: "Hazme en una mesa VIP en Saint-Tropez con botellas y baddies",
       },
     },
     ideas: [
-      "Pon una multa falsa en mi coche...",
-      "Haz que mi amigo parezca que se beso con...",
-      "Haz que mi amigo gane la loteria...",
-      "Crea una citacion policial falsa...",
-      "Crea una carta de despido falsa...",
-      "Haz que esta casa parezca un caos...",
+      "Hazme salir de Chrome Hearts con tres bolsas...",
+      "Ponme al volante de un Lamborghini en Monaco...",
+      "Hazme cenar en Caviar Kaspia...",
+      "Ponme frente al Casino de Monte-Carlo...",
+      "Hazme subir a un jet privado rumbo a Dubai...",
+      "Crea un dashboard de Shopify con 87k esta semana...",
+      "Ponme un Rolex Daytona en la muneca...",
+      "Hazme en una mesa VIP en Saint-Tropez...",
     ],
   },
   de: {
     chips: {
-      ticket: {
-        label: "Strafzettel",
-        example: "Erstelle einen realistischen Strafzettel mit meinem Namen",
+      chrome: {
+        label: "Chrome Hearts",
+        example: "Lass mich mit drei Taschen aus Chrome Hearts kommen, full black Outfit",
       },
-      echo: {
-        label: "Falsche Schwangerschaft",
-        example: "Erstelle ein falsches Ultraschallbild fur einen Streich",
+      supercar: {
+        label: "Supercar",
+        example: "Setz mich in einen Lamborghini vor dem Casino de Monte-Carlo",
       },
-      sms: {
-        label: "Trennungs-SMS",
-        example: "Ein lustiger Trennungs-SMS-Screenshot",
+      restaurant: {
+        label: "Luxus-Dinner",
+        example: "Lass mich bei Caviar Kaspia essen, mit sichtbarer Uhr und dezentem Blitz",
       },
-      lettre: {
-        label: "Kundigung",
-        example: "Ein offizielles und glaubwurdiges Kundigungsschreiben",
+      monaco: {
+        label: "Monaco",
+        example: "Stell mich vor das Hotel de Paris Monaco im Quiet-Luxury-Outfit",
       },
-      loto: {
-        label: "Lotto-Jackpot",
-        example: "Ein Lottoschein mit 2 Millionen Euro Gewinn",
+      jet: {
+        label: "Privatjet",
+        example: "Lass mich in einen Privatjet nach Dubai steigen, ultra VIP Stimmung",
       },
-      police: {
-        label: "Polizei-Vorladung",
-        example: "Eine gefalschte Vorladung zur Polizei",
+      dashboard: {
+        label: "Revenue-Dashboard",
+        example: "Erstelle ein Shopify-Dashboard mit 87k diese Woche auf meinem Laptop",
       },
-      banque: {
-        label: "Bank-Dispo",
-        example: "Ein Kontoauszug mit riesigem Minus",
+      watch: {
+        label: "Hype-Uhr",
+        example: "Setz mir eine Rolex Daytona ans Handgelenk mit Goyard-Quittung",
       },
-      permis: {
-        label: "Fahrverbot",
-        example: "Ein Schreiben zum Entzug der Fahrerlaubnis",
+      nightlife: {
+        label: "VIP-Tisch",
+        example: "Lass mich an einem VIP-Tisch in Saint-Tropez sitzen, mit Flaschen und Baddies",
       },
     },
     ideas: [
-      "Packe einen fake Strafzettel auf mein Auto...",
-      "Lass es aussehen, als hatte mein Freund jemanden gekusst...",
-      "Lass meinen Freund im Lotto gewinnen...",
-      "Erstelle eine fake Polizei-Vorladung...",
-      "Erstelle ein fake Kundigungsschreiben...",
-      "Lass dieses Haus wie Chaos aussehen...",
+      "Lass mich mit drei Taschen aus Chrome Hearts kommen...",
+      "Setz mich in einen Lamborghini in Monaco...",
+      "Lass mich bei Caviar Kaspia essen...",
+      "Stell mich vor das Casino de Monte-Carlo...",
+      "Lass mich in einen Privatjet nach Dubai steigen...",
+      "Erstelle ein Shopify-Dashboard mit 87k diese Woche...",
+      "Setz mir eine Rolex Daytona ans Handgelenk...",
+      "Lass mich an einem VIP-Tisch in Saint-Tropez sitzen...",
     ],
   },
 };

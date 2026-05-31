@@ -113,7 +113,7 @@ export function TemplateGallery({
         )}
       </motion.div>
 
-      {/* Prank grid */}
+      {/* LARP grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {templatesLoading && (
           <div className="col-span-full flex justify-center py-8">
