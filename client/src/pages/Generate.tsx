@@ -10,7 +10,7 @@ import { Loader2, ChevronDown } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
-import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
+import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateGallery } from "@/components/generate/TemplateGallery";
@@ -32,6 +32,9 @@ import { useTranslation } from "react-i18next";
 
 const FAKE_LOADER_MIN_DELAY_MS = 10_000;
 const FAKE_LOADER_MAX_DELAY_MS = 20_000;
+const IMAGE_CREDIT_COST = 5;
+const VIDEO_CREDIT_COST = 30;
+type FakePaywallReason = "onboarding" | "insufficientCredits";
 
 function getRandomFakeLoaderDelay() {
   return (
@@ -63,7 +66,9 @@ export default function Generate() {
   const [isFakeGenerating, setIsFakeGenerating] = useState(false);
   const [fakeLoaderStatus, setFakeLoaderStatus] = useState<"connecting" | "waiting" | "success">("connecting");
   const [showFakePaywall, setShowFakePaywall] = useState(false);
-  const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<"weekly" | "monthly">("monthly");
+  const [fakePaywallReason, setFakePaywallReason] =
+    useState<FakePaywallReason>("onboarding");
+  const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     larpId: string;
@@ -331,6 +336,14 @@ export default function Generate() {
       reader.readAsDataURL(file);
     });
 
+  const startInsufficientCreditsFlow = useCallback(() => {
+    setPendingLoading(false);
+    setShowFakePaywall(false);
+    setPaywallDefaultPlan("essential");
+    setFakePaywallReason("insufficientCredits");
+    setIsFakeGenerating(true);
+  }, []);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast({
@@ -388,6 +401,18 @@ export default function Generate() {
       });
     }
 
+    const requiredCredits =
+      generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
+    if (
+      !isReturningFromCheckout &&
+      profile &&
+      profile.role !== "admin" &&
+      profile.credits < requiredCredits
+    ) {
+      startInsufficientCreditsFlow();
+      return;
+    }
+
     if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
       try {
         await savePendingLarp({
@@ -408,6 +433,7 @@ export default function Generate() {
 
       setPendingLoading(false);
       setShowFakePaywall(false);
+      setFakePaywallReason("onboarding");
       setIsFakeGenerating(true);
       return;
     }
@@ -416,11 +442,7 @@ export default function Generate() {
     // the cached data is stale (user just got credits via Stripe).
     // Server will still validate credits.
     if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
-      toast({
-        variant: "destructive",
-        title: t("generate.insufficientCreditsTitle"),
-        description: t("generate.insufficientCreditsDescription"),
-      });
+      startInsufficientCreditsFlow();
       return;
     }
 
@@ -438,7 +460,7 @@ export default function Generate() {
           aspect_ratio: "9:16",
           images: base64Images.length > 0 ? base64Images : undefined,
         });
-        setPaywallDefaultPlan("monthly");
+        setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
         refetchEligibility();
         return;
@@ -478,8 +500,18 @@ export default function Generate() {
         !profile?.is_subscriber &&
         profile?.role !== "admin"
       ) {
-        setPaywallDefaultPlan("monthly");
+        setPaywallDefaultPlan("essential");
+        setFakePaywallReason("onboarding");
         setShowFakePaywall(true);
+        return;
+      }
+      if (
+        error.status === 403 &&
+        (normalizedMessage.includes("credit") ||
+          normalizedMessage.includes("credits") ||
+          normalizedMessage.includes("jeton"))
+      ) {
+        startInsufficientCreditsFlow();
         return;
       }
       toast({
@@ -497,6 +529,7 @@ export default function Generate() {
     setSelectedTemplate(null);
     setTextValues({});
     setGenerationMode("image");
+    setFakePaywallReason("onboarding");
     refetchEligibility();
   };
 
@@ -521,16 +554,31 @@ export default function Generate() {
       return;
     }
 
+    const requiredCredits =
+      generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
+    if (
+      !isReturningFromCheckout &&
+      profile &&
+      profile.role !== "admin" &&
+      profile.credits < requiredCredits
+    ) {
+      console.log("[Generate] Starting insufficient credits fake flow...");
+      startInsufficientCreditsFlow();
+      return;
+    }
+
     if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
       if (sessionStorage.getItem("fake_paywall_reached") === "true") {
         console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
         setPendingLoading(false);
+        setFakePaywallReason("onboarding");
         setShowFakePaywall(true);
         return;
       }
 
       console.log("[Generate] Starting FAKE generation flow...");
       setPendingLoading(false);
+      setFakePaywallReason("onboarding");
       setIsFakeGenerating(true);
       return;
     }
@@ -613,7 +661,9 @@ export default function Generate() {
       inputImageUrl={images[0]?.url}
       onRevealComplete={() => {
         setIsFakeGenerating(false);
-        sessionStorage.setItem("fake_paywall_reached", "true");
+        if (fakePaywallReason === "onboarding") {
+          sessionStorage.setItem("fake_paywall_reached", "true");
+        }
         setShowFakePaywall(true);
       }}
     />,
@@ -677,7 +727,12 @@ export default function Generate() {
     return createPortal(
       <div className={paywallOverlayClassName}>
         <div className={paywallOverlayInnerClassName}>
-          <PaywallOverlay isFake={true} imageUrl={paywallImageUrl} defaultPlan={paywallDefaultPlan} />
+          <PaywallOverlay
+            isFake={true}
+            imageUrl={paywallImageUrl}
+            defaultPlan={paywallDefaultPlan}
+            variant={fakePaywallReason === "insufficientCredits" ? "insufficientCredits" : "default"}
+          />
         </div>
       </div>,
       document.body,

@@ -343,10 +343,20 @@ create table public.subscriptions (
   stripe_customer_id text not null,
   status text not null default 'active',
   price_id text not null,
-  plan_type text not null default 'weekly'
-    check (plan_type in ('weekly', 'monthly', 'image', 'video')),
-  credits_per_cycle integer not null default 100 check (credits_per_cycle >= 0),
-  billing_interval text not null default 'week'
+  plan_type text not null default 'discovery'
+    check (
+      plan_type in (
+        'discovery',
+        'essential',
+        'ultimate',
+        'weekly',
+        'monthly',
+        'image',
+        'video'
+      )
+    ),
+  credits_per_cycle integer not null default 2500 check (credits_per_cycle >= 0),
+  billing_interval text not null default 'month'
     check (billing_interval in ('week', 'month')),
   current_period_start timestamptz,
   current_period_end timestamptz,

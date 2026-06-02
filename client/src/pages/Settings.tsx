@@ -88,15 +88,17 @@ export default function Settings() {
 
   const subscriptionPrice = (() => {
     if (!activeSubscription) return t("settings.subscription.price");
-    if (activeSubscription.plan_type === "video") {
-      return t("settings.subscription.legacyVideoPrice");
+    if (activeSubscription.plan_type === "ultimate") {
+      return t("settings.subscription.ultimatePrice");
     }
-    if (activeSubscription.plan_type === "image") {
-      return t("settings.subscription.legacyImagePrice");
+    if (
+      activeSubscription.plan_type === "essential" ||
+      activeSubscription.plan_type === "monthly" ||
+      activeSubscription.plan_type === "video"
+    ) {
+      return t("settings.subscription.essentialPrice");
     }
-    return activeSubscription.plan_type === "monthly" || activeSubscription.billing_interval === "month"
-      ? t("settings.subscription.videoPrice")
-      : t("settings.subscription.price");
+    return t("settings.subscription.discoveryPrice");
   })();
 
   const form = useForm({

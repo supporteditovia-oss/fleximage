@@ -164,7 +164,7 @@ body[data-paywall-overlay] .floating-header-credits {
   animation: arrow-bounce 1.5s ease-in-out infinite;
 }
 
-/* Animated glowing border for hero image slot */
+/* Animated border for hero image slot */
 
 @property --border-angle {
   syntax: "<angle>";
@@ -197,9 +197,9 @@ body[data-paywall-overlay] .floating-header-credits {
     from var(--border-angle),
     transparent 0deg,
     transparent 250deg,
-    rgb(66 165 246 / 0.35) 285deg,
-    rgb(66 165 246) 315deg,
-    rgb(66 165 246 / 0.8) 345deg,
+    rgb(0 0 0 / 0.28) 285deg,
+    rgb(0 0 0 / 0.9) 315deg,
+    rgb(0 0 0 / 0.62) 345deg,
     transparent 360deg
   );
   -webkit-mask:
@@ -217,6 +217,36 @@ body[data-paywall-overlay] .floating-header-credits {
 
 .hero-image-slot--fast::before {
   animation-duration: 1.5s;
+}
+
+.paywall-credits-cta-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  box-sizing: border-box;
+  --border-angle: 0deg;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0deg,
+    transparent 230deg,
+    rgb(66 165 246 / 0.25) 270deg,
+    rgb(66 165 246) 315deg,
+    rgb(66 165 246 / 0.85) 345deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: border-angle-spin 2.4s linear infinite;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ── Generation Loader ── */

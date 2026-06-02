@@ -1,16 +1,17 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-
-interface MarqueeTemplate {
-  name: string;
-  example_before_url: string | null;
-  example_after_url: string;
-}
+import {
+  LANDING_MARQUEE_IMAGES,
+  fetchLandingMarqueeImages,
+  type LandingMarqueeImage,
+} from "@/lib/landing-marquee-images";
 
 const MIN_FRAMES = 10;
+const LOWER_ROW_IMAGE_IDS = new Set(["bb04deea-c7b1-46f0-a816-d3e8be84fec8"]);
 const FRAME_CLASS =
   "relative h-[clamp(9rem,28vh,18rem)] aspect-[9/16] flex-shrink-0 rounded-lg border border-foreground/10 bg-white/45 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden";
+type ImageFetchPriority = "high" | "low" | "auto";
 
 function padToMin<T>(items: T[], min: number): T[] {
   if (items.length === 0) return items;
@@ -21,19 +22,58 @@ function padToMin<T>(items: T[], min: number): T[] {
   return result;
 }
 
-function FrameCard({ template }: { template: MarqueeTemplate }) {
-  const src = template.example_after_url;
+function splitFrameRows(items: LandingMarqueeImage[]) {
+  const upper: LandingMarqueeImage[] = [];
+  const lower: LandingMarqueeImage[] = [];
 
+  for (const item of items) {
+    if (LOWER_ROW_IMAGE_IDS.has(item.id)) {
+      lower.push(item);
+      continue;
+    }
+
+    if (upper.length <= lower.length) {
+      upper.push(item);
+    } else {
+      lower.push(item);
+    }
+  }
+
+  return { upper, lower };
+}
+
+function FrameCard({
+  template,
+  eager,
+  fetchPriority,
+}: {
+  template: LandingMarqueeImage;
+  eager: boolean;
+  fetchPriority: ImageFetchPriority;
+}) {
   return (
     <div className={FRAME_CLASS}>
       <img
-        src={src}
-        alt={template.name}
-        loading="lazy"
-        decoding="async"
-        className="h-full w-full object-cover opacity-80 saturate-[0.85]"
+        src={template.placeholder_url}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-white/35 via-transparent to-white/20" />
+      <picture className="absolute inset-0 block h-full w-full">
+        <source srcSet={template.avif_url} type="image/avif" />
+        {template.webp_url ? (
+          <source srcSet={template.webp_url} type="image/webp" />
+        ) : null}
+        <img
+          src={template.webp_url ?? template.avif_url}
+          alt=""
+          loading={eager ? "eager" : "lazy"}
+          {...{ fetchpriority: fetchPriority }}
+          decoding="async"
+          className="h-full w-full object-cover opacity-95 saturate-100"
+        />
+      </picture>
+      <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-white/10" />
     </div>
   );
 }
@@ -67,19 +107,11 @@ function FrameRow({
   duration,
   offsetY,
 }: {
-  items: MarqueeTemplate[];
+  items: LandingMarqueeImage[];
   placeholders: boolean;
   duration: number;
   offsetY: string;
 }) {
-  const content = placeholders
-    ? Array.from({ length: 8 }, (_, i) => (
-        <PlaceholderFrame key={`placeholder-${i}`} index={i} />
-      ))
-    : items.map((template, i) => (
-        <FrameCard key={`frame-${i}-${template.name}`} template={template} />
-      ));
-
   return (
     <div
       className="absolute left-0 right-0 flex overflow-hidden gap-4"
@@ -94,7 +126,27 @@ function FrameRow({
             animation: `scroll ${duration}s linear infinite`,
           }}
         >
-          {content}
+          {placeholders
+            ? Array.from({ length: 8 }, (_, i) => (
+                <PlaceholderFrame
+                  key={`placeholder-${track}-${i}`}
+                  index={i}
+                />
+              ))
+            : items.map((template, i) => {
+                const isPrimaryTrack = track === 0;
+                const fetchPriority =
+                  isPrimaryTrack && i < 4 ? "high" : "auto";
+
+                return (
+                  <FrameCard
+                    key={`frame-${track}-${i}-${template.id}`}
+                    template={template}
+                    eager
+                    fetchPriority={fetchPriority}
+                  />
+                );
+              })}
         </div>
       ))}
     </div>
@@ -102,21 +154,19 @@ function FrameRow({
 }
 
 export default function HeroBackgroundFrames() {
-  const { data: templates } = useQuery<MarqueeTemplate[]>({
-    queryKey: ["marquee-templates"],
-    queryFn: async () => {
-      const res = await fetch("/api/templates/marquee");
-      if (!res.ok) throw new Error("Failed to fetch marquee templates");
-      return res.json();
-    },
+  const { data: templates } = useQuery<LandingMarqueeImage[]>({
+    queryKey: ["landing-marquee-images"],
+    queryFn: fetchLandingMarqueeImages,
+    placeholderData: LANDING_MARQUEE_IMAGES,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const hasData = templates && templates.length > 0;
   const frames = hasData ? padToMin(templates, MIN_FRAMES) : [];
-  const row1 = hasData ? frames.filter((_, i) => i % 2 === 0) : [];
-  const row2 = hasData ? frames.filter((_, i) => i % 2 === 1) : [];
+  const { upper: row1, lower: row2 } = hasData
+    ? splitFrameRows(frames)
+    : { upper: [], lower: [] };
 
   return (
     <div
@@ -124,7 +174,7 @@ export default function HeroBackgroundFrames() {
       aria-hidden="true"
     >
       <div
-        className="absolute inset-0 opacity-55 md:opacity-65 [mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
+        className="absolute inset-0 opacity-75 md:opacity-85 [mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
       >
         <FrameRow
           items={row1}

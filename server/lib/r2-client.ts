@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
 import { logger } from "./logger";
 
 function getR2Config() {
@@ -57,6 +62,46 @@ export async function uploadToR2(
   const publicUrl = `${config.publicUrl.replace(/\/$/, "")}/${key}`;
   logger.info({ key, publicUrl }, "File uploaded to R2");
   return publicUrl;
+}
+
+export interface PublicR2Object {
+  key: string;
+  publicUrl: string;
+}
+
+/**
+ * List public R2 objects under a key prefix and return their CDN URLs.
+ */
+export async function listPublicR2Objects(prefix: string): Promise<PublicR2Object[]> {
+  const config = getR2Config();
+  const client = getS3Client();
+  const publicBaseUrl = config.publicUrl.replace(/\/$/, "");
+  const normalizedPrefix = prefix.replace(/^\/+/, "");
+  const objects: PublicR2Object[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: config.bucketName,
+        Prefix: normalizedPrefix,
+        ContinuationToken: continuationToken,
+      })
+    );
+
+    for (const object of response.Contents ?? []) {
+      if (!object.Key || object.Key.endsWith("/")) continue;
+
+      objects.push({
+        key: object.Key,
+        publicUrl: `${publicBaseUrl}/${object.Key}`,
+      });
+    }
+
+    continuationToken = response.NextContinuationToken;
+  } while (continuationToken);
+
+  return objects;
 }
 
 /**

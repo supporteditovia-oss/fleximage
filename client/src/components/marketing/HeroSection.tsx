@@ -119,14 +119,6 @@ export default function HeroSection() {
     );
 
     if (user) {
-      if (eligibility && !eligibility.canGenerate) {
-        toast({
-          variant: "destructive",
-          title: t("hero.limitReachedTitle"),
-          description: t("hero.limitReachedDescription"),
-        });
-        return;
-      }
       if (!prompt.trim() && files.length === 0) {
         toast({
           variant: "destructive",
@@ -135,6 +127,22 @@ export default function HeroSection() {
         });
         return;
       }
+
+      if (eligibility && !eligibility.canGenerate) {
+        try {
+          await savePendingLarp({
+            prompt: prompt.trim() || t("hero.surprisePrompt"),
+            images: files.map((f) => f.file),
+            generationMode: "image",
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.error("Ignored IDB save error:", error);
+        }
+        navigate("/generate");
+        return;
+      }
+
       try {
         const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
         const payload = {
@@ -153,6 +161,29 @@ export default function HeroSection() {
         } catch {}
         if (message.includes("<!DOCTYPE") || message.includes("<html")) {
           message = t("hero.serverRetry");
+        }
+        const normalizedMessage = message
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        if (
+          error.status === 403 &&
+          (normalizedMessage.includes("credit") ||
+            normalizedMessage.includes("credits") ||
+            normalizedMessage.includes("jeton"))
+        ) {
+          try {
+            await savePendingLarp({
+              prompt: prompt.trim() || t("hero.surprisePrompt"),
+              images: files.map((f) => f.file),
+              generationMode: "image",
+              timestamp: Date.now(),
+            });
+          } catch (saveError) {
+            console.error("Ignored IDB save error:", saveError);
+          }
+          navigate("/generate");
+          return;
         }
         toast({
           variant: "destructive",

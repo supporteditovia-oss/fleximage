@@ -35,16 +35,11 @@ function applyAuthoritativeBillingInterval(
   priceId: string,
   billingInterval: BillingInterval | undefined,
 ): StripePlanConfig {
-  if (billingInterval === "month") {
-    const monthlyConfig = getStripePlanConfig("monthly");
-    return {
-      ...monthlyConfig,
-      priceId: priceId || monthlyConfig.priceId,
-      billingInterval: "month",
-    };
-  }
-
-  return billingInterval ? { ...planConfig, billingInterval } : planConfig;
+  return {
+    ...planConfig,
+    priceId: priceId || planConfig.priceId,
+    billingInterval: billingInterval ?? planConfig.billingInterval,
+  };
 }
 
 async function applyCreditDelta(params: {
@@ -257,11 +252,8 @@ export async function handleInvoicePaid(
   }
 
   const planConfig = getPlanForPriceId(subscriptionRow.price_id || "");
-  const planType = normalizeStripePlanType(subscriptionRow.plan_type);
   const creditsPerCycle =
-    planType === "monthly"
-      ? planConfig.creditsPerCycle
-      : subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
+    subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
 
   try {
     await applyCreditDelta({

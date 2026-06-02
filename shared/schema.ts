@@ -302,12 +302,14 @@ export const subscriptions = pgTable("subscriptions", {
   stripe_customer_id: text("stripe_customer_id").notNull(),
   status: text("status").default("active").notNull(),
   price_id: text("price_id").notNull(),
-  plan_type: text("plan_type", { enum: ["weekly", "monthly", "image", "video"] })
-    .default("weekly")
+  plan_type: text("plan_type", {
+    enum: ["discovery", "essential", "ultimate", "weekly", "monthly", "image", "video"],
+  })
+    .default("discovery")
     .notNull(),
-  credits_per_cycle: integer("credits_per_cycle").default(100).notNull(),
+  credits_per_cycle: integer("credits_per_cycle").default(2500).notNull(),
   billing_interval: text("billing_interval", { enum: ["week", "month"] })
-    .default("week")
+    .default("month")
     .notNull(),
   current_period_start: timestamp("current_period_start", {
     withTimezone: true,

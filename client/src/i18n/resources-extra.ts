@@ -3,7 +3,7 @@ export const extraResources = {
     layout: {
       loadingPlatform: "Chargement de la plateforme...",
       header: {
-        app: "App",
+        app: "Mon compte",
         login: "Connexion",
         start: "Commencer",
       },
@@ -15,7 +15,7 @@ export const extraResources = {
         signOut: "Déconnexion",
         adminOverview: "Aperçu Admin",
         users: "Utilisateurs",
-        templates: "Templates",
+        templates: "Mod\u00e8les",
       },
     },
     hero: {
@@ -23,7 +23,7 @@ export const extraResources = {
       titleGradient: "lifestyle",
       titleSuffix: "hyper réaliste",
       dropHere: "Lâche ici",
-      dropImage: "Mets ton image ici",
+      dropImage: "Ajoute ton image ici",
       randomIdea: "Idée aléatoire",
       create: "Créer",
       simpleCta: "Créer mon LARP",
@@ -48,11 +48,11 @@ export const extraResources = {
     generate: {
       modeImage: "Image",
       modeVideo: "Vidéo",
-      viewTemplates: "Voir les templates",
+      viewTemplates: "Voir les mod\u00e8les",
       insufficientCreditsTitle: "Crédits insuffisants",
       insufficientCreditsDescription:
-        "Tu n'as pas assez de crédits pour générer. Abonne-toi pour en obtenir !",
-      emptyPromptTitle: "Prompt vide",
+        "Tu n'as pas assez de crédits pour générer.",
+      emptyPromptTitle: "Description vide",
       emptyPromptDescription: "Décris ton LARP avant de lancer la génération.",
       missingImageTitle: "Image manquante",
       missingImageDescription: "L'image « {{label}} » est obligatoire.",
@@ -74,14 +74,14 @@ export const extraResources = {
       enterValueFallback: "Entrer une valeur...",
     },
     templateGallery: {
-      title: "Choisis parmi les LARPs existants",
-      searchPlaceholder: "Recherche un LARP...",
-      empty: "Aucun LARP trouvé.",
+      title: "Choisis parmi les mod\u00e8les existants",
+      searchPlaceholder: "Rechercher un mod\u00e8le...",
+      empty: "Aucun mod\u00e8le trouv\u00e9.",
       before: "Avant",
       after: "Après",
     },
     imageUpload: {
-      template: "Template",
+      template: "Mod\u00e8le",
       dropImage: "Dépose ton image",
       required: "Obligatoire",
       optional: "Optionnel",
@@ -150,10 +150,10 @@ export const extraResources = {
       items: {
         larpkingQ: "C'est quoi LarpKing ?",
         larpkingA:
-          "LarpKing est un outil IA pour générer des contenus LARP hyper réalistes en quelques secondes. Upload ta photo, décris ton idée, et l'IA fait le reste.",
+          "LarpKing est un outil IA pour générer des contenus LARP hyper réalistes en quelques secondes. Ajoute ta photo, décris ton idée, et l'IA fait le reste.",
         realisticQ: "Les images générées sont-elles réalistes ?",
         realisticA:
-          "Oui, notre IA est entraînée pour produire des résultats très convaincants. Parfait pour construire une vibe crédible sans quitter ton canapé.",
+          "Oui, notre IA est entra\u00een\u00e9e pour produire des r\u00e9sultats tr\u00e8s convaincants. Parfait pour cr\u00e9er une mise en sc\u00e8ne cr\u00e9dible sans quitter ton canap\u00e9.",
         legalQ: "C'est légal ?",
         legalA:
           "LarpKing est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
@@ -165,7 +165,7 @@ export const extraResources = {
           "Tes images sont traitées de manière sécurisée. Tu peux supprimer tes créations à tout moment depuis ton compte.",
         typesQ: "Quel type de LARPs je peux créer ?",
         typesA:
-          "Boutiques de luxe, supercars, restaurants haut de gamme, Monaco, jets privés, dashboards revenus, invitations VIP... Les possibilités sont quasi illimitées !",
+          "Boutiques de luxe, voitures d?exception, restaurants haut de gamme, Monaco, jets priv\u00e9s, captures de revenus, invitations VIP... Les possibilit\u00e9s sont quasi illimit\u00e9es !",
       },
     },
     cta: {
@@ -184,13 +184,7 @@ export const extraResources = {
     marquee: {
       titlePrefix: "Plus rien n'est",
       titleGradient: "réel",
-      subtitle: "Tu peux tout faker",
-      successTitle: "Mode réussite",
-      successItem1: "Pour développer ta notoriété (fake it until you make it)",
-      successItem2: "Pour débloquer des opportunités",
-      socialTitle: "Mode social",
-      socialItem1: "Pour choquer tes proches",
-      socialItem2: "Pour booster tes matchs Tinder",
+      subtitle: "Tu peux tout simuler",
       gamePrompt: "Laquelle est la vraie photo ?",
       gamePickReal: "Choisir",
       gameHint: "Clique sur la photo réelle",
@@ -206,15 +200,17 @@ export const extraResources = {
       gameFakeLabel: "Fausse",
     },
     larpPro: {
-      title: "How to LARP like a pro",
-      subtitle: "What you can do with LarpKing",
+      title: "Comment larper comme un pro",
+      subtitle: "Ce que tu peux faire avec LarpKing",
       item1: "Achats dans des boutiques de luxe",
-      item2: "Conduire une voiture de luxe / supersportive",
+      item2: "Conduire une voiture de luxe ou une supercar",
       item3: "Manger dans des restaurants haut de gamme",
       item4: "Voyage et tourisme de luxe",
-      item5: "Montrer des dashboards et revenus (hustler)",
-      item6: "Être en compagnie de baddies",
-      cta: "Lancer mon contenu",
+      item5: "Montrer des captures de revenus",
+      item6: "?tre entour? de filles canon",
+      item7: "Cr\u00e9er de fausses sc\u00e8nes de travail ou d'entreprise",
+      item8: "Faire croire que tu fr\u00e9quentes des femmes canon",
+      cta: "Cr\u00e9er mon LARP",
     },
     legalCommon: {
       backHome: "Retour à l'accueil",
@@ -231,7 +227,7 @@ export const extraResources = {
     layout: {
       loadingPlatform: "Loading platform...",
       header: {
-        app: "App",
+        app: "My account",
         login: "Sign in",
         start: "Get started",
       },
@@ -279,7 +275,7 @@ export const extraResources = {
       viewTemplates: "View templates",
       insufficientCreditsTitle: "Not enough credits",
       insufficientCreditsDescription:
-        "You do not have enough credits to generate. Subscribe to get more!",
+        "You do not have enough credits to generate.",
       emptyPromptTitle: "Empty prompt",
       emptyPromptDescription: "Describe your LARP before generating.",
       missingImageTitle: "Missing image",
@@ -412,12 +408,6 @@ export const extraResources = {
       titlePrefix: "Nothing is Real",
       titleGradient: "Anymore",
       subtitle: "You can fake anything",
-      successTitle: "Success mode",
-      successItem1: "To build your reputation (fake it until you make it)",
-      successItem2: "To unlock opportunities",
-      socialTitle: "Social mode",
-      socialItem1: "To shock your friends and family",
-      socialItem2: "To boost your Tinder matches",
       gamePrompt: "Which one is the real photo?",
       gamePickReal: "Pick",
       gameHint: "Tap the real photo",
@@ -440,7 +430,9 @@ export const extraResources = {
       item3: "Dining at high-end restaurants",
       item4: "Luxury travel and tourism",
       item5: "Showing dashboards and revenue (hustler)",
-      item6: "Being surrounded by baddies",
+      item6: "\u00catre entour\u00e9 de filles canon",
+      item7: "Showing off fake work and fake factories",
+      item8: "Pretending you're dating hot women",
       cta: "Start My Content",
     },
     legalCommon: {
@@ -458,7 +450,7 @@ export const extraResources = {
     layout: {
       loadingPlatform: "Cargando plataforma...",
       header: {
-        app: "App",
+        app: "Mi cuenta",
         login: "Iniciar sesion",
         start: "Comenzar",
       },
@@ -506,7 +498,7 @@ export const extraResources = {
       viewTemplates: "Ver plantillas",
       insufficientCreditsTitle: "Creditos insuficientes",
       insufficientCreditsDescription:
-        "No tienes suficientes creditos para generar. Suscribete para obtener mas.",
+        "No tienes suficientes creditos para generar.",
       emptyPromptTitle: "Prompt vacio",
       emptyPromptDescription: "Describe tu LARP antes de generar.",
       missingImageTitle: "Falta imagen",
@@ -639,12 +631,6 @@ export const extraResources = {
       titlePrefix: "Nada es",
       titleGradient: "real",
       subtitle: "Puedes falsificar cualquier cosa",
-      successTitle: "Modo exito",
-      successItem1: "Para desarrollar tu notoriedad (fake it until you make it)",
-      successItem2: "Para desbloquear oportunidades",
-      socialTitle: "Modo social",
-      socialItem1: "Para sorprender a tus seres queridos",
-      socialItem2: "Para impulsar tus matchs de Tinder",
       gamePrompt: "Cual es la foto real?",
       gamePickReal: "Elegir",
       gameHint: "Toca la foto real",
@@ -668,6 +654,8 @@ export const extraResources = {
       item4: "Viajes y turismo de lujo",
       item5: "Mostrar dashboards e ingresos (hustler)",
       item6: "Estar rodeado de baddies",
+      item7: "Mostrar trabajo falso y fabricas falsas",
+      item8: "Fingir que sales con mujeres atractivas",
       cta: "Start My Content",
     },
     legalCommon: {
@@ -685,7 +673,7 @@ export const extraResources = {
     layout: {
       loadingPlatform: "Plattform wird geladen...",
       header: {
-        app: "App",
+        app: "Mein Konto",
         login: "Anmelden",
         start: "Loslegen",
       },
@@ -733,7 +721,7 @@ export const extraResources = {
       viewTemplates: "Vorlagen ansehen",
       insufficientCreditsTitle: "Nicht genug Credits",
       insufficientCreditsDescription:
-        "Du hast nicht genug Credits zum Generieren. Abonniere fuer mehr.",
+        "Du hast nicht genug Credits zum Generieren.",
       emptyPromptTitle: "Leerer Prompt",
       emptyPromptDescription: "Beschreibe deinen LARP vor dem Generieren.",
       missingImageTitle: "Fehlendes Bild",
@@ -866,12 +854,6 @@ export const extraResources = {
       titlePrefix: "Nichts ist noch",
       titleGradient: "real",
       subtitle: "Du kannst alles faken",
-      successTitle: "Erfolgsmodus",
-      successItem1: "Um deine Bekanntheit aufzubauen (fake it until you make it)",
-      successItem2: "Um Chancen freizuschalten",
-      socialTitle: "Social-Modus",
-      socialItem1: "Um deine Freunde zu schockieren",
-      socialItem2: "Um deine Tinder-Matches zu boosten",
       gamePrompt: "Welches ist das echte Foto?",
       gamePickReal: "Wahlen",
       gameHint: "Tippe auf das echte Foto",
@@ -895,6 +877,8 @@ export const extraResources = {
       item4: "Luxusreisen und Tourismus",
       item5: "Dashboards und Einnahmen zeigen (hustler)",
       item6: "In Begleitung von Baddies sein",
+      item7: "Fake-Arbeit und Fake-Fabriken zeigen",
+      item8: "So tun, als wuerdest du attraktive Frauen daten",
       cta: "Start My Content",
     },
     legalCommon: {

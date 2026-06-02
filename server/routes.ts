@@ -35,7 +35,7 @@ import {
   isGoogleAiPromptFlagged,
 } from "./lib/oneshot-api-client";
 import { downloadAndStoreImages } from "./lib/image-storage";
-import { uploadToR2 } from "./lib/r2-client";
+import { listPublicR2Objects, uploadToR2 } from "./lib/r2-client";
 import { generateLimiter } from "./lib/rate-limiter";
 import {
   checkGenerationLimits,
@@ -47,6 +47,9 @@ import {
   tBackend,
 } from "./lib/i18n";
 import { registerStripeRoutes } from "./stripe-routes";
+
+const IMAGE_CREDIT_COST = 5;
+const VIDEO_CREDIT_COST = 30;
 
 /**
  * Extract image URLs from the Kie.ai resultJson, regardless of the exact structure.
@@ -379,6 +382,124 @@ async function applyCreditDelta(
   });
 }
 
+function getBillableCreditCost(
+  limitResult: { isAdmin: boolean },
+  creditCost: number,
+): number {
+  return limitResult.isAdmin ? 0 : creditCost;
+}
+
+async function deductGenerationCredits(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  params: {
+    userId: string;
+    generationId: string;
+    creditCost: number;
+    source: string;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  if (params.creditCost < 0) {
+    throw new Error("creditCost must be non-negative");
+  }
+
+  if (params.creditCost === 0) {
+    return null;
+  }
+
+  const { error } = await applyCreditDelta(supabaseAdmin, {
+    userId: params.userId,
+    delta: -params.creditCost,
+    reason: "generation_charge",
+    generationId: params.generationId,
+    idempotencyKey: `generation:${params.generationId}:charge`,
+    metadata: {
+      source: params.source,
+      ...params.metadata,
+    },
+  });
+
+  return error;
+}
+
+async function markCreditDeductionFailed(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  generationId: string,
+) {
+  await supabaseAdmin
+    .from("generations")
+    .update({
+      status: "failed",
+      fail_message: "credit_deduction_failed",
+      updated_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", generationId);
+}
+
+const LANDING_MARQUEE_AVIF_PREFIX = "landing/marquee/avif/";
+const LANDING_MARQUEE_WEBP_PREFIX = "landing/marquee/webp/";
+const LANDING_MARQUEE_CACHE_MS = 5 * 60 * 1000;
+
+type LandingMarqueeImage = {
+  id: string;
+  alt: string;
+  avif_url: string;
+  webp_url: string | null;
+};
+
+let landingMarqueeCache:
+  | { expiresAt: number; images: LandingMarqueeImage[] }
+  | null = null;
+
+function objectIdFromPrefix(key: string, prefix: string): string | null {
+  if (!key.startsWith(prefix)) return null;
+  const fileName = key.slice(prefix.length).replace(/^\/+/, "");
+  const id = fileName.replace(/\.(avif|webp)$/i, "");
+  return id && !id.includes("/") ? id : null;
+}
+
+async function listLandingMarqueeImages(): Promise<LandingMarqueeImage[]> {
+  const now = Date.now();
+  if (landingMarqueeCache && landingMarqueeCache.expiresAt > now) {
+    return landingMarqueeCache.images;
+  }
+
+  const [avifObjects, webpObjects] = await Promise.all([
+    listPublicR2Objects(LANDING_MARQUEE_AVIF_PREFIX),
+    listPublicR2Objects(LANDING_MARQUEE_WEBP_PREFIX),
+  ]);
+
+  const avifById = new Map<string, string>();
+  const webpById = new Map<string, string>();
+
+  for (const object of avifObjects) {
+    const id = objectIdFromPrefix(object.key, LANDING_MARQUEE_AVIF_PREFIX);
+    if (id) avifById.set(id, object.publicUrl);
+  }
+
+  for (const object of webpObjects) {
+    const id = objectIdFromPrefix(object.key, LANDING_MARQUEE_WEBP_PREFIX);
+    if (id) webpById.set(id, object.publicUrl);
+  }
+
+  const images = Array.from(avifById.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, avifUrl], index) => ({
+      id,
+      alt: `LarpKing example ${index + 1}`,
+      avif_url: avifUrl,
+      webp_url: webpById.get(id) ?? null,
+    }));
+
+  landingMarqueeCache = {
+    expiresAt: now + LANDING_MARQUEE_CACHE_MS,
+    images,
+  };
+
+  return images;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -388,6 +509,27 @@ export async function registerRoutes(
   // =============================================
   app.get(api.health.path, (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // =============================================
+  // LANDING ASSETS
+  // =============================================
+
+  app.get(api.landing.marquee.path, async (req, res) => {
+    try {
+      const images = await listLandingMarqueeImages();
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=300, stale-while-revalidate=3600",
+      );
+      res.json(images);
+    } catch (error: any) {
+      logger.error({ err: error }, "Error listing landing marquee images");
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
   });
 
   // =============================================
@@ -854,6 +996,10 @@ export async function registerRoutes(
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
+        const creditCost = getBillableCreditCost(
+          limitResult,
+          IMAGE_CREDIT_COST,
+        );
 
         // 2. Fetch template
         const { data: template, error: tplErr } = await supabaseAdmin
@@ -955,36 +1101,26 @@ export async function registerRoutes(
             provider_task_id: externalTaskId,
             status: "processing",
             aspect_ratio,
-            credit_cost: 5,
+            credit_cost: creditCost,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
 
-        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+        const deductErr = await deductGenerationCredits(supabaseAdmin, {
           userId: authReq.userId,
-          delta: -5,
-          reason: "generation_charge",
+          creditCost,
           generationId: larp.id,
-          idempotencyKey: `generation:${larp.id}:charge`,
+          source: "template_generation",
           metadata: {
-            source: "template_generation",
             provider,
             provider_task_id: externalTaskId,
           },
         });
 
         if (deductErr) {
-          await supabaseAdmin
-            .from("generations")
-            .update({
-              status: "failed",
-              fail_message: "credit_deduction_failed",
-              updated_at: new Date().toISOString(),
-              completed_at: new Date().toISOString(),
-            })
-            .eq("id", larp.id);
+          await markCreditDeductionFailed(supabaseAdmin, larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
@@ -1039,6 +1175,10 @@ export async function registerRoutes(
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
+        const creditCost = getBillableCreditCost(
+          limitResult,
+          IMAGE_CREDIT_COST,
+        );
 
         // 2. Upload images to R2 and get public URLs
         let imageUrls: string[] = [];
@@ -1163,36 +1303,26 @@ export async function registerRoutes(
             status: "processing",
             aspect_ratio,
             input_assets: imageUrls,
-            credit_cost: 5,
+            credit_cost: creditCost,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
 
-        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+        const deductErr = await deductGenerationCredits(supabaseAdmin, {
           userId: authReq.userId,
-          delta: -5,
-          reason: "generation_charge",
+          creditCost,
           generationId: larp.id,
-          idempotencyKey: `generation:${larp.id}:charge`,
+          source: "direct_generation",
           metadata: {
-            source: "direct_generation",
             provider,
             provider_task_id: externalTaskId,
           },
         });
 
         if (deductErr) {
-          await supabaseAdmin
-            .from("generations")
-            .update({
-              status: "failed",
-              fail_message: "credit_deduction_failed",
-              updated_at: new Date().toISOString(),
-              completed_at: new Date().toISOString(),
-            })
-            .eq("id", larp.id);
+          await markCreditDeductionFailed(supabaseAdmin, larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
@@ -1217,9 +1347,6 @@ export async function registerRoutes(
       }
     },
   );
-
-  // ── Video generation constants ────────────────────────────────
-  const VIDEO_CREDIT_COST = 30;
 
   // POST /api/larps/generate-video
   app.post(
@@ -1257,6 +1384,10 @@ export async function registerRoutes(
         if (!limitResult.allowed) {
           return res.status(403).json({ message: limitResult.reason });
         }
+        const creditCost = getBillableCreditCost(
+          limitResult,
+          VIDEO_CREDIT_COST,
+        );
 
         // 2. Upload optional reference image to R2
         let imageUrl: string | undefined;
@@ -1300,35 +1431,25 @@ export async function registerRoutes(
             provider_task_id: externalTaskId,
             status: "processing",
             input_assets: imageUrl ? [imageUrl] : [],
-            credit_cost: VIDEO_CREDIT_COST,
+            credit_cost: creditCost,
           })
           .select()
           .single();
 
         if (insertErr) throw insertErr;
 
-        const { error: deductErr } = await applyCreditDelta(supabaseAdmin, {
+        const deductErr = await deductGenerationCredits(supabaseAdmin, {
           userId: authReq.userId,
-          delta: -VIDEO_CREDIT_COST,
-          reason: "generation_charge",
+          creditCost,
           generationId: larp.id,
-          idempotencyKey: `generation:${larp.id}:charge`,
+          source: "video_generation",
           metadata: {
-            source: "video_generation",
             provider: "runway",
             provider_task_id: externalTaskId,
           },
         });
         if (deductErr) {
-          await supabaseAdmin
-            .from("generations")
-            .update({
-              status: "failed",
-              fail_message: "credit_deduction_failed",
-              updated_at: new Date().toISOString(),
-              completed_at: new Date().toISOString(),
-            })
-            .eq("id", larp.id);
+          await markCreditDeductionFailed(supabaseAdmin, larp.id);
           logger.error({ err: deductErr }, "Failed to deduct credits");
           return res
             .status(500)
@@ -1858,7 +1979,9 @@ export async function registerRoutes(
   const updateUserBodySchema = z.object({
     is_subscriber: z.boolean().optional(),
     role: z.enum(["user", "admin"]).optional(),
-    admin_plan: z.enum(["free", "weekly", "monthly", "image", "video"]).optional(),
+    admin_plan: z
+      .enum(["free", "discovery", "essential", "ultimate", "weekly", "monthly", "image", "video"])
+      .optional(),
   });
 
   app.patch(

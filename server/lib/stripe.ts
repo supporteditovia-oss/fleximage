@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 
-export type StripePlanType = "weekly" | "monthly";
-export type LegacyStripePlanType = "image" | "video";
+export type StripePlanType = "discovery" | "essential" | "ultimate";
+export type LegacyStripePlanType = "weekly" | "monthly" | "image" | "video";
 export type StripePlanInput = StripePlanType | LegacyStripePlanType;
 export type BillingInterval = "week" | "month";
 
@@ -10,9 +10,47 @@ export interface StripePlanConfig {
   priceId: string;
   creditsPerCycle: number;
   billingInterval: BillingInterval;
+  name: string;
+  monthlyAmount: number;
 }
 
 let _stripe: Stripe | null = null;
+
+const PLAN_DEFINITIONS: Record<
+  StripePlanType,
+  {
+    name: string;
+    monthlyAmount: number;
+    creditsPerCycle: number;
+    envKeys: string[];
+    legacyEnvKeys?: string[];
+  }
+> = {
+  discovery: {
+    name: "Decouverte",
+    monthlyAmount: 890,
+    creditsPerCycle: 2500,
+    envKeys: ["STRIPE_DISCOVERY_PRICE_ID"],
+    legacyEnvKeys: [
+      "STRIPE_WEEKLY_PRICE_ID",
+      "STRIPE_IMAGE_PRICE_ID",
+      "STRIPE_PRICE_ID",
+    ],
+  },
+  essential: {
+    name: "Essentiel",
+    monthlyAmount: 1990,
+    creditsPerCycle: 9500,
+    envKeys: ["STRIPE_ESSENTIAL_PRICE_ID"],
+    legacyEnvKeys: ["STRIPE_MONTHLY_PRICE_ID", "STRIPE_VIDEO_PRICE_ID"],
+  },
+  ultimate: {
+    name: "Ultimate",
+    monthlyAmount: 3990,
+    creditsPerCycle: 1_000_000,
+    envKeys: ["STRIPE_ULTIMATE_PRICE_ID"],
+  },
+};
 
 export function getStripe(): Stripe {
   if (_stripe) return _stripe;
@@ -27,12 +65,15 @@ export function getStripe(): Stripe {
 }
 
 export function getStripePriceId(): string {
-  return getStripePriceIdForPlan("weekly");
+  return getStripePriceIdForPlan("essential");
 }
 
 export function normalizeStripePlanType(planType: string | null | undefined): StripePlanType {
-  if (planType === "monthly" || planType === "video") return "monthly";
-  return "weekly";
+  if (planType === "ultimate") return "ultimate";
+  if (planType === "essential" || planType === "monthly" || planType === "video") {
+    return "essential";
+  }
+  return "discovery";
 }
 
 function splitPriceIds(value: string | undefined): string[] {
@@ -43,56 +84,61 @@ function splitPriceIds(value: string | undefined): string[] {
 }
 
 function getPlanPriceIds(planType: StripePlanType): string[] {
-  if (planType === "monthly") {
-    return [
-      process.env.STRIPE_MONTHLY_PRICE_ID,
-      process.env.STRIPE_VIDEO_PRICE_ID,
-      ...splitPriceIds(process.env.STRIPE_MONTHLY_LEGACY_PRICE_IDS),
-      ...splitPriceIds(process.env.STRIPE_VIDEO_LEGACY_PRICE_IDS),
-    ].filter(Boolean) as string[];
-  }
+  const definition = PLAN_DEFINITIONS[planType];
+  const directIds = definition.envKeys.map((key) => process.env[key]);
+  const fallbackIds = (definition.legacyEnvKeys || []).map((key) => process.env[key]);
+  const extraLegacyIds =
+    planType === "discovery"
+      ? [
+          ...splitPriceIds(process.env.STRIPE_WEEKLY_LEGACY_PRICE_IDS),
+          ...splitPriceIds(process.env.STRIPE_IMAGE_LEGACY_PRICE_IDS),
+        ]
+      : planType === "essential"
+        ? [
+            ...splitPriceIds(process.env.STRIPE_MONTHLY_LEGACY_PRICE_IDS),
+            ...splitPriceIds(process.env.STRIPE_VIDEO_LEGACY_PRICE_IDS),
+          ]
+        : [];
 
   return [
-    process.env.STRIPE_WEEKLY_PRICE_ID,
-    process.env.STRIPE_IMAGE_PRICE_ID,
-    process.env.STRIPE_PRICE_ID,
-    ...splitPriceIds(process.env.STRIPE_WEEKLY_LEGACY_PRICE_IDS),
-    ...splitPriceIds(process.env.STRIPE_IMAGE_LEGACY_PRICE_IDS),
+    ...directIds,
+    ...fallbackIds,
+    ...extraLegacyIds,
   ].filter(Boolean) as string[];
+}
+
+function toStripePlanConfig(
+  planType: StripePlanType,
+  priceId: string,
+  billingInterval: BillingInterval = "month",
+): StripePlanConfig {
+  const definition = PLAN_DEFINITIONS[planType];
+  return {
+    planType,
+    priceId,
+    creditsPerCycle: definition.creditsPerCycle,
+    billingInterval,
+    name: definition.name,
+    monthlyAmount: definition.monthlyAmount,
+  };
 }
 
 export function getStripePlanConfig(planType: StripePlanInput): StripePlanConfig {
   const normalizedPlanType = normalizeStripePlanType(planType);
+  const definition = PLAN_DEFINITIONS[normalizedPlanType];
+  const isLegacyInput = !["discovery", "essential", "ultimate"].includes(planType);
+  const candidateEnvKeys = isLegacyInput
+    ? [...definition.envKeys, ...(definition.legacyEnvKeys || [])]
+    : definition.envKeys;
+  const priceId = candidateEnvKeys
+    .map((key) => process.env[key])
+    .find(Boolean);
 
-  if (normalizedPlanType === "weekly") {
-    const priceId =
-      process.env.STRIPE_WEEKLY_PRICE_ID ||
-      process.env.STRIPE_IMAGE_PRICE_ID ||
-      process.env.STRIPE_PRICE_ID;
-    if (!priceId) {
-      throw new Error(
-        "STRIPE_WEEKLY_PRICE_ID, STRIPE_IMAGE_PRICE_ID, or STRIPE_PRICE_ID must be set",
-      );
-    }
-    return {
-      planType: "weekly",
-      priceId,
-      creditsPerCycle: 100,
-      billingInterval: "week",
-    };
-  }
-
-  const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
-  const priceId = monthlyPriceId || process.env.STRIPE_VIDEO_PRICE_ID;
   if (!priceId) {
-    throw new Error("STRIPE_MONTHLY_PRICE_ID or STRIPE_VIDEO_PRICE_ID must be set");
+    throw new Error(`${candidateEnvKeys.join(" or ")} must be set`);
   }
-  return {
-    planType: "monthly",
-    priceId,
-    creditsPerCycle: 250,
-    billingInterval: monthlyPriceId ? "month" : "week",
-  };
+
+  return toStripePlanConfig(normalizedPlanType, priceId);
 }
 
 export function getStripePriceIdForPlan(planType: StripePlanInput): string {
@@ -100,33 +146,12 @@ export function getStripePriceIdForPlan(planType: StripePlanInput): string {
 }
 
 export function getPlanForPriceId(priceId: string): StripePlanConfig {
-  if (priceId && getPlanPriceIds("monthly").includes(priceId)) {
-    const monthlyConfig = getStripePlanConfig("monthly");
-    const legacyWeeklyMonthlyIds = [
-      process.env.STRIPE_VIDEO_PRICE_ID,
-      ...splitPriceIds(process.env.STRIPE_VIDEO_LEGACY_PRICE_IDS),
-    ].filter(Boolean) as string[];
-
-    return {
-      ...monthlyConfig,
-      priceId,
-      billingInterval:
-        process.env.STRIPE_MONTHLY_PRICE_ID &&
-        priceId !== process.env.STRIPE_MONTHLY_PRICE_ID &&
-        legacyWeeklyMonthlyIds.includes(priceId)
-          ? "week"
-          : monthlyConfig.billingInterval,
-    };
+  for (const planType of Object.keys(PLAN_DEFINITIONS) as StripePlanType[]) {
+    if (!priceId || !getPlanPriceIds(planType).includes(priceId)) continue;
+    return toStripePlanConfig(planType, priceId);
   }
 
-  if (priceId && getPlanPriceIds("weekly").includes(priceId)) {
-    return {
-      ...getStripePlanConfig("weekly"),
-      priceId,
-    };
-  }
-
-  return getStripePlanConfig("weekly");
+  return getStripePlanConfig("discovery");
 }
 
 export function getStripeWebhookSecret(): string {

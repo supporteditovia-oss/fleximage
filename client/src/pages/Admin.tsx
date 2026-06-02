@@ -237,12 +237,21 @@ function UsersManagementPage() {
   const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
 
-  const handleChangePlan = async (id: string, plan: "free" | "weekly" | "monthly") => {
+  const handleChangePlan = async (
+    id: string,
+    plan: "free" | "discovery" | "essential" | "ultimate",
+  ) => {
     try {
       await updateProfile({ id, updates: { admin_plan: plan } as any });
       queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      toast({ title: "Plan mis à jour", description: `Le plan utilisateur est maintenant ${plan === "free" ? "Gratuit" : plan === "weekly" ? "Hebdo" : "Mensuel"}.` });
+      const planLabels = {
+        free: "Gratuit",
+        discovery: "Decouverte",
+        essential: "Essentiel",
+        ultimate: "Ultimate",
+      };
+      toast({ title: "Plan mis à jour", description: `Le plan utilisateur est maintenant ${planLabels[plan]}.` });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Échec de la mise à jour", description: error.message });
     }
@@ -416,11 +425,15 @@ function UsersManagementPage() {
                 {profiles.map((profile: AdminProfile) => {
                   const activeSubscription = profile.subscriptions?.find((subscription) => subscription.status === "active");
                   const currentPlan = activeSubscription
-                    ? activeSubscription.plan_type === "monthly" || activeSubscription.plan_type === "video" || activeSubscription.billing_interval === "month"
-                      ? "monthly"
-                      : "weekly"
+                    ? activeSubscription.plan_type === "ultimate"
+                      ? "ultimate"
+                      : activeSubscription.plan_type === "essential" ||
+                          activeSubscription.plan_type === "monthly" ||
+                          activeSubscription.plan_type === "video"
+                        ? "essential"
+                        : "discovery"
                     : profile.is_subscriber
-                      ? "weekly"
+                      ? "discovery"
                       : "free";
 
                   return (
@@ -452,12 +465,18 @@ function UsersManagementPage() {
                     <TableCell>
                       <select
                         value={currentPlan}
-                        onChange={(e) => handleChangePlan(profile.id, e.target.value as "free" | "weekly" | "monthly")}
+                        onChange={(e) =>
+                          handleChangePlan(
+                            profile.id,
+                            e.target.value as "free" | "discovery" | "essential" | "ultimate",
+                          )
+                        }
                         className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                       >
                         <option value="free">Gratuit</option>
-                        <option value="weekly">Hebdo</option>
-                        <option value="monthly">Mensuel</option>
+                        <option value="discovery">Decouverte</option>
+                        <option value="essential">Essentiel</option>
+                        <option value="ultimate">Ultimate</option>
                       </select>
                     </TableCell>
                     <TableCell>

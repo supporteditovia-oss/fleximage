@@ -98,6 +98,30 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/confidentialite": "meta:titles.privacy",
 };
 
+/** Legal pages: noindex in HTML + Disallow in robots.txt; omitted from sitemap.xml */
+const NOINDEX_PATHS = new Set([
+  "/mentions-legales",
+  "/cgu",
+  "/cgv",
+  "/confidentialite",
+]);
+
+function setRobotsMeta(content: string | null) {
+  const existing = document.querySelector('meta[name="robots"]');
+  if (content === null) {
+    existing?.remove();
+    return;
+  }
+  const meta =
+    existing instanceof HTMLMetaElement
+      ? existing
+      : Object.assign(document.createElement("meta"), { name: "robots" });
+  if (!existing) {
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
 function Router() {
   const { user, profile } = useAuth();
   const [location] = useLocation();
@@ -181,6 +205,7 @@ function Router() {
 
   React.useEffect(() => {
     document.title = t(PAGE_TITLE_KEYS[location] || "meta:appName");
+    setRobotsMeta(NOINDEX_PATHS.has(location) ? "noindex, nofollow" : null);
   }, [location, t]);
 
   return (

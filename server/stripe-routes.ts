@@ -20,7 +20,10 @@ import {
 } from "./lib/stripe-webhooks";
 
 const createCheckoutBodySchema = z.object({
-  plan: z.enum(["weekly", "monthly", "image", "video"]).optional().default("weekly"),
+  plan: z
+    .enum(["discovery", "essential", "ultimate", "weekly", "monthly", "image", "video"])
+    .optional()
+    .default("essential"),
 });
 
 export function registerStripeRoutes(app: Express): void {
@@ -29,9 +32,6 @@ export function registerStripeRoutes(app: Express): void {
       const authReq = req as AuthenticatedRequest;
       const locale = resolveLocaleFromRequest(req);
       const stripe = getStripe();
-      if (req.body.plan === "monthly" && !process.env.STRIPE_MONTHLY_PRICE_ID) {
-        throw new Error("STRIPE_MONTHLY_PRICE_ID must be set for monthly checkout");
-      }
       const planConfig = getStripePlanConfig(req.body.plan);
       const priceId = planConfig.priceId;
       const supabaseAdmin = getSupabaseAdmin();

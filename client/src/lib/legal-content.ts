@@ -33,9 +33,9 @@ export interface LegalLocaleContent {
   };
 }
 
-const SITE_DOMAIN = "larpking.fr";
-const CONTACT_EMAIL = "contact@larpking.fr";
-const COMPANY_NAME = "GUS";
+const SITE_DOMAIN = "larpking.com";
+const CONTACT_EMAIL = "contact@larpking.com";
+const SERVICE_NAME = "LarpKing";
 const COMPANY_STATUS_FR = "Auto-entrepreneur (Entreprise Individuelle)";
 const COMPANY_STATUS_EN = "Sole proprietor";
 const COMPANY_STATUS_ES = "Autonomo / empresa individual";
@@ -46,7 +46,7 @@ const COMPANY_ADDRESS = "11 rue de Bourgogne, 38000 Grenoble, France";
 const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   fr: [
     { label: "Nom commercial", text: "LarpKing" },
-    { label: "Editeur", text: COMPANY_NAME },
+    { label: "Editeur", text: SERVICE_NAME },
     { label: "Statut", text: COMPANY_STATUS_FR },
     { label: "SIRET", text: COMPANY_SIRET },
     { label: "Adresse", text: COMPANY_ADDRESS },
@@ -54,7 +54,7 @@ const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   ],
   en: [
     { label: "Trade name", text: "LarpKing" },
-    { label: "Publisher", text: COMPANY_NAME },
+    { label: "Publisher", text: SERVICE_NAME },
     { label: "Status", text: COMPANY_STATUS_EN },
     { label: "Registration", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Address", text: COMPANY_ADDRESS },
@@ -62,7 +62,7 @@ const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   ],
   es: [
     { label: "Nombre comercial", text: "LarpKing" },
-    { label: "Editor", text: COMPANY_NAME },
+    { label: "Editor", text: SERVICE_NAME },
     { label: "Estatuto", text: COMPANY_STATUS_ES },
     { label: "Registro", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Direccion", text: COMPANY_ADDRESS },
@@ -70,7 +70,7 @@ const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   ],
   de: [
     { label: "Handelsname", text: "LarpKing" },
-    { label: "Herausgeber", text: COMPANY_NAME },
+    { label: "Herausgeber", text: SERVICE_NAME },
     { label: "Status", text: COMPANY_STATUS_DE },
     { label: "Registrierung", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Adresse", text: COMPANY_ADDRESS },
@@ -146,7 +146,6 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Les presentes Conditions Generales d'Utilisation (CGU) definissent les conditions d'acces et d'utilisation de LarpKing, service disponible sur ${SITE_DOMAIN}.`,
               "LarpKing permet de transformer des images a l'aide de l'intelligence artificielle afin de creer des visuels lifestyle, sociaux, mode, voyage, restauration, luxe ou creatifs, a partir d'images et/ou d'instructions fournies par l'utilisateur.",
-              `Le service est edite par ${COMPANY_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
             ],
           },
           {
@@ -242,7 +241,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Le service est fourni avec diligence raisonnable, sans garantie de disponibilite continue, de resultat exact, d'absence d'erreur ou d'adequation a un usage particulier.",
               "LarpKing peut faire evoluer, suspendre ou interrompre certaines fonctionnalites pour maintenance, securite, amelioration du produit ou contraintes de prestataires tiers.",
-              `${COMPANY_NAME} ne peut etre tenu responsable des dommages indirects, pertes de donnees, pertes d'opportunite, atteinte a l'image ou consequences liees a une utilisation non conforme du service.`,
+              `${SERVICE_NAME} ne peut etre tenu responsable des dommages indirects, pertes de donnees, pertes d'opportunite, atteinte a l'image ou consequences liees a une utilisation non conforme du service.`,
             ],
           },
           {
@@ -272,7 +271,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Objet",
             paragraphs: [
               "Les presentes Conditions Generales de Vente (CGV) encadrent la souscription, le paiement et l'utilisation des offres payantes LarpKing.",
-              `Le vendeur est ${COMPANY_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `Le vendeur est ${SERVICE_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
             ],
           },
           {
@@ -282,8 +281,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               "Les offres payantes donnent acces a des credits et fonctionnalites supplementaires pour generer, conserver, telecharger ou partager des images.",
             ],
             bullets: [
-              { text: "Formule hebdomadaire : 100 credits par cycle de facturation." },
-              { text: "Formule mensuelle : 250 credits par cycle de facturation." },
+              { text: "Formule Decouverte : 2500 credits par cycle de facturation mensuel." },
+              { text: "Formule Essentiel : 9500 credits par cycle de facturation mensuel." },
+              { text: "Formule Ultimate : tres haut volume de credits par cycle de facturation mensuel." },
               { text: "Acces aux templates et options disponibles selon l'offre active." },
               { text: "Images generees accessibles dans l'historique du compte tant qu'elles sont conservees par le service." },
               { text: "Les credits non utilises ne constituent pas une monnaie, ne sont pas remboursables en especes et peuvent expirer a la fin du cycle selon l'offre." },
@@ -295,7 +295,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Prix",
             paragraphs: [
               "Les prix affiches dans l'application et lors du paiement font foi au moment de la commande.",
-              "A titre indicatif, les offres actuellement proposees sont 2,90 EUR par semaine pour la formule hebdomadaire et 9,90 EUR par mois pour la formule mensuelle.",
+              "A titre indicatif, les offres actuellement proposees sont 8,90 EUR, 19,90 EUR et 39,90 EUR par mois.",
               "TVA non applicable, article 293 B du Code general des impots, sauf changement de statut fiscal ou indication contraire au moment du paiement.",
               "LarpKing peut modifier ses prix. Une modification s'applique au prochain cycle de facturation ou a toute nouvelle commande, jamais retroactivement sur une periode deja payee.",
             ],
@@ -503,7 +503,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Directeur de la publication",
-            paragraphs: [`Le directeur de la publication est ${COMPANY_NAME}, joignable a ${CONTACT_EMAIL}.`],
+            paragraphs: [`Le directeur de la publication est ${SERVICE_NAME}, joignable a ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -566,7 +566,6 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `These Terms of Use govern access to and use of LarpKing, available at ${SITE_DOMAIN}.`,
               "LarpKing is an AI image transformation service for creating lifestyle, social, fashion, travel, restaurant, luxury, or creative visuals from images and/or prompts supplied by users.",
-              `The service is operated by ${COMPANY_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "The French version of these Terms prevails over translations in case of inconsistency.",
             ],
           },
@@ -645,7 +644,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "The service is provided with reasonable care, without any guarantee of continuous availability, exact results, error-free operation, or fitness for a particular purpose.",
               "LarpKing may evolve, suspend, or discontinue features for maintenance, security, product improvement, or third-party provider constraints.",
-              `${COMPANY_NAME} is not liable for indirect damages, loss of data, loss of opportunity, reputational harm, or consequences of non-compliant use.`,
+              `${SERVICE_NAME} is not liable for indirect damages, loss of data, loss of opportunity, reputational harm, or consequences of non-compliant use.`,
             ],
           },
           {
@@ -675,7 +674,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Purpose",
             paragraphs: [
               "These Sales Terms govern subscriptions, payments, and use of LarpKing paid offers.",
-              `The seller is ${COMPANY_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `The seller is ${SERVICE_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "The French version prevails over translations in case of inconsistency.",
             ],
           },
@@ -684,8 +683,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Paid offers",
             paragraphs: ["Paid offers provide credits and additional features to generate, keep, download, or share images."],
             bullets: [
-              { text: "Weekly plan: 100 credits per billing cycle." },
-              { text: "Monthly plan: 250 credits per billing cycle." },
+              { text: "Discovery plan: 2500 credits per monthly billing cycle." },
+              { text: "Essential plan: 9500 credits per monthly billing cycle." },
+              { text: "Ultimate plan: very high credit volume per monthly billing cycle." },
               { text: "Access to templates and options available according to the active offer." },
               { text: "Generated images remain available in account history while retained by the service." },
               { text: "Unused credits are not currency, cannot be redeemed for cash, and may expire at the end of the cycle depending on the offer." },
@@ -697,7 +697,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Prices",
             paragraphs: [
               "Prices shown in the app and at checkout are authoritative at the time of order.",
-              "For information, current offers are EUR 2.90 per week for the weekly plan and EUR 9.90 per month for the monthly plan.",
+              "For information, current offers are EUR 8.90, EUR 19.90, and EUR 39.90 per month.",
               "VAT not applicable under article 293 B of the French General Tax Code, unless tax status changes or checkout states otherwise.",
               "Prices may change. Changes apply to the next billing cycle or new orders, never retroactively to an already paid period.",
             ],
@@ -905,7 +905,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Publication director",
-            paragraphs: [`The publication director is ${COMPANY_NAME}, reachable at ${CONTACT_EMAIL}.`],
+            paragraphs: [`The publication director is ${SERVICE_NAME}, reachable at ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -968,7 +968,6 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Estas Condiciones de Uso regulan el acceso y uso de LarpKing, disponible en ${SITE_DOMAIN}.`,
               "LarpKing es un servicio de transformacion de imagenes con IA para crear visuales lifestyle, sociales, moda, viajes, restaurantes, lujo o creativos a partir de imagenes y/o prompts del usuario.",
-              `El servicio es operado por ${COMPANY_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "La version francesa prevalece sobre cualquier traduccion en caso de contradiccion.",
             ],
           },
@@ -1045,7 +1044,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "El servicio se presta con diligencia razonable, sin garantia de disponibilidad continua, resultado exacto, ausencia de errores o adecuacion a un uso particular.",
               "LarpKing puede modificar, suspender o interrumpir funciones por mantenimiento, seguridad, mejora del producto o restricciones de proveedores.",
-              `${COMPANY_NAME} no responde por danos indirectos, perdida de datos, oportunidades, reputacion o consecuencias de un uso no conforme.`,
+              `${SERVICE_NAME} no responde por danos indirectos, perdida de datos, oportunidades, reputacion o consecuencias de un uso no conforme.`,
             ],
           },
           {
@@ -1075,7 +1074,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Objeto",
             paragraphs: [
               "Estas Condiciones de Venta regulan suscripciones, pagos y uso de las ofertas de pago de LarpKing.",
-              `El vendedor es ${COMPANY_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `El vendedor es ${SERVICE_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "La version francesa prevalece sobre cualquier traduccion en caso de contradiccion.",
             ],
           },
@@ -1084,8 +1083,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Ofertas de pago",
             paragraphs: ["Las ofertas de pago dan acceso a creditos y funciones adicionales para generar, conservar, descargar o compartir imagenes."],
             bullets: [
-              { text: "Plan semanal: 100 creditos por ciclo de facturacion." },
-              { text: "Plan mensual: 250 creditos por ciclo de facturacion." },
+              { text: "Plan Descubrimiento: 2500 creditos por ciclo de facturacion mensual." },
+              { text: "Plan Esencial: 9500 creditos por ciclo de facturacion mensual." },
+              { text: "Plan Ultimate: volumen muy alto de creditos por ciclo de facturacion mensual." },
               { text: "Acceso a plantillas y opciones disponibles segun la oferta activa." },
               { text: "Imagenes generadas accesibles en el historial mientras el servicio las conserve." },
               { text: "Los creditos no usados no son dinero, no se reembolsan en efectivo y pueden expirar al final del ciclo segun la oferta." },
@@ -1097,7 +1097,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Precios",
             paragraphs: [
               "Los precios mostrados en la app y en checkout prevalecen en el momento del pedido.",
-              "A titulo informativo, las ofertas actuales son 2,90 EUR por semana y 9,90 EUR por mes.",
+              "A titulo informativo, las ofertas actuales son 8,90 EUR, 19,90 EUR y 39,90 EUR por mes.",
               "IVA no aplicable segun el articulo 293 B del Codigo General de Impuestos frances, salvo cambio fiscal o indicacion contraria en checkout.",
               "Los precios pueden cambiar. Los cambios se aplican al siguiente ciclo o nuevos pedidos, nunca retroactivamente a un periodo ya pagado.",
             ],
@@ -1301,7 +1301,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Director de publicacion",
-            paragraphs: [`El director de publicacion es ${COMPANY_NAME}, contactable en ${CONTACT_EMAIL}.`],
+            paragraphs: [`El director de publicacion es ${SERVICE_NAME}, contactable en ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -1362,7 +1362,6 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Diese Nutzungsbedingungen regeln den Zugang zu LarpKing und dessen Nutzung, verfugbar unter ${SITE_DOMAIN}.`,
               "LarpKing ist ein KI-Bildtransformationsdienst zur Erstellung von Lifestyle-, Social-, Mode-, Reise-, Restaurant-, Luxus- oder Kreativvisuals aus Bildern und/oder Prompts der Nutzer.",
-              `Der Dienst wird betrieben von ${COMPANY_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "Bei Widerspruchen ist die franzosische Fassung massgeblich.",
             ],
           },
@@ -1439,7 +1438,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Der Dienst wird mit angemessener Sorgfalt bereitgestellt, ohne Garantie kontinuierlicher Verfugbarkeit, exakter Ergebnisse, Fehlerfreiheit oder Eignung fur einen bestimmten Zweck.",
               "LarpKing kann Funktionen wegen Wartung, Sicherheit, Produktverbesserung oder Vorgaben Dritter andern, aussetzen oder einstellen.",
-              `${COMPANY_NAME} haftet nicht fur mittelbare Schaden, Datenverlust, entgangene Chancen, Rufschaden oder Folgen nicht konformer Nutzung.`,
+              `${SERVICE_NAME} haftet nicht fur mittelbare Schaden, Datenverlust, entgangene Chancen, Rufschaden oder Folgen nicht konformer Nutzung.`,
             ],
           },
           {
@@ -1469,7 +1468,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Zweck",
             paragraphs: [
               "Diese Verkaufsbedingungen regeln Abonnements, Zahlungen und Nutzung kostenpflichtiger Angebote von LarpKing.",
-              `Verkaufer ist ${COMPANY_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `Verkaufer ist ${SERVICE_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "Bei Widerspruchen ist die franzosische Fassung massgeblich.",
             ],
           },
@@ -1478,8 +1477,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Kostenpflichtige Angebote",
             paragraphs: ["Kostenpflichtige Angebote bieten Credits und zusatzliche Funktionen zum Generieren, Speichern, Herunterladen oder Teilen von Bildern."],
             bullets: [
-              { text: "Wochentarif: 100 Credits pro Abrechnungszyklus." },
-              { text: "Monatstarif: 250 Credits pro Abrechnungszyklus." },
+              { text: "Discovery-Tarif: 2500 Credits pro monatlichem Abrechnungszyklus." },
+              { text: "Essentiel-Tarif: 9500 Credits pro monatlichem Abrechnungszyklus." },
+              { text: "Ultimate-Tarif: sehr hohes Credit-Volumen pro monatlichem Abrechnungszyklus." },
               { text: "Zugang zu Templates und Optionen je nach aktivem Angebot." },
               { text: "Generierte Bilder bleiben im Kontoverlauf verfugbar, solange der Dienst sie speichert." },
               { text: "Nicht genutzte Credits sind keine Wahrung, nicht in Geld erstattbar und konnen je nach Angebot am Zyklusende verfallen." },
@@ -1491,7 +1491,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Preise",
             paragraphs: [
               "Massgeblich sind die Preise, die in der App und beim Checkout zum Zeitpunkt der Bestellung angezeigt werden.",
-              "Zur Information betragen die aktuellen Angebote 2,90 EUR pro Woche und 9,90 EUR pro Monat.",
+              "Zur Information betragen die aktuellen Angebote 8,90 EUR, 19,90 EUR und 39,90 EUR pro Monat.",
               "Mehrwertsteuer nicht anwendbar gemass Artikel 293 B des franzosischen Steuergesetzbuchs, sofern sich der Steuerstatus nicht andert oder Checkout anderes angibt.",
               "Preise konnen geandert werden. Anderungen gelten fur den nachsten Abrechnungszyklus oder neue Bestellungen, nicht ruckwirkend fur bereits bezahlte Zeitraume.",
             ],
@@ -1695,7 +1695,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Verantwortlich fur die Veroffentlichung",
-            paragraphs: [`Verantwortlich fur die Veroffentlichung ist ${COMPANY_NAME}, erreichbar unter ${CONTACT_EMAIL}.`],
+            paragraphs: [`Verantwortlich fur die Veroffentlichung ist ${SERVICE_NAME}, erreichbar unter ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",

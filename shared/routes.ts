@@ -97,6 +97,12 @@ export const api = {
       path: "/api/templates/marquee",
     },
   },
+  landing: {
+    marquee: {
+      method: "GET" as const,
+      path: "/api/landing/marquee",
+    },
+  },
   larps: {
     generate: {
       method: "POST" as const,
