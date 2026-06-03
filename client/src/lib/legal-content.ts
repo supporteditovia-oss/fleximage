@@ -1696,7 +1696,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Verantwortlich fur die Veroffentlichung",
-            paragraphs: [`Verantwortlich fur die Veroffentlichung ist ${SERVICE_NAME}, erreichbar unter ${CONTACT_EMAIL}.`],
+            paragraphs: [`Verantwortlich fur die Veroffentlichung ist ${COMPANY_TRADE_NAME}, erreichbar unter ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
