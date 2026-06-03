@@ -3,9 +3,11 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { useCanLoadLandingAvif } from "@/hooks/use-can-load-landing-avif";
 import {
   LANDING_MARQUEE_IMAGES,
   fetchLandingMarqueeImages,
+  getMobileCompatibleLandingImages,
   type LandingMarqueeImage,
 } from "@/lib/landing-marquee-images";
 
@@ -84,6 +86,13 @@ function LarpStackCard({
             className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
           />
           <picture className="absolute inset-0 block h-full w-full">
+            {item.image.webp_url ? (
+              <source
+                media="(max-width: 767px)"
+                srcSet={item.image.webp_url}
+                type="image/webp"
+              />
+            ) : null}
             <source srcSet={item.image.avif_url} type="image/avif" />
             {item.image.webp_url ? (
               <source srcSet={item.image.webp_url} type="image/webp" />
@@ -124,13 +133,23 @@ export default function LarpProSection() {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const canLoadAvif = useCanLoadLandingAvif();
+  const supportedImages = React.useMemo(() => {
+    if (!marqueeImages) return [];
+    return canLoadAvif === false
+      ? getMobileCompatibleLandingImages(marqueeImages)
+      : marqueeImages;
+  }, [canLoadAvif, marqueeImages]);
 
   const imagesById = React.useMemo(() => {
-    return new Map((marqueeImages ?? []).map((image) => [image.id, image]));
-  }, [marqueeImages]);
+    return new Map(supportedImages.map((image) => [image.id, image]));
+  }, [supportedImages]);
 
   const items: ProCardItem[] = itemOrder.map((originalIndex) => ({
-    image: imagesById.get(PRO_IMAGE_IDS[originalIndex]) ?? null,
+    image:
+      imagesById.get(PRO_IMAGE_IDS[originalIndex]) ??
+      supportedImages[originalIndex % Math.max(supportedImages.length, 1)] ??
+      null,
     text: t(PRO_ITEM_KEYS[originalIndex]),
   }));
 

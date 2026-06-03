@@ -1,9 +1,11 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useCanLoadLandingAvif } from "@/hooks/use-can-load-landing-avif";
 import {
   LANDING_MARQUEE_IMAGES,
   fetchLandingMarqueeImages,
+  getMobileCompatibleLandingImages,
   type LandingMarqueeImage,
 } from "@/lib/landing-marquee-images";
 
@@ -60,6 +62,13 @@ function FrameCard({
         className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
       />
       <picture className="absolute inset-0 block h-full w-full">
+        {template.webp_url ? (
+          <source
+            media="(max-width: 767px)"
+            srcSet={template.webp_url}
+            type="image/webp"
+          />
+        ) : null}
         <source srcSet={template.avif_url} type="image/avif" />
         {template.webp_url ? (
           <source srcSet={template.webp_url} type="image/webp" />
@@ -162,8 +171,16 @@ export default function HeroBackgroundFrames() {
     refetchOnWindowFocus: false,
   });
 
-  const hasData = templates && templates.length > 0;
-  const frames = hasData ? padToMin(templates, MIN_FRAMES) : [];
+  const canLoadAvif = useCanLoadLandingAvif();
+  const supportedTemplates = React.useMemo(() => {
+    if (!templates) return templates;
+    return canLoadAvif === false
+      ? getMobileCompatibleLandingImages(templates)
+      : templates;
+  }, [canLoadAvif, templates]);
+
+  const hasData = supportedTemplates && supportedTemplates.length > 0;
+  const frames = hasData ? padToMin(supportedTemplates, MIN_FRAMES) : [];
   const { upper: row1, lower: row2 } = hasData
     ? splitFrameRows(frames)
     : { upper: [], lower: [] };
@@ -190,7 +207,7 @@ export default function HeroBackgroundFrames() {
         />
       </div>
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.31)_0%,rgba(255,255,255,0.24)_38%,rgba(255,255,255,0.06)_58%,transparent_72%)] md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
     </div>
   );
 }

@@ -91,18 +91,27 @@ export const LANDING_MARQUEE_IMAGES: LandingMarqueeImage[] =
     placeholder_url: LANDING_MARQUEE_PLACEHOLDERS[id],
   }));
 
+export function getMobileCompatibleLandingImages(images: LandingMarqueeImage[]) {
+  return images.filter((image) => Boolean(image.webp_url));
+}
+
+export function canaryLandingAvifUrl() {
+  return LANDING_MARQUEE_IMAGES[0]?.avif_url;
+}
+
 export function preloadLandingMarqueeImages(count = 20) {
   if (typeof document === "undefined") return;
 
   for (const image of LANDING_MARQUEE_IMAGES.slice(0, count)) {
-    const selector = `link[rel="preload"][href="${image.avif_url}"]`;
+    const preloadUrl = image.webp_url ?? image.avif_url;
+    const selector = `link[rel="preload"][href="${preloadUrl}"]`;
     if (document.head.querySelector(selector)) continue;
 
     const link = document.createElement("link");
     link.rel = "preload";
     link.as = "image";
-    link.href = image.avif_url;
-    link.type = "image/avif";
+    link.href = preloadUrl;
+    link.type = image.webp_url ? "image/webp" : "image/avif";
     link.setAttribute("fetchpriority", "high");
     document.head.appendChild(link);
   }

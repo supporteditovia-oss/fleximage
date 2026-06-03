@@ -157,9 +157,9 @@ export const extraResources = {
         legalQ: "C'est légal ?",
         legalA:
           "LarpKing est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
-        pricingQ: "Combien ça coûte ?",
+        pricingQ: "Qu'est-ce que le LARP ?",
         pricingA:
-          "Tu peux créer tes premiers LARPs gratuitement. Des crédits supplémentaires sont disponibles via nos forfaits accessibles.",
+          "Le LARP, ici, c'est l'art de créer une mise en scène crédible avec l'IA : une photo de voyage, une sortie premium, un achat luxe ou une situation inventée qui a l'air réelle. LarpKing sert à générer ce type de contenu pour s'amuser, surprendre ses proches ou construire une vibe visuelle.",
         storageQ: "Mes images sont-elles stockées ?",
         storageA:
           "Tes images sont traitées de manière sécurisée. Tu peux supprimer tes créations à tout moment depuis ton compte.",
@@ -380,9 +380,9 @@ export const extraResources = {
         legalQ: "Is it legal?",
         legalA:
           "LarpKing is made for fun between friends. Harassment, defamation, fraud, or abuse are strictly prohibited and against our terms.",
-        pricingQ: "How much does it cost?",
+        pricingQ: "What is a LARP?",
         pricingA:
-          "You can create your first LARPs for free. Additional credits are available through affordable plans.",
+          "On LarpKing, a LARP is a believable AI-made scene: a travel photo, premium outing, luxury purchase, or invented situation that looks real. It is made for fun, social storytelling, and playful flexing.",
         storageQ: "Are my images stored?",
         storageA:
           "Your images are processed securely. You can delete your creations anytime from your account.",
@@ -603,9 +603,9 @@ export const extraResources = {
         legalQ: "Es legal?",
         legalA:
           "LarpKing esta pensado para diversion entre amigos. El acoso, la difamacion, el fraude o usos maliciosos estan estrictamente prohibidos.",
-        pricingQ: "Cuanto cuesta?",
+        pricingQ: "Que es un LARP?",
         pricingA:
-          "Puedes crear tus primeras LARPs gratis. Hay creditos adicionales disponibles en nuestros planes.",
+          "En LarpKing, un LARP es una escena creible creada con IA: un viaje, una salida premium, una compra de lujo o una situacion inventada que parece real. Sirve para divertirse, contar una historia visual y sorprender a los demas.",
         storageQ: "Se almacenan mis imagenes?",
         storageA:
           "Tus imagenes se procesan de forma segura. Puedes eliminar tus creaciones cuando quieras.",
@@ -826,9 +826,9 @@ export const extraResources = {
         legalQ: "Ist das legal?",
         legalA:
           "LarpKing ist fuer Unterhaltung gedacht. Belaestigung, Verleumdung, Betrug oder missbrauchende Nutzung sind strikt verboten.",
-        pricingQ: "Was kostet es?",
+        pricingQ: "Was ist ein LARP?",
         pricingA:
-          "Du kannst deine ersten LARPs kostenlos erstellen. Weitere Credits gibt es ueber unsere Pakete.",
+          "Auf LarpKing ist ein LARP eine glaubwuerdige KI-Szene: ein Reisebild, ein Premium-Ausflug, ein Luxuskauf oder eine erfundene Situation, die echt wirkt. Es geht um Spass, visuelles Storytelling und spielerischen Flex.",
         storageQ: "Werden meine Bilder gespeichert?",
         storageA:
           "Deine Bilder werden sicher verarbeitet. Du kannst deine Inhalte jederzeit loeschen.",
