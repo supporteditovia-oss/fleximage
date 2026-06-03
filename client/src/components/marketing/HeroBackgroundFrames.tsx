@@ -207,7 +207,7 @@ export default function HeroBackgroundFrames() {
         />
       </div>
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.31)_0%,rgba(255,255,255,0.24)_38%,rgba(255,255,255,0.06)_58%,transparent_72%)] md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.10)_0%,rgba(255,255,255,0.08)_38%,rgba(255,255,255,0.02)_58%,transparent_72%)] md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
     </div>
   );
 }

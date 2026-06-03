@@ -118,16 +118,16 @@ export default function HeroSection() {
       (img): img is { url: string; file: File } => img !== null,
     );
 
-    if (user) {
-      if (!prompt.trim() && files.length === 0) {
-        toast({
-          variant: "destructive",
-          title: t("hero.emptyPromptTitle"),
-          description: t("hero.emptyPromptDescription"),
-        });
-        return;
-      }
+    if (files.length === 0) {
+      toast({
+        variant: "destructive",
+        title: t("hero.referenceImageRequiredTitle"),
+        description: t("hero.referenceImageRequiredDescription"),
+      });
+      return;
+    }
 
+    if (user) {
       if (eligibility && !eligibility.canGenerate) {
         try {
           await savePendingLarp({
@@ -148,12 +148,20 @@ export default function HeroSection() {
         const payload = {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: "9:16",
-          images: base64Images.length > 0 ? base64Images : undefined,
+          images: base64Images,
         };
         const result = await generateDirect.mutateAsync(payload);
         setTaskId(result.taskId);
         refetchEligibility();
       } catch (error: any) {
+        if (error.code === "REFERENCE_IMAGE_REQUIRED") {
+          toast({
+            variant: "destructive",
+            title: t("hero.referenceImageRequiredTitle"),
+            description: t("hero.referenceImageRequiredDescription"),
+          });
+          return;
+        }
         let message = error.message;
         try {
           const parsed = JSON.parse(error.message);
@@ -192,17 +200,15 @@ export default function HeroSection() {
         });
       }
     } else {
-      if (files.length > 0 || prompt.trim()) {
-        try {
-          await savePendingLarp({
-            prompt,
-            images: files.map((f) => f.file),
-            generationMode: "image",
-            timestamp: Date.now(),
-          });
-        } catch (error) {
-          console.error("Ignored IDB save error:", error);
-        }
+      try {
+        await savePendingLarp({
+          prompt,
+          images: files.map((f) => f.file),
+          generationMode: "image",
+          timestamp: Date.now(),
+        });
+      } catch (error) {
+        console.error("Ignored IDB save error:", error);
       }
       navigate("/register");
     }
@@ -213,6 +219,8 @@ export default function HeroSection() {
     setPrompt("");
     setImages([null]);
   };
+
+  const hasUploadedImages = images.some((img) => img !== null);
 
   return (
     <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
@@ -330,8 +338,9 @@ export default function HeroSection() {
                 <Shuffle className="w-4 h-4" />
               </button>
               <button
-                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all"
+                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all disabled:opacity-50"
                 onClick={handleSubmit}
+                disabled={!hasUploadedImages}
                 title={t("hero.create")}
               >
                 <ArrowRight className="w-4 h-4" />
@@ -340,6 +349,7 @@ export default function HeroSection() {
                 size="sm"
                 className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
                 onClick={handleSubmit}
+                disabled={!hasUploadedImages}
               >
                 {t("hero.create")}
               </Button>

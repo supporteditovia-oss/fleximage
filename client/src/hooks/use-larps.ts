@@ -13,6 +13,7 @@ interface GenerateDirectInput {
   aspect_ratio?: string;
   images?: string[];
   template_id?: string;
+  use_face_asset?: boolean;
 }
 
 interface GenerateVideoInput {
@@ -21,6 +22,7 @@ interface GenerateVideoInput {
   aspect_ratio?: string;
   images?: string[];
   template_id?: string;
+  use_face_asset?: boolean;
 }
 
 interface GenerateLarpResponse {

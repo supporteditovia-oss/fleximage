@@ -116,6 +116,11 @@ export default function Generate() {
   const { data: templatesList } = useTemplates();
   const latestFaceCapture = useLatestFaceCapture();
   const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
+  const [useFaceAsset, setUseFaceAsset] = useState(false);
+
+  useEffect(() => {
+    setUseFaceAsset(faceCaptureReady);
+  }, [faceCaptureReady, selectedTemplate?.id]);
 
   // Store checkout state early before URL gets cleaned
   const [isReturningFromCheckout] = useState(() => {
@@ -407,25 +412,41 @@ export default function Generate() {
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
 
-    if (!isTemplateGeneration && !prompt.trim()) {
-      toast({
-        variant: "destructive",
-        title: t("generate.emptyPromptTitle"),
-        description: t("generate.emptyPromptDescription"),
-      });
-      return;
-    }
-
     const activeTemplate =
       selectedTemplate ??
       (pendingTemplateId && templatesList
         ? templatesList.find((t) => t.id === pendingTemplateId)
         : undefined);
+
+    const files = images.filter(
+      (img): img is { url: string; file: File } => img !== null,
+    );
+    const filesForGeneration =
+      generationMode === "video" ? files.slice(0, 1) : files;
+
+    if (isTemplateGeneration) {
+      if ((activeTemplate?.reference_image_count ?? 0) === 0) {
+        toast({
+          variant: "destructive",
+          title: t("generate.referenceImageRequiredTitle"),
+          description: t("templateSelected.noReferenceImages"),
+        });
+        return;
+      }
+    } else if (filesForGeneration.length === 0) {
+      toast({
+        variant: "destructive",
+        title: t("generate.referenceImageRequiredTitle"),
+        description: t("generate.referenceImageRequiredDescription"),
+      });
+      return;
+    }
+
     const templateNeedsFace = activeTemplate
       ? templateRequiresFaceCapture(activeTemplate)
       : true;
 
-    if (isTemplateGeneration && templateNeedsFace && !faceCaptureReady) {
+    if (isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
       toast({
         variant: "destructive",
         title: t("templateSelected.faceRequired"),
@@ -434,17 +455,21 @@ export default function Generate() {
       return;
     }
 
-    const files = images.filter(
-      (img): img is { url: string; file: File } => img !== null,
-    );
-    const filesForGeneration =
-      generationMode === "video" ? files.slice(0, 1) : files;
+    if (isTemplateGeneration && templateNeedsFace && !useFaceAsset) {
+      toast({
+        variant: "destructive",
+        title: t("templateSelected.faceRequiredForTemplate"),
+        description: t("templateSelected.useFace"),
+      });
+      return;
+    }
+
     const serverPrompt = isTemplateGeneration
       ? selectedTemplate?.prompt_text?.trim() || " "
       : prompt.trim();
 
     let templateFaceImages: string[] | undefined;
-    if (isTemplateGeneration && templateNeedsFace) {
+    if (isTemplateGeneration && useFaceAsset && faceCaptureReady) {
       try {
         templateFaceImages = await loadFaceCaptureBase64Images();
       } catch {
@@ -521,6 +546,7 @@ export default function Generate() {
           aspect_ratio: "9:16",
           images: base64Images && base64Images.length > 0 ? base64Images : undefined,
           template_id: selectedOrPendingTemplateId,
+          use_face_asset: isTemplateGeneration ? useFaceAsset : undefined,
         });
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
@@ -540,6 +566,7 @@ export default function Generate() {
         aspect_ratio: "9:16",
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
+        use_face_asset: isTemplateGeneration ? useFaceAsset : undefined,
       });
       setTaskId(result.taskId);
       refetchEligibility();
@@ -549,6 +576,14 @@ export default function Generate() {
           variant: "destructive",
           title: t("templateSelected.faceRequired"),
           description: t("generate.scanFace"),
+        });
+        return;
+      }
+      if (error.code === "REFERENCE_IMAGE_REQUIRED") {
+        toast({
+          variant: "destructive",
+          title: t("generate.referenceImageRequiredTitle"),
+          description: t("generate.referenceImageRequiredDescription"),
         });
         return;
       }
@@ -847,15 +882,15 @@ export default function Generate() {
       {/* Image upload zone + prompt */}
       <div
         ref={topRef}
-        className="relative flex flex-col items-center justify-center gap-3 min-h-[calc(100vh-12rem)] pt-4 pb-4"
+        className="relative flex flex-col items-center justify-start gap-3 min-h-0 pt-2 pb-4 md:min-h-[calc(100vh-12rem)] md:justify-center md:pt-4"
       >
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
-          <div className="flex w-full max-w-md items-center justify-center gap-2">
+          <div className="sticky top-[5.25rem] z-20 flex w-full max-w-md flex-col items-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2.5 shadow-sm backdrop-blur-md sm:flex-row sm:justify-center md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
             <div
               role="tablist"
               aria-label="Generation mode"
-              className="relative grid shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
+              className="relative grid w-full max-w-[11.5rem] shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md sm:w-auto"
             >
               <div
                 className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -890,18 +925,14 @@ export default function Generate() {
               </button>
             </div>
 
-            {!selectedTemplate && (
-              <div className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => navigate("/face-capture")}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-3 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10 sm:text-xs"
-                >
-                  <ScanFace className="h-3.5 w-3.5 shrink-0" />
-                  {t("generate.scanFace")}
-                </button>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => navigate("/face-capture")}
+              className="inline-flex h-9 w-full max-w-[11.5rem] shrink-0 items-center justify-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-3 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10 sm:w-auto sm:max-w-none sm:text-xs"
+            >
+              <ScanFace className="h-3.5 w-3.5 shrink-0" />
+              {t("generate.scanFace")}
+            </button>
           </div>
 
           {selectedTemplate ? (
@@ -909,6 +940,8 @@ export default function Generate() {
               template={selectedTemplate}
               generationMode={generationMode}
               requiresFaceCapture={templateRequiresFaceCapture(selectedTemplate)}
+              useFaceAsset={useFaceAsset}
+              onUseFaceAssetChange={setUseFaceAsset}
               faceCaptureReady={faceCaptureReady}
               faceCaptureLoading={latestFaceCapture.isLoading}
               onDeselect={deselectTemplate}
@@ -933,6 +966,7 @@ export default function Generate() {
                 isGenerating={
                   generateDirect.isPending || generateVideo.isPending
                 }
+                canGenerate={images.some((img) => img !== null)}
               />
             </>
           )}

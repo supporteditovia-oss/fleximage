@@ -465,4 +465,5 @@ export const generateVideoBodySchema = z.object({
   images: z.array(z.string()).max(1).optional(),
   template_id: z.string().uuid().optional(),
   text_values: z.array(z.string().max(500)).optional(),
+  use_face_asset: z.boolean().optional(),
 });

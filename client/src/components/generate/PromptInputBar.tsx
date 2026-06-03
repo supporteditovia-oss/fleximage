@@ -13,6 +13,7 @@ interface PromptInputBarProps {
   onPromptChange: (value: string) => void;
   onGenerate: () => void;
   isGenerating: boolean;
+  canGenerate?: boolean;
 }
 
 export function PromptInputBar({
@@ -20,6 +21,7 @@ export function PromptInputBar({
   onPromptChange,
   onGenerate,
   isGenerating,
+  canGenerate = true,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const larpIdeas = useMemo(
@@ -64,7 +66,7 @@ export function PromptInputBar({
           <button
             className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
             onClick={onGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !canGenerate}
             type="button"
           >
             {isGenerating ? (
@@ -77,7 +79,7 @@ export function PromptInputBar({
             size="sm"
             className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
             onClick={onGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !canGenerate}
             type="button"
           >
             {isGenerating ? t("promptInput.creating") : t("promptInput.create")}

@@ -115,13 +115,10 @@ export function GenerationLoader({
               alt="LarpKing"
               className="h-24 md:h-32 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
             />
-            {/* Spinner + Elapsed timer */}
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 text-white/70 animate-spin" />
-              <span className="text-lg tabular-nums text-white font-semibold">
-                {elapsed}s
-              </span>
-            </div>
+            <Loader2 className="h-6 w-6 text-foreground animate-spin" />
+            <span className="text-lg tabular-nums text-foreground font-semibold">
+              {elapsed}s
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

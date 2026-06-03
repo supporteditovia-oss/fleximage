@@ -778,11 +778,43 @@ async function userHasCompleteFaceAsset(
   return !!(faceUrls && faceUrls.length > 0);
 }
 
+function resolveHasFaceAssetForTemplateGeneration(
+  hasCompleteFaceAsset: boolean,
+  useFaceAsset?: boolean,
+): boolean {
+  if (useFaceAsset === false) return false;
+  return hasCompleteFaceAsset;
+}
+
 function referenceRowRequiresFace(
   row: TemplateReferencePickRow | null,
 ): boolean {
   if (!row) return true;
   return row.requires_face_asset !== false;
+}
+
+async function respondIfTemplateReferenceImageMissing(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  templateId: string,
+  selectedReferenceRow: TemplateReferencePickRow | null,
+  locale: AppLocale,
+  res: import("express").Response,
+): Promise<boolean> {
+  if (selectedReferenceRow) return true;
+
+  const { count, error } = await supabaseAdmin
+    .from("template_reference_images")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId);
+  if (error) throw error;
+  if ((count ?? 0) === 0) {
+    res.status(422).json({
+      code: "REFERENCE_IMAGE_REQUIRED",
+      message: tBackend(locale, "larps.referenceImageRequired"),
+    });
+    return false;
+  }
+  return true;
 }
 
 async function respondIfTemplateFaceCaptureRequired(
@@ -2393,6 +2425,7 @@ export async function registerRoutes(
     images: z.array(z.string()).optional().default([]),
     template_id: z.string().uuid().optional(),
     text_values: z.array(z.string().max(500)).optional(),
+    use_face_asset: z.boolean().optional(),
   });
 
   app.post(
@@ -2403,7 +2436,8 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
-        let { prompt, aspect_ratio, images, template_id } = req.body;
+        let { prompt, aspect_ratio, images, template_id, use_face_asset } =
+          req.body;
         const locale = resolveLocaleFromRequest(req);
 
         const supabaseAdmin = getSupabaseAdmin();
@@ -2417,6 +2451,13 @@ export async function registerRoutes(
           limitResult,
           IMAGE_CREDIT_COST,
         );
+
+        if (!template_id && (!images || images.length === 0)) {
+          return res.status(422).json({
+            code: "REFERENCE_IMAGE_REQUIRED",
+            message: tBackend(locale, "larps.referenceImageRequired"),
+          });
+        }
 
         let selectedReferenceRow: Awaited<
           ReturnType<typeof pickRandomReferenceRow>
@@ -2438,9 +2479,13 @@ export async function registerRoutes(
               .json({ message: tBackend(locale, "templates.notFoundOrInactive") });
           }
 
-          const hasFaceAsset = await userHasCompleteFaceAsset(
+          const hasCompleteFaceAsset = await userHasCompleteFaceAsset(
             supabaseAdmin,
             authReq.userId,
+          );
+          const hasFaceAsset = resolveHasFaceAssetForTemplateGeneration(
+            hasCompleteFaceAsset,
+            use_face_asset,
           );
           selectedReferenceRow = await pickRandomReferenceRow(
             supabaseAdmin,
@@ -2450,6 +2495,15 @@ export async function registerRoutes(
           finalPrompt = selectedReferenceRow
             ? selectedReferenceRow.image_prompt
             : template.prompt_text;
+
+          const refOk = await respondIfTemplateReferenceImageMissing(
+            supabaseAdmin,
+            template_id,
+            selectedReferenceRow,
+            locale,
+            res,
+          );
+          if (!refOk) return;
 
           const faceOk = await respondIfTemplateFaceCaptureRequired(
             supabaseAdmin,
@@ -2473,6 +2527,16 @@ export async function registerRoutes(
           );
         } else if (images && images.length > 0) {
           imageUrls = await uploadInputImagesToR2(authReq.userId, images);
+        }
+
+        if (
+          (template_id && !selectedReferenceRow?.url) ||
+          (!template_id && imageUrls.length === 0)
+        ) {
+          return res.status(422).json({
+            code: "REFERENCE_IMAGE_REQUIRED",
+            message: tBackend(locale, "larps.referenceImageRequired"),
+          });
         }
 
         const referenceMetadata = selectedReferenceRow
@@ -2641,6 +2705,7 @@ export async function registerRoutes(
           images,
           template_id,
           aspect_ratio,
+          use_face_asset,
         } = req.body;
         const locale = resolveLocaleFromRequest(req);
         const supabaseAdmin = getSupabaseAdmin();
@@ -2673,6 +2738,13 @@ export async function registerRoutes(
           VIDEO_CREDIT_COST,
         );
 
+        if (!template_id && (!images || images.length === 0)) {
+          return res.status(422).json({
+            code: "REFERENCE_IMAGE_REQUIRED",
+            message: tBackend(locale, "larps.referenceImageRequired"),
+          });
+        }
+
         let templateIdForGeneration: string | null = null;
         let selectedReferenceRow: Awaited<
           ReturnType<typeof pickRandomReferenceRow>
@@ -2697,15 +2769,28 @@ export async function registerRoutes(
           }
 
           templateIdForGeneration = template.id;
-          const hasFaceAsset = await userHasCompleteFaceAsset(
+          const hasCompleteFaceAsset = await userHasCompleteFaceAsset(
             supabaseAdmin,
             authReq.userId,
+          );
+          const hasFaceAsset = resolveHasFaceAssetForTemplateGeneration(
+            hasCompleteFaceAsset,
+            use_face_asset,
           );
           selectedReferenceRow = await pickRandomReferenceRow(
             supabaseAdmin,
             template_id,
             { hasFaceAsset },
           );
+
+          const refOk = await respondIfTemplateReferenceImageMissing(
+            supabaseAdmin,
+            template_id,
+            selectedReferenceRow,
+            locale,
+            res,
+          );
+          if (!refOk) return;
 
           const faceOk = await respondIfTemplateFaceCaptureRequired(
             supabaseAdmin,
@@ -2765,6 +2850,17 @@ export async function registerRoutes(
         } else {
           imageUrls = await uploadInputImagesToR2(authReq.userId, images);
         }
+
+        if (
+          (templateIdForGeneration && !selectedReferenceRow?.url) ||
+          (!templateIdForGeneration && imageUrls.length === 0)
+        ) {
+          return res.status(422).json({
+            code: "REFERENCE_IMAGE_REQUIRED",
+            message: tBackend(locale, "larps.referenceImageRequired"),
+          });
+        }
+
         const aspectRatio = aspect_ratio || "9:16";
 
         let externalTaskId: string;

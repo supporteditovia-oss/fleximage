@@ -77,10 +77,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <span>{profile?.credits ?? 0}</span>
           </div>
         ) : !isLoading && (
-          <div className="absolute right-0 hidden items-center justify-end gap-3 pointer-events-auto sm:flex">
+          <div className="absolute right-0 flex items-center justify-end gap-2 sm:gap-3 pointer-events-auto">
             {user ? (
               <Link href="/app">
-                <Button size="sm" className="rounded-full px-5 font-semibold border-0 shadow-none active:scale-95 transition-transform">
+                <Button size="sm" className="rounded-full px-4 sm:px-5 text-xs sm:text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform">
                   {t("layout.header.app")}
                 </Button>
               </Link>
@@ -90,7 +90,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="rounded-full hidden sm:flex text-muted-foreground hover:text-foreground"
+                    className="rounded-full h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm text-muted-foreground hover:text-foreground"
                   >
                     {t("layout.header.login")}
                   </Button>
@@ -98,7 +98,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 <Link href="/register">
                   <Button
                     size="sm"
-                    className="rounded-full px-5 text-sm font-semibold border-0 bg-primary shadow-none transition-transform active:scale-95 hover:opacity-90"
+                    className="hidden sm:flex rounded-full px-5 text-sm font-semibold border-0 bg-primary shadow-none transition-transform active:scale-95 hover:opacity-90"
                   >
                     {t("layout.header.start")}
                   </Button>

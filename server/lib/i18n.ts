@@ -34,6 +34,7 @@ export type BackendMessageKey =
   | "larps.pollingError"
   | "larps.fallbackFailed"
   | "larps.policyViolation"
+  | "larps.referenceImageRequired"
   | "rateLimit.tooManyRequests"
   | "rateLimit.tooManyGenerationRequests";
 
@@ -72,6 +73,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "La generation a echoue apres la tentative de secours",
     "larps.policyViolation":
       "Votre LARP enfreint les règles de création.",
+    "larps.referenceImageRequired":
+      "Ajoute au moins une image de référence pour lancer la génération.",
     "rateLimit.tooManyRequests":
       "Trop de requetes. Veuillez reessayer plus tard.",
     "rateLimit.tooManyGenerationRequests":
@@ -108,6 +111,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.pollingError": "Failed to check generation status",
     "larps.fallbackFailed": "Generation failed after fallback",
     "larps.policyViolation": "Your LARP violates the creation rules.",
+    "larps.referenceImageRequired":
+      "Add at least one reference image to start generation.",
     "rateLimit.tooManyRequests": "Too many requests. Please try again later.",
     "rateLimit.tooManyGenerationRequests":
       "Too many generation requests. Please try again later.",
@@ -146,6 +151,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "La generacion fallo despues del modo de respaldo",
     "larps.policyViolation":
       "Tu LARP infringe las reglas de creacion.",
+    "larps.referenceImageRequired":
+      "Agrega al menos una imagen de referencia para iniciar la generacion.",
     "rateLimit.tooManyRequests":
       "Demasiadas solicitudes. Intentalo de nuevo mas tarde.",
     "rateLimit.tooManyGenerationRequests":
@@ -184,6 +191,8 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
     "larps.policyViolation":
       "Dein LARP verstoesst gegen die Erstellungsregeln.",
+    "larps.referenceImageRequired":
+      "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
     "rateLimit.tooManyRequests":
       "Zu viele Anfragen. Bitte versuche es spaeter erneut.",
     "rateLimit.tooManyGenerationRequests":

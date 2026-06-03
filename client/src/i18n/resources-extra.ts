@@ -80,7 +80,10 @@ export const extraResources = {
       limitReachedDescription:
         "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
       emptyPromptTitle: "Erreur",
-      emptyPromptDescription: "Décris ton LARP ou ajoute une image.",
+      emptyPromptDescription: "Ajoute au moins une image pour lancer la génération.",
+      referenceImageRequiredTitle: "Image requise",
+      referenceImageRequiredDescription:
+        "Ajoute au moins une image de référence pour lancer la génération.",
       surprisePrompt: "Surprends-moi",
       serverRetry: "Erreur serveur. Veuillez réessayer.",
     },
@@ -93,9 +96,14 @@ export const extraResources = {
       faceReady: "Tes photos visage seront utilisées automatiquement.",
       faceRequired:
         "Scanne ton visage (face + profils) pour utiliser ce template.",
-      faceOptional:
-        "Ce modèle peut être généré sans scan visage (selon l'image tirée).",
+      useFace: "Utiliser mon visage",
+      useFaceDisabledTooltip:
+        "Scanne ton visage (face + profils) pour activer cette option.",
+      faceRequiredForTemplate:
+        "Ce template nécessite ton visage pour toutes ses images de référence.",
       loadingFace: "Vérification des photos visage…",
+      noReferenceImages:
+        "Ce template n'a pas encore d'images de référence. Choisis-en un autre.",
     },
     generate: {
       modeImage: "Image",
@@ -106,7 +114,11 @@ export const extraResources = {
       insufficientCreditsDescription:
         "Tu n'as pas assez de crédits pour générer.",
       emptyPromptTitle: "Description vide",
-      emptyPromptDescription: "Décris ton LARP avant de lancer la génération.",
+      emptyPromptDescription:
+        "Ajoute au moins une image de référence pour lancer la génération.",
+      referenceImageRequiredTitle: "Image requise",
+      referenceImageRequiredDescription:
+        "Ajoute au moins une image de référence pour lancer la génération.",
       missingImageTitle: "Image manquante",
       missingImageDescription: "L'image « {{label}} » est obligatoire.",
       missingFieldTitle: "Champ manquant",
@@ -355,7 +367,10 @@ export const extraResources = {
       limitReachedDescription:
         "You reached your free generation limit. Subscribe to continue!",
       emptyPromptTitle: "Error",
-      emptyPromptDescription: "Describe your LARP or add an image.",
+      emptyPromptDescription: "Add at least one image to start generating.",
+      referenceImageRequiredTitle: "Image required",
+      referenceImageRequiredDescription:
+        "Add at least one reference image to start generation.",
       surprisePrompt: "Surprise me",
       serverRetry: "Server error. Please try again.",
     },
@@ -367,9 +382,14 @@ export const extraResources = {
       modeVideo: "Video generation",
       faceReady: "Your face photos will be used automatically.",
       faceRequired: "Scan your face (front + profiles) to use this template.",
-      faceOptional:
-        "This template can be generated without a face scan (depends on the image drawn).",
+      useFace: "Use my face",
+      useFaceDisabledTooltip:
+        "Scan your face (front + profiles) to enable this option.",
+      faceRequiredForTemplate:
+        "This template requires your face for all of its reference images.",
       loadingFace: "Checking face photos…",
+      noReferenceImages:
+        "This template has no reference images yet. Pick another one.",
     },
     generate: {
       modeImage: "Image",
@@ -380,7 +400,11 @@ export const extraResources = {
       insufficientCreditsDescription:
         "You do not have enough credits to generate.",
       emptyPromptTitle: "Empty prompt",
-      emptyPromptDescription: "Describe your LARP before generating.",
+      emptyPromptDescription:
+        "Add at least one reference image to start generation.",
+      referenceImageRequiredTitle: "Image required",
+      referenceImageRequiredDescription:
+        "Add at least one reference image to start generation.",
       missingImageTitle: "Missing image",
       missingImageDescription: "Image " + "{{label}}" + " is required.",
       missingFieldTitle: "Missing field",
@@ -629,7 +653,10 @@ export const extraResources = {
       limitReachedDescription:
         "Has alcanzado tu limite de generaciones gratis. Suscribete para continuar.",
       emptyPromptTitle: "Error",
-      emptyPromptDescription: "Describe tu LARP o agrega una imagen.",
+      emptyPromptDescription: "Agrega al menos una imagen para iniciar la generacion.",
+      referenceImageRequiredTitle: "Imagen requerida",
+      referenceImageRequiredDescription:
+        "Agrega al menos una imagen de referencia para iniciar la generacion.",
       surprisePrompt: "Sorprendeme",
       serverRetry: "Error del servidor. Intentalo de nuevo.",
     },
@@ -642,7 +669,11 @@ export const extraResources = {
       insufficientCreditsDescription:
         "No tienes suficientes creditos para generar.",
       emptyPromptTitle: "Prompt vacio",
-      emptyPromptDescription: "Describe tu LARP antes de generar.",
+      emptyPromptDescription:
+        "Agrega al menos una imagen de referencia para iniciar la generacion.",
+      referenceImageRequiredTitle: "Imagen requerida",
+      referenceImageRequiredDescription:
+        "Agrega al menos una imagen de referencia para iniciar la generacion.",
       missingImageTitle: "Falta imagen",
       missingImageDescription: "La imagen " + "{{label}}" + " es obligatoria.",
       missingFieldTitle: "Falta campo",
@@ -892,7 +923,11 @@ export const extraResources = {
       limitReachedDescription:
         "Du hast dein kostenloses Limit erreicht. Abonniere, um weiterzumachen.",
       emptyPromptTitle: "Fehler",
-      emptyPromptDescription: "Beschreibe deinen LARP oder fuege ein Bild hinzu.",
+      emptyPromptDescription:
+        "Fuege mindestens ein Bild hinzu, um die Generierung zu starten.",
+      referenceImageRequiredTitle: "Bild erforderlich",
+      referenceImageRequiredDescription:
+        "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
       surprisePrompt: "Ueberrasch mich",
       serverRetry: "Serverfehler. Bitte versuche es erneut.",
     },
@@ -905,7 +940,11 @@ export const extraResources = {
       insufficientCreditsDescription:
         "Du hast nicht genug Credits zum Generieren.",
       emptyPromptTitle: "Leerer Prompt",
-      emptyPromptDescription: "Beschreibe deinen LARP vor dem Generieren.",
+      emptyPromptDescription:
+        "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
+      referenceImageRequiredTitle: "Bild erforderlich",
+      referenceImageRequiredDescription:
+        "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
       missingImageTitle: "Fehlendes Bild",
       missingImageDescription: "Bild " + "{{label}}" + " ist erforderlich.",
       missingFieldTitle: "Fehlendes Feld",
