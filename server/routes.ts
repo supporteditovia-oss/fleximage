@@ -40,6 +40,7 @@ import {
   isGoogleAiPromptFlagged,
 } from "./lib/oneshot-api-client";
 import { downloadAndStoreImages } from "./lib/image-storage";
+import { inferDownloadMediaMeta } from "./lib/media-download";
 import { listPublicR2Objects, uploadToR2 } from "./lib/r2-client";
 import { generateLimiter } from "./lib/rate-limiter";
 import {
@@ -3723,17 +3724,13 @@ export async function registerRoutes(
 
       const { data: larp, error } = await supabaseAdmin
         .from("generations")
-        .select("output_assets, watermarked_assets")
+        .select("output_assets, watermarked_assets, generation_type")
         .eq("id", larpId)
         .eq("user_id", authReq.userId)
         .single();
 
-      if (
-        error ||
-        !larp ||
-        !Array.isArray(larp.output_assets) ||
-        larp.output_assets.length === 0
-      ) {
+      const originals = toAssetList(larp?.output_assets);
+      if (error || !larp || originals.length === 0) {
         return res
           .status(404)
           .json({ message: tBackend(locale, "larps.notFound") });
@@ -3747,11 +3744,9 @@ export async function registerRoutes(
         .single();
       const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
 
-      const urls = isSubscriber
-        ? larp.output_assets
-        : Array.isArray(larp.watermarked_assets) && larp.watermarked_assets.length > 0
-          ? larp.watermarked_assets
-          : larp.output_assets;
+      const watermarked = toAssetList(larp.watermarked_assets);
+      const urls =
+        !isSubscriber && watermarked.length > 0 ? watermarked : originals;
 
       if (index >= urls.length) {
         return res
@@ -3759,21 +3754,21 @@ export async function registerRoutes(
           .json({ message: tBackend(locale, "larps.imageNotFound") });
       }
 
-      const imageUrl = urls[index];
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) {
+      const assetUrl = urls[index];
+      const assetResponse = await fetch(assetUrl);
+      if (!assetResponse.ok) {
         return res
           .status(502)
           .json({ message: tBackend(locale, "larps.fetchImageFailed") });
       }
 
-      const contentType =
-        imageResponse.headers.get("content-type") || "image/jpeg";
-      const extension = contentType.includes("png")
-        ? "png"
-        : contentType.includes("webp")
-          ? "webp"
-          : "jpg";
+      const generationType =
+        larp.generation_type === "video" ? "video" : "image";
+      const { contentType, extension } = inferDownloadMediaMeta(
+        assetUrl,
+        assetResponse.headers.get("content-type"),
+        generationType,
+      );
 
       const randomSuffix = Math.random().toString(36).substring(2, 8);
 
@@ -3784,10 +3779,10 @@ export async function registerRoutes(
       );
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
-      const arrayBuffer = await imageResponse.arrayBuffer();
+      const arrayBuffer = await assetResponse.arrayBuffer();
       res.send(Buffer.from(arrayBuffer));
     } catch (error: any) {
-      logger.error({ err: error }, "Error downloading larp image");
+      logger.error({ err: error }, "Error downloading larp asset");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)

@@ -22,10 +22,17 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Trash2, Loader2, Download, Share2, ArrowRight, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
+import {
+  inferDownloadExtension,
+  randomLarpDownloadName,
+  triggerBlobDownload,
+} from "@/lib/download-media";
 import { useTranslation } from "react-i18next";
 import { getLocalizedHistoryTemplateName } from "@/lib/template-utils";
 import { LARP_FULLSCREEN_VIEWER_FRAME_CLASS } from "@/components/larp/LarpResult";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
+import { VideoHistoryCardPreview } from "@/components/larp/VideoHistoryCardPreview";
+import { pickVideoPosterUrl } from "@/lib/video-poster";
 
 const SHARE_PLATFORMS = [
   {
@@ -106,26 +113,31 @@ export default function LarpHistory() {
     }
   }
 
-  async function handleDownload(larpId: string, imageIndex: number = 0) {
+  function getDownloadOptions(
+    larpId: string,
+    imageIndex: number,
+  ): { resultType: "image" | "video"; url?: string } | undefined {
+    const larp = successLarps.find((item) => item.id === larpId);
+    if (!larp) return undefined;
+    const urls = getAssetUrls(larp.outputAssets);
+    return {
+      resultType: larp.generationType === "video" ? "video" : "image",
+      url: urls[imageIndex],
+    };
+  }
+
+  async function handleDownload(
+    larpId: string,
+    imageIndex: number = 0,
+    options?: { resultType?: "image" | "video"; url?: string },
+  ) {
     try {
       const res = await authFetch(
         `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
       );
       const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const ext = blob.type.includes("png")
-        ? "png"
-        : blob.type.includes("webp")
-          ? "webp"
-          : "jpg";
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `larp-${randomSuffix}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      const ext = inferDownloadExtension(blob, options);
+      triggerBlobDownload(blob, randomLarpDownloadName(ext));
     } catch {
       toast({
         title: t("history.downloadError"),
@@ -145,10 +157,18 @@ export default function LarpHistory() {
         const res = await authFetch(
           `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
+        const larp = successLarps.find((item) => item.id === larpId);
+        const urls = larp ? getAssetUrls(larp.outputAssets) : [];
+        const isVideo = larp?.generationType === "video";
         const blob = await res.blob();
-        const file = new File([blob], "larp.jpg", {
-          type: blob.type || "image/jpeg",
+        const ext = inferDownloadExtension(blob, {
+          resultType: isVideo ? "video" : "image",
+          url: urls[imageIndex],
         });
+        const mime =
+          blob.type ||
+          (isVideo ? `video/${ext === "mov" ? "quicktime" : ext}` : "image/jpeg");
+        const file = new File([blob], randomLarpDownloadName(ext), { type: mime });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file] });
           return;
@@ -276,6 +296,7 @@ export default function LarpHistory() {
             const inputUrls = getAssetUrls(larp.inputAssets);
             const resultType =
               larp.generationType === "video" ? "video" : "image";
+            const videoPosterUrl = pickVideoPosterUrl(inputUrls);
             const hasInputImage = resultType === "image" && inputUrls.length > 0;
 
             return (
@@ -287,16 +308,13 @@ export default function LarpHistory() {
                     url: urls[0],
                     larpId: larp.id,
                     resultType,
-                    posterUrl: inputUrls[0],
+                    posterUrl: videoPosterUrl,
                   })
                 }
               >
                 {resultType === "video" ? (
-                  <VideoResultPlayer
-                    src={urls[0]}
-                    poster={inputUrls[0]}
-                    controls={false}
-                    muted
+                  <VideoHistoryCardPreview
+                    posterUrl={videoPosterUrl}
                     className="transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   />
                 ) : (
@@ -369,7 +387,11 @@ export default function LarpHistory() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDownload(larp.id);
+                        handleDownload(
+                          larp.id,
+                          0,
+                          getDownloadOptions(larp.id, 0),
+                        );
                       }}
                       className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                       title={t("history.download")}
@@ -524,7 +546,12 @@ export default function LarpHistory() {
                 <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-3 rounded-b-2xl bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
                   <button
                     type="button"
-                    onClick={() => handleDownload(selectedLarp.larpId)}
+                    onClick={() =>
+                      handleDownload(selectedLarp.larpId, 0, {
+                        resultType: selectedLarp.resultType,
+                        url: selectedLarp.url,
+                      })
+                    }
                     className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95"
                     title={t("history.download")}
                   >
@@ -679,6 +706,10 @@ export default function LarpHistory() {
                     await handleDownload(
                       shareGuide.larpId,
                       shareGuide.imageIndex,
+                      getDownloadOptions(
+                        shareGuide.larpId,
+                        shareGuide.imageIndex,
+                      ),
                     );
                     toast({ title: t("history.imageDownloaded") });
                     setShareGuide(null);
@@ -725,6 +756,10 @@ export default function LarpHistory() {
                     await handleDownload(
                       shareGuide.larpId,
                       shareGuide.imageIndex,
+                      getDownloadOptions(
+                        shareGuide.larpId,
+                        shareGuide.imageIndex,
+                      ),
                     );
                     toast({ title: t("history.imageDownloaded") });
                   }

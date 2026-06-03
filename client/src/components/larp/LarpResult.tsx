@@ -20,6 +20,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
+import {
+  inferDownloadExtension,
+  randomLarpDownloadName,
+  triggerBlobDownload,
+} from "@/lib/download-media";
 
 /** Strict 9:16 frame — height-limited, width derived from aspect ratio */
 export const LARP_RESULT_FRAME_CLASS =
@@ -107,27 +112,19 @@ export function LarpResult({
 
   async function handleDownload(imageIndex: number) {
     try {
+      const assetUrl = resultUrls[imageIndex];
+      const isVideo =
+        resultType === "video" ||
+        (assetUrl ? isVideoResultUrl(assetUrl) : false);
       const res = await authFetch(
         `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
       );
       const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const isVideo = blob.type.startsWith("video/") || blob.type === "application/octet-stream";
-      const ext = isVideo
-        ? "mp4"
-        : blob.type.includes("png")
-          ? "png"
-          : blob.type.includes("webp")
-            ? "webp"
-            : "jpg";
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `larp-${randomSuffix}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      const ext = inferDownloadExtension(blob, {
+        resultType: isVideo ? "video" : "image",
+        url: assetUrl,
+      });
+      triggerBlobDownload(blob, randomLarpDownloadName(ext));
     } catch {
       toast({ title: t("result.downloadError"), variant: "destructive" });
     }
@@ -143,10 +140,19 @@ export function LarpResult({
         const res = await authFetch(
           `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
+        const assetUrl = resultUrls[imageIndex];
+        const isVideo =
+          resultType === "video" ||
+          (assetUrl ? isVideoResultUrl(assetUrl) : false);
         const blob = await res.blob();
-        const file = new File([blob], "larp.jpg", {
-          type: blob.type || "image/jpeg",
+        const ext = inferDownloadExtension(blob, {
+          resultType: isVideo ? "video" : "image",
+          url: assetUrl,
         });
+        const mime =
+          blob.type ||
+          (isVideo ? `video/${ext === "mov" ? "quicktime" : ext}` : "image/jpeg");
+        const file = new File([blob], randomLarpDownloadName(ext), { type: mime });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file] });
           return;
