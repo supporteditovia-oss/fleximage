@@ -5,10 +5,32 @@ import {
   Check,
   Loader2,
   Lock,
+  LogOut,
+  MoreHorizontal,
+  Trash2,
   Unlock,
 } from "lucide-react";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-supabase";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type PaywallPlan = "discovery" | "essential" | "ultimate";
 export type PaywallGenerationMode = "image" | "video";
@@ -65,7 +87,11 @@ export function PaywallOverlay({
   const [isLoading, setIsLoading] = useState(false);
   const [isChoosingPlan, setIsChoosingPlan] = useState(initialChoosingPlan);
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { t } = useTranslation();
+  const { user, signOut } = useAuth();
+  const { deleteProfile, isDeleting } = useProfile();
+  const { toast } = useToast();
 
   useEffect(() => {
     setSelectedPlan(defaultPlan);
@@ -100,6 +126,25 @@ export function PaywallOverlay({
     void handleSubscribe();
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+
+    try {
+      await deleteProfile(user.id);
+      toast({
+        title: t("settings.deleteDialog.deletedTitle"),
+        description: t("settings.deleteDialog.deletedDescription"),
+      });
+      await signOut();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description: error.message,
+      });
+    }
+  };
+
   const isInsufficientCredits = variant === "insufficientCredits";
   const isVideo = generationMode === "video";
   const overlaySubtitle = isInsufficientCredits
@@ -123,6 +168,78 @@ export function PaywallOverlay({
   const ctaIconClassName = isInsufficientCredits
     ? "h-4 w-4 text-sky-500"
     : "h-4 w-4";
+  const shouldShowMobileAccountMenu = presentation === "overlay";
+  const mobileAccountMenu = shouldShowMobileAccountMenu ? (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("layout.dock.account")}
+            className="absolute right-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-black/50 md:hidden"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          sideOffset={8}
+          className="z-[130] min-w-[220px] rounded-xl border-border/80 bg-white/95 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl"
+        >
+          <DropdownMenuItem
+            onClick={() => void signOut()}
+            className="rounded-lg px-3 py-2.5 font-medium"
+          >
+            <LogOut className="h-4 w-4" />
+            {t("common.actions.signOut")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setDeleteDialogOpen(true);
+            }}
+            className="rounded-lg px-3 py-2.5 font-medium text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+            {t("settings.account.deleteAccount")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="z-[140] w-[calc(100vw-2rem)] max-w-sm rounded-2xl border-border/80 bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.deleteDialog.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.deleteDialog.irreversibleText")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="mt-0 rounded-full">
+              {t("common.actions.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeleteAccount();
+              }}
+              disabled={isDeleting}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("common.actions.delete")}
+                </span>
+              ) : (
+                t("common.actions.delete")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  ) : null;
 
   if (isChoosingPlan) {
     const isModalPresentation = presentation === "modal";
@@ -148,6 +265,7 @@ export function PaywallOverlay({
         transition={{ duration: 0.35, ease: "easeOut" }}
         className={shellClassName}
       >
+        {mobileAccountMenu}
         <div className={innerClassName}>
           <div className={headerClassName}>
             <div>
@@ -280,6 +398,7 @@ export function PaywallOverlay({
   }
   return (
     <div className="relative mx-auto h-[min(92%,620px)] max-h-full min-h-0 w-full max-w-[360px] self-center overflow-hidden rounded-lg shadow-xl">
+      {mobileAccountMenu}
       {imageUrl ? (
         <img
           src={imageUrl}
