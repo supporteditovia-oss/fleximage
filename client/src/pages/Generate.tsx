@@ -33,6 +33,12 @@ import {
   clearPaywalledResult,
 } from "@/lib/paywalled-result";
 import { savePaywallImage, getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
+import {
+  markFakePaywallReached,
+  hasReachedFakePaywall,
+  clearFakePaywallReached,
+  getFakePaywallGenerationMode,
+} from "@/lib/fake-paywall-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import {
@@ -152,7 +158,7 @@ export default function Generate() {
       window.history.replaceState({}, "", "/generate");
       clearPaywalledResult();
       setSavedPaywall(null);
-      sessionStorage.removeItem("fake_paywall_reached");
+      clearFakePaywallReached();
       clearPaywallImage();
 
       const waitForWebhookActivation = async () => {
@@ -233,6 +239,7 @@ export default function Generate() {
   useEffect(() => {
     if (profile?.is_subscriber) {
       clearPaywalledResult();
+      clearFakePaywallReached();
       return;
     }
     const saved = getPaywalledResult();
@@ -478,6 +485,49 @@ export default function Generate() {
     [],
   );
 
+  const shouldSkipFakeLoader =
+    profile?.id != null && hasReachedFakePaywall(profile.id);
+  const storedPaywallGenerationMode =
+    profile?.id != null
+      ? getFakePaywallGenerationMode(profile.id)
+      : "image";
+  const activePaywallGenerationMode =
+    generationMode === "video" ? "video" : storedPaywallGenerationMode;
+
+  // Returning non-subscribers who already finished the fake loader → unlock step
+  useEffect(() => {
+    if (isAuthLoading || isReturningFromCheckout) return;
+    if (!profile || profile.is_subscriber || profile.role === "admin") return;
+    if (!shouldSkipFakeLoader) return;
+    if (
+      taskId ||
+      isFakeGenerating ||
+      showFakePaywall ||
+      savedPaywall ||
+      unlockingLarp ||
+      pendingLoading ||
+      autoGenerateReady
+    ) {
+      return;
+    }
+
+    console.log("[Generate] Fake paywall already reached — showing unlock step");
+    startOnboardingPaywallFlow({ showPaywallImmediately: true });
+  }, [
+    isAuthLoading,
+    isReturningFromCheckout,
+    profile,
+    shouldSkipFakeLoader,
+    taskId,
+    isFakeGenerating,
+    showFakePaywall,
+    savedPaywall,
+    unlockingLarp,
+    pendingLoading,
+    autoGenerateReady,
+    startOnboardingPaywallFlow,
+  ]);
+
   const handleGenerate = async () => {
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
@@ -607,7 +657,9 @@ export default function Generate() {
         return;
       }
 
-      startOnboardingPaywallFlow();
+      startOnboardingPaywallFlow({
+        showPaywallImmediately: shouldSkipFakeLoader,
+      });
       return;
     }
 
@@ -637,7 +689,9 @@ export default function Generate() {
         return;
       }
 
-      startOnboardingPaywallFlow();
+      startOnboardingPaywallFlow({
+        showPaywallImmediately: shouldSkipFakeLoader,
+      });
       return;
     }
 
@@ -801,8 +855,15 @@ export default function Generate() {
       !isReturningFromCheckout;
 
     if (shouldUseOnboardingPaywall && (pendingTemplateId || selectedTemplate)) {
-      console.log("[Generate] Starting template onboarding fake flow...");
-      startOnboardingPaywallFlow();
+      if (shouldSkipFakeLoader) {
+        console.log(
+          "[Generate] Template onboarding: fake paywall already reached, skipping loader",
+        );
+        startOnboardingPaywallFlow({ showPaywallImmediately: true });
+      } else {
+        console.log("[Generate] Starting template onboarding fake flow...");
+        startOnboardingPaywallFlow();
+      }
       return;
     }
 
@@ -824,8 +885,10 @@ export default function Generate() {
     }
 
     if (shouldUseOnboardingPaywall) {
-      if (sessionStorage.getItem("fake_paywall_reached") === "true") {
-        console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
+      if (shouldSkipFakeLoader) {
+        console.log(
+          "[Generate] Fake paywall already reached, skipping loader directly to paywall",
+        );
         startOnboardingPaywallFlow({ showPaywallImmediately: true });
         return;
       }
@@ -914,7 +977,7 @@ export default function Generate() {
       onRevealComplete={() => {
         setIsFakeGenerating(false);
         if (fakePaywallReason === "onboarding") {
-          sessionStorage.setItem("fake_paywall_reached", "true");
+          markFakePaywallReached(profile?.id, activePaywallGenerationMode);
         }
         setShowFakePaywall(true);
       }}
@@ -983,6 +1046,11 @@ export default function Generate() {
             isFake={true}
             imageUrl={paywallImageUrl}
             defaultPlan={paywallDefaultPlan}
+            generationMode={
+              fakePaywallReason === "insufficientCredits"
+                ? insufficientCreditsContext.generationMode
+                : activePaywallGenerationMode
+            }
             variant={fakePaywallReason === "insufficientCredits" ? "insufficientCredits" : "default"}
           />
         </div>
@@ -1010,7 +1078,10 @@ export default function Generate() {
     return createPortal(
       <div className={paywallOverlayClassName}>
         <div className={paywallOverlayInnerClassName}>
-          <PaywallOverlay imageUrl={savedPaywall.resultUrls[0]} />
+          <PaywallOverlay
+            imageUrl={savedPaywall.resultUrls[0]}
+            generationMode={activePaywallGenerationMode}
+          />
         </div>
       </div>,
       document.body,
@@ -1156,6 +1227,7 @@ export default function Generate() {
             initialChoosingPlan
             presentation="modal"
             variant="insufficientCredits"
+            generationMode={insufficientCreditsContext.generationMode}
           />
         </DialogContent>
       </Dialog>

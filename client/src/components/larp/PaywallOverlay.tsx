@@ -11,6 +11,7 @@ import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 export type PaywallPlan = "discovery" | "essential" | "ultimate";
+export type PaywallGenerationMode = "image" | "video";
 
 type PlanCard = {
   id: PaywallPlan;
@@ -49,6 +50,7 @@ interface PaywallOverlayProps {
   initialChoosingPlan?: boolean;
   presentation?: "overlay" | "modal";
   variant?: "default" | "insufficientCredits";
+  generationMode?: PaywallGenerationMode;
 }
 
 export function PaywallOverlay({
@@ -58,6 +60,7 @@ export function PaywallOverlay({
   initialChoosingPlan = false,
   presentation = "overlay",
   variant = "default",
+  generationMode = "image",
 }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isChoosingPlan, setIsChoosingPlan] = useState(initialChoosingPlan);
@@ -98,15 +101,16 @@ export function PaywallOverlay({
   };
 
   const isInsufficientCredits = variant === "insufficientCredits";
+  const isVideo = generationMode === "video";
   const overlaySubtitle = isInsufficientCredits
     ? t("generate.insufficientCreditsTitle")
-    : t("paywall.subtitle");
+    : t(isVideo ? "paywall.subtitleVideo" : "paywall.subtitleImage");
   const overlayTitle = isInsufficientCredits
     ? t("generate.insufficientCreditsDescription")
-    : t("paywall.title");
+    : t(isVideo ? "paywall.titleVideo" : "paywall.titleImage");
   const primaryCta = isInsufficientCredits
     ? t("paywall.creditsCta")
-    : t("paywall.unlockCta");
+    : t(isVideo ? "paywall.unlockCtaVideo" : "paywall.unlockCtaImage");
   const textBlockClassName = isInsufficientCredits
     ? "absolute left-6 right-6 top-[48%] z-20 flex flex-col items-center text-center"
     : "absolute bottom-[116px] left-6 right-6 z-20 flex flex-col items-center text-center";

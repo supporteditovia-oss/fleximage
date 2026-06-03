@@ -9,6 +9,7 @@ import {
   History,
   FileText,
   ScrollText,
+  LifeBuoy,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -100,6 +101,7 @@ export function BottomDock() {
 
   const avatarUrl =
     user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+  const hasSupportAccess = Boolean(profile?.is_subscriber || isAdmin);
 
   const dockItemClass = (active: boolean) =>
     cn(
@@ -181,6 +183,22 @@ export function BottomDock() {
                   <span className="font-medium">{t("layout.dock.settings")}</span>
                 </Link>
               </DropdownMenuItem>
+              {hasSupportAccess && (
+                <DropdownMenuItem
+                  asChild
+                  className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
+                >
+                  <Link
+                    href="/support"
+                    className="flex w-full items-center gap-3"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
+                      <LifeBuoy className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{t("layout.dock.support")}</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
                 <>
                   <div className="my-1 h-px bg-border/40 mx-2" />
