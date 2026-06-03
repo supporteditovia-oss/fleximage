@@ -227,6 +227,53 @@ export const insertGenerationSchema = z.object({
 
 export type InsertGeneration = z.infer<typeof insertGenerationSchema>;
 
+// --- Face capture sessions ---
+export const faceCaptureSessions = pgTable("face_capture_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  status: text("status", { enum: ["completed", "failed"] })
+    .default("completed")
+    .notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const faceCaptureAssets = pgTable(
+  "face_capture_assets",
+  {
+    session_id: uuid("session_id")
+      .references(() => faceCaptureSessions.id, { onDelete: "cascade" })
+      .notNull(),
+    user_id: uuid("user_id")
+      .references(() => profiles.id, { onDelete: "cascade" })
+      .notNull(),
+    pose_id: text("pose_id", {
+      enum: ["frontal", "profile-right", "profile-left"],
+    }).notNull(),
+    storage_bucket: text("storage_bucket").default("face-captures").notNull(),
+    storage_path: text("storage_path").notNull(),
+    content_type: text("content_type").default("image/jpeg").notNull(),
+    byte_size: integer("byte_size").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.session_id, table.pose_id] }),
+  }),
+);
+
+export type FaceCaptureSession = typeof faceCaptureSessions.$inferSelect;
+export type FaceCaptureAsset = typeof faceCaptureAssets.$inferSelect;
+
 // --- Favorite Templates ---
 export const favoriteTemplates = pgTable("favorite_templates", {
   id: uuid("id").primaryKey().defaultRandom(),

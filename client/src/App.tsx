@@ -13,6 +13,7 @@ import AuthPage from "@/pages/Auth";
 import AdminPage from "@/pages/Admin";
 import AdminTemplates from "@/pages/AdminTemplates";
 import Generate from "@/pages/Generate";
+import FaceCapture from "@/pages/FaceCapture";
 import LarpHistory from "@/pages/LarpHistory";
 import Settings from "@/pages/Settings";
 import MentionsLegales from "@/pages/MentionsLegales";
@@ -231,6 +232,10 @@ function Router() {
 
       <Route path="/generate">
         <ProtectedRoute component={Generate} />
+      </Route>
+
+      <Route path="/face-capture">
+        <ProtectedRoute component={FaceCapture} />
       </Route>
 
       <Route path="/debug-generate">

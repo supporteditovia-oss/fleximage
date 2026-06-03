@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import { randomUUID } from "crypto";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { SUPPORTED_LOCALES } from "@shared/locales";
@@ -50,6 +51,47 @@ import { registerStripeRoutes } from "./stripe-routes";
 
 const IMAGE_CREDIT_COST = 5;
 const VIDEO_CREDIT_COST = 30;
+const FACE_CAPTURE_BUCKET = "face-captures";
+const FACE_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
+const MAX_FACE_CAPTURE_BYTES = 10 * 1024 * 1024;
+
+const faceLandmarkSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number().optional(),
+  visibility: z.number().optional(),
+});
+
+const faceCaptureBodySchema = z.object({
+  captures: z
+    .array(
+      z.object({
+        poseId: z.enum(FACE_CAPTURE_POSES),
+        imageBase64: z.string().min(1),
+        timestamp: z.number(),
+        landmarks: z.array(faceLandmarkSchema).optional().default([]),
+        landmarkFrameWidth: z.number().nullable().optional(),
+        landmarkFrameHeight: z.number().nullable().optional(),
+      }),
+    )
+    .length(FACE_CAPTURE_POSES.length),
+});
+
+function decodeJpegBase64(input: string): Buffer {
+  const base64 = input.includes(",") ? input.split(",").pop() ?? "" : input;
+  const buffer = Buffer.from(base64, "base64");
+
+  if (
+    buffer.length === 0 ||
+    buffer.length > MAX_FACE_CAPTURE_BYTES ||
+    buffer[0] !== 0xff ||
+    buffer[1] !== 0xd8
+  ) {
+    throw new Error("invalid_face_capture_image");
+  }
+
+  return buffer;
+}
 
 /**
  * Extract image URLs from the Kie.ai resultJson, regardless of the exact structure.
@@ -531,6 +573,127 @@ export async function registerRoutes(
         .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
+
+  // =============================================
+  // FACE CAPTURES
+  // =============================================
+
+  app.post(
+    api.faceCaptures.create.path,
+    requireAuth,
+    validateRequest(faceCaptureBodySchema),
+    async (req, res) => {
+      const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
+      const supabaseAdmin = getSupabaseAdmin();
+      const sessionId = randomUUID();
+      const uploadedPaths: string[] = [];
+      let sessionInserted = false;
+
+      try {
+        const body = req.body as z.infer<typeof faceCaptureBodySchema>;
+        const poseIds = body.captures.map((capture) => capture.poseId);
+        const hasExpectedPoseOrder = FACE_CAPTURE_POSES.every(
+          (poseId, index) => poseIds[index] === poseId,
+        );
+
+        if (!hasExpectedPoseOrder) {
+          return res.status(400).json({
+            message: "Expected frontal, profile-right, and profile-left captures.",
+          });
+        }
+
+        const decodedCaptures = body.captures.map((capture) => ({
+          ...capture,
+          buffer: decodeJpegBase64(capture.imageBase64),
+        }));
+
+        for (const capture of decodedCaptures) {
+          const storagePath = `users/${authReq.userId}/sessions/${sessionId}/${capture.poseId}.jpg`;
+          const { error: uploadError } = await supabaseAdmin.storage
+            .from(FACE_CAPTURE_BUCKET)
+            .upload(storagePath, capture.buffer, {
+              contentType: "image/jpeg",
+              upsert: false,
+            });
+
+          if (uploadError) throw uploadError;
+          uploadedPaths.push(storagePath);
+        }
+
+        const { error: sessionError } = await supabaseAdmin
+          .from("face_capture_sessions")
+          .insert({
+            id: sessionId,
+            user_id: authReq.userId,
+            status: "completed",
+            metadata: {
+              source: "larpking_web",
+              pose_count: decodedCaptures.length,
+            },
+          });
+
+        if (sessionError) throw sessionError;
+        sessionInserted = true;
+
+        const { error: assetsError } = await supabaseAdmin
+          .from("face_capture_assets")
+          .insert(
+            decodedCaptures.map((capture) => ({
+              session_id: sessionId,
+              user_id: authReq.userId,
+              pose_id: capture.poseId,
+              storage_bucket: FACE_CAPTURE_BUCKET,
+              storage_path: `users/${authReq.userId}/sessions/${sessionId}/${capture.poseId}.jpg`,
+              content_type: "image/jpeg",
+              byte_size: capture.buffer.length,
+              metadata: {
+                timestamp: capture.timestamp,
+                landmarks: capture.landmarks,
+                landmarkFrameWidth: capture.landmarkFrameWidth ?? null,
+                landmarkFrameHeight: capture.landmarkFrameHeight ?? null,
+              },
+            })),
+          );
+
+        if (assetsError) throw assetsError;
+
+        res.status(201).json({
+          sessionId,
+          captures: decodedCaptures.map((capture) => ({
+            poseId: capture.poseId,
+            byteSize: capture.buffer.length,
+          })),
+        });
+      } catch (error: any) {
+        if (uploadedPaths.length > 0) {
+          await supabaseAdmin.storage
+            .from(FACE_CAPTURE_BUCKET)
+            .remove(uploadedPaths)
+            .catch(() => undefined);
+        }
+        if (sessionInserted) {
+          try {
+            await supabaseAdmin
+              .from("face_capture_sessions")
+              .delete()
+              .eq("id", sessionId);
+          } catch {
+            // Best-effort cleanup only.
+          }
+        }
+
+        logger.error({ err: error }, "Error storing face captures");
+        if (error?.message === "invalid_face_capture_image") {
+          return res.status(400).json({ message: "Invalid face capture image." });
+        }
+
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
+      }
+    },
+  );
 
   // =============================================
   // PROFILE (SELF-SERVICE)

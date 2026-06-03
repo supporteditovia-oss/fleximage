@@ -137,6 +137,12 @@ export const api = {
       path: "/api/larps/can-generate",
     },
   },
+  faceCaptures: {
+    create: {
+      method: "POST" as const,
+      path: "/api/face-captures",
+    },
+  },
   admin: {
     credits: {
       method: "POST" as const,
