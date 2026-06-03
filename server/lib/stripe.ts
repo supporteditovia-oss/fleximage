@@ -29,7 +29,7 @@ const PLAN_DEFINITIONS: Record<
   discovery: {
     name: "Decouverte",
     monthlyAmount: 890,
-    creditsPerCycle: 2500,
+    creditsPerCycle: 250,
     envKeys: ["STRIPE_DISCOVERY_PRICE_ID"],
     legacyEnvKeys: [
       "STRIPE_WEEKLY_PRICE_ID",
@@ -40,14 +40,14 @@ const PLAN_DEFINITIONS: Record<
   essential: {
     name: "Essentiel",
     monthlyAmount: 1990,
-    creditsPerCycle: 9500,
+    creditsPerCycle: 1100,
     envKeys: ["STRIPE_ESSENTIAL_PRICE_ID"],
     legacyEnvKeys: ["STRIPE_MONTHLY_PRICE_ID", "STRIPE_VIDEO_PRICE_ID"],
   },
   ultimate: {
     name: "Ultimate",
     monthlyAmount: 3990,
-    creditsPerCycle: 1_000_000,
+    creditsPerCycle: 2500,
     envKeys: ["STRIPE_ULTIMATE_PRICE_ID"],
   },
 };

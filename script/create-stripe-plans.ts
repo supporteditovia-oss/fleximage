@@ -11,6 +11,8 @@ type PlanDefinition = {
   lookupKey: string;
   amount: number;
   credits: number;
+  displayCredits: number;
+  bonusCredits: number;
   badge: string;
 };
 
@@ -21,30 +23,36 @@ const plans: PlanDefinition[] = [
     key: "discovery",
     envKey: "STRIPE_DISCOVERY_PRICE_ID",
     name: "LarpKing Decouverte",
-    description: "2500 credits par mois pour explorer et tester des idees.",
+    description: "250 credits par mois pour explorer et tester des idees.",
     lookupKey: "larpking_discovery_monthly_eur",
     amount: 890,
-    credits: 2500,
+    credits: 250,
+    displayCredits: 250,
+    bonusCredits: 0,
     badge: "",
   },
   {
     key: "essential",
     envKey: "STRIPE_ESSENTIAL_PRICE_ID",
     name: "LarpKing Essentiel",
-    description: "9500 credits par mois pour les createurs reguliers.",
+    description: "850 credits par mois + 250 credits offerts pour les createurs reguliers.",
     lookupKey: "larpking_essential_monthly_eur",
     amount: 1990,
-    credits: 9500,
+    credits: 1100,
+    displayCredits: 850,
+    bonusCredits: 250,
     badge: "best_value",
   },
   {
     key: "ultimate",
     envKey: "STRIPE_ULTIMATE_PRICE_ID",
     name: "LarpKing Ultimate",
-    description: "Acces tres haut volume pour les createurs sans limites.",
+    description: "2500 credits par mois pour les createurs intensifs.",
     lookupKey: "larpking_ultimate_monthly_eur",
     amount: 3990,
-    credits: 1_000_000,
+    credits: 2500,
+    displayCredits: 2500,
+    bonusCredits: 0,
     badge: "exclusive",
   },
 ];
@@ -105,6 +113,9 @@ async function findOrCreateProduct(
         ...existing.metadata,
         app: "larpking",
         larpking_plan: plan.key,
+        credits_per_cycle: String(plan.credits),
+        display_credits_per_cycle: String(plan.displayCredits),
+        bonus_credits_per_cycle: String(plan.bonusCredits),
       },
     });
     return existing.id;
@@ -116,6 +127,9 @@ async function findOrCreateProduct(
     metadata: {
       app: "larpking",
       larpking_plan: plan.key,
+      credits_per_cycle: String(plan.credits),
+      display_credits_per_cycle: String(plan.displayCredits),
+      bonus_credits_per_cycle: String(plan.bonusCredits),
     },
   });
 
@@ -133,6 +147,15 @@ async function findOrCreatePrice(
     limit: 1,
   });
   const existing = prices.data[0];
+  const metadata = {
+    app: "larpking",
+    plan_type: plan.key,
+    credits_per_cycle: String(plan.credits),
+    display_credits_per_cycle: String(plan.displayCredits),
+    bonus_credits_per_cycle: String(plan.bonusCredits),
+    billing_interval: "month",
+    badge: plan.badge,
+  };
 
   if (existing) {
     const interval = existing.recurring?.interval;
@@ -145,6 +168,12 @@ async function findOrCreatePrice(
         `Existing Stripe price ${existing.id} for ${plan.lookupKey} has unexpected amount/currency/interval`,
       );
     }
+    await stripe.prices.update(existing.id, {
+      metadata: {
+        ...existing.metadata,
+        ...metadata,
+      },
+    });
     return existing.id;
   }
 
@@ -154,13 +183,7 @@ async function findOrCreatePrice(
     unit_amount: plan.amount,
     recurring: { interval: "month" },
     lookup_key: plan.lookupKey,
-    metadata: {
-      app: "larpking",
-      plan_type: plan.key,
-      credits_per_cycle: String(plan.credits),
-      billing_interval: "month",
-      badge: plan.badge,
-    },
+    metadata,
   });
 
   return created.id;

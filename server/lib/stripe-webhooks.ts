@@ -15,7 +15,6 @@ import {
 function parsePlanMetadata(metadata: Stripe.Metadata | null | undefined, priceId: string) {
   const fallback = getPlanForPriceId(priceId);
   const planType = normalizeStripePlanType(metadata?.plan_type || fallback.planType);
-  const credits = Number(metadata?.credits_per_cycle);
   const billingInterval =
     metadata?.billing_interval === "month" || metadata?.billing_interval === "week"
       ? metadata.billing_interval
@@ -24,7 +23,7 @@ function parsePlanMetadata(metadata: Stripe.Metadata | null | undefined, priceId
   return {
     ...getStripePlanConfig(planType),
     priceId: priceId || fallback.priceId,
-    creditsPerCycle: Number.isFinite(credits) && credits > 0 ? credits : fallback.creditsPerCycle,
+    creditsPerCycle: getStripePlanConfig(planType).creditsPerCycle,
     billingInterval: billingInterval as BillingInterval,
     planType: planType as StripePlanType,
   };
@@ -126,6 +125,12 @@ export async function handleCheckoutCompleted(
 
   const supabase = getSupabaseAdmin();
 
+  const { data: existingSubscription } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
   // Update profile with Stripe IDs and subscriber status
   const { error: profileErr } = await supabase
     .from("profiles")
@@ -196,7 +201,10 @@ export async function handleCheckoutCompleted(
     throw creditErr;
   }
 
-  logger.info({ userId, subscriptionId }, "Subscription activated via checkout");
+  logger.info(
+    { userId, subscriptionId, alreadyKnown: Boolean(existingSubscription) },
+    "Subscription activated via checkout",
+  );
 
   // Discord notification
   const { data: notifProfile } = await supabase
@@ -239,7 +247,7 @@ export async function handleInvoicePaid(
   // Find subscription by Stripe subscription ID
   const { data: subscriptionRow } = await supabase
     .from("subscriptions")
-    .select("id, user_id, price_id, plan_type, credits_per_cycle")
+    .select("id, user_id, price_id, plan_type")
     .eq("stripe_subscription_id", subscriptionId)
     .single();
 
@@ -252,8 +260,7 @@ export async function handleInvoicePaid(
   }
 
   const planConfig = getPlanForPriceId(subscriptionRow.price_id || "");
-  const creditsPerCycle =
-    subscriptionRow.credits_per_cycle || planConfig.creditsPerCycle;
+  const creditsPerCycle = planConfig.creditsPerCycle;
 
   try {
     await applyCreditDelta({

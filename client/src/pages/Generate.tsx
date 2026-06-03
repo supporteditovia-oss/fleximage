@@ -17,6 +17,12 @@ import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
+import { InsufficientCreditsDialog } from "@/components/generate/InsufficientCreditsDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,10 +50,15 @@ import { useLocation } from "wouter";
 
 const FAKE_LOADER_MIN_DELAY_MS = 10_000;
 const FAKE_LOADER_MAX_DELAY_MS = 20_000;
-const IMAGE_CREDIT_COST = 5;
-const VIDEO_CREDIT_COST = 30;
+const IMAGE_CREDIT_COST = 10;
+const VIDEO_CREDIT_COST = 25;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
 type GenerationMode = "image" | "video";
+type InsufficientCreditsContext = {
+  currentCredits: number;
+  requiredCredits: number;
+  generationMode: GenerationMode;
+};
 
 function getRandomFakeLoaderDelay() {
   return (
@@ -86,6 +97,14 @@ export default function Generate() {
   const [fakePaywallReason, setFakePaywallReason] =
     useState<FakePaywallReason>("onboarding");
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
+  const [insufficientCreditsOpen, setInsufficientCreditsOpen] = useState(false);
+  const [creditsPaywallOpen, setCreditsPaywallOpen] = useState(false);
+  const [insufficientCreditsContext, setInsufficientCreditsContext] =
+    useState<InsufficientCreditsContext>({
+      currentCredits: 0,
+      requiredCredits: IMAGE_CREDIT_COST,
+      generationMode: "image",
+    });
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     larpId: string;
@@ -128,6 +147,7 @@ export default function Generate() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
+      const checkoutSessionId = params.get("session_id");
       const paywalled = getPaywalledResult();
       window.history.replaceState({}, "", "/generate");
       clearPaywalledResult();
@@ -137,7 +157,12 @@ export default function Generate() {
 
       const waitForWebhookActivation = async () => {
         for (let attempt = 0; attempt < 6; attempt += 1) {
-          const res = await authFetch("/api/stripe/verify-session", { method: "POST" });
+          const res = await authFetch("/api/stripe/verify-session", {
+            method: "POST",
+            body: checkoutSessionId
+              ? JSON.stringify({ session_id: checkoutSessionId })
+              : undefined,
+          });
           const data = await res.json();
           console.log("[Checkout] verify-session result:", data);
           if (data.active) return true;
@@ -415,13 +440,43 @@ export default function Generate() {
       reader.readAsDataURL(file);
     });
 
-  const startInsufficientCreditsFlow = useCallback(() => {
-    setPendingLoading(false);
-    setShowFakePaywall(false);
+  const startInsufficientCreditsFlow = useCallback(
+    (context?: Partial<InsufficientCreditsContext>) => {
+      const requiredCredits =
+        context?.requiredCredits ??
+        (generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST);
+
+      setPendingLoading(false);
+      setShowFakePaywall(false);
+      setIsFakeGenerating(false);
+      setPaywallDefaultPlan("essential");
+      setFakePaywallReason("insufficientCredits");
+      setInsufficientCreditsContext({
+        currentCredits: context?.currentCredits ?? profile?.credits ?? 0,
+        requiredCredits,
+        generationMode: context?.generationMode ?? generationMode,
+      });
+      setInsufficientCreditsOpen(true);
+    },
+    [generationMode, profile?.credits],
+  );
+
+  const openCreditsPaywall = useCallback(() => {
+    setInsufficientCreditsOpen(false);
     setPaywallDefaultPlan("essential");
-    setFakePaywallReason("insufficientCredits");
-    setIsFakeGenerating(true);
+    setCreditsPaywallOpen(true);
   }, []);
+
+  const startOnboardingPaywallFlow = useCallback(
+    (options?: { showPaywallImmediately?: boolean }) => {
+      const showPaywallImmediately = options?.showPaywallImmediately ?? false;
+      setPendingLoading(false);
+      setShowFakePaywall(showPaywallImmediately);
+      setFakePaywallReason("onboarding");
+      setIsFakeGenerating(!showPaywallImmediately);
+    },
+    [],
+  );
 
   const handleGenerate = async () => {
     const selectedOrPendingTemplateId =
@@ -501,6 +556,24 @@ export default function Generate() {
       ? selectedTemplate?.prompt_text?.trim() || " "
       : prompt.trim();
 
+    const saveCurrentDraftForCheckout = async () => {
+      try {
+        await savePendingLarp({
+          prompt: serverPrompt,
+          images: isTemplateGeneration
+            ? []
+            : filesForGeneration.map((f) => f.file),
+          generationMode,
+          templateId: selectedOrPendingTemplateId,
+          timestamp: Date.now(),
+        });
+        return true;
+      } catch (error) {
+        console.error("[Generate] Failed to save pending generation draft:", error);
+        return false;
+      }
+    };
+
     let templateFaceImages: string[] | undefined;
     if (isTemplateGeneration && useFaceAsset && faceCaptureReady) {
       try {
@@ -517,29 +590,15 @@ export default function Generate() {
 
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
-    if (
-      !isReturningFromCheckout &&
+    const shouldUseOnboardingPaywall =
       profile &&
+      !profile.is_subscriber &&
       profile.role !== "admin" &&
-      profile.credits < requiredCredits
-    ) {
-      startInsufficientCreditsFlow();
-      return;
-    }
+      !isReturningFromCheckout;
 
-    if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
-      try {
-        await savePendingLarp({
-          prompt: serverPrompt,
-          images: isTemplateGeneration
-            ? []
-            : filesForGeneration.map((f) => f.file),
-          generationMode,
-          templateId: selectedOrPendingTemplateId,
-          timestamp: Date.now(),
-        });
-      } catch (error) {
-        console.error("[Generate] Failed to save onboarding LARP:", error);
+    if (shouldUseOnboardingPaywall && isTemplateGeneration) {
+      const saved = await saveCurrentDraftForCheckout();
+      if (!saved) {
         toast({
           variant: "destructive",
           title: t("common.messages.error"),
@@ -548,10 +607,37 @@ export default function Generate() {
         return;
       }
 
-      setPendingLoading(false);
-      setShowFakePaywall(false);
-      setFakePaywallReason("onboarding");
-      setIsFakeGenerating(true);
+      startOnboardingPaywallFlow();
+      return;
+    }
+
+    if (
+      !isReturningFromCheckout &&
+      profile &&
+      profile.role !== "admin" &&
+      profile.credits < requiredCredits
+    ) {
+      await saveCurrentDraftForCheckout();
+      startInsufficientCreditsFlow({
+        currentCredits: profile.credits,
+        requiredCredits,
+        generationMode,
+      });
+      return;
+    }
+
+    if (shouldUseOnboardingPaywall) {
+      const saved = await saveCurrentDraftForCheckout();
+      if (!saved) {
+        toast({
+          variant: "destructive",
+          title: t("common.messages.error"),
+          description: t("generate.serverRetry"),
+        });
+        return;
+      }
+
+      startOnboardingPaywallFlow();
       return;
     }
 
@@ -559,7 +645,12 @@ export default function Generate() {
     // the cached data is stale (user just got credits via Stripe).
     // Server will still validate credits.
     if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
-      startInsufficientCreditsFlow();
+      await saveCurrentDraftForCheckout();
+      startInsufficientCreditsFlow({
+        currentCredits: profile?.credits ?? 0,
+        requiredCredits,
+        generationMode,
+      });
       return;
     }
 
@@ -651,7 +742,12 @@ export default function Generate() {
           normalizedMessage.includes("credits") ||
           normalizedMessage.includes("jeton"))
       ) {
-        startInsufficientCreditsFlow();
+        await saveCurrentDraftForCheckout();
+        startInsufficientCreditsFlow({
+          currentCredits: profile?.credits ?? 0,
+          requiredCredits,
+          generationMode,
+        });
         return;
       }
       toast({
@@ -698,6 +794,18 @@ export default function Generate() {
       return;
     }
 
+    const shouldUseOnboardingPaywall =
+      profile &&
+      !profile.is_subscriber &&
+      profile.role !== "admin" &&
+      !isReturningFromCheckout;
+
+    if (shouldUseOnboardingPaywall && (pendingTemplateId || selectedTemplate)) {
+      console.log("[Generate] Starting template onboarding fake flow...");
+      startOnboardingPaywallFlow();
+      return;
+    }
+
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
     if (
@@ -707,23 +815,23 @@ export default function Generate() {
       profile.credits < requiredCredits
     ) {
       console.log("[Generate] Starting insufficient credits fake flow...");
-      startInsufficientCreditsFlow();
+      startInsufficientCreditsFlow({
+        currentCredits: profile.credits,
+        requiredCredits,
+        generationMode,
+      });
       return;
     }
 
-    if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
+    if (shouldUseOnboardingPaywall) {
       if (sessionStorage.getItem("fake_paywall_reached") === "true") {
         console.log("[Generate] Fake paywall already reached, skipping loader directly to paywall");
-        setPendingLoading(false);
-        setFakePaywallReason("onboarding");
-        setShowFakePaywall(true);
+        startOnboardingPaywallFlow({ showPaywallImmediately: true });
         return;
       }
 
       console.log("[Generate] Starting FAKE generation flow...");
-      setPendingLoading(false);
-      setFakePaywallReason("onboarding");
-      setIsFakeGenerating(true);
+      startOnboardingPaywallFlow();
       return;
     }
 
@@ -1029,6 +1137,28 @@ export default function Generate() {
           onDeselectTemplate={deselectTemplate}
         />
       </div>
+
+      <InsufficientCreditsDialog
+        open={insufficientCreditsOpen}
+        onOpenChange={setInsufficientCreditsOpen}
+        currentCredits={insufficientCreditsContext.currentCredits}
+        requiredCredits={insufficientCreditsContext.requiredCredits}
+        generationMode={insufficientCreditsContext.generationMode}
+        onUpgrade={openCreditsPaywall}
+      />
+
+      <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
+        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
+          <DialogTitle className="sr-only">{t("paywall.chooseTitle")}</DialogTitle>
+          <PaywallOverlay
+            imageUrl=""
+            defaultPlan={paywallDefaultPlan}
+            initialChoosingPlan
+            presentation="modal"
+            variant="insufficientCredits"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

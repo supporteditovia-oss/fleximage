@@ -53,8 +53,8 @@ import {
 } from "./lib/i18n";
 import { registerStripeRoutes } from "./stripe-routes";
 
-const IMAGE_CREDIT_COST = 5;
-const VIDEO_CREDIT_COST = 30;
+const IMAGE_CREDIT_COST = 10;
+const VIDEO_CREDIT_COST = 25;
 const FACE_CAPTURE_BUCKET = "face-captures";
 const FACE_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
 const MAX_FACE_CAPTURE_BYTES = 10 * 1024 * 1024;
@@ -1220,6 +1220,51 @@ async function deductGenerationCredits(
     idempotencyKey: `generation:${params.generationId}:charge`,
     metadata: {
       source: params.source,
+      ...params.metadata,
+    },
+  });
+
+  return error;
+}
+
+async function refundGenerationCreditsIfCharged(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  params: {
+    userId: string;
+    generationId: string;
+    source: string;
+    failMessage?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const { data: charges, error: chargeFetchErr } = await supabaseAdmin
+    .from("credit_ledger")
+    .select("delta")
+    .eq("generation_id", params.generationId)
+    .eq("reason", "generation_charge");
+
+  if (chargeFetchErr) {
+    throw chargeFetchErr;
+  }
+
+  const refundAmount = (charges ?? []).reduce((total, entry) => {
+    const delta = Number(entry.delta);
+    return delta < 0 ? total + Math.abs(delta) : total;
+  }, 0);
+
+  if (refundAmount === 0) {
+    return null;
+  }
+
+  const { error } = await applyCreditDelta(supabaseAdmin, {
+    userId: params.userId,
+    delta: refundAmount,
+    reason: "refund",
+    generationId: params.generationId,
+    idempotencyKey: `generation:${params.generationId}:refund`,
+    metadata: {
+      source: params.source,
+      fail_message: params.failMessage ?? null,
       ...params.metadata,
     },
   });
@@ -3098,6 +3143,25 @@ export async function registerRoutes(
 
       // If already terminal, return cached result
       if (larp.status === "succeeded" || larp.status === "failed") {
+        if (larp.status === "failed") {
+          const refundErr = await refundGenerationCreditsIfCharged(supabaseAdmin, {
+            userId: authReq.userId,
+            generationId: larp.id,
+            source: "cached_failed_status",
+            failMessage: larp.fail_message,
+            metadata: {
+              provider: larp.provider,
+              provider_task_id: larp.provider_task_id,
+            },
+          });
+          if (refundErr) {
+            logger.error(
+              { err: refundErr, larpId: larp.id },
+              "Failed to refund failed generation credits",
+            );
+          }
+        }
+
         // Check subscriber status for watermark decision
         const { data: profile } = await supabaseAdmin
           .from("profiles")
@@ -3435,6 +3499,11 @@ export async function registerRoutes(
               );
             }
           }
+
+          if (resultUrls.length === 0) {
+            apiStatus = "fail";
+            apiFailMsg = tBackend(locale, "larps.taskCreateFailed");
+          }
         }
 
         // Check subscriber status
@@ -3445,6 +3514,27 @@ export async function registerRoutes(
           .single();
         const isSubscriber =
           profile?.is_subscriber || profile?.role === "admin";
+
+        if (apiStatus === "fail") {
+          const refundErr = await refundGenerationCreditsIfCharged(supabaseAdmin, {
+            userId: authReq.userId,
+            generationId: larp.id,
+            source: "generation_failed",
+            failMessage: apiFailMsg,
+            metadata: {
+              provider: larp.provider,
+              provider_task_id: larp.provider_task_id,
+              result_type: resultType,
+            },
+          });
+          if (refundErr) {
+            logger.error(
+              { err: refundErr, larpId: larp.id },
+              "Failed to refund failed generation credits",
+            );
+            throw refundErr;
+          }
+        }
 
         // Update record
         await supabaseAdmin
@@ -3831,6 +3921,139 @@ export async function registerRoutes(
         res.json(data);
       } catch (error: any) {
         logger.error({ err: error }, "Error updating user profile");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  app.get(
+    api.admin.userActivity.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .select("id, email, full_name, role, is_subscriber, credits, generation_count, created_at")
+          .eq("id", id)
+          .single();
+
+        if (profileError || !profile) {
+          return res.status(404).json({ message: "Utilisateur introuvable" });
+        }
+
+        const [generationsResult, ledgerResult] = await Promise.all([
+          supabaseAdmin
+            .from("generations")
+            .select("*, templates(name, name_en, template_categories(slug, name, name_en))")
+            .eq("user_id", id)
+            .order("created_at", { ascending: false })
+            .limit(100),
+          supabaseAdmin
+            .from("credit_ledger")
+            .select("id, generation_id, subscription_id, delta, balance_after, reason, metadata, created_at")
+            .eq("user_id", id)
+            .order("created_at", { ascending: false })
+            .limit(200),
+        ]);
+
+        if (generationsResult.error) throw generationsResult.error;
+        if (ledgerResult.error) throw ledgerResult.error;
+
+        const ledgerEntries = ledgerResult.data ?? [];
+        const creditsByGeneration = ledgerEntries.reduce((acc, entry) => {
+          if (!entry.generation_id) return acc;
+          const existing = acc.get(entry.generation_id) ?? {
+            charged: 0,
+            refunded: 0,
+            entries: [] as any[],
+          };
+          if (entry.reason === "generation_charge" && entry.delta < 0) {
+            existing.charged += Math.abs(entry.delta);
+          }
+          if (entry.reason === "refund" && entry.delta > 0) {
+            existing.refunded += entry.delta;
+          }
+          existing.entries.push({
+            id: entry.id,
+            delta: entry.delta,
+            balanceAfter: entry.balance_after,
+            reason: entry.reason,
+            createdAt: entry.created_at,
+            metadata: entry.metadata ?? {},
+          });
+          acc.set(entry.generation_id, existing);
+          return acc;
+        }, new Map<string, { charged: number; refunded: number; entries: any[] }>());
+
+        const generations = (generationsResult.data ?? []).map((row) => {
+          const credits = creditsByGeneration.get(row.id) ?? {
+            charged: 0,
+            refunded: 0,
+            entries: [],
+          };
+          return {
+            ...toLarpDto(row),
+            prompt: row.prompt,
+            provider: row.provider,
+            creditCost: row.credit_cost ?? 0,
+            creditsCharged: credits.charged,
+            creditsRefunded: credits.refunded,
+            netCredits: credits.charged - credits.refunded,
+            creditEntries: credits.entries,
+          };
+        });
+
+        const totalCharged = ledgerEntries
+          .filter((entry) => entry.reason === "generation_charge" && entry.delta < 0)
+          .reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+        const totalRefunded = ledgerEntries
+          .filter((entry) => entry.reason === "refund" && entry.delta > 0)
+          .reduce((sum, entry) => sum + entry.delta, 0);
+        const subscriptionGranted = ledgerEntries
+          .filter((entry) => entry.reason === "subscription_grant" && entry.delta > 0)
+          .reduce((sum, entry) => sum + entry.delta, 0);
+        const adminAdjustments = ledgerEntries
+          .filter((entry) => entry.reason === "admin_adjustment")
+          .reduce((sum, entry) => sum + entry.delta, 0);
+
+        res.json({
+          profile: {
+            id: profile.id,
+            email: profile.email,
+            fullName: profile.full_name,
+            role: profile.role,
+            isSubscriber: profile.is_subscriber,
+            credits: profile.credits,
+            generationCount: profile.generation_count,
+            createdAt: profile.created_at,
+          },
+          summary: {
+            generationCount: generations.length,
+            failedGenerations: generations.filter((item) => item.status === "fail").length,
+            totalCharged,
+            totalRefunded,
+            netSpent: totalCharged - totalRefunded,
+            subscriptionGranted,
+            adminAdjustments,
+          },
+          generations,
+          creditLedger: ledgerEntries.map((entry) => ({
+            id: entry.id,
+            generationId: entry.generation_id,
+            subscriptionId: entry.subscription_id,
+            delta: entry.delta,
+            balanceAfter: entry.balance_after,
+            reason: entry.reason,
+            metadata: entry.metadata ?? {},
+            createdAt: entry.created_at,
+          })),
+        });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error fetching admin user activity");
         res.status(500).json({ message: error.message });
       }
     },

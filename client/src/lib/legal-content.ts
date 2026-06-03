@@ -40,37 +40,38 @@ const COMPANY_STATUS_FR = "Auto-entrepreneur (Entreprise Individuelle)";
 const COMPANY_STATUS_EN = "Sole proprietor";
 const COMPANY_STATUS_ES = "Autonomo / empresa individual";
 const COMPANY_STATUS_DE = "Einzelunternehmer";
-const COMPANY_SIRET = "100 452 200 00015";
-const COMPANY_ADDRESS = "11 rue de Bourgogne, 38000 Grenoble, France";
+const COMPANY_TRADE_NAME = "DEVINCK";
+const COMPANY_SIRET = "944 582 600 00010";
+const COMPANY_ADDRESS = "28 Rue Nicolas Leblanc, 59000 Lille, France";
 
 const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   fr: [
-    { label: "Nom commercial", text: "LarpKing" },
-    { label: "Editeur", text: SERVICE_NAME },
+    { label: "Nom commercial", text: COMPANY_TRADE_NAME },
+    { label: "Editeur", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
     { label: "Statut", text: COMPANY_STATUS_FR },
     { label: "SIRET", text: COMPANY_SIRET },
     { label: "Adresse", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
   ],
   en: [
-    { label: "Trade name", text: "LarpKing" },
-    { label: "Publisher", text: SERVICE_NAME },
+    { label: "Trade name", text: COMPANY_TRADE_NAME },
+    { label: "Publisher", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
     { label: "Status", text: COMPANY_STATUS_EN },
     { label: "Registration", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Address", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
   ],
   es: [
-    { label: "Nombre comercial", text: "LarpKing" },
-    { label: "Editor", text: SERVICE_NAME },
+    { label: "Nombre comercial", text: COMPANY_TRADE_NAME },
+    { label: "Editor", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
     { label: "Estatuto", text: COMPANY_STATUS_ES },
     { label: "Registro", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Direccion", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
   ],
   de: [
-    { label: "Handelsname", text: "LarpKing" },
-    { label: "Herausgeber", text: SERVICE_NAME },
+    { label: "Handelsname", text: COMPANY_TRADE_NAME },
+    { label: "Herausgeber", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
     { label: "Status", text: COMPANY_STATUS_DE },
     { label: "Registrierung", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Adresse", text: COMPANY_ADDRESS },
@@ -271,7 +272,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Objet",
             paragraphs: [
               "Les presentes Conditions Generales de Vente (CGV) encadrent la souscription, le paiement et l'utilisation des offres payantes LarpKing.",
-              `Le vendeur est ${SERVICE_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `Le vendeur est ${COMPANY_TRADE_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
             ],
           },
           {
@@ -281,9 +282,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               "Les offres payantes donnent acces a des credits et fonctionnalites supplementaires pour generer, conserver, telecharger ou partager des images.",
             ],
             bullets: [
-              { text: "Formule Decouverte : 2500 credits par cycle de facturation mensuel." },
-              { text: "Formule Essentiel : 9500 credits par cycle de facturation mensuel." },
-              { text: "Formule Ultimate : tres haut volume de credits par cycle de facturation mensuel." },
+              { text: "Formule Decouverte : 250 credits par cycle de facturation mensuel." },
+              { text: "Formule Essentiel : 850 credits par cycle de facturation mensuel + 250 credits offerts." },
+              { text: "Formule Ultimate : 2500 credits par cycle de facturation mensuel." },
               { text: "Acces aux templates et options disponibles selon l'offre active." },
               { text: "Images generees accessibles dans l'historique du compte tant qu'elles sont conservees par le service." },
               { text: "Les credits non utilises ne constituent pas une monnaie, ne sont pas remboursables en especes et peuvent expirer a la fin du cycle selon l'offre." },
@@ -503,7 +504,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Directeur de la publication",
-            paragraphs: [`Le directeur de la publication est ${SERVICE_NAME}, joignable a ${CONTACT_EMAIL}.`],
+            paragraphs: [`Le directeur de la publication est ${COMPANY_TRADE_NAME}, joignable a ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -674,7 +675,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Purpose",
             paragraphs: [
               "These Sales Terms govern subscriptions, payments, and use of LarpKing paid offers.",
-              `The seller is ${SERVICE_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `The seller is ${COMPANY_TRADE_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "The French version prevails over translations in case of inconsistency.",
             ],
           },
@@ -683,9 +684,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Paid offers",
             paragraphs: ["Paid offers provide credits and additional features to generate, keep, download, or share images."],
             bullets: [
-              { text: "Discovery plan: 2500 credits per monthly billing cycle." },
-              { text: "Essential plan: 9500 credits per monthly billing cycle." },
-              { text: "Ultimate plan: very high credit volume per monthly billing cycle." },
+              { text: "Discovery plan: 250 credits per monthly billing cycle." },
+              { text: "Essential plan: 850 credits per monthly billing cycle + 250 bonus credits." },
+              { text: "Ultimate plan: 2500 credits per monthly billing cycle." },
               { text: "Access to templates and options available according to the active offer." },
               { text: "Generated images remain available in account history while retained by the service." },
               { text: "Unused credits are not currency, cannot be redeemed for cash, and may expire at the end of the cycle depending on the offer." },
@@ -905,7 +906,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Publication director",
-            paragraphs: [`The publication director is ${SERVICE_NAME}, reachable at ${CONTACT_EMAIL}.`],
+            paragraphs: [`The publication director is ${COMPANY_TRADE_NAME}, reachable at ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -1074,7 +1075,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Objeto",
             paragraphs: [
               "Estas Condiciones de Venta regulan suscripciones, pagos y uso de las ofertas de pago de LarpKing.",
-              `El vendedor es ${SERVICE_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `El vendedor es ${COMPANY_TRADE_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "La version francesa prevalece sobre cualquier traduccion en caso de contradiccion.",
             ],
           },
@@ -1083,9 +1084,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Ofertas de pago",
             paragraphs: ["Las ofertas de pago dan acceso a creditos y funciones adicionales para generar, conservar, descargar o compartir imagenes."],
             bullets: [
-              { text: "Plan Descubrimiento: 2500 creditos por ciclo de facturacion mensual." },
-              { text: "Plan Esencial: 9500 creditos por ciclo de facturacion mensual." },
-              { text: "Plan Ultimate: volumen muy alto de creditos por ciclo de facturacion mensual." },
+              { text: "Plan Descubrimiento: 250 creditos por ciclo de facturacion mensual." },
+              { text: "Plan Esencial: 850 creditos por ciclo de facturacion mensual + 250 creditos de regalo." },
+              { text: "Plan Ultimate: 2500 creditos por ciclo de facturacion mensual." },
               { text: "Acceso a plantillas y opciones disponibles segun la oferta activa." },
               { text: "Imagenes generadas accesibles en el historial mientras el servicio las conserve." },
               { text: "Los creditos no usados no son dinero, no se reembolsan en efectivo y pueden expirar al final del ciclo segun la oferta." },
@@ -1301,7 +1302,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Director de publicacion",
-            paragraphs: [`El director de publicacion es ${SERVICE_NAME}, contactable en ${CONTACT_EMAIL}.`],
+            paragraphs: [`El director de publicacion es ${COMPANY_TRADE_NAME}, contactable en ${CONTACT_EMAIL}.`],
           },
           {
             id: "3",
@@ -1468,7 +1469,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "1. Zweck",
             paragraphs: [
               "Diese Verkaufsbedingungen regeln Abonnements, Zahlungen und Nutzung kostenpflichtiger Angebote von LarpKing.",
-              `Verkaufer ist ${SERVICE_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              `Verkaufer ist ${COMPANY_TRADE_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "Bei Widerspruchen ist die franzosische Fassung massgeblich.",
             ],
           },
@@ -1477,9 +1478,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "2. Kostenpflichtige Angebote",
             paragraphs: ["Kostenpflichtige Angebote bieten Credits und zusatzliche Funktionen zum Generieren, Speichern, Herunterladen oder Teilen von Bildern."],
             bullets: [
-              { text: "Discovery-Tarif: 2500 Credits pro monatlichem Abrechnungszyklus." },
-              { text: "Essentiel-Tarif: 9500 Credits pro monatlichem Abrechnungszyklus." },
-              { text: "Ultimate-Tarif: sehr hohes Credit-Volumen pro monatlichem Abrechnungszyklus." },
+              { text: "Discovery-Tarif: 250 Credits pro monatlichem Abrechnungszyklus." },
+              { text: "Essentiel-Tarif: 850 Credits pro monatlichem Abrechnungszyklus + 250 Bonus-Credits." },
+              { text: "Ultimate-Tarif: 2500 Credits pro monatlichem Abrechnungszyklus." },
               { text: "Zugang zu Templates und Optionen je nach aktivem Angebot." },
               { text: "Generierte Bilder bleiben im Kontoverlauf verfugbar, solange der Dienst sie speichert." },
               { text: "Nicht genutzte Credits sind keine Wahrung, nicht in Geld erstattbar und konnen je nach Angebot am Zyklusende verfallen." },

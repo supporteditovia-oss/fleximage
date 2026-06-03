@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { createPortalSession } from "@/lib/stripe";
+import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { setAppLanguage } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,6 @@ import {
   User,
   Mail,
   Crown,
-  CreditCard,
   ChevronRight,
   X,
   Languages,
@@ -64,6 +64,7 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
 
@@ -87,6 +88,7 @@ export default function Settings() {
   const billingActive = Boolean(currentPlan?.isSubscriber);
   const canManageBilling = Boolean(currentPlan?.canManageSubscription);
   const billingCanceled = !billingActive && canManageBilling;
+  const canOpenPaywall = Boolean(profile?.id && !billingActive && !canManageBilling);
 
   const form = useForm({
     resolver: zodResolver(
@@ -184,6 +186,17 @@ export default function Settings() {
       });
     } finally {
       setPortalLoading(false);
+    }
+  };
+
+  const handleSubscriptionAction = () => {
+    if (canManageBilling) {
+      void handleManageSubscription();
+      return;
+    }
+
+    if (canOpenPaywall) {
+      setPaywallOpen(true);
     }
   };
 
@@ -398,8 +411,13 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.subscription")}
         </h2>
-        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
-          <div className="flex items-center gap-3 px-4 py-3.5">
+        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden">
+          <button
+            type="button"
+            onClick={handleSubscriptionAction}
+            disabled={portalLoading || (!canManageBilling && !canOpenPaywall)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30 disabled:cursor-default disabled:hover:bg-transparent"
+          >
             <Crown className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{t("settings.subscription.title")}</p>
@@ -422,30 +440,12 @@ export default function Settings() {
                 {t("common.states.inactive")}
               </span>
             )}
-          </div>
-
-          {canManageBilling && (
-            <button
-              onClick={handleManageSubscription}
-              disabled={portalLoading}
-              className="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors disabled:opacity-70"
-            >
-              <CreditCard className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
-              <span className="flex-1 text-sm font-medium">
-                {portalLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    {t("common.actions.redirecting")}
-                  </span>
-                ) : billingActive ? (
-                  t("settings.subscription.manage")
-                ) : (
-                  t("settings.subscription.reactivate")
-                )}
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground/40" />
-            </button>
-          )}
+            {portalLoading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground/50" />
+            ) : (canManageBilling || canOpenPaywall) ? (
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+            ) : null}
+          </button>
         </div>
       </section>
 
@@ -534,6 +534,17 @@ export default function Settings() {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={paywallOpen} onOpenChange={setPaywallOpen}>
+        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
+          <PaywallOverlay
+            imageUrl=""
+            defaultPlan="essential"
+            initialChoosingPlan
+            presentation="modal"
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Legal footer */}
       <p className="text-center text-[11px] text-muted-foreground/40 pb-4">

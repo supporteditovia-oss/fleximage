@@ -182,6 +182,10 @@ export const api = {
       method: "PATCH" as const,
       path: "/api/admin/users/:id",
     },
+    userActivity: {
+      method: "GET" as const,
+      path: "/api/admin/users/:id/activity",
+    },
     deleteUser: {
       method: "DELETE" as const,
       path: "/api/admin/users/:id",

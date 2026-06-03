@@ -13,7 +13,7 @@ export interface LimitCheckResult {
 export async function checkGenerationLimits(
   userId: string,
   locale: AppLocale = DEFAULT_LOCALE,
-  creditCost: number = 5,
+  creditCost: number = 10,
 ): Promise<LimitCheckResult> {
   const supabase = getSupabaseAdmin();
 

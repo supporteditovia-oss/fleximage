@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldCheck, Users, ShieldAlert, Trash2, Crown, TrendingUp, BarChart3, Search, Coins, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, Settings2 } from "lucide-react";
+import { ShieldCheck, Users, ShieldAlert, Trash2, Crown, TrendingUp, BarChart3, Search, Coins, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, Settings2, Activity, Loader2, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +25,58 @@ import { Profile } from "@shared/schema";
 
 type AdminProfile = Profile & {
   subscriptions?: Array<{ plan_type: string; status: string; billing_interval?: string | null }>;
+};
+
+type CreditLedgerReason =
+  | "subscription_grant"
+  | "generation_charge"
+  | "admin_adjustment"
+  | "refund"
+  | "system_adjustment";
+
+type AdminUserActivity = {
+  profile: {
+    id: string;
+    email: string | null;
+    fullName: string | null;
+    role: "user" | "admin";
+    isSubscriber: boolean;
+    credits: number;
+    generationCount: number;
+    createdAt: string;
+  };
+  summary: {
+    generationCount: number;
+    failedGenerations: number;
+    totalCharged: number;
+    totalRefunded: number;
+    netSpent: number;
+    subscriptionGranted: number;
+    adminAdjustments: number;
+  };
+  generations: Array<{
+    id: string;
+    generationType: "image" | "video";
+    status: "waiting" | "success" | "fail";
+    finalPrompt: string;
+    prompt?: string | null;
+    provider: string | null;
+    failMessage: string | null;
+    creditCost: number;
+    creditsCharged: number;
+    creditsRefunded: number;
+    netCredits: number;
+    createdAt: string;
+    template: { name: string; nameEn?: string | null; category: string | null } | null;
+  }>;
+  creditLedger: Array<{
+    id: string;
+    generationId: string | null;
+    delta: number;
+    balanceAfter: number;
+    reason: CreditLedgerReason;
+    createdAt: string;
+  }>;
 };
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -149,6 +201,36 @@ export function useAllProfiles() {
   });
 }
 
+function useAdminUserActivity(userId: string | null) {
+  const { isAdmin } = useAuth();
+
+  return useQuery<AdminUserActivity>({
+    queryKey: ["admin-user-activity", userId],
+    queryFn: async () => {
+      if (!userId) throw new Error("Missing user id");
+      const res = await authFetch(`/api/admin/users/${userId}/activity`);
+      return res.json();
+    },
+    enabled: isAdmin && Boolean(userId),
+    staleTime: 10_000,
+  });
+}
+
+function formatCreditDelta(delta: number) {
+  return `${delta > 0 ? "+" : ""}${delta}`;
+}
+
+function creditReasonLabel(reason: CreditLedgerReason) {
+  const labels: Record<CreditLedgerReason, string> = {
+    subscription_grant: "Crédits abonnement",
+    generation_charge: "Génération",
+    admin_adjustment: "Ajustement admin",
+    refund: "Remboursement",
+    system_adjustment: "Ajustement système",
+  };
+  return labels[reason];
+}
+
 /**
  * Admin Portal Main Page (Dashboard Only)
  */
@@ -236,6 +318,12 @@ function UsersManagementPage() {
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
+  const [activityUser, setActivityUser] = useState<AdminProfile | null>(null);
+  const {
+    data: activity,
+    isLoading: isActivityLoading,
+    isFetching: isActivityFetching,
+  } = useAdminUserActivity(activityUser?.id ?? null);
 
   const handleChangePlan = async (
     id: string,
@@ -437,7 +525,11 @@ function UsersManagementPage() {
                       : "free";
 
                   return (
-                  <TableRow key={profile.id} className={isFetching ? "opacity-60 transition-opacity" : "transition-opacity"}>
+                  <TableRow
+                    key={profile.id}
+                    onClick={() => setActivityUser(profile)}
+                    className={`cursor-pointer hover:bg-muted/35 ${isFetching ? "opacity-60 transition-opacity" : "transition-opacity"}`}
+                  >
                     <TableCell>
                       <div className="flex flex-col gap-0.5">
                         <span className="font-medium text-sm">{profile.full_name || "N/A"}</span>
@@ -451,7 +543,10 @@ function UsersManagementPage() {
                     </TableCell>
                     <TableCell>
                       <button 
-                        onClick={() => handleToggleRole(profile.id, profile.role)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleToggleRole(profile.id, profile.role);
+                        }}
                         className="transition-transform active:scale-95"
                       >
                         <Badge 
@@ -465,12 +560,14 @@ function UsersManagementPage() {
                     <TableCell>
                       <select
                         value={currentPlan}
-                        onChange={(e) =>
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
                           handleChangePlan(
                             profile.id,
                             e.target.value as "free" | "discovery" | "essential" | "ultimate",
-                          )
-                        }
+                          );
+                        }}
                         className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                       >
                         <option value="free">Gratuit</option>
@@ -488,7 +585,8 @@ function UsersManagementPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation();
                             setCreditTarget(profile);
                             setCreditAmount("");
                             setCreditDialogOpen(true);
@@ -559,6 +657,16 @@ function UsersManagementPage() {
         </CardContent>
       </Card>
 
+      <UserActivityDialog
+        profile={activityUser}
+        activity={activity}
+        isLoading={isActivityLoading}
+        isFetching={isActivityFetching}
+        onOpenChange={(open) => {
+          if (!open) setActivityUser(null);
+        }}
+      />
+
       {/* Credit Dialog */}
       <Dialog open={creditDialogOpen} onOpenChange={(open) => {
         setCreditDialogOpen(open);
@@ -616,6 +724,223 @@ function UsersManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function UserActivityDialog({
+  profile,
+  activity,
+  isLoading,
+  isFetching,
+  onOpenChange,
+}: {
+  profile: AdminProfile | null;
+  activity?: AdminUserActivity;
+  isLoading: boolean;
+  isFetching: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const open = Boolean(profile);
+  const displayName =
+    activity?.profile.fullName ||
+    profile?.full_name ||
+    activity?.profile.email ||
+    profile?.email ||
+    "Utilisateur";
+
+  const statusLabel = (status: "waiting" | "success" | "fail") => {
+    if (status === "success") return "Succès";
+    if (status === "fail") return "Erreur";
+    return "En cours";
+  };
+
+  const statusClassName = (status: "waiting" | "success" | "fail") => {
+    if (status === "success") return "bg-emerald-600/90 hover:bg-emerald-600/90";
+    if (status === "fail") return "bg-destructive text-destructive-foreground hover:bg-destructive";
+    return "";
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[min(92svh,780px)] w-[min(calc(100vw-1.5rem),72rem)] max-w-none flex-col overflow-hidden rounded-2xl p-0">
+        <DialogHeader className="border-b border-border/70 px-6 py-5">
+          <DialogTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Historique utilisateur
+          </DialogTitle>
+          <DialogDescription>
+            {displayName}
+            {profile?.email ? ` · ${profile.email}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-4 p-6">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-56 w-full" />
+          </div>
+        ) : !activity ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            Impossible de charger l’activité utilisateur.
+          </div>
+        ) : (
+          <div className="min-h-0 overflow-y-auto p-6">
+            {isFetching && (
+              <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Actualisation...
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+                <p className="text-xs text-muted-foreground">Solde actuel</p>
+                <p className="mt-1 font-mono text-xl font-bold tabular-nums">
+                  {activity.profile.credits}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+                <p className="text-xs text-muted-foreground">Consommés</p>
+                <p className="mt-1 font-mono text-xl font-bold tabular-nums text-rose-600">
+                  -{activity.summary.totalCharged}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+                <p className="text-xs text-muted-foreground">Remboursés</p>
+                <p className="mt-1 font-mono text-xl font-bold tabular-nums text-emerald-600">
+                  +{activity.summary.totalRefunded}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+                <p className="text-xs text-muted-foreground">Net généré</p>
+                <p className="mt-1 font-mono text-xl font-bold tabular-nums">
+                  {activity.summary.netSpent}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-muted/25 p-3">
+                <p className="text-xs text-muted-foreground">Requêtes</p>
+                <p className="mt-1 font-mono text-xl font-bold tabular-nums">
+                  {activity.summary.generationCount}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.8fr)]">
+              <Card className="border-border/70">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Requêtes de génération</CardTitle>
+                  <CardDescription>
+                    Les 100 dernières requêtes, avec débit et remboursement associé.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {!activity.generations.length ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">
+                      Aucune génération pour cet utilisateur.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Requête</TableHead>
+                          <TableHead>Statut</TableHead>
+                          <TableHead className="text-right">Crédits</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {activity.generations.map((generation) => (
+                          <TableRow key={generation.id}>
+                            <TableCell className="align-top">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {generation.generationType === "video" ? "Vidéo" : "Image"}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(generation.createdAt), "dd/MM/yyyy HH:mm")}
+                                  </span>
+                                </div>
+                                <p className="line-clamp-2 max-w-xl text-sm font-medium">
+                                  {generation.template?.nameEn ||
+                                    generation.template?.name ||
+                                    generation.finalPrompt ||
+                                    generation.prompt ||
+                                    "Requête sans prompt"}
+                                </p>
+                                {generation.failMessage && (
+                                  <p className="text-xs text-destructive">
+                                    {generation.failMessage}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <Badge className={statusClassName(generation.status)} variant={generation.status === "waiting" ? "secondary" : "default"}>
+                                {statusLabel(generation.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="align-top text-right">
+                              <div className="font-mono text-sm tabular-nums">
+                                -{generation.creditsCharged}
+                              </div>
+                              {generation.creditsRefunded > 0 && (
+                                <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                  <RotateCcw className="h-3 w-3" />
+                                  +{generation.creditsRefunded}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/70">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Mouvements crédits</CardTitle>
+                  <CardDescription>
+                    Débits, remboursements, abonnements et ajustements admin.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {!activity.creditLedger.length ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      Aucun mouvement crédit.
+                    </p>
+                  ) : (
+                    activity.creditLedger.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {creditReasonLabel(entry.reason)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(entry.createdAt), "dd/MM/yyyy HH:mm")} · solde {entry.balanceAfter}
+                          </p>
+                        </div>
+                        <span
+                          className={`font-mono text-sm font-bold tabular-nums ${
+                            entry.delta > 0 ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          {formatCreditDelta(entry.delta)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -899,7 +1224,12 @@ function DeleteUserDialog({ profile, onDelete }: any) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={(event) => event.stopPropagation()}
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </AlertDialogTrigger>

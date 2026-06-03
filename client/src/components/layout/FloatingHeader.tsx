@@ -249,9 +249,13 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             </PopoverContent>
           </Popover>
           <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
-            <DialogContent className="h-[min(92svh,620px)] w-[min(calc(100vw-2rem),64rem)] max-w-none overflow-hidden border-0 bg-transparent p-0 shadow-none">
+            <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
               <DialogTitle className="sr-only">{t("paywall.chooseTitle")}</DialogTitle>
-              <PaywallOverlay imageUrl="" initialChoosingPlan />
+              <PaywallOverlay
+                imageUrl=""
+                initialChoosingPlan
+                presentation="modal"
+              />
             </DialogContent>
           </Dialog>
           </>

@@ -16,6 +16,8 @@ type PlanDefinition = {
   lookupKey: string;
   amount: number;
   credits: number;
+  displayCredits: number;
+  bonusCredits: number;
 };
 
 const ENV_PATH = ".env";
@@ -32,21 +34,27 @@ const PLANS: PlanDefinition[] = [
     envKey: "STRIPE_DISCOVERY_PRICE_ID",
     lookupKey: "larpking_discovery_monthly_eur",
     amount: 890,
-    credits: 2500,
+    credits: 250,
+    displayCredits: 250,
+    bonusCredits: 0,
   },
   {
     key: "essential",
     envKey: "STRIPE_ESSENTIAL_PRICE_ID",
     lookupKey: "larpking_essential_monthly_eur",
     amount: 1990,
-    credits: 9500,
+    credits: 1100,
+    displayCredits: 850,
+    bonusCredits: 250,
   },
   {
     key: "ultimate",
     envKey: "STRIPE_ULTIMATE_PRICE_ID",
     lookupKey: "larpking_ultimate_monthly_eur",
     amount: 3990,
-    credits: 1_000_000,
+    credits: 2500,
+    displayCredits: 2500,
+    bonusCredits: 0,
   },
 ];
 
@@ -227,6 +235,18 @@ async function auditStripe(
       `stripe.price.${plan.key}`,
       `Metadata credits_per_cycle is ${price.metadata?.credits_per_cycle ?? "missing"}`,
     );
+    addCheck(
+      checks,
+      price.metadata?.display_credits_per_cycle === String(plan.displayCredits) ? "pass" : "fail",
+      `stripe.price.${plan.key}`,
+      `Metadata display_credits_per_cycle is ${price.metadata?.display_credits_per_cycle ?? "missing"}`,
+    );
+    addCheck(
+      checks,
+      price.metadata?.bonus_credits_per_cycle === String(plan.bonusCredits) ? "pass" : "fail",
+      `stripe.price.${plan.key}`,
+      `Metadata bonus_credits_per_cycle is ${price.metadata?.bonus_credits_per_cycle ?? "missing"}`,
+    );
 
     if (!product) {
       addCheck(checks, "fail", `stripe.product.${plan.key}`, "Product is not expandable");
@@ -250,6 +270,12 @@ async function auditStripe(
       product.metadata?.larpking_plan === plan.key ? "pass" : "fail",
       `stripe.product.${plan.key}`,
       `Product metadata larpking_plan is ${product.metadata?.larpking_plan ?? "missing"}`,
+    );
+    addCheck(
+      checks,
+      product.metadata?.credits_per_cycle === String(plan.credits) ? "pass" : "fail",
+      `stripe.product.${plan.key}`,
+      `Product metadata credits_per_cycle is ${product.metadata?.credits_per_cycle ?? "missing"}`,
     );
   }
 

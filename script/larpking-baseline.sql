@@ -355,7 +355,7 @@ create table public.subscriptions (
         'video'
       )
     ),
-  credits_per_cycle integer not null default 2500 check (credits_per_cycle >= 0),
+  credits_per_cycle integer not null default 250 check (credits_per_cycle >= 0),
   billing_interval text not null default 'month'
     check (billing_interval in ('week', 'month')),
   current_period_start timestamptz,

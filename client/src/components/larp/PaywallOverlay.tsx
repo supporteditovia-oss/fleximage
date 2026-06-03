@@ -25,7 +25,7 @@ const planCards: PlanCard[] = [
     id: "discovery",
     euros: "8",
     cents: "90",
-    featureKeys: ["photo", "realistic", "hd", "history", "support"],
+    featureKeys: ["photo", "realistic", "video", "hd", "history", "support"],
   },
   {
     id: "essential",
@@ -38,7 +38,7 @@ const planCards: PlanCard[] = [
     id: "ultimate",
     euros: "39",
     cents: "90",
-    featureKeys: ["photo", "indistinguishable", "ulDetails", "immersion", "vipSupport"],
+    featureKeys: ["photo", "indistinguishable", "video", "ulDetails", "immersion", "vipSupport"],
   },
 ];
 
@@ -47,6 +47,7 @@ interface PaywallOverlayProps {
   isFake?: boolean;
   defaultPlan?: PaywallPlan;
   initialChoosingPlan?: boolean;
+  presentation?: "overlay" | "modal";
   variant?: "default" | "insufficientCredits";
 }
 
@@ -55,6 +56,7 @@ export function PaywallOverlay({
   isFake,
   defaultPlan = "essential",
   initialChoosingPlan = false,
+  presentation = "overlay",
   variant = "default",
 }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -119,15 +121,35 @@ export function PaywallOverlay({
     : "h-4 w-4";
 
   if (isChoosingPlan) {
+    const isModalPresentation = presentation === "modal";
+    const shellClassName = isModalPresentation
+      ? "flex w-full flex-col overflow-hidden bg-white text-foreground"
+      : "flex h-full max-h-full w-full items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4";
+    const innerClassName = isModalPresentation
+      ? "flex w-full flex-col"
+      : "mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col";
+    const headerClassName = isModalPresentation
+      ? "shrink-0 px-14 pb-3 pt-3 text-center"
+      : "flex shrink-0 flex-col gap-2 pb-3 text-center";
+    const gridWrapperClassName = isModalPresentation
+      ? "px-4 pt-3"
+      : "mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-3";
+    const gridClassName = isModalPresentation
+      ? "grid gap-3 pt-1 md:grid-cols-3"
+      : undefined;
+    const footerClassName = isModalPresentation
+      ? "flex shrink-0 justify-center px-4 pb-4 pt-3"
+      : "mt-2 flex shrink-0 justify-center pt-0";
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
-        className="flex h-full max-h-full w-full items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white/86 px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4"
+        className={shellClassName}
       >
-        <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col">
-          <div className="flex shrink-0 flex-col gap-2 border-b border-border/70 pb-3">
+        <div className={innerClassName}>
+          <div className={headerClassName}>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                 {t("paywall.chooseTitle")}
@@ -138,21 +160,29 @@ export function PaywallOverlay({
             </div>
           </div>
 
-          <div className="mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-3">
+          <div className={gridWrapperClassName}>
+            <div className={gridClassName ?? "contents"}>
             {planCards.map((plan) => {
               const isSelected = selectedPlan === plan.id;
               const visibleFeatures = plan.featureKeys.slice(0, 4);
 
               return (
+                <div key={plan.id} className="relative">
+                  {plan.id === "essential" && (
+                    <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/15 bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-background shadow-sm">
+                      {t("paywall.planBadges.recommended")}
+                    </span>
+                  )}
                 <motion.button
-                  key={plan.id}
                   type="button"
                   onClick={() => setSelectedPlan(plan.id)}
                   whileTap={{ scale: 0.985 }}
-                  className={`relative flex min-h-0 flex-col overflow-hidden rounded-lg border p-3 text-left transition-all md:p-4 ${
+                  className={`relative flex min-h-0 w-full flex-col overflow-hidden rounded-lg border p-3 text-left transition-all md:p-4 ${
+                    plan.id === "essential" ? "pt-5 md:pt-6" : ""
+                  } ${
                     isSelected
                       ? "border-foreground/80 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_18px_45px_rgba(0,0,0,0.10)]"
-                      : "border-border/70 bg-white/66 hover:border-foreground/25 hover:bg-white/86"
+                      : "border-border/70 bg-muted/25 hover:border-foreground/25 hover:bg-muted/40"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -191,8 +221,8 @@ export function PaywallOverlay({
                     <p className="text-lg font-bold leading-tight md:text-xl">
                       {t(`paywall.plans.${plan.id}.creditsPerMonth`)}
                     </p>
-                    <p className="mt-1 text-xs font-semibold leading-snug text-muted-foreground">
-                      {t(`paywall.plans.${plan.id}.note`)}
+                    <p className="mt-2 text-[11px] font-bold leading-snug text-foreground/75">
+                      {t("paywall.generationCosts")}
                     </p>
                     {plan.bonusKey && (
                       <span className="mt-2 inline-flex rounded-full border border-sky-400/25 bg-sky-400/10 px-2 py-1 text-[10px] font-bold text-sky-700">
@@ -215,16 +245,18 @@ export function PaywallOverlay({
                     </ul>
                   </div>
                 </motion.button>
+                </div>
               );
             })}
+            </div>
           </div>
 
-          <div className="mt-3 flex shrink-0 justify-center border-t border-border/70 pt-3">
+          <div className={footerClassName}>
             <motion.button
               onClick={handleSubscribe}
               disabled={isLoading}
               whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
-              className="group relative flex min-h-11 w-full items-center justify-center overflow-hidden rounded-full bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
+              className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-full bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

@@ -28,6 +28,13 @@ const createCheckoutBodySchema = z.object({
     .default("essential"),
 });
 
+const verifySessionBodySchema = z
+  .object({
+    session_id: z.string().min(1).optional(),
+  })
+  .optional()
+  .default({});
+
 type CurrentSubscriptionSnapshot = {
   status: string;
   plan_type: string;
@@ -91,10 +98,12 @@ export function registerStripeRoutes(app: Express): void {
         planType = "admin";
         subscriptionStatus = "admin";
       } else if (subscription) {
-        planType = normalizeStripePlanType(subscription.plan_type);
+        const normalizedPlanType = normalizeStripePlanType(subscription.plan_type);
+        const planConfig = getStripePlanConfig(normalizedPlanType);
+        planType = planConfig.planType;
         subscriptionStatus = subscription.status || subscriptionStatus;
-        creditsPerCycle = subscription.credits_per_cycle;
-        billingInterval = subscription.billing_interval;
+        creditsPerCycle = planConfig.creditsPerCycle;
+        billingInterval = subscription.billing_interval || planConfig.billingInterval;
       } else if (profile.is_subscriber) {
         planType = "unknown";
       }
@@ -143,7 +152,7 @@ export function registerStripeRoutes(app: Express): void {
       const sessionParams: Record<string, any> = {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=success`,
+        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=cancel`,
         metadata: {
           user_id: authReq.userId,
@@ -219,19 +228,50 @@ export function registerStripeRoutes(app: Express): void {
     }
   });
 
-  app.post(api.stripe.verifySession.path, requireAuth, async (req, res) => {
+  app.post(api.stripe.verifySession.path, requireAuth, validateRequest(verifySessionBodySchema), async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     const supabaseAdmin = getSupabaseAdmin();
+    const sessionId = req.body?.session_id;
+
+    if (sessionId) {
+      try {
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const sessionUserId = session.metadata?.user_id;
+
+        if (sessionUserId !== authReq.userId) {
+          logger.warn(
+            { sessionId, userId: authReq.userId, sessionUserId },
+            "Checkout session verification user mismatch",
+          );
+          return res.status(403).json({ message: "Invalid checkout session" });
+        }
+
+        if (
+          session.mode === "subscription" &&
+          session.status === "complete" &&
+          session.payment_status === "paid"
+        ) {
+          await handleCheckoutCompleted(session as any);
+        }
+      } catch (error: any) {
+        logger.warn(
+          { err: error, sessionId, userId: authReq.userId },
+          "Could not reconcile checkout session during verification",
+        );
+      }
+    }
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("is_subscriber, subscription_status")
+      .select("is_subscriber, subscription_status, credits")
       .eq("id", authReq.userId)
       .single();
 
     res.json({
       status: profile?.subscription_status || "pending_webhook",
       active: !!profile?.is_subscriber,
+      credits: profile?.credits ?? 0,
     });
   });
 

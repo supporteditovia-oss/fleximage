@@ -113,6 +113,20 @@ export const extraResources = {
       insufficientCreditsTitle: "Crédits insuffisants",
       insufficientCreditsDescription:
         "Tu n'as pas assez de crédits pour générer.",
+      insufficientCreditsModal: {
+        badge: "Crédits requis",
+        title: "Il te manque quelques crédits.",
+        description:
+          "Cette génération {{mode}} demande plus de crédits que ton solde actuel.",
+        current: "Solde",
+        required: "Requis",
+        missing: "Manque",
+        planHintTitle: "Recharge ton compte et relance ta création",
+        planHintDescription:
+          "Les crédits sont ajoutés après le paiement. Ta demande est conservée pour reprendre plus vite.",
+        cta: "Voir les plans",
+        secondaryCta: "Plus tard",
+      },
       emptyPromptTitle: "Description vide",
       emptyPromptDescription:
         "Ajoute au moins une image de référence pour lancer la génération.",
@@ -402,6 +416,20 @@ export const extraResources = {
       insufficientCreditsTitle: "Not enough credits",
       insufficientCreditsDescription:
         "You do not have enough credits to generate.",
+      insufficientCreditsModal: {
+        badge: "Credits required",
+        title: "You are just short on credits.",
+        description:
+          "This {{mode}} generation needs more credits than your current balance.",
+        current: "Balance",
+        required: "Required",
+        missing: "Missing",
+        planHintTitle: "Top up and resume your creation",
+        planHintDescription:
+          "Credits are added after checkout. Your request is saved so you can resume faster.",
+        cta: "View plans",
+        secondaryCta: "Later",
+      },
       emptyPromptTitle: "Empty prompt",
       emptyPromptDescription:
         "Add at least one reference image to start generation.",
@@ -674,6 +702,20 @@ export const extraResources = {
       insufficientCreditsTitle: "Creditos insuficientes",
       insufficientCreditsDescription:
         "No tienes suficientes creditos para generar.",
+      insufficientCreditsModal: {
+        badge: "Creditos requeridos",
+        title: "Te faltan algunos creditos.",
+        description:
+          "Esta generacion de {{mode}} necesita mas creditos que tu saldo actual.",
+        current: "Saldo",
+        required: "Necesarios",
+        missing: "Faltan",
+        planHintTitle: "Recarga tu cuenta y continua tu creacion",
+        planHintDescription:
+          "Los creditos se anaden despues del pago. Guardamos tu solicitud para retomarla mas rapido.",
+        cta: "Ver planes",
+        secondaryCta: "Mas tarde",
+      },
       emptyPromptTitle: "Prompt vacio",
       emptyPromptDescription:
         "Agrega al menos una imagen de referencia para iniciar la generacion.",
@@ -948,6 +990,20 @@ export const extraResources = {
       insufficientCreditsTitle: "Nicht genug Credits",
       insufficientCreditsDescription:
         "Du hast nicht genug Credits zum Generieren.",
+      insufficientCreditsModal: {
+        badge: "Credits erforderlich",
+        title: "Dir fehlen ein paar Credits.",
+        description:
+          "Diese {{mode}}-Generierung braucht mehr Credits als dein aktueller Kontostand.",
+        current: "Saldo",
+        required: "Erforderlich",
+        missing: "Fehlen",
+        planHintTitle: "Lade dein Konto auf und setze die Erstellung fort",
+        planHintDescription:
+          "Credits werden nach dem Checkout hinzugefuegt. Deine Anfrage bleibt gespeichert.",
+        cta: "Plaene ansehen",
+        secondaryCta: "Spaeter",
+      },
       emptyPromptTitle: "Leerer Prompt",
       emptyPromptDescription:
         "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",

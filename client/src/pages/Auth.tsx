@@ -173,10 +173,8 @@ export default function AuthPage() {
       </Link>
 
       {/* Auth card */}
-      <div className="relative w-full max-w-md">
-        <div className="absolute inset-x-0 -top-10 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent -z-10 pointer-events-none" />
-
-        <div className="relative rounded-lg border border-border bg-card p-8 shadow-sm md:p-10">
+      <div className="w-full max-w-md">
+        <div className="rounded-lg border border-border bg-card p-8 shadow-sm md:p-10">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl md:text-3xl font-bold">

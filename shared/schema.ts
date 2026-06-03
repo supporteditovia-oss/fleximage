@@ -395,7 +395,7 @@ export const subscriptions = pgTable("subscriptions", {
   })
     .default("discovery")
     .notNull(),
-  credits_per_cycle: integer("credits_per_cycle").default(2500).notNull(),
+  credits_per_cycle: integer("credits_per_cycle").default(250).notNull(),
   billing_interval: text("billing_interval", { enum: ["week", "month"] })
     .default("month")
     .notNull(),
