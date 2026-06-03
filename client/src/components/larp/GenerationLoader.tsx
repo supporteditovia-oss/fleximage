@@ -115,8 +115,8 @@ export function GenerationLoader({
               alt="LarpKing"
               className="h-24 md:h-32 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
             />
-            <Loader2 className="h-6 w-6 text-foreground animate-spin" />
-            <span className="text-lg tabular-nums text-foreground font-semibold">
+            <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
+            <span className="text-lg font-semibold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
               {elapsed}s
             </span>
           </motion.div>

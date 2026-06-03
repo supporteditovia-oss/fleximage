@@ -99,7 +99,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { authFetch } from "@/lib/api";
 
@@ -207,12 +207,20 @@ function useAdminUserActivity(userId: string | null) {
   return useQuery<AdminUserActivity>({
     queryKey: ["admin-user-activity", userId],
     queryFn: async () => {
-      if (!userId) throw new Error("Missing user id");
       const res = await authFetch(`/api/admin/users/${userId}/activity`);
-      return res.json();
+      const json = await res.json();
+      if (!json?.profile) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "Réponse activité invalide",
+        );
+      }
+      return json as AdminUserActivity;
     },
     enabled: isAdmin && Boolean(userId),
     staleTime: 10_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -228,7 +236,7 @@ function creditReasonLabel(reason: CreditLedgerReason) {
     refund: "Remboursement",
     system_adjustment: "Ajustement système",
   };
-  return labels[reason];
+  return labels[reason] ?? reason ?? "Mouvement";
 }
 
 /**
@@ -319,10 +327,13 @@ function UsersManagementPage() {
   const [creditTarget, setCreditTarget] = useState<Profile | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
   const [activityUser, setActivityUser] = useState<AdminProfile | null>(null);
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const {
     data: activity,
     isLoading: isActivityLoading,
     isFetching: isActivityFetching,
+    isError: isActivityError,
+    error: activityError,
   } = useAdminUserActivity(activityUser?.id ?? null);
 
   const handleChangePlan = async (
@@ -527,7 +538,10 @@ function UsersManagementPage() {
                   return (
                   <TableRow
                     key={profile.id}
-                    onClick={() => setActivityUser(profile)}
+                    onClick={() => {
+                      setActivityUser(profile);
+                      setActivityDialogOpen(true);
+                    }}
                     className={`cursor-pointer hover:bg-muted/35 ${isFetching ? "opacity-60 transition-opacity" : "transition-opacity"}`}
                   >
                     <TableCell>
@@ -658,12 +672,20 @@ function UsersManagementPage() {
       </Card>
 
       <UserActivityDialog
+        open={activityDialogOpen}
         profile={activityUser}
         activity={activity}
         isLoading={isActivityLoading}
         isFetching={isActivityFetching}
+        isError={isActivityError}
+        errorMessage={
+          activityError instanceof Error ? activityError.message : undefined
+        }
         onOpenChange={(open) => {
-          if (!open) setActivityUser(null);
+          setActivityDialogOpen(open);
+          if (!open) {
+            setActivityUser(null);
+          }
         }}
       />
 
@@ -728,19 +750,24 @@ function UsersManagementPage() {
 }
 
 function UserActivityDialog({
+  open,
   profile,
   activity,
   isLoading,
   isFetching,
+  isError,
+  errorMessage,
   onOpenChange,
 }: {
+  open: boolean;
   profile: AdminProfile | null;
   activity?: AdminUserActivity;
   isLoading: boolean;
   isFetching: boolean;
+  isError: boolean;
+  errorMessage?: string;
   onOpenChange: (open: boolean) => void;
 }) {
-  const open = Boolean(profile);
   const displayName =
     activity?.profile.fullName ||
     profile?.full_name ||
@@ -774,16 +801,20 @@ function UserActivityDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {open && isLoading ? (
           <div className="space-y-4 p-6">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-56 w-full" />
           </div>
-        ) : !activity ? (
+        ) : open && isError ? (
+          <div className="p-8 text-center text-sm text-destructive">
+            {errorMessage || "Impossible de charger l’activité utilisateur."}
+          </div>
+        ) : open && !activity ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
             Impossible de charger l’activité utilisateur.
           </div>
-        ) : (
+        ) : open && activity ? (
           <div className="min-h-0 overflow-y-auto p-6">
             {isFetching && (
               <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -938,7 +969,7 @@ function UserActivityDialog({
               </Card>
             </div>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

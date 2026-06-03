@@ -6,12 +6,16 @@ import { useTranslation } from "react-i18next";
 interface UnlockedLarpViewProps {
   resultUrls: string[];
   larpId: string;
+  resultType?: "image" | "video";
+  posterUrl?: string;
   onReset: () => void;
 }
 
 export function UnlockedLarpView({
   resultUrls,
   larpId,
+  resultType = "image",
+  posterUrl,
   onReset,
 }: UnlockedLarpViewProps) {
   const { t } = useTranslation();
@@ -38,8 +42,13 @@ export function UnlockedLarpView({
         </span>
       </h1>
 
-      <div className="relative min-h-0 flex-1 flex items-center justify-center overflow-hidden">
-        <LarpResult resultUrls={resultUrls} larpId={larpId} />
+      <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2">
+        <LarpResult
+          resultUrls={resultUrls}
+          larpId={larpId}
+          resultType={resultType}
+          posterUrl={posterUrl}
+        />
       </div>
 
       <Button

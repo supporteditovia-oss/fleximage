@@ -264,6 +264,41 @@ function extractImageUrls(parsed: unknown): string[] {
   return [];
 }
 
+function normalizeUrlForComparison(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return url.split("?")[0].split("#")[0];
+  }
+}
+
+/**
+ * Resolve the generated image URL(s) that must feed the Runway video stage.
+ *
+ * Reuses the proven `extractImageUrls` extractor (which already walks the
+ * provider payload in output-priority order) and then removes any URL that
+ * merely echoes an input asset (uploaded photo, template reference, or the
+ * face-capture composite). This guarantees Runway never receives an input
+ * image instead of the freshly generated one.
+ */
+function extractGeneratedImageUrlsForVideoStage(
+  parsed: unknown,
+  originalInputUrls: string[],
+): string[] {
+  const originalInputSet = new Set(
+    originalInputUrls
+      .filter((url): url is string => typeof url === "string" && url.length > 0)
+      .map(normalizeUrlForComparison),
+  );
+
+  return extractImageUrls(parsed).filter(
+    (url) => !originalInputSet.has(normalizeUrlForComparison(url)),
+  );
+}
+
 function slugify(value: string): string {
   return value
     .normalize("NFD")
@@ -3127,7 +3162,10 @@ export async function registerRoutes(
       const { taskId } = req.params;
       const supabaseAdmin = getSupabaseAdmin();
 
-      // Verify this task belongs to the user
+      // Verify this task belongs to the user. The DB filter is a broad
+      // substring match (provider_task_id can hold a comma-joined chain), so
+      // we re-verify the requested id is an exact delimited segment to avoid
+      // a substring collision returning the wrong generation.
       const { data: larp, error: fetchErr } = await supabaseAdmin
         .from("generations")
         .select("*")
@@ -3135,7 +3173,11 @@ export async function registerRoutes(
         .eq("user_id", authReq.userId)
         .single();
 
-      if (fetchErr || !larp) {
+      const taskIdSegments = (larp?.provider_task_id || "")
+        .split(",")
+        .map((segment: string) => segment.trim());
+
+      if (fetchErr || !larp || !taskIdSegments.includes(taskId)) {
         return res
           .status(404)
           .json({ message: tBackend(locale, "larps.taskNotFound") });
@@ -3196,10 +3238,12 @@ export async function registerRoutes(
       const isVideoTask = activeTaskId.startsWith("video_");
       const metadata = getGenerationMetadata(larp);
       const isVideoGeneration = larp.generation_type === "video";
+      // Stay in the image→video handler for the whole pre-Runway window
+      // (stage "image" or transient "starting_video"); routing flips to the
+      // Runway poller only once a `video_*` task id has been appended.
       const isTemplateVideoImageStage =
         isVideoGeneration &&
         metadata.workflow === "template_image_to_video" &&
-        metadata.stage === "image" &&
         !isVideoTask;
 
       let apiStatus: "waiting" | "success" | "fail" = "waiting";
@@ -3241,7 +3285,17 @@ export async function registerRoutes(
               typeof apiResultJson === "string"
                 ? JSON.parse(apiResultJson)
                 : apiResultJson;
-            generatedImageUrls = extractImageUrls(parsed);
+            const originalInputUrls = uniqueStrings([
+              ...(Array.isArray(larp.input_assets) ? larp.input_assets : []),
+              ...(Array.isArray(metadata.originalInputAssets)
+                ? metadata.originalInputAssets
+                : []),
+              metadata.selectedTemplateReferenceImage,
+            ]);
+            generatedImageUrls = extractGeneratedImageUrlsForVideoStage(
+              parsed,
+              originalInputUrls,
+            );
           } catch (parseErr) {
             logger.error(
               { err: parseErr, rawResultJson: apiResultJson },
@@ -3274,6 +3328,37 @@ export async function registerRoutes(
                   : "";
               if (!videoPromptText) {
                 throw new Error("Missing template video prompt");
+              }
+
+              // Atomically claim the image→video transition so concurrent
+              // status polls cannot launch a second Runway task (double spend).
+              const { data: claimedRows, error: claimErr } = await supabaseAdmin
+                .from("generations")
+                .update({
+                  metadata: {
+                    ...metadata,
+                    stage: "starting_video",
+                    generatedImageUrl,
+                    generatedImageAssets: storedImageUrls,
+                  },
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", larp.id)
+                .eq("metadata->>stage", "image")
+                .select("id");
+              if (claimErr) throw claimErr;
+              if (!claimedRows || claimedRows.length === 0) {
+                // Another concurrent poll already started the video stage.
+                return res.json({
+                  larpId: larp.id,
+                  status: "waiting",
+                  resultUrls: [],
+                  failMessage: null,
+                  costTime: null,
+                  isSubscriber: false,
+                  requiresPaywall: false,
+                  resultType,
+                });
               }
 
               const runwayResponse = await createRunwayVideoTask({
@@ -3515,6 +3600,23 @@ export async function registerRoutes(
         const isSubscriber =
           profile?.is_subscriber || profile?.role === "admin";
 
+        // Persist the terminal status first so a later refund failure can
+        // never leave the generation stuck in "processing".
+        await supabaseAdmin
+          .from("generations")
+          .update({
+            status: toDbStatus(apiStatus),
+            output_assets: resultUrls,
+            watermarked_assets: watermarkedUrls.length > 0 ? watermarkedUrls : [],
+            fail_message: apiFailMsg || null,
+            cost_time: toNullableNumber(apiCostTime),
+            updated_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", larp.id);
+
+        // Refunds are idempotent (keyed on the charge ledger); on failure we
+        // log and let a subsequent poll retry rather than blocking the client.
         if (apiStatus === "fail") {
           const refundErr = await refundGenerationCreditsIfCharged(supabaseAdmin, {
             userId: authReq.userId,
@@ -3532,23 +3634,8 @@ export async function registerRoutes(
               { err: refundErr, larpId: larp.id },
               "Failed to refund failed generation credits",
             );
-            throw refundErr;
           }
         }
-
-        // Update record
-        await supabaseAdmin
-          .from("generations")
-          .update({
-            status: toDbStatus(apiStatus),
-            output_assets: resultUrls,
-            watermarked_assets: watermarkedUrls.length > 0 ? watermarkedUrls : [],
-            fail_message: apiFailMsg || null,
-            cost_time: toNullableNumber(apiCostTime),
-            updated_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", larp.id);
 
         return res.json({
           larpId: larp.id,

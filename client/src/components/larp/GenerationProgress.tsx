@@ -139,11 +139,12 @@ export function GenerationProgress({
             </h1>
 
             {/* LARP result with download/share actions */}
-            <div className="relative min-h-0 min-w-0 flex items-center justify-center overflow-hidden py-2 shrink">
+            <div className="relative flex min-h-0 min-w-0 w-full shrink items-center justify-center overflow-hidden px-2 py-2">
               <LarpResult
                 resultUrls={data.resultUrls}
                 larpId={data.larpId}
                 resultType={data.resultType ?? resultType}
+                posterUrl={inputImageUrl}
               />
             </div>
 

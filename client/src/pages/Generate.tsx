@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, ChevronDown, ScanFace } from "lucide-react";
@@ -118,6 +119,7 @@ export default function Generate() {
   const [unlockedLarp, setUnlockedLarp] = useState<{
     resultUrls: string[];
     larpId: string;
+    resultType: "image" | "video";
   } | null>(null);
   const [unlockingLarp, setUnlockingLarp] = useState(false);
 
@@ -201,6 +203,8 @@ export default function Generate() {
                 setUnlockedLarp({
                   resultUrls: statusData.resultUrls,
                   larpId: statusData.larpId,
+                  resultType:
+                    statusData.resultType === "video" ? "video" : generationMode,
                 });
               } else {
                 toast({
@@ -368,6 +372,32 @@ export default function Generate() {
       if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
     };
   }, [facePreviewUrl]);
+
+  const loaderInputImageUrl = useMemo(() => {
+    if (images[0]?.url) return images[0].url;
+
+    const activeTemplate =
+      selectedTemplate ??
+      (pendingTemplateId && templatesList
+        ? templatesList.find((t) => t.id === pendingTemplateId)
+        : undefined);
+
+    if (activeTemplate) {
+      return (
+        activeTemplate.example_after_url ||
+        activeTemplate.example_before_url ||
+        undefined
+      );
+    }
+
+    return facePreviewUrl ?? undefined;
+  }, [
+    images,
+    selectedTemplate,
+    pendingTemplateId,
+    templatesList,
+    facePreviewUrl,
+  ]);
 
   // ── Image & template handlers ───────────────────────────────
   const handleImageSelect = (index: number, file: File) => {
@@ -948,7 +978,7 @@ export default function Generate() {
     ? createPortal(
       <GenerationProgress
         taskId={taskId}
-        inputImageUrl={images[0]?.url ?? facePreviewUrl ?? undefined}
+        inputImageUrl={loaderInputImageUrl}
         onReset={handleReset}
         resultType={generationMode}
       />,
@@ -973,7 +1003,7 @@ export default function Generate() {
   const fakeLoaderOverlay = isFakeGenerating ? createPortal(
     <GenerationLoader
       status={fakeLoaderStatus}
-      inputImageUrl={images[0]?.url}
+      inputImageUrl={loaderInputImageUrl}
       onRevealComplete={() => {
         setIsFakeGenerating(false);
         if (fakePaywallReason === "onboarding") {
@@ -1065,6 +1095,10 @@ export default function Generate() {
       <UnlockedLarpView
         resultUrls={unlockedLarp.resultUrls}
         larpId={unlockedLarp.larpId}
+        resultType={unlockedLarp.resultType}
+        posterUrl={
+          images[0]?.url ?? facePreviewUrl ?? getPaywallImage() ?? undefined
+        }
         onReset={() => {
           setUnlockedLarp(null);
           handleReset();

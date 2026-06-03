@@ -19,8 +19,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 
-const RESULT_ASPECT_CLASS = "aspect-[9/16]";
+/** Strict 9:16 frame — height-limited, width derived from aspect ratio */
+export const LARP_RESULT_FRAME_CLASS =
+  "relative mx-auto aspect-[9/16] h-[min(calc(100dvh-14rem),min(80svh,720px))] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+
+function isVideoResultUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
+}
 
 const SHARE_PLATFORMS = [
   {
@@ -66,6 +73,8 @@ interface LarpResultProps {
   larpId: string;
   hideActions?: boolean;
   resultType?: "image" | "video";
+  /** Reference / input image used as poster for video results */
+  posterUrl?: string;
 }
 
 export function LarpResult({
@@ -73,6 +82,7 @@ export function LarpResult({
   larpId,
   hideActions = false,
   resultType = "image",
+  posterUrl,
 }: LarpResultProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -154,25 +164,20 @@ export function LarpResult({
 
   return (
     <>
-      <div className="flex justify-center gap-4 max-h-full">
-        {resultUrls.map((url, index) => (
-          <div
-            key={index}
-            className={`relative ${RESULT_ASPECT_CLASS} h-[min(55vh,640px)] w-auto overflow-hidden rounded-lg shadow-xl`}
-          >
-            {resultType === "video" ? (
-              <video
-                src={url}
-                controls
-                playsInline
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+      <div className="flex min-w-0 max-w-full justify-center gap-4">
+        {resultUrls.map((url, index) => {
+          const isVideo = resultType === "video" || isVideoResultUrl(url);
+
+          return (
+          <div key={index} className={LARP_RESULT_FRAME_CLASS}>
+            {isVideo ? (
+              <VideoResultPlayer src={url} poster={posterUrl} />
             ) : (
               <>
                 <img
                   src={url}
                   alt={t("result.generatedAlt", { index: index + 1 })}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-contain"
                   loading="lazy"
                 />
                 {/* Bottom gradient with action buttons */}
@@ -197,7 +202,8 @@ export function LarpResult({
               </>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Share platform picker — same as history */}

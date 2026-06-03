@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { getLocalizedHistoryTemplateName } from "@/lib/template-utils";
+import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 
 const SHARE_PLATFORMS = [
   {
@@ -80,6 +81,7 @@ export default function LarpHistory() {
     url: string;
     larpId: string;
     resultType: "image" | "video";
+    posterUrl?: string;
   } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareDialog, setShareDialog] = useState<{
@@ -280,16 +282,21 @@ export default function LarpHistory() {
                 key={larp.id}
                 className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer"
                 onClick={() =>
-                  setSelectedLarp({ url: urls[0], larpId: larp.id, resultType })
+                  setSelectedLarp({
+                    url: urls[0],
+                    larpId: larp.id,
+                    resultType,
+                    posterUrl: inputUrls[0],
+                  })
                 }
               >
                 {resultType === "video" ? (
-                  <video
+                  <VideoResultPlayer
                     src={urls[0]}
+                    poster={inputUrls[0]}
+                    controls={false}
                     muted
-                    playsInline
-                    preload="metadata"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                    className="transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   />
                 ) : (
                   <img
@@ -480,20 +487,17 @@ export default function LarpHistory() {
             />
             {/* Media with actions */}
             <div className={`relative z-10 ${selectedLarp.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
-              <div className="relative aspect-[9/16] h-[min(80vh,720px)] w-auto overflow-hidden rounded-lg">
+              <div className="relative aspect-[9/16] h-[min(80vh,720px)] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black">
               {selectedLarp.resultType === "video" ? (
-                <video
+                <VideoResultPlayer
                   src={selectedLarp.url}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="absolute inset-0 h-full w-full object-cover"
+                  poster={selectedLarp.posterUrl}
                 />
               ) : (
                 <img
                   src={selectedLarp.url}
                   alt={t("history.generatedAlt")}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-contain"
                 />
               )}
               </div>
