@@ -123,23 +123,19 @@ export function PaywallOverlay({
   if (isChoosingPlan) {
     const isModalPresentation = presentation === "modal";
     const shellClassName = isModalPresentation
-      ? "flex w-full flex-col overflow-hidden bg-white text-foreground"
-      : "flex h-full max-h-full w-full items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4";
-    const innerClassName = isModalPresentation
-      ? "flex w-full flex-col"
-      : "mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col";
+      ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white text-foreground"
+      : "flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border border-border/80 bg-white px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4";
+    const innerClassName =
+      "mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col";
     const headerClassName = isModalPresentation
-      ? "shrink-0 px-14 pb-3 pt-3 text-center"
-      : "flex shrink-0 flex-col gap-2 pb-3 text-center";
-    const gridWrapperClassName = isModalPresentation
-      ? "px-4 pt-3"
-      : "mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-3";
-    const gridClassName = isModalPresentation
-      ? "grid gap-3 pt-1 md:grid-cols-3"
-      : undefined;
-    const footerClassName = isModalPresentation
-      ? "flex shrink-0 justify-center px-4 pb-4 pt-3"
-      : "mt-2 flex shrink-0 justify-center pt-0";
+      ? "shrink-0 px-4 pb-2 pt-3 text-center sm:px-14"
+      : "flex shrink-0 flex-col gap-2 px-1 pb-2 text-center";
+    const gridWrapperClassName =
+      "min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-2 md:px-0";
+    const gridClassName =
+      "grid grid-cols-1 gap-5 pt-1 md:grid-cols-3 md:gap-3 md:pt-0";
+    const footerClassName =
+      "flex shrink-0 justify-center border-t border-border/50 bg-white/95 px-4 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]";
 
     return (
       <motion.div
@@ -161,13 +157,16 @@ export function PaywallOverlay({
           </div>
 
           <div className={gridWrapperClassName}>
-            <div className={gridClassName ?? "contents"}>
+            <div className={gridClassName}>
             {planCards.map((plan) => {
               const isSelected = selectedPlan === plan.id;
               const visibleFeatures = plan.featureKeys.slice(0, 4);
 
               return (
-                <div key={plan.id} className="relative">
+                <div
+                  key={plan.id}
+                  className={`relative ${plan.id === "essential" ? "mt-3 md:mt-0" : ""}`}
+                >
                   {plan.id === "essential" && (
                     <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/15 bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-background shadow-sm">
                       {t("paywall.planBadges.recommended")}

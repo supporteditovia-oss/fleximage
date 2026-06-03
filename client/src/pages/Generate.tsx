@@ -926,7 +926,7 @@ export default function Generate() {
     "fixed inset-0 z-[100] overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
 
   const paywallOverlayInnerClassName =
-    "absolute inset-x-0 top-20 bottom-4 flex items-stretch justify-center px-4 md:top-24 md:bottom-10";
+    "absolute inset-x-0 top-20 bottom-0 flex min-h-0 items-stretch justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:top-24 md:bottom-10";
 
   // ════════════════════════════════════════════════════════════
   // RENDER
@@ -1148,7 +1148,7 @@ export default function Generate() {
       />
 
       <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
-        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
+        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-hidden rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
           <DialogTitle className="sr-only">{t("paywall.chooseTitle")}</DialogTitle>
           <PaywallOverlay
             imageUrl=""

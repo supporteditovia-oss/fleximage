@@ -16,14 +16,19 @@ type PlanDefinition = {
   badge: string;
 };
 
+/** Paste into Stripe Dashboard → Settings → Business → Product description */
+export const STRIPE_BUSINESS_DESCRIPTION =
+  "LarpKing (larpking.com) is a subscription-based SaaS web application for AI-powered lifestyle image creation. Users upload reference photos, select creative templates or text prompts, and generate realistic social, travel, fashion, restaurant, and luxury-style visuals. Monthly plans provide credits consumed per image or video generation, with access to templates, generation history, and downloads. The service is designed for creative, entertainment, and personal branding use—not for identity verification, fraud, or non-consensual content.";
+
 const ENV_PATH = ".env";
 
 const plans: PlanDefinition[] = [
   {
     key: "discovery",
     envKey: "STRIPE_DISCOVERY_PRICE_ID",
-    name: "LarpKing Decouverte",
-    description: "250 credits par mois pour explorer et tester des idees.",
+    name: "LarpKing Discovery",
+    description:
+      "Monthly subscription: 250 credits for AI lifestyle image generations on LarpKing.",
     lookupKey: "larpking_discovery_monthly_eur",
     amount: 890,
     credits: 250,
@@ -34,8 +39,9 @@ const plans: PlanDefinition[] = [
   {
     key: "essential",
     envKey: "STRIPE_ESSENTIAL_PRICE_ID",
-    name: "LarpKing Essentiel",
-    description: "850 credits par mois + 250 credits offerts pour les createurs reguliers.",
+    name: "LarpKing Essential",
+    description:
+      "Monthly subscription: 850 credits per month plus 250 bonus credits for regular creators (images and video on LarpKing).",
     lookupKey: "larpking_essential_monthly_eur",
     amount: 1990,
     credits: 1100,
@@ -47,7 +53,8 @@ const plans: PlanDefinition[] = [
     key: "ultimate",
     envKey: "STRIPE_ULTIMATE_PRICE_ID",
     name: "LarpKing Ultimate",
-    description: "2500 credits par mois pour les createurs intensifs.",
+    description:
+      "Monthly subscription: 2,500 credits per month for high-volume AI lifestyle image and video creation on LarpKing.",
     lookupKey: "larpking_ultimate_monthly_eur",
     amount: 3990,
     credits: 2500,
@@ -207,6 +214,8 @@ async function main(): Promise<void> {
 
   writeEnvValues(raw, results);
   console.log("Stripe plan price IDs written to .env");
+  console.log("\nStripe business product description (Dashboard → Business):\n");
+  console.log(STRIPE_BUSINESS_DESCRIPTION);
 }
 
 main().catch((error) => {

@@ -162,7 +162,7 @@ export const resources = {
       subtitle: "Ton LARP est prêt.",
       upgradeTitle: "Passe au mensuel !",
       chooseTitle: "Choisis ton plan",
-      pricingTitle: "Fait le plan de crédits",
+      pricingTitle: "Fais le plein de crédits",
       pricingSubtitle: "Plus qu'1 clic pour le débloquer",
       satisfactionBadge: "Satisfait ou remboursé",
       includedTitle: "Inclus dans le plan",

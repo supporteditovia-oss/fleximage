@@ -82,7 +82,7 @@ function FrameCard({
           className="h-full w-full object-cover opacity-95 saturate-100"
         />
       </picture>
-      <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-white/10" />
+      <div className="absolute inset-0 hidden bg-gradient-to-t from-white/20 via-transparent to-white/10 md:block" />
     </div>
   );
 }
@@ -191,7 +191,7 @@ export default function HeroBackgroundFrames() {
       aria-hidden="true"
     >
       <div
-        className="absolute inset-0 opacity-75 md:opacity-85 [mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
+        className="absolute inset-0 opacity-90 max-md:[mask-image:none] md:opacity-85 md:[mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
       >
         <FrameRow
           items={row1}
