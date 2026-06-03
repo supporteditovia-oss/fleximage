@@ -222,7 +222,7 @@ export const resources = {
           badge: "Meilleur choix",
           price: "19,90 EUR",
           credits: "850 cr\u00e9dits",
-          priceLine: "8,90 EUR/mois - R\u00e9siliable \u00e0 tout moment",
+          priceLine: "19,90 EUR/mois - R\u00e9siliable \u00e0 tout moment",
           oldPrice: "24,90 EUR",
           creditsPerMonth: "850 cr\u00e9dits / mois",
           note: "Le meilleur choix pour les passionnés",
