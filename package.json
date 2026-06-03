@@ -11,6 +11,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "cleanup:larps": "bun run script/purge-larps.ts",
+    "stripe:audit": "bun run script/audit-stripe.ts",
     "stripe:plans": "bun run script/create-stripe-plans.ts",
     "stripe:webhook": "bun run script/create-stripe-webhook.ts"
   },

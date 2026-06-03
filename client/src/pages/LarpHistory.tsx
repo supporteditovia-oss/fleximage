@@ -479,22 +479,24 @@ export default function LarpHistory() {
               onClick={() => setSelectedLarp(null)}
             />
             {/* Media with actions */}
-            <div className={`relative z-10 max-w-[90vw] md:max-w-3xl max-h-[80vh] md:max-h-[85vh] ${selectedLarp.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
+            <div className={`relative z-10 ${selectedLarp.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
+              <div className="relative aspect-[9/16] h-[min(80vh,720px)] w-auto overflow-hidden rounded-lg">
               {selectedLarp.resultType === "video" ? (
                 <video
                   src={selectedLarp.url}
                   controls
                   autoPlay
                   playsInline
-                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-lg object-contain"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
                 <img
                   src={selectedLarp.url}
                   alt={t("history.generatedAlt")}
-                  className="max-w-full max-h-[80vh] md:max-h-[85vh] rounded-lg object-contain"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
               )}
+              </div>
               {/* Top left — close */}
               <button
                 onClick={() => setSelectedLarp(null)}

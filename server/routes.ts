@@ -15,6 +15,7 @@ import {
   generateVideoBodySchema,
   uploadReferenceImageItemSchema,
   updateReferenceImageSchema,
+  OUTPUT_ASPECT_RATIO,
 } from "@shared/schema";
 import { logger } from "./lib/logger";
 import {
@@ -605,7 +606,7 @@ async function pollChainedVideoImageStage(params: {
     }
 
     try {
-      const aspectRatio = larp.aspect_ratio || "9:16";
+      const aspectRatio = larp.aspect_ratio || OUTPUT_ASPECT_RATIO;
       const imageUrls = Array.isArray(larp.input_assets)
         ? larp.input_assets.filter((url: unknown): url is string => typeof url === "string")
         : [];
@@ -852,6 +853,51 @@ async function respondIfTemplateFaceCaptureRequired(
       "Photos visage requises (face + profils). Scanne ton visage avant de générer.",
   });
   return false;
+}
+
+async function appendDirectGenerationFaceAssetUrls(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  imageUrls: string[],
+  useFaceAsset: boolean | undefined,
+  locale: AppLocale,
+  res: import("express").Response,
+): Promise<string[] | null> {
+  const hasCompleteFaceAsset = await userHasCompleteFaceAsset(
+    supabaseAdmin,
+    userId,
+  );
+  const includeFace = resolveHasFaceAssetForTemplateGeneration(
+    hasCompleteFaceAsset,
+    useFaceAsset,
+  );
+
+  if (!includeFace) {
+    if (useFaceAsset === true && !hasCompleteFaceAsset) {
+      res.status(422).json({
+        code: "FACE_CAPTURE_REQUIRED",
+        message:
+          "Photos visage requises (face + profils). Scanne ton visage avant de générer.",
+      });
+      return null;
+    }
+    return imageUrls;
+  }
+
+  const faceUrls = await resolveUserFaceCaptureImageUrls(
+    supabaseAdmin,
+    userId,
+  );
+  if (!faceUrls?.length) {
+    res.status(422).json({
+      code: "FACE_CAPTURE_REQUIRED",
+      message:
+        "Photos visage requises (face + profils). Scanne ton visage avant de générer.",
+    });
+    return null;
+  }
+
+  return [...faceUrls, ...imageUrls];
 }
 
 async function buildTemplateGenerationImageUrls(
@@ -2247,7 +2293,7 @@ export async function registerRoutes(
   const generateLarpBodySchema = z.object({
     template_id: z.string().uuid(),
     placeholders: z.record(z.string()).optional(),
-    aspect_ratio: z.string().optional().default("1:1"),
+    aspect_ratio: z.string().optional().default(OUTPUT_ASPECT_RATIO),
   });
 
   // POST /api/larps/generate
@@ -2259,7 +2305,8 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
-        const { template_id, placeholders, aspect_ratio } = req.body;
+        const { template_id, placeholders } = req.body;
+        const aspect_ratio = OUTPUT_ASPECT_RATIO;
         const supabaseAdmin = getSupabaseAdmin();
         const locale = resolveLocaleFromRequest(req);
 
@@ -2312,7 +2359,7 @@ export async function registerRoutes(
         if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
           try {
             const oneshotResponse = await createOneshotJob(finalPrompt, {
-              aspectRatio: aspect_ratio || "1:1",
+              aspectRatio: OUTPUT_ASPECT_RATIO,
             });
             if (oneshotResponse && oneshotResponse.id) {
               externalTaskId = `custom_${oneshotResponse.id}`;
@@ -2335,7 +2382,7 @@ export async function registerRoutes(
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
-              aspect_ratio: aspect_ratio || "1:1",
+              aspect_ratio: OUTPUT_ASPECT_RATIO,
             });
             if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
               logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
@@ -2349,7 +2396,7 @@ export async function registerRoutes(
           provider = "kie";
           const kieResponse = await createKieTask({
             prompt: finalPrompt,
-            aspect_ratio: aspect_ratio || "1:1",
+            aspect_ratio: OUTPUT_ASPECT_RATIO,
           });
           if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
             logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
@@ -2421,7 +2468,7 @@ export async function registerRoutes(
   // POST /api/larps/generate-direct (free prompt, no template)
   const generateDirectBodySchema = z.object({
     prompt: z.string().min(1).max(2000),
-    aspect_ratio: z.string().optional().default("9:16"),
+    aspect_ratio: z.string().optional().default(OUTPUT_ASPECT_RATIO),
     images: z.array(z.string()).optional().default([]),
     template_id: z.string().uuid().optional(),
     text_values: z.array(z.string().max(500)).optional(),
@@ -2436,8 +2483,8 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
-        let { prompt, aspect_ratio, images, template_id, use_face_asset } =
-          req.body;
+        let { prompt, images, template_id, use_face_asset } = req.body;
+        const aspect_ratio = OUTPUT_ASPECT_RATIO;
         const locale = resolveLocaleFromRequest(req);
 
         const supabaseAdmin = getSupabaseAdmin();
@@ -2527,6 +2574,16 @@ export async function registerRoutes(
           );
         } else if (images && images.length > 0) {
           imageUrls = await uploadInputImagesToR2(authReq.userId, images);
+          const mergedUrls = await appendDirectGenerationFaceAssetUrls(
+            supabaseAdmin,
+            authReq.userId,
+            imageUrls,
+            use_face_asset,
+            locale,
+            res,
+          );
+          if (mergedUrls === null) return;
+          imageUrls = mergedUrls;
         }
 
         if (
@@ -2576,7 +2633,7 @@ export async function registerRoutes(
 
             logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
             const oneshotResponse = await createOneshotJob(finalPrompt, {
-              aspectRatio: aspect_ratio || "9:16",
+              aspectRatio: OUTPUT_ASPECT_RATIO,
               ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
             });
             if (oneshotResponse && oneshotResponse.id) {
@@ -2600,7 +2657,7 @@ export async function registerRoutes(
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
-              aspect_ratio: aspect_ratio || "9:16",
+              aspect_ratio: OUTPUT_ASPECT_RATIO,
               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
             });
             if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
@@ -2616,7 +2673,7 @@ export async function registerRoutes(
           logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
           const kieResponse = await createKieTask({
             prompt: finalPrompt,
-            aspect_ratio: aspect_ratio || "9:16",
+            aspect_ratio: OUTPUT_ASPECT_RATIO,
             ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
           });
 
@@ -2704,9 +2761,9 @@ export async function registerRoutes(
           video_prompt,
           images,
           template_id,
-          aspect_ratio,
           use_face_asset,
         } = req.body;
+        const aspectRatio = OUTPUT_ASPECT_RATIO;
         const locale = resolveLocaleFromRequest(req);
         const supabaseAdmin = getSupabaseAdmin();
 
@@ -2849,6 +2906,16 @@ export async function registerRoutes(
           );
         } else {
           imageUrls = await uploadInputImagesToR2(authReq.userId, images);
+          const mergedUrls = await appendDirectGenerationFaceAssetUrls(
+            supabaseAdmin,
+            authReq.userId,
+            imageUrls,
+            use_face_asset,
+            locale,
+            res,
+          );
+          if (mergedUrls === null) return;
+          imageUrls = mergedUrls;
         }
 
         if (
@@ -2860,8 +2927,6 @@ export async function registerRoutes(
             message: tBackend(locale, "larps.referenceImageRequired"),
           });
         }
-
-        const aspectRatio = aspect_ratio || "9:16";
 
         let externalTaskId: string;
         let generationMetadata: Record<string, unknown>;
@@ -3150,7 +3215,7 @@ export async function registerRoutes(
               const runwayResponse = await createRunwayVideoTask({
                 prompt: videoPromptText,
                 image: generatedImageUrl,
-                aspectRatio: larp.aspect_ratio || "9:16",
+                aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
               });
 
               if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
@@ -3268,7 +3333,7 @@ export async function registerRoutes(
               "Custom API failed or timeout, triggering Kie AI fallback",
             );
             try {
-              const aspect_ratio = larp.aspect_ratio || "9:16";
+              const aspect_ratio = larp.aspect_ratio || OUTPUT_ASPECT_RATIO;
               const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
               const fallbackKieResponse = await createKieTask({
                 prompt: larp.final_prompt,

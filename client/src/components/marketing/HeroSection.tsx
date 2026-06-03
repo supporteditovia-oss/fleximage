@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -147,7 +148,7 @@ export default function HeroSection() {
         const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
         const payload = {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
-          aspect_ratio: "9:16",
+          aspect_ratio: OUTPUT_ASPECT_RATIO,
           images: base64Images,
         };
         const result = await generateDirect.mutateAsync(payload);
@@ -321,7 +322,7 @@ export default function HeroSection() {
             variants={itemVariants}
             className="relative z-10 w-full flex justify-center px-4"
           >
-            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-lg border border-border/80 bg-white/85 backdrop-blur px-3 md:px-5 py-2.5 md:py-3.5 shadow-sm shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 focus-within:ring-2 focus-within:ring-foreground/10 transition-all">
+            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-lg border border-border/80 bg-white/95 px-3 md:px-5 py-2.5 md:py-3.5 md:bg-white/85 md:backdrop-blur md:shadow-sm md:shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 md:focus-within:ring-2 md:focus-within:ring-foreground/10 transition-all">
               <input
                 ref={typewriterRef}
                 type="text"

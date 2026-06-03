@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 
 export const GOOGLE_AI_PROMPT_FLAGGED_ERROR = "Prompt flaggé par Google AI";
 
@@ -224,7 +225,7 @@ export async function createOneshotJob(
     prompt,
     options: {
       modelVariant: "fast",
-      aspectRatio: "9:16",
+      aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }
         : {}),

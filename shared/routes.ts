@@ -230,6 +230,10 @@ export const api = {
       method: "POST" as const,
       path: "/api/stripe/create-portal",
     },
+    currentPlan: {
+      method: "GET" as const,
+      path: "/api/stripe/current-plan",
+    },
     webhook: {
       method: "POST" as const,
       path: "/api/stripe/webhook",

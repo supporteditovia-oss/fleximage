@@ -119,6 +119,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Image requise",
       referenceImageRequiredDescription:
         "Ajoute au moins une image de référence pour lancer la génération.",
+      templateModeUnavailableTitle: "Mode indisponible",
+      templateModeUnavailableDescription:
+        "Ce template ne supporte pas ce mode de génération.",
       missingImageTitle: "Image manquante",
       missingImageDescription: "L'image « {{label}} » est obligatoire.",
       missingFieldTitle: "Champ manquant",
@@ -405,6 +408,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Image required",
       referenceImageRequiredDescription:
         "Add at least one reference image to start generation.",
+      templateModeUnavailableTitle: "Mode unavailable",
+      templateModeUnavailableDescription:
+        "This template does not support this generation mode.",
       missingImageTitle: "Missing image",
       missingImageDescription: "Image " + "{{label}}" + " is required.",
       missingFieldTitle: "Missing field",
@@ -674,6 +680,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Imagen requerida",
       referenceImageRequiredDescription:
         "Agrega al menos una imagen de referencia para iniciar la generacion.",
+      templateModeUnavailableTitle: "Modo no disponible",
+      templateModeUnavailableDescription:
+        "Esta plantilla no admite este modo de generacion.",
       missingImageTitle: "Falta imagen",
       missingImageDescription: "La imagen " + "{{label}}" + " es obligatoria.",
       missingFieldTitle: "Falta campo",
@@ -945,6 +954,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Bild erforderlich",
       referenceImageRequiredDescription:
         "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
+      templateModeUnavailableTitle: "Modus nicht verfugbar",
+      templateModeUnavailableDescription:
+        "Diese Vorlage unterstutzt diesen Generierungsmodus nicht.",
       missingImageTitle: "Fehlendes Bild",
       missingImageDescription: "Bild " + "{{label}}" + " ist erforderlich.",
       missingFieldTitle: "Fehlendes Feld",

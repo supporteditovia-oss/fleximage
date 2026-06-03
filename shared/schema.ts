@@ -458,6 +458,9 @@ export const appSettings = pgTable("app_settings", {
 });
 
 // --- Video generation ---
+/** Vertical portrait format for all image and video generations. */
+export const OUTPUT_ASPECT_RATIO = "9:16" as const;
+
 export const generateVideoBodySchema = z.object({
   prompt: z.string().min(1).max(2000),
   video_prompt: z.string().min(1).max(2000).optional(),

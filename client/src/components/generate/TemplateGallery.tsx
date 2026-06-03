@@ -19,23 +19,12 @@ import {
 import { TemplateIllustrationMedia } from "@/components/templates/TemplateIllustrationMedia";
 
 interface TemplateGalleryProps {
-  generationMode: "image" | "video";
   selectedTemplateId: string | null;
   onSelectTemplate: (tpl: PromptTemplate) => void;
   onDeselectTemplate: () => void;
 }
 
-function templateSupportsMode(
-  template: PromptTemplate,
-  mode: "image" | "video",
-) {
-  const generationType = template.generation_type ?? "image";
-  if (generationType === "video" || generationType === "both") return true;
-  return mode === "image";
-}
-
 export function TemplateGallery({
-  generationMode,
   selectedTemplateId,
   onSelectTemplate,
   onDeselectTemplate,
@@ -55,7 +44,6 @@ export function TemplateGallery({
       .replace(/[\u0300-\u036f]/g, "");
 
   const filtered = (templates || [])
-    .filter((t) => templateSupportsMode(t, generationMode))
     .filter((t) => {
       const q = normalize(search);
       if (!q) return true;

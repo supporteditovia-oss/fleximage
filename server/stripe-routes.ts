@@ -11,6 +11,8 @@ import {
   getStripe,
   getStripePlanConfig,
   getStripeWebhookSecret,
+  normalizeStripePlanType,
+  validateStripeRuntimeConfig,
 } from "./lib/stripe";
 import {
   handleCheckoutCompleted,
@@ -26,7 +28,97 @@ const createCheckoutBodySchema = z.object({
     .default("essential"),
 });
 
+type CurrentSubscriptionSnapshot = {
+  status: string;
+  plan_type: string;
+  credits_per_cycle: number | null;
+  billing_interval: "week" | "month" | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean | null;
+};
+
 export function registerStripeRoutes(app: Express): void {
+  validateStripeRuntimeConfig();
+
+  app.get(api.stripe.currentPlan.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
+      const supabaseAdmin = getSupabaseAdmin();
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, role, credits, is_subscriber, subscription_status, stripe_customer_id, stripe_subscription_id")
+        .eq("id", authReq.userId)
+        .single();
+
+      if (profileError || !profile) {
+        logger.warn({ err: profileError, userId: authReq.userId }, "Profile not found for current plan");
+        return res
+          .status(404)
+          .json({ message: tBackend(locale, "profiles.notFound") });
+      }
+
+      let subscription: CurrentSubscriptionSnapshot | null = null;
+
+      if (profile.stripe_subscription_id) {
+        const { data, error } = await supabaseAdmin
+          .from("subscriptions")
+          .select("status, plan_type, credits_per_cycle, billing_interval, current_period_end, cancel_at_period_end")
+          .eq("user_id", authReq.userId)
+          .eq("stripe_subscription_id", profile.stripe_subscription_id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          logger.warn({ err: error, userId: authReq.userId }, "Could not load current subscription");
+        } else {
+          subscription = data as CurrentSubscriptionSnapshot | null;
+        }
+      }
+
+      const isAdmin = profile.role === "admin";
+      const hasStripeCustomer = Boolean(profile.stripe_customer_id);
+      const isSubscriber = Boolean(profile.is_subscriber || isAdmin);
+      let planType: "free" | "admin" | "unknown" | ReturnType<typeof normalizeStripePlanType> = "free";
+      let creditsPerCycle: number | null = null;
+      let billingInterval: "week" | "month" | null = null;
+      let subscriptionStatus =
+        profile.subscription_status || (profile.is_subscriber ? "active" : "inactive");
+
+      if (isAdmin) {
+        planType = "admin";
+        subscriptionStatus = "admin";
+      } else if (subscription) {
+        planType = normalizeStripePlanType(subscription.plan_type);
+        subscriptionStatus = subscription.status || subscriptionStatus;
+        creditsPerCycle = subscription.credits_per_cycle;
+        billingInterval = subscription.billing_interval;
+      } else if (profile.is_subscriber) {
+        planType = "unknown";
+      }
+
+      res.json({
+        credits: profile.credits ?? 0,
+        planType,
+        subscriptionStatus,
+        isSubscriber,
+        creditsPerCycle,
+        billingInterval,
+        currentPeriodEnd: subscription?.current_period_end ?? null,
+        cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+        canManageSubscription: hasStripeCustomer,
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error loading current Stripe plan");
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
   app.post(api.stripe.createCheckout.path, requireAuth, validateRequest(createCheckoutBodySchema), async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;

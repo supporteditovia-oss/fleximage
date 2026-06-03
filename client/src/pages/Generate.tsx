@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, ChevronDown, ScanFace } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
@@ -15,10 +15,12 @@ import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
+import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
+import { currentPlanQueryKey } from "@/hooks/use-billing";
 import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import {
   getPaywalledResult,
@@ -35,7 +37,8 @@ import {
 import { useLatestFaceCapture } from "@/hooks/use-face-captures";
 import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
-import { templateRequiresFaceCapture } from "@/lib/template-utils";
+import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
+import { templateRequiresFaceCapture, templateSupportsGenerationMode, getTemplateDefaultGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 
@@ -45,12 +48,6 @@ const IMAGE_CREDIT_COST = 5;
 const VIDEO_CREDIT_COST = 30;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
 type GenerationMode = "image" | "video";
-
-function templateSupportsMode(template: PromptTemplate, mode: GenerationMode) {
-  const generationType = template.generation_type ?? "image";
-  if (generationType === "video" || generationType === "both") return true;
-  return mode === "image";
-}
 
 function getRandomFakeLoaderDelay() {
   return (
@@ -151,6 +148,7 @@ export default function Generate() {
 
       const onVerified = async (isActive: boolean) => {
         queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
         await refetchEligibility();
 
         if (!isActive) {
@@ -324,7 +322,13 @@ export default function Generate() {
   useEffect(() => {
     if (!pendingTemplateId || selectedTemplate || !templatesList) return;
     const tpl = templatesList.find((t) => t.id === pendingTemplateId);
-    if (tpl) setSelectedTemplate(tpl);
+    if (!tpl) return;
+    setSelectedTemplate(tpl);
+    setGenerationMode((current) =>
+      templateSupportsGenerationMode(tpl, current)
+        ? current
+        : getTemplateDefaultGenerationMode(tpl),
+    );
   }, [pendingTemplateId, selectedTemplate, templatesList]);
 
   useEffect(() => {
@@ -361,6 +365,9 @@ export default function Generate() {
     setPendingTemplateId(null);
     setPrompt("");
     setImages([null]);
+    if (!templateSupportsGenerationMode(tpl, generationMode)) {
+      setGenerationMode(getTemplateDefaultGenerationMode(tpl));
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -374,6 +381,13 @@ export default function Generate() {
   };
 
   const handleGenerationModeChange = (mode: GenerationMode) => {
+    if (
+      selectedTemplate &&
+      !templateSupportsGenerationMode(selectedTemplate, mode)
+    ) {
+      return;
+    }
+
     setGenerationMode(mode);
     setPendingTemplateId(null);
 
@@ -382,13 +396,15 @@ export default function Generate() {
         const next = mode === "video" ? prev.slice(0, 1) : prev;
         return next.length === 0 ? [null] : next;
       });
-      return;
-    }
-
-    if (!templateSupportsMode(selectedTemplate, mode)) {
-      deselectTemplate();
     }
   };
+
+  const imageModeDisabled =
+    Boolean(selectedTemplate) &&
+    !templateSupportsGenerationMode(selectedTemplate!, "image");
+  const videoModeDisabled =
+    Boolean(selectedTemplate) &&
+    !templateSupportsGenerationMode(selectedTemplate!, "video");
 
   // ── Generation ──────────────────────────────────────────────
   const fileToBase64 = (file: File): Promise<string> =>
@@ -424,12 +440,20 @@ export default function Generate() {
     const filesForGeneration =
       generationMode === "video" ? files.slice(0, 1) : files;
 
-    if (isTemplateGeneration) {
-      if ((activeTemplate?.reference_image_count ?? 0) === 0) {
+    if (isTemplateGeneration && activeTemplate) {
+      if ((activeTemplate.reference_image_count ?? 0) === 0) {
         toast({
           variant: "destructive",
           title: t("generate.referenceImageRequiredTitle"),
           description: t("templateSelected.noReferenceImages"),
+        });
+        return;
+      }
+      if (!templateSupportsGenerationMode(activeTemplate, generationMode)) {
+        toast({
+          variant: "destructive",
+          title: t("generate.templateModeUnavailableTitle"),
+          description: t("generate.templateModeUnavailableDescription"),
         });
         return;
       }
@@ -447,6 +471,15 @@ export default function Generate() {
       : true;
 
     if (isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
+      toast({
+        variant: "destructive",
+        title: t("templateSelected.faceRequired"),
+        description: t("generate.scanFace"),
+      });
+      return;
+    }
+
+    if (!isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
       toast({
         variant: "destructive",
         title: t("templateSelected.faceRequired"),
@@ -543,10 +576,10 @@ export default function Generate() {
 
         const result = await generateVideo.mutateAsync({
           prompt: serverPrompt,
-          aspect_ratio: "9:16",
+          aspect_ratio: OUTPUT_ASPECT_RATIO,
           images: base64Images && base64Images.length > 0 ? base64Images : undefined,
           template_id: selectedOrPendingTemplateId,
-          use_face_asset: isTemplateGeneration ? useFaceAsset : undefined,
+          use_face_asset: useFaceAsset,
         });
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
@@ -563,10 +596,10 @@ export default function Generate() {
 
       const result = await generateDirect.mutateAsync({
         prompt: serverPrompt,
-        aspect_ratio: "9:16",
+        aspect_ratio: OUTPUT_ASPECT_RATIO,
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
-        use_face_asset: isTemplateGeneration ? useFaceAsset : undefined,
+        use_face_asset: useFaceAsset,
       });
       setTaskId(result.taskId);
       refetchEligibility();
@@ -886,11 +919,11 @@ export default function Generate() {
       >
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
-          <div className="sticky top-[5.25rem] z-20 flex w-full max-w-md flex-col items-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2.5 shadow-sm backdrop-blur-md sm:flex-row sm:justify-center md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
+          <div className="sticky top-[5.25rem] z-20 flex w-full max-w-md justify-center md:static">
             <div
               role="tablist"
               aria-label="Generation mode"
-              className="relative grid w-full max-w-[11.5rem] shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md sm:w-auto"
+              className="relative grid shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
             >
               <div
                 className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -902,7 +935,8 @@ export default function Generate() {
                 role="tab"
                 aria-selected={generationMode === "image"}
                 onClick={() => handleGenerationModeChange("image")}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                disabled={imageModeDisabled}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-40 ${
                   generationMode === "image"
                     ? "text-primary-foreground"
                     : "text-muted-foreground/75 hover:text-muted-foreground"
@@ -915,7 +949,8 @@ export default function Generate() {
                 role="tab"
                 aria-selected={generationMode === "video"}
                 onClick={() => handleGenerationModeChange("video")}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                disabled={videoModeDisabled}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-40 ${
                   generationMode === "video"
                     ? "text-primary-foreground"
                     : "text-muted-foreground/75 hover:text-muted-foreground"
@@ -924,15 +959,6 @@ export default function Generate() {
                 {t("generate.modeVideo")}
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/face-capture")}
-              className="inline-flex h-9 w-full max-w-[11.5rem] shrink-0 items-center justify-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-3 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10 sm:w-auto sm:max-w-none sm:text-xs"
-            >
-              <ScanFace className="h-3.5 w-3.5 shrink-0" />
-              {t("generate.scanFace")}
-            </button>
           </div>
 
           {selectedTemplate ? (
@@ -966,7 +992,20 @@ export default function Generate() {
                 isGenerating={
                   generateDirect.isPending || generateVideo.isPending
                 }
-                canGenerate={images.some((img) => img !== null)}
+                canGenerate={
+                  images.some((img) => img !== null) &&
+                  (!useFaceAsset || faceCaptureReady)
+                }
+              />
+
+              <FaceAssetControls
+                idPrefix="free-prompt-face-asset"
+                useFaceAsset={useFaceAsset}
+                onUseFaceAssetChange={setUseFaceAsset}
+                faceCaptureReady={faceCaptureReady}
+                faceCaptureLoading={latestFaceCapture.isLoading}
+                onScanFace={() => navigate("/face-capture")}
+                scanButtonVariant="pill"
               />
             </>
           )}
@@ -985,7 +1024,6 @@ export default function Generate() {
 
       <div ref={galleryRef}>
         <TemplateGallery
-          generationMode={generationMode}
           selectedTemplateId={selectedTemplate?.id ?? null}
           onSelectTemplate={selectTemplate}
           onDeselectTemplate={deselectTemplate}

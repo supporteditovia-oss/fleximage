@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 
 const KIE_RUNWAY_BASE_URL = "https://api.kie.ai/api/v1/runway";
 
@@ -79,7 +80,7 @@ export async function createRunwayVideoTask(
     prompt: input.prompt,
     duration: 5,
     quality: "720p",
-    aspectRatio: input.aspectRatio || "9:16",
+    aspectRatio: input.aspectRatio || OUTPUT_ASPECT_RATIO,
     waterMark: "",
   };
 

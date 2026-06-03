@@ -389,13 +389,31 @@ export class CaptureSession {
   }
 
   stop(): void {
-    this.cancelSendLoop();
-    this.camera.stop();
+    this.releaseCamera();
     this.detector.destroy();
     this.maskRenderer.dispose();
     this.clearGuideOverlayCanvas();
     this.adminPausedCompletedIdx = null;
     this.state = "idle";
+  }
+
+  /** Stops the webcam and frame loop without tearing down the full session. */
+  private releaseCamera(): void {
+    this.cancelSendLoop();
+    this.camera.stop();
+    if (this.videoEl) {
+      try {
+        this.videoEl.pause();
+      } catch {
+        // ignore
+      }
+      this.videoEl.srcObject = null;
+      try {
+        this.videoEl.load();
+      } catch {
+        // ignore
+      }
+    }
   }
 
   getState(): CaptureSessionState {
@@ -1097,7 +1115,7 @@ export class CaptureSession {
 
     if (this.currentPoseIndex >= this.poses.length) {
       this.state = "Done";
-      this.cancelSendLoop();
+      this.releaseCamera();
       this.callback?.({ type: "pose_captured", poseId: poseState.poseId, blob });
       this.callback?.({ type: "session_complete", results: this.capturedPoses });
       return;

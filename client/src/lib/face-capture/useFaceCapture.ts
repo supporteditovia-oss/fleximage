@@ -139,6 +139,7 @@ export function useFaceCapture(
         syncState(session);
         setState(prev => ({
           ...prev,
+          sessionState: 'Done',
           capturedPoses: event.results,
           isLoading: false,
           adminCaptureDebug: null,

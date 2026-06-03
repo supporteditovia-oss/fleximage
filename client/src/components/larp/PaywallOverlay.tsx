@@ -5,8 +5,6 @@ import {
   Check,
   Loader2,
   Lock,
-  ShieldCheck,
-  Sparkles,
   Unlock,
 } from "lucide-react";
 import { authFetch } from "@/lib/api";
@@ -18,20 +16,9 @@ type PlanCard = {
   id: PaywallPlan;
   euros: string;
   cents: string;
-  badge?: {
-    key: string;
-    tone: "green" | "gold";
-  };
   bonusKey?: string;
   featureKeys: string[];
 };
-
-const socialProofAvatars = [
-  { initials: "AM", className: "bg-[radial-gradient(circle_at_30%_25%,#c084fc,#7c3aed_58%,#4c1d95)]" },
-  { initials: "JL", className: "bg-[radial-gradient(circle_at_30%_25%,#f9a8d4,#db2777_58%,#831843)]" },
-  { initials: "NS", className: "bg-[radial-gradient(circle_at_30%_25%,#67e8f9,#0891b2_58%,#164e63)]" },
-  { initials: "MR", className: "bg-[radial-gradient(circle_at_30%_25%,#fdba74,#f97316_58%,#7c2d12)]" },
-];
 
 const planCards: PlanCard[] = [
   {
@@ -44,7 +31,6 @@ const planCards: PlanCard[] = [
     id: "essential",
     euros: "19",
     cents: "90",
-    badge: { key: "bestValue", tone: "green" },
     bonusKey: "essentialBonus",
     featureKeys: ["photo", "marketRealism", "details", "video", "prioritySupport"],
   },
@@ -52,7 +38,6 @@ const planCards: PlanCard[] = [
     id: "ultimate",
     euros: "39",
     cents: "90",
-    badge: { key: "exclusive", tone: "gold" },
     featureKeys: ["photo", "indistinguishable", "ulDetails", "immersion", "vipSupport"],
   },
 ];
@@ -61,6 +46,7 @@ interface PaywallOverlayProps {
   imageUrl: string;
   isFake?: boolean;
   defaultPlan?: PaywallPlan;
+  initialChoosingPlan?: boolean;
   variant?: "default" | "insufficientCredits";
 }
 
@@ -68,62 +54,19 @@ export function PaywallOverlay({
   imageUrl,
   isFake,
   defaultPlan = "essential",
+  initialChoosingPlan = false,
   variant = "default",
 }: PaywallOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isChoosingPlan, setIsChoosingPlan] = useState(false);
+  const [isChoosingPlan, setIsChoosingPlan] = useState(initialChoosingPlan);
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
-  const [monthlyLarpsCount, setMonthlyLarpsCount] = useState(12847);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setSelectedPlan(defaultPlan);
-    setIsChoosingPlan(false);
+    setIsChoosingPlan(initialChoosingPlan);
     setIsLoading(false);
-  }, [defaultPlan, imageUrl]);
-
-  useEffect(() => {
-    const baseCount = 12847;
-    let timeoutId: number | null = null;
-    let cancelled = false;
-
-    const scheduleNextTick = () => {
-      if (cancelled) return;
-
-      const isPause = Math.random() < 0.22;
-      const delay = isPause
-        ? 2800 + Math.floor(Math.random() * 2200)
-        : 1200 + Math.floor(Math.random() * 1600);
-
-      timeoutId = window.setTimeout(() => {
-        setMonthlyLarpsCount((current) => {
-          if (isPause) return current;
-
-          const step = Math.random() < 0.16
-            ? 3 + Math.floor(Math.random() * 4)
-            : 1 + Math.floor(Math.random() * 2);
-          const next = current + step;
-
-          if (next > baseCount + 250) {
-            return baseCount + Math.floor(Math.random() * 50);
-          }
-
-          return next;
-        });
-
-        scheduleNextTick();
-      }, delay);
-    };
-
-    scheduleNextTick();
-
-    return () => {
-      cancelled = true;
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, []);
+  }, [defaultPlan, imageUrl, initialChoosingPlan]);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -152,9 +95,6 @@ export function PaywallOverlay({
     void handleSubscribe();
   };
 
-  const formattedLarpsCount = new Intl.NumberFormat(
-    i18n.resolvedLanguage ?? "fr",
-  ).format(monthlyLarpsCount);
   const isInsufficientCredits = variant === "insufficientCredits";
   const overlaySubtitle = isInsufficientCredits
     ? t("generate.insufficientCreditsTitle")
@@ -187,7 +127,7 @@ export function PaywallOverlay({
         className="flex h-full max-h-full w-full items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white/86 px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4"
       >
         <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col">
-          <div className="flex shrink-0 flex-col gap-2 border-b border-border/70 pb-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex shrink-0 flex-col gap-2 border-b border-border/70 pb-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                 {t("paywall.chooseTitle")}
@@ -195,10 +135,6 @@ export function PaywallOverlay({
               <h2 className="mt-1 font-display text-2xl font-bold leading-none text-foreground md:text-3xl">
                 {t("paywall.pricingTitle")}
               </h2>
-            </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1.5 text-[11px] font-bold text-emerald-700">
-              <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.6} />
-              {t("paywall.satisfactionBadge")}
             </div>
           </div>
 
@@ -219,14 +155,7 @@ export function PaywallOverlay({
                       : "border-border/70 bg-white/66 hover:border-foreground/25 hover:bg-white/86"
                   }`}
                 >
-                  {plan.badge && (
-                    <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-sky-400/25 bg-sky-400/10 px-2 py-1 text-[10px] font-bold text-sky-700">
-                      <Sparkles className="h-3 w-3" strokeWidth={2.6} />
-                      {t(`paywall.planBadges.${plan.badge.key}`)}
-                    </span>
-                  )}
-
-                  <div className="flex items-start justify-between gap-3 pr-20 md:pr-16">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-display text-xl font-bold leading-none md:text-2xl">
                         {t(`paywall.plans.${plan.id}.name`)}
@@ -290,23 +219,7 @@ export function PaywallOverlay({
             })}
           </div>
 
-          <div className="mt-3 flex shrink-0 flex-col items-center gap-3 border-t border-border/70 pt-3 md:flex-row md:justify-between">
-            <div className="flex items-center gap-2.5 text-center md:text-left">
-              <div className="flex shrink-0 -space-x-2" aria-hidden="true">
-                {socialProofAvatars.map((avatar) => (
-                  <span
-                    key={avatar.initials}
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[8px] font-bold text-white shadow-sm ${avatar.className}`}
-                  >
-                    {avatar.initials}
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs font-bold leading-tight text-muted-foreground">
-                {t("paywall.monthlySent", { count: formattedLarpsCount })}
-              </p>
-            </div>
-
+          <div className="mt-3 flex shrink-0 justify-center border-t border-border/70 pt-3">
             <motion.button
               onClick={handleSubscribe}
               disabled={isLoading}
@@ -415,10 +328,6 @@ export function PaywallOverlay({
             </span>
           </motion.button>
         )}
-
-        <p className={`${isInsufficientCredits ? "mt-0" : "mt-2"} text-center text-xs text-white/80`}>
-          {t("paywall.monthlySent", { count: formattedLarpsCount })}
-        </p>
       </motion.div>
     </div>
   );

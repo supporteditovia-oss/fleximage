@@ -12,6 +12,8 @@ export const FACE_CAPTURE_POSES = [
 
 export type FaceCapturePoseId = (typeof FACE_CAPTURE_POSES)[number];
 
+export const FACE_CAPTURE_COMPOSITE_POSES = ["frontal", "profile-right"] as const;
+
 export function hasCompleteFaceCapture(
   data: LatestFaceCaptureResponse | undefined,
 ): boolean {
@@ -47,11 +49,12 @@ function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
 }
 
 export async function composeFaceCaptureBlobs(blobs: Blob[]): Promise<Blob> {
-  if (blobs.length !== FACE_CAPTURE_POSES.length) {
+  if (blobs.length < FACE_CAPTURE_COMPOSITE_POSES.length) {
     throw new Error("FACE_CAPTURE_REQUIRED");
   }
 
-  const images = await Promise.all(blobs.map((blob) => loadImageFromBlob(blob)));
+  const compositeBlobs = blobs.slice(0, FACE_CAPTURE_COMPOSITE_POSES.length);
+  const images = await Promise.all(compositeBlobs.map((blob) => loadImageFromBlob(blob)));
   const targetHeight = 1024;
   const panelWidth = Math.round((targetHeight * 9) / 16);
   const canvas = document.createElement("canvas");
@@ -125,7 +128,7 @@ export async function loadFaceCaptureBase64Images(): Promise<string[]> {
   }
 
   const captures = data.session!.captures;
-  const ordered = FACE_CAPTURE_POSES.map((poseId) => {
+  const ordered = FACE_CAPTURE_COMPOSITE_POSES.map((poseId) => {
     const capture = captures.find((item) => item.poseId === poseId);
     if (!capture) throw new Error("FACE_CAPTURE_REQUIRED");
     return capture;
@@ -143,7 +146,7 @@ export async function loadFaceCapturePreviewUrl(): Promise<string | null> {
     const data = await fetchLatestFaceCapture();
     if (!hasCompleteFaceCapture(data)) return null;
     const captures = data.session!.captures;
-    const ordered = FACE_CAPTURE_POSES.map((poseId) => {
+    const ordered = FACE_CAPTURE_COMPOSITE_POSES.map((poseId) => {
       const capture = captures.find((item) => item.poseId === poseId);
       if (!capture) throw new Error("FACE_CAPTURE_REQUIRED");
       return capture;

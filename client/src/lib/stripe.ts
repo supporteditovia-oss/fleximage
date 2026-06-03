@@ -19,9 +19,10 @@ export async function createCheckoutSession(
 /**
  * Create a Stripe Customer Portal session and return the URL.
  */
-export async function createPortalSession(): Promise<string | null> {
+export async function createPortalSession(returnPath?: "/generate" | "/settings"): Promise<string | null> {
   const res = await authFetch("/api/stripe/create-portal", {
     method: "POST",
+    body: returnPath ? JSON.stringify({ returnPath }) : undefined,
   });
   const data = await res.json();
   return data.url || null;

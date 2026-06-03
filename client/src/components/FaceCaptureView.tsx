@@ -124,9 +124,11 @@ export function FaceCaptureView({
       !completionNotifiedRef.current
     ) {
       completionNotifiedRef.current = true;
-      onComplete(state.capturedPoses);
+      const capturedPoses = [...state.capturedPoses];
+      stop();
+      onComplete(capturedPoses);
     }
-  }, [state.sessionState, state.capturedPoses, onComplete]);
+  }, [state.sessionState, state.capturedPoses, onComplete, stop]);
 
   const cameraErrorMessage = useMemo(() => {
     if (!state.error) return null;
@@ -225,31 +227,31 @@ export function FaceCaptureView({
       <style>{`
         @keyframes captureFlash {
           0% { opacity: 0; }
-          20% { opacity: 0.3; }
+          20% { opacity: 0.08; }
           100% { opacity: 0; }
         }
         .capture-flash { animation: captureFlash 0.4s ease-out forwards; }
         @keyframes scanFlashPulse {
-          0%, 100% { opacity: 0.85; }
-          50% { opacity: 1; }
+          0%, 100% { opacity: 0.28; }
+          50% { opacity: 0.42; }
         }
         .scan-flash-frame { animation: scanFlashPulse 1.4s ease-in-out infinite; }
         /**
          * Anneau blanc type « flash selfie » (Snap) : centre laissé plus clair
-         * pour le visage, bords fortement éclaircis.
+         * pour le visage, bords légèrement éclaircis.
          */
         .selfie-flash-vignette {
           background: radial-gradient(
             ellipse 82% 86% at 50% 46%,
             rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0) 40%,
-            rgba(255, 255, 255, 0.22) 62%,
-            rgba(255, 255, 255, 0.52) 78%,
-            rgba(255, 255, 255, 0.88) 100%
+            rgba(255, 255, 255, 0) 48%,
+            rgba(255, 255, 255, 0.06) 68%,
+            rgba(255, 255, 255, 0.12) 82%,
+            rgba(255, 255, 255, 0.2) 100%
           );
           box-shadow:
-            inset 0 0 72px rgba(255, 255, 255, 0.45),
-            inset 0 0 140px rgba(255, 255, 255, 0.2);
+            inset 0 0 72px rgba(255, 255, 255, 0.06),
+            inset 0 0 140px rgba(255, 255, 255, 0.03);
         }
       `}</style>
 
@@ -368,13 +370,13 @@ export function FaceCaptureView({
               aria-hidden
               style={{
                 boxShadow:
-                  'inset 0 0 0 5px rgba(255, 255, 255, 0.98), inset 0 0 100px 40px rgba(255, 255, 255, 0.42)',
+                  'inset 0 0 0 3px rgba(255, 255, 255, 0.42), inset 0 0 80px 32px rgba(255, 255, 255, 0.06)',
               }}
             />
           ) : null}
 
           {hasNoFace && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center">
+            <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center px-5">
               <div
                 className="rounded-2xl border px-6 py-4 backdrop-blur-md"
                 style={{
@@ -394,37 +396,33 @@ export function FaceCaptureView({
           )}
 
           {!isLoading && !hasError && showPoseInstructionOverlay ? (
-            <>
-              <div
-                className="pointer-events-none absolute left-0 right-0 top-0 z-20 mx-auto flex max-w-md flex-col items-center px-5 pt-8 text-center sm:max-w-lg"
-              >
-                <p className="font-display text-lg font-semibold leading-snug tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)] sm:text-xl">
-                  {instruction}
-                </p>
-                {profileTurnArrow ? (
-                  <div
-                    className="mt-2 flex h-12 w-12 items-center justify-center rounded-full bg-black/25 text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)] backdrop-blur-sm sm:mt-2.5 sm:h-14 sm:w-14"
-                    aria-hidden
-                  >
-                    {profileTurnArrow === 'left' ? (
-                      <ChevronLeft
-                        className="h-9 w-9 animate-pulse sm:h-11 sm:w-11"
-                        strokeWidth={2.25}
-                      />
-                    ) : (
-                      <ChevronRight
-                        className="h-9 w-9 animate-pulse sm:h-11 sm:w-11"
-                        strokeWidth={2.25}
-                      />
-                    )}
-                  </div>
-                ) : null}
-              </div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 mx-auto flex max-w-md flex-col items-center px-5 pb-1 text-center sm:max-w-lg">
+              <p className="font-display text-lg font-semibold leading-snug tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)] sm:text-xl">
+                {instruction}
+              </p>
+              {profileTurnArrow ? (
+                <div
+                  className="mt-2 flex h-12 w-12 items-center justify-center rounded-full bg-black/25 text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)] backdrop-blur-sm sm:mt-2.5 sm:h-14 sm:w-14"
+                  aria-hidden
+                >
+                  {profileTurnArrow === 'left' ? (
+                    <ChevronLeft
+                      className="h-9 w-9 animate-pulse sm:h-11 sm:w-11"
+                      strokeWidth={2.25}
+                    />
+                  ) : (
+                    <ChevronRight
+                      className="h-9 w-9 animate-pulse sm:h-11 sm:w-11"
+                      strokeWidth={2.25}
+                    />
+                  )}
+                </div>
+              ) : null}
 
               {state.sessionState === 'Holding' &&
               state.validation?.poseId === activePoseId ? (
                 <p
-                  className="pointer-events-none absolute inset-x-0 top-1/2 z-[21] mx-auto max-w-lg -translate-y-1/2 px-5 text-center font-display text-2xl font-semibold leading-snug tracking-tight text-emerald-300 drop-shadow-[0_2px_20px_rgba(0,0,0,0.92)] sm:max-w-2xl sm:text-3xl"
+                  className="mt-2 font-display text-xl font-semibold leading-snug tracking-tight text-emerald-300 drop-shadow-[0_2px_20px_rgba(0,0,0,0.92)] sm:text-2xl"
                   aria-live="polite"
                 >
                   {i18n(language, { en: 'Hold still', fr: 'Ne bougez pas' })}
@@ -440,14 +438,13 @@ export function FaceCaptureView({
               activePoseId !== null &&
               state.validation.poseId === activePoseId ? (
                 <p
-                  className="pointer-events-none absolute inset-x-0 top-1/2 z-[21] mx-auto max-w-lg -translate-y-1/2 px-5 text-center font-display text-2xl font-semibold leading-snug tracking-tight text-amber-200/95 drop-shadow-[0_2px_20px_rgba(0,0,0,0.92)] sm:max-w-2xl sm:text-3xl"
+                  className="mt-2 font-display text-xl font-semibold leading-snug tracking-tight text-amber-200/95 drop-shadow-[0_2px_20px_rgba(0,0,0,0.92)] sm:text-2xl"
                   aria-live="polite"
                 >
                   {state.validation.reasons[0]}
                 </p>
               ) : null}
-
-            </>
+            </div>
           ) : null}
 
           {state.sessionState === 'Capturing' &&

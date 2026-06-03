@@ -45,6 +45,38 @@ body[data-paywall-overlay] .floating-header-credits {
   pointer-events: none !important;
 }
 
+@keyframes credit-zero-attention {
+  0%,
+  100% {
+    border-color: hsl(var(--border) / 0.8);
+    background-color: rgb(255 255 255 / 0.85);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.1),
+      0 0 0 0 hsl(var(--destructive) / 0);
+  }
+  50% {
+    border-color: hsl(var(--destructive) / 0.38);
+    background-color: hsl(var(--destructive) / 0.055);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 0 0 3px hsl(var(--destructive) / 0.12);
+  }
+}
+
+.credits-zero-attention {
+  animation: credit-zero-attention 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credits-zero-attention {
+    animation: none;
+    border-color: hsl(var(--destructive) / 0.34);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 0 0 2px hsl(var(--destructive) / 0.1);
+  }
+}
+
 :root {
   /* LarpKing grayscale palette */
   --font-sans: "DM Sans", sans-serif;

@@ -20,6 +20,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
+const RESULT_ASPECT_CLASS = "aspect-[9/16]";
+
 const SHARE_PLATFORMS = [
   {
     id: "whatsapp" as const,
@@ -156,21 +158,21 @@ export function LarpResult({
         {resultUrls.map((url, index) => (
           <div
             key={index}
-            className="relative rounded-lg overflow-hidden max-h-full flex items-center justify-center"
+            className={`relative ${RESULT_ASPECT_CLASS} h-[min(55vh,640px)] w-auto overflow-hidden rounded-lg shadow-xl`}
           >
             {resultType === "video" ? (
               <video
                 src={url}
                 controls
                 playsInline
-                className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-lg shadow-xl"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
               <>
                 <img
                   src={url}
                   alt={t("result.generatedAlt", { index: index + 1 })}
-                  className="max-h-[55vh] md:max-h-[60vh] max-w-full w-auto object-contain rounded-lg shadow-xl"
+                  className="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
                 />
                 {/* Bottom gradient with action buttons */}

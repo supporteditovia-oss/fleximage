@@ -44,6 +44,24 @@ export function getLocalizedHistoryTemplateName(
   return template.name;
 }
 
+/** Whether a template can be generated in the given output mode. */
+export function templateSupportsGenerationMode(
+  template: Pick<PromptTemplate, "generation_type">,
+  mode: "image" | "video",
+): boolean {
+  const generationType = template.generation_type ?? "image";
+  if (generationType === "both") return true;
+  if (generationType === "video") return mode === "video";
+  return mode === "image";
+}
+
+/** Preferred mode when the user picks a template without a compatible toggle selection. */
+export function getTemplateDefaultGenerationMode(
+  template: Pick<PromptTemplate, "generation_type">,
+): "image" | "video" {
+  return template.generation_type === "video" ? "video" : "image";
+}
+
 /** Whether the user must complete face capture before generating with this template. */
 export function templateRequiresFaceCapture(
   template: Pick<

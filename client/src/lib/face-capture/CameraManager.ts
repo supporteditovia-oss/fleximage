@@ -135,11 +135,25 @@ export class CameraManager {
 
   stop(): void {
     if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
+      for (const track of this.stream.getTracks()) {
+        track.enabled = false;
+        track.stop();
+      }
       this.stream = null;
     }
     if (this.video) {
+      try {
+        this.video.pause();
+      } catch {
+        // ignore autoplay / already paused
+      }
       this.video.srcObject = null;
+      // Safari iOS: reset the element so the hardware camera releases promptly.
+      try {
+        this.video.load();
+      } catch {
+        // ignore
+      }
       this.video = null;
     }
     if (this.animFrameId !== null) {

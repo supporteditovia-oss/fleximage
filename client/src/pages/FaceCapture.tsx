@@ -11,7 +11,10 @@ import {
   useLatestFaceCapture,
   useStoreFaceCaptures,
 } from "@/hooks/use-face-captures";
-import { composeFaceCaptureBlobs } from "@/lib/face-capture-generation";
+import {
+  FACE_CAPTURE_COMPOSITE_POSES,
+  composeFaceCaptureBlobs,
+} from "@/lib/face-capture-generation";
 import type { CapturedPose } from "@/lib/face-capture";
 
 const REQUIRED_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
@@ -64,7 +67,7 @@ export default function FaceCapture() {
 
     setStoredThumbnailsLoading(true);
 
-    const orderedCaptures = REQUIRED_CAPTURE_POSES.map((poseId) =>
+    const orderedCaptures = FACE_CAPTURE_COMPOSITE_POSES.map((poseId) =>
       captures.find((capture) => capture.poseId === poseId),
     );
 
@@ -158,7 +161,7 @@ export default function FaceCapture() {
         : storedThumbnailsError?.message ?? null;
 
   return (
-    <main className="h-[calc(100svh-12rem)] overflow-hidden bg-transparent px-4 py-0 text-foreground">
+    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 text-foreground md:h-[calc(100svh-12rem)] md:overflow-hidden md:py-0">
       {showCapture ? (
         <FaceCaptureView
           language={captureLanguage}
@@ -168,19 +171,19 @@ export default function FaceCapture() {
         />
       ) : null}
 
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col">
+      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
         <button
           type="button"
           onClick={() => navigate("/generate")}
-          className="mb-4 inline-flex w-fit shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-3 inline-flex w-fit shrink-0 items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground md:mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           {copy(language, { en: "Back", fr: "Retour" })}
         </button>
 
-        <section className="flex min-h-0 flex-1 items-center justify-center overflow-hidden text-center">
-          <div className="relative flex h-[min(76svh,520px)] aspect-[9/16] max-w-full flex-col overflow-hidden rounded-lg border-2 border-foreground/25 bg-white/80 shadow-sm">
-            <div className="relative z-20 flex h-full min-h-0 flex-col items-center justify-center px-5 py-6">
+        <section className="flex min-h-0 flex-1 items-center justify-center py-1 md:overflow-hidden md:py-0">
+          <div className="relative mx-auto flex aspect-[9/16] w-[min(100%,calc((100svh-15rem)*9/16))] max-h-[calc(100svh-15rem)] max-w-full flex-col overflow-hidden rounded-lg border-2 border-foreground/25 bg-white/80 shadow-sm md:h-[min(76svh,520px)] md:w-auto md:max-h-none">
+            <div className="relative z-20 flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-5 md:py-6">
               <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
                 {isSaving || isLoadingExistingCapture || deleteLatestFaceCapture.isPending ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -191,7 +194,7 @@ export default function FaceCapture() {
                 )}
               </div>
 
-              <h1 className="font-display text-3xl font-bold tracking-tight">
+              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
                 {isSaved
                   ? copy(language, { en: "Face capture saved", fr: "Capture visage sauvegard\u00e9e" })
                   : hasStoredCapture
@@ -223,15 +226,15 @@ export default function FaceCapture() {
                   <img
                     src={displayCaptureUrl ?? ""}
                     alt={copy(language, {
-                      en: "Combined face scan: front, right profile, and left profile",
-                      fr: "Scan visage combin\u00e9 : face, profil droit et profil gauche",
+                      en: "Combined face scan: front and profile",
+                      fr: "Scan visage combin\u00e9 : face et profil",
                     })}
-                    className="aspect-[27/16] w-full rounded-md object-cover"
+                    className="aspect-[9/8] w-full rounded-md object-cover"
                   />
                   <figcaption className="mt-1 truncate text-center text-[10px] font-semibold text-muted-foreground">
                     {copy(language, {
-                      en: "Front, right profile, left profile",
-                      fr: "Face, profil droit, profil gauche",
+                      en: "Front and profile",
+                      fr: "Face et profil",
                     })}
                   </figcaption>
                 </figure>

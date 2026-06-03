@@ -59,9 +59,41 @@ export function getStripe(): Stripe {
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY must be set");
   }
+  assertStripeKeyAllowedForRuntime(secretKey);
 
   _stripe = new Stripe(secretKey);
   return _stripe;
+}
+
+export function isLiveStripeSecretKey(secretKey: string | undefined): boolean {
+  return Boolean(secretKey?.startsWith("sk_live_"));
+}
+
+export function isTestStripeSecretKey(secretKey: string | undefined): boolean {
+  return Boolean(secretKey?.startsWith("sk_test_"));
+}
+
+function isPlaceholderWebhookSecret(secret: string | undefined): boolean {
+  return !secret?.trim() || secret.includes("your_") || secret === "whsec_your_stripe_webhook_secret";
+}
+
+function assertStripeKeyAllowedForRuntime(secretKey: string): void {
+  if (process.env.NODE_ENV === "production" && !isLiveStripeSecretKey(secretKey)) {
+    throw new Error("Production Stripe billing must use a live STRIPE_SECRET_KEY");
+  }
+}
+
+export function validateStripeRuntimeConfig(): void {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY must be set");
+  }
+  assertStripeKeyAllowedForRuntime(secretKey);
+
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (process.env.NODE_ENV === "production" && isPlaceholderWebhookSecret(webhookSecret)) {
+    throw new Error("Production Stripe billing must use a real STRIPE_WEBHOOK_SECRET");
+  }
 }
 
 export function getStripePriceId(): string {
