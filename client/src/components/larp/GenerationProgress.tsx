@@ -47,12 +47,16 @@ export function GenerationProgress({
   }, [showResult]);
 
   // Determine loader status
+  const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
+
   const loaderStatus =
     !data || isLoading
       ? "connecting"
-      : data.status === "success"
+      : data.status === "success" && hasResultMedia
         ? "success"
-        : "waiting";
+        : data.status === "success"
+          ? "waiting"
+          : "waiting";
 
   useEffect(() => {
     if (hasHandledFailure.current) return;
@@ -113,6 +117,7 @@ export function GenerationProgress({
       {/* After reveal: show the result */}
       {showResult &&
         data?.status === "success" &&
+        hasResultMedia &&
         createPortal(
           <div
             className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-6 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid"
@@ -139,7 +144,7 @@ export function GenerationProgress({
             </h1>
 
             {/* LARP result with download/share actions */}
-            <div className="relative flex min-h-0 min-w-0 w-full shrink items-center justify-center overflow-hidden px-2 py-2">
+            <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 py-2">
               <LarpResult
                 resultUrls={data.resultUrls}
                 larpId={data.larpId}

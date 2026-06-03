@@ -84,7 +84,7 @@ export function GenerationLoader({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <div className="relative h-[min(60vh,500px)] md:h-[70vh] aspect-[9/16] rounded-lg overflow-hidden shadow-xl">
+          <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] rounded-lg overflow-hidden shadow-xl md:h-[min(82svh,720px)]">
             <motion.img
               src={inputImageUrl}
               alt={t("progress.inputAlt")}

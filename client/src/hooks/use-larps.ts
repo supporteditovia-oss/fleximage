@@ -137,7 +137,8 @@ export function useLarpStatus(taskId: string | null) {
     enabled: !!taskId,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && (data.status === "success" || data.status === "fail")) {
+      if (data?.status === "fail") return false;
+      if (data?.status === "success" && (data.resultUrls?.length ?? 0) > 0) {
         return false;
       }
       return 2000;

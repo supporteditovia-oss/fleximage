@@ -3213,17 +3213,19 @@ export async function registerRoutes(
         const isSubscriber =
           profile?.is_subscriber || profile?.role === "admin";
 
-        const originals = Array.isArray(larp.output_assets)
-          ? larp.output_assets
-          : [];
-        const watermarkedList = Array.isArray(larp.watermarked_assets)
-          ? larp.watermarked_assets
-          : originals;
+        const originals = toAssetList(larp.output_assets);
+        const watermarkedList = toAssetList(larp.watermarked_assets);
+        const resolvedUrls =
+          watermarkedList.length > 0 && !isSubscriber
+            ? watermarkedList
+            : originals.length > 0
+              ? originals
+              : watermarkedList;
 
         return res.json({
           larpId: larp.id,
           status: toClientGenerationStatus(larp.status),
-          resultUrls: originals,
+          resultUrls: resolvedUrls,
           watermarkedUrls: watermarkedList,
           failMessage: larp.fail_message,
           costTime: toNullableNumber(larp.cost_time),

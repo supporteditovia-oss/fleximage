@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { getLocalizedHistoryTemplateName } from "@/lib/template-utils";
+import { LARP_FULLSCREEN_VIEWER_FRAME_CLASS } from "@/components/larp/LarpResult";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 
 const SHARE_PLATFORMS = [
@@ -479,70 +480,71 @@ export default function LarpHistory() {
       {/* Image viewer — fullscreen overlay on both mobile and desktop */}
       {selectedLarp &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setSelectedLarp(null)}
             />
-            {/* Media with actions */}
-            <div className={`relative z-10 ${selectedLarp.resultType === "video" ? "flex flex-col items-center gap-3" : ""}`}>
-              <div className="relative aspect-[9/16] h-[min(80vh,720px)] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black">
-              {selectedLarp.resultType === "video" ? (
-                <VideoResultPlayer
-                  src={selectedLarp.url}
-                  poster={selectedLarp.posterUrl}
-                />
-              ) : (
-                <img
-                  src={selectedLarp.url}
-                  alt={t("history.generatedAlt")}
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              )}
-              </div>
-              {/* Top left — close */}
-              <button
-                onClick={() => setSelectedLarp(null)}
-                className="absolute top-2 left-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              {/* Top right — delete */}
-              <button
-                onClick={() => {
-                  setDeletingId(selectedLarp.larpId);
-                  setSelectedLarp(null);
-                }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 active:scale-95 transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              {/* Bottom center — download & share */}
-              <div className={selectedLarp.resultType === "video"
-                ? "flex items-center justify-center gap-3"
-                : "absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-2xl"
-              }>
+            {/* Media with actions — width-first 9:16 frame (stable on iOS Safari) */}
+            <div className="relative z-10 flex w-full max-w-full justify-center">
+              <div className={LARP_FULLSCREEN_VIEWER_FRAME_CLASS}>
+                {selectedLarp.resultType === "video" ? (
+                  <VideoResultPlayer
+                    src={selectedLarp.url}
+                    poster={selectedLarp.posterUrl}
+                  />
+                ) : (
+                  <img
+                    src={selectedLarp.url}
+                    alt={t("history.generatedAlt")}
+                    className="absolute inset-0 h-full w-full object-contain"
+                  />
+                )}
+                {/* Top left — close */}
                 <button
-                  onClick={() => handleDownload(selectedLarp.larpId)}
-                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title={t("history.download")}
+                  type="button"
+                  onClick={() => setSelectedLarp(null)}
+                  className="absolute top-2 left-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white transition-all hover:bg-black/70 active:scale-95"
                 >
-                  <Download className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
+                {/* Top right — delete */}
                 <button
+                  type="button"
                   onClick={() => {
-                    setShareDialog({
-                      larpId: selectedLarp.larpId,
-                      imageIndex: 0,
-                    });
+                    setDeletingId(selectedLarp.larpId);
                     setSelectedLarp(null);
                   }}
-                  className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                  title={t("history.share")}
+                  className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white transition-all hover:bg-black/70 active:scale-95"
                 >
-                  <Share2 className="h-5 w-5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
+                {/* Bottom center — download & share */}
+                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-3 rounded-b-2xl bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(selectedLarp.larpId)}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95"
+                    title={t("history.download")}
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShareDialog({
+                        larpId: selectedLarp.larpId,
+                        imageIndex: 0,
+                      });
+                      setSelectedLarp(null);
+                    }}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95"
+                    title={t("history.share")}
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>,

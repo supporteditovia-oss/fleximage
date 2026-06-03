@@ -23,7 +23,11 @@ import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 
 /** Strict 9:16 frame — height-limited, width derived from aspect ratio */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] h-[min(calc(100dvh-14rem),min(80svh,720px))] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+  "relative mx-auto aspect-[9/16] h-[min(calc(100dvh-14rem),min(80svh,720px))] min-h-[min(50svh,360px)] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+
+/** Fullscreen portal viewer — width-first sizing avoids iOS Safari width collapse */
+export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
+  "relative mx-auto aspect-[9/16] w-[min(calc(100vw-2rem),calc(min(80svh,calc(100dvh-8rem))*9/16))] max-h-[min(80svh,calc(100dvh-8rem))] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
 
 function isVideoResultUrl(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
@@ -169,37 +173,64 @@ export function LarpResult({
           const isVideo = resultType === "video" || isVideoResultUrl(url);
 
           return (
-          <div key={index} className={LARP_RESULT_FRAME_CLASS}>
-            {isVideo ? (
-              <VideoResultPlayer src={url} poster={posterUrl} />
-            ) : (
-              <>
-                <img
-                  src={url}
-                  alt={t("result.generatedAlt", { index: index + 1 })}
-                  className="absolute inset-0 h-full w-full object-contain"
-                  loading="lazy"
-                />
-                {/* Bottom gradient with action buttons */}
-                {!hideActions && (
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg">
-                    <button
-                      onClick={() => handleDownload(index)}
-                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                      title={t("result.download")}
-                    >
-                      <Download className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => setShareDialog({ imageIndex: index })}
-                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
-                      title={t("result.share")}
-                    >
-                      <Share2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                )}
-              </>
+          <div
+            key={index}
+            className={
+              isVideo
+                ? "flex w-full max-w-full flex-col items-center gap-3"
+                : ""
+            }
+          >
+            <div className={LARP_RESULT_FRAME_CLASS}>
+              {isVideo ? (
+                <VideoResultPlayer src={url} poster={posterUrl} />
+              ) : (
+                <>
+                  <img
+                    src={url}
+                    alt={t("result.generatedAlt", { index: index + 1 })}
+                    className="absolute inset-0 h-full w-full object-contain"
+                    loading="lazy"
+                  />
+                  {/* Bottom gradient with action buttons */}
+                  {!hideActions && (
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg">
+                      <button
+                        onClick={() => handleDownload(index)}
+                        className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                        title={t("result.download")}
+                      >
+                        <Download className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => setShareDialog({ imageIndex: index })}
+                        className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                        title={t("result.share")}
+                      >
+                        <Share2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {isVideo && !hideActions && (
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => handleDownload(index)}
+                  className="w-12 h-12 rounded-full bg-foreground/10 text-foreground flex items-center justify-center hover:bg-foreground/15 active:scale-95 transition-all"
+                  title={t("result.download")}
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setShareDialog({ imageIndex: index })}
+                  className="w-12 h-12 rounded-full bg-foreground/10 text-foreground flex items-center justify-center hover:bg-foreground/15 active:scale-95 transition-all"
+                  title={t("result.share")}
+                >
+                  <Share2 className="h-5 w-5" />
+                </button>
+              </div>
             )}
           </div>
         );
