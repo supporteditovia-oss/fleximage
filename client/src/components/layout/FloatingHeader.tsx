@@ -144,7 +144,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative flex items-center justify-center w-full"
+        className="relative flex w-full flex-col items-center justify-center gap-2 md:flex-row md:gap-0"
       >
         {/* Logo — centered */}
         <Link
@@ -157,6 +157,17 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             className="h-[clamp(2rem,6svh,2.5rem)] w-auto max-w-full object-contain md:h-[clamp(2.25rem,6svh,4rem)]"
           />
         </Link>
+
+        {variant === "landing" && user && !isLoading && (
+          <Link href="/app" className="pointer-events-auto md:hidden">
+            <Button
+              size="sm"
+              className="rounded-full px-4 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform"
+            >
+              {t("layout.header.app")}
+            </Button>
+          </Link>
+        )}
 
         {/* Right side */}
         {variant === "app" ? (
@@ -260,7 +271,11 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
           </Dialog>
           </>
         ) : !isLoading && (
-          <div className="absolute right-0 flex items-center justify-end gap-2 sm:gap-3 pointer-events-auto">
+          <div
+            className={`absolute right-0 flex items-center justify-end gap-2 sm:gap-3 pointer-events-auto ${
+              user ? "hidden md:flex" : ""
+            }`}
+          >
             {user ? (
               <Link href="/app">
                 <Button size="sm" className="rounded-full px-4 sm:px-5 text-xs sm:text-sm font-semibold border-0 shadow-none active:scale-95 transition-transform">

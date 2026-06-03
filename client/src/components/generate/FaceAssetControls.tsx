@@ -67,32 +67,30 @@ export function FaceAssetControls({
       </TooltipProvider>
 
       {faceCaptureLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex h-11 w-full items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           {t("templateSelected.loadingFace")}
         </div>
-      ) : !faceCaptureReady ? (
-        scanButtonVariant === "pill" ? (
-          <button
-            type="button"
-            onClick={onScanFace}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-4 text-xs font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10"
-          >
-            <ScanFace className="h-3.5 w-3.5 shrink-0" />
-            {t("generate.scanFace")}
-          </button>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full"
-            onClick={onScanFace}
-          >
-            <ScanFace className="mr-2 h-4 w-4" />
-            {t("generate.scanFace")}
-          </Button>
-        )
-      ) : null}
+      ) : scanButtonVariant === "pill" ? (
+        <button
+          type="button"
+          onClick={onScanFace}
+          className="hidden h-9 w-full items-center justify-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-4 text-xs font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10 md:inline-flex"
+        >
+          <ScanFace className="h-3.5 w-3.5 shrink-0" />
+          {t("generate.scanFace")}
+        </button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="hidden h-10 w-full rounded-full md:flex"
+          onClick={onScanFace}
+        >
+          <ScanFace className="mr-2 h-4 w-4" />
+          {t("generate.scanFace")}
+        </Button>
+      )}
     </div>
   );
 }

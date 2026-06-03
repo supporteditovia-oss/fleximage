@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, ScanFace } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
@@ -1138,6 +1138,24 @@ export default function Generate() {
                 {t("generate.modeVideo")}
               </button>
             </div>
+          </div>
+
+          <div className="relative z-20 w-full max-w-md md:hidden">
+            {latestFaceCapture.isLoading ? (
+              <div className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-white/85 text-sm font-medium text-muted-foreground shadow-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t("templateSelected.loadingFace")}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate("/face-capture")}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary px-4 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform active:scale-95"
+              >
+                <ScanFace className="h-4 w-4 shrink-0" />
+                {t("generate.scanFace")}
+              </button>
+            )}
           </div>
 
           {selectedTemplate ? (
