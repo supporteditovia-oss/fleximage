@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
+import { api } from "@shared/routes";
 
 interface GenerateLarpInput {
   template_id: string;
@@ -16,8 +17,10 @@ interface GenerateDirectInput {
 
 interface GenerateVideoInput {
   prompt: string;
+  video_prompt?: string;
   aspect_ratio?: string;
   images?: string[];
+  template_id?: string;
 }
 
 interface GenerateLarpResponse {
@@ -50,11 +53,25 @@ interface LarpHistoryItem {
   watermarkedAssets: string[];
   inputAssets: string[];
   failMessage: string | null;
-  costTime: string | null;
+  costTime: number | null;
   aspectRatio: string | null;
   createdAt: string;
   updatedAt: string;
-  template: { name: string; category: string | null } | null;
+  template: { name: string; nameEn?: string | null; category: string | null } | null;
+}
+
+export interface AdminGenerationLogItem {
+  id: string;
+  userId: string;
+  userEmail: string | null;
+  generationType: "image" | "video";
+  status: "waiting" | "success" | "fail";
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  costTime: number | null;
+  failMessage: string | null;
+  template: { name: string; nameEn?: string | null; category: string | null } | null;
 }
 
 export function useGenerateLarp() {
@@ -132,6 +149,41 @@ export function useLarpHistory() {
     queryFn: async () => {
       const res = await authFetch("/api/larps/history");
       return res.json();
+    },
+  });
+}
+
+export function useAdminGenerationLogs(options?: { enabled?: boolean }) {
+  return useQuery<AdminGenerationLogItem[]>({
+    queryKey: ["admin-generation-logs"],
+    queryFn: async () => {
+      const res = await authFetch(api.admin.generationLogs.path);
+      return res.json();
+    },
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useClearAdminGenerationLogs() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await authFetch(api.admin.clearGenerationLogs.path, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          typeof body.message === "string"
+            ? body.message
+            : "Failed to clear logs",
+        );
+      }
+      return res.json() as Promise<{ deletedCount: number }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-generation-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["larp-history"] });
     },
   });
 }

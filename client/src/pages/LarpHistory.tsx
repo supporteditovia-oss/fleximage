@@ -23,6 +23,7 @@ import { Trash2, Loader2, Download, Share2, ArrowRight, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
+import { getLocalizedHistoryTemplateName } from "@/lib/template-utils";
 
 const SHARE_PLATFORMS = [
   {
@@ -72,7 +73,7 @@ export default function LarpHistory() {
   const { data: larps, isLoading } = useLarpHistory();
   const deleteLarp = useDeleteLarp();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
   const [selectedLarp, setSelectedLarp] = useState<{
@@ -342,7 +343,10 @@ export default function LarpHistory() {
                   <div className="flex-1 min-w-0">
                     {larp.template?.name && (
                       <p className="text-white text-sm font-semibold truncate">
-                        {larp.template.name}
+                        {getLocalizedHistoryTemplateName(
+                          larp.template,
+                          i18n.language,
+                        )}
                       </p>
                     )}
                     {larp.failMessage && (

@@ -1,9 +1,10 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { SUPPORTED_LOCALES } from "@shared/locales";
+import { SUPPORTED_LOCALES, type AppLocale } from "@shared/locales";
 
 import { validateRequest } from "./lib/validate";
 import {
@@ -12,6 +13,8 @@ import {
   insertCategorySchema,
   updateCategorySchema,
   generateVideoBodySchema,
+  uploadReferenceImageItemSchema,
+  updateReferenceImageSchema,
 } from "@shared/schema";
 import { logger } from "./lib/logger";
 import {
@@ -54,6 +57,12 @@ const VIDEO_CREDIT_COST = 30;
 const FACE_CAPTURE_BUCKET = "face-captures";
 const FACE_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
 const MAX_FACE_CAPTURE_BYTES = 10 * 1024 * 1024;
+const MAX_TEMPLATE_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
+const TEMPLATE_REFERENCE_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 const faceLandmarkSchema = z.object({
   x: z.number(),
@@ -91,6 +100,89 @@ function decodeJpegBase64(input: string): Buffer {
   }
 
   return buffer;
+}
+
+function isFaceCapturePose(poseId: string): poseId is (typeof FACE_CAPTURE_POSES)[number] {
+  return FACE_CAPTURE_POSES.includes(poseId as (typeof FACE_CAPTURE_POSES)[number]);
+}
+
+async function getLatestFaceCaptureSession(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("face_capture_sessions")
+    .select("id, created_at, status")
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function getFaceCaptureAssetsForSession(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  sessionId: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("face_capture_assets")
+    .select("pose_id, storage_bucket, storage_path, content_type, byte_size, created_at")
+    .eq("user_id", userId)
+    .eq("session_id", sessionId);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function deleteFaceCaptureSessionsForUser(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  sessionIds: string[],
+) {
+  const uniqueSessionIds = Array.from(new Set(sessionIds)).filter(Boolean);
+
+  if (uniqueSessionIds.length === 0) {
+    return 0;
+  }
+
+  const { data: assets, error: assetsError } = await supabaseAdmin
+    .from("face_capture_assets")
+    .select("storage_bucket, storage_path")
+    .eq("user_id", userId)
+    .in("session_id", uniqueSessionIds);
+
+  if (assetsError) throw assetsError;
+
+  const paths = Array.from(
+    new Set(
+      (assets ?? [])
+        .filter((asset) => asset.storage_bucket === FACE_CAPTURE_BUCKET)
+        .map((asset) => asset.storage_path)
+        .filter(Boolean),
+    ),
+  );
+
+  if (paths.length > 0) {
+    const { error: storageError } = await supabaseAdmin.storage
+      .from(FACE_CAPTURE_BUCKET)
+      .remove(paths);
+
+    if (storageError) throw storageError;
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from("face_capture_sessions")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", uniqueSessionIds);
+
+  if (deleteError) throw deleteError;
+
+  return uniqueSessionIds.length;
 }
 
 /**
@@ -181,17 +273,6 @@ function slugify(value: string): string {
     .slice(0, 80);
 }
 
-function parseJsonArray<T>(raw: unknown): T[] {
-  if (Array.isArray(raw)) return raw as T[];
-  if (typeof raw !== "string" || raw.trim() === "") return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as T[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 function normalizeKeywords(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw
@@ -242,6 +323,400 @@ function toDbStatus(
   return "processing";
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+type ImageGenerationProvider = "oneshot" | "kie";
+
+interface StartedImageGenerationTask {
+  provider: ImageGenerationProvider;
+  providerTaskId: string;
+}
+
+interface ImageGenerationPollResult {
+  status: "waiting" | "success" | "fail";
+  resultJson: any;
+  failMsg: string | null;
+  costTime: number | null;
+  providerTaskUpdated?: boolean;
+}
+
+function getGenerationMetadata(row: { metadata?: unknown }) {
+  return typeof row.metadata === "object" && row.metadata !== null
+    ? (row.metadata as Record<string, unknown>)
+    : {};
+}
+
+function uniqueStrings(values: unknown[]): string[] {
+  return Array.from(
+    new Set(values.filter((value): value is string => typeof value === "string" && value.length > 0)),
+  );
+}
+
+async function composeFaceCaptureImageBuffers(buffers: Buffer[]): Promise<Buffer> {
+  if (buffers.length !== FACE_CAPTURE_POSES.length) {
+    throw new Error("FACE_CAPTURE_REQUIRED");
+  }
+
+  const targetHeight = 1024;
+  const panelWidth = Math.round((targetHeight * 9) / 16);
+  const resized = await Promise.all(
+    buffers.map(async (buffer) => {
+      const input = await sharp(buffer)
+        .rotate()
+        .resize({
+          width: panelWidth,
+          height: targetHeight,
+          fit: "cover",
+          position: "center",
+        })
+        .jpeg({ quality: 92 })
+        .toBuffer();
+      return { input, width: panelWidth };
+    }),
+  );
+
+  const width = resized.reduce((sum, item) => sum + item.width, 0);
+  let left = 0;
+  const composite = resized.map((item) => {
+    const placement = { input: item.input, left, top: 0 };
+    left += item.width;
+    return placement;
+  });
+
+  return sharp({
+    create: {
+      width,
+      height: targetHeight,
+      channels: 3,
+      background: "#ffffff",
+    },
+  })
+    .composite(composite)
+    .jpeg({ quality: 92 })
+    .toBuffer();
+}
+
+async function resolveUserFaceCaptureImageUrls(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+): Promise<string[] | null> {
+  const session = await getLatestFaceCaptureSession(supabaseAdmin, userId);
+  if (!session) return null;
+
+  const assets = await getFaceCaptureAssetsForSession(
+    supabaseAdmin,
+    userId,
+    session.id,
+  );
+  const ordered = FACE_CAPTURE_POSES.map((poseId) =>
+    assets.find((asset) => asset.pose_id === poseId),
+  );
+  if (ordered.some((asset) => !asset)) return null;
+
+  const buffers: Buffer[] = [];
+  for (const asset of ordered) {
+    const { data: imageBlob, error: downloadError } = await supabaseAdmin.storage
+      .from(asset!.storage_bucket)
+      .download(asset!.storage_path);
+
+    if (downloadError) throw downloadError;
+
+    buffers.push(Buffer.from(await imageBlob.arrayBuffer()));
+  }
+
+  const composite = await composeFaceCaptureImageBuffers(buffers);
+  const key = `inputs/${userId}/face-capture/composite-${Date.now()}.jpg`;
+  return [await uploadToR2(key, composite, "image/jpeg")];
+}
+
+async function uploadInputImagesToR2(
+  userId: string,
+  images: string[] | undefined,
+): Promise<string[]> {
+  const imageUrls: string[] = [];
+  if (!images || images.length === 0) return imageUrls;
+
+  for (let i = 0; i < images.length; i++) {
+    const dataUrl = images[i];
+    const match = dataUrl.match(/^data:(image\/[\w+.-]+);base64,([\s\S]+)$/);
+    if (!match) {
+      logger.warn(
+        { index: i, prefix: dataUrl.substring(0, 40) },
+        "Invalid base64 image, skipping",
+      );
+      continue;
+    }
+
+    const contentType = match[1];
+    const base64Data = match[2];
+    const buffer = Buffer.from(base64Data, "base64");
+    const ext = contentType.split("/")[1] || "jpg";
+    const key = `inputs/${userId}/${Date.now()}-${i}.${ext}`;
+    imageUrls.push(await uploadToR2(key, buffer, contentType));
+  }
+
+  return imageUrls;
+}
+
+async function uploadImageUrlsToOneshot(imageUrls: string[]): Promise<string[]> {
+  const referenceFileIds: string[] = [];
+  for (const publicUrl of imageUrls) {
+    try {
+      const imgResp = await fetch(publicUrl);
+      if (!imgResp.ok) throw new Error(`Failed to download ${publicUrl}`);
+      const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+      const arrBuf = await imgResp.arrayBuffer();
+      const buffer = Buffer.from(arrBuf);
+      const filename = publicUrl.split("/").pop() || "image.jpg";
+      referenceFileIds.push(await uploadToOneshotApi(buffer, filename, contentType));
+    } catch (uploadErr) {
+      logger.error(
+        { err: uploadErr, publicUrl },
+        "Failed to upload image to OneshotAPI",
+      );
+    }
+  }
+
+  return referenceFileIds;
+}
+
+async function startImageGenerationTask(params: {
+  prompt: string;
+  aspectRatio: string;
+  imageUrls: string[];
+}): Promise<StartedImageGenerationTask> {
+  const oneshotConfig = getOneshotApiConfig();
+  const appSettings = await getAppSettings();
+
+  if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
+    try {
+      const referenceFileIds = params.imageUrls.length
+        ? await uploadImageUrlsToOneshot(params.imageUrls)
+        : [];
+      const oneshotResponse = await createOneshotJob(params.prompt, {
+        aspectRatio: params.aspectRatio,
+        ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+      });
+      if (oneshotResponse?.id) {
+        return {
+          provider: "oneshot",
+          providerTaskId: `custom_${oneshotResponse.id}`,
+        };
+      }
+      throw new Error("Invalid response from OneshotAPI");
+    } catch (err) {
+      if (isGoogleAiPromptFlagged(err)) {
+        throw err;
+      }
+      logger.error(
+        { err },
+        "OneshotAPI failed while starting chained video image, falling back to Kie AI",
+      );
+    }
+  }
+
+  const kieResponse = await createKieTask({
+    prompt: params.prompt,
+    aspect_ratio: params.aspectRatio,
+    ...(params.imageUrls.length > 0 ? { image_input: params.imageUrls } : {}),
+  });
+
+  if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+    logger.error(
+      { response: kieResponse },
+      "Kie.ai createTask unexpected response for chained video image",
+    );
+    throw new Error("Kie.ai image task creation failed");
+  }
+
+  return {
+    provider: "kie",
+    providerTaskId: kieResponse.data.taskId,
+  };
+}
+
+async function pollChainedVideoImageStage(params: {
+  activeTaskId: string;
+  larp: any;
+  locale: AppLocale;
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+}): Promise<ImageGenerationPollResult> {
+  const { activeTaskId, larp, locale, supabaseAdmin } = params;
+  const metadata = getGenerationMetadata(larp);
+
+  if (activeTaskId.startsWith("custom_")) {
+    const jobId = activeTaskId.replace("custom_", "");
+    let customStatus: any;
+    try {
+      customStatus = await getOneshotJobStatus(jobId);
+    } catch (err) {
+      logger.error({ err }, "Failed to poll OneshotAPI for chained video image");
+      customStatus = {
+        status: "failed",
+        error: isGoogleAiPromptFlagged(err)
+          ? err instanceof Error
+            ? err.message
+            : String(err)
+          : tBackend(locale, "larps.pollingError"),
+      };
+    }
+
+    const currentSettings = await getAppSettings();
+    const ageInMs = Date.now() - new Date(larp.created_at).getTime();
+    const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
+    const isCustomApiFailed =
+      customStatus.status === "failed" || customStatus.status === "fail";
+    const isPolicyViolation =
+      isCustomApiFailed && isGoogleAiPromptFlagged(customStatus);
+
+    if (customStatus.status === "completed" || customStatus.status === "success") {
+      return {
+        status: "success",
+        resultJson: JSON.stringify(customStatus),
+        failMsg: null,
+        costTime: null,
+      };
+    }
+
+    if (!isCustomApiFailed && !isTimeout) {
+      return {
+        status: "waiting",
+        resultJson: null,
+        failMsg: null,
+        costTime: null,
+      };
+    }
+
+    if (isPolicyViolation) {
+      logger.warn(
+        { larpId: larp.id, jobId },
+        "OneshotAPI rejected chained video image prompt, skipping Kie AI fallback",
+      );
+      return {
+        status: "fail",
+        resultJson: null,
+        failMsg: tBackend(locale, "larps.policyViolation"),
+        costTime: null,
+      };
+    }
+
+    try {
+      const aspectRatio = larp.aspect_ratio || "9:16";
+      const imageUrls = Array.isArray(larp.input_assets)
+        ? larp.input_assets.filter((url: unknown): url is string => typeof url === "string")
+        : [];
+      const fallbackKieResponse = await createKieTask({
+        prompt: larp.final_prompt,
+        aspect_ratio: aspectRatio,
+        ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+      });
+
+      if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
+        const newKieTaskIdString = `${larp.provider_task_id},${fallbackKieResponse.data.taskId}`;
+        await supabaseAdmin
+          .from("generations")
+          .update({
+            provider_task_id: newKieTaskIdString,
+            metadata: {
+              ...metadata,
+              imageProvider: "kie",
+              imageFallbackFrom: activeTaskId,
+              imageTaskId: fallbackKieResponse.data.taskId,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", larp.id);
+
+        return {
+          status: "waiting",
+          resultJson: null,
+          failMsg: null,
+          costTime: null,
+          providerTaskUpdated: true,
+        };
+      }
+
+      return {
+        status: "fail",
+        resultJson: null,
+        failMsg: tBackend(locale, "larps.fallbackFailed"),
+        costTime: null,
+      };
+    } catch (fallbackErr) {
+      logger.error({ err: fallbackErr }, "Kie fallback failed for chained video image");
+      return {
+        status: "fail",
+        resultJson: null,
+        failMsg: tBackend(locale, "larps.fallbackFailed"),
+        costTime: null,
+      };
+    }
+  }
+
+  try {
+    const kieStatus = await getKieTaskStatus(activeTaskId);
+    return {
+      status: kieStatus.data.state,
+      resultJson: kieStatus.data.resultJson,
+      failMsg: kieStatus.data.failMsg,
+      costTime: kieStatus.data.costTime,
+    };
+  } catch (err) {
+    logger.error({ err }, "Failed to poll Kie.ai for chained video image");
+    return {
+      status: "fail",
+      resultJson: null,
+      failMsg: tBackend(locale, "larps.pollingError"),
+      costTime: null,
+    };
+  }
+}
+
+function parseTemplateReferenceAggregates(row: {
+  template_reference_images?: unknown;
+  reference_image_count?: number;
+}) {
+  const embedded = row.template_reference_images;
+  if (Array.isArray(embedded) && embedded.length > 0) {
+    if (embedded[0] && typeof embedded[0] === "object" && "count" in embedded[0]) {
+      const count = Number((embedded[0] as { count: number }).count);
+      return {
+        reference_image_count: count,
+        has_face_optional_reference_image: false,
+        requires_face_capture: count === 0,
+      };
+    }
+    const refs = embedded as { requires_face_asset?: boolean }[];
+    const count = refs.length;
+    const hasOptional = refs.some((ref) => ref.requires_face_asset === false);
+    return {
+      reference_image_count: count,
+      has_face_optional_reference_image: hasOptional,
+      requires_face_capture: count === 0 || !hasOptional,
+    };
+  }
+  if (typeof row.reference_image_count === "number") {
+    const count = row.reference_image_count;
+    return {
+      reference_image_count: count,
+      has_face_optional_reference_image: false,
+      requires_face_capture: count === 0,
+    };
+  }
+  return {
+    reference_image_count: 0,
+    has_face_optional_reference_image: false,
+    requires_face_capture: true,
+  };
+}
+
+const TEMPLATE_LIST_SELECT =
+  "*, template_categories(slug, name, name_en), template_reference_images(requires_face_asset)";
+
 function toTemplateDto(row: any) {
   const inputSchema = row.input_schema || {};
   const categorySlug =
@@ -249,20 +724,190 @@ function toTemplateDto(row: any) {
     row.category_slug ||
     row.category ||
     null;
+  const categoryName = row.template_categories?.name ?? null;
+  const categoryNameEn = row.template_categories?.name_en ?? null;
+  const { template_reference_images: _refEmbed, ...rest } = row;
+  const refAggregates = parseTemplateReferenceAggregates(row);
 
   return {
-    ...row,
+    ...rest,
     category: categorySlug,
-    image_slots:
-      inputSchema.image_slots && inputSchema.image_slots.length
-        ? JSON.stringify(inputSchema.image_slots)
-        : null,
-    text_fields:
-      inputSchema.text_fields && inputSchema.text_fields.length
-        ? JSON.stringify(inputSchema.text_fields)
+    categoryName,
+    categoryNameEn,
+    ...refAggregates,
+    video_prompt_text:
+      typeof inputSchema.video_prompt_text === "string" &&
+      inputSchema.video_prompt_text.trim()
+        ? inputSchema.video_prompt_text
         : null,
     keywords: Array.isArray(row.keywords) ? row.keywords.join(", ") : null,
   };
+}
+
+function toReferenceImageDto(row: {
+  id: string;
+  url: string;
+  image_prompt: string;
+  video_prompt: string | null;
+  display_order: number;
+  requires_face_asset: boolean;
+}) {
+  return {
+    id: row.id,
+    url: row.url,
+    image_prompt: row.image_prompt,
+    video_prompt: row.video_prompt,
+    display_order: row.display_order,
+    requires_face_asset: row.requires_face_asset,
+  };
+}
+
+type TemplateReferencePickRow = {
+  id: string;
+  url: string;
+  image_prompt: string;
+  video_prompt: string | null;
+  requires_face_asset: boolean;
+};
+
+async function userHasCompleteFaceAsset(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+): Promise<boolean> {
+  const faceUrls = await resolveUserFaceCaptureImageUrls(supabaseAdmin, userId);
+  return !!(faceUrls && faceUrls.length > 0);
+}
+
+function referenceRowRequiresFace(
+  row: TemplateReferencePickRow | null,
+): boolean {
+  if (!row) return true;
+  return row.requires_face_asset !== false;
+}
+
+async function respondIfTemplateFaceCaptureRequired(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  templateId: string,
+  selectedReferenceRow: TemplateReferencePickRow | null,
+  hasFaceAsset: boolean,
+  res: import("express").Response,
+): Promise<boolean> {
+  if (hasFaceAsset) return true;
+
+  if (selectedReferenceRow && !selectedReferenceRow.requires_face_asset) {
+    return true;
+  }
+
+  if (!selectedReferenceRow) {
+    const { count, error } = await supabaseAdmin
+      .from("template_reference_images")
+      .select("id", { count: "exact", head: true })
+      .eq("template_id", templateId);
+    if (error) throw error;
+    if ((count ?? 0) > 0) {
+      res.status(422).json({
+        code: "FACE_CAPTURE_REQUIRED",
+        message:
+          "Photos visage requises (face + profils). Scanne ton visage avant de générer.",
+      });
+      return false;
+    }
+  }
+
+  res.status(422).json({
+    code: "FACE_CAPTURE_REQUIRED",
+    message:
+      "Photos visage requises (face + profils). Scanne ton visage avant de générer.",
+  });
+  return false;
+}
+
+async function buildTemplateGenerationImageUrls(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  selectedReferenceRow: TemplateReferencePickRow | null,
+): Promise<string[]> {
+  const imageUrls: string[] = [];
+  if (referenceRowRequiresFace(selectedReferenceRow)) {
+    const faceUrls = await resolveUserFaceCaptureImageUrls(
+      supabaseAdmin,
+      userId,
+    );
+    if (faceUrls?.length) {
+      imageUrls.push(...faceUrls);
+    }
+  }
+  if (selectedReferenceRow?.url) {
+    imageUrls.push(selectedReferenceRow.url);
+  }
+  return imageUrls;
+}
+
+function injectTextValues(prompt: string, textValues?: string[]): string {
+  let result = prompt;
+  if (!textValues?.length) return result;
+  textValues.forEach((value, idx) => {
+    result = result.replaceAll(`{text${idx + 1}}`, value);
+  });
+  return result;
+}
+
+async function pickRandomReferenceRow(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  templateId: string,
+  options: { hasFaceAsset: boolean },
+): Promise<TemplateReferencePickRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from("template_reference_images")
+    .select("id, url, image_prompt, video_prompt, requires_face_asset")
+    .eq("template_id", templateId);
+
+  if (error) throw error;
+  if (!data?.length) return null;
+
+  const pool = options.hasFaceAsset
+    ? data
+    : data.filter((row) => row.requires_face_asset === false);
+
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)] as TemplateReferencePickRow;
+}
+
+async function uploadTemplateReferenceImageFromDataUrl(
+  templateId: string,
+  dataUrl: string,
+): Promise<string | null> {
+  const match = dataUrl.match(/^data:(image\/[\w+.-]+);base64,([\s\S]+)$/);
+  if (!match) {
+    logger.warn(
+      { prefix: dataUrl.substring(0, 40) },
+      "Invalid template reference image, skipping",
+    );
+    return null;
+  }
+
+  const contentType = match[1];
+  const base64Data = match[2];
+  if (!TEMPLATE_REFERENCE_IMAGE_TYPES.has(contentType)) {
+    logger.warn({ contentType }, "Unsupported template reference image type, skipping");
+    return null;
+  }
+
+  const buffer = Buffer.from(base64Data, "base64");
+  if (
+    buffer.length === 0 ||
+    buffer.length > MAX_TEMPLATE_REFERENCE_IMAGE_BYTES
+  ) {
+    logger.warn(
+      { byteSize: buffer.length },
+      "Template reference image size is invalid, skipping",
+    );
+    return null;
+  }
+
+  const ext = contentType.split("/")[1] || "jpg";
+  const key = `templates/${templateId}/references/${randomUUID()}.${ext}`;
+  return uploadToR2(key, buffer, contentType);
 }
 
 function toLarpDto(row: any) {
@@ -285,13 +930,44 @@ function toLarpDto(row: any) {
     watermarkedAssets: toAssetList(row.watermarked_assets),
     inputAssets: toAssetList(row.input_assets),
     failMessage: row.fail_message,
-    costTime: row.cost_time,
+    costTime: toNullableNumber(row.cost_time),
     aspectRatio: row.aspect_ratio,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     template: template
       ? {
           name: template.name,
+          nameEn: template.name_en ?? null,
+          category,
+        }
+      : null,
+  };
+}
+
+function toAdminGenerationLogDto(row: any) {
+  const template = row.templates;
+  const category =
+    template?.template_categories?.slug ||
+    template?.category_slug ||
+    template?.category ||
+    null;
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userEmail: profile?.email ?? null,
+    generationType: row.generation_type,
+    status: toClientGenerationStatus(row.status),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at,
+    costTime: toNullableNumber(row.cost_time),
+    failMessage: row.fail_message,
+    template: template
+      ? {
+          name: template.name,
+          nameEn: template.name_en ?? null,
           category,
         }
       : null,
@@ -340,15 +1016,22 @@ async function getUniqueTemplateSlug(
 function buildTemplateInputSchema(body: any, current: any = {}) {
   const next = { ...(current && typeof current === "object" ? current : {}) };
 
-  if (Object.prototype.hasOwnProperty.call(body, "image_slots")) {
-    next.image_slots = parseJsonArray(body.image_slots);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(body, "text_fields")) {
-    next.text_fields = parseJsonArray(body.text_fields);
+  if (Object.prototype.hasOwnProperty.call(body, "video_prompt_text")) {
+    next.video_prompt_text =
+      typeof body.video_prompt_text === "string"
+        ? body.video_prompt_text.trim()
+        : "";
   }
 
   return next;
+}
+
+function getTemplateVideoPrompt(inputSchema: unknown): string | null {
+  if (typeof inputSchema !== "object" || inputSchema === null) return null;
+  const videoPrompt = (inputSchema as Record<string, unknown>).video_prompt_text;
+  if (typeof videoPrompt !== "string") return null;
+  const trimmed = videoPrompt.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 async function buildTemplatePayload(
@@ -359,6 +1042,9 @@ async function buildTemplatePayload(
   const payload: Record<string, unknown> = {};
 
   if (Object.prototype.hasOwnProperty.call(body, "name")) payload.name = body.name;
+  if (Object.prototype.hasOwnProperty.call(body, "name_en")) {
+    payload.name_en = body.name_en || null;
+  }
   if (Object.prototype.hasOwnProperty.call(body, "description")) {
     payload.description = body.description || null;
   }
@@ -387,8 +1073,7 @@ async function buildTemplatePayload(
     payload.category_id = await resolveCategoryId(supabaseAdmin, body.category);
   }
   if (
-    Object.prototype.hasOwnProperty.call(body, "image_slots") ||
-    Object.prototype.hasOwnProperty.call(body, "text_fields")
+    Object.prototype.hasOwnProperty.call(body, "video_prompt_text")
   ) {
     payload.input_schema = buildTemplateInputSchema(body, currentInputSchema);
   }
@@ -578,6 +1263,136 @@ export async function registerRoutes(
   // FACE CAPTURES
   // =============================================
 
+  app.get(api.faceCaptures.latest.path, requireAuth, async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const locale = resolveLocaleFromRequest(req);
+    const supabaseAdmin = getSupabaseAdmin();
+
+    try {
+      const session = await getLatestFaceCaptureSession(
+        supabaseAdmin,
+        authReq.userId,
+      );
+
+      if (!session) {
+        return res.json({ session: null });
+      }
+
+      const assets = await getFaceCaptureAssetsForSession(
+        supabaseAdmin,
+        authReq.userId,
+        session.id,
+      );
+      const assetsByPose = new Map(assets.map((asset) => [asset.pose_id, asset]));
+
+      res.json({
+        session: {
+          id: session.id,
+          createdAt: session.created_at,
+          captures: FACE_CAPTURE_POSES.map((poseId) => {
+            const asset = assetsByPose.get(poseId);
+            if (!asset) return null;
+
+            return {
+              poseId,
+              byteSize: asset.byte_size,
+              imageUrl: `/api/face-captures/latest/assets/${poseId}`,
+            };
+          }).filter(Boolean),
+        },
+      });
+    } catch (error) {
+      logger.error({ err: error }, "Error reading latest face capture");
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
+  app.get(api.faceCaptures.asset.path, requireAuth, async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const locale = resolveLocaleFromRequest(req);
+    const supabaseAdmin = getSupabaseAdmin();
+    const poseId = req.params.poseId;
+
+    if (!isFaceCapturePose(poseId)) {
+      return res.status(404).json({ message: "Face capture not found." });
+    }
+
+    try {
+      const session = await getLatestFaceCaptureSession(
+        supabaseAdmin,
+        authReq.userId,
+      );
+
+      if (!session) {
+        return res.status(404).json({ message: "Face capture not found." });
+      }
+
+      const { data: asset, error: assetError } = await supabaseAdmin
+        .from("face_capture_assets")
+        .select("storage_bucket, storage_path, content_type")
+        .eq("user_id", authReq.userId)
+        .eq("session_id", session.id)
+        .eq("pose_id", poseId)
+        .maybeSingle();
+
+      if (assetError) throw assetError;
+      if (!asset) {
+        return res.status(404).json({ message: "Face capture not found." });
+      }
+
+      const { data: imageBlob, error: downloadError } = await supabaseAdmin.storage
+        .from(asset.storage_bucket)
+        .download(asset.storage_path);
+
+      if (downloadError) throw downloadError;
+
+      const buffer = Buffer.from(await imageBlob.arrayBuffer());
+      res.setHeader("Content-Type", asset.content_type || "image/jpeg");
+      res.setHeader("Content-Length", String(buffer.length));
+      res.setHeader("Cache-Control", "private, no-store");
+      res.end(buffer);
+    } catch (error) {
+      logger.error({ err: error }, "Error serving face capture asset");
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
+  app.delete(api.faceCaptures.deleteLatest.path, requireAuth, async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const locale = resolveLocaleFromRequest(req);
+    const supabaseAdmin = getSupabaseAdmin();
+
+    try {
+      const { data: sessions, error: sessionsError } = await supabaseAdmin
+        .from("face_capture_sessions")
+        .select("id")
+        .eq("user_id", authReq.userId);
+
+      if (sessionsError) throw sessionsError;
+
+      const sessionIds = (sessions ?? []).map((session) => session.id);
+      if (sessionIds.length === 0) {
+        return res.json({ deleted: false });
+      }
+
+      const deletedCount = await deleteFaceCaptureSessionsForUser(
+        supabaseAdmin,
+        authReq.userId,
+        sessionIds,
+      );
+      res.json({ deleted: deletedCount > 0, deletedCount });
+    } catch (error) {
+      logger.error({ err: error }, "Error deleting face capture");
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
   app.post(
     api.faceCaptures.create.path,
     requireAuth,
@@ -657,6 +1472,37 @@ export async function registerRoutes(
           );
 
         if (assetsError) throw assetsError;
+
+        const { data: previousSessions, error: previousSessionsError } =
+          await supabaseAdmin
+            .from("face_capture_sessions")
+            .select("id")
+            .eq("user_id", authReq.userId)
+            .neq("id", sessionId);
+
+        if (previousSessionsError) {
+          logger.warn(
+            { err: previousSessionsError, userId: authReq.userId },
+            "Unable to list previous face capture sessions for cleanup",
+          );
+        } else {
+          const previousSessionIds = (previousSessions ?? []).map(
+            (previousSession) => previousSession.id,
+          );
+
+          if (previousSessionIds.length > 0) {
+            await deleteFaceCaptureSessionsForUser(
+              supabaseAdmin,
+              authReq.userId,
+              previousSessionIds,
+            ).catch((cleanupError) => {
+              logger.warn(
+                { err: cleanupError, sessionIds: previousSessionIds },
+                "Unable to cleanup previous face capture sessions",
+              );
+            });
+          }
+        }
 
         res.status(201).json({
           sessionId,
@@ -909,7 +1755,7 @@ export async function registerRoutes(
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("templates")
-        .select("name, example_before_url, example_after_url")
+        .select("name, name_en, example_before_url, example_after_url")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
@@ -944,7 +1790,9 @@ export async function registerRoutes(
 
       let query = supabaseAdmin
         .from("templates")
-        .select("*, template_categories(slug, name)")
+        .select(
+          TEMPLATE_LIST_SELECT,
+        )
         .order("created_at", { ascending: false });
 
       if (profile?.role !== "admin") {
@@ -970,7 +1818,9 @@ export async function registerRoutes(
       const supabaseAdmin = getSupabaseAdmin();
       const { data, error } = await supabaseAdmin
         .from("templates")
-        .select("*, template_categories(slug, name)")
+        .select(
+          TEMPLATE_LIST_SELECT,
+        )
         .eq("id", req.params.id)
         .single();
 
@@ -1011,7 +1861,9 @@ export async function registerRoutes(
             keywords: payload.keywords ?? [],
             created_by: authReq.userId,
           })
-          .select("*, template_categories(slug, name)")
+          .select(
+            TEMPLATE_LIST_SELECT,
+          )
           .single();
 
         if (error) throw error;
@@ -1050,7 +1902,9 @@ export async function registerRoutes(
           .from("templates")
           .update({ ...payload, updated_at: new Date().toISOString() })
           .eq("id", req.params.id)
-          .select("*, template_categories(slug, name)")
+          .select(
+            TEMPLATE_LIST_SELECT,
+          )
           .single();
 
         if (error) throw error;
@@ -1090,6 +1944,12 @@ export async function registerRoutes(
     image: z.string().min(1),
   });
 
+  const templateIllustrationVideoTypes: Record<string, string> = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/quicktime": "mov",
+  };
+
   app.post(
     api.templates.uploadImage.path,
     requireAuth,
@@ -1100,15 +1960,26 @@ export async function registerRoutes(
         const { field, image } = req.body;
         const templateId = req.params.id;
 
-        const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+        const match = image.match(
+          /^data:(image\/[\w.+-]+|video\/[\w.+-]+);base64,(.+)$/,
+        );
         if (!match) {
-          return res.status(400).json({ message: "Format d'image invalide" });
+          return res.status(400).json({ message: "Format de fichier invalide" });
         }
 
         const contentType = match[1];
+        const isVideo = contentType.startsWith("video/");
+        if (isVideo && field !== "example_after_url") {
+          return res
+            .status(400)
+            .json({ message: "Seul le champ « après » accepte une vidéo" });
+        }
+
         const base64Data = match[2];
         const buffer = Buffer.from(base64Data, "base64");
-        const ext = contentType.split("/")[1] || "jpg";
+        const ext = isVideo
+          ? (templateIllustrationVideoTypes[contentType] ?? "mp4")
+          : (contentType.split("/")[1] || "jpg").replace("jpeg", "jpg");
         const key = `templates/${templateId}/${field}.${ext}`;
 
         const { uploadToR2 } = await import("./lib/r2-client");
@@ -1119,13 +1990,219 @@ export async function registerRoutes(
           .from("templates")
           .update({ [field]: publicUrl, updated_at: new Date().toISOString() })
           .eq("id", templateId)
-          .select("*, template_categories(slug, name)")
+          .select(
+            TEMPLATE_LIST_SELECT,
+          )
           .single();
 
         if (error) throw error;
         res.json(toTemplateDto(data));
       } catch (error: any) {
         logger.error({ err: error }, "Error uploading template image");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  const uploadReferenceImagesSchema = z.object({
+    items: z.array(uploadReferenceImageItemSchema).min(1).max(20),
+  });
+
+  async function assertTemplateExists(
+    supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+    templateId: string,
+  ) {
+    const { data, error } = await supabaseAdmin
+      .from("templates")
+      .select("id")
+      .eq("id", templateId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  // GET /api/templates/:id/reference-images (Admin only)
+  app.get(
+    api.templates.referenceImages.list.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const templateId = req.params.id;
+        const supabaseAdmin = getSupabaseAdmin();
+        const template = await assertTemplateExists(supabaseAdmin, templateId);
+        if (!template) {
+          return res.status(404).json({ message: "Template introuvable" });
+        }
+
+        const { data, error } = await supabaseAdmin
+          .from("template_reference_images")
+          .select(
+            "id, url, image_prompt, video_prompt, display_order, requires_face_asset",
+          )
+          .eq("template_id", templateId)
+          .order("display_order", { ascending: true });
+
+        if (error) throw error;
+        res.json((data ?? []).map(toReferenceImageDto));
+      } catch (error: any) {
+        logger.error({ err: error }, "Error listing template reference images");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // POST /api/templates/:id/reference-images (Admin only)
+  app.post(
+    api.templates.referenceImages.create.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(uploadReferenceImagesSchema),
+    async (req, res) => {
+      try {
+        const templateId = req.params.id;
+        const { items } = req.body as {
+          items: {
+            image: string;
+            image_prompt: string;
+            video_prompt?: string | null;
+            requires_face_asset?: boolean;
+          }[];
+        };
+        const supabaseAdmin = getSupabaseAdmin();
+        const template = await assertTemplateExists(supabaseAdmin, templateId);
+        if (!template) {
+          return res.status(404).json({ message: "Template introuvable" });
+        }
+
+        const { count: existingCount, error: countError } = await supabaseAdmin
+          .from("template_reference_images")
+          .select("id", { count: "exact", head: true })
+          .eq("template_id", templateId);
+        if (countError) throw countError;
+
+        const rowsToInsert: {
+          template_id: string;
+          url: string;
+          image_prompt: string;
+          video_prompt: string | null;
+          display_order: number;
+          requires_face_asset: boolean;
+        }[] = [];
+        let displayOrder = existingCount ?? 0;
+
+        for (const item of items) {
+          const url = await uploadTemplateReferenceImageFromDataUrl(
+            templateId,
+            item.image,
+          );
+          if (!url) continue;
+          rowsToInsert.push({
+            template_id: templateId,
+            url,
+            image_prompt: item.image_prompt.trim(),
+            video_prompt:
+              typeof item.video_prompt === "string" &&
+              item.video_prompt.trim()
+                ? item.video_prompt.trim()
+                : null,
+            display_order: displayOrder++,
+            requires_face_asset: item.requires_face_asset !== false,
+          });
+        }
+
+        if (rowsToInsert.length === 0) {
+          return res.status(400).json({ message: "Aucune image valide" });
+        }
+
+        const { data, error } = await supabaseAdmin
+          .from("template_reference_images")
+          .insert(rowsToInsert)
+          .select(
+            "id, url, image_prompt, video_prompt, display_order, requires_face_asset",
+          );
+
+        if (error) throw error;
+        res.status(201).json((data ?? []).map(toReferenceImageDto));
+      } catch (error: any) {
+        logger.error({ err: error }, "Error uploading template reference images");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // PATCH /api/templates/:id/reference-images/:refId (Admin only)
+  app.patch(
+    api.templates.referenceImages.update.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(updateReferenceImageSchema),
+    async (req, res) => {
+      try {
+        const { id: templateId, refId } = req.params;
+        const supabaseAdmin = getSupabaseAdmin();
+        const updates: Record<string, string | boolean | null> = {};
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "image_prompt")) {
+          updates.image_prompt = req.body.image_prompt.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(req.body, "video_prompt")) {
+          const vp = req.body.video_prompt;
+          updates.video_prompt =
+            typeof vp === "string" && vp.trim() ? vp.trim() : null;
+        }
+        if (
+          Object.prototype.hasOwnProperty.call(req.body, "requires_face_asset")
+        ) {
+          updates.requires_face_asset = req.body.requires_face_asset === true;
+        }
+
+        if (Object.keys(updates).length === 0) {
+          return res.status(400).json({ message: "Aucune modification" });
+        }
+
+        const { data, error } = await supabaseAdmin
+          .from("template_reference_images")
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq("id", refId)
+          .eq("template_id", templateId)
+          .select(
+            "id, url, image_prompt, video_prompt, display_order, requires_face_asset",
+          )
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          return res.status(404).json({ message: "Image de référence introuvable" });
+        }
+        res.json(toReferenceImageDto(data));
+      } catch (error: any) {
+        logger.error({ err: error }, "Error updating template reference image");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // DELETE /api/templates/:id/reference-images/:refId (Admin only)
+  app.delete(
+    api.templates.referenceImages.delete.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { id: templateId, refId } = req.params;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { error } = await supabaseAdmin
+          .from("template_reference_images")
+          .delete()
+          .eq("id", refId)
+          .eq("template_id", templateId);
+
+        if (error) throw error;
+        res.status(204).send();
+      } catch (error: any) {
+        logger.error({ err: error }, "Error deleting template reference image");
         res.status(500).json({ message: error.message });
       }
     },
@@ -1315,6 +2392,7 @@ export async function registerRoutes(
     aspect_ratio: z.string().optional().default("9:16"),
     images: z.array(z.string()).optional().default([]),
     template_id: z.string().uuid().optional(),
+    text_values: z.array(z.string().max(500)).optional(),
   });
 
   app.post(
@@ -1327,10 +2405,7 @@ export async function registerRoutes(
         const authReq = req as AuthenticatedRequest;
         let { prompt, aspect_ratio, images, template_id } = req.body;
         const locale = resolveLocaleFromRequest(req);
-        
-        // Apply global mapping for "Tana" and "92i"
-        prompt = prompt.replace(/tanas?|92i/gi, "jolies filles");
-        
+
         const supabaseAdmin = getSupabaseAdmin();
 
         // 0. Check generation limits & credits
@@ -1343,31 +2418,69 @@ export async function registerRoutes(
           IMAGE_CREDIT_COST,
         );
 
-        // 2. Upload images to R2 and get public URLs
-        let imageUrls: string[] = [];
-        if (images && images.length > 0) {
-          const { uploadToR2 } = await import("./lib/r2-client");
-          for (let i = 0; i < images.length; i++) {
-            const dataUrl = images[i];
-            const match = dataUrl.match(
-              /^data:(image\/[\w+.-]+);base64,([\s\S]+)$/,
-            );
-            if (!match) {
-              logger.warn(
-                { index: i, prefix: dataUrl.substring(0, 40) },
-                "Invalid base64 image, skipping",
-              );
-              continue;
-            }
-            const contentType = match[1];
-            const base64Data = match[2];
-            const buffer = Buffer.from(base64Data, "base64");
-            const ext = contentType.split("/")[1] || "jpg";
-            const key = `inputs/${authReq.userId}/${Date.now()}-${i}.${ext}`;
-            const publicUrl = await uploadToR2(key, buffer, contentType);
-            imageUrls.push(publicUrl);
+        let selectedReferenceRow: Awaited<
+          ReturnType<typeof pickRandomReferenceRow>
+        > = null;
+        let finalPrompt = prompt;
+
+        if (template_id) {
+          const { data: template, error: templateError } = await supabaseAdmin
+            .from("templates")
+            .select("id, prompt_text")
+            .eq("id", template_id)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (templateError) throw templateError;
+          if (!template) {
+            return res
+              .status(404)
+              .json({ message: tBackend(locale, "templates.notFoundOrInactive") });
           }
+
+          const hasFaceAsset = await userHasCompleteFaceAsset(
+            supabaseAdmin,
+            authReq.userId,
+          );
+          selectedReferenceRow = await pickRandomReferenceRow(
+            supabaseAdmin,
+            template_id,
+            { hasFaceAsset },
+          );
+          finalPrompt = selectedReferenceRow
+            ? selectedReferenceRow.image_prompt
+            : template.prompt_text;
+
+          const faceOk = await respondIfTemplateFaceCaptureRequired(
+            supabaseAdmin,
+            template_id,
+            selectedReferenceRow,
+            hasFaceAsset,
+            res,
+          );
+          if (!faceOk) return;
         }
+
+        // Apply global mapping for "Tana" and "92i"
+        finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
+
+        let imageUrls: string[] = [];
+        if (template_id) {
+          imageUrls = await buildTemplateGenerationImageUrls(
+            supabaseAdmin,
+            authReq.userId,
+            selectedReferenceRow,
+          );
+        } else if (images && images.length > 0) {
+          imageUrls = await uploadInputImagesToR2(authReq.userId, images);
+        }
+
+        const referenceMetadata = selectedReferenceRow
+          ? {
+              selectedTemplateReferenceImage: selectedReferenceRow.url,
+              selectedTemplateReferenceImageId: selectedReferenceRow.id,
+            }
+          : {};
 
         // 3. Call Image API
         const oneshotConfig = getOneshotApiConfig();
@@ -1398,7 +2511,7 @@ export async function registerRoutes(
             }
 
             logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
-            const oneshotResponse = await createOneshotJob(prompt, {
+            const oneshotResponse = await createOneshotJob(finalPrompt, {
               aspectRatio: aspect_ratio || "9:16",
               ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
             });
@@ -1422,7 +2535,7 @@ export async function registerRoutes(
             logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             provider = "kie";
             const kieResponse = await createKieTask({
-              prompt,
+              prompt: finalPrompt,
               aspect_ratio: aspect_ratio || "9:16",
               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
             });
@@ -1438,7 +2551,7 @@ export async function registerRoutes(
           provider = "kie";
           logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
           const kieResponse = await createKieTask({
-            prompt,
+            prompt: finalPrompt,
             aspect_ratio: aspect_ratio || "9:16",
             ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
           });
@@ -1459,14 +2572,15 @@ export async function registerRoutes(
             user_id: authReq.userId,
             template_id: template_id || null,
             generation_type: "image",
-            prompt,
-            final_prompt: prompt,
+            prompt: finalPrompt,
+            final_prompt: finalPrompt,
             provider,
             provider_task_id: externalTaskId,
             status: "processing",
             aspect_ratio,
             input_assets: imageUrls,
             credit_cost: creditCost,
+            metadata: referenceMetadata,
           })
           .select()
           .single();
@@ -1481,6 +2595,7 @@ export async function registerRoutes(
           metadata: {
             provider,
             provider_task_id: externalTaskId,
+            ...referenceMetadata,
           },
         });
 
@@ -1520,7 +2635,13 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const authReq = req as AuthenticatedRequest;
-        const { prompt, images } = req.body;
+        const {
+          prompt,
+          video_prompt,
+          images,
+          template_id,
+          aspect_ratio,
+        } = req.body;
         const locale = resolveLocaleFromRequest(req);
         const supabaseAdmin = getSupabaseAdmin();
 
@@ -1552,49 +2673,177 @@ export async function registerRoutes(
           VIDEO_CREDIT_COST,
         );
 
-        // 2. Upload optional reference image to R2
-        let imageUrl: string | undefined;
-        if (images && images.length > 0) {
-          const dataUrl = images[0];
-          const match = dataUrl.match(
-            /^data:(image\/[\w+.-]+);base64,([\s\S]+)$/,
+        let templateIdForGeneration: string | null = null;
+        let selectedReferenceRow: Awaited<
+          ReturnType<typeof pickRandomReferenceRow>
+        > = null;
+        let templateVideoPrompt: string | null = null;
+        let finalImagePrompt = prompt;
+
+        if (template_id) {
+          const { data: template, error: templateError } = await supabaseAdmin
+            .from("templates")
+            .select("id, prompt_text, input_schema")
+            .eq("id", template_id)
+            .eq("is_active", true)
+            .in("generation_type", ["video", "both"])
+            .maybeSingle();
+
+          if (templateError) throw templateError;
+          if (!template) {
+            return res
+              .status(404)
+              .json({ message: tBackend(locale, "templates.notFoundOrInactive") });
+          }
+
+          templateIdForGeneration = template.id;
+          const hasFaceAsset = await userHasCompleteFaceAsset(
+            supabaseAdmin,
+            authReq.userId,
           );
-          if (match) {
-            const contentType = match[1];
-            const base64Data = match[2];
-            const buffer = Buffer.from(base64Data, "base64");
-            const ext = contentType.split("/")[1] || "jpg";
-            const key = `inputs/${authReq.userId}/${Date.now()}-ref.${ext}`;
-            imageUrl = await uploadToR2(key, buffer, contentType);
+          selectedReferenceRow = await pickRandomReferenceRow(
+            supabaseAdmin,
+            template_id,
+            { hasFaceAsset },
+          );
+
+          const faceOk = await respondIfTemplateFaceCaptureRequired(
+            supabaseAdmin,
+            template_id,
+            selectedReferenceRow,
+            hasFaceAsset,
+            res,
+          );
+          if (!faceOk) return;
+
+          if (selectedReferenceRow) {
+            finalImagePrompt = selectedReferenceRow.image_prompt;
+            const rowVideoPrompt = selectedReferenceRow.video_prompt?.trim();
+            if (!rowVideoPrompt || rowVideoPrompt.length < 10) {
+              return res.status(422).json({
+                message:
+                  "Prompt vidéo requis sur l'image de référence sélectionnée",
+              });
+            }
+            templateVideoPrompt = rowVideoPrompt;
+          } else {
+            finalImagePrompt = template.prompt_text;
+            templateVideoPrompt =
+              typeof video_prompt === "string" && video_prompt.trim()
+                ? video_prompt.trim()
+                : getTemplateVideoPrompt(template.input_schema) ?? null;
+            if (!templateVideoPrompt) {
+              return res.status(422).json({
+                message: "Prompt vidéo requis pour ce template",
+              });
+            }
           }
         }
 
-        // 3. Call KIE Runway API
-        const runwayResponse = await createRunwayVideoTask({
-          prompt,
-          image: imageUrl,
-        });
+        finalImagePrompt = finalImagePrompt.replace(/tanas?|92i/gi, "jolies filles");
+        if (templateVideoPrompt) {
+          templateVideoPrompt = templateVideoPrompt.replace(
+            /tanas?|92i/gi,
+            "jolies filles",
+          );
+        }
 
-        if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
-          const msg = (runwayResponse as any).msg || tBackend(locale, "larps.taskCreateFailed");
-          return res.status(422).json({ message: msg });
+        const referenceMetadata = selectedReferenceRow
+          ? {
+              selectedTemplateReferenceImage: selectedReferenceRow.url,
+              selectedTemplateReferenceImageId: selectedReferenceRow.id,
+            }
+          : {};
+
+        let imageUrls: string[] = [];
+        if (templateIdForGeneration) {
+          imageUrls = await buildTemplateGenerationImageUrls(
+            supabaseAdmin,
+            authReq.userId,
+            selectedReferenceRow,
+          );
+        } else {
+          imageUrls = await uploadInputImagesToR2(authReq.userId, images);
+        }
+        const aspectRatio = aspect_ratio || "9:16";
+
+        let externalTaskId: string;
+        let generationMetadata: Record<string, unknown>;
+
+        if (templateIdForGeneration) {
+          let imageTask: StartedImageGenerationTask;
+          try {
+            imageTask = await startImageGenerationTask({
+              prompt: finalImagePrompt,
+              aspectRatio,
+              imageUrls,
+            });
+          } catch (err) {
+            if (isGoogleAiPromptFlagged(err)) {
+              return res.status(422).json({
+                code: "PROMPT_POLICY_VIOLATION",
+                message: tBackend(locale, "larps.policyViolation"),
+              });
+            }
+
+            logger.error(
+              { err },
+              "Failed to start image stage for template video generation",
+            );
+            return res
+              .status(502)
+              .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+          }
+
+          externalTaskId = imageTask.providerTaskId;
+          generationMetadata = {
+            workflow: "template_image_to_video",
+            stage: "image",
+            imageProvider: imageTask.provider,
+            imageTaskId: imageTask.providerTaskId,
+            originalInputAssets: imageUrls,
+            ...referenceMetadata,
+            videoPromptText: templateVideoPrompt,
+          };
+        } else {
+          // 3. Call KIE Runway API directly for non-template videos
+          const runwayResponse = await createRunwayVideoTask({
+            prompt: finalImagePrompt,
+            image: imageUrls[0],
+            aspectRatio,
+          });
+
+          if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
+            const msg = (runwayResponse as any).msg || tBackend(locale, "larps.taskCreateFailed");
+            return res.status(422).json({ message: msg });
+          }
+
+          externalTaskId = `video_${runwayResponse.data.task_id}`;
+          generationMetadata = {
+            workflow: "direct_runway",
+            stage: "video",
+            runwayTaskId: externalTaskId,
+            sourceImageUrl: imageUrls[0] ?? null,
+            ...referenceMetadata,
+          };
         }
 
         // 4. Store in generations, then charge through the credit ledger.
-        const externalTaskId = `video_${runwayResponse.data.task_id}`;
         const { data: larp, error: insertErr } = await supabaseAdmin
           .from("generations")
           .insert({
             user_id: authReq.userId,
-            template_id: null,
+            template_id: templateIdForGeneration,
             generation_type: "video",
-            prompt,
-            final_prompt: prompt,
+            prompt: finalImagePrompt,
+            final_prompt: finalImagePrompt,
             provider: "runway",
             provider_task_id: externalTaskId,
             status: "processing",
-            input_assets: imageUrl ? [imageUrl] : [],
+            aspect_ratio: aspectRatio,
+            input_assets: imageUrls,
             credit_cost: creditCost,
+            metadata: generationMetadata,
           })
           .select()
           .single();
@@ -1609,6 +2858,9 @@ export async function registerRoutes(
           metadata: {
             provider: "runway",
             provider_task_id: externalTaskId,
+            workflow: generationMetadata.workflow,
+            stage: generationMetadata.stage,
+            ...referenceMetadata,
           },
         });
         if (deductErr) {
@@ -1707,23 +2959,155 @@ export async function registerRoutes(
           resultUrls: originals,
           watermarkedUrls: watermarkedList,
           failMessage: larp.fail_message,
-          costTime: larp.cost_time,
+          costTime: toNullableNumber(larp.cost_time),
           isSubscriber,
           requiresPaywall: false,
+          resultType: larp.generation_type === "video" ? "video" : "image",
         });
       }
 
       const activeTaskId = (larp.provider_task_id || "").split(",").pop() as string;
       const isCustomApi = activeTaskId.startsWith("custom_");
       const isVideoTask = activeTaskId.startsWith("video_");
+      const metadata = getGenerationMetadata(larp);
+      const isVideoGeneration = larp.generation_type === "video";
+      const isTemplateVideoImageStage =
+        isVideoGeneration &&
+        metadata.workflow === "template_image_to_video" &&
+        metadata.stage === "image" &&
+        !isVideoTask;
 
       let apiStatus: "waiting" | "success" | "fail" = "waiting";
       let apiResultJson: any = null;
       let apiFailMsg: string | null = null;
       let apiCostTime: number | null = null;
-      const resultType: "image" | "video" = isVideoTask ? "video" : "image";
+      const resultType: "image" | "video" = isVideoGeneration ? "video" : "image";
 
-      if (isVideoTask) {
+      if (isTemplateVideoImageStage) {
+        const imagePoll = await pollChainedVideoImageStage({
+          activeTaskId,
+          larp,
+          locale,
+          supabaseAdmin,
+        });
+
+        if (imagePoll.providerTaskUpdated || imagePoll.status === "waiting") {
+          return res.json({
+            larpId: larp.id,
+            status: "waiting",
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+        }
+
+        apiStatus = imagePoll.status;
+        apiResultJson = imagePoll.resultJson;
+        apiFailMsg = imagePoll.failMsg;
+        apiCostTime = imagePoll.costTime;
+
+        if (apiStatus === "success" && apiResultJson) {
+          let generatedImageUrls: string[] = [];
+          try {
+            const parsed =
+              typeof apiResultJson === "string"
+                ? JSON.parse(apiResultJson)
+                : apiResultJson;
+            generatedImageUrls = extractImageUrls(parsed);
+          } catch (parseErr) {
+            logger.error(
+              { err: parseErr, rawResultJson: apiResultJson },
+              "Failed to parse chained video image resultJson",
+            );
+          }
+
+          if (generatedImageUrls.length === 0) {
+            apiStatus = "fail";
+            apiFailMsg = tBackend(locale, "larps.taskCreateFailed");
+          } else {
+            let storedImageUrls = generatedImageUrls;
+            try {
+              storedImageUrls = await downloadAndStoreImages(
+                larp.id,
+                generatedImageUrls,
+              );
+            } catch (err) {
+              logger.error(
+                { err, larpId: larp.id },
+                "Failed to store chained video image to R2, keeping provider URL",
+              );
+            }
+
+            const generatedImageUrl = storedImageUrls[0];
+            try {
+              const videoPromptText =
+                typeof metadata.videoPromptText === "string"
+                  ? metadata.videoPromptText.trim()
+                  : "";
+              if (!videoPromptText) {
+                throw new Error("Missing template video prompt");
+              }
+
+              const runwayResponse = await createRunwayVideoTask({
+                prompt: videoPromptText,
+                image: generatedImageUrl,
+                aspectRatio: larp.aspect_ratio || "9:16",
+              });
+
+              if (runwayResponse.code !== 200 || !runwayResponse.data?.task_id) {
+                const msg =
+                  (runwayResponse as any).msg ||
+                  tBackend(locale, "larps.taskCreateFailed");
+                throw new RunwayApiError(msg, runwayResponse.code, msg);
+              }
+
+              const runwayExternalTaskId = `video_${runwayResponse.data.task_id}`;
+              const inputAssets = Array.isArray(larp.input_assets)
+                ? larp.input_assets
+                : [];
+              await supabaseAdmin
+                .from("generations")
+                .update({
+                  provider_task_id: `${larp.provider_task_id},${runwayExternalTaskId}`,
+                  input_assets: uniqueStrings([...inputAssets, generatedImageUrl]),
+                  metadata: {
+                    ...metadata,
+                    stage: "video",
+                    generatedImageUrl,
+                    generatedImageAssets: storedImageUrls,
+                    runwayTaskId: runwayExternalTaskId,
+                  },
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", larp.id);
+
+              return res.json({
+                larpId: larp.id,
+                status: "waiting",
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+            } catch (err) {
+              logger.error(
+                { err, larpId: larp.id },
+                "Failed to start Runway stage for template video generation",
+              );
+              apiStatus = "fail";
+              apiFailMsg =
+                err instanceof RunwayApiError
+                  ? err.apiMsg
+                  : tBackend(locale, "larps.taskCreateFailed");
+            }
+          }
+        }
+      } else if (isVideoTask) {
         const runwayTaskId = activeTaskId.replace("video_", "");
         try {
           const runwayStatus = await getRunwayVideoStatus(runwayTaskId);
@@ -1909,9 +3293,7 @@ export async function registerRoutes(
             output_assets: resultUrls,
             watermarked_assets: watermarkedUrls.length > 0 ? watermarkedUrls : [],
             fail_message: apiFailMsg || null,
-            cost_time: apiCostTime
-              ? String(apiCostTime)
-              : null,
+            cost_time: toNullableNumber(apiCostTime),
             updated_at: new Date().toISOString(),
             completed_at: new Date().toISOString(),
           })
@@ -1968,7 +3350,7 @@ export async function registerRoutes(
 
       const { data, error } = await supabaseAdmin
         .from("generations")
-        .select("*, templates(name, template_categories(slug))")
+        .select("*, templates(name, name_en, template_categories(slug, name, name_en))")
         .eq("user_id", authReq.userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -2096,6 +3478,77 @@ export async function registerRoutes(
         .json({ message: tBackend(locale, "common.internalServerError") });
     }
   });
+
+  // =============================================
+  // ADMIN: GENERATION LOGS
+  // =============================================
+
+  const generationLogsQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(500).default(100),
+  });
+
+  app.get(
+    api.admin.generationLogs.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { limit } = generationLogsQuerySchema.parse({
+          limit: req.query.limit ?? 100,
+        });
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { data, error } = await supabaseAdmin
+          .from("generations")
+          .select(
+            "*, profiles(email), templates(name, name_en, template_categories(slug, name, name_en))",
+          )
+          .order("created_at", { ascending: false })
+          .limit(limit);
+
+        if (error) throw error;
+        res.json((data ?? []).map(toAdminGenerationLogDto));
+      } catch (error: any) {
+        logger.error({ err: error }, "Error fetching admin generation logs");
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
+      }
+    },
+  );
+
+  app.delete(
+    api.admin.clearGenerationLogs.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const supabaseAdmin = getSupabaseAdmin();
+
+        const { error, count } = await supabaseAdmin
+          .from("generations")
+          .delete({ count: "exact" })
+          .neq("id", "00000000-0000-0000-0000-000000000000");
+
+        if (error) throw error;
+
+        const deletedCount = count ?? 0;
+        logger.info(
+          { adminUserId: authReq.userId, deletedCount },
+          "Admin cleared all generation logs",
+        );
+        res.json({ deletedCount });
+      } catch (error: any) {
+        logger.error({ err: error }, "Error clearing admin generation logs");
+        const locale = resolveLocaleFromRequest(req);
+        res
+          .status(500)
+          .json({ message: tBackend(locale, "common.internalServerError") });
+      }
+    },
+  );
 
   // =============================================
   // ADMIN: CREDITS MANAGEMENT

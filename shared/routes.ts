@@ -92,6 +92,24 @@ export const api = {
       method: "POST" as const,
       path: "/api/templates/:id/upload-image",
     },
+    referenceImages: {
+      list: {
+        method: "GET" as const,
+        path: "/api/templates/:id/reference-images",
+      },
+      create: {
+        method: "POST" as const,
+        path: "/api/templates/:id/reference-images",
+      },
+      update: {
+        method: "PATCH" as const,
+        path: "/api/templates/:id/reference-images/:refId",
+      },
+      delete: {
+        method: "DELETE" as const,
+        path: "/api/templates/:id/reference-images/:refId",
+      },
+    },
     marquee: {
       method: "GET" as const,
       path: "/api/templates/marquee",
@@ -138,9 +156,21 @@ export const api = {
     },
   },
   faceCaptures: {
+    latest: {
+      method: "GET" as const,
+      path: "/api/face-captures/latest",
+    },
+    asset: {
+      method: "GET" as const,
+      path: "/api/face-captures/latest/assets/:poseId",
+    },
     create: {
       method: "POST" as const,
       path: "/api/face-captures",
+    },
+    deleteLatest: {
+      method: "DELETE" as const,
+      path: "/api/face-captures/latest",
     },
   },
   admin: {
@@ -155,6 +185,14 @@ export const api = {
     deleteUser: {
       method: "DELETE" as const,
       path: "/api/admin/users/:id",
+    },
+    generationLogs: {
+      method: "GET" as const,
+      path: "/api/admin/generation-logs",
+    },
+    clearGenerationLogs: {
+      method: "DELETE" as const,
+      path: "/api/admin/generation-logs",
     },
     getSettings: {
       method: "GET" as const,

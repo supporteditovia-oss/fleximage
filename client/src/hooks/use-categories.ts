@@ -27,6 +27,7 @@ export function useCreateCategory() {
   return useMutation({
     mutationFn: async (data: {
       name: string;
+      name_en?: string | null;
       slug: string;
       is_active?: boolean;
       display_order?: number;
@@ -52,6 +53,7 @@ export function useUpdateCategory() {
     }: {
       id: string;
       name?: string;
+      name_en?: string | null;
       slug?: string;
       is_active?: boolean;
       display_order?: number;

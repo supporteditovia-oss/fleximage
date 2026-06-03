@@ -12,19 +12,35 @@ import { useTemplates } from "@/hooks/use-templates";
 import { useFavorites, useToggleFavorite } from "@/hooks/use-favorites";
 import type { PromptTemplate } from "@shared/schema";
 import { useTranslation } from "react-i18next";
+import {
+  getLocalizedTemplateCategoryName,
+  getLocalizedTemplateName,
+} from "@/lib/template-utils";
+import { TemplateIllustrationMedia } from "@/components/templates/TemplateIllustrationMedia";
 
 interface TemplateGalleryProps {
+  generationMode: "image" | "video";
   selectedTemplateId: string | null;
   onSelectTemplate: (tpl: PromptTemplate) => void;
   onDeselectTemplate: () => void;
 }
 
+function templateSupportsMode(
+  template: PromptTemplate,
+  mode: "image" | "video",
+) {
+  const generationType = template.generation_type ?? "image";
+  if (generationType === "video" || generationType === "both") return true;
+  return mode === "image";
+}
+
 export function TemplateGallery({
+  generationMode,
   selectedTemplateId,
   onSelectTemplate,
   onDeselectTemplate,
 }: TemplateGalleryProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -39,12 +55,16 @@ export function TemplateGallery({
       .replace(/[\u0300-\u036f]/g, "");
 
   const filtered = (templates || [])
+    .filter((t) => templateSupportsMode(t, generationMode))
     .filter((t) => {
       const q = normalize(search);
       if (!q) return true;
       return (
-        normalize(t.name).includes(q) ||
+        normalize(getLocalizedTemplateName(t, i18n.language)).includes(q) ||
+        (t.name_en && normalize(t.name_en).includes(q)) ||
         (t.keywords && normalize(t.keywords).includes(q)) ||
+        (getLocalizedTemplateCategoryName(t, i18n.language) &&
+          normalize(getLocalizedTemplateCategoryName(t, i18n.language) || "").includes(q)) ||
         (t.category && normalize(t.category).includes(q))
       );
     })
@@ -128,8 +148,7 @@ export function TemplateGallery({
         {filtered.map((tpl) => {
           const isSelected = selectedTemplateId === tpl.id;
           const isFav = favoriteIds.includes(tpl.id);
-          const hasBothImages =
-            !!tpl.example_before_url && !!tpl.example_after_url;
+          const templateName = getLocalizedTemplateName(tpl, i18n.language);
 
           return (
             <div
@@ -157,71 +176,13 @@ export function TemplateGallery({
                     }`}
                 />
               </button>
-              {/* Image area */}
-              {hasBothImages ? (
-                <>
-                  {/* Mobile: split view — après (top) + avant (bottom) */}
-                  <div className="md:hidden relative aspect-[2/3] w-full overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-[calc(50%-1px)] overflow-hidden">
-                      <img
-                        src={tpl.example_after_url!}
-                        alt={`${tpl.name} - ${t("templateGallery.after")}`}
-                        className="absolute inset-0 w-full h-full object-cover object-center"
-                        loading="lazy"
-                      />
-                      <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
-                        {t("templateGallery.after")}
-                      </span>
-                    </div>
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/25 z-[5]" />
-                    <div className="absolute inset-x-0 bottom-0 h-[calc(50%-1px)] overflow-hidden">
-                      <img
-                        src={tpl.example_before_url!}
-                        alt={`${tpl.name} - ${t("templateGallery.before")}`}
-                        className="absolute inset-0 w-full h-full object-cover object-center"
-                        loading="lazy"
-                      />
-                      <span className="absolute top-1 left-1 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
-                        {t("templateGallery.before")}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Desktop: hover clip-path effect */}
-                  <div className="hidden md:block relative aspect-[2/3] w-full overflow-hidden">
-                    <img
-                      src={tpl.example_after_url!}
-                      alt={`${tpl.name} - ${t("templateGallery.after")}`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 w-full h-full overflow-hidden [clip-path:inset(0_100%_0_0)] group-hover:[clip-path:inset(0_0_0_0)] transition-[clip-path] duration-700 ease-in-out">
-                      <img
-                        src={tpl.example_before_url!}
-                        alt={`${tpl.name} - ${t("templateGallery.before")}`}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="absolute inset-y-0 left-0 group-hover:left-full w-[2px] bg-white/80 shadow-sm transition-all duration-700 ease-in-out pointer-events-none opacity-0 group-hover:opacity-100" />
-                    <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        {t("templateGallery.before")}
-                      </span>
-                    </div>
-                    <div className="absolute bottom-2 right-2 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                      <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        {t("templateGallery.after")}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : tpl.example_after_url ? (
+              {/* Image area — après uniquement */}
+              {tpl.example_after_url ? (
                 <div className="relative aspect-[2/3] w-full overflow-hidden">
-                  <img
+                  <TemplateIllustrationMedia
                     src={tpl.example_after_url}
-                    alt={tpl.name}
+                    alt={templateName}
                     className="block w-full h-full object-cover"
-                    loading="lazy"
                   />
                 </div>
               ) : (
@@ -233,7 +194,7 @@ export function TemplateGallery({
               {/* Footer */}
               <div className="flex items-center justify-between gap-1 px-2.5 py-2.5 bg-card">
                 <p className="text-xs font-semibold leading-tight line-clamp-2">
-                  {tpl.name}
+                  {templateName}
                 </p>
                 <ChevronDown
                   className={`w-3.5 h-3.5 shrink-0 -rotate-90 transition-all ${isSelected

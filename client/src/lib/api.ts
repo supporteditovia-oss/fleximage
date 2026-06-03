@@ -31,6 +31,20 @@ export async function authFetch(
   }
 
   const res = await fetch(url, { ...options, headers });
+  const contentType = res.headers.get("Content-Type") ?? "";
+
+  if (
+    res.ok &&
+    typeof url === "string" &&
+    url.startsWith("/api/") &&
+    contentType.includes("text/html")
+  ) {
+    throw new Error(
+      i18n.t("errors.generic.serverDefault", {
+        defaultValue: "Server error",
+      }),
+    );
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

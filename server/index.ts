@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
+import { registerSeoRoutes } from "./lib/seo-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { logger } from "./lib/logger";
@@ -49,6 +50,7 @@ app.use(
 
 (async () => {
   await registerRoutes(httpServer, app);
+  registerSeoRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

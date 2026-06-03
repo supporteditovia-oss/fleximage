@@ -68,6 +68,18 @@ import { cn } from "@/lib/utils";
 
 // ---- Category Form Dialog (inline in this page) ----
 
+type TemplateGenerationType = "image" | "video" | "both";
+
+const TEMPLATE_GENERATION_LABELS: Record<TemplateGenerationType, string> = {
+  image: "Image",
+  video: "Image + vidéo",
+  both: "Image + vidéo",
+};
+
+function getTemplateGenerationLabel(template: PromptTemplate) {
+  return TEMPLATE_GENERATION_LABELS[template.generation_type ?? "image"];
+}
+
 function slugify(text: string): string {
   return text
     .normalize("NFD")
@@ -91,6 +103,7 @@ function CategoryFormDialog({
   const updateCategory = useUpdateCategory();
 
   const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [slug, setSlug] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [displayOrder, setDisplayOrder] = useState(0);
@@ -102,6 +115,7 @@ function CategoryFormDialog({
   useEffect(() => {
     if (open) {
       setName(category?.name || "");
+      setNameEn(category?.name_en || "");
       setSlug(category?.slug || "");
       setIsActive(category?.is_active ?? true);
       setDisplayOrder(category?.display_order ?? 0);
@@ -122,6 +136,7 @@ function CategoryFormDialog({
         await updateCategory.mutateAsync({
           id: category.id,
           name,
+          name_en: nameEn.trim() || null,
           slug,
           is_active: isActive,
           display_order: displayOrder,
@@ -130,6 +145,7 @@ function CategoryFormDialog({
       } else {
         await createCategory.mutateAsync({
           name,
+          name_en: nameEn.trim() || null,
           slug,
           is_active: isActive,
           display_order: displayOrder,
@@ -155,17 +171,29 @@ function CategoryFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cat-name">Nom</Label>
-            <Input
-              id="cat-name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Ex: Célébrité"
-              required
-              minLength={2}
-              maxLength={100}
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="cat-name">Nom français</Label>
+              <Input
+                id="cat-name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Ex: Célébrité"
+                required
+                minLength={2}
+                maxLength={100}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cat-name-en">Nom anglais</Label>
+              <Input
+                id="cat-name-en"
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                placeholder="Ex: Celebrity"
+                maxLength={100}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="cat-slug">Slug</Label>
@@ -315,7 +343,8 @@ function CategoryManagementDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nom</TableHead>
+                    <TableHead>Nom FR</TableHead>
+                    <TableHead>Nom EN</TableHead>
                     <TableHead>Slug</TableHead>
                     <TableHead>Ordre</TableHead>
                     <TableHead>Active</TableHead>
@@ -326,6 +355,9 @@ function CategoryManagementDialog({
                   {categories.map((cat) => (
                     <TableRow key={cat.id}>
                       <TableCell className="font-medium">{cat.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {cat.name_en || "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{cat.slug}</Badge>
                       </TableCell>
@@ -436,6 +468,7 @@ export default function AdminTemplates() {
   const filteredTemplates = templates?.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(search.toLowerCase()) ||
+      (t.name_en || "").toLowerCase().includes(search.toLowerCase()) ||
       t.prompt_text.toLowerCase().includes(search.toLowerCase());
     const matchesCategory =
       categoryFilter === "all" ||
@@ -580,6 +613,7 @@ export default function AdminTemplates() {
               )}
             >
               {cat.name}
+              {cat.name_en ? ` / ${cat.name_en}` : ""}
             </button>
           ))}
           <button
@@ -619,7 +653,12 @@ export default function AdminTemplates() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nom</TableHead>
+                  <TableHead>Titre FR</TableHead>
+                  <TableHead>Titre EN</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-center" title="Images de référence dans le tirage aléatoire">
+                    Refs
+                  </TableHead>
                   <TableHead>Catégorie</TableHead>
                   <TableHead>Actif</TableHead>
                   <TableHead>Créé le</TableHead>
@@ -631,6 +670,31 @@ export default function AdminTemplates() {
                   <TableRow key={template.id} className="group">
                     <TableCell>
                       <p className="font-medium">{template.name}</p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {template.name_en || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {getTemplateGenerationLabel(template)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={
+                          (template.reference_image_count ?? 0) === 0
+                            ? "destructive"
+                            : "secondary"
+                        }
+                        className="tabular-nums"
+                        title={
+                          (template.reference_image_count ?? 0) === 0
+                            ? "Aucune image de référence — prompt global uniquement"
+                            : `${template.reference_image_count} image(s) dans le tirage aléatoire`
+                        }
+                      >
+                        {template.reference_image_count ?? 0}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Select
@@ -654,6 +718,7 @@ export default function AdminTemplates() {
                           {(categoriesList || []).map((cat) => (
                             <SelectItem key={cat.slug} value={cat.slug}>
                               {cat.name}
+                              {cat.name_en ? ` / ${cat.name_en}` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -700,7 +765,10 @@ export default function AdminTemplates() {
 
       <TemplateFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingTemplate(null);
+        }}
         template={editingTemplate}
       />
 

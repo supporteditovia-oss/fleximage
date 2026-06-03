@@ -17,6 +17,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -28,21 +41,32 @@ import {
   useCreateTemplate,
   useUpdateTemplate,
   useUploadTemplateImage,
+  useUploadTemplateReferenceImages,
+  useTemplateReferenceImages,
+  useUpdateReferenceImage,
+  useDeleteReferenceImage,
 } from "@/hooks/use-templates";
 import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useToast } from "@/hooks/use-toast";
-import type { PromptTemplate, ImageSlot, TextFieldSlot } from "@shared/schema";
+import type {
+  PromptTemplate,
+  ReferenceImageDto,
+} from "@shared/schema";
 import {
   Loader2,
   Plus,
   X,
-  Type,
   ImageUp,
   ChevronsUpDown,
   Check,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AFTER_ILLUSTRATION_ACCEPT,
+  isAfterIllustrationVideo,
+  MAX_AFTER_VIDEO_BYTES,
+} from "@/lib/template-illustration";
 
 const POPULAR_ICONS = [
   "Camera", "Image", "Laugh", "Smile", "SmilePlus", "Zap", "Flame", "Ghost",
@@ -76,84 +100,210 @@ interface TemplateFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template?: PromptTemplate | null;
+  onTemplateSaved?: (template: PromptTemplate) => void;
 }
 
-function parseJson<T>(raw: string | null | undefined, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
+type TemplateGenerationType = "image" | "video" | "both";
+
+type EditableReferenceImage = ReferenceImageDto & {
+  image_prompt: string;
+  video_prompt: string;
+  dirty: boolean;
+};
+
+type PendingReferenceImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  image_prompt: string;
+  video_prompt: string;
+  requires_face_asset: boolean;
+};
+
+const TEMPLATE_GENERATION_TYPES: {
+  value: TemplateGenerationType;
+  label: string;
+}[] = [
+  { value: "image", label: "Image" },
+  { value: "video", label: "Image + vidéo" },
+];
+const REFERENCE_IMAGE_ACCEPT = "image/*";
+const REFERENCE_IMAGE_INPUT_ID = "template-reference-images-input";
+const REFERENCE_FOLDER_INPUT_ID = "template-reference-images-folder";
+const REFERENCE_TILE_WIDTH = "w-[108px]";
+
+type SelectedReferenceKey = `existing:${string}` | `pending:${string}`;
+
+function isReferenceImageFile(file: File) {
+  if (["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    return true;
   }
+  return /\.(jpe?g|png|webp)$/i.test(file.name);
+}
+
+function isReferenceImagePromptMissing(prompt: string) {
+  return prompt.trim().length < 10;
+}
+
+function getReferenceTileClasses(isInvalid: boolean, isSelected: boolean) {
+  return cn(
+    "relative aspect-[9/16] w-full overflow-hidden rounded-lg border-2 transition-colors",
+    isInvalid
+      ? "border-destructive bg-destructive/15"
+      : "border-border bg-muted/30",
+    isSelected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+  );
 }
 
 export function TemplateFormDialog({
   open,
   onOpenChange,
   template,
+  onTemplateSaved,
 }: TemplateFormDialogProps) {
   const { toast } = useToast();
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
   const uploadImage = useUploadTemplateImage();
+  const uploadReferenceImages = useUploadTemplateReferenceImages();
+  const updateReferenceImage = useUpdateReferenceImage();
+  const deleteReferenceImage = useDeleteReferenceImage();
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
+  const activeTemplateId = template?.id ?? savedTemplateId;
   const { data: categoriesList } = useCategories();
+  const { data: loadedReferenceImages, refetch: refetchReferenceImages } =
+    useTemplateReferenceImages(activeTemplateId);
 
   const createCategory = useCreateCategory();
   const [catPopoverOpen, setCatPopoverOpen] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("principal");
 
   const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [promptText, setPromptText] = useState("");
+  const [videoPromptText, setVideoPromptText] = useState("");
   const [category, setCategory] = useState("");
+  const [generationType, setGenerationType] =
+    useState<TemplateGenerationType>("image");
   const [isActive, setIsActive] = useState(true);
-  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
-  const [textFields, setTextFields] = useState<TextFieldSlot[]>([]);
   const [keywords, setKeywords] = useState("");
   const [icon, setIcon] = useState("");
   const [iconOpen, setIconOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
-  const [beforePreview, setBeforePreview] = useState<string | null>(null);
   const [afterPreview, setAfterPreview] = useState<string | null>(null);
-  const [beforeFile, setBeforeFile] = useState<File | null>(null);
   const [afterFile, setAfterFile] = useState<File | null>(null);
-  const beforeInputRef = useRef<HTMLInputElement>(null);
+  const [existingReferences, setExistingReferences] = useState<
+    EditableReferenceImage[]
+  >([]);
+  const [referenceFiles, setReferenceFiles] = useState<PendingReferenceImage[]>(
+    [],
+  );
+  const [selectedReferenceKey, setSelectedReferenceKey] =
+    useState<SelectedReferenceKey | null>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
+  const referenceFilesRef = useRef<PendingReferenceImage[]>([]);
+  const initializedSessionKeyRef = useRef<string | null>(null);
 
-  const isEditing = !!template;
+  const isEditing = !!activeTemplateId;
   const isPending =
     createTemplate.isPending ||
     updateTemplate.isPending ||
-    uploadImage.isPending;
+    uploadImage.isPending ||
+    uploadReferenceImages.isPending ||
+    updateReferenceImage.isPending ||
+    deleteReferenceImage.isPending;
 
   useEffect(() => {
+    if (!open) {
+      setSavedTemplateId(null);
+      initializedSessionKeyRef.current = null;
+      return;
+    }
+
+    const sessionKey = template?.id ?? savedTemplateId ?? "new";
+
+    if (initializedSessionKeyRef.current === sessionKey) {
+      return;
+    }
+
+    if (
+      initializedSessionKeyRef.current === "new" &&
+      sessionKey !== "new" &&
+      !template
+    ) {
+      initializedSessionKeyRef.current = sessionKey;
+      void refetchReferenceImages();
+      return;
+    }
+
+    initializedSessionKeyRef.current = sessionKey;
+
     if (template) {
       setName(template.name);
+      setNameEn(template.name_en || "");
       setPromptText(template.prompt_text);
+      setVideoPromptText(template.video_prompt_text || "");
       setCategory(template.category || "");
+      setGenerationType(
+        template.generation_type === "both"
+          ? "video"
+          : template.generation_type ?? "image",
+      );
       setIsActive(template.is_active);
       setKeywords(template.keywords || "");
       setIcon(template.icon || "");
-      setImageSlots(parseJson<ImageSlot[]>(template.image_slots, []));
-      setTextFields(parseJson<TextFieldSlot[]>(template.text_fields, []));
-      setBeforePreview(template.example_before_url || null);
+      setExistingReferences([]);
+      clearPendingReferenceFiles();
+      setSelectedReferenceKey(null);
+      void refetchReferenceImages();
       setAfterPreview(template.example_after_url || null);
-      setBeforeFile(null);
       setAfterFile(null);
-    } else {
+      setActiveTab("principal");
+    } else if (sessionKey === "new") {
       setName("");
+      setNameEn("");
       setPromptText("");
+      setVideoPromptText("");
       setCategory("");
+      setGenerationType("image");
       setIsActive(true);
       setKeywords("");
       setIcon("");
-      setImageSlots([]);
-      setTextFields([]);
-      setBeforePreview(null);
+      setExistingReferences([]);
+      clearPendingReferenceFiles();
+      setSelectedReferenceKey(null);
       setAfterPreview(null);
-      setBeforeFile(null);
       setAfterFile(null);
+      setActiveTab("principal");
     }
-  }, [template, open]);
+  }, [open, template?.id, savedTemplateId, refetchReferenceImages]);
+
+  useEffect(() => {
+    if (!loadedReferenceImages) return;
+    setExistingReferences(
+      loadedReferenceImages.map((ref) => ({
+        ...ref,
+        image_prompt: ref.image_prompt,
+        video_prompt: ref.video_prompt ?? "",
+        requires_face_asset: ref.requires_face_asset !== false,
+        dirty: false,
+      })),
+    );
+  }, [loadedReferenceImages]);
+
+  useEffect(() => {
+    referenceFilesRef.current = referenceFiles;
+  }, [referenceFiles]);
+
+  useEffect(() => {
+    return () => {
+      referenceFilesRef.current.forEach((item) =>
+        URL.revokeObjectURL(item.previewUrl),
+      );
+    };
+  }, []);
 
   function slugify(text: string): string {
     return text
@@ -182,34 +332,6 @@ export function TemplateFormDialog({
     }
   }
 
-  // --- Image slots ---
-  function addImageSlot() {
-    if (imageSlots.length >= 3) return;
-    setImageSlots((prev) => [...prev, { label: "", required: false }]);
-  }
-  function removeImageSlot(index: number) {
-    setImageSlots((prev) => prev.filter((_, i) => i !== index));
-  }
-  function updateImageSlot(index: number, updates: Partial<ImageSlot>) {
-    setImageSlots((prev) =>
-      prev.map((slot, i) => (i === index ? { ...slot, ...updates } : slot)),
-    );
-  }
-
-  // --- Text fields ---
-  function addTextField() {
-    if (textFields.length >= 5) return;
-    setTextFields((prev) => [...prev, { label: "", required: false }]);
-  }
-  function removeTextField(index: number) {
-    setTextFields((prev) => prev.filter((_, i) => i !== index));
-  }
-  function updateTextField(index: number, updates: Partial<TextFieldSlot>) {
-    setTextFields((prev) =>
-      prev.map((field, i) => (i === index ? { ...field, ...updates } : field)),
-    );
-  }
-
   function handleFileSelect(
     file: File,
     setPreview: (url: string) => void,
@@ -218,6 +340,129 @@ export function TemplateFormDialog({
     setFile(file);
     const url = URL.createObjectURL(file);
     setPreview(url);
+  }
+
+  function appendReferenceFiles(files: File[]) {
+    const accepted = files.filter(isReferenceImageFile);
+    const rejectedCount = files.length - accepted.length;
+
+    if (accepted.length === 0) {
+      if (files.length > 0) {
+        toast({
+          title: "Format non supporté",
+          description: "Utilisez des images JPEG, PNG ou WebP.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (rejectedCount > 0) {
+      toast({
+        title: "Certains fichiers ont été ignorés",
+        description: `${rejectedCount} fichier(s) non supporté(s) sur ${files.length}.`,
+        variant: "destructive",
+      });
+    }
+
+    const newItems: PendingReferenceImage[] = accepted.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      image_prompt: promptText.trim() || "",
+      video_prompt: videoPromptText.trim() || "",
+      requires_face_asset: true,
+    }));
+
+    setReferenceFiles((prev) => [...prev, ...newItems]);
+
+    if (newItems.length === 1) {
+      setSelectedReferenceKey(`pending:${newItems[0].id}`);
+    }
+  }
+
+  function handleReferenceFilesSelect(
+    fileList: FileList | File[] | null | undefined,
+  ) {
+    appendReferenceFiles(Array.from(fileList ?? []));
+  }
+
+  function updateExistingReference(
+    id: string,
+    updates: Partial<
+      Pick<
+        EditableReferenceImage,
+        "image_prompt" | "video_prompt" | "requires_face_asset"
+      >
+    >,
+  ) {
+    setExistingReferences((prev) =>
+      prev.map((ref) =>
+        ref.id === id
+          ? { ...ref, ...updates, dirty: true }
+          : ref,
+      ),
+    );
+  }
+
+  async function removeExistingReference(id: string) {
+    if (!activeTemplateId) return;
+    try {
+      await deleteReferenceImage.mutateAsync({
+        templateId: activeTemplateId,
+        refId: id,
+      });
+      setExistingReferences((prev) => prev.filter((ref) => ref.id !== id));
+      setSelectedReferenceKey((current) =>
+        current === `existing:${id}` ? null : current,
+      );
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  function updatePendingReference(
+    id: string,
+    updates: Partial<
+      Pick<
+        PendingReferenceImage,
+        "image_prompt" | "video_prompt" | "requires_face_asset"
+      >
+    >,
+  ) {
+    setReferenceFiles((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+    );
+  }
+
+  function removePendingReferenceImage(id: string) {
+    setReferenceFiles((prev) => {
+      const removed = prev.find((item) => item.id === id);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((item) => item.id !== id);
+    });
+    setSelectedReferenceKey((current) =>
+      current === `pending:${id}` ? null : current,
+    );
+  }
+
+  function clearPendingReferenceFiles() {
+    setReferenceFiles((prev) => {
+      prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+  }
+
+  function chunkArray<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
   }
 
   function fileToBase64(file: File): Promise<string> {
@@ -232,50 +477,146 @@ export function TemplateFormDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    if (name.trim().length < 2) {
+      setActiveTab("principal");
+      toast({
+        title: "Titre requis",
+        description: "Le titre du template doit contenir au moins 2 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (promptText.trim().length < 10) {
+      setActiveTab("workflow");
+      toast({
+        title: "Prompt requis",
+        description: "Le prompt doit contenir au moins 10 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (generationType === "video" && videoPromptText.trim().length < 10) {
+      setActiveTab("workflow");
+      toast({
+        title: "Prompt vidéo requis",
+        description: "Le prompt vidéo doit contenir au moins 10 caractères.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const data = {
       name,
+      name_en: nameEn.trim() || null,
       prompt_text: promptText,
+      video_prompt_text:
+        generationType === "video" ? videoPromptText.trim() : "",
       category: category || null,
+      generation_type: generationType,
       is_active: isActive,
       keywords: keywords.trim() || null,
       icon: icon.trim() || null,
-      image_slots:
-        imageSlots.length > 0 ? JSON.stringify(imageSlots) : undefined,
-      text_fields:
-        textFields.length > 0 ? JSON.stringify(textFields) : undefined,
     };
 
+    const allRefs = [...existingReferences, ...referenceFiles];
+    for (const ref of allRefs) {
+      const imagePrompt =
+        "image_prompt" in ref ? ref.image_prompt.trim() : "";
+      if (imagePrompt.length < 10) {
+        setActiveTab("workflow");
+        toast({
+          title: "Prompt image requis",
+          description:
+            "Chaque image de référence doit avoir un prompt image d'au moins 10 caractères.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (generationType === "video") {
+        const videoPrompt =
+          "video_prompt" in ref ? ref.video_prompt.trim() : "";
+        if (videoPrompt.length < 10) {
+          setActiveTab("workflow");
+          toast({
+            title: "Prompt vidéo requis",
+            description:
+              "Chaque image de référence doit avoir un prompt vidéo d'au moins 10 caractères.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     try {
-      let templateId: string;
-      if (isEditing && template) {
-        await updateTemplate.mutateAsync({ id: template.id, ...data });
-        templateId = template.id;
-        toast({ title: "Template mis à jour" });
+      let templateId = activeTemplateId;
+
+      if (templateId) {
+        await updateTemplate.mutateAsync({ id: templateId, ...data });
+        toast({ title: "Template enregistré" });
       } else {
-        const created = await createTemplate.mutateAsync(data);
+        const created = (await createTemplate.mutateAsync(
+          data,
+        )) as PromptTemplate;
         templateId = created.id;
-        toast({ title: "Template créé" });
+        setSavedTemplateId(created.id);
+        onTemplateSaved?.(created);
+        toast({ title: "Template créé — vous pouvez continuer à éditer" });
       }
 
       // Upload example images if new files were selected
-      if (beforeFile) {
-        const b64 = await fileToBase64(beforeFile);
-        await uploadImage.mutateAsync({
-          id: templateId,
-          field: "example_before_url",
-          image: b64,
-        });
-      }
       if (afterFile) {
         const b64 = await fileToBase64(afterFile);
-        await uploadImage.mutateAsync({
+        const updated = await uploadImage.mutateAsync({
           id: templateId,
           field: "example_after_url",
           image: b64,
         });
+        setAfterPreview(updated.example_after_url || afterPreview);
+        setAfterFile(null);
+      }
+      const dirtyExisting = existingReferences.filter((ref) => ref.dirty);
+      for (const ref of dirtyExisting) {
+        await updateReferenceImage.mutateAsync({
+          templateId,
+          refId: ref.id,
+          image_prompt: ref.image_prompt.trim(),
+          video_prompt:
+            generationType === "video" ? ref.video_prompt.trim() : null,
+          requires_face_asset: ref.requires_face_asset,
+        });
       }
 
-      onOpenChange(false);
+      if (referenceFiles.length > 0) {
+        const items = await Promise.all(
+          referenceFiles.map(async (item) => ({
+            image: await fileToBase64(item.file),
+            image_prompt: item.image_prompt.trim(),
+            video_prompt:
+              generationType === "video" && item.video_prompt.trim()
+                ? item.video_prompt.trim()
+                : null,
+            requires_face_asset: item.requires_face_asset,
+          })),
+        );
+        for (const batch of chunkArray(items, 10)) {
+          await uploadReferenceImages.mutateAsync({
+            id: templateId,
+            items: batch,
+          });
+        }
+        clearPendingReferenceFiles();
+      }
+
+      setExistingReferences((prev) =>
+        prev.map((ref) => ({ ...ref, dirty: false })),
+      );
+      setSelectedReferenceKey((current) =>
+        current?.startsWith("pending:") ? null : current,
+      );
+      await refetchReferenceImages();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -285,9 +626,21 @@ export function TemplateFormDialog({
     }
   }
 
+  const referenceCount = existingReferences.length + referenceFiles.length;
+  const selectedExistingReference = selectedReferenceKey?.startsWith("existing:")
+    ? existingReferences.find(
+        (ref) => ref.id === selectedReferenceKey.slice("existing:".length),
+      )
+    : undefined;
+  const selectedPendingReference = selectedReferenceKey?.startsWith("pending:")
+    ? referenceFiles.find(
+        (item) => item.id === selectedReferenceKey.slice("pending:".length),
+      )
+    : undefined;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col">
+      <DialogContent className="w-[min(96vw,1400px)] max-w-[min(96vw,1400px)] h-[min(92vh,1100px)] max-h-[min(92vh,1100px)] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Modifier le template" : "Nouveau template"}
@@ -297,23 +650,42 @@ export function TemplateFormDialog({
           onSubmit={handleSubmit}
           className="space-y-6 overflow-y-auto pr-1 flex-1"
         >
-          {/* ── SECTION 1: Informations générales ── */}
-          <fieldset className="space-y-4 rounded-lg border p-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="principal">Principal</TabsTrigger>
+              <TabsTrigger value="workflow">Workflow</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="principal" className="mt-0 space-y-6">
+              {/* ── SECTION 1: Informations générales ── */}
+              <fieldset className="space-y-4 rounded-lg border p-4">
             <legend className="px-2 text-sm font-semibold">
               Informations générales
             </legend>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Titre</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Photo embarrassante"
-                required
-                minLength={2}
-                maxLength={200}
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Titre français</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Photo embarrassante"
+                  required
+                  minLength={2}
+                  maxLength={200}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name_en">Titre anglais</Label>
+                <Input
+                  id="name_en"
+                  value={nameEn}
+                  onChange={(e) => setNameEn(e.target.value)}
+                  placeholder="Ex: Embarrassing photo"
+                  maxLength={200}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -329,7 +701,16 @@ export function TemplateFormDialog({
                     >
                       {category
                         ? categoriesList?.find((c) => c.slug === category)
-                            ?.name || category
+                            ? `${categoriesList.find((c) => c.slug === category)?.name}${
+                                categoriesList.find((c) => c.slug === category)
+                                  ?.name_en
+                                  ? ` / ${
+                                      categoriesList.find((c) => c.slug === category)
+                                        ?.name_en
+                                    }`
+                                  : ""
+                              }`
+                            : category
                         : "Aucune catégorie"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -373,6 +754,9 @@ export function TemplateFormDialog({
                                 cat.name
                                   .toLowerCase()
                                   .includes(catSearch.toLowerCase()) ||
+                                (cat.name_en || "")
+                                  .toLowerCase()
+                                  .includes(catSearch.toLowerCase()) ||
                                 cat.slug
                                   .toLowerCase()
                                   .includes(catSearch.toLowerCase()),
@@ -396,6 +780,7 @@ export function TemplateFormDialog({
                                   )}
                                 />
                                 {cat.name}
+                                {cat.name_en ? ` / ${cat.name_en}` : ""}
                               </CommandItem>
                             ))}
                         </CommandGroup>
@@ -524,245 +909,15 @@ export function TemplateFormDialog({
             </div>
           </fieldset>
 
-          {/* ── SECTION 2: Prompt ── */}
-          <fieldset className="space-y-3 rounded-lg border p-4">
-            <legend className="px-2 text-sm font-semibold">Prompt</legend>
-            <Textarea
-              id="prompt_text"
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              placeholder="Ex: Une photo réaliste de {text1} en train de {text2}…"
-              required
-              minLength={10}
-              maxLength={2000}
-              rows={5}
-            />
-            {textFields.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Variables disponibles :{" "}
-                {textFields.map((f, i) => (
-                  <code
-                    key={i}
-                    className="bg-muted px-1 rounded text-[11px] mr-1"
-                  >
-                    {`{text${i + 1}}`}
-                  </code>
-                ))}
-              </p>
-            )}
-          </fieldset>
-
-          {/* ── SECTION 3: Entrées utilisateur ── */}
-          <fieldset className="space-y-4 rounded-lg border p-4">
-            <legend className="px-2 text-sm font-semibold">
-              Entrées demandées à l'utilisateur
-            </legend>
-
-            {/* Image slots */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Images</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Images que l'utilisateur devra fournir (max 3).
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addImageSlot}
-                  disabled={imageSlots.length >= 3}
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" />
-                  Image
-                </Button>
-              </div>
-
-              {imageSlots.map((slot, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 rounded-lg border p-3"
-                >
-                  <div className="flex-1 space-y-1">
-                    <Input
-                      value={slot.label}
-                      onChange={(e) =>
-                        updateImageSlot(idx, { label: e.target.value })
-                      }
-                      placeholder="Ex: ton visage, ta voiture…"
-                      maxLength={100}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Switch
-                      checked={slot.required}
-                      onCheckedChange={(checked) =>
-                        updateImageSlot(idx, { required: checked })
-                      }
-                    />
-                    <span className="text-xs text-muted-foreground w-16">
-                      {slot.required ? "Requis" : "Facultatif"}
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => removeImageSlot(idx)}
-                  >
-                    <X className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {/* Separator */}
-            {(imageSlots.length > 0 || textFields.length > 0) && (
-              <div className="border-t" />
-            )}
-
-            {/* Text fields */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Champs texte</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Champs que l'utilisateur pourra remplir (max 5). Utilisez{" "}
-                    <code className="bg-muted px-1 rounded text-[11px]">
-                      {"{text1}"}
-                    </code>
-                    ,{" "}
-                    <code className="bg-muted px-1 rounded text-[11px]">
-                      {"{text2}"}
-                    </code>
-                    … dans le prompt pour les injecter.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addTextField}
-                  disabled={textFields.length >= 5}
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" />
-                  Texte
-                </Button>
-              </div>
-
-              {textFields.map((field, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Type className="h-4 w-4 text-muted-foreground" />
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {`{text${idx + 1}}`}
-                    </code>
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      value={field.label}
-                      onChange={(e) =>
-                        updateTextField(idx, { label: e.target.value })
-                      }
-                      placeholder="Ex: Prénom de la personne"
-                      maxLength={100}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Switch
-                      checked={field.required}
-                      onCheckedChange={(checked) =>
-                        updateTextField(idx, { required: checked })
-                      }
-                    />
-                    <span className="text-xs text-muted-foreground w-16">
-                      {field.required ? "Requis" : "Facultatif"}
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={() => removeTextField(idx)}
-                  >
-                    <X className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-
-              {imageSlots.length === 0 && textFields.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-3 border border-dashed rounded-lg">
-                  Aucune entrée définie. Ajoutez des images ou des champs texte.
-                </p>
-              )}
-            </div>
-          </fieldset>
-
           {/* ── SECTION 4: Images d'illustration ── */}
           <fieldset className="space-y-3 rounded-lg border p-4">
             <legend className="px-2 text-sm font-semibold">
               Images d'illustration
             </legend>
             <p className="text-xs text-muted-foreground">
-              Photos d'exemple affichées dans la galerie de LARPs (avant / après).
+              Image ou vidéo d&apos;exemple affichée dans la galerie.
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Before */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Avant
-                </span>
-                <div
-                  onClick={() => beforeInputRef.current?.click()}
-                  className="relative aspect-[9/16] rounded-lg border-2 border-dashed cursor-pointer hover:border-primary/60 transition-colors overflow-hidden bg-muted/30"
-                >
-                  <input
-                    ref={beforeInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f)
-                        handleFileSelect(f, setBeforePreview, setBeforeFile);
-                    }}
-                  />
-                  {beforePreview ? (
-                    <>
-                      <img
-                        src={beforePreview}
-                        alt="Avant"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setBeforePreview(null);
-                          setBeforeFile(null);
-                        }}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                      <ImageUp className="w-6 h-6 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground">
-                        Photo avant
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* After */}
+            <div className="max-w-[140px]">
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
                   Après
@@ -774,21 +929,51 @@ export function TemplateFormDialog({
                   <input
                     ref={afterInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={AFTER_ILLUSTRATION_ACCEPT}
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f)
-                        handleFileSelect(f, setAfterPreview, setAfterFile);
+                      if (!f) return;
+                      const isVideo = f.type.startsWith("video/");
+                      const isImage = f.type.startsWith("image/");
+                      if (!isVideo && !isImage) {
+                        toast({
+                          title: "Format non supporté",
+                          description:
+                            "Utilisez une image (JPEG, PNG, WebP) ou une vidéo (MP4, WebM, MOV).",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      if (isVideo && f.size > MAX_AFTER_VIDEO_BYTES) {
+                        toast({
+                          title: "Vidéo trop volumineuse",
+                          description: "La taille maximale est de 80 Mo.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      handleFileSelect(f, setAfterPreview, setAfterFile);
                     }}
                   />
                   {afterPreview ? (
                     <>
-                      <img
-                        src={afterPreview}
-                        alt="Après"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      {isAfterIllustrationVideo(afterPreview, afterFile) ? (
+                        <video
+                          src={afterPreview}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          muted
+                          playsInline
+                          autoPlay
+                          loop
+                        />
+                      ) : (
+                        <img
+                          src={afterPreview}
+                          alt="Après"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -804,8 +989,8 @@ export function TemplateFormDialog({
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
                       <ImageUp className="w-6 h-6 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground">
-                        Photo après
+                      <span className="text-[10px] text-muted-foreground text-center px-2">
+                        Image ou vidéo après
                       </span>
                     </div>
                   )}
@@ -814,17 +999,413 @@ export function TemplateFormDialog({
             </div>
           </fieldset>
 
+            </TabsContent>
+
+            <TabsContent value="workflow" className="mt-0 space-y-6">
+              <fieldset className="space-y-4 rounded-lg border p-4">
+                <legend className="px-2 text-sm font-semibold">Workflow</legend>
+
+                <div className="space-y-2">
+                  <Label>Type de génération</Label>
+                  <Select
+                    value={generationType}
+                    onValueChange={(value) =>
+                      setGenerationType(value as TemplateGenerationType)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_GENERATION_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </fieldset>
+
+              <fieldset className="space-y-4 rounded-lg border p-4">
+                <legend className="px-2 text-sm font-semibold">
+                  Images de référence
+                </legend>
+
+                <p className="text-xs text-muted-foreground">
+                  Configuration principale du template : une image et ses prompts
+                  sont choisis aléatoirement à chaque génération. Chaque
+                  référence possède son propre prompt image
+                  {generationType !== "image"
+                    ? " et son propre prompt vidéo"
+                    : ""}
+                  .
+                </p>
+
+                <div className="space-y-3">
+                  <input
+                    id={REFERENCE_IMAGE_INPUT_ID}
+                    ref={referenceInputRef}
+                    type="file"
+                    accept={REFERENCE_IMAGE_ACCEPT}
+                    multiple={true}
+                    className="sr-only"
+                    onChange={(e) => {
+                      handleReferenceFilesSelect(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                  <input
+                    id={REFERENCE_FOLDER_INPUT_ID}
+                    type="file"
+                    accept={REFERENCE_IMAGE_ACCEPT}
+                    multiple={true}
+                    className="sr-only"
+                    {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                    onChange={(e) => {
+                      handleReferenceFilesSelect(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <div className="text-xs text-muted-foreground">
+                    {referenceCount} image
+                    {referenceCount > 1 ? "s" : ""} configurée
+                    {referenceCount > 1 ? "s" : ""}
+                    {referenceCount > 0
+                      ? " — cliquez sur une vignette pour éditer son prompt."
+                      : " — sélection multiple ou glisser-déposer possible."}
+                  </div>
+
+                  <div
+                    className="flex flex-wrap gap-3"
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      handleReferenceFilesSelect(event.dataTransfer.files);
+                    }}
+                  >
+                    <label
+                      htmlFor={REFERENCE_IMAGE_INPUT_ID}
+                      className={cn(
+                        REFERENCE_TILE_WIDTH,
+                        "relative aspect-[9/16] shrink-0 overflow-hidden rounded-lg border-2 border-dashed bg-muted/20 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/40 hover:text-foreground cursor-pointer",
+                      )}
+                    >
+                      <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
+                        <ImageUp className="h-5 w-5 shrink-0" />
+                        <span className="text-[10px] font-medium leading-tight">
+                          Ajouter des images de référence
+                        </span>
+                      </span>
+                    </label>
+
+                    {existingReferences.map((ref) => {
+                      const key = `existing:${ref.id}` as const;
+                      const isInvalid = isReferenceImagePromptMissing(
+                        ref.image_prompt,
+                      );
+                      const isSelected = selectedReferenceKey === key;
+
+                      return (
+                        <div key={ref.id} className={cn("relative shrink-0", REFERENCE_TILE_WIDTH)}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedReferenceKey((current) =>
+                                current === key ? null : key,
+                              )
+                            }
+                            className={getReferenceTileClasses(isInvalid, isSelected)}
+                            title={
+                              isInvalid
+                                ? "Prompt image manquant ou trop court"
+                                : ref.image_prompt
+                            }
+                          >
+                            <img
+                              src={ref.url}
+                              alt="Référence"
+                              className="h-full w-full object-cover"
+                            />
+                          </button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-1 top-1 h-6 w-6 bg-black/65 text-white hover:bg-black/80"
+                            onClick={() => removeExistingReference(ref.id)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+
+                    {referenceFiles.map((item) => {
+                      const key = `pending:${item.id}` as const;
+                      const isInvalid = isReferenceImagePromptMissing(
+                        item.image_prompt,
+                      );
+                      const isSelected = selectedReferenceKey === key;
+
+                      return (
+                        <div key={item.id} className={cn("relative shrink-0", REFERENCE_TILE_WIDTH)}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedReferenceKey((current) =>
+                                current === key ? null : key,
+                              )
+                            }
+                            className={getReferenceTileClasses(isInvalid, isSelected)}
+                            title={
+                              isInvalid
+                                ? "Prompt image manquant ou trop court"
+                                : item.image_prompt
+                            }
+                          >
+                            <img
+                              src={item.previewUrl}
+                              alt="Référence à uploader"
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                              Nouveau
+                            </span>
+                          </button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-1 top-1 h-6 w-6 bg-black/65 text-white hover:bg-black/80"
+                            onClick={() => removePendingReferenceImage(item.id)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground">
+                    Astuce Windows : maintenez{" "}
+                    <kbd className="rounded border bg-muted px-1">Ctrl</kbd> pour
+                    en sélectionner plusieurs, ou{" "}
+                    <label
+                      htmlFor={REFERENCE_FOLDER_INPUT_ID}
+                      className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      importer un dossier entier
+                    </label>
+                    .
+                  </p>
+
+                  {(selectedExistingReference || selectedPendingReference) && (
+                    <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Prompt associé à l&apos;image sélectionnée
+                      </p>
+
+                      {selectedExistingReference && (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Prompt image</Label>
+                            <Textarea
+                              value={selectedExistingReference.image_prompt}
+                              onChange={(e) =>
+                                updateExistingReference(
+                                  selectedExistingReference.id,
+                                  { image_prompt: e.target.value },
+                                )
+                              }
+                              rows={4}
+                              maxLength={2000}
+                              placeholder="Prompt pour cette image…"
+                              className={cn(
+                                isReferenceImagePromptMissing(
+                                  selectedExistingReference.image_prompt,
+                                ) && "border-destructive focus-visible:ring-destructive",
+                              )}
+                            />
+                          </div>
+                          {generationType !== "image" && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Prompt vidéo</Label>
+                              <Textarea
+                                value={selectedExistingReference.video_prompt}
+                                onChange={(e) =>
+                                  updateExistingReference(
+                                    selectedExistingReference.id,
+                                    { video_prompt: e.target.value },
+                                  )
+                                }
+                                rows={3}
+                                maxLength={2000}
+                                placeholder="Prompt Runway pour cette image…"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                            <div className="min-w-0">
+                              <Label className="text-xs">
+                                Nécessite le visage
+                              </Label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Envoie l&apos;asset visage à la génération
+                              </p>
+                            </div>
+                            <Switch
+                              checked={
+                                selectedExistingReference.requires_face_asset
+                              }
+                              onCheckedChange={(checked) =>
+                                updateExistingReference(
+                                  selectedExistingReference.id,
+                                  { requires_face_asset: checked },
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedPendingReference && (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Prompt image</Label>
+                            <Textarea
+                              value={selectedPendingReference.image_prompt}
+                              onChange={(e) =>
+                                updatePendingReference(
+                                  selectedPendingReference.id,
+                                  { image_prompt: e.target.value },
+                                )
+                              }
+                              rows={4}
+                              maxLength={2000}
+                              placeholder="Prompt pour cette image…"
+                              className={cn(
+                                isReferenceImagePromptMissing(
+                                  selectedPendingReference.image_prompt,
+                                ) && "border-destructive focus-visible:ring-destructive",
+                              )}
+                            />
+                          </div>
+                          {generationType !== "image" && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Prompt vidéo</Label>
+                              <Textarea
+                                value={selectedPendingReference.video_prompt}
+                                onChange={(e) =>
+                                  updatePendingReference(
+                                    selectedPendingReference.id,
+                                    { video_prompt: e.target.value },
+                                  )
+                                }
+                                rows={3}
+                                maxLength={2000}
+                                placeholder="Prompt Runway pour cette image…"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                            <div className="min-w-0">
+                              <Label className="text-xs">
+                                Nécessite le visage
+                              </Label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Envoie l&apos;asset visage à la génération
+                              </p>
+                            </div>
+                            <Switch
+                              checked={
+                                selectedPendingReference.requires_face_asset
+                              }
+                              onCheckedChange={(checked) =>
+                                updatePendingReference(
+                                  selectedPendingReference.id,
+                                  { requires_face_asset: checked },
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </fieldset>
+
+              <fieldset className="space-y-4 rounded-lg border p-4">
+                <legend className="px-2 text-sm font-semibold">
+                  Génération d&apos;image (secours)
+                </legend>
+
+                <div className="space-y-3">
+                  <Label htmlFor="prompt_text">Prompt global</Label>
+                  <Textarea
+                    id="prompt_text"
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    placeholder="Ex: Une photo réaliste, drôle et cinématographique…"
+                    required
+                    minLength={10}
+                    maxLength={2000}
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Utilisé uniquement lorsqu&apos;aucune image de référence
+                    n&apos;est configurée. Si des références existent, leurs
+                    prompts image priment.
+                  </p>
+                </div>
+              </fieldset>
+
+              {generationType !== "image" && (
+                <fieldset className="space-y-4 rounded-lg border p-4">
+                  <legend className="px-2 text-sm font-semibold">
+                    Génération vidéo (secours)
+                  </legend>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="video_prompt_text">Prompt Runway global</Label>
+                    <Textarea
+                      id="video_prompt_text"
+                      value={videoPromptText}
+                      onChange={(e) => setVideoPromptText(e.target.value)}
+                      placeholder="Ex: Animer le sujet avec un mouvement caméra fluide, lumière naturelle, rendu cinématique…"
+                      required={generationType === "video"}
+                      minLength={10}
+                      maxLength={2000}
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Secours si l&apos;image de référence sélectionnée
+                      n&apos;a pas de prompt vidéo. Sinon, le prompt vidéo de
+                      la référence est utilisé.
+                    </p>
+                  </div>
+                </fieldset>
+              )}
+            </TabsContent>
+          </Tabs>
+
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Annuler
+              Fermer
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Mettre à jour" : "Créer"}
+              {isEditing ? "Enregistrer" : "Créer"}
             </Button>
           </DialogFooter>
         </form>

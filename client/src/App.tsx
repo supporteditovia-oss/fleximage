@@ -12,6 +12,7 @@ import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
 import AdminPage from "@/pages/Admin";
 import AdminTemplates from "@/pages/AdminTemplates";
+import AdminLogs from "@/pages/AdminLogs";
 import Generate from "@/pages/Generate";
 import FaceCapture from "@/pages/FaceCapture";
 import LarpHistory from "@/pages/LarpHistory";
@@ -32,6 +33,8 @@ import {
   resolvePreferredLocale,
   SIGNUP_LOCALE_STORAGE_KEY,
 } from "@shared/locales";
+import { isLegalNoindexPath } from "@shared/site-seo";
+import { setRobotsMeta } from "@/lib/robots-meta";
 
 // OAuth callback handler — waits for Supabase to parse the hash fragment
 function AuthCallback() {
@@ -93,35 +96,12 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/admin": "meta:titles.admin",
   "/admin/users": "meta:titles.adminUsers",
   "/admin/templates": "meta:titles.adminTemplates",
+  "/admin/logs": "meta:titles.adminLogs",
   "/mentions-legales": "meta:titles.legal",
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
   "/confidentialite": "meta:titles.privacy",
 };
-
-/** Legal pages: noindex in HTML + Disallow in robots.txt; omitted from sitemap.xml */
-const NOINDEX_PATHS = new Set([
-  "/mentions-legales",
-  "/cgu",
-  "/cgv",
-  "/confidentialite",
-]);
-
-function setRobotsMeta(content: string | null) {
-  const existing = document.querySelector('meta[name="robots"]');
-  if (content === null) {
-    existing?.remove();
-    return;
-  }
-  const meta =
-    existing instanceof HTMLMetaElement
-      ? existing
-      : Object.assign(document.createElement("meta"), { name: "robots" });
-  if (!existing) {
-    document.head.appendChild(meta);
-  }
-  meta.content = content;
-}
 
 function Router() {
   const { user, profile } = useAuth();
@@ -206,7 +186,7 @@ function Router() {
 
   React.useEffect(() => {
     document.title = t(PAGE_TITLE_KEYS[location] || "meta:appName");
-    setRobotsMeta(NOINDEX_PATHS.has(location) ? "noindex, nofollow" : null);
+    setRobotsMeta(isLegalNoindexPath(location) ? "noindex, nofollow" : null);
   }, [location, t]);
 
   return (
@@ -259,6 +239,9 @@ function Router() {
       </Route>
       <Route path="/admin/templates">
         <ProtectedRoute component={AdminTemplates} />
+      </Route>
+      <Route path="/admin/logs">
+        <ProtectedRoute component={AdminLogs} />
       </Route>
 
       {/* Fallback */}

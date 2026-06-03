@@ -7,8 +7,10 @@ export type PendingLarpGenerationMode = "image" | "video";
 
 export interface PendingLarp {
   prompt: string;
+  videoPrompt?: string | null;
   images: File[];
   generationMode?: PendingLarpGenerationMode;
+  templateId?: string | null;
   timestamp: number;
 }
 
@@ -40,8 +42,10 @@ export async function savePendingLarp(data: PendingLarp): Promise<void> {
     const store = tx.objectStore(STORE_NAME);
     store.put({
       prompt: data.prompt,
+      videoPrompt: data.videoPrompt ?? null,
       images: imageBuffers,
       generationMode: data.generationMode ?? "image",
+      templateId: data.templateId ?? null,
       timestamp: data.timestamp,
     }, "current");
     await new Promise<void>((resolve, reject) => {
@@ -82,8 +86,14 @@ export async function getPendingLarp(): Promise<PendingLarp | null> {
         
         resolve({
           prompt: rawData.prompt,
+          videoPrompt:
+            typeof rawData.videoPrompt === "string"
+              ? rawData.videoPrompt
+              : null,
           images: restoredImages,
           generationMode: rawData.generationMode === "video" ? "video" : "image",
+          templateId:
+            typeof rawData.templateId === "string" ? rawData.templateId : null,
           timestamp: rawData.timestamp,
         });
       };

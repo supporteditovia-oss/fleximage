@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isTemplateIllustrationVideo } from "@/lib/template-illustration";
 import { Button } from "@/components/ui/button";
 
 interface GameTemplate {
@@ -107,7 +108,11 @@ export default function RealOrFakeGame() {
     () =>
       (templates ?? []).filter(
         (template): template is GameTemplate & { example_before_url: string } =>
-          Boolean(template.example_before_url && template.example_after_url),
+          Boolean(
+            template.example_before_url &&
+              template.example_after_url &&
+              !isTemplateIllustrationVideo(template.example_after_url),
+          ),
       ),
     [templates],
   );

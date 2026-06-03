@@ -12,7 +12,8 @@ function getApiKey(): string {
 
 export interface CreateRunwayVideoInput {
   prompt: string;
-  image?: string; // base64 data URI or public URL
+  image?: string;
+  aspectRatio?: string;
 }
 
 export interface CreateRunwayVideoResponse {
@@ -26,10 +27,17 @@ export interface RunwayVideoStatusData {
   task_id?: string;
   state?: "wait" | "queueing" | "generating" | "success" | "fail";
   status?: "pending" | "processing" | "completed" | "failed";
-  videoInfo?: { videoUrl?: string };
+  videoInfo?: {
+    videoId?: string;
+    videoUrl?: string;
+    imageUrl?: string;
+  };
   video_url?: string;
+  generateTime?: string;
+  expireFlag?: number;
   duration?: string;
   resolution?: string;
+  failCode?: string;
   failMsg?: string;
   fail_reason?: string;
 }
@@ -51,14 +59,28 @@ export class RunwayApiError extends Error {
   }
 }
 
+function parseRunwayResponse<T>(
+  text: string,
+  status: number,
+  context: string,
+): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    logger.error({ status, body: text }, `Kie.ai Runway ${context}: non-JSON response`);
+    throw new Error(`Kie.ai Runway API error: ${status} - ${text}`);
+  }
+}
+
 export async function createRunwayVideoTask(
   input: CreateRunwayVideoInput,
 ): Promise<CreateRunwayVideoResponse> {
   const body: Record<string, unknown> = {
     prompt: input.prompt,
-    aspectRatio: "9:16",
-    quality: "720p",
     duration: 5,
+    quality: "720p",
+    aspectRatio: input.aspectRatio || "9:16",
+    waterMark: "",
   };
 
   if (input.image) {
@@ -75,20 +97,21 @@ export async function createRunwayVideoTask(
   });
 
   const text = await response.text();
-
-  let parsed: CreateRunwayVideoResponse;
-  try {
-    parsed = JSON.parse(text) as CreateRunwayVideoResponse;
-  } catch {
-    logger.error({ status: response.status, body: text }, "Kie.ai Runway: non-JSON response");
-    throw new Error(`Kie.ai Runway API error: ${response.status} — ${text}`);
-  }
-
+  const parsed = parseRunwayResponse<CreateRunwayVideoResponse>(
+    text,
+    response.status,
+    "createTask",
+  );
   const taskId = parsed.data?.task_id ?? parsed.data?.taskId;
 
-  if (parsed.code !== 200 || !taskId) {
+  if (!response.ok || parsed.code !== 200 || !taskId) {
     logger.error(
-      { status: response.status, apiCode: parsed.code, apiMsg: parsed.msg, data: parsed.data },
+      {
+        status: response.status,
+        apiCode: parsed.code,
+        apiMsg: parsed.msg,
+        data: parsed.data,
+      },
       "Kie.ai Runway createTask failed",
     );
     throw new RunwayApiError(
@@ -115,14 +138,30 @@ export async function getRunwayVideoStatus(
     },
   );
 
-  if (!response.ok) {
-    const text = await response.text();
+  const text = await response.text();
+  const parsed = parseRunwayResponse<RunwayVideoStatusResponse>(
+    text,
+    response.status,
+    "getStatus",
+  );
+
+  if (!response.ok || parsed.code !== 200) {
     logger.error(
-      { status: response.status, body: text, taskId },
+      {
+        status: response.status,
+        apiCode: parsed.code,
+        apiMsg: parsed.msg,
+        data: parsed.data,
+        taskId,
+      },
       "Kie.ai Runway getStatus failed",
     );
-    throw new Error(`Kie.ai Runway API error: ${response.status}`);
+    throw new RunwayApiError(
+      parsed.msg || "Runway API error",
+      parsed.code,
+      parsed.msg,
+    );
   }
 
-  return response.json() as Promise<RunwayVideoStatusResponse>;
+  return parsed;
 }

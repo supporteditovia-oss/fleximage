@@ -53,6 +53,7 @@ export const templateCategories = pgTable("template_categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
+  name_en: text("name_en"),
   description: text("description"),
   display_order: integer("display_order").default(0).notNull(),
   is_active: boolean("is_active").default(true).notNull(),
@@ -68,6 +69,7 @@ export const categories = templateCategories;
 
 export const insertCategorySchema = createInsertSchema(templateCategories, {
   name: z.string().min(2).max(100),
+  name_en: z.string().max(100).nullable().optional(),
   slug: z
     .string()
     .min(2)
@@ -87,20 +89,8 @@ export const updateCategorySchema = insertCategorySchema.partial();
 export type Category = typeof templateCategories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 
-// --- Template input schema DTOs ---
-export interface ImageSlot {
-  label: string;
-  required: boolean;
-}
-
-export interface TextFieldSlot {
-  label: string;
-  required: boolean;
-}
-
 export interface TemplateInputSchema {
-  image_slots?: ImageSlot[];
-  text_fields?: TextFieldSlot[];
+  video_prompt_text?: string;
   [key: string]: unknown;
 }
 
@@ -112,6 +102,7 @@ export const templates = pgTable("templates", {
   }),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
+  name_en: text("name_en"),
   description: text("description"),
   prompt_text: text("prompt_text").notNull(),
   generation_type: text("generation_type", { enum: ["image", "video", "both"] })
@@ -139,14 +130,57 @@ export const templates = pgTable("templates", {
 
 export const promptTemplates = templates;
 
+// --- Template reference images (per-image prompts) ---
+export const templateReferenceImages = pgTable("template_reference_images", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  template_id: uuid("template_id")
+    .references(() => templates.id, { onDelete: "cascade" })
+    .notNull(),
+  url: text("url").notNull(),
+  image_prompt: text("image_prompt").notNull(),
+  video_prompt: text("video_prompt"),
+  display_order: integer("display_order").default(0).notNull(),
+  requires_face_asset: boolean("requires_face_asset").default(true).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type TemplateReferenceImage = typeof templateReferenceImages.$inferSelect;
+
+export type ReferenceImageDto = {
+  id: string;
+  url: string;
+  image_prompt: string;
+  video_prompt: string | null;
+  display_order: number;
+  requires_face_asset: boolean;
+};
+
+export const uploadReferenceImageItemSchema = z.object({
+  image: z.string().min(1),
+  image_prompt: z.string().min(10).max(2000),
+  video_prompt: z.string().max(2000).nullable().optional(),
+  requires_face_asset: z.boolean().optional().default(true),
+});
+
+export const updateReferenceImageSchema = z.object({
+  image_prompt: z.string().min(10).max(2000).optional(),
+  video_prompt: z.string().max(2000).nullable().optional(),
+  requires_face_asset: z.boolean().optional(),
+});
+
 export const insertPromptTemplateSchema = z.object({
   name: z.string().min(2).max(200),
+  name_en: z.string().max(200).nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   prompt_text: z.string().min(10).max(2000),
   category: z.string().max(100).nullable().optional(),
   is_active: z.boolean().optional().default(true),
-  image_slots: z.string().max(2000).nullable().optional(),
-  text_fields: z.string().max(2000).nullable().optional(),
+  video_prompt_text: z.string().max(2000).nullable().optional(),
   example_before_url: z.string().max(500).nullable().optional(),
   example_after_url: z.string().max(500).nullable().optional(),
   keywords: z.string().max(1000).nullable().optional(),
@@ -160,13 +194,20 @@ export type Template = typeof templates.$inferSelect;
 export type PromptTemplate = {
   id: string;
   name: string;
+  name_en?: string | null;
   description?: string | null;
   prompt_text: string;
   category: string | null;
+  categoryName?: string | null;
+  categoryNameEn?: string | null;
   category_id?: string | null;
   is_active: boolean;
-  image_slots: string | null;
-  text_fields: string | null;
+  reference_image_count: number;
+  /** At least one reference image can be used without face capture */
+  has_face_optional_reference_image: boolean;
+  /** User must complete face capture before generating with this template */
+  requires_face_capture: boolean;
+  video_prompt_text: string | null;
   example_before_url: string | null;
   example_after_url: string | null;
   keywords: string | null;
@@ -206,7 +247,7 @@ export const generations = pgTable("generations", {
   output_assets: jsonb("output_assets").$type<string[]>().notNull(),
   watermarked_assets: jsonb("watermarked_assets").$type<string[]>().notNull(),
   fail_message: text("fail_message"),
-  cost_time: text("cost_time"),
+  cost_time: integer("cost_time"),
   credit_cost: integer("credit_cost").default(0).notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
   created_at: timestamp("created_at", { withTimezone: true })
@@ -419,6 +460,9 @@ export const appSettings = pgTable("app_settings", {
 // --- Video generation ---
 export const generateVideoBodySchema = z.object({
   prompt: z.string().min(1).max(2000),
+  video_prompt: z.string().min(1).max(2000).optional(),
   aspect_ratio: z.string().optional(),
   images: z.array(z.string()).max(1).optional(),
+  template_id: z.string().uuid().optional(),
+  text_values: z.array(z.string().max(500)).optional(),
 });

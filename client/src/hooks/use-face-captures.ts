@@ -1,8 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import type { CapturedPose } from "@/lib/face-capture";
 
 const FACE_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
+const FACE_CAPTURE_QUERY_KEY = ["face-captures", "latest"] as const;
 
 type FaceCapturePoseId = (typeof FACE_CAPTURE_POSES)[number];
 
@@ -14,6 +15,20 @@ type StoredFaceCapture = {
 type StoreFaceCapturesResponse = {
   sessionId: string;
   captures: StoredFaceCapture[];
+};
+
+export type LatestFaceCaptureAsset = {
+  poseId: FaceCapturePoseId;
+  byteSize: number;
+  imageUrl: string;
+};
+
+export type LatestFaceCaptureResponse = {
+  session: {
+    id: string;
+    createdAt: string;
+    captures: LatestFaceCaptureAsset[];
+  } | null;
 };
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -37,6 +52,8 @@ function isRequiredPose(poseId: string): poseId is FaceCapturePoseId {
 }
 
 export function useStoreFaceCaptures() {
+  const queryClient = useQueryClient();
+
   return useMutation<StoreFaceCapturesResponse, Error, CapturedPose[]>({
     mutationFn: async (poses) => {
       const byPoseId = new Map(poses.map((pose) => [pose.poseId, pose]));
@@ -64,5 +81,47 @@ export function useStoreFaceCaptures() {
 
       return response.json();
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FACE_CAPTURE_QUERY_KEY });
+    },
   });
+}
+
+export function useLatestFaceCapture() {
+  return useQuery<LatestFaceCaptureResponse>({
+    queryKey: FACE_CAPTURE_QUERY_KEY,
+    queryFn: async () => {
+      const response = await authFetch("/api/face-captures/latest");
+      return response.json();
+    },
+  });
+}
+
+type DeleteFaceCapturesResponse = {
+  deleted: boolean;
+  deletedCount?: number;
+};
+
+export function useDeleteLatestFaceCapture() {
+  const queryClient = useQueryClient();
+
+  return useMutation<DeleteFaceCapturesResponse, Error>({
+    mutationFn: async () => {
+      const response = await authFetch("/api/face-captures/latest", {
+        method: "DELETE",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.setQueryData<LatestFaceCaptureResponse>(FACE_CAPTURE_QUERY_KEY, {
+        session: null,
+      });
+      queryClient.invalidateQueries({ queryKey: FACE_CAPTURE_QUERY_KEY });
+    },
+  });
+}
+
+export async function fetchFaceCaptureAssetBlob(assetUrl: string): Promise<Blob> {
+  const response = await authFetch(assetUrl);
+  return response.blob();
 }

@@ -1,24 +1,5 @@
-# https://larpking.com/robots.txt
+# Served dynamically by the app from shared/site-seo.ts (see GET /robots.txt).
+# This file is a fallback for static previews only.
 
 User-agent: *
 Allow: /
-
-# API et application (comptes, génération, admin)
-Disallow: /api/
-Disallow: /admin
-Disallow: /admin/
-Disallow: /app
-Disallow: /generate
-Disallow: /history
-Disallow: /settings
-Disallow: /login
-Disallow: /register
-Disallow: /debug-generate
-
-# Pages légales — accessibles aux utilisateurs, non indexées (noindex + Disallow)
-Disallow: /mentions-legales
-Disallow: /cgu
-Disallow: /cgv
-Disallow: /confidentialite
-
-Sitemap: https://larpking.com/sitemap.xml

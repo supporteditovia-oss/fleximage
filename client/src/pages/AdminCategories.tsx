@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useAllCategories,
@@ -67,6 +67,7 @@ function CategoryFormDialog({
   const updateCategory = useUpdateCategory();
 
   const [name, setName] = useState(category?.name || "");
+  const [nameEn, setNameEn] = useState(category?.name_en || "");
   const [slug, setSlug] = useState(category?.slug || "");
   const [isActive, setIsActive] = useState(category?.is_active ?? true);
   const [displayOrder, setDisplayOrder] = useState(
@@ -78,15 +79,16 @@ function CategoryFormDialog({
   const isPending = createCategory.isPending || updateCategory.isPending;
 
   // Reset form when dialog opens/closes
-  useState(() => {
+  useEffect(() => {
     if (open) {
       setName(category?.name || "");
+      setNameEn(category?.name_en || "");
       setSlug(category?.slug || "");
       setIsActive(category?.is_active ?? true);
       setDisplayOrder(category?.display_order ?? 0);
       setAutoSlug(!category);
     }
-  });
+  }, [open, category]);
 
   function handleNameChange(value: string) {
     setName(value);
@@ -112,6 +114,7 @@ function CategoryFormDialog({
         await updateCategory.mutateAsync({
           id: category.id,
           name,
+          name_en: nameEn.trim() || null,
           slug,
           is_active: isActive,
           display_order: displayOrder,
@@ -120,6 +123,7 @@ function CategoryFormDialog({
       } else {
         await createCategory.mutateAsync({
           name,
+          name_en: nameEn.trim() || null,
           slug,
           is_active: isActive,
           display_order: displayOrder,
@@ -145,17 +149,29 @@ function CategoryFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cat-name">Nom</Label>
-            <Input
-              id="cat-name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Ex: Célébrité"
-              required
-              minLength={2}
-              maxLength={100}
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="cat-name">Nom français</Label>
+              <Input
+                id="cat-name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Ex: Célébrité"
+                required
+                minLength={2}
+                maxLength={100}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cat-name-en">Nom anglais</Label>
+              <Input
+                id="cat-name-en"
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                placeholder="Ex: Celebrity"
+                maxLength={100}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -324,7 +340,8 @@ export default function AdminCategories() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nom</TableHead>
+                  <TableHead>Nom FR</TableHead>
+                  <TableHead>Nom EN</TableHead>
                   <TableHead>Slug</TableHead>
                   <TableHead>Ordre</TableHead>
                   <TableHead>Active</TableHead>
@@ -335,6 +352,9 @@ export default function AdminCategories() {
                 {categories.map((cat) => (
                   <TableRow key={cat.id}>
                     <TableCell className="font-medium">{cat.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {cat.name_en || "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{cat.slug}</Badge>
                     </TableCell>

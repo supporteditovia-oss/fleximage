@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, ScanFace } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
@@ -14,6 +14,7 @@ import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverl
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateGallery } from "@/components/generate/TemplateGallery";
+import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
@@ -26,15 +27,30 @@ import {
 import { savePaywallImage, getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
-import { parseImageSlots, parseTextFields } from "@/lib/template-utils";
+import {
+  hasCompleteFaceCapture,
+  loadFaceCaptureBase64Images,
+  loadFaceCapturePreviewUrl,
+} from "@/lib/face-capture-generation";
+import { useLatestFaceCapture } from "@/hooks/use-face-captures";
+import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
+import { templateRequiresFaceCapture } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 
 const FAKE_LOADER_MIN_DELAY_MS = 10_000;
 const FAKE_LOADER_MAX_DELAY_MS = 20_000;
 const IMAGE_CREDIT_COST = 5;
 const VIDEO_CREDIT_COST = 30;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
+type GenerationMode = "image" | "video";
+
+function templateSupportsMode(template: PromptTemplate, mode: GenerationMode) {
+  const generationType = template.generation_type ?? "image";
+  if (generationType === "video" || generationType === "both") return true;
+  return mode === "image";
+}
 
 function getRandomFakeLoaderDelay() {
   return (
@@ -47,6 +63,7 @@ function getRandomFakeLoaderDelay() {
 
 export default function Generate() {
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
   // ── Form state ──────────────────────────────────────────────
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([
@@ -54,7 +71,10 @@ export default function Generate() {
   ]);
   const [selectedTemplate, setSelectedTemplate] =
     useState<PromptTemplate | null>(null);
-  const [textValues, setTextValues] = useState<Record<number, string>>({});
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(
+    null,
+  );
+  const [facePreviewUrl, setFacePreviewUrl] = useState<string | null>(null);
 
   // ── Generation state ────────────────────────────────────────
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -84,7 +104,8 @@ export default function Generate() {
   const generateVideo = useGenerateVideoLarp();
 
   // ── Mode state ─────────────────────────────────────────────
-  const [generationMode, setGenerationMode] = useState<"image" | "video">("image");
+  const [generationMode, setGenerationMode] =
+    useState<GenerationMode>("image");
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -92,6 +113,9 @@ export default function Generate() {
     useGenerationEligibility();
   const { profile, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
+  const { data: templatesList } = useTemplates();
+  const latestFaceCapture = useLatestFaceCapture();
+  const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
 
   // Store checkout state early before URL gets cleaned
   const [isReturningFromCheckout] = useState(() => {
@@ -242,10 +266,26 @@ export default function Generate() {
           prompt: pending.prompt,
           images: pending.images.length,
           generationMode: pending.generationMode ?? "image",
+          templateId: pending.templateId ?? null,
         });
         setGenerationMode(pending.generationMode ?? "image");
+        setPendingTemplateId(pending.templateId ?? null);
         if (pending.prompt) setPrompt(pending.prompt);
-        if (pending.images.length > 0) {
+        if (pending.templateId) {
+          void (async () => {
+            const url = await loadFaceCapturePreviewUrl();
+            if (!url) return;
+            setFacePreviewUrl(url);
+            try {
+              const blob = await fetch(url).then((r) => r.blob());
+              await savePaywallImage(
+                new File([blob], "face-frontal.jpg", { type: "image/jpeg" }),
+              );
+            } catch {
+              /* paywall preview optional */
+            }
+          })();
+        } else if (pending.images.length > 0) {
           const restored = pending.images.map((file) => ({
             url: URL.createObjectURL(file),
             file,
@@ -276,14 +316,25 @@ export default function Generate() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!pendingTemplateId || selectedTemplate || !templatesList) return;
+    const tpl = templatesList.find((t) => t.id === pendingTemplateId);
+    if (tpl) setSelectedTemplate(tpl);
+  }, [pendingTemplateId, selectedTemplate, templatesList]);
+
+  useEffect(() => {
+    return () => {
+      if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
+    };
+  }, [facePreviewUrl]);
+
   // ── Image & template handlers ───────────────────────────────
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
     setImages((prev) => {
       const next = [...prev];
       next[index] = { url, file };
-      const slots = parseImageSlots(selectedTemplate);
-      const maxSlots = selectedTemplate ? slots.length : 3;
+      const maxSlots = generationMode === "video" ? 1 : 3;
       const allFilled = !next.some((img) => img === null);
       if (allFilled && next.length < maxSlots) {
         next.push(null);
@@ -294,37 +345,44 @@ export default function Generate() {
   };
 
   const removeSlot = (index: number) => {
-    const slots = parseImageSlots(selectedTemplate);
-    const minSlots = selectedTemplate
-      ? slots.filter((s) => s.required).length
-      : 0;
     setImages((prev) => {
       const next = prev.filter((_, i) => i !== index);
-      if (next.length < minSlots)
-        return next.concat(Array(minSlots - next.length).fill(null));
       return next.length === 0 ? [null] : next;
     });
   };
 
   const selectTemplate = (tpl: PromptTemplate) => {
-    const slots = parseImageSlots(tpl);
-    const initSlots = slots.length > 0 ? slots.length : 1;
     setSelectedTemplate(tpl);
-    setPrompt(tpl.prompt_text);
-    setImages(Array(initSlots).fill(null));
-    setTextValues({});
+    setPendingTemplateId(null);
+    setPrompt("");
+    setImages([null]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const deselectTemplate = () => {
+    if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
+    setFacePreviewUrl(null);
     setSelectedTemplate(null);
+    setPendingTemplateId(null);
     setPrompt("");
     setImages([null]);
-    setTextValues({});
   };
 
-  const handleTextValueChange = (index: number, value: string) => {
-    setTextValues((prev) => ({ ...prev, [index]: value }));
+  const handleGenerationModeChange = (mode: GenerationMode) => {
+    setGenerationMode(mode);
+    setPendingTemplateId(null);
+
+    if (!selectedTemplate) {
+      setImages((prev) => {
+        const next = mode === "video" ? prev.slice(0, 1) : prev;
+        return next.length === 0 ? [null] : next;
+      });
+      return;
+    }
+
+    if (!templateSupportsMode(selectedTemplate, mode)) {
+      deselectTemplate();
+    }
   };
 
   // ── Generation ──────────────────────────────────────────────
@@ -345,7 +403,11 @@ export default function Generate() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
+    const selectedOrPendingTemplateId =
+      selectedTemplate?.id ?? pendingTemplateId ?? undefined;
+    const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
+
+    if (!isTemplateGeneration && !prompt.trim()) {
       toast({
         variant: "destructive",
         title: t("generate.emptyPromptTitle"),
@@ -354,51 +416,45 @@ export default function Generate() {
       return;
     }
 
-    // Validate required image slots (image mode only — video mode skips templates)
-    if (generationMode === "image" && selectedTemplate) {
-      const slots = parseImageSlots(selectedTemplate);
-      for (let i = 0; i < slots.length; i++) {
-        if (slots[i].required && !images[i]) {
-          toast({
-            variant: "destructive",
-            title: t("generate.missingImageTitle"),
-            description: t("generate.missingImageDescription", {
-              label:
-                slots[i].label ||
-                t("generate.imageFallbackLabel", { index: i + 1 }),
-            }),
-          });
-          return;
-        }
-      }
+    const activeTemplate =
+      selectedTemplate ??
+      (pendingTemplateId && templatesList
+        ? templatesList.find((t) => t.id === pendingTemplateId)
+        : undefined);
+    const templateNeedsFace = activeTemplate
+      ? templateRequiresFaceCapture(activeTemplate)
+      : true;
 
-      const fields = parseTextFields(selectedTemplate);
-      for (let i = 0; i < fields.length; i++) {
-        if (fields[i].required && !textValues[i]?.trim()) {
-          toast({
-            variant: "destructive",
-            title: t("generate.missingFieldTitle"),
-            description: t("generate.missingFieldDescription", {
-              label:
-                fields[i].label ||
-                t("generate.textFallbackLabel", { index: i + 1 }),
-            }),
-          });
-          return;
-        }
-      }
+    if (isTemplateGeneration && templateNeedsFace && !faceCaptureReady) {
+      toast({
+        variant: "destructive",
+        title: t("templateSelected.faceRequired"),
+        description: t("generate.scanFace"),
+      });
+      return;
     }
 
     const files = images.filter(
       (img): img is { url: string; file: File } => img !== null,
     );
-    let finalPrompt = prompt.trim();
-    if (generationMode === "image") {
-      const fields = parseTextFields(selectedTemplate);
-      fields.forEach((_, idx) => {
-        const val = textValues[idx] || "";
-        finalPrompt = finalPrompt.replaceAll(`{text${idx + 1}}`, val);
-      });
+    const filesForGeneration =
+      generationMode === "video" ? files.slice(0, 1) : files;
+    const serverPrompt = isTemplateGeneration
+      ? selectedTemplate?.prompt_text?.trim() || " "
+      : prompt.trim();
+
+    let templateFaceImages: string[] | undefined;
+    if (isTemplateGeneration && templateNeedsFace) {
+      try {
+        templateFaceImages = await loadFaceCaptureBase64Images();
+      } catch {
+        toast({
+          variant: "destructive",
+          title: t("templateSelected.faceRequired"),
+          description: t("generate.scanFace"),
+        });
+        return;
+      }
     }
 
     const requiredCredits =
@@ -416,9 +472,12 @@ export default function Generate() {
     if (profile && !profile.is_subscriber && profile.role !== "admin" && !isReturningFromCheckout) {
       try {
         await savePendingLarp({
-          prompt: finalPrompt,
-          images: files.map((f) => f.file),
+          prompt: serverPrompt,
+          images: isTemplateGeneration
+            ? []
+            : filesForGeneration.map((f) => f.file),
           generationMode,
+          templateId: selectedOrPendingTemplateId,
           timestamp: Date.now(),
         });
       } catch (error) {
@@ -451,14 +510,17 @@ export default function Generate() {
 
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
-        const base64Images = await Promise.all(
-          files.map((img) => fileToBase64(img.file)),
-        );
+        const base64Images = isTemplateGeneration
+          ? templateFaceImages
+          : await Promise.all(
+              filesForGeneration.map((img) => fileToBase64(img.file)),
+            );
 
         const result = await generateVideo.mutateAsync({
-          prompt: finalPrompt,
+          prompt: serverPrompt,
           aspect_ratio: "9:16",
-          images: base64Images.length > 0 ? base64Images : undefined,
+          images: base64Images && base64Images.length > 0 ? base64Images : undefined,
+          template_id: selectedOrPendingTemplateId,
         });
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
@@ -467,19 +529,29 @@ export default function Generate() {
       }
 
       // ── Image mode (existing logic) ──────────────────────────
-      const base64Images = await Promise.all(
-        files.map((img) => fileToBase64(img.file)),
-      );
+      const base64Images = isTemplateGeneration
+        ? templateFaceImages
+        : await Promise.all(
+            filesForGeneration.map((img) => fileToBase64(img.file)),
+          );
 
       const result = await generateDirect.mutateAsync({
-        prompt: finalPrompt,
+        prompt: serverPrompt,
         aspect_ratio: "9:16",
-        images: base64Images.length > 0 ? base64Images : undefined,
-        template_id: selectedTemplate?.id,
+        images: base64Images && base64Images.length > 0 ? base64Images : undefined,
+        template_id: selectedOrPendingTemplateId,
       });
       setTaskId(result.taskId);
       refetchEligibility();
     } catch (error: any) {
+      if (error.code === "FACE_CAPTURE_REQUIRED") {
+        toast({
+          variant: "destructive",
+          title: t("templateSelected.faceRequired"),
+          description: t("generate.scanFace"),
+        });
+        return;
+      }
       let message = error.message;
       try {
         const parsed = JSON.parse(error.message);
@@ -527,7 +599,9 @@ export default function Generate() {
     setPrompt("");
     setImages([null]);
     setSelectedTemplate(null);
-    setTextValues({});
+    setPendingTemplateId(null);
+    if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
+    setFacePreviewUrl(null);
     setGenerationMode("image");
     setFakePaywallReason("onboarding");
     refetchEligibility();
@@ -548,8 +622,10 @@ export default function Generate() {
       "[Generate] Auto-generate ready, prompt:",
       JSON.stringify(prompt.slice(0, 50)),
     );
-    if (!prompt.trim()) {
-      console.log("[Generate] Empty prompt, skipping auto-generate");
+    const canAutoGenerate =
+      Boolean(pendingTemplateId || selectedTemplate) || prompt.trim().length > 0;
+    if (!canAutoGenerate) {
+      console.log("[Generate] Nothing to auto-generate, skipping");
       setPendingLoading(false);
       return;
     }
@@ -633,7 +709,7 @@ export default function Generate() {
     ? createPortal(
       <GenerationProgress
         taskId={taskId}
-        inputImageUrl={images[0]?.url}
+        inputImageUrl={images[0]?.url ?? facePreviewUrl ?? undefined}
         onReset={handleReset}
         resultType={generationMode}
       />,
@@ -775,71 +851,97 @@ export default function Generate() {
       >
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
-          <div
-            role="tablist"
-            aria-label="Generation mode"
-            className="relative grid grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
-          >
+          <div className="flex w-full max-w-md items-center justify-center gap-2">
             <div
-              className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                generationMode === "video" ? "translate-x-full" : "translate-x-0"
-              }`}
-            />
-            <button
-              type="button"
-              role="tab"
-              aria-selected={generationMode === "image"}
-              onClick={() => setGenerationMode("image")}
-              className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
-                generationMode === "image"
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground/75 hover:text-muted-foreground"
-              }`}
+              role="tablist"
+              aria-label="Generation mode"
+              className="relative grid shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
             >
-              {t("generate.modeImage")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={generationMode === "video"}
-              onClick={() => setGenerationMode("video")}
-              className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
-                generationMode === "video"
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground/75 hover:text-muted-foreground"
-              }`}
-            >
-              {t("generate.modeVideo")}
-            </button>
+              <div
+                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  generationMode === "video" ? "translate-x-full" : "translate-x-0"
+                }`}
+              />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={generationMode === "image"}
+                onClick={() => handleGenerationModeChange("image")}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                  generationMode === "image"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground/75 hover:text-muted-foreground"
+                }`}
+              >
+                {t("generate.modeImage")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={generationMode === "video"}
+                onClick={() => handleGenerationModeChange("video")}
+                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out ${
+                  generationMode === "video"
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground/75 hover:text-muted-foreground"
+                }`}
+              >
+                {t("generate.modeVideo")}
+              </button>
+            </div>
+
+            {!selectedTemplate && (
+              <div className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate("/face-capture")}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/25 bg-white/80 px-3 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md transition-colors hover:bg-primary/10 sm:text-xs"
+                >
+                  <ScanFace className="h-3.5 w-3.5 shrink-0" />
+                  {t("generate.scanFace")}
+                </button>
+              </div>
+            )}
           </div>
 
-          <ImageUploadGrid
-            images={images}
-            selectedTemplate={selectedTemplate}
-            onImageSelect={handleImageSelect}
-            onRemoveSlot={removeSlot}
-            onDeselectTemplate={deselectTemplate}
-          />
+          {selectedTemplate ? (
+            <TemplateSelectedPanel
+              template={selectedTemplate}
+              generationMode={generationMode}
+              requiresFaceCapture={templateRequiresFaceCapture(selectedTemplate)}
+              faceCaptureReady={faceCaptureReady}
+              faceCaptureLoading={latestFaceCapture.isLoading}
+              onDeselect={deselectTemplate}
+              onGenerate={handleGenerate}
+              onScanFace={() => navigate("/face-capture")}
+              isGenerating={
+                generateDirect.isPending || generateVideo.isPending
+              }
+            />
+          ) : (
+            <>
+              <ImageUploadGrid
+                images={images}
+                onImageSelect={handleImageSelect}
+                onRemoveSlot={removeSlot}
+              />
 
-          <PromptInputBar
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            selectedTemplate={selectedTemplate}
-            textValues={textValues}
-            onTextValueChange={handleTextValueChange}
-            onGenerate={handleGenerate}
-            isGenerating={generateDirect.isPending || generateVideo.isPending}
-          />
+              <PromptInputBar
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                onGenerate={handleGenerate}
+                isGenerating={
+                  generateDirect.isPending || generateVideo.isPending
+                }
+              />
+            </>
+          )}
 
           <button
             onClick={() =>
               galleryRef.current?.scrollIntoView({ behavior: "smooth" })
             }
-            className={`relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mt-1 ${
-              generationMode === "video" ? "invisible pointer-events-none" : ""
-            }`}
-            aria-hidden={generationMode === "video"}
-            tabIndex={generationMode === "video" ? -1 : 0}
+            className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mt-1"
           >
             {t("generate.viewTemplates")}
             <ChevronDown className="w-3.5 h-3.5" />
@@ -847,16 +949,14 @@ export default function Generate() {
         </div>
       </div>
 
-      {/* Template Gallery — hidden in video mode */}
-      {generationMode === "image" && (
-        <div ref={galleryRef}>
-          <TemplateGallery
-            selectedTemplateId={selectedTemplate?.id ?? null}
-            onSelectTemplate={selectTemplate}
-            onDeselectTemplate={deselectTemplate}
-          />
-        </div>
-      )}
+      <div ref={galleryRef}>
+        <TemplateGallery
+          generationMode={generationMode}
+          selectedTemplateId={selectedTemplate?.id ?? null}
+          onSelectTemplate={selectTemplate}
+          onDeselectTemplate={deselectTemplate}
+        />
+      </div>
     </div>
   );
 }

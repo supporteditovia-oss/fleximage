@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   getLegalContent,
   type LegalDocumentKey,
 } from "@/lib/legal-content";
+import { setRobotsMeta } from "@/lib/robots-meta";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 
@@ -14,6 +16,11 @@ export default function LegalPageLayout({ pageKey }: LegalPageLayoutProps) {
   const { i18n } = useTranslation();
   const content = getLegalContent(i18n.resolvedLanguage);
   const doc = content.docs[pageKey];
+
+  useEffect(() => {
+    setRobotsMeta("noindex, nofollow");
+    return () => setRobotsMeta(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background py-20 px-4">
