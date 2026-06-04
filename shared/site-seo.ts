@@ -31,10 +31,26 @@ export const SITEMAP_ENTRIES = [
   { path: "/", changefreq: "weekly" as const, priority: "1.0" },
 ] as const;
 
+const NON_PUBLIC_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/** True when origin is suitable for sitemap.xml / robots.txt (never localhost). */
+export function isPublicSiteOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    if (NON_PUBLIC_HOSTS.has(hostname)) return false;
+    if (hostname.endsWith(".local")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Canonical origin for SEO files — always production URL unless SITE_URL is public. */
 export function resolveSiteOrigin(envOrigin?: string | null): string {
   const raw = (envOrigin?.trim() || DEFAULT_SITE_ORIGIN).replace(/\/$/, "");
   try {
-    return new URL(raw.includes("://") ? raw : `https://${raw}`).origin;
+    const origin = new URL(raw.includes("://") ? raw : `https://${raw}`).origin;
+    return isPublicSiteOrigin(origin) ? origin : DEFAULT_SITE_ORIGIN;
   } catch {
     return DEFAULT_SITE_ORIGIN;
   }
