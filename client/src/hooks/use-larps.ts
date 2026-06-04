@@ -135,6 +135,20 @@ export function useLarpStatus(taskId: string | null) {
       return res.json();
     },
     enabled: !!taskId,
+    // A generation can keep running on the server even if a single poll fails
+    // (transient 5xx, network blip). Retry hard before surfacing an error, but
+    // never retry client errors (404 task not found, 403) — they won't recover.
+    retry: (failureCount, err) => {
+      const status = (err as { status?: number } | null)?.status;
+      if (typeof status === "number" && status >= 400 && status < 500) {
+        return false;
+      }
+      return failureCount < 8;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    // Keep polling even while in an error state so a transient failure
+    // recovers automatically once the server responds again.
+    refetchIntervalInBackground: true,
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.status === "fail") return false;

@@ -26,10 +26,16 @@ export function GenerationProgress({
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { data, isLoading, error } = useLarpStatus(taskId);
+  const { data, isLoading, error, isError } = useLarpStatus(taskId);
   const [revealDone, setRevealDone] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
+  // Grace window before a sustained, unrecoverable connection failure is
+  // surfaced. Transient blips (5xx, network) during polling are ignored —
+  // the generation keeps running server-side.
+  const connectionErrorSince = useRef<number | null>(null);
+  const CONNECTION_ERROR_GRACE_MS = 60_000;
 
   // Wait for loader exit animation before showing result
   useEffect(() => {
@@ -58,16 +64,39 @@ export function GenerationProgress({
           ? "waiting"
           : "waiting";
 
+  // Track transient connection errors without killing the flow. Once we have
+  // ever received data, the generation exists server-side, so we never treat a
+  // later connection blip as fatal — we just keep polling until it resolves.
+  // A timer guarantees the fatal transition fires even if React stops
+  // re-rendering (e.g. polling stalls) once the grace window elapses.
+  useEffect(() => {
+    if (data || !isError) {
+      connectionErrorSince.current = null;
+      return;
+    }
+    if (connectionErrorSince.current === null) {
+      connectionErrorSince.current = Date.now();
+    }
+    const remaining =
+      CONNECTION_ERROR_GRACE_MS - (Date.now() - connectionErrorSince.current);
+    if (remaining <= 0) {
+      setFatalConnectionError(true);
+      return;
+    }
+    const timer = setTimeout(() => setFatalConnectionError(true), remaining);
+    return () => clearTimeout(timer);
+  }, [isError, error, data]);
+
   useEffect(() => {
     if (hasHandledFailure.current) return;
 
-    if (error) {
+    if (fatalConnectionError) {
       hasHandledFailure.current = true;
       document.body.removeAttribute("data-fullscreen-overlay");
       toast({
         variant: "destructive",
         title: t("progress.connectionError"),
-        description: error.message,
+        description: error?.message ?? t("progress.connectionError"),
       });
       onReset();
       navigate("/generate");
@@ -85,7 +114,16 @@ export function GenerationProgress({
       onReset();
       navigate("/generate");
     }
-  }, [data?.status, data?.failMessage, error, navigate, onReset, t, toast]);
+  }, [
+    data?.status,
+    data?.failMessage,
+    fatalConnectionError,
+    error,
+    navigate,
+    onReset,
+    t,
+    toast,
+  ]);
 
   const isGenerating =
     loaderStatus === "connecting" ||
@@ -94,9 +132,12 @@ export function GenerationProgress({
 
   // Show the immersive loader for connecting/waiting/success (until reveal completes)
   const showLoader =
-    isGenerating && !revealDone && !error && data?.status !== "fail";
+    isGenerating &&
+    !revealDone &&
+    !fatalConnectionError &&
+    data?.status !== "fail";
 
-  if (error || data?.status === "fail") {
+  if (fatalConnectionError || data?.status === "fail") {
     return null;
   }
 

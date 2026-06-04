@@ -400,9 +400,18 @@ export default function Generate() {
   ]);
 
   // ── Image & template handlers ───────────────────────────────
+  // Object URLs leak memory if not revoked once the preview is gone.
+  const revokeSlotUrl = useCallback(
+    (slot: { url: string; file: File } | null) => {
+      if (slot?.url.startsWith("blob:")) URL.revokeObjectURL(slot.url);
+    },
+    [],
+  );
+
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
     setImages((prev) => {
+      revokeSlotUrl(prev[index]);
       const next = [...prev];
       next[index] = { url, file };
       const maxSlots = generationMode === "video" ? 1 : 3;
@@ -417,6 +426,7 @@ export default function Generate() {
 
   const removeSlot = (index: number) => {
     setImages((prev) => {
+      revokeSlotUrl(prev[index]);
       const next = prev.filter((_, i) => i !== index);
       return next.length === 0 ? [null] : next;
     });
@@ -426,7 +436,10 @@ export default function Generate() {
     setSelectedTemplate(tpl);
     setPendingTemplateId(null);
     setPrompt("");
-    setImages([null]);
+    setImages((prev) => {
+      prev.forEach(revokeSlotUrl);
+      return [null];
+    });
     if (!templateSupportsGenerationMode(tpl, generationMode)) {
       setGenerationMode(getTemplateDefaultGenerationMode(tpl));
     }
@@ -439,7 +452,10 @@ export default function Generate() {
     setSelectedTemplate(null);
     setPendingTemplateId(null);
     setPrompt("");
-    setImages([null]);
+    setImages((prev) => {
+      prev.forEach(revokeSlotUrl);
+      return [null];
+    });
   };
 
   const handleGenerationModeChange = (mode: GenerationMode) => {
@@ -842,7 +858,10 @@ export default function Generate() {
     setPendingLoading(false);
     setIsStartingGeneration(false);
     setPrompt("");
-    setImages([null]);
+    setImages((prev) => {
+      prev.forEach(revokeSlotUrl);
+      return [null];
+    });
     setSelectedTemplate(null);
     setPendingTemplateId(null);
     if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);

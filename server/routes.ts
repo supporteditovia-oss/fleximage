@@ -56,6 +56,9 @@ import { registerStripeRoutes } from "./stripe-routes";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
+// While polling a generation, a transient provider/network error within this
+// window is treated as "still running" instead of a permanent failure.
+const PROVIDER_POLL_HARD_TIMEOUT_MS = 12 * 60 * 1000;
 const FACE_CAPTURE_BUCKET = "face-captures";
 const FACE_CAPTURE_POSES = ["frontal", "profile-right", "profile-left"] as const;
 const MAX_FACE_CAPTURE_BYTES = 10 * 1024 * 1024;
@@ -3422,6 +3425,23 @@ export async function registerRoutes(
           }
         } catch (err) {
           logger.error({ err }, "Failed to poll KIE Runway");
+          // Transient provider/network blip: keep the job alive and let the
+          // client retry instead of permanently failing a running generation.
+          if (
+            Date.now() - new Date(larp.created_at).getTime() <
+            PROVIDER_POLL_HARD_TIMEOUT_MS
+          ) {
+            return res.json({
+              larpId: larp.id,
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType,
+            });
+          }
           apiStatus = "fail";
           apiFailMsg = tBackend(locale, "larps.pollingError");
         }
@@ -3516,9 +3536,26 @@ export async function registerRoutes(
           apiFailMsg = kieStatus.data.failMsg;
           apiCostTime = kieStatus.data.costTime;
         } catch (err: any) {
-           logger.error({ err }, "Failed to poll Kie.ai");
-           apiStatus = "fail";
-            apiFailMsg = tBackend(locale, "larps.pollingError");
+          logger.error({ err }, "Failed to poll Kie.ai");
+          // Transient provider/network blip: keep the job alive and let the
+          // client retry instead of permanently failing a running generation.
+          if (
+            Date.now() - new Date(larp.created_at).getTime() <
+            PROVIDER_POLL_HARD_TIMEOUT_MS
+          ) {
+            return res.json({
+              larpId: larp.id,
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType,
+            });
+          }
+          apiStatus = "fail";
+          apiFailMsg = tBackend(locale, "larps.pollingError");
         }
       }
 
