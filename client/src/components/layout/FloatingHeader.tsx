@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { createPortalSession } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarClock, CreditCard, Crown, Loader2 } from "lucide-react";
+import { CreditsTokenIcon } from "@/components/icons/CreditsTokenIcon";
 
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
@@ -181,8 +182,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
               >
-                <img src="/assets/jeton.svg" alt="" className="w-5 h-5" />
-                <span aria-live="polite">{displayedCredits}</span>
+                <CreditsTokenIcon className="h-5 w-5" />
+                <span className="tabular-nums" aria-live="polite">
+                  {displayedCredits}
+                </span>
               </button>
             </PopoverTrigger>
             <PopoverContent
@@ -196,7 +199,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 </p>
                 <div className="mt-2 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <img src="/assets/jeton.svg" alt="" className="h-7 w-7" />
+                    <CreditsTokenIcon className="h-7 w-7" />
                     <span className="font-display text-3xl font-bold leading-none">
                       {displayedCredits}
                     </span>
