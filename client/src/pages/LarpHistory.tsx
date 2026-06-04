@@ -117,7 +117,7 @@ export default function LarpHistory() {
     larpId: string,
     imageIndex: number,
   ): { resultType: "image" | "video"; url?: string } | undefined {
-    const larp = successLarps.find((item) => item.id === larpId);
+    const larp = successLarps?.find((item) => item.id === larpId);
     if (!larp) return undefined;
     const urls = getAssetUrls(larp.outputAssets);
     return {
@@ -157,7 +157,7 @@ export default function LarpHistory() {
         const res = await authFetch(
           `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
-        const larp = successLarps.find((item) => item.id === larpId);
+        const larp = successLarps?.find((item) => item.id === larpId);
         const urls = larp ? getAssetUrls(larp.outputAssets) : [];
         const isVideo = larp?.generationType === "video";
         const blob = await res.blob();

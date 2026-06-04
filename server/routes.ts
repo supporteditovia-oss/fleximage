@@ -454,16 +454,15 @@ async function resolveUserFaceCaptureImageUrls(
   );
   if (ordered.some((asset) => !asset)) return null;
 
-  const buffers: Buffer[] = [];
-  for (const asset of ordered) {
+  const buffers = await Promise.all(ordered.map(async (asset) => {
     const { data: imageBlob, error: downloadError } = await supabaseAdmin.storage
       .from(asset!.storage_bucket)
       .download(asset!.storage_path);
 
     if (downloadError) throw downloadError;
 
-    buffers.push(Buffer.from(await imageBlob.arrayBuffer()));
-  }
+    return Buffer.from(await imageBlob.arrayBuffer());
+  }));
 
   const composite = await composeFaceCaptureImageBuffers(buffers);
   const key = `inputs/${userId}/face-capture/composite-${Date.now()}.jpg`;
@@ -474,18 +473,16 @@ async function uploadInputImagesToR2(
   userId: string,
   images: string[] | undefined,
 ): Promise<string[]> {
-  const imageUrls: string[] = [];
-  if (!images || images.length === 0) return imageUrls;
+  if (!images || images.length === 0) return [];
 
-  for (let i = 0; i < images.length; i++) {
-    const dataUrl = images[i];
+  const uploaded = await Promise.all(images.map(async (dataUrl, i) => {
     const match = dataUrl.match(/^data:(image\/[\w+.-]+);base64,([\s\S]+)$/);
     if (!match) {
       logger.warn(
         { index: i, prefix: dataUrl.substring(0, 40) },
         "Invalid base64 image, skipping",
       );
-      continue;
+      return null;
     }
 
     const contentType = match[1];
@@ -493,15 +490,14 @@ async function uploadInputImagesToR2(
     const buffer = Buffer.from(base64Data, "base64");
     const ext = contentType.split("/")[1] || "jpg";
     const key = `inputs/${userId}/${Date.now()}-${i}.${ext}`;
-    imageUrls.push(await uploadToR2(key, buffer, contentType));
-  }
+    return uploadToR2(key, buffer, contentType);
+  }));
 
-  return imageUrls;
+  return uploaded.filter((url): url is string => typeof url === "string");
 }
 
 async function uploadImageUrlsToOneshot(imageUrls: string[]): Promise<string[]> {
-  const referenceFileIds: string[] = [];
-  for (const publicUrl of imageUrls) {
+  const referenceFileIds = await Promise.all(imageUrls.map(async (publicUrl) => {
     try {
       const imgResp = await fetch(publicUrl);
       if (!imgResp.ok) throw new Error(`Failed to download ${publicUrl}`);
@@ -509,16 +505,17 @@ async function uploadImageUrlsToOneshot(imageUrls: string[]): Promise<string[]> 
       const arrBuf = await imgResp.arrayBuffer();
       const buffer = Buffer.from(arrBuf);
       const filename = publicUrl.split("/").pop() || "image.jpg";
-      referenceFileIds.push(await uploadToOneshotApi(buffer, filename, contentType));
+      return uploadToOneshotApi(buffer, filename, contentType);
     } catch (uploadErr) {
       logger.error(
         { err: uploadErr, publicUrl },
         "Failed to upload image to OneshotAPI",
       );
+      return null;
     }
-  }
+  }));
 
-  return referenceFileIds;
+  return referenceFileIds.filter((id): id is string => typeof id === "string");
 }
 
 async function startImageGenerationTask(params: {
@@ -2693,24 +2690,9 @@ export async function registerRoutes(
         if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
           try {
             // Upload images to OneshotAPI servers if any
-            let referenceFileIds: string[] = [];
-            if (imageUrls.length > 0) {
-              logger.info({ imageCount: imageUrls.length }, "Uploading images to OneshotAPI");
-              for (const publicUrl of imageUrls) {
-                try {
-                  const imgResp = await fetch(publicUrl);
-                  if (!imgResp.ok) throw new Error(`Failed to download ${publicUrl}`);
-                  const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-                  const arrBuf = await imgResp.arrayBuffer();
-                  const buffer = Buffer.from(arrBuf);
-                  const filename = publicUrl.split("/").pop() || "image.jpg";
-                  const fileId = await uploadToOneshotApi(buffer, filename, contentType);
-                  referenceFileIds.push(fileId);
-                } catch (uploadErr) {
-                  logger.error({ err: uploadErr, publicUrl }, "Failed to upload image to OneshotAPI");
-                }
-              }
-            }
+            const referenceFileIds = imageUrls.length > 0
+              ? await uploadImageUrlsToOneshot(imageUrls)
+              : [];
 
             logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
             const oneshotResponse = await createOneshotJob(finalPrompt, {

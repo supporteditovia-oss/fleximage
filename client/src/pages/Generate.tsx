@@ -44,7 +44,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import {
   hasCompleteFaceCapture,
-  loadFaceCaptureBase64Images,
   loadFaceCapturePreviewUrl,
 } from "@/lib/face-capture-generation";
 import { useLatestFaceCapture } from "@/hooks/use-face-captures";
@@ -93,6 +92,7 @@ export default function Generate() {
 
   // ── Generation state ────────────────────────────────────────
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(true);
   const [transitionBg, setTransitionBg] = useState(false);
@@ -523,6 +523,8 @@ export default function Generate() {
       : "image";
   const activePaywallGenerationMode =
     generationMode === "video" ? "video" : storedPaywallGenerationMode;
+  const isSubmittingGeneration =
+    isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   // Returning non-subscribers who already finished the fake loader → unlock step
   useEffect(() => {
@@ -654,20 +656,6 @@ export default function Generate() {
       }
     };
 
-    let templateFaceImages: string[] | undefined;
-    if (isTemplateGeneration && useFaceAsset && faceCaptureReady) {
-      try {
-        templateFaceImages = await loadFaceCaptureBase64Images();
-      } catch {
-        toast({
-          variant: "destructive",
-          title: t("templateSelected.faceRequired"),
-          description: t("generate.scanFace"),
-        });
-        return;
-      }
-    }
-
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
     const shouldUseOnboardingPaywall =
@@ -739,12 +727,14 @@ export default function Generate() {
     }
 
     try {
+      setIsStartingGeneration(true);
+      setPendingLoading(true);
       clearPendingLarp();
 
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
         const base64Images = isTemplateGeneration
-          ? templateFaceImages
+          ? undefined
           : await Promise.all(
               filesForGeneration.map((img) => fileToBase64(img.file)),
             );
@@ -758,13 +748,14 @@ export default function Generate() {
         });
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
-        refetchEligibility();
+        setPendingLoading(false);
+        void refetchEligibility();
         return;
       }
 
       // ── Image mode (existing logic) ──────────────────────────
       const base64Images = isTemplateGeneration
-        ? templateFaceImages
+        ? undefined
         : await Promise.all(
             filesForGeneration.map((img) => fileToBase64(img.file)),
           );
@@ -777,8 +768,10 @@ export default function Generate() {
         use_face_asset: useFaceAsset,
       });
       setTaskId(result.taskId);
-      refetchEligibility();
+      setPendingLoading(false);
+      void refetchEligibility();
     } catch (error: any) {
+      setPendingLoading(false);
       if (error.code === "FACE_CAPTURE_REQUIRED") {
         toast({
           variant: "destructive",
@@ -839,11 +832,15 @@ export default function Generate() {
         title: t("common.messages.error"),
         description: message,
       });
+    } finally {
+      setIsStartingGeneration(false);
     }
   };
 
   const handleReset = () => {
     setTaskId(null);
+    setPendingLoading(false);
+    setIsStartingGeneration(false);
     setPrompt("");
     setImages([null]);
     setSelectedTemplate(null);
@@ -1204,9 +1201,7 @@ export default function Generate() {
               onDeselect={deselectTemplate}
               onGenerate={handleGenerate}
               onScanFace={() => navigate("/face-capture")}
-              isGenerating={
-                generateDirect.isPending || generateVideo.isPending
-              }
+              isGenerating={isSubmittingGeneration}
             />
           ) : (
             <>
@@ -1220,9 +1215,7 @@ export default function Generate() {
                 prompt={prompt}
                 onPromptChange={setPrompt}
                 onGenerate={handleGenerate}
-                isGenerating={
-                  generateDirect.isPending || generateVideo.isPending
-                }
+                isGenerating={isSubmittingGeneration}
                 canGenerate={
                   images.some((img) => img !== null) &&
                   (!useFaceAsset || faceCaptureReady)
