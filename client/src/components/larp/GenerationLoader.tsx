@@ -35,13 +35,21 @@ export function GenerationLoader({
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // When success arrives, transition to result
+  // When success arrives, transition to result (even if still dissolving — fast
+  // image generations used to stall because this required phase === "logo").
   useEffect(() => {
-    if (status === "success" && phase === "logo") {
-      const timer = setTimeout(() => setPhase("result"), 600);
-      return () => clearTimeout(timer);
-    }
+    if (status !== "success" || phase === "result") return;
+    const delay = phase === "logo" ? 600 : phase === "blur" ? 400 : 500;
+    const timer = setTimeout(() => setPhase("result"), delay);
+    return () => clearTimeout(timer);
   }, [status, phase]);
+
+  // Guarantee hand-off even if Framer onAnimationComplete does not fire.
+  useEffect(() => {
+    if (phase !== "result") return;
+    const timer = setTimeout(() => onRevealComplete?.(), 1200);
+    return () => clearTimeout(timer);
+  }, [phase, onRevealComplete]);
 
   const handleRevealDone = useCallback(() => {
     if (onRevealComplete) {
@@ -77,7 +85,7 @@ export function GenerationLoader({
   }, [showTimer]);
 
   const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
-  const showLogo = phase === "logo" || (phase !== "result" && status !== "success");
+  const showLogo = phase !== "result";
 
   return (
     <motion.div
@@ -120,7 +128,7 @@ export function GenerationLoader({
 
       {/* Logo + status — visible immediately with "Préparation", then timer */}
       <AnimatePresence>
-        {showLogo && phase !== "result" && (
+        {showLogo && (
           <motion.div
             key="logo-overlay"
             className="relative z-10 flex flex-col items-center gap-4"

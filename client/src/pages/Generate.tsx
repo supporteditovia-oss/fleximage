@@ -440,9 +440,7 @@ export default function Generate() {
       prev.forEach(revokeSlotUrl);
       return [null];
     });
-    if (!templateSupportsGenerationMode(tpl, generationMode)) {
-      setGenerationMode(getTemplateDefaultGenerationMode(tpl));
-    }
+    setGenerationMode(getTemplateDefaultGenerationMode(tpl));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

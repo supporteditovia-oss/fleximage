@@ -30,12 +30,13 @@ import {
  * Strict 9:16 frame — width-first sizing so flex parents cannot stretch height
  * past the aspect ratio (height-only rules caused tall narrow black bars on mobile).
  */
+/** Height-first 9:16 — avoids flex parents collapsing width-based frames to 0. */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] w-[min(calc(100vw-2rem),calc(min(80svh,calc(100dvh-14rem))*9/16))] max-h-[min(80svh,calc(100dvh-14rem))] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+  "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-14rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
 
-/** Fullscreen portal viewer — same width-first 9:16 constraint */
+/** Fullscreen portal viewer — same height-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] w-[min(calc(100vw-2rem),calc(min(80svh,calc(100dvh-8rem))*9/16))] max-h-[min(80svh,calc(100dvh-8rem))] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
+  "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-8rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
 
 function isVideoResultUrl(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
@@ -200,7 +201,7 @@ export function LarpResult({
                   <img
                     src={url}
                     alt={t("result.generatedAlt", { index: index + 1 })}
-                    className="absolute inset-0 h-full w-full object-contain"
+                    className="absolute inset-0 h-full w-full object-cover"
                     loading="lazy"
                   />
                   {/* Bottom gradient with action buttons */}

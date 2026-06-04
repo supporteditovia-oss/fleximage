@@ -36,6 +36,7 @@ export function GenerationProgress({
   // the generation keeps running server-side.
   const connectionErrorSince = useRef<number | null>(null);
   const CONNECTION_ERROR_GRACE_MS = 60_000;
+  const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
 
   // Wait for loader exit animation before showing result
   useEffect(() => {
@@ -45,15 +46,19 @@ export function GenerationProgress({
     }
   }, [revealDone]);
 
+  // Fallback if loader reveal never completes (e.g. animation edge case).
+  useEffect(() => {
+    if (data?.status !== "success" || !hasResultMedia || revealDone) return;
+    const timer = setTimeout(() => setRevealDone(true), 5000);
+    return () => clearTimeout(timer);
+  }, [data?.status, hasResultMedia, revealDone]);
+
   // Show dock again when result is displayed (remove fullscreen overlay flag)
   useEffect(() => {
     if (showResult) {
       document.body.removeAttribute("data-fullscreen-overlay");
     }
   }, [showResult]);
-
-  // Determine loader status
-  const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
 
   const loaderStatus =
     !data || isLoading
@@ -161,7 +166,7 @@ export function GenerationProgress({
         hasResultMedia &&
         createPortal(
           <div
-            className="fixed inset-0 z-30 flex flex-col items-center justify-center gap-6 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid"
+            className="fixed inset-0 z-30 flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center gap-6 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid"
           >
             {/* Title with SVG underline */}
             <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
