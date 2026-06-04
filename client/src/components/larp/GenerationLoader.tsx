@@ -49,13 +49,32 @@ export function GenerationLoader({
     }
   }, [onRevealComplete]);
 
-  // Elapsed timer
-  const startTime = useRef(Date.now());
+  // "Préparation" first, then elapsed timer (timer does not count prep time).
+  const PREPARING_MS = 2000;
+  const mountedAt = useRef(Date.now());
+  const startTime = useRef<number | null>(null);
+  const [showTimer, setShowTimer] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+
   useEffect(() => {
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime.current) / 1000)), 200);
-    return () => clearInterval(id);
+    const remaining = Math.max(0, PREPARING_MS - (Date.now() - mountedAt.current));
+    const id = setTimeout(() => {
+      startTime.current = Date.now();
+      setShowTimer(true);
+    }, remaining);
+    return () => clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    if (!showTimer) return;
+    const id = setInterval(() => {
+      if (startTime.current === null) return;
+      setElapsed(
+        Math.floor((Date.now() - startTime.current) / 1000),
+      );
+    }, 200);
+    return () => clearInterval(id);
+  }, [showTimer]);
 
   const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
   const showLogo = phase === "logo" || (phase !== "result" && status !== "success");
@@ -99,9 +118,9 @@ export function GenerationLoader({
         </motion.div>
       )}
 
-      {/* Logo — appears over blurred image */}
+      {/* Logo + status — visible immediately with "Préparation", then timer */}
       <AnimatePresence>
-        {showLogo && phase !== "dissolve" && (
+        {showLogo && phase !== "result" && (
           <motion.div
             key="logo-overlay"
             className="relative z-10 flex flex-col items-center gap-4"
@@ -116,8 +135,10 @@ export function GenerationLoader({
               className="h-24 md:h-32 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
             />
             <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
-            <span className="text-lg font-semibold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
-              {elapsed}s
+            <span
+              className={`text-lg font-semibold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${showTimer ? "tabular-nums" : ""}`}
+            >
+              {showTimer ? `${elapsed}s` : t("progress.preparing")}
             </span>
           </motion.div>
         )}

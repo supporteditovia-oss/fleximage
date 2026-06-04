@@ -42,7 +42,7 @@ export function UnlockedLarpView({
         </span>
       </h1>
 
-      <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2">
+      <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 [&>*]:shrink-0">
         <LarpResult
           resultUrls={resultUrls}
           larpId={larpId}

@@ -185,7 +185,7 @@ export function GenerationProgress({
             </h1>
 
             {/* LARP result with download/share actions */}
-            <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 py-2">
+            <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 py-2 [&>*]:shrink-0">
               <LarpResult
                 resultUrls={data.resultUrls}
                 larpId={data.larpId}

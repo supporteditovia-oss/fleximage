@@ -26,11 +26,14 @@ import {
   triggerBlobDownload,
 } from "@/lib/download-media";
 
-/** Strict 9:16 frame — height-limited, width derived from aspect ratio */
+/**
+ * Strict 9:16 frame — width-first sizing so flex parents cannot stretch height
+ * past the aspect ratio (height-only rules caused tall narrow black bars on mobile).
+ */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] h-[min(calc(100dvh-14rem),min(80svh,720px))] min-h-[min(50svh,360px)] w-auto max-w-full shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+  "relative mx-auto aspect-[9/16] w-[min(calc(100vw-2rem),calc(min(80svh,calc(100dvh-14rem))*9/16))] max-h-[min(80svh,calc(100dvh-14rem))] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
 
-/** Fullscreen portal viewer — width-first sizing avoids iOS Safari width collapse */
+/** Fullscreen portal viewer — same width-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
   "relative mx-auto aspect-[9/16] w-[min(calc(100vw-2rem),calc(min(80svh,calc(100dvh-8rem))*9/16))] max-h-[min(80svh,calc(100dvh-8rem))] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
 
@@ -174,7 +177,7 @@ export function LarpResult({
 
   return (
     <>
-      <div className="flex min-w-0 max-w-full justify-center gap-4">
+      <div className="flex min-w-0 max-w-full shrink-0 justify-center gap-4">
         {resultUrls.map((url, index) => {
           const isVideo = resultType === "video" || isVideoResultUrl(url);
 
@@ -182,14 +185,16 @@ export function LarpResult({
           <div
             key={index}
             className={
-              isVideo
-                ? "flex w-full max-w-full flex-col items-center gap-3"
-                : ""
+              isVideo ? "flex shrink-0 flex-col items-center gap-3" : "shrink-0"
             }
           >
             <div className={LARP_RESULT_FRAME_CLASS}>
               {isVideo ? (
-                <VideoResultPlayer src={url} poster={posterUrl} />
+                <VideoResultPlayer
+                  src={url}
+                  poster={posterUrl}
+                  objectFit="cover"
+                />
               ) : (
                 <>
                   <img

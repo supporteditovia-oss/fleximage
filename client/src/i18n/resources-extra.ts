@@ -182,6 +182,7 @@ export const extraResources = {
       imageAlt: "Image {{index}}",
     },
     progress: {
+      preparing: "Préparation…",
       connectionError: "Erreur de connexion",
       generationFailed: "Échec de la génération",
       generationFailedDefault: "Une erreur est survenue lors de la génération.",
@@ -496,6 +497,7 @@ export const extraResources = {
       imageAlt: "Image {{index}}",
     },
     progress: {
+      preparing: "Preparing…",
       connectionError: "Connection error",
       generationFailed: "Generation failed",
       generationFailedDefault: "An error occurred during generation.",
@@ -793,6 +795,7 @@ export const extraResources = {
       imageAlt: "Imagen {{index}}",
     },
     progress: {
+      preparing: "Preparando…",
       connectionError: "Error de conexion",
       generationFailed: "Error en la generacion",
       generationFailedDefault: "Se produjo un error durante la generacion.",
@@ -1092,6 +1095,7 @@ export const extraResources = {
       imageAlt: "Bild {{index}}",
     },
     progress: {
+      preparing: "Vorbereitung…",
       connectionError: "Verbindungsfehler",
       generationFailed: "Generierung fehlgeschlagen",
       generationFailedDefault: "Bei der Generierung ist ein Fehler aufgetreten.",
