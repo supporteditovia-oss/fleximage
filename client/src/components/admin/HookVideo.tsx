@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 import {
   createCanvasSafeImageUrl,
   drawCoverImage,
-  getSupportedVideoMimeType,
   loadDrawableImage,
 } from "@/lib/canvas-image";
 import { downloadVideoAsMp4 } from "@/lib/video-export";
+import { recordCanvasTimeline } from "@/lib/canvas-recorder";
 
 // --- Hook model -------------------------------------------------------------
 // First half shows the "avant" image, second half the "après" image. The first
@@ -179,47 +179,19 @@ export async function exportHookVideo({
 
   const durationMs = durationSeconds * 1000;
 
-  const drawFrame = (elapsedMs: number) => {
-    const { phase, scale } = hookStateAt(elapsedMs, durationMs);
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT);
-    const image = phase === "before" ? beforeImage : afterImage;
-    drawCoverImage(ctx, image, 0, 0, EXPORT_WIDTH, EXPORT_HEIGHT, scale);
-  };
-
-  const stream = canvas.captureStream(EXPORT_FPS);
-  const mimeType = getSupportedVideoMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  const chunks: BlobPart[] = [];
-  const stopped = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error("Erreur pendant l'enregistrement"));
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
+  const blob = await recordCanvasTimeline({
+    canvas,
+    fps: EXPORT_FPS,
+    durationMs,
+    drawFrame: (elapsedMs) => {
+      const { phase, scale } = hookStateAt(elapsedMs, durationMs);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT);
+      const image = phase === "before" ? beforeImage : afterImage;
+      drawCoverImage(ctx, image, 0, 0, EXPORT_WIDTH, EXPORT_HEIGHT, scale);
+    },
   });
 
-  recorder.start();
-  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-  const startedAt = performance.now();
-
-  await new Promise<void>((resolve) => {
-    const tick = () => {
-      const elapsedMs = performance.now() - startedAt;
-      drawFrame(Math.min(durationMs, elapsedMs));
-      videoTrack.requestFrame?.();
-      if (elapsedMs >= durationMs) {
-        resolve();
-        return;
-      }
-      window.setTimeout(tick, 1000 / EXPORT_FPS);
-    };
-    tick();
-  });
-
-  recorder.stop();
-  const blob = await stopped;
-  stream.getTracks().forEach((track) => track.stop());
   objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   await downloadVideoAsMp4(blob, filename);
 }

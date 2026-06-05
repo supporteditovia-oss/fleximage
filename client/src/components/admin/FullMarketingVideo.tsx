@@ -2,11 +2,11 @@ import {
   createCanvasSafeImageUrl,
   createGrainPattern,
   drawCoverImage,
-  getSupportedVideoMimeType,
   loadDrawableImage,
   roundedRectPath,
 } from "@/lib/canvas-image";
 import { downloadVideoAsMp4 } from "@/lib/video-export";
+import { recordCanvasTimeline } from "@/lib/canvas-recorder";
 import { hookStateAt } from "@/components/admin/HookVideo";
 import {
   buildWritingTimeline,
@@ -202,25 +202,11 @@ export async function exportFullMarketingVideo({
   const loaderOutputMs = loaderTimelineMs / loaderSpeedMultiplier;
   const totalMs = hookDurationMs + writingTimeline.totalMs + loaderOutputMs;
 
-  const stream = canvas.captureStream(EXPORT_FPS);
-  const mimeType = getSupportedVideoMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  const chunks: BlobPart[] = [];
-  const stopped = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error("Erreur pendant l'enregistrement"));
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
-  });
-
-  recorder.start();
-  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-  const startedAt = performance.now();
-
-  await new Promise<void>((resolve) => {
-    const tick = () => {
-      const elapsedMs = performance.now() - startedAt;
+  const blob = await recordCanvasTimeline({
+    canvas,
+    fps: EXPORT_FPS,
+    durationMs: totalMs,
+    drawFrame: (elapsedMs) => {
       if (elapsedMs < hookDurationMs) {
         drawHookScene(ctx, beforeImage, afterImage, elapsedMs, hookDurationMs);
       } else if (elapsedMs < hookDurationMs + writingTimeline.totalMs) {
@@ -233,7 +219,9 @@ export async function exportFullMarketingVideo({
           grainPattern,
         });
       } else {
-        const loaderElapsed = (elapsedMs - hookDurationMs - writingTimeline.totalMs) * loaderSpeedMultiplier;
+        const loaderElapsed =
+          (elapsedMs - hookDurationMs - writingTimeline.totalMs) *
+          loaderSpeedMultiplier;
         drawLoaderScene({
           ctx,
           beforeImage,
@@ -243,20 +231,9 @@ export async function exportFullMarketingVideo({
           grainPattern,
         });
       }
-
-      videoTrack.requestFrame?.();
-      if (elapsedMs >= totalMs) {
-        resolve();
-        return;
-      }
-      window.setTimeout(tick, 1000 / EXPORT_FPS);
-    };
-    tick();
+    },
   });
 
-  recorder.stop();
-  const blob = await stopped;
-  stream.getTracks().forEach((track) => track.stop());
   objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   await downloadVideoAsMp4(blob, filename);
 }

@@ -14,11 +14,11 @@ import {
   createCanvasSafeImageUrl,
   createGrainPattern,
   drawCoverImage,
-  getSupportedVideoMimeType,
   loadDrawableImage,
   roundedRectPath,
 } from "@/lib/canvas-image";
 import { downloadVideoAsMp4 } from "@/lib/video-export";
+import { recordCanvasTimeline } from "@/lib/canvas-recorder";
 import {
   KeyboardWritingPreview,
   clampWritingSpeed,
@@ -400,21 +400,9 @@ async function exportLoaderVideo({
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas non supporté");
 
-  const stream = canvas.captureStream(LOADER_EXPORT_FPS);
-  const mimeType = getSupportedVideoMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  const chunks: BlobPart[] = [];
   const grainPattern = createGrainPattern(ctx);
   const timelineTotalMs = LOADER_LOGO_START_MS + durationSeconds * 1000;
   const outputTotalMs = timelineTotalMs / speedMultiplier;
-
-  const stopped = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error("Erreur pendant l'enregistrement"));
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
-  });
 
   const drawFrame = (elapsedMs: number) => {
     ctx.save();
@@ -514,30 +502,14 @@ async function exportLoaderVideo({
     ctx.restore();
   };
 
-  recorder.start();
-  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-  const startedAt = performance.now();
-
-  await new Promise<void>((resolve) => {
-    const tick = () => {
-      const elapsedMs = performance.now() - startedAt;
-      const timelineElapsedMs = elapsedMs * speedMultiplier;
-      drawFrame(Math.min(timelineTotalMs, timelineElapsedMs));
-      videoTrack.requestFrame?.();
-
-      if (elapsedMs >= outputTotalMs) {
-        resolve();
-        return;
-      }
-
-      window.setTimeout(tick, 1000 / LOADER_EXPORT_FPS);
-    };
-    tick();
+  const blob = await recordCanvasTimeline({
+    canvas,
+    fps: LOADER_EXPORT_FPS,
+    durationMs: outputTotalMs,
+    drawFrame: (elapsedMs) =>
+      drawFrame(Math.min(timelineTotalMs, elapsedMs * speedMultiplier)),
   });
 
-  recorder.stop();
-  const blob = await stopped;
-  stream.getTracks().forEach((track) => track.stop());
   objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   await downloadVideoAsMp4(blob, filename);
 }

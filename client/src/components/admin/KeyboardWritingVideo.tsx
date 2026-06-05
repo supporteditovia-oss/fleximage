@@ -4,11 +4,11 @@ import {
   createCanvasSafeImageUrl,
   createGrainPattern,
   drawCoverImage,
-  getSupportedVideoMimeType,
   loadDrawableImage,
   roundedRectPath,
 } from "@/lib/canvas-image";
 import { downloadVideoAsMp4 } from "@/lib/video-export";
+import { recordCanvasTimeline } from "@/lib/canvas-recorder";
 
 // --- Timing model -----------------------------------------------------------
 // Duration is derived automatically from the prompt length. Speed (x1 = normal)
@@ -862,50 +862,22 @@ export async function exportKeyboardWritingVideo({
 
   const timeline = buildWritingTimeline(prompt, speedMultiplier);
   const grainPattern = createGrainPattern(ctx);
-  const drawFrame = (elapsedMs: number) => {
-    drawKeyboardWritingFrame(ctx, {
-      prompt,
-      beforeImage,
-      speedMultiplier,
-      elapsedMs,
-      isPlaying: true,
-      grainPattern,
-    });
-  };
 
-  const stream = canvas.captureStream(EXPORT_FPS);
-  const mimeType = getSupportedVideoMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  const chunks: BlobPart[] = [];
-  const stopped = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-    recorder.onerror = () => reject(new Error("Erreur pendant l'enregistrement"));
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
+  const blob = await recordCanvasTimeline({
+    canvas,
+    fps: EXPORT_FPS,
+    durationMs: timeline.totalMs,
+    drawFrame: (elapsedMs) =>
+      drawKeyboardWritingFrame(ctx, {
+        prompt,
+        beforeImage,
+        speedMultiplier,
+        elapsedMs,
+        isPlaying: true,
+        grainPattern,
+      }),
   });
 
-  recorder.start();
-  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-  const startedAt = performance.now();
-
-  await new Promise<void>((resolve) => {
-    const tick = () => {
-      const elapsedMs = performance.now() - startedAt;
-      drawFrame(Math.min(timeline.totalMs, elapsedMs));
-      videoTrack.requestFrame?.();
-      if (elapsedMs >= timeline.totalMs) {
-        resolve();
-        return;
-      }
-      window.setTimeout(tick, 1000 / EXPORT_FPS);
-    };
-    tick();
-  });
-
-  recorder.stop();
-  const blob = await stopped;
-  stream.getTracks().forEach((track) => track.stop());
   objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   await downloadVideoAsMp4(blob, filename);
 }
