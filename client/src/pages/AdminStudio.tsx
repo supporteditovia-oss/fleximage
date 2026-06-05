@@ -18,6 +18,7 @@ import {
   loadDrawableImage,
   roundedRectPath,
 } from "@/lib/canvas-image";
+import { downloadVideoAsMp4 } from "@/lib/video-export";
 import {
   KeyboardWritingPreview,
   clampWritingSpeed,
@@ -412,7 +413,7 @@ async function exportLoaderVideo({
       if (event.data.size > 0) chunks.push(event.data);
     };
     recorder.onerror = () => reject(new Error("Erreur pendant l'enregistrement"));
-    recorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
   });
 
   const drawFrame = (elapsedMs: number) => {
@@ -536,16 +537,9 @@ async function exportLoaderVideo({
 
   recorder.stop();
   const blob = await stopped;
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
   stream.getTracks().forEach((track) => track.stop());
   objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+  await downloadVideoAsMp4(blob, filename);
 }
 
 function AspectImageSlot({
@@ -1136,7 +1130,7 @@ export default function AdminStudio() {
         sourceUrl,
         durationSeconds: activeVideo.loaderDurationSeconds,
         speedMultiplier: activeVideo.loaderSpeedMultiplier,
-        filename: `larpking-loader-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.webm`,
+        filename: `larpking-loader-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
       toast({
         title: "Vidéo téléchargée",
@@ -1194,7 +1188,7 @@ export default function AdminStudio() {
         prompt: activeVideo.writingPrompt,
         beforeImageUrl,
         speedMultiplier: activeVideo.writingSpeedMultiplier,
-        filename: `larpking-ecriture-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.webm`,
+        filename: `larpking-ecriture-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
       toast({
         title: "Vidéo téléchargée",
@@ -1252,7 +1246,7 @@ export default function AdminStudio() {
         beforeImageUrl,
         afterImageUrl,
         durationSeconds: activeVideo.hookDurationSeconds,
-        filename: `larpking-hook-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.webm`,
+        filename: `larpking-hook-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
       toast({
         title: "Vidéo téléchargée",
@@ -1292,7 +1286,7 @@ export default function AdminStudio() {
         hookDurationSeconds: activeVideo.hookDurationSeconds,
         loaderDurationSeconds: activeVideo.loaderDurationSeconds,
         loaderSpeedMultiplier: activeVideo.loaderSpeedMultiplier,
-        filename: `larpking-video-complete-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.webm`,
+        filename: `larpking-video-complete-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
       toast({
         title: "Vidéo complète téléchargée",
