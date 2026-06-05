@@ -1,3 +1,4 @@
+import { Play } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -59,19 +60,31 @@ export function VideoResultPlayer({
     }
   }, [autoPlay]);
 
+  const togglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      void video.play();
+      return;
+    }
+
+    video.pause();
+  }, []);
+
   const showPosterLayer = Boolean(poster) && !isPlaying && !frameVisible;
   const objectClass =
     objectFit === "cover" ? "object-cover" : "object-contain";
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
       {poster && (
         <img
           src={poster}
           alt=""
           aria-hidden
           className={cn(
-            "absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
+            "absolute inset-0 h-full w-full rounded-[inherit] object-cover transition-opacity duration-200",
             showPosterLayer ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
         />
@@ -86,7 +99,7 @@ export function VideoResultPlayer({
         muted={muted || autoPlay}
         autoPlay={autoPlay}
         className={cn(
-          "absolute inset-0 h-full w-full transition-opacity duration-200",
+          "absolute inset-0 h-full w-full rounded-[inherit] transition-opacity duration-200",
           objectClass,
           showPosterLayer ? "opacity-0" : "opacity-100",
           className,
@@ -100,6 +113,24 @@ export function VideoResultPlayer({
         }}
         onPause={() => setIsPlaying(false)}
       />
+      {!controls && !isPlaying ? (
+        <button
+          type="button"
+          onClick={togglePlayback}
+          className="absolute left-1/2 top-1/2 z-20 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/55 active:scale-95"
+          aria-label="Play video"
+        >
+          <Play className="ml-0.5 h-7 w-7 fill-current" />
+        </button>
+      ) : null}
+      {!controls && isPlaying ? (
+        <button
+          type="button"
+          onClick={togglePlayback}
+          className="absolute inset-0 z-10 cursor-default"
+          aria-label="Pause video"
+        />
+      ) : null}
     </div>
   );
 }

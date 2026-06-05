@@ -114,7 +114,9 @@ export function BottomDock() {
   const dockIconClass = (active: boolean) =>
     cn(
       "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 md:w-9 md:h-9",
-      active ? "bg-primary/10 shadow-sm" : "group-hover:bg-muted/60",
+      active
+        ? "bg-primary/10 shadow-sm group-hover:!bg-muted/60"
+        : "group-hover:bg-muted/60",
     );
 
   return (

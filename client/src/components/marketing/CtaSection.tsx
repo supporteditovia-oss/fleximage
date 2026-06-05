@@ -8,7 +8,7 @@ export default function CtaSection() {
   const { t } = useTranslation();
 
   return (
-    <section className="border-y border-border/70 bg-white/45 px-4 py-16 md:py-24">
+    <section className="border-b border-border/70 px-4 py-16 md:py-24">
       <div className="max-w-2xl mx-auto text-center">
         <h2 className="font-display text-2xl md:text-3xl font-bold">
           {t("cta.title")}

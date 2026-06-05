@@ -166,31 +166,16 @@ export function GenerationProgress({
         hasResultMedia &&
         createPortal(
           <div
-            className="fixed inset-0 z-30 flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center gap-6 overflow-hidden px-4 pt-24 pb-24 animate-in fade-in duration-500 bg-background bg-grid"
+            className="fixed inset-0 z-30 flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center gap-3 overflow-hidden px-4 pb-20 pt-20 animate-in fade-in duration-500 bg-background bg-grid md:gap-6 md:pb-24 md:pt-24"
           >
-            {/* Title with SVG underline */}
             <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
-              <span className="relative inline-block">
+              <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
                 {t("progress.resultTitle")}
-                <svg
-                  className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
-                  viewBox="0 0 100 12"
-                  fill="none"
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M2 8 Q 50 2 98 8"
-                    stroke="currentColor"
-                    strokeWidth="5"
-                    strokeLinecap="round"
-                  ></path>
-                </svg>
               </span>
             </h1>
 
             {/* LARP result with download/share actions */}
-            <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 py-2 [&>*]:shrink-0">
+            <div className="relative flex min-h-0 min-w-0 w-full items-center justify-center overflow-visible px-2 py-1 md:py-2 [&>*]:shrink-0">
               <LarpResult
                 resultUrls={data.resultUrls}
                 larpId={data.larpId}

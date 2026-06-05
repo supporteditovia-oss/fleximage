@@ -177,7 +177,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`floating-header-credits absolute right-0 flex items-center gap-1.5 rounded-full border border-border/80 bg-white/85 px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm shadow-black/10 backdrop-blur-xl transition hover:bg-white pointer-events-auto ${
+                className={`floating-header-credits absolute right-0 flex items-center gap-1.5 rounded-lg border border-border/80 bg-white/85 px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm shadow-black/10 backdrop-blur-xl transition hover:bg-white pointer-events-auto ${
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}

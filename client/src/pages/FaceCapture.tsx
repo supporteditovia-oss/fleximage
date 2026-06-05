@@ -32,7 +32,7 @@ export default function FaceCapture() {
   const storeFaceCaptures = useStoreFaceCaptures();
   const latestFaceCapture = useLatestFaceCapture();
   const deleteLatestFaceCapture = useDeleteLatestFaceCapture();
-  const [showCapture, setShowCapture] = React.useState(false);
+  const [showCapture, setShowCapture] = React.useState(true);
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
   const [storedThumbnailUrl, setStoredThumbnailUrl] = React.useState<string | null>(null);
   const [storedThumbnailsLoading, setStoredThumbnailsLoading] = React.useState(false);
@@ -111,15 +111,14 @@ export default function FaceCapture() {
 
   const handleComplete = React.useCallback(
     async (poses: CapturedPose[]) => {
-      setShowCapture(false);
-      const compositeBlob = await composeFaceCaptureBlobs(poses.map((pose) => pose.blob));
-      setThumbnailUrl((previousUrl) => {
-        if (previousUrl) URL.revokeObjectURL(previousUrl);
-        return URL.createObjectURL(compositeBlob);
-      });
-      await storeFaceCaptures.mutateAsync(poses).catch(() => undefined);
+      try {
+        await storeFaceCaptures.mutateAsync(poses);
+        navigate("/generate");
+      } catch {
+        setShowCapture(false);
+      }
     },
-    [storeFaceCaptures],
+    [navigate, storeFaceCaptures],
   );
 
   const handleDelete = React.useCallback(async () => {
@@ -134,6 +133,10 @@ export default function FaceCapture() {
     clearStoredThumbnails();
     storeFaceCaptures.reset();
   }, [clearStoredThumbnails, deleteLatestFaceCapture, storeFaceCaptures, thumbnailUrl]);
+
+  const handleCancelCapture = React.useCallback(() => {
+    navigate("/generate");
+  }, [navigate]);
 
   const isSaving = storeFaceCaptures.isPending;
   const isSaved = Boolean(storeFaceCaptures.data);
@@ -159,18 +162,37 @@ export default function FaceCapture() {
       : deleteLatestFaceCapture.isError
         ? deleteLatestFaceCapture.error.message
         : storedThumbnailsError?.message ?? null;
+  const shouldLeaveEmptyCaptureState =
+    !showCapture &&
+    !hasDisplayCapture &&
+    !hasError &&
+    !isLoadingExistingCapture &&
+    !isSaving &&
+    !deleteLatestFaceCapture.isPending;
+
+  React.useEffect(() => {
+    if (shouldLeaveEmptyCaptureState) {
+      navigate("/generate");
+    }
+  }, [navigate, shouldLeaveEmptyCaptureState]);
+
+  if (showCapture) {
+    return (
+      <FaceCaptureView
+        language={captureLanguage}
+        posesToCapture={REQUIRED_CAPTURE_POSES}
+        onCancel={handleCancelCapture}
+        onComplete={handleComplete}
+      />
+    );
+  }
+
+  if (shouldLeaveEmptyCaptureState) {
+    return null;
+  }
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 text-foreground md:h-[calc(100svh-12rem)] md:overflow-hidden md:py-0">
-      {showCapture ? (
-        <FaceCaptureView
-          language={captureLanguage}
-          posesToCapture={REQUIRED_CAPTURE_POSES}
-          onCancel={() => setShowCapture(false)}
-          onComplete={handleComplete}
-        />
-      ) : null}
-
       <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
         <button
           type="button"
@@ -266,17 +288,7 @@ export default function FaceCapture() {
                     <RefreshCw className="h-4 w-4" />
                     {copy(language, { en: "Retake", fr: "Reprendre" })}
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => setShowCapture(true)}
-                    disabled={isSaving}
-                    className="gap-2 rounded-full"
-                  >
-                    <ScanFace className="h-4 w-4" />
-                    {copy(language, { en: "Start capture", fr: "D\u00e9marrer la capture" })}
-                  </Button>
-                )}
+                ) : null}
 
                 {showDeleteCapture ? (
                   <Button

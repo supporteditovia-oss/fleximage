@@ -110,6 +110,10 @@ export const extraResources = {
       useFace: "Utiliser mon visage",
       useFaceDisabledTooltip:
         "Scanne ton visage (face + profils) pour activer cette option.",
+      faceScanPromptTitle: "Scanne ta tête",
+      faceScanPromptSubtitle: "Tu dois créer ton scan visage avant d'activer cette option.",
+      faceScanPromptDescription:
+        "On a besoin de ton visage de face et de profil pour générer des LARPs cohérents avec toi.",
       faceRequiredForTemplate:
         "Ce template nécessite ton visage pour toutes ses images de référence.",
       loadingFace: "Vérification des photos visage…",
@@ -301,7 +305,7 @@ export const extraResources = {
       item3: "Manger dans des restaurants haut de gamme",
       item4: "Voyage et tourisme de luxe",
       item5: "Montrer des captures de revenus",
-      item6: "?tre entour? de filles canon",
+      item6: "Être entouré de filles canon",
       item7: "Cr\u00e9er de fausses sc\u00e8nes de travail ou d'entreprise",
       item8: "Faire croire que tu fr\u00e9quentes des femmes canon",
       cta: "Cr\u00e9er mon LARP",
@@ -425,6 +429,10 @@ export const extraResources = {
       useFace: "Use my face",
       useFaceDisabledTooltip:
         "Scan your face (front + profiles) to enable this option.",
+      faceScanPromptTitle: "Scan your face",
+      faceScanPromptSubtitle: "Create your face scan before enabling this option.",
+      faceScanPromptDescription:
+        "We need front and profile face photos to generate LARPs that look consistent with you.",
       faceRequiredForTemplate:
         "This template requires your face for all of its reference images.",
       loadingFace: "Checking face photos…",

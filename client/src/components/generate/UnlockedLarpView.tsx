@@ -21,28 +21,14 @@ export function UnlockedLarpView({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 h-[calc(100dvh-12.5rem)] animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex h-[calc(100dvh-12.5rem)] flex-col items-center justify-center gap-3 overflow-hidden px-4 py-4 animate-in fade-in duration-500">
       <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
-        <span className="relative inline-block">
+        <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
           {t("generate.resultTitle")}
-          <svg
-            className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
-            viewBox="0 0 100 12"
-            fill="none"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M2 8 Q 50 2 98 8"
-              stroke="currentColor"
-              strokeWidth="5"
-              strokeLinecap="round"
-            ></path>
-          </svg>
         </span>
       </h1>
 
-      <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-hidden px-2 [&>*]:shrink-0">
+      <div className="relative flex min-h-0 min-w-0 w-full items-center justify-center overflow-visible px-2 [&>*]:shrink-0">
         <LarpResult
           resultUrls={resultUrls}
           larpId={larpId}

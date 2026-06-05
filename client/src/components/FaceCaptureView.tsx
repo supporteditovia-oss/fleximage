@@ -353,7 +353,7 @@ export function FaceCaptureView({
               <button
                 type="button"
                 onClick={onCancel}
-                className="mt-6 flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm transition-colors"
+                className="mt-6 flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm transition-colors"
                 style={{
                   borderColor: 'hsl(235 18% 29% / 0.95)',
                   color: 'hsl(225 18% 72%)',
@@ -475,14 +475,14 @@ export function FaceCaptureView({
             >
               <button
                 type="button"
-                className="flex-1 rounded-full border border-black/12 bg-white px-4 py-3 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:bg-zinc-50"
+                className="flex-1 rounded-lg border border-black/12 bg-white px-4 py-3 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:bg-zinc-50"
                 onClick={() => setCancelConfirmOpen(false)}
               >
                 {i18n(language, { en: "Keep capturing", fr: "Continuer la capture" })}
               </button>
               <button
                 type="button"
-                className="flex-1 rounded-full border border-red-300/80 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm transition-all hover:bg-red-100"
+                className="flex-1 rounded-lg border border-red-300/80 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm transition-all hover:bg-red-100"
                 onClick={() => {
                   setCancelConfirmOpen(false);
                   stop();
@@ -496,7 +496,7 @@ export function FaceCaptureView({
             <button
               type="button"
               onClick={() => setCancelConfirmOpen(true)}
-              className="group flex w-full items-center justify-center gap-2 rounded-full border border-black/12 bg-white px-4 py-3 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:bg-zinc-50"
+              className="group flex w-full items-center justify-center gap-2 rounded-lg border border-black/12 bg-white px-4 py-3 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:bg-zinc-50"
             >
               <svg
                 className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"

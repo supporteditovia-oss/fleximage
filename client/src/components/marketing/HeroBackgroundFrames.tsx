@@ -115,16 +115,23 @@ function FrameRow({
   placeholders,
   duration,
   offsetY,
+  mobileOffsetY,
 }: {
   items: LandingMarqueeImage[];
   placeholders: boolean;
   duration: number;
   offsetY: string;
+  mobileOffsetY: string;
 }) {
   return (
     <div
-      className="absolute left-0 right-0 flex overflow-hidden gap-4"
-      style={{ top: offsetY }}
+      className="absolute left-0 right-0 top-[var(--mobile-offset-y)] flex overflow-hidden gap-4 md:top-[var(--desktop-offset-y)]"
+      style={
+        {
+          "--mobile-offset-y": mobileOffsetY,
+          "--desktop-offset-y": offsetY,
+        } as React.CSSProperties
+      }
     >
       {[0, 1].map((track) => (
         <div
@@ -191,23 +198,25 @@ export default function HeroBackgroundFrames() {
       aria-hidden="true"
     >
       <div
-        className="absolute inset-0 opacity-90 max-md:[mask-image:none] md:opacity-85 md:[mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
+        className="absolute inset-0 opacity-90 [mask-image:radial-gradient(ellipse_min(300px,88vw)_min(500px,55vh)_at_50%_55%,transparent_0%,transparent_36%,rgba(0,0,0,0.35)_54%,black_74%)] md:opacity-85 md:[mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
       >
         <FrameRow
           items={row1}
           placeholders={!hasData}
           duration={55}
+          mobileOffsetY="calc(50% - 7.25rem)"
           offsetY="calc(50% - 4.5rem)"
         />
         <FrameRow
           items={row2}
           placeholders={!hasData}
           duration={42}
+          mobileOffsetY="calc(50% - 1.25rem)"
           offsetY="calc(50% + 1.5rem)"
         />
       </div>
 
-      <div className="absolute inset-0 md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(280px,86vw)_min(450px,54vh)_at_50%_55%,rgba(255,255,255,0.3)_0%,rgba(255,255,255,0.16)_42%,transparent_68%)] md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
     </div>
   );
 }

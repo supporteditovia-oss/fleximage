@@ -262,22 +262,8 @@ export default function Settings() {
     <div className="space-y-10 pt-20 max-w-lg mx-auto">
       {/* Page title */}
       <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
-        <span className="relative inline-block">
+        <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
           {t("settings.title")}
-          <svg
-            className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
-            viewBox="0 0 100 12"
-            fill="none"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M2 8 Q 50 2 98 8"
-              stroke="currentColor"
-              strokeWidth="5"
-              strokeLinecap="round"
-            />
-          </svg>
         </span>
       </h1>
 

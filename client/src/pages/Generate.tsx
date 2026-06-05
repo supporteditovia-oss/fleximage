@@ -22,8 +22,17 @@ import { InsufficientCreditsDialog } from "@/components/generate/InsufficientCre
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
@@ -53,6 +62,7 @@ import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { templateRequiresFaceCapture, templateSupportsGenerationMode, getTemplateDefaultGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const FAKE_LOADER_MIN_DELAY_MS = 10_000;
 const FAKE_LOADER_MAX_DELAY_MS = 20_000;
@@ -78,6 +88,10 @@ function getRandomFakeLoaderDelay() {
 export default function Generate() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const isMobile = useIsMobile();
+  const [isReturningFromCheckout] = useState(() => {
+    return new URLSearchParams(window.location.search).get("checkout") === "success";
+  });
   // ── Form state ──────────────────────────────────────────────
   const [prompt, setPrompt] = useState("");
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([
@@ -94,7 +108,7 @@ export default function Generate() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
-  const [pendingLoading, setPendingLoading] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
   const [transitionBg, setTransitionBg] = useState(false);
 
   // ── Fake generation / paywall state ─────────────────────────
@@ -106,6 +120,7 @@ export default function Generate() {
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
   const [insufficientCreditsOpen, setInsufficientCreditsOpen] = useState(false);
   const [creditsPaywallOpen, setCreditsPaywallOpen] = useState(false);
+  const [faceScanPromptOpen, setFaceScanPromptOpen] = useState(false);
   const [insufficientCreditsContext, setInsufficientCreditsContext] =
     useState<InsufficientCreditsContext>({
       currentCredits: 0,
@@ -146,10 +161,23 @@ export default function Generate() {
     setUseFaceAsset(faceCaptureReady);
   }, [faceCaptureReady, selectedTemplate?.id]);
 
-  // Store checkout state early before URL gets cleaned
-  const [isReturningFromCheckout] = useState(() => {
-    return new URLSearchParams(window.location.search).get("checkout") === "success";
-  });
+  const handleUseFaceAssetChange = useCallback(
+    (value: boolean) => {
+      if (value && !faceCaptureReady) {
+        setUseFaceAsset(false);
+        setFaceScanPromptOpen(true);
+        return;
+      }
+
+      setUseFaceAsset(value);
+    },
+    [faceCaptureReady],
+  );
+
+  const handleStartFaceScan = useCallback(() => {
+    setFaceScanPromptOpen(false);
+    navigate("/face-capture");
+  }, [navigate]);
 
   // ── Stripe checkout return ──────────────────────────────────
   useEffect(() => {
@@ -307,6 +335,7 @@ export default function Generate() {
           generationMode: pending.generationMode ?? "image",
           templateId: pending.templateId ?? null,
         });
+        setPendingLoading(true);
         setGenerationMode(pending.generationMode ?? "image");
         setPendingTemplateId(pending.templateId ?? null);
         if (pending.prompt) setPrompt(pending.prompt);
@@ -1035,6 +1064,25 @@ export default function Generate() {
   const paywallOverlayInnerClassName =
     "absolute inset-x-0 top-20 bottom-0 flex min-h-0 items-stretch justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:top-24 md:bottom-10";
 
+  const faceScanPromptContent = (
+    <div className="w-full space-y-4">
+      <p className="text-center text-sm font-medium leading-5 text-foreground">
+        {t("templateSelected.faceScanPromptSubtitle")}
+      </p>
+      <p className="text-center text-xs font-medium leading-5 text-muted-foreground">
+        {t("templateSelected.faceScanPromptDescription")}
+      </p>
+      <Button
+        type="button"
+        onClick={handleStartFaceScan}
+        className="h-10 w-full rounded-lg text-sm font-semibold"
+      >
+        <ScanFace className="mr-2 h-4 w-4" />
+        {t("generate.scanFace")}
+      </Button>
+    </div>
+  );
+
   // ════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════
@@ -1188,36 +1236,17 @@ export default function Generate() {
             </div>
           </div>
 
-          <div className="relative z-20 w-full max-w-md md:hidden">
-            {latestFaceCapture.isLoading ? (
-              <div className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border/80 bg-white/85 text-sm font-medium text-muted-foreground shadow-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("templateSelected.loadingFace")}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate("/face-capture")}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary px-4 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform active:scale-95"
-              >
-                <ScanFace className="h-4 w-4 shrink-0" />
-                {t("generate.scanFace")}
-              </button>
-            )}
-          </div>
-
           {selectedTemplate ? (
             <TemplateSelectedPanel
               template={selectedTemplate}
               generationMode={generationMode}
               requiresFaceCapture={templateRequiresFaceCapture(selectedTemplate)}
               useFaceAsset={useFaceAsset}
-              onUseFaceAssetChange={setUseFaceAsset}
+              onUseFaceAssetChange={handleUseFaceAssetChange}
               faceCaptureReady={faceCaptureReady}
               faceCaptureLoading={latestFaceCapture.isLoading}
               onDeselect={deselectTemplate}
               onGenerate={handleGenerate}
-              onScanFace={() => navigate("/face-capture")}
               isGenerating={isSubmittingGeneration}
             />
           ) : (
@@ -1242,11 +1271,9 @@ export default function Generate() {
               <FaceAssetControls
                 idPrefix="free-prompt-face-asset"
                 useFaceAsset={useFaceAsset}
-                onUseFaceAssetChange={setUseFaceAsset}
+                onUseFaceAssetChange={handleUseFaceAssetChange}
                 faceCaptureReady={faceCaptureReady}
                 faceCaptureLoading={latestFaceCapture.isLoading}
-                onScanFace={() => navigate("/face-capture")}
-                scanButtonVariant="pill"
               />
             </>
           )}
@@ -1279,6 +1306,36 @@ export default function Generate() {
         generationMode={insufficientCreditsContext.generationMode}
         onUpgrade={openCreditsPaywall}
       />
+
+      {isMobile ? (
+        <Drawer open={faceScanPromptOpen} onOpenChange={setFaceScanPromptOpen}>
+          <DrawerContent className="rounded-t-2xl border-border/70 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <DrawerHeader className="w-full px-0 pb-3 pt-4 text-center">
+              <DrawerTitle className="flex items-center justify-center gap-2 font-display text-2xl font-bold">
+                <ScanFace className="h-5 w-5" />
+                {t("templateSelected.faceScanPromptTitle")}
+              </DrawerTitle>
+              <DrawerDescription className="sr-only">
+                {t("templateSelected.faceScanPromptDescription")}
+              </DrawerDescription>
+            </DrawerHeader>
+            {faceScanPromptContent}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={faceScanPromptOpen} onOpenChange={setFaceScanPromptOpen}>
+          <DialogContent className="w-[min(calc(100vw-2rem),28rem)] rounded-2xl border border-border/70 bg-white p-6 shadow-2xl">
+            <DialogTitle className="flex items-center justify-center gap-2 text-center font-display text-2xl font-bold">
+              <ScanFace className="h-5 w-5" />
+              {t("templateSelected.faceScanPromptTitle")}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("templateSelected.faceScanPromptDescription")}
+            </DialogDescription>
+            {faceScanPromptContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
         <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-hidden rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">

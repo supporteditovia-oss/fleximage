@@ -86,6 +86,9 @@ function assertStripeKeyAllowedForRuntime(secretKey: string): void {
 export function validateStripeRuntimeConfig(): void {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
+    if (process.env.NODE_ENV !== "production") {
+      return;
+    }
     throw new Error("STRIPE_SECRET_KEY must be set");
   }
   assertStripeKeyAllowedForRuntime(secretKey);

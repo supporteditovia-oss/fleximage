@@ -17,7 +17,6 @@ interface TemplateSelectedPanelProps {
   faceCaptureLoading: boolean;
   onDeselect: () => void;
   onGenerate: () => void;
-  onScanFace: () => void;
   isGenerating: boolean;
 }
 
@@ -31,7 +30,6 @@ export function TemplateSelectedPanel({
   faceCaptureLoading,
   onDeselect,
   onGenerate,
-  onScanFace,
   isGenerating,
 }: TemplateSelectedPanelProps) {
   const { t, i18n } = useTranslation();
@@ -54,7 +52,7 @@ export function TemplateSelectedPanel({
         <button
           type="button"
           onClick={onDeselect}
-          className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
+          className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-black/55 text-white transition-colors hover:bg-black/75"
           aria-label={t("templateSelected.deselect")}
         >
           <X className="h-4 w-4" />
@@ -98,7 +96,6 @@ export function TemplateSelectedPanel({
         onUseFaceAssetChange={onUseFaceAssetChange}
         faceCaptureReady={faceCaptureReady}
         faceCaptureLoading={faceCaptureLoading}
-        onScanFace={onScanFace}
       />
 
       {requiresFaceCapture && !useFaceAsset && (

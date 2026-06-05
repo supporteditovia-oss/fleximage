@@ -57,14 +57,14 @@ export function PromptInputBar({
           />
           <button
             onClick={shuffleIdea}
-            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
+            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
             title={t("promptInput.randomIdea")}
             type="button"
           >
             <Shuffle className="w-4 h-4" />
           </button>
           <button
-            className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+            className="shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
             onClick={onGenerate}
             disabled={isGenerating || !canGenerate}
             type="button"

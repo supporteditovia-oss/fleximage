@@ -14,7 +14,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
@@ -32,11 +32,29 @@ import {
  */
 /** Height-first 9:16 — avoids flex parents collapsing width-based frames to 0. */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-14rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl";
+  "relative isolate mx-auto shrink-0 bg-black shadow-xl";
 
 /** Fullscreen portal viewer — same height-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
   "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-8rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
+
+const RESULT_FRAME_RADIUS_PX = 8;
+const RESULT_FRAME_RADIUS = `${RESULT_FRAME_RADIUS_PX}px`;
+const RESULT_FRAME_CLIP_PATH = `inset(0 round ${RESULT_FRAME_RADIUS})`;
+const RESULT_FRAME_STYLE: CSSProperties = {
+  aspectRatio: "9 / 16",
+  height: "min(66svh, calc(100dvh - 18rem))",
+  width: "auto",
+  maxWidth: "min(calc(100vw - 2rem), 100%)",
+  overflow: "hidden",
+  borderRadius: RESULT_FRAME_RADIUS,
+  clipPath: RESULT_FRAME_CLIP_PATH,
+  WebkitClipPath: RESULT_FRAME_CLIP_PATH,
+};
+const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
+  ...RESULT_FRAME_STYLE,
+  height: "min(58svh, calc(100dvh - 20rem))",
+};
 
 function isVideoResultUrl(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
@@ -185,28 +203,57 @@ export function LarpResult({
           return (
           <div
             key={index}
-            className={
-              isVideo ? "flex shrink-0 flex-col items-center gap-3" : "shrink-0"
-            }
+            className="shrink-0"
           >
-            <div className={LARP_RESULT_FRAME_CLASS}>
+            <div
+              className={LARP_RESULT_FRAME_CLASS}
+              style={{
+                ...(isVideo ? VIDEO_RESULT_FRAME_STYLE : RESULT_FRAME_STYLE),
+              }}
+            >
               {isVideo ? (
-                <VideoResultPlayer
-                  src={url}
-                  poster={posterUrl}
-                  objectFit="cover"
-                />
+                <>
+                  <VideoResultPlayer
+                    src={url}
+                    poster={posterUrl}
+                    objectFit="cover"
+                    controls={false}
+                  />
+                  {!hideActions && (
+                    <div className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
+                      <button
+                        onClick={() => handleDownload(index)}
+                        className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                        title={t("result.download")}
+                      >
+                        <Download className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => setShareDialog({ imageIndex: index })}
+                        className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                        title={t("result.share")}
+                      >
+                        <Share2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <img
                     src={url}
                     alt={t("result.generatedAlt", { index: index + 1 })}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+                    style={{
+                      borderRadius: RESULT_FRAME_RADIUS,
+                      clipPath: RESULT_FRAME_CLIP_PATH,
+                      WebkitClipPath: RESULT_FRAME_CLIP_PATH,
+                    }}
                     loading="lazy"
                   />
                   {/* Bottom gradient with action buttons */}
                   {!hideActions && (
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 pb-4 pt-12 bg-gradient-to-t from-black/60 to-transparent rounded-b-lg">
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
                       <button
                         onClick={() => handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
@@ -226,24 +273,6 @@ export function LarpResult({
                 </>
               )}
             </div>
-            {isVideo && !hideActions && (
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={() => handleDownload(index)}
-                  className="w-12 h-12 rounded-full bg-foreground/10 text-foreground flex items-center justify-center hover:bg-foreground/15 active:scale-95 transition-all"
-                  title={t("result.download")}
-                >
-                  <Download className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setShareDialog({ imageIndex: index })}
-                  className="w-12 h-12 rounded-full bg-foreground/10 text-foreground flex items-center justify-center hover:bg-foreground/15 active:scale-95 transition-all"
-                  title={t("result.share")}
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-              </div>
-            )}
           </div>
         );
         })}

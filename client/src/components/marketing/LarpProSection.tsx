@@ -2,6 +2,7 @@ import * as React from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useCanLoadLandingAvif } from "@/hooks/use-can-load-landing-avif";
 import {
@@ -14,6 +15,16 @@ import {
 type ProCardItem = {
   image: LandingMarqueeImage | null;
   text: string;
+};
+
+type CardMotionState = {
+  depth: number;
+  x: number;
+  y: number;
+  rotate: number;
+  scale: number;
+  opacity: number;
+  filter: string;
 };
 
 const PRO_ITEM_KEYS = [
@@ -49,32 +60,98 @@ function shuffledIndexes(length: number) {
   return indexes;
 }
 
+function getFanSpread() {
+  if (typeof window === "undefined") return 132;
+  const width = window.innerWidth;
+
+  if (width < 768) {
+    return Math.min(Math.max(width * 0.28, 84), 122);
+  }
+
+  return Math.min(Math.max(width * 0.16, 112), 154);
+}
+
+function getCardMotionState(signedOffset: number, fanSpread: number): CardMotionState {
+  const depth = Math.abs(signedOffset);
+  const rotation = signedOffset * 4.5;
+  const scale = 1 - depth * 0.06;
+  const opacity = depth === 0 ? 1 : depth > 1 ? 0.18 : 0.84;
+  const filter =
+    depth === 0
+      ? "none"
+      : depth > 1
+        ? "blur(5px) saturate(0.75) brightness(0.82)"
+        : "blur(0.4px) saturate(0.86) brightness(0.92)";
+
+  return {
+    depth,
+    opacity,
+    filter,
+    x: signedOffset * fanSpread,
+    y: depth * 18,
+    rotate: rotation,
+    scale,
+  };
+}
+
 function LarpStackCard({
   item,
-  offset,
-  onClick,
+  depth,
+  signedOffset,
+  fanSpread,
+  onSelect,
 }: {
   item: ProCardItem;
-  offset: number;
-  onClick: () => void;
+  depth: number;
+  signedOffset: -1 | 0 | 1;
+  fanSpread: number;
+  onSelect: (signedOffset: -1 | 0 | 1) => void;
 }) {
-  const isActive = offset === 0;
+  const isActive = signedOffset === 0;
   const imageFetchPriority = isActive ? "high" : "auto";
+  const cardState = getCardMotionState(signedOffset, fanSpread);
+  const enterState = getCardMotionState(signedOffset < 0 ? -2 : signedOffset > 0 ? 2 : 0, fanSpread);
 
   return (
-    <button
+    <motion.button
       type="button"
       aria-label={item.text}
       aria-current={isActive ? "true" : undefined}
-      onClick={isActive ? onClick : undefined}
-      className="absolute inset-0 cursor-pointer overflow-hidden rounded-lg border border-black/15 bg-zinc-950 text-left shadow-[0_26px_70px_rgb(0_0_0_/_0.18)] outline-none transition-[transform,opacity,filter] duration-500 focus-visible:ring-2 focus-visible:ring-foreground/40"
+      onClick={() => onSelect(signedOffset)}
+      className="absolute inset-0 cursor-pointer overflow-hidden rounded-lg border border-black/15 bg-zinc-950 text-left shadow-[0_26px_70px_rgb(0_0_0_/_0.18)] outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
+      initial={{
+        opacity: enterState.opacity,
+        x: enterState.x,
+        y: enterState.y,
+        rotate: enterState.rotate,
+        scale: enterState.scale,
+        filter: enterState.filter,
+      }}
+      animate={{
+        opacity: cardState.opacity,
+        x: cardState.x,
+        y: cardState.y,
+        rotate: cardState.rotate,
+        scale: cardState.scale,
+        filter: cardState.filter,
+      }}
+      exit={{
+        opacity: 0,
+        scale: 0.98,
+        filter: "none",
+        transition: { duration: 0.08, ease: "linear" },
+      }}
+      transition={{
+        x: { type: "spring", stiffness: 360, damping: 34, mass: 0.8 },
+        y: { type: "spring", stiffness: 360, damping: 34, mass: 0.8 },
+        rotate: { type: "spring", stiffness: 320, damping: 32, mass: 0.8 },
+        scale: { type: "spring", stiffness: 360, damping: 34, mass: 0.8 },
+        opacity: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+        filter: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+      }}
       style={{
-        zIndex: 20 - offset,
-        opacity: offset > 3 ? 0 : 1 - offset * 0.16,
-        pointerEvents: isActive ? "auto" : "none",
-        transform: `translate3d(${offset * 18}px, ${offset * 14}px, 0) rotate(${offset * 2.6 - 1.5}deg) scale(${1 - offset * 0.055})`,
-        filter: offset === 0 ? "none" : "saturate(0.72) brightness(0.82)",
-        transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+        zIndex: 20 - cardState.depth,
+        willChange: "transform, opacity, filter",
       }}
     >
       {item.image ? (
@@ -113,11 +190,11 @@ function LarpStackCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/24 to-black/10" />
 
       <div className="relative flex h-full flex-col justify-end p-5 text-white md:p-6">
-        <h3 className="text-balance font-display text-2xl font-bold leading-[1.02] tracking-normal drop-shadow-[0_2px_16px_rgb(0_0_0_/_0.5)] md:text-3xl">
+        <h3 className="text-balance font-display text-xl font-bold leading-[1.06] tracking-normal drop-shadow-[0_2px_16px_rgb(0_0_0_/_0.5)] md:text-2xl">
           {item.text}
         </h3>
       </div>
-    </button>
+    </motion.button>
   );
 }
 
@@ -125,6 +202,7 @@ export default function LarpProSection() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [fanSpread, setFanSpread] = React.useState(getFanSpread);
   const [itemOrder] = React.useState(() => shuffledIndexes(PRO_ITEM_KEYS.length));
   const { data: marqueeImages } = useQuery<LandingMarqueeImage[]>({
     queryKey: ["landing-marquee-images"],
@@ -153,17 +231,30 @@ export default function LarpProSection() {
     text: t(PRO_ITEM_KEYS[originalIndex]),
   }));
 
-  const visibleItems = items
-    .map((item, index) => ({
-      item,
-      index,
-      offset: (index - activeIndex + items.length) % items.length,
-    }))
-    .filter(({ offset }) => offset < 4)
-    .sort((a, b) => b.offset - a.offset);
+  const fanOffsets = [-1, 1, 0] as const;
+  const visibleItems = fanOffsets.map((signedOffset) => {
+    const index = (activeIndex + signedOffset + items.length) % items.length;
 
-  const showNext = () => {
-    setActiveIndex((current) => (current + 1) % items.length);
+    return {
+      item: items[index],
+      depth: Math.abs(signedOffset),
+      signedOffset,
+    };
+  });
+
+  React.useEffect(() => {
+    const updateFanSpread = () => setFanSpread(getFanSpread());
+
+    updateFanSpread();
+    window.addEventListener("resize", updateFanSpread);
+
+    return () => window.removeEventListener("resize", updateFanSpread);
+  }, []);
+
+  const showCard = (signedOffset: -1 | 0 | 1) => {
+    const direction = signedOffset === 0 ? 1 : signedOffset;
+
+    setActiveIndex((current) => (current + direction + items.length) % items.length);
   };
 
   return (
@@ -179,16 +270,20 @@ export default function LarpProSection() {
           </p>
         </div>
 
-        <div className="relative mx-auto h-[min(50svh,500px)] max-h-[500px] min-h-[300px] w-full max-w-[280px] md:h-[min(54svh,540px)] md:max-w-[300px]">
+        <div className="relative mx-auto h-[min(50svh,500px)] max-h-[500px] min-h-[300px] w-full max-w-[560px] md:h-[min(54svh,540px)] md:max-w-[680px]">
           <div className="absolute inset-y-0 left-1/2 aspect-[9/16] -translate-x-1/2">
-            {visibleItems.map(({ item, offset }) => (
-              <LarpStackCard
-                key={item.text}
-                item={item}
-                offset={offset}
-                onClick={showNext}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {visibleItems.map(({ item, depth, signedOffset }) => (
+                <LarpStackCard
+                  key={item.text}
+                  item={item}
+                  depth={depth}
+                  signedOffset={signedOffset}
+                  fanSpread={fanSpread}
+                  onSelect={showCard}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         </div>
 

@@ -54,12 +54,7 @@ function AuthCallback() {
   );
 }
 
-// Protected Route Wrapper
-function ProtectedRoute({
-  component: Component,
-}: {
-  component: React.ComponentType;
-}) {
+function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
 
   React.useEffect(() => {
@@ -81,7 +76,19 @@ function ProtectedRoute({
   return (
     <AppLayout>
       <ErrorBoundary>
-        <Component />
+        <Switch>
+          <Route path="/generate" component={Generate} />
+          <Route path="/face-capture" component={FaceCapture} />
+          <Route path="/debug-generate" component={DebugGenerate} />
+          <Route path="/history" component={LarpHistory} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/support" component={Support} />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/admin/users" component={AdminPage} />
+          <Route path="/admin/templates" component={AdminTemplates} />
+          <Route path="/admin/logs" component={AdminLogs} />
+          <Route component={NotFound} />
+        </Switch>
       </ErrorBoundary>
     </AppLayout>
   );
@@ -105,10 +112,24 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/confidentialite": "meta:titles.privacy",
 };
 
+const PROTECTED_PATHS = new Set([
+  "/generate",
+  "/face-capture",
+  "/debug-generate",
+  "/history",
+  "/settings",
+  "/support",
+  "/admin",
+  "/admin/users",
+  "/admin/templates",
+  "/admin/logs",
+]);
+
 function Router() {
   const { user, profile } = useAuth();
   const [location] = useLocation();
   const { t, i18n } = useTranslation();
+  const pathname = location.split("?")[0] || location;
 
   React.useEffect(() => {
     if (!user || !profile) {
@@ -187,9 +208,13 @@ function Router() {
   }, [i18n, profile?.preferred_locale, user]);
 
   React.useEffect(() => {
-    document.title = t(PAGE_TITLE_KEYS[location] || "meta:appName");
-    setRobotsMeta(isLegalNoindexPath(location) ? "noindex, nofollow" : null);
-  }, [location, t]);
+    document.title = t(PAGE_TITLE_KEYS[pathname] || "meta:appName");
+    setRobotsMeta(isLegalNoindexPath(pathname) ? "noindex, nofollow" : null);
+  }, [pathname, t]);
+
+  if (PROTECTED_PATHS.has(pathname)) {
+    return <ProtectedAppRoutes />;
+  }
 
   return (
     <Switch>
@@ -210,44 +235,6 @@ function Router() {
       {/* OAuth callback + redirect */}
       <Route path="/app">
         <AuthCallback />
-      </Route>
-
-      <Route path="/generate">
-        <ProtectedRoute component={Generate} />
-      </Route>
-
-      <Route path="/face-capture">
-        <ProtectedRoute component={FaceCapture} />
-      </Route>
-
-      <Route path="/debug-generate">
-        <ProtectedRoute component={DebugGenerate} />
-      </Route>
-
-      <Route path="/history">
-        <ProtectedRoute component={LarpHistory} />
-      </Route>
-
-      <Route path="/settings">
-        <ProtectedRoute component={Settings} />
-      </Route>
-
-      <Route path="/support">
-        <ProtectedRoute component={Support} />
-      </Route>
-
-      {/* Admin Routes */}
-      <Route path="/admin">
-        <ProtectedRoute component={AdminPage} />
-      </Route>
-      <Route path="/admin/users">
-        <ProtectedRoute component={AdminPage} />
-      </Route>
-      <Route path="/admin/templates">
-        <ProtectedRoute component={AdminTemplates} />
-      </Route>
-      <Route path="/admin/logs">
-        <ProtectedRoute component={AdminLogs} />
       </Route>
 
       {/* Fallback */}

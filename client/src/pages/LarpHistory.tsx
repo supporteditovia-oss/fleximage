@@ -212,26 +212,12 @@ export default function LarpHistory() {
   const hasLarps = !isLoading && successLarps && successLarps.length > 0;
 
   return (
-    <div className="space-y-16 pt-10">
+    <div className="space-y-8 pt-10">
       {/* Title — hidden when empty */}
       {hasLarps && (
         <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
-          <span className="relative inline-block">
+          <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
             {t("history.pageTitle")}
-            <svg
-              className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
-              viewBox="0 0 100 12"
-              fill="none"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M2 8 Q 50 2 98 8"
-                stroke="currentColor"
-                strokeWidth="5"
-                strokeLinecap="round"
-              ></path>
-            </svg>
           </span>
         </h1>
       )}
@@ -260,22 +246,8 @@ export default function LarpHistory() {
       ) : !successLarps?.length ? (
         <div className="flex flex-col items-center justify-center h-[calc(100dvh-15rem)] text-center px-4">
           <h2 className="font-display text-2xl md:text-3xl font-bold mb-6 w-full">
-            <span className="relative inline-block">
+            <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
               {t("history.emptyTitle")}
-              <svg
-                className="pointer-events-none absolute left-0 right-0 mx-auto bottom-[-0.25em] md:bottom-[-0.35em] w-full h-[0.3em] md:h-[0.34em] text-primary/50"
-                viewBox="0 0 100 12"
-                fill="none"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 8 Q 50 2 98 8"
-                  stroke="currentColor"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                ></path>
-              </svg>
             </span>
           </h2>
           <p className="text-muted-foreground mb-8 max-w-sm">

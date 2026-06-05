@@ -163,8 +163,8 @@ export function PaywallOverlay({
     ? "absolute left-1/2 top-[34%] z-20 -translate-x-1/2 -translate-y-1/2"
     : "absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2";
   const ctaClassName = isInsufficientCredits
-    ? "paywall-credits-cta-border group relative mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-full border border-sky-200/80 bg-white py-3.5 text-sm font-bold tracking-tight text-slate-950 shadow-[0_12px_34px_rgba(14,165,233,0.18)] ring-1 ring-sky-300/45 transition-[filter,opacity,box-shadow] hover:brightness-105 hover:shadow-[0_14px_40px_rgba(14,165,233,0.24)] active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
-    : "group relative flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-full bg-primary py-3.5 text-sm font-bold tracking-tight text-primary-foreground ring-1 ring-primary/70 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70";
+    ? "paywall-credits-cta-border group relative mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-lg border border-sky-200/80 bg-white py-3.5 text-sm font-bold tracking-tight text-slate-950 shadow-[0_12px_34px_rgba(14,165,233,0.18)] ring-1 ring-sky-300/45 transition-[filter,opacity,box-shadow] hover:brightness-105 hover:shadow-[0_14px_40px_rgba(14,165,233,0.24)] active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+    : "group relative flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-lg bg-primary py-3.5 text-sm font-bold tracking-tight text-primary-foreground ring-1 ring-primary/70 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70";
   const ctaIconClassName = isInsufficientCredits
     ? "h-4 w-4 text-sky-500"
     : "h-4 w-4";
@@ -176,7 +176,7 @@ export function PaywallOverlay({
           <button
             type="button"
             aria-label={t("layout.dock.account")}
-            className="absolute right-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-black/50 md:hidden"
+            className="absolute right-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 bg-black/35 text-white shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-black/50 md:hidden"
           >
             <MoreHorizontal className="h-5 w-5" />
           </button>
@@ -377,7 +377,7 @@ export function PaywallOverlay({
               onClick={handleSubscribe}
               disabled={isLoading}
               whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
-              className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-full bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
+              className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

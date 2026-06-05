@@ -93,19 +93,19 @@ export default function DebugGenerate() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleSaveFake}
-            className="px-4 py-2 text-sm font-semibold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
+            className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
           >
             1. Save fake pending LARP
           </button>
           <button
             onClick={handleNavigate}
-            className="px-4 py-2 text-sm font-semibold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
+            className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all"
           >
             2. Go to /generate
           </button>
           <button
             onClick={handleClear}
-            className="px-4 py-2 text-sm font-semibold rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-95 transition-all"
+            className="px-4 py-2 text-sm font-semibold rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-95 transition-all"
           >
             Clear pending LARP
           </button>

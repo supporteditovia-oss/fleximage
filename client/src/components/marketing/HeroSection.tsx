@@ -269,7 +269,7 @@ export default function HeroSection() {
                       className={`group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all ${
                         draggedIndex === i
                           ? "border-primary bg-primary/10 border-solid"
-                          : "border-foreground/25 bg-white/80"
+                          : "border-foreground/25 bg-white md:bg-white/80"
                       }`}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragLeave={handleDragLeave}
@@ -322,7 +322,7 @@ export default function HeroSection() {
             variants={itemVariants}
             className="relative z-10 w-full flex justify-center px-4"
           >
-            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-lg border border-border/80 bg-white/95 px-3 md:px-5 py-2.5 md:py-3.5 md:bg-white/85 md:backdrop-blur md:shadow-sm md:shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 md:focus-within:ring-2 md:focus-within:ring-foreground/10 transition-all">
+            <div className="flex items-center gap-2 md:gap-3 w-full max-w-md rounded-lg border border-border/80 bg-white px-3 md:px-5 py-2.5 md:py-3.5 md:bg-white/85 md:backdrop-blur md:shadow-sm md:shadow-black/5 hover:border-foreground/30 focus-within:border-foreground/50 md:focus-within:ring-2 md:focus-within:ring-foreground/10 transition-all">
               <input
                 ref={typewriterRef}
                 type="text"
@@ -333,13 +333,13 @@ export default function HeroSection() {
               />
               <button
                 onClick={shuffleIdea}
-                className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
+                className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
                 title={t("hero.randomIdea")}
               >
                 <Shuffle className="w-4 h-4" />
               </button>
               <button
-                className="shrink-0 w-8 h-8 rounded-full flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all disabled:opacity-50"
+                className="shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all disabled:opacity-50"
                 onClick={handleSubmit}
                 disabled={!hasUploadedImages}
                 title={t("hero.create")}
