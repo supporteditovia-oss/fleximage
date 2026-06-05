@@ -499,6 +499,114 @@ async function uploadInputImagesToR2(
   return uploaded.filter((url): url is string => typeof url === "string");
 }
 
+async function uploadMarketingImageToR2(
+  userId: string,
+  dataUrl: string,
+): Promise<string | null> {
+  const match = dataUrl.match(/^data:(image\/[\w+.-]+);base64,([\s\S]+)$/);
+  if (!match) {
+    logger.warn(
+      { prefix: dataUrl.substring(0, 40) },
+      "Invalid marketing upload base64 image",
+    );
+    return null;
+  }
+
+  const contentType = match[1];
+  const base64Data = match[2];
+  const buffer = Buffer.from(base64Data, "base64");
+  const ext = contentType.split("/")[1] || "jpg";
+  const key = `marketing/${userId}/${Date.now()}.${ext}`;
+  return uploadToR2(key, buffer, contentType);
+}
+
+async function storeMarketingOutputImage(sourceUrl: string): Promise<string> {
+  const response = await fetch(sourceUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download result: HTTP ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const key = `marketing/outputs/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+  return uploadToR2(key, buffer, contentType);
+}
+
+async function pollMarketingGenerationStatus(taskId: string): Promise<{
+  status: "waiting" | "success" | "fail";
+  resultUrl: string | null;
+  failMessage: string | null;
+}> {
+  if (taskId.startsWith("custom_")) {
+    const jobId = taskId.replace("custom_", "");
+    const customStatus = await getOneshotJobStatus(jobId);
+
+    if (
+      customStatus.status === "completed" ||
+      customStatus.status === "success"
+    ) {
+      const urls = extractImageUrls(customStatus);
+      if (urls.length === 0) {
+        return {
+          status: "fail",
+          resultUrl: null,
+          failMessage: "Aucune image dans le résultat",
+        };
+      }
+      const resultUrl = await storeMarketingOutputImage(urls[0]);
+      return { status: "success", resultUrl, failMessage: null };
+    }
+
+    if (customStatus.status === "failed" || customStatus.status === "fail") {
+      return {
+        status: "fail",
+        resultUrl: null,
+        failMessage:
+          customStatus.error ||
+          customStatus.failMsg ||
+          customStatus.message ||
+          "Génération échouée",
+      };
+    }
+
+    return { status: "waiting", resultUrl: null, failMessage: null };
+  }
+
+  const kieStatus = await getKieTaskStatus(taskId);
+
+  if (kieStatus.data.state === "success") {
+    let parsed: unknown = kieStatus.data.resultJson;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        parsed = kieStatus.data.resultJson;
+      }
+    }
+    const urls = extractImageUrls(parsed);
+    if (urls.length === 0) {
+      return {
+        status: "fail",
+        resultUrl: null,
+        failMessage: "Aucune image dans le résultat",
+      };
+    }
+    const resultUrl = await storeMarketingOutputImage(urls[0]);
+    return { status: "success", resultUrl, failMessage: null };
+  }
+
+  if (kieStatus.data.state === "fail") {
+    return {
+      status: "fail",
+      resultUrl: null,
+      failMessage: kieStatus.data.failMsg || "Génération échouée",
+    };
+  }
+
+  return { status: "waiting", resultUrl: null, failMessage: null };
+}
+
 async function uploadImageUrlsToOneshot(imageUrls: string[]): Promise<string[]> {
   const referenceFileIds = await Promise.all(imageUrls.map(async (publicUrl) => {
     try {
@@ -4328,6 +4436,130 @@ export async function registerRoutes(
         res.json(settings);
       } catch (error: any) {
         logger.error({ err: error }, "Error updating admin settings");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  const marketingUploadSchema = z.object({
+    image: z.string().min(1),
+  });
+
+  const marketingGenerateSchema = z.object({
+    prompt: z.string().min(1),
+    referenceImageUrl: z.string().url(),
+  });
+
+  // POST /api/admin/marketing/upload
+  app.post(
+    api.admin.marketingUpload.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(marketingUploadSchema),
+    async (req, res) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const url = await uploadMarketingImageToR2(authReq.userId, req.body.image);
+        if (!url) {
+          return res.status(400).json({ message: "Image invalide" });
+        }
+        res.json({ url });
+      } catch (error: any) {
+        logger.error({ err: error }, "Marketing image upload failed");
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // POST /api/admin/marketing/generate
+  app.post(
+    api.admin.marketingGenerate.path,
+    requireAuth,
+    requireAdmin,
+    validateRequest(marketingGenerateSchema),
+    async (req, res) => {
+      const locale = resolveLocaleFromRequest(req);
+      try {
+        const { prompt, referenceImageUrl } = req.body;
+        const task = await startImageGenerationTask({
+          prompt,
+          aspectRatio: OUTPUT_ASPECT_RATIO,
+          imageUrls: [referenceImageUrl],
+        });
+        res.json({ taskId: task.providerTaskId });
+      } catch (error: any) {
+        logger.error({ err: error }, "Marketing generation start failed");
+        if (isGoogleAiPromptFlagged(error)) {
+          return res.status(400).json({
+            message: tBackend(locale, "larps.policyViolation"),
+          });
+        }
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
+
+  // GET /api/admin/marketing/status/:taskId
+  app.get(
+    api.admin.marketingStatus.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      const locale = resolveLocaleFromRequest(req);
+      try {
+        const taskId = req.params.taskId;
+        if (!taskId) {
+          return res.status(400).json({ message: "Missing taskId" });
+        }
+        const result = await pollMarketingGenerationStatus(taskId);
+        res.json(result);
+      } catch (error: any) {
+        logger.error({ err: error }, "Marketing generation status poll failed");
+        res.status(500).json({
+          message: error.message || tBackend(locale, "larps.pollingError"),
+        });
+      }
+    },
+  );
+
+  // GET /api/admin/marketing/image-proxy?url=...
+  app.get(
+    api.admin.marketingImageProxy.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const rawUrl = typeof req.query.url === "string" ? req.query.url : "";
+        let imageUrl: URL;
+        try {
+          imageUrl = new URL(rawUrl);
+        } catch {
+          return res.status(400).json({ message: "URL d'image invalide" });
+        }
+
+        if (!["http:", "https:"].includes(imageUrl.protocol)) {
+          return res.status(400).json({ message: "URL d'image invalide" });
+        }
+
+        const imageResponse = await fetch(imageUrl.toString());
+        if (!imageResponse.ok) {
+          return res
+            .status(502)
+            .json({ message: `Image inaccessible (${imageResponse.status})` });
+        }
+
+        const contentType =
+          imageResponse.headers.get("content-type") || "image/jpeg";
+        if (!contentType.startsWith("image/")) {
+          return res.status(400).json({ message: "Le fichier n'est pas une image" });
+        }
+
+        const buffer = Buffer.from(await imageResponse.arrayBuffer());
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Cache-Control", "private, max-age=300");
+        res.send(buffer);
+      } catch (error: any) {
+        logger.error({ err: error }, "Marketing image proxy failed");
         res.status(500).json({ message: error.message });
       }
     },

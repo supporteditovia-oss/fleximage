@@ -206,6 +206,22 @@ export const api = {
       method: "PATCH" as const,
       path: "/api/admin/settings",
     },
+    marketingUpload: {
+      method: "POST" as const,
+      path: "/api/admin/marketing/upload",
+    },
+    marketingGenerate: {
+      method: "POST" as const,
+      path: "/api/admin/marketing/generate",
+    },
+    marketingStatus: {
+      method: "GET" as const,
+      path: "/api/admin/marketing/status/:taskId",
+    },
+    marketingImageProxy: {
+      method: "GET" as const,
+      path: "/api/admin/marketing/image-proxy",
+    },
   },
   categories: {
     list: {

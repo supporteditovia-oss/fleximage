@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -27,6 +27,7 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
+  const [location] = useLocation();
   const { user, profile, isLoading } = useAuth();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -136,6 +137,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
       setPortalLoading(false);
     }
   };
+
+  if (location === "/admin/studio") {
+    return null;
+  }
 
   return (
     <div className={`floating-header fixed top-6 left-0 right-0 z-50 px-5 md:px-8 pointer-events-none transition-all duration-300 ${

@@ -13,6 +13,7 @@ import AuthPage from "@/pages/Auth";
 import AdminPage from "@/pages/Admin";
 import AdminTemplates from "@/pages/AdminTemplates";
 import AdminLogs from "@/pages/AdminLogs";
+import AdminStudio from "@/pages/AdminStudio";
 import Generate from "@/pages/Generate";
 import FaceCapture from "@/pages/FaceCapture";
 import LarpHistory from "@/pages/LarpHistory";
@@ -87,6 +88,7 @@ function ProtectedAppRoutes() {
           <Route path="/admin/users" component={AdminPage} />
           <Route path="/admin/templates" component={AdminTemplates} />
           <Route path="/admin/logs" component={AdminLogs} />
+          <Route path="/admin/studio" component={AdminStudio} />
           <Route component={NotFound} />
         </Switch>
       </ErrorBoundary>
@@ -106,6 +108,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/admin/users": "meta:titles.adminUsers",
   "/admin/templates": "meta:titles.adminTemplates",
   "/admin/logs": "meta:titles.adminLogs",
+  "/admin/studio": "Studio",
   "/mentions-legales": "meta:titles.legal",
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
@@ -123,6 +126,7 @@ const PROTECTED_PATHS = new Set([
   "/admin/users",
   "/admin/templates",
   "/admin/logs",
+  "/admin/studio",
 ]);
 
 function Router() {

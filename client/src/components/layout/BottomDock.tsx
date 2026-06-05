@@ -10,6 +10,7 @@ import {
   FileText,
   ScrollText,
   LifeBuoy,
+  Clapperboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ export function BottomDock() {
     { href: "/admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
     { href: "/admin/users", label: t("layout.dock.users"), icon: Users },
     { href: "/admin/templates", label: t("layout.dock.templates"), icon: FileText },
+    { href: "/admin/studio", label: "Studio", icon: Clapperboard },
     { href: "/admin/logs", label: t("layout.dock.logs"), icon: ScrollText },
   ];
 
