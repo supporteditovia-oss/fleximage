@@ -166,7 +166,7 @@ export function GenerationProgress({
         hasResultMedia &&
         createPortal(
           <div
-            className="fixed inset-0 z-30 flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center gap-3 overflow-hidden px-4 pb-20 pt-20 animate-in fade-in duration-500 bg-background bg-grid md:gap-6 md:pb-24 md:pt-24"
+            className="fixed inset-0 z-[100] flex min-h-screen flex-col items-center justify-start gap-3 overflow-y-auto overflow-x-hidden px-4 pb-[max(5rem,env(safe-area-inset-bottom))] pt-[max(5rem,env(safe-area-inset-top))] animate-in fade-in duration-500 bg-background bg-grid md:h-[100dvh] md:max-h-[100dvh] md:justify-center md:gap-6 md:overflow-hidden md:pb-24 md:pt-24"
           >
             <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
               <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">

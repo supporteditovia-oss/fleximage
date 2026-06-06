@@ -24,7 +24,7 @@ function copy(language: string | undefined, text: { en: string; fr: string }) {
 }
 
 export default function FaceCapture() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const language = profile?.preferred_locale ?? i18n.resolvedLanguage ?? "en";
@@ -37,6 +37,9 @@ export default function FaceCapture() {
   const [storedThumbnailUrl, setStoredThumbnailUrl] = React.useState<string | null>(null);
   const [storedThumbnailsLoading, setStoredThumbnailsLoading] = React.useState(false);
   const [storedThumbnailsError, setStoredThumbnailsError] = React.useState<Error | null>(null);
+  const returnToSettings = React.useMemo(() => {
+    return new URLSearchParams(window.location.search).get("returnTo") === "settings";
+  }, [location]);
 
   const clearStoredThumbnails = React.useCallback(() => {
     setStoredThumbnailUrl((previousUrl) => {
@@ -111,14 +114,15 @@ export default function FaceCapture() {
 
   const handleComplete = React.useCallback(
     async (poses: CapturedPose[]) => {
+      setShowCapture(false);
       try {
         await storeFaceCaptures.mutateAsync(poses);
-        navigate("/generate");
+        navigate(returnToSettings ? "/settings?faceScan=review" : "/generate?faceScan=review");
       } catch {
         setShowCapture(false);
       }
     },
-    [navigate, storeFaceCaptures],
+    [navigate, returnToSettings, storeFaceCaptures],
   );
 
   const handleDelete = React.useCallback(async () => {
@@ -135,8 +139,8 @@ export default function FaceCapture() {
   }, [clearStoredThumbnails, deleteLatestFaceCapture, storeFaceCaptures, thumbnailUrl]);
 
   const handleCancelCapture = React.useCallback(() => {
-    navigate("/generate");
-  }, [navigate]);
+    navigate(returnToSettings ? "/settings" : "/generate");
+  }, [navigate, returnToSettings]);
 
   const isSaving = storeFaceCaptures.isPending;
   const isSaved = Boolean(storeFaceCaptures.data);

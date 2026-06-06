@@ -150,7 +150,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative flex w-full flex-col items-center justify-center gap-2 md:flex-row md:gap-0"
+        className="relative flex w-full items-center justify-center"
       >
         {/* Logo — centered */}
         <Link
@@ -165,7 +165,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         </Link>
 
         {variant === "landing" && user && !isLoading && (
-          <Link href="/app" className="pointer-events-auto md:hidden">
+          <Link
+            href="/app"
+            className="pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 md:hidden"
+          >
             <Button
               size="sm"
               className="rounded-full px-4 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform"

@@ -39,8 +39,10 @@ import { exportFullMarketingVideo } from "@/components/admin/FullMarketingVideo"
 import {
   ImagePlus,
   Loader2,
+  Maximize2,
   Play,
   ShieldAlert,
+  X,
 } from "lucide-react";
 
 type ImageType = "avant" | "apres";
@@ -64,6 +66,8 @@ type WritingVideo = {
 type HookVideo = {
   startedAt: number | null;
 };
+
+type StudioFullscreenPreview = "loader" | "writing" | "hook" | null;
 
 const EMPTY_SLOT: OutputSlot = {
   taskId: null,
@@ -627,6 +631,7 @@ function SimulatedMarketingVideoPreview({
   speedMultiplier,
   onEnded = () => {},
   onPlay = () => {},
+  className,
 }: {
   sourceUrl: string | null;
   startedAt: number | null;
@@ -634,6 +639,7 @@ function SimulatedMarketingVideoPreview({
   speedMultiplier: number;
   onEnded?: () => void;
   onPlay?: () => void;
+  className?: string;
 }) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const hasEndedRef = useRef(false);
@@ -670,7 +676,12 @@ function SimulatedMarketingVideoPreview({
     : 0;
 
   return (
-    <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid">
+    <div
+      className={cn(
+        "relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid",
+        className,
+      )}
+    >
       {sourceUrl ? (
         <>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -730,6 +741,29 @@ function SimulatedMarketingVideoPreview({
         </div>
       )}
     </div>
+  );
+}
+
+function FullscreenPreviewButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant="secondary"
+      onClick={onClick}
+      disabled={disabled}
+      className="absolute right-2 top-2 z-10 h-9 w-9 rounded-full border border-white/15 bg-black/65 text-white shadow-lg backdrop-blur-md hover:bg-black/80 disabled:pointer-events-none disabled:opacity-0"
+      aria-label="Afficher en grand écran"
+      title="Grand écran"
+    >
+      <Maximize2 className="h-4 w-4" />
+    </Button>
   );
 }
 
@@ -823,6 +857,8 @@ export default function AdminStudio() {
   const [isExportingFullVideo, setIsExportingFullVideo] = useState(false);
   const [downloadingImageSlot, setDownloadingImageSlot] = useState<"b1" | "c1" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [fullscreenPreview, setFullscreenPreview] =
+    useState<StudioFullscreenPreview>(null);
   const [studioState, setStudioState] = useState<StudioState>(loadStudioState);
 
   const uploadImage = useUploadMarketingImage();
@@ -836,6 +872,42 @@ export default function AdminStudio() {
     b1.type === "avant" ? b1.url : c1.type === "avant" ? c1.url : null;
   const afterImageUrl =
     b1.type === "apres" ? b1.url : c1.type === "apres" ? c1.url : null;
+
+  const closeFullscreenPreview = useCallback(() => {
+    setFullscreenPreview(null);
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  const openFullscreenPreview = useCallback((preview: NonNullable<StudioFullscreenPreview>) => {
+    setFullscreenPreview(preview);
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      void document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!fullscreenPreview) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeFullscreenPreview();
+    };
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) setFullscreenPreview(null);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [closeFullscreenPreview, fullscreenPreview]);
 
   useEffect(() => {
     try {
@@ -1357,6 +1429,67 @@ export default function AdminStudio() {
         />
       ))}
 
+      {fullscreenPreview ? (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Simulation en grand écran"
+        >
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            onClick={closeFullscreenPreview}
+            className="absolute right-3 top-3 z-20 h-10 w-10 rounded-full border border-white/15 bg-white/10 text-white shadow-xl backdrop-blur-md hover:bg-white/20"
+            aria-label="Fermer le grand écran"
+            title="Fermer"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <div className="flex h-[100svh] w-full items-center justify-center overflow-hidden p-0 sm:p-4">
+            <div className="aspect-[9/16] h-[100svh] max-h-[100svh] w-auto max-w-full overflow-hidden bg-black sm:rounded-[10px]">
+              {fullscreenPreview === "loader" ? (
+                <SimulatedMarketingVideoPreview
+                  sourceUrl={activeVideo.simulatedVideo.sourceUrl}
+                  startedAt={activeVideo.simulatedVideo.startedAt}
+                  maxSeconds={activeVideo.loaderDurationSeconds}
+                  speedMultiplier={activeVideo.loaderSpeedMultiplier}
+                  onEnded={handleSimulatedVideoEnded}
+                  onPlay={handleReplaySimulatedVideo}
+                  className="h-full w-full rounded-none border-0"
+                />
+              ) : null}
+
+              {fullscreenPreview === "writing" ? (
+                <KeyboardWritingPreview
+                  prompt={activeVideo.writingPrompt}
+                  beforeImageUrl={beforeImageUrl}
+                  startedAt={activeVideo.writingVideo.startedAt}
+                  speedMultiplier={activeVideo.writingSpeedMultiplier}
+                  onEnded={handleWritingEnded}
+                  onReplay={handleReplayWriting}
+                  className="h-full w-full rounded-none border-0"
+                />
+              ) : null}
+
+              {fullscreenPreview === "hook" ? (
+                <HookVideoPreview
+                  beforeImageUrl={beforeImageUrl}
+                  afterImageUrl={afterImageUrl}
+                  durationSeconds={activeVideo.hookDurationSeconds}
+                  startedAt={activeVideo.hookVideo.startedAt}
+                  onEnded={handleHookEnded}
+                  onReplay={handleReplayHook}
+                  className="h-full w-full rounded-none border-0"
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="fixed top-4 left-0 right-0 z-20 pointer-events-none px-4 md:px-8">
         <div className="mx-auto flex w-full max-w-sm flex-col gap-2 pointer-events-auto">
           <div className="grid grid-cols-5 gap-2">
@@ -1600,14 +1733,20 @@ export default function AdminStudio() {
             </label>
           </div>
 
-          <SimulatedMarketingVideoPreview
-            sourceUrl={activeVideo.simulatedVideo.sourceUrl}
-            startedAt={activeVideo.simulatedVideo.startedAt}
-            maxSeconds={activeVideo.loaderDurationSeconds}
-            speedMultiplier={activeVideo.loaderSpeedMultiplier}
-            onEnded={handleSimulatedVideoEnded}
-            onPlay={handleReplaySimulatedVideo}
-          />
+          <div className="relative">
+            <SimulatedMarketingVideoPreview
+              sourceUrl={activeVideo.simulatedVideo.sourceUrl}
+              startedAt={activeVideo.simulatedVideo.startedAt}
+              maxSeconds={activeVideo.loaderDurationSeconds}
+              speedMultiplier={activeVideo.loaderSpeedMultiplier}
+              onEnded={handleSimulatedVideoEnded}
+              onPlay={handleReplaySimulatedVideo}
+            />
+            <FullscreenPreviewButton
+              onClick={() => openFullscreenPreview("loader")}
+              disabled={!activeVideo.simulatedVideo.sourceUrl}
+            />
+          </div>
 
           <Button
             type="button"
@@ -1670,14 +1809,20 @@ export default function AdminStudio() {
             </label>
           </div>
 
-          <KeyboardWritingPreview
-            prompt={activeVideo.writingPrompt}
-            beforeImageUrl={beforeImageUrl}
-            startedAt={activeVideo.writingVideo.startedAt}
-            speedMultiplier={activeVideo.writingSpeedMultiplier}
-            onEnded={handleWritingEnded}
-            onReplay={handleReplayWriting}
-          />
+          <div className="relative">
+            <KeyboardWritingPreview
+              prompt={activeVideo.writingPrompt}
+              beforeImageUrl={beforeImageUrl}
+              startedAt={activeVideo.writingVideo.startedAt}
+              speedMultiplier={activeVideo.writingSpeedMultiplier}
+              onEnded={handleWritingEnded}
+              onReplay={handleReplayWriting}
+            />
+            <FullscreenPreviewButton
+              onClick={() => openFullscreenPreview("writing")}
+              disabled={!activeVideo.writingPrompt.trim()}
+            />
+          </div>
 
           <Button
             type="button"
@@ -1726,14 +1871,20 @@ export default function AdminStudio() {
             </Button>
           </div>
 
-          <HookVideoPreview
-            beforeImageUrl={beforeImageUrl}
-            afterImageUrl={afterImageUrl}
-            durationSeconds={activeVideo.hookDurationSeconds}
-            startedAt={activeVideo.hookVideo.startedAt}
-            onEnded={handleHookEnded}
-            onReplay={handleReplayHook}
-          />
+          <div className="relative">
+            <HookVideoPreview
+              beforeImageUrl={beforeImageUrl}
+              afterImageUrl={afterImageUrl}
+              durationSeconds={activeVideo.hookDurationSeconds}
+              startedAt={activeVideo.hookVideo.startedAt}
+              onEnded={handleHookEnded}
+              onReplay={handleReplayHook}
+            />
+            <FullscreenPreviewButton
+              onClick={() => openFullscreenPreview("hook")}
+              disabled={!beforeImageUrl || !afterImageUrl}
+            />
+          </div>
 
           <Button
             type="button"

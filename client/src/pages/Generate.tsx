@@ -7,7 +7,7 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, ChevronDown, ScanFace } from "lucide-react";
+import { Check, Loader2, ChevronDown, RefreshCw, ScanFace } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
@@ -87,7 +87,7 @@ function getRandomFakeLoaderDelay() {
 
 export default function Generate() {
   const { t } = useTranslation();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const isMobile = useIsMobile();
   const [isReturningFromCheckout] = useState(() => {
     return new URLSearchParams(window.location.search).get("checkout") === "success";
@@ -121,6 +121,10 @@ export default function Generate() {
   const [insufficientCreditsOpen, setInsufficientCreditsOpen] = useState(false);
   const [creditsPaywallOpen, setCreditsPaywallOpen] = useState(false);
   const [faceScanPromptOpen, setFaceScanPromptOpen] = useState(false);
+  const [faceScanPromptMode, setFaceScanPromptMode] = useState<"start" | "review">("start");
+  const [faceScanPreviewLoading, setFaceScanPreviewLoading] = useState(false);
+  const [faceScanPreviewError, setFaceScanPreviewError] = useState<string | null>(null);
+  const [holdFaceAutoEnable, setHoldFaceAutoEnable] = useState(false);
   const [insufficientCreditsContext, setInsufficientCreditsContext] =
     useState<InsufficientCreditsContext>({
       currentCredits: 0,
@@ -148,36 +152,121 @@ export default function Generate() {
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const handledFaceScanReviewRef = useRef(false);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
   const { profile, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
   const latestFaceCapture = useLatestFaceCapture();
+  const refetchLatestFaceCapture = latestFaceCapture.refetch;
   const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
   const [useFaceAsset, setUseFaceAsset] = useState(false);
 
   useEffect(() => {
-    setUseFaceAsset(faceCaptureReady);
-  }, [faceCaptureReady, selectedTemplate?.id]);
+    if (!faceCaptureReady) {
+      setUseFaceAsset(false);
+      return;
+    }
+
+    if (!holdFaceAutoEnable) {
+      setUseFaceAsset(true);
+    }
+  }, [faceCaptureReady, holdFaceAutoEnable, selectedTemplate?.id]);
 
   const handleUseFaceAssetChange = useCallback(
     (value: boolean) => {
       if (value && !faceCaptureReady) {
         setUseFaceAsset(false);
+        setFaceScanPromptMode("start");
         setFaceScanPromptOpen(true);
         return;
       }
 
       setUseFaceAsset(value);
+      if (value) {
+        setHoldFaceAutoEnable(false);
+      }
     },
     [faceCaptureReady],
   );
 
   const handleStartFaceScan = useCallback(() => {
     setFaceScanPromptOpen(false);
+    setFaceScanPromptMode("start");
     navigate("/face-capture");
   }, [navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("faceScan") !== "review") return;
+    if (handledFaceScanReviewRef.current) return;
+    handledFaceScanReviewRef.current = true;
+
+    window.history.replaceState({}, "", "/generate");
+    setHoldFaceAutoEnable(true);
+    setUseFaceAsset(false);
+    setFacePreviewUrl((previousUrl) => {
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
+      return null;
+    });
+    setFaceScanPromptMode("review");
+    setFaceScanPromptOpen(true);
+    setFaceScanPreviewLoading(true);
+    setFaceScanPreviewError(null);
+
+    let cancelled = false;
+    void refetchLatestFaceCapture();
+    loadFaceCapturePreviewUrl()
+      .then((url) => {
+        if (cancelled) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        if (!url) {
+          setFaceScanPreviewError(
+            t("templateSelected.faceScanReviewLoadError", {
+              defaultValue: "Impossible de charger la preview du scan.",
+            }),
+          );
+          return;
+        }
+        setFacePreviewUrl((previousUrl) => {
+          if (previousUrl) URL.revokeObjectURL(previousUrl);
+          return url;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFaceScanPreviewError(
+            t("templateSelected.faceScanReviewLoadError", {
+              defaultValue: "Impossible de charger la preview du scan.",
+            }),
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFaceScanPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location, refetchLatestFaceCapture, t]);
+
+  const handleUseReviewedFaceScan = useCallback(() => {
+    setHoldFaceAutoEnable(false);
+    setUseFaceAsset(true);
+    setFaceScanPromptOpen(false);
+    setFaceScanPromptMode("start");
+  }, []);
+
+  const handleFaceScanPromptOpenChange = useCallback((open: boolean) => {
+    setFaceScanPromptOpen(open);
+    if (!open) {
+      setFaceScanPromptMode("start");
+    }
+  }, []);
 
   // ── Stripe checkout return ──────────────────────────────────
   useEffect(() => {
@@ -1064,24 +1153,76 @@ export default function Generate() {
   const paywallOverlayInnerClassName =
     "absolute inset-x-0 top-20 bottom-0 flex min-h-0 items-stretch justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:top-24 md:bottom-10";
 
-  const faceScanPromptContent = (
-    <div className="w-full space-y-4">
-      <p className="text-center text-sm font-medium leading-5 text-foreground">
-        {t("templateSelected.faceScanPromptSubtitle")}
-      </p>
-      <p className="text-center text-xs font-medium leading-5 text-muted-foreground">
-        {t("templateSelected.faceScanPromptDescription")}
-      </p>
-      <Button
-        type="button"
-        onClick={handleStartFaceScan}
-        className="h-10 w-full rounded-lg text-sm font-semibold"
-      >
-        <ScanFace className="mr-2 h-4 w-4" />
-        {t("generate.scanFace")}
-      </Button>
-    </div>
-  );
+  const faceScanPromptTitle =
+    faceScanPromptMode === "review"
+      ? t("templateSelected.faceScanReviewTitle")
+      : t("templateSelected.faceScanPromptTitle");
+
+  const faceScanPromptContent =
+    faceScanPromptMode === "review" ? (
+      <div className="w-full space-y-4">
+        <p className="text-center text-sm font-medium leading-5 text-foreground">
+          {t("templateSelected.faceScanReviewSubtitle")}
+        </p>
+
+        <div className="relative mx-auto aspect-[9/8] w-full max-w-sm overflow-hidden rounded-lg border border-border/70 bg-muted/40">
+          {faceScanPreviewLoading ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              {t("templateSelected.faceScanReviewLoading")}
+            </div>
+          ) : facePreviewUrl ? (
+            <img
+              src={facePreviewUrl}
+              alt={t("templateSelected.faceScanReviewAlt")}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center px-5 text-center text-sm font-medium text-muted-foreground">
+              {faceScanPreviewError ?? t("templateSelected.faceScanReviewLoadError")}
+            </div>
+          )}
+        </div>
+
+        <div className="flex w-full flex-col gap-2.5">
+          <Button
+            type="button"
+            onClick={handleUseReviewedFaceScan}
+            disabled={faceScanPreviewLoading || !facePreviewUrl}
+            className="h-10 rounded-lg text-sm font-semibold"
+          >
+            <Check className="mr-2 h-4 w-4" />
+            {t("templateSelected.faceScanReviewUse")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleStartFaceScan}
+            className="h-10 rounded-lg text-sm font-semibold"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {t("templateSelected.faceScanReviewRetake")}
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <div className="w-full space-y-4">
+        <p className="text-center text-sm font-medium leading-5 text-foreground">
+          {t("templateSelected.faceScanPromptSubtitle")}
+        </p>
+        <p className="text-center text-xs font-medium leading-5 text-muted-foreground">
+          {t("templateSelected.faceScanPromptDescription")}
+        </p>
+        <Button
+          type="button"
+          onClick={handleStartFaceScan}
+          className="h-10 w-full rounded-lg text-sm font-semibold"
+        >
+          <ScanFace className="mr-2 h-4 w-4" />
+          {t("generate.scanFace")}
+        </Button>
+      </div>
+    );
 
   // ════════════════════════════════════════════════════════════
   // RENDER
@@ -1308,12 +1449,12 @@ export default function Generate() {
       />
 
       {isMobile ? (
-        <Drawer open={faceScanPromptOpen} onOpenChange={setFaceScanPromptOpen}>
+        <Drawer open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>
           <DrawerContent className="rounded-t-2xl border-border/70 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <DrawerHeader className="w-full px-0 pb-3 pt-4 text-center">
               <DrawerTitle className="flex items-center justify-center gap-2 font-display text-2xl font-bold">
                 <ScanFace className="h-5 w-5" />
-                {t("templateSelected.faceScanPromptTitle")}
+                {faceScanPromptTitle}
               </DrawerTitle>
               <DrawerDescription className="sr-only">
                 {t("templateSelected.faceScanPromptDescription")}
@@ -1323,11 +1464,11 @@ export default function Generate() {
           </DrawerContent>
         </Drawer>
       ) : (
-        <Dialog open={faceScanPromptOpen} onOpenChange={setFaceScanPromptOpen}>
+        <Dialog open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>
           <DialogContent className="w-[min(calc(100vw-2rem),28rem)] rounded-2xl border border-border/70 bg-white p-6 shadow-2xl">
             <DialogTitle className="flex items-center justify-center gap-2 text-center font-display text-2xl font-bold">
               <ScanFace className="h-5 w-5" />
-              {t("templateSelected.faceScanPromptTitle")}
+              {faceScanPromptTitle}
             </DialogTitle>
             <DialogDescription className="sr-only">
               {t("templateSelected.faceScanPromptDescription")}

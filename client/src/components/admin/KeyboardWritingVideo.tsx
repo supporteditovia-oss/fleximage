@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   createCanvasSafeImageUrl,
   createGrainPattern,
@@ -145,6 +146,7 @@ export function KeyboardWritingPreview({
   speedMultiplier,
   onEnded = () => {},
   onReplay = () => {},
+  className,
 }: {
   prompt: string;
   beforeImageUrl: string | null;
@@ -152,6 +154,7 @@ export function KeyboardWritingPreview({
   speedMultiplier: number;
   onEnded?: () => void;
   onReplay?: () => void;
+  className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const grainPatternRef = useRef<CanvasPattern | null>(null);
@@ -242,7 +245,12 @@ export function KeyboardWritingPreview({
 
   if (!prompt.trim()) {
     return (
-      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid">
+      <div
+        className={cn(
+          "relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid",
+          className,
+        )}
+      >
         <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-muted-foreground">
           La vidéo d'écriture apparaîtra ici
         </div>
@@ -251,7 +259,12 @@ export function KeyboardWritingPreview({
   }
 
   return (
-    <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid">
+    <div
+      className={cn(
+        "relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-background bg-grid",
+        className,
+      )}
+    >
       <canvas
         ref={canvasRef}
         width={EXPORT_WIDTH}

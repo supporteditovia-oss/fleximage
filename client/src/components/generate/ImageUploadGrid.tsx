@@ -13,6 +13,8 @@ export function ImageUploadGrid({
   onRemoveSlot,
 }: ImageUploadGridProps) {
   const { t } = useTranslation();
+  const uploadedCount = images.filter(Boolean).length;
+  const showEmptySlotText = uploadedCount < 2;
 
   return (
     <div className="w-full flex justify-center -mb-7 md:-mb-8">
@@ -53,9 +55,11 @@ export function ImageUploadGrid({
                     <div className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
                       <Plus className="w-7 h-7 transition-colors text-primary" />
                     </div>
-                    <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                      {t("hero.dropImage")}
-                    </p>
+                    {showEmptySlotText && (
+                      <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
+                        {t("hero.dropImage")}
+                      </p>
+                    )}
                   </label>
                   <span className="hero-image-slot absolute inset-0 z-10 rounded-lg pointer-events-none" />
                 </>

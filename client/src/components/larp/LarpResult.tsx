@@ -43,9 +43,12 @@ const RESULT_FRAME_RADIUS = `${RESULT_FRAME_RADIUS_PX}px`;
 const RESULT_FRAME_CLIP_PATH = `inset(0 round ${RESULT_FRAME_RADIUS})`;
 const RESULT_FRAME_STYLE: CSSProperties = {
   aspectRatio: "9 / 16",
-  height: "min(66svh, calc(100dvh - 18rem))",
+  height: "clamp(16rem, 62vh, 42rem)",
   width: "auto",
+  maxHeight: "calc(100vh - 14rem)",
   maxWidth: "min(calc(100vw - 2rem), 100%)",
+  minHeight: "16rem",
+  minWidth: "9rem",
   overflow: "hidden",
   borderRadius: RESULT_FRAME_RADIUS,
   clipPath: RESULT_FRAME_CLIP_PATH,
@@ -53,7 +56,8 @@ const RESULT_FRAME_STYLE: CSSProperties = {
 };
 const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
   ...RESULT_FRAME_STYLE,
-  height: "min(58svh, calc(100dvh - 20rem))",
+  height: "clamp(15rem, 56vh, 38rem)",
+  maxHeight: "calc(100vh - 16rem)",
 };
 
 function isVideoResultUrl(url: string): boolean {

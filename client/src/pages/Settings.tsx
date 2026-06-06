@@ -1,9 +1,18 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
 import { useCurrentPlan } from "@/hooks/use-billing";
+import {
+  fetchFaceCaptureAssetBlob,
+  useDeleteLatestFaceCapture,
+  useLatestFaceCapture,
+} from "@/hooks/use-face-captures";
 import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { setAppLanguage } from "@/i18n";
+import {
+  FACE_CAPTURE_POSES,
+  hasCompleteFaceCapture,
+} from "@/lib/face-capture-generation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +46,16 @@ import {
   ChevronRight,
   X,
   Languages,
+  ScanFace,
+  RefreshCw,
+  Check,
+  Headphones,
+  MessageCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +71,35 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 
+const CRISP_WEBSITE_ID = "e73cb8a0-2dd4-4239-967a-3913dcc35e2a";
+const CRISP_SCRIPT_ID = "larpking-crisp-script";
+
+declare global {
+  interface Window {
+    $crisp?: unknown[];
+    CRISP_WEBSITE_ID?: string;
+  }
+}
+
+function cleanupCrisp() {
+  try {
+    window.$crisp?.push(["do", "chat:close"]);
+  } catch {
+    // Crisp may already be partially unloaded.
+  }
+
+  document
+    .querySelectorAll(
+      `#${CRISP_SCRIPT_ID}, script[src*="client.crisp.chat"], #crisp-chatbox, .crisp-client`,
+    )
+    .forEach((node) => node.remove());
+
+  delete window.$crisp;
+  delete window.CRISP_WEBSITE_ID;
+}
+
 export default function Settings() {
+  const [location, navigate] = useLocation();
   const { user, profile, signOut } = useAuth();
   const { updateOwnProfile, deleteProfile, isDeleting } = useProfile();
   const { toast } = useToast();
@@ -66,7 +109,16 @@ export default function Settings() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [supportChatOpen, setSupportChatOpen] = useState(false);
+  const [supportChatLoading, setSupportChatLoading] = useState(false);
+  const [supportChatLoaded, setSupportChatLoaded] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
+  const latestFaceCapture = useLatestFaceCapture();
+  const deleteLatestFaceCapture = useDeleteLatestFaceCapture();
+  const [facePreviewUrls, setFacePreviewUrls] = useState<string[]>([]);
+  const [facePreviewLoading, setFacePreviewLoading] = useState(false);
+  const [facePreviewError, setFacePreviewError] = useState<string | null>(null);
+  const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
 
   const subscriptionPrice = (() => {
     if (!currentPlan) return t("settings.subscription.price");
@@ -89,6 +141,7 @@ export default function Settings() {
   const canManageBilling = Boolean(currentPlan?.canManageSubscription);
   const billingCanceled = !billingActive && canManageBilling;
   const canOpenPaywall = Boolean(profile?.id && !billingActive && !canManageBilling);
+  const hasSupportAccess = Boolean(billingActive || profile?.role === "admin");
 
   const form = useForm({
     resolver: zodResolver(
@@ -109,6 +162,83 @@ export default function Settings() {
       preferred_locale: profile?.preferred_locale || "fr",
     });
   }, [form, profile?.full_name, profile?.preferred_locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setFacePreviewError(null);
+
+    if (!faceCaptureReady) {
+      setFacePreviewUrls((previousUrls) => {
+        previousUrls.forEach((url) => URL.revokeObjectURL(url));
+        return [];
+      });
+      setFacePreviewLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setFacePreviewLoading(true);
+    const captures = latestFaceCapture.data?.session?.captures ?? [];
+    const orderedCaptures = FACE_CAPTURE_POSES.map((poseId) =>
+      captures.find((capture) => capture.poseId === poseId),
+    );
+
+    Promise.all(
+      orderedCaptures.map(async (capture) => {
+        if (!capture) throw new Error("FACE_CAPTURE_REQUIRED");
+        const blob = await fetchFaceCaptureAssetBlob(capture.imageUrl);
+        return URL.createObjectURL(blob);
+      }),
+    )
+      .then((urls) => {
+        if (cancelled) {
+          urls.forEach((url) => URL.revokeObjectURL(url));
+          return;
+        }
+
+        setFacePreviewUrls((previousUrls) => {
+          previousUrls.forEach((url) => URL.revokeObjectURL(url));
+          return urls;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFacePreviewError(t("settings.faceScan.loadError"));
+          setFacePreviewUrls((previousUrls) => {
+            previousUrls.forEach((url) => URL.revokeObjectURL(url));
+            return [];
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFacePreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [faceCaptureReady, latestFaceCapture.data?.session?.id, t]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("faceScan") !== "review") return;
+    window.history.replaceState({}, "", "/settings");
+    void latestFaceCapture.refetch();
+    toast({
+      title: t("settings.faceScan.updatedTitle"),
+      description: t("settings.faceScan.updatedDescription"),
+    });
+  }, [latestFaceCapture, location, t, toast]);
+
+  useEffect(() => {
+    return () => {
+      facePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [facePreviewUrls]);
+
+  useEffect(() => cleanupCrisp, []);
 
   const onSubmit = async (data: {
     full_name: string | null;
@@ -200,6 +330,86 @@ export default function Settings() {
     }
   };
 
+  const handleRetakeFaceScan = () => {
+    navigate("/face-capture?returnTo=settings");
+  };
+
+  const handleDeleteFaceScan = async () => {
+    try {
+      await deleteLatestFaceCapture.mutateAsync();
+      setFacePreviewUrls((previousUrls) => {
+        previousUrls.forEach((url) => URL.revokeObjectURL(url));
+        return [];
+      });
+      toast({
+        title: t("settings.faceScan.deletedTitle"),
+        description: t("settings.faceScan.deletedDescription"),
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description: error.message,
+      });
+    }
+  };
+
+  const openSupportChat = () => {
+    if (!hasSupportAccess) {
+      if (canOpenPaywall) setPaywallOpen(true);
+      return;
+    }
+
+    if (supportChatLoaded) {
+      if (supportChatOpen) {
+        window.$crisp?.push(["do", "chat:close"]);
+        window.$crisp?.push(["do", "chat:hide"]);
+      } else {
+        window.$crisp?.push(["do", "chat:show"]);
+        window.$crisp?.push(["do", "chat:open"]);
+      }
+      return;
+    }
+
+    setSupportChatLoading(true);
+    cleanupCrisp();
+    window.$crisp = [];
+    window.CRISP_WEBSITE_ID = CRISP_WEBSITE_ID;
+    window.$crisp.push(["on", "chat:opened", () => setSupportChatOpen(true)]);
+    window.$crisp.push([
+      "on",
+      "chat:closed",
+      () => {
+        setSupportChatOpen(false);
+        window.$crisp?.push(["do", "chat:hide"]);
+      },
+    ]);
+    window.$crisp.push(["do", "chat:hide"]);
+
+    const script = document.createElement("script");
+    script.id = CRISP_SCRIPT_ID;
+    script.src = "https://client.crisp.chat/l.js";
+    script.async = true;
+    script.onload = () => {
+      setSupportChatLoaded(true);
+      setSupportChatLoading(false);
+      window.$crisp?.push(["do", "chat:show"]);
+      window.$crisp?.push(["do", "chat:open"]);
+    };
+    script.onerror = () => {
+      setSupportChatLoading(false);
+      cleanupCrisp();
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description: t("support.loadError", {
+          defaultValue: "Impossible de charger le support.",
+        }),
+      });
+    };
+    document.head.appendChild(script);
+  };
+
   const deleteDialogBody = (
     <div className="space-y-4">
       <p className="font-medium text-foreground">
@@ -259,7 +469,7 @@ export default function Settings() {
   );
 
   return (
-    <div className="space-y-10 pt-20 max-w-lg mx-auto">
+    <div className="space-y-8 pt-10 max-w-lg mx-auto">
       {/* Page title */}
       <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
         <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
@@ -392,6 +602,105 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* Face scan section */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
+          {t("settings.sections.faceScan")}
+        </h2>
+        <div className="overflow-hidden rounded-lg border border-border/80 bg-card/90 backdrop-blur">
+          <div className="flex items-center gap-4 px-4 py-3.5">
+            {(facePreviewLoading || latestFaceCapture.isLoading || facePreviewUrls.length > 0) && (
+              <div className="relative flex h-24 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/40">
+                {facePreviewLoading || latestFaceCapture.isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : (
+                <>
+                  <div className="grid h-full w-full grid-cols-3">
+                    {facePreviewUrls.map((url, index) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt={t("settings.faceScan.previewAlt")}
+                        className={`h-full w-full object-cover ${
+                          index > 0 ? "border-l border-white/70" : ""
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="absolute right-1 top-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white/90 text-[#42a5f6] shadow-sm backdrop-blur">
+                    <Check className="h-3 w-3" />
+                  </span>
+                </>
+                )}
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                {faceCaptureReady
+                  ? t("settings.faceScan.readyTitle")
+                  : t("settings.faceScan.emptyTitle")}
+              </p>
+              <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground/60">
+                {facePreviewError ??
+                  (faceCaptureReady
+                    ? t("settings.faceScan.readyDescription")
+                    : t("settings.faceScan.emptyDescription"))}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              {faceCaptureReady ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleRetakeFaceScan}
+                    disabled={deleteLatestFaceCapture.isPending}
+                    size="sm"
+                    className="h-9 w-9 rounded-full p-0 text-foreground/80 shadow-none hover:bg-muted hover:text-foreground"
+                    title={t("settings.faceScan.retake")}
+                    aria-label={t("settings.faceScan.retake")}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleDeleteFaceScan}
+                    disabled={deleteLatestFaceCapture.isPending}
+                    size="sm"
+                    className="h-9 w-9 rounded-full p-0 text-destructive/80 shadow-none hover:bg-destructive/10 hover:text-destructive"
+                    title={t("settings.faceScan.delete")}
+                    aria-label={t("settings.faceScan.delete")}
+                  >
+                    {deleteLatestFaceCapture.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleRetakeFaceScan}
+                  disabled={deleteLatestFaceCapture.isPending}
+                  size="sm"
+                  className="h-9 shrink-0 gap-1.5 rounded-full px-2.5 text-xs font-semibold text-foreground/80 shadow-none hover:bg-muted hover:text-foreground"
+                  title={t("settings.faceScan.createFaceScan")}
+                  aria-label={t("settings.faceScan.createFaceScan")}
+                >
+                  <ScanFace className="h-4 w-4" />
+                  <span>{t("settings.faceScan.scan")}</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Subscription section */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
@@ -431,6 +740,40 @@ export default function Settings() {
             ) : (canManageBilling || canOpenPaywall) ? (
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
             ) : null}
+          </button>
+        </div>
+      </section>
+
+      {/* Support section */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
+          {t("layout.dock.support")}
+        </h2>
+        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden">
+          <button
+            type="button"
+            onClick={openSupportChat}
+            disabled={supportChatLoading || (!hasSupportAccess && !canOpenPaywall)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30 disabled:cursor-default disabled:hover:bg-transparent"
+          >
+            <Headphones className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{t("support.settingsTitle")}</p>
+              <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground/60">
+                {hasSupportAccess
+                  ? t("support.settingsDescription")
+                  : t("support.subscriberOnly", {
+                      defaultValue: "Disponible avec un abonnement actif.",
+                    })}
+              </p>
+            </div>
+            {supportChatLoading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground/50" />
+            ) : (
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <MessageCircle className="h-4 w-4" />
+              </span>
+            )}
           </button>
         </div>
       </section>

@@ -18,7 +18,6 @@ import Generate from "@/pages/Generate";
 import FaceCapture from "@/pages/FaceCapture";
 import LarpHistory from "@/pages/LarpHistory";
 import Settings from "@/pages/Settings";
-import Support from "@/pages/Support";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
@@ -83,7 +82,6 @@ function ProtectedAppRoutes() {
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/history" component={LarpHistory} />
           <Route path="/settings" component={Settings} />
-          <Route path="/support" component={Support} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/users" component={AdminPage} />
           <Route path="/admin/templates" component={AdminTemplates} />
@@ -103,7 +101,6 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/generate": "meta:titles.generate",
   "/history": "meta:titles.history",
   "/settings": "meta:titles.settings",
-  "/support": "meta:titles.support",
   "/admin": "meta:titles.admin",
   "/admin/users": "meta:titles.adminUsers",
   "/admin/templates": "meta:titles.adminTemplates",
@@ -121,7 +118,6 @@ const PROTECTED_PATHS = new Set([
   "/debug-generate",
   "/history",
   "/settings",
-  "/support",
   "/admin",
   "/admin/users",
   "/admin/templates",

@@ -56,6 +56,7 @@ export function HookVideoPreview({
   startedAt,
   onEnded = () => {},
   onReplay = () => {},
+  className,
 }: {
   beforeImageUrl: string | null;
   afterImageUrl: string | null;
@@ -63,6 +64,7 @@ export function HookVideoPreview({
   startedAt: number | null;
   onEnded?: () => void;
   onReplay?: () => void;
+  className?: string;
 }) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const endedRef = useRef(false);
@@ -97,7 +99,12 @@ export function HookVideoPreview({
 
   if (!ready) {
     return (
-      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-muted/30">
+      <div
+        className={cn(
+          "relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-muted/30",
+          className,
+        )}
+      >
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
           <ImageOff className="h-7 w-7" />
           Définissez une image avant et une image après pour générer le hook
@@ -107,7 +114,12 @@ export function HookVideoPreview({
   }
 
   return (
-    <div className="relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-black">
+    <div
+      className={cn(
+        "relative aspect-[9/16] w-full overflow-hidden rounded-lg border border-border bg-black",
+        className,
+      )}
+    >
       <img
         src={beforeImageUrl ?? undefined}
         alt="Image avant"
