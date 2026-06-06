@@ -65,6 +65,15 @@ const planCards: PlanCard[] = [
   },
 ];
 
+const commonPlanFeatureKeys = ["instantCredits", "monthlyRenewal"];
+
+const socialProofAvatars = [
+  { initial: "C", className: "bg-[radial-gradient(circle_at_30%_25%,#93c5fd,#2563eb_58%,#1e3a8a)]" },
+  { initial: "M", className: "bg-[radial-gradient(circle_at_30%_25%,#f0abfc,#c026d3_58%,#701a75)]" },
+  { initial: "Y", className: "bg-[radial-gradient(circle_at_30%_25%,#86efac,#16a34a_58%,#14532d)]" },
+  { initial: "N", className: "bg-[radial-gradient(circle_at_30%_25%,#fdba74,#ea580c_58%,#7c2d12)]" },
+];
+
 interface PaywallOverlayProps {
   imageUrl: string;
   isFake?: boolean;
@@ -163,22 +172,22 @@ export function PaywallOverlay({
     ? "absolute left-1/2 top-[34%] z-20 -translate-x-1/2 -translate-y-1/2"
     : "absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2";
   const ctaClassName = isInsufficientCredits
-    ? "paywall-credits-cta-border group relative mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-lg border border-sky-200/80 bg-white py-3.5 text-sm font-bold tracking-tight text-slate-950 shadow-[0_12px_34px_rgba(14,165,233,0.18)] ring-1 ring-sky-300/45 transition-[filter,opacity,box-shadow] hover:brightness-105 hover:shadow-[0_14px_40px_rgba(14,165,233,0.24)] active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+    ? "paywall-credits-cta-border group relative isolate mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-visible rounded-lg bg-white py-3.5 text-sm font-bold tracking-tight text-slate-950 shadow-[0_10px_28px_rgba(15,23,42,0.16)] transition-[filter,opacity,box-shadow] hover:brightness-105 hover:shadow-[0_12px_32px_rgba(15,23,42,0.20)] active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
     : "group relative flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-lg bg-primary py-3.5 text-sm font-bold tracking-tight text-primary-foreground ring-1 ring-primary/70 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70";
   const ctaIconClassName = isInsufficientCredits
-    ? "h-4 w-4 text-sky-500"
+    ? "h-4 w-4 text-slate-950"
     : "h-4 w-4";
-  const shouldShowMobileAccountMenu = presentation === "overlay";
-  const mobileAccountMenu = shouldShowMobileAccountMenu ? (
+  const shouldShowAccountMenu = presentation === "overlay";
+  const accountMenu = shouldShowAccountMenu ? (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             aria-label={t("layout.dock.account")}
-            className="absolute right-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 bg-black/35 text-white shadow-lg shadow-black/20 backdrop-blur-md transition hover:bg-black/50 md:hidden"
+            className="fixed right-5 top-[calc(1.5rem+clamp(2rem,6svh,2.5rem)/2-1rem)] z-[120] flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-card/90 text-muted-foreground/70 shadow-sm backdrop-blur transition-colors hover:bg-muted/30 hover:text-foreground md:right-8 md:top-[calc(1.5rem+clamp(2.25rem,6svh,4rem)/2-1rem)]"
           >
-            <MoreHorizontal className="h-5 w-5" />
+            <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -243,54 +252,57 @@ export function PaywallOverlay({
 
   if (isChoosingPlan) {
     const isModalPresentation = presentation === "modal";
+    const selectedPlanCard =
+      planCards.find((plan) => plan.id === selectedPlan) ?? planCards[0];
     const shellClassName = isModalPresentation
       ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white text-foreground"
-      : "flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border border-border/80 bg-white px-3 py-3 text-foreground shadow-2xl shadow-black/10 backdrop-blur-xl md:px-4 md:py-4";
+      : "flex h-full min-h-0 w-full flex-col overflow-visible px-3 py-3 text-foreground md:px-4 md:py-4";
     const innerClassName =
-      "mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col";
+      "mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col";
     const headerClassName = isModalPresentation
       ? "shrink-0 px-4 pb-2 pt-3 text-center sm:px-14"
       : "flex shrink-0 flex-col gap-2 px-1 pb-2 text-center";
     const gridWrapperClassName =
-      "min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-2 md:px-0";
+      "flex min-h-0 flex-1 flex-col overflow-hidden px-1 pb-2 md:flex-none md:items-center md:justify-start md:overflow-visible md:px-0 md:pt-7";
     const gridClassName =
-      "grid grid-cols-1 gap-5 pt-1 md:grid-cols-3 md:gap-3 md:pt-0";
+      "grid w-full shrink-0 grid-cols-3 items-end gap-2 pt-7 md:max-w-[720px] md:gap-3 md:pt-0";
     const footerClassName =
-      "flex shrink-0 justify-center border-t border-border/50 bg-white/95 px-4 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]";
+      isModalPresentation
+        ? "flex shrink-0 flex-col items-center justify-center gap-2 border-t border-border/50 bg-white/95 px-4 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]"
+        : "flex shrink-0 flex-col items-center justify-center gap-2 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className={shellClassName}
-      >
-        {mobileAccountMenu}
-        <div className={innerClassName}>
-          <div className={headerClassName}>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                {t("paywall.chooseTitle")}
-              </p>
-              <h2 className="mt-1 font-display text-2xl font-bold leading-none text-foreground md:text-3xl">
-                {t("paywall.pricingTitle")}
-              </h2>
+      <>
+        {accountMenu}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className={shellClassName}
+        >
+          <div className={innerClassName}>
+            <div className={headerClassName}>
+              <div>
+                <h2 className="font-display text-xl font-bold leading-tight text-center text-foreground md:text-3xl">
+                  <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
+                    {t("paywall.pricingTitle")}
+                  </span>
+                </h2>
+              </div>
             </div>
-          </div>
 
-          <div className={gridWrapperClassName}>
-            <div className={gridClassName}>
+            <div className={gridWrapperClassName}>
+              <div className={gridClassName}>
             {planCards.map((plan) => {
               const isSelected = selectedPlan === plan.id;
-              const visibleFeatures = plan.featureKeys.slice(0, 4);
 
               return (
                 <div
                   key={plan.id}
-                  className={`relative ${plan.id === "essential" ? "mt-3 md:mt-0" : ""}`}
+                  className="relative"
                 >
                   {plan.id === "essential" && (
-                    <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/15 bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-background shadow-sm">
+                    <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/15 bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-background shadow-sm md:inline-flex">
                       {t("paywall.planBadges.recommended")}
                     </span>
                   )}
@@ -298,107 +310,136 @@ export function PaywallOverlay({
                   type="button"
                   onClick={() => setSelectedPlan(plan.id)}
                   whileTap={{ scale: 0.985 }}
-                  className={`relative flex min-h-0 w-full flex-col overflow-hidden rounded-lg border p-3 text-left transition-all md:p-4 ${
-                    plan.id === "essential" ? "pt-5 md:pt-6" : ""
+                  className={`relative flex w-full flex-col overflow-hidden rounded-lg p-3 text-left transition-all md:p-4 ${
+                    plan.id === "essential"
+                      ? "min-h-[11.75rem] md:min-h-[12.5rem] md:pt-5"
+                      : "min-h-[11.25rem] md:min-h-[12rem]"
+                  } ${
+                    plan.id === "essential" ? "paywall-essential-card-border isolate border-0" : ""
                   } ${
                     isSelected
-                      ? "border-foreground/80 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_18px_45px_rgba(0,0,0,0.10)]"
-                      : "border-border/70 bg-muted/25 hover:border-foreground/25 hover:bg-muted/40"
+                      ? plan.id === "essential"
+                        ? "bg-white shadow-[0_18px_45px_rgba(0,0,0,0.10)]"
+                        : "border border-foreground/80 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_18px_45px_rgba(0,0,0,0.10)]"
+                      : plan.id === "essential"
+                        ? "bg-muted/25 hover:bg-muted/40"
+                        : "border border-border/70 bg-muted/25 hover:border-foreground/25 hover:bg-muted/40"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-display text-xl font-bold leading-none md:text-2xl">
+                  <div className="flex items-start justify-between gap-1.5 md:gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-display text-[15px] font-bold leading-none md:text-xl">
                         {t(`paywall.plans.${plan.id}.name`)}
                       </h3>
-                      <p className="mt-2 text-xs font-semibold text-muted-foreground line-through">
+                      <p className="mt-1 text-[10px] font-semibold text-muted-foreground line-through">
                         {t(`paywall.plans.${plan.id}.oldPrice`)}
                       </p>
                     </div>
 
-                    {isSelected && (
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                        <Check className="h-4 w-4" strokeWidth={3} />
-                      </span>
-                    )}
                   </div>
 
-                  <div className="mt-3 flex items-end gap-1">
-                    <span className="font-display text-5xl font-bold leading-[0.86] tracking-normal md:text-6xl">
+                  <div className="mt-3 flex items-end gap-0.5 md:mt-4 md:gap-1">
+                    <span className="font-display text-[2.75rem] font-bold leading-[0.86] tracking-normal md:text-6xl">
                       {plan.euros}
                     </span>
-                    <span className="pb-1 text-xl font-bold leading-none text-muted-foreground md:text-2xl">
+                    <span className="pb-0.5 text-sm font-bold leading-none text-muted-foreground md:pb-1 md:text-xl">
                       {plan.cents}
                     </span>
-                    <span className="pb-1 text-sm font-bold leading-none text-muted-foreground">
+                    <span className="pb-0.5 text-[10px] font-bold leading-none text-muted-foreground md:pb-1 md:text-xs">
                       {t("paywall.currency")}
                     </span>
-                    <span className="pb-1 text-xs font-bold leading-none text-muted-foreground">
+                    <span className="hidden pb-1 text-xs font-bold leading-none text-muted-foreground md:inline">
                       {t("paywall.perMonthShort")}
                     </span>
                   </div>
 
-                  <div className="mt-3 rounded-lg border border-border/70 bg-muted/35 p-3">
-                    <p className="text-lg font-bold leading-tight md:text-xl">
-                      {t(`paywall.plans.${plan.id}.creditsPerMonth`)}
-                    </p>
-                    <p className="mt-2 text-[11px] font-bold leading-snug text-foreground/75">
-                      {t("paywall.generationCosts")}
-                    </p>
-                    {plan.bonusKey && (
-                      <span className="mt-2 inline-flex rounded-full border border-sky-400/25 bg-sky-400/10 px-2 py-1 text-[10px] font-bold text-sky-700">
-                        {t(`paywall.planBonuses.${plan.bonusKey}`)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-3 min-h-0 flex-1 overflow-hidden">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      {t("paywall.includedTitle")}
-                    </p>
-                    <ul className="mt-2 space-y-1.5 text-xs font-semibold leading-snug text-foreground/78 md:text-sm">
-                      {visibleFeatures.map((feature) => (
-                        <li key={feature} className="flex gap-2">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
-                          <span>{t(`paywall.planFeatures.${feature}`)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
                 </motion.button>
                 </div>
               );
             })}
+              </div>
+              <div className="mt-6 min-h-[18rem] w-full flex-1 overflow-y-auto px-1 py-2 md:mt-6 md:min-h-0 md:max-w-[720px] md:flex-none md:overflow-visible md:px-1 md:py-0">
+                <p className="text-sm font-bold text-foreground">
+                  {t(`paywall.plans.${selectedPlanCard.id}.name`)}
+                </p>
+                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-[10px] font-semibold leading-tight text-foreground/78 min-[390px]:text-[11px] md:gap-x-8 md:gap-y-3 md:text-xs">
+                  <li className="flex min-w-0 gap-1.5">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                    <span>{t(`paywall.plans.${selectedPlanCard.id}.creditsPerMonth`)}</span>
+                  </li>
+                  <li className="flex min-w-0 gap-1.5">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                    <span>{t("paywall.generationCosts")}</span>
+                  </li>
+                  {selectedPlanCard.bonusKey && (
+                    <li className="flex min-w-0 gap-1.5">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <span>{t(`paywall.planBonuses.${selectedPlanCard.bonusKey}`)}</span>
+                    </li>
+                  )}
+                  {selectedPlanCard.featureKeys.map((feature) => (
+                    <li key={feature} className="flex min-w-0 gap-1.5">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <span>{t(`paywall.planFeatures.${feature}`)}</span>
+                    </li>
+                  ))}
+                  {commonPlanFeatureKeys.map((feature) => (
+                    <li key={feature} className="flex min-w-0 gap-1.5">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <span>{t(`paywall.planFeatures.${feature}`)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className={footerClassName}>
+              <div className="flex items-center justify-center gap-2.5 text-center">
+                <div className="flex shrink-0 -space-x-2" aria-hidden="true">
+                  {socialProofAvatars.map((avatar) => (
+                    <span
+                      key={avatar.initial}
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-black text-white shadow-sm ${avatar.className}`}
+                    >
+                      {avatar.initial}
+                    </span>
+                  ))}
+                </div>
+                <p className="min-w-0 text-[11px] font-bold leading-tight text-muted-foreground sm:text-xs">
+                  {t("paywall.socialProof")}
+                </p>
+              </div>
+              <motion.button
+                onClick={handleSubscribe}
+                disabled={isLoading}
+                whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
+                className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:min-h-12 md:max-w-lg md:px-10 md:text-base"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("common.actions.redirecting")}
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    {t("paywall.checkoutCta")}
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={3} />
+                  </span>
+                )}
+              </motion.button>
+              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold leading-tight text-muted-foreground/65">
+                <Lock className="h-3 w-3" strokeWidth={2.6} />
+                {t("paywall.securePayment")}
+              </p>
             </div>
           </div>
-
-          <div className={footerClassName}>
-            <motion.button
-              onClick={handleSubscribe}
-              disabled={isLoading}
-              whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
-              className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:w-auto"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("common.actions.redirecting")}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  {t("paywall.checkoutCta")}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={3} />
-                </span>
-              )}
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </>
     );
   }
   return (
     <div className="relative mx-auto h-[min(92%,620px)] max-h-full min-h-0 w-full max-w-[360px] self-center overflow-hidden rounded-lg shadow-xl">
-      {mobileAccountMenu}
+      {accountMenu}
       {imageUrl ? (
         <img
           src={imageUrl}

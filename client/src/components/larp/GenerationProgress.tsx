@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -14,6 +13,7 @@ interface GenerationProgressProps {
   taskId: string;
   inputImageUrl?: string;
   onReset: () => void;
+  onResultVisible?: () => void;
   resultType?: "image" | "video";
 }
 
@@ -21,6 +21,7 @@ export function GenerationProgress({
   taskId,
   inputImageUrl,
   onReset,
+  onResultVisible,
   resultType = "image",
 }: GenerationProgressProps) {
   const { t } = useTranslation();
@@ -56,9 +57,11 @@ export function GenerationProgress({
   // Show dock again when result is displayed (remove fullscreen overlay flag)
   useEffect(() => {
     if (showResult) {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      onResultVisible?.();
     }
-  }, [showResult]);
+  }, [onResultVisible, showResult]);
 
   const loaderStatus =
     !data || isLoading
@@ -163,10 +166,9 @@ export function GenerationProgress({
       {/* After reveal: show the result */}
       {showResult &&
         data?.status === "success" &&
-        hasResultMedia &&
-        createPortal(
+        hasResultMedia && (
           <div
-            className="fixed inset-0 z-[100] flex min-h-screen flex-col items-center justify-start gap-3 overflow-y-auto overflow-x-hidden px-4 pb-[max(5rem,env(safe-area-inset-bottom))] pt-[max(5rem,env(safe-area-inset-top))] animate-in fade-in duration-500 bg-background bg-grid md:h-[100dvh] md:max-h-[100dvh] md:justify-center md:gap-6 md:overflow-hidden md:pb-24 md:pt-24"
+            className="flex min-h-[calc(100svh-12.5rem)] flex-col items-center justify-start gap-3 overflow-y-auto overflow-x-hidden px-4 py-4 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:justify-center md:gap-6 md:overflow-hidden"
           >
             <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
               <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
@@ -192,8 +194,7 @@ export function GenerationProgress({
               {t("progress.createAnother")}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
-          </div>,
-          document.body,
+          </div>
         )}
     </>
   );

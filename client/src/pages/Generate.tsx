@@ -18,7 +18,6 @@ import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
-import { InsufficientCreditsDialog } from "@/components/generate/InsufficientCreditsDialog";
 import {
   Dialog,
   DialogContent,
@@ -110,6 +109,7 @@ export default function Generate() {
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
   const [transitionBg, setTransitionBg] = useState(false);
+  const [generationResultVisible, setGenerationResultVisible] = useState(false);
 
   // ── Fake generation / paywall state ─────────────────────────
   const [isFakeGenerating, setIsFakeGenerating] = useState(false);
@@ -118,8 +118,6 @@ export default function Generate() {
   const [fakePaywallReason, setFakePaywallReason] =
     useState<FakePaywallReason>("onboarding");
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
-  const [insufficientCreditsOpen, setInsufficientCreditsOpen] = useState(false);
-  const [creditsPaywallOpen, setCreditsPaywallOpen] = useState(false);
   const [faceScanPromptOpen, setFaceScanPromptOpen] = useState(false);
   const [faceScanPromptMode, setFaceScanPromptMode] = useState<"start" | "review">("start");
   const [faceScanPreviewLoading, setFaceScanPreviewLoading] = useState(false);
@@ -373,10 +371,16 @@ export default function Generate() {
   const isPaywallOverlayActive = showFakePaywall || hasSavedPaywall;
   const isFullscreenOverlayActive =
     pendingLoading ||
-    !!taskId ||
+    (!!taskId && !generationResultVisible) ||
     isFakeGenerating ||
     isPaywallOverlayActive ||
     unlockingLarp;
+
+  useEffect(() => {
+    if (taskId) {
+      setGenerationResultVisible(false);
+    }
+  }, [taskId]);
 
   // ── Hide header/dock while fullscreen overlay is active ─────
   useLayoutEffect(() => {
@@ -617,7 +621,7 @@ export default function Generate() {
 
       setPendingLoading(false);
       setShowFakePaywall(false);
-      setIsFakeGenerating(false);
+      setIsFakeGenerating(true);
       setPaywallDefaultPlan("essential");
       setFakePaywallReason("insufficientCredits");
       setInsufficientCreditsContext({
@@ -625,16 +629,9 @@ export default function Generate() {
         requiredCredits,
         generationMode: context?.generationMode ?? generationMode,
       });
-      setInsufficientCreditsOpen(true);
     },
     [generationMode, profile?.credits],
   );
-
-  const openCreditsPaywall = useCallback(() => {
-    setInsufficientCreditsOpen(false);
-    setPaywallDefaultPlan("essential");
-    setCreditsPaywallOpen(true);
-  }, []);
 
   const startOnboardingPaywallFlow = useCallback(
     (options?: { showPaywallImmediately?: boolean }) => {
@@ -971,6 +968,7 @@ export default function Generate() {
 
   const handleReset = () => {
     setTaskId(null);
+    setGenerationResultVisible(false);
     setPendingLoading(false);
     setIsStartingGeneration(false);
     setPrompt("");
@@ -1106,31 +1104,31 @@ export default function Generate() {
   });
 
   // ── Portal overlays ─────────────────────────────────────────
-  const portalOverlay = taskId
+  const generationProgress = taskId ? (
+    <GenerationProgress
+      taskId={taskId}
+      inputImageUrl={loaderInputImageUrl}
+      onReset={handleReset}
+      onResultVisible={() => setGenerationResultVisible(true)}
+      resultType={generationMode}
+    />
+  ) : null;
+
+  const portalOverlay = pendingLoading
     ? createPortal(
-      <GenerationProgress
-        taskId={taskId}
-        inputImageUrl={loaderInputImageUrl}
-        onReset={handleReset}
-        resultType={generationMode}
-      />,
+      <div
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
+      >
+        <img
+          src="/assets/larpking.png"
+          alt="LarpKing"
+          className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
+        />
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>,
       document.body,
     )
-    : pendingLoading
-      ? createPortal(
-        <div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
-        >
-          <img
-            src="/assets/larpking.png"
-            alt="LarpKing"
-            className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
-          />
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>,
-        document.body,
-      )
-      : null;
+    : null;
 
   const fakeLoaderOverlay = isFakeGenerating ? createPortal(
     <GenerationLoader
@@ -1233,7 +1231,7 @@ export default function Generate() {
     return (
       <>
         {transitionBackdrop}
-        {portalOverlay}
+        {generationProgress}
       </>
     );
   }
@@ -1439,15 +1437,6 @@ export default function Generate() {
         />
       </div>
 
-      <InsufficientCreditsDialog
-        open={insufficientCreditsOpen}
-        onOpenChange={setInsufficientCreditsOpen}
-        currentCredits={insufficientCreditsContext.currentCredits}
-        requiredCredits={insufficientCreditsContext.requiredCredits}
-        generationMode={insufficientCreditsContext.generationMode}
-        onUpgrade={openCreditsPaywall}
-      />
-
       {isMobile ? (
         <Drawer open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>
           <DrawerContent className="rounded-t-2xl border-border/70 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -1477,20 +1466,6 @@ export default function Generate() {
           </DialogContent>
         </Dialog>
       )}
-
-      <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
-        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-hidden rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
-          <DialogTitle className="sr-only">{t("paywall.chooseTitle")}</DialogTitle>
-          <PaywallOverlay
-            imageUrl=""
-            defaultPlan={paywallDefaultPlan}
-            initialChoosingPlan
-            presentation="modal"
-            variant="insufficientCredits"
-            generationMode={insufficientCreditsContext.generationMode}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

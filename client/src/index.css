@@ -254,18 +254,18 @@ body[data-paywall-overlay] .floating-header-credits {
 .paywall-credits-cta-border::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  inset: -3px;
+  border-radius: calc(0.5rem + 3px);
   padding: 2px;
   box-sizing: border-box;
   --border-angle: 0deg;
   background: conic-gradient(
     from var(--border-angle),
     transparent 0deg,
-    transparent 230deg,
-    rgb(66 165 246 / 0.25) 270deg,
-    rgb(66 165 246) 315deg,
-    rgb(66 165 246 / 0.85) 345deg,
+    transparent 250deg,
+    rgb(0 0 0 / 0.28) 285deg,
+    rgb(0 0 0 / 0.9) 315deg,
+    rgb(0 0 0 / 0.62) 345deg,
     transparent 360deg
   );
   -webkit-mask:
@@ -276,7 +276,37 @@ body[data-paywall-overlay] .floating-header-credits {
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: border-angle-spin 2.4s linear infinite;
+  animation: border-angle-spin 3s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.paywall-essential-card-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  box-sizing: border-box;
+  --border-angle: 0deg;
+  background: conic-gradient(
+    from var(--border-angle),
+    transparent 0deg,
+    transparent 250deg,
+    rgb(0 0 0 / 0.28) 285deg,
+    rgb(0 0 0 / 0.9) 315deg,
+    rgb(0 0 0 / 0.62) 345deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: border-angle-spin 3s linear infinite;
   pointer-events: none;
   z-index: 1;
 }

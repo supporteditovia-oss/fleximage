@@ -21,7 +21,7 @@ export function UnlockedLarpView({
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-h-[calc(100vh-12.5rem)] flex-col items-center justify-start gap-3 overflow-y-auto overflow-x-hidden px-4 py-4 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:justify-center md:overflow-hidden">
+    <div className="flex min-h-[calc(100svh-12.5rem)] flex-col items-center justify-start gap-3 overflow-y-auto overflow-x-hidden px-4 py-4 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:justify-center md:overflow-hidden">
       <h1 className="font-display text-2xl md:text-3xl font-bold text-center shrink-0">
         <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
           {t("generate.resultTitle")}
