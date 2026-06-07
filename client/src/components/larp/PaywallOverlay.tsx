@@ -268,8 +268,8 @@ export function PaywallOverlay({
       "grid w-full shrink-0 grid-cols-3 items-end gap-2 pt-7 md:max-w-[720px] md:gap-3 md:pt-0";
     const footerClassName =
       isModalPresentation
-        ? "flex shrink-0 flex-col items-center justify-center gap-2 border-t border-border/50 bg-white/95 px-4 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]"
-        : "flex shrink-0 flex-col items-center justify-center gap-2 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
+        ? "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 border-t border-border/50 bg-white/95 px-1 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]"
+        : "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 px-1 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
 
     return (
       <>
@@ -310,10 +310,10 @@ export function PaywallOverlay({
                   type="button"
                   onClick={() => setSelectedPlan(plan.id)}
                   whileTap={{ scale: 0.985 }}
-                  className={`relative flex w-full flex-col overflow-hidden rounded-lg p-3 text-left transition-all md:p-4 ${
+                  className={`relative flex w-full flex-col overflow-hidden rounded-lg p-2.5 text-left transition-all md:p-3 ${
                     plan.id === "essential"
-                      ? "min-h-[11.75rem] md:min-h-[12.5rem] md:pt-5"
-                      : "min-h-[11.25rem] md:min-h-[12rem]"
+                      ? "min-h-[8.75rem] md:min-h-[10.25rem] md:pt-4"
+                      : "min-h-[8.5rem] md:min-h-[10rem]"
                   } ${
                     plan.id === "essential" ? "paywall-essential-card-border isolate border-0" : ""
                   } ${
@@ -328,7 +328,7 @@ export function PaywallOverlay({
                 >
                   <div className="flex items-start justify-between gap-1.5 md:gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate font-display text-[15px] font-bold leading-none md:text-xl">
+                      <h3 className="truncate font-display text-sm font-bold leading-none md:text-lg">
                         {t(`paywall.plans.${plan.id}.name`)}
                       </h3>
                       <p className="mt-1 text-[10px] font-semibold text-muted-foreground line-through">
@@ -338,14 +338,14 @@ export function PaywallOverlay({
 
                   </div>
 
-                  <div className="mt-3 flex items-end gap-0.5 md:mt-4 md:gap-1">
-                    <span className="font-display text-[2.75rem] font-bold leading-[0.86] tracking-normal md:text-6xl">
+                  <div className="mt-2 flex items-end gap-0.5 md:mt-3 md:gap-1">
+                    <span className="font-display text-[2.15rem] font-bold leading-[0.86] tracking-normal md:text-5xl">
                       {plan.euros}
                     </span>
-                    <span className="pb-0.5 text-sm font-bold leading-none text-muted-foreground md:pb-1 md:text-xl">
+                    <span className="pb-0.5 text-xs font-bold leading-none text-muted-foreground md:pb-1 md:text-lg">
                       {plan.cents}
                     </span>
-                    <span className="pb-0.5 text-[10px] font-bold leading-none text-muted-foreground md:pb-1 md:text-xs">
+                    <span className="pb-0.5 text-[9px] font-bold leading-none text-muted-foreground md:pb-1 md:text-xs">
                       {t("paywall.currency")}
                     </span>
                     <span className="hidden pb-1 text-xs font-bold leading-none text-muted-foreground md:inline">
@@ -413,7 +413,7 @@ export function PaywallOverlay({
                 onClick={handleSubscribe}
                 disabled={isLoading}
                 whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
-                className="group relative flex min-h-11 w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:min-h-12 md:max-w-lg md:px-10 md:text-base"
+                className="group relative flex min-h-11 w-full items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:min-h-12 md:px-10 md:text-base"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -438,7 +438,7 @@ export function PaywallOverlay({
     );
   }
   return (
-    <div className="relative mx-auto h-[min(92%,620px)] max-h-full min-h-0 w-full max-w-[360px] self-center overflow-hidden rounded-lg shadow-xl">
+    <div className="relative mx-auto aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] self-center overflow-hidden rounded-lg shadow-xl md:h-[min(82svh,720px)]">
       {accountMenu}
       {imageUrl ? (
         <img

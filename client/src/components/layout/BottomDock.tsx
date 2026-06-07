@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 
 export function BottomDock() {
   const [location] = useLocation();
+  const pathname = location.split("?")[0] || location;
   const { user, profile, isAdmin, signOut } = useAuth();
   const { t } = useTranslation();
   const [hidden, setHidden] = useState(false);
@@ -98,7 +99,11 @@ export function BottomDock() {
     };
   }, []);
 
-  const isActive = (path: string) => location === path;
+  const isActive = (path: string) => pathname === path;
+  const handleCreateClick = () => {
+    if (pathname !== "/generate") return;
+    window.dispatchEvent(new Event("larpking:create-new-larp"));
+  };
 
   const avatarUrl =
     user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -137,6 +142,7 @@ export function BottomDock() {
           <Link
             href="/generate"
             className={dockItemClass(isActive("/generate"))}
+            onClick={handleCreateClick}
           >
             <div className={dockIconClass(isActive("/generate"))}>
               <Plus className="h-6 w-6 md:h-5 md:w-5" />

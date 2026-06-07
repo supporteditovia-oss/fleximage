@@ -14,7 +14,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
@@ -25,52 +25,6 @@ import {
   randomLarpDownloadName,
   triggerBlobDownload,
 } from "@/lib/download-media";
-
-type ViewportSize = {
-  width: number;
-  height: number;
-};
-
-function getVisualViewportSize(): ViewportSize {
-  if (typeof window === "undefined") {
-    return { width: 390, height: 760 };
-  }
-
-  const viewport = window.visualViewport;
-  return {
-    width: viewport?.width ?? window.innerWidth,
-    height: viewport?.height ?? window.innerHeight,
-  };
-}
-
-function useVisualViewportSize() {
-  const [size, setSize] = useState<ViewportSize>(getVisualViewportSize);
-
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        setSize(getVisualViewportSize());
-      });
-    };
-    const viewport = window.visualViewport;
-
-    update();
-    window.addEventListener("resize", update);
-    viewport?.addEventListener("resize", update);
-    viewport?.addEventListener("scroll", update);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", update);
-      viewport?.removeEventListener("resize", update);
-      viewport?.removeEventListener("scroll", update);
-    };
-  }, []);
-
-  return size;
-}
 
 /**
  * Strict 9:16 frame — width-first sizing so flex parents cannot stretch height
@@ -109,10 +63,10 @@ const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
 function getMobileResultFrameStyle(): CSSProperties {
   return {
     ...RESULT_FRAME_STYLE,
-    height: "auto",
-    width: "min(calc(100vw - 2rem), 28rem)",
-    maxHeight: "none",
-    maxWidth: "calc(100vw - 2rem)",
+    height: "min(78svh, 640px)",
+    width: "auto",
+    maxHeight: "min(78svh, 640px)",
+    maxWidth: "92vw",
     minHeight: undefined,
     minWidth: undefined,
   };
@@ -180,8 +134,6 @@ export function LarpResult({
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const viewport = useVisualViewportSize();
-  const useMobileFrame = isMobile || viewport.width < 768;
   const [shareDialog, setShareDialog] = useState<{ imageIndex: number } | null>(
     null,
   );
@@ -263,7 +215,7 @@ export function LarpResult({
       <div className="flex min-w-0 max-w-full shrink-0 justify-center gap-4">
         {resultUrls.map((url, index) => {
           const isVideo = resultType === "video" || isVideoResultUrl(url);
-          const frameStyle = useMobileFrame
+          const frameStyle = isMobile
             ? getMobileResultFrameStyle()
             : isVideo
               ? VIDEO_RESULT_FRAME_STYLE

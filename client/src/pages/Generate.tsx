@@ -966,10 +966,11 @@ export default function Generate() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setTaskId(null);
     setGenerationResultVisible(false);
     setPendingLoading(false);
+    setAutoGenerateReady(false);
     setIsStartingGeneration(false);
     setPrompt("");
     setImages((prev) => {
@@ -983,7 +984,30 @@ export default function Generate() {
     setGenerationMode("image");
     setFakePaywallReason("onboarding");
     refetchEligibility();
-  };
+  }, [facePreviewUrl, refetchEligibility]);
+
+  useEffect(() => {
+    const handleCreateNewLarp = () => {
+      setUnlockedLarp(null);
+      setUnlockingLarp(false);
+      setSavedPaywall(null);
+      setShowFakePaywall(false);
+      setIsFakeGenerating(false);
+      setTransitionBg(false);
+      clearPendingLarp();
+      clearPaywalledResult();
+      clearPaywallImage();
+      handleReset();
+      window.requestAnimationFrame(() => {
+        topRef.current?.scrollIntoView({ block: "start" });
+      });
+    };
+
+    window.addEventListener("larpking:create-new-larp", handleCreateNewLarp);
+    return () => {
+      window.removeEventListener("larpking:create-new-larp", handleCreateNewLarp);
+    };
+  }, [handleReset]);
 
   // ── Auto-generate when pending LARP data has been restored ──
   // We need `profile` to be loaded to decide fake vs real generation,
