@@ -199,16 +199,16 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverContent
               align="end"
               sideOffset={8}
-              className="w-[min(calc(100vw-2rem),22rem)] overflow-hidden rounded-lg border-border/80 bg-white/95 p-0 shadow-xl shadow-black/10 backdrop-blur-xl"
+              className="w-[min(calc(100vw-2rem),15.5rem)] overflow-hidden rounded-lg border-border/80 bg-white/95 p-0 shadow-xl shadow-black/10 backdrop-blur-xl"
             >
-              <div className="border-b border-border/60 px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <div className="border-b border-border/60 px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                   {t("billing.creditsTitle")}
                 </p>
-                <div className="mt-2 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <CreditsTokenIcon className="h-7 w-7" />
-                    <span className="font-display text-3xl font-bold leading-none">
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <CreditsTokenIcon className="h-6 w-6" />
+                    <span className="font-display text-2xl font-bold leading-none">
                       {displayedCredits}
                     </span>
                   </div>
@@ -218,19 +218,19 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 </div>
               </div>
 
-              <div className="space-y-3 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <Crown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="space-y-2 px-3 py-2.5">
+                <div className="flex items-start gap-2.5">
+                  <Crown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{planLabels[planType]}</p>
-                    <p className="text-xs text-muted-foreground">{statusLabel}</p>
+                    <p className="text-[13px] font-semibold leading-tight">{planLabels[planType]}</p>
+                    <p className="text-[11px] leading-tight text-muted-foreground">{statusLabel}</p>
                   </div>
                 </div>
 
                 {plan?.creditsPerCycle !== null && plan?.creditsPerCycle !== undefined && (
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground">
+                  <div className="flex items-start gap-2.5">
+                    <CreditCard className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <p className="text-[11px] font-medium leading-snug text-muted-foreground">
                       {t("billing.creditsPerCycle", {
                         credits: plan.creditsPerCycle,
                         interval: t(`billing.intervals.${plan.billingInterval || "month"}`),
@@ -240,9 +240,9 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 )}
 
                 {periodEndLabel && (
-                  <div className="flex items-start gap-3">
-                    <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground">
+                  <div className="flex items-start gap-2.5">
+                    <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <p className="text-[11px] font-medium leading-snug text-muted-foreground">
                       {plan?.cancelAtPeriodEnd
                         ? t("billing.endsOn", { date: periodEndLabel })
                         : t("billing.renewsOn", { date: periodEndLabel })}
@@ -255,7 +255,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                     type="button"
                     onClick={handleManageSubscription}
                     disabled={portalLoading}
-                    className="mt-1 h-10 w-full rounded-full"
+                    className="mt-0.5 h-9 w-full rounded-full text-xs"
                   >
                     {portalLoading ? (
                       <span className="flex items-center justify-center gap-2">
