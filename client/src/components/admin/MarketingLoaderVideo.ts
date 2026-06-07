@@ -16,6 +16,7 @@ export const MARKETING_LOADER_BLUR_START_MS = 800;
 export const MARKETING_LOADER_BLUR_DURATION_MS = 1800;
 export const MARKETING_LOADER_PREPARING_MS = 2000;
 export const MARKETING_LOADER_PREPARING_LABEL = "Pr\u00e9paration\u2026";
+const MARKETING_LOADER_FONT_READY_TIMEOUT_MS = 1200;
 
 const LOADER_DESIGN_WIDTH = 390;
 const LOADER_BACKGROUND_TILE_CSS = 180;
@@ -447,9 +448,14 @@ export function drawMarketingLoaderFrame({
 }
 
 export async function waitForMarketingLoaderFonts() {
-  if (document.fonts?.ready) {
-    await document.fonts.ready;
-  }
+  if (!document.fonts?.ready) return;
+
+  await Promise.race([
+    document.fonts.ready,
+    new Promise<void>((resolve) =>
+      window.setTimeout(resolve, MARKETING_LOADER_FONT_READY_TIMEOUT_MS),
+    ),
+  ]);
 }
 
 export async function exportMarketingLoaderVideo({
