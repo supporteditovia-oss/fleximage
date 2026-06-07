@@ -28,7 +28,7 @@ import {
 
 /** Compact media frame used by the generated result surface. */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl md:h-[min(82svh,720px)]";
+  "relative aspect-[9/16] h-[min(72svh,600px)] w-auto max-w-[92vw] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl md:h-[min(76svh,680px)]";
 
 /** Fullscreen portal viewer — same height-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
