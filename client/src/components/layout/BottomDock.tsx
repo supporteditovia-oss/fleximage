@@ -51,12 +51,6 @@ export function BottomDock() {
       const currentH = vv.height;
       if (currentH > maxHeight) maxHeight = currentH;
 
-      if (document.body.hasAttribute("data-larp-result-visible")) {
-        setHidden(false);
-        lastY = currentY;
-        return;
-      }
-      
       // 1. Keyboard open: height drops significantly (e.g. < 80% of max seen height)
       if (currentH < maxHeight * 0.8) {
         setHidden(true);
@@ -89,13 +83,7 @@ export function BottomDock() {
       }
     };
 
-    const handleResultVisible = () => {
-      setHidden(false);
-      lastY = window.scrollY;
-    };
-
     // Listen to resize and scroll on visualViewport (scroll on vv fires when UI expands/collapses usually)
-    window.addEventListener("larpking:result-visible", handleResultVisible);
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", handleResizeOrScroll);
       window.visualViewport.addEventListener("scroll", handleResizeOrScroll);
@@ -104,7 +92,6 @@ export function BottomDock() {
     }
 
     return () => {
-      window.removeEventListener("larpking:result-visible", handleResultVisible);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", handleResizeOrScroll);
         window.visualViewport.removeEventListener("scroll", handleResizeOrScroll);

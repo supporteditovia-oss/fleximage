@@ -14,7 +14,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
@@ -26,51 +26,20 @@ import {
   triggerBlobDownload,
 } from "@/lib/download-media";
 
-/**
- * Strict 9:16 frame — width-first sizing so flex parents cannot stretch height
- * past the aspect ratio (height-only rules caused tall narrow black bars on mobile).
- */
-/** Height-first 9:16 — avoids flex parents collapsing width-based frames to 0. */
+/** Compact media frame used by the generated result surface. */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative isolate mx-auto shrink-0 bg-black shadow-xl";
+  "relative shrink-0 overflow-hidden rounded-2xl bg-black shadow-xl";
 
 /** Fullscreen portal viewer — same height-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
   "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-8rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
 
-const RESULT_FRAME_RADIUS_PX = 8;
-const RESULT_FRAME_RADIUS = `${RESULT_FRAME_RADIUS_PX}px`;
-const RESULT_FRAME_CLIP_PATH = `inset(0 round ${RESULT_FRAME_RADIUS})`;
-const RESULT_FRAME_STYLE: CSSProperties = {
-  aspectRatio: "9 / 16",
-  height: "clamp(16rem, 62vh, 42rem)",
-  width: "auto",
-  maxHeight: "calc(100vh - 14rem)",
-  maxWidth: "min(calc(100vw - 2rem), 100%)",
-  minHeight: "16rem",
-  minWidth: "9rem",
-  overflow: "hidden",
-  borderRadius: RESULT_FRAME_RADIUS,
-  clipPath: RESULT_FRAME_CLIP_PATH,
-  WebkitClipPath: RESULT_FRAME_CLIP_PATH,
-};
-const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
-  ...RESULT_FRAME_STYLE,
-  height: "clamp(15rem, 56vh, 38rem)",
-  maxHeight: "calc(100vh - 16rem)",
-};
-
-function getMobileResultFrameStyle(): CSSProperties {
-  return {
-    ...RESULT_FRAME_STYLE,
-    height: "min(64svh, calc(100svh - 17rem), 560px)",
-    width: "auto",
-    maxHeight: "min(64svh, calc(100svh - 17rem), 560px)",
-    maxWidth: "92vw",
-    minHeight: undefined,
-    minWidth: undefined,
-  };
-}
+const RESULT_MEDIA_CLASS =
+  "block max-h-[55svh] w-auto max-w-[calc(100vw-2rem)] object-contain md:max-h-[60vh]";
+const VIDEO_RESULT_FRAME_CLASS =
+  "relative aspect-[9/16] h-[min(55svh,calc(100svh-12rem))] w-auto max-w-[calc(100vw-2rem)] md:h-[min(60vh,calc(100vh-12rem))]";
+const RESULT_ACTIONS_CLASS =
+  "absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12";
 
 function isVideoResultUrl(url: string): boolean {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
@@ -212,34 +181,27 @@ export function LarpResult({
 
   return (
     <>
-      <div className="flex min-w-0 max-w-full shrink-0 justify-center gap-4">
+      <div className="flex min-h-0 min-w-0 max-w-full shrink items-center justify-center gap-4">
         {resultUrls.map((url, index) => {
           const isVideo = resultType === "video" || isVideoResultUrl(url);
-          const frameStyle = isMobile
-            ? getMobileResultFrameStyle()
-            : isVideo
-              ? VIDEO_RESULT_FRAME_STYLE
-              : RESULT_FRAME_STYLE;
 
           return (
-          <div
-            key={index}
-            className="shrink-0"
-          >
             <div
+              key={index}
               className={LARP_RESULT_FRAME_CLASS}
-              style={frameStyle}
             >
               {isVideo ? (
                 <>
-                  <VideoResultPlayer
-                    src={url}
-                    poster={posterUrl}
-                    objectFit="cover"
-                    controls={false}
-                  />
+                  <div className={VIDEO_RESULT_FRAME_CLASS}>
+                    <VideoResultPlayer
+                      src={url}
+                      poster={posterUrl}
+                      objectFit="contain"
+                      controls={false}
+                    />
+                  </div>
                   {!hideActions && (
-                    <div className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
+                    <div className={RESULT_ACTIONS_CLASS}>
                       <button
                         onClick={() => handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
@@ -262,17 +224,11 @@ export function LarpResult({
                   <img
                     src={url}
                     alt={t("result.generatedAlt", { index: index + 1 })}
-                    className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
-                    style={{
-                      borderRadius: RESULT_FRAME_RADIUS,
-                      clipPath: RESULT_FRAME_CLIP_PATH,
-                      WebkitClipPath: RESULT_FRAME_CLIP_PATH,
-                    }}
+                    className={RESULT_MEDIA_CLASS}
                     loading="lazy"
                   />
-                  {/* Bottom gradient with action buttons */}
                   {!hideActions && (
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12">
+                    <div className={RESULT_ACTIONS_CLASS}>
                       <button
                         onClick={() => handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
@@ -292,8 +248,7 @@ export function LarpResult({
                 </>
               )}
             </div>
-          </div>
-        );
+          );
         })}
       </div>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -54,21 +55,20 @@ export function GenerationProgress({
     return () => clearTimeout(timer);
   }, [data?.status, hasResultMedia, revealDone]);
 
-  // Show dock again when result is displayed (remove fullscreen overlay flag)
+  // Swap the fullscreen loader for a clean result surface.
   useEffect(() => {
     if (showResult) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      document.documentElement.setAttribute("data-larp-result-visible", "true");
-      document.body.setAttribute("data-larp-result-visible", "true");
-      window.dispatchEvent(new Event("larpking:result-visible"));
+      document.documentElement.setAttribute("data-larp-result-mode", "true");
+      document.body.setAttribute("data-larp-result-mode", "true");
       onResultVisible?.();
     }
 
     return () => {
       if (showResult) {
-        document.documentElement.removeAttribute("data-larp-result-visible");
-        document.body.removeAttribute("data-larp-result-visible");
+        document.documentElement.removeAttribute("data-larp-result-mode");
+        document.body.removeAttribute("data-larp-result-mode");
       }
     };
   }, [onResultVisible, showResult]);
@@ -112,8 +112,8 @@ export function GenerationProgress({
       hasHandledFailure.current = true;
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      document.documentElement.removeAttribute("data-larp-result-visible");
-      document.body.removeAttribute("data-larp-result-visible");
+      document.documentElement.removeAttribute("data-larp-result-mode");
+      document.body.removeAttribute("data-larp-result-mode");
       toast({
         variant: "destructive",
         title: t("progress.connectionError"),
@@ -128,8 +128,8 @@ export function GenerationProgress({
       hasHandledFailure.current = true;
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      document.documentElement.removeAttribute("data-larp-result-visible");
-      document.body.removeAttribute("data-larp-result-visible");
+      document.documentElement.removeAttribute("data-larp-result-mode");
+      document.body.removeAttribute("data-larp-result-mode");
       toast({
         variant: "destructive",
         title: t("progress.generationFailed"),
@@ -182,9 +182,10 @@ export function GenerationProgress({
       {/* After reveal: show the result */}
       {showResult &&
         data?.status === "success" &&
-        hasResultMedia && (
+        hasResultMedia &&
+        createPortal(
           <div
-            className="mx-auto flex min-h-[calc(100svh-12rem)] w-full max-w-[28rem] flex-col items-center justify-start gap-3 overflow-visible px-0 pb-8 pt-0 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:max-w-none md:justify-center md:gap-6 md:overflow-hidden md:px-4 md:py-4"
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4 overflow-hidden bg-background bg-grid px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-[calc(4.75rem+env(safe-area-inset-top))] animate-in fade-in duration-500 md:gap-6 md:px-6 md:pb-24 md:pt-24"
           >
             <h1 className="font-display w-full shrink-0 text-center text-[2rem] font-bold leading-none md:text-3xl">
               <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
@@ -193,7 +194,7 @@ export function GenerationProgress({
             </h1>
 
             {/* LARP result with download/share actions */}
-            <div className="relative flex min-h-0 min-w-0 w-full flex-1 items-center justify-center overflow-visible px-0 py-1 md:px-2 md:py-2 [&>*]:shrink-0">
+            <div className="relative flex min-h-0 min-w-0 shrink items-center justify-center overflow-visible">
               <LarpResult
                 resultUrls={data.resultUrls}
                 larpId={data.larpId}
@@ -210,7 +211,8 @@ export function GenerationProgress({
               {t("progress.createAnother")}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
-          </div>
+          </div>,
+          document.body,
         )}
     </>
   );

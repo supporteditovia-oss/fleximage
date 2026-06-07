@@ -272,7 +272,7 @@ export function PaywallOverlay({
         : "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 px-1 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
     const bulletClassName = "flex min-w-0 gap-1.5";
     const mobileHiddenBulletClassName = "hidden min-w-0 gap-1.5 md:flex";
-    const visibleMobilePlanFeatureCount = selectedPlanCard.bonusKey ? 1 : 2;
+    const visibleMobilePlanFeatureCount = selectedPlanCard.bonusKey ? 3 : 4;
 
     return (
       <>

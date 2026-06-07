@@ -33,15 +33,21 @@ body[data-fullscreen-overlay] .bottom-dock {
   pointer-events: none !important;
 }
 
-html[data-larp-result-visible],
-body[data-larp-result-visible] {
-  overflow-y: auto !important;
-  overscroll-behavior: auto;
+html[data-larp-result-mode],
+body[data-larp-result-mode] {
+  overflow: hidden !important;
+  overscroll-behavior: none;
 }
 
-body[data-larp-result-visible] .bottom-dock {
+body[data-larp-result-mode] .floating-header {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body[data-larp-result-mode] .bottom-dock {
   opacity: 1 !important;
   pointer-events: auto !important;
+  transform: translateY(0) !important;
 }
 
 body[data-paywall-overlay] .floating-header {
