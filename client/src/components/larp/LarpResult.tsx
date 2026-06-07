@@ -106,31 +106,12 @@ const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
   maxHeight: "calc(100vh - 16rem)",
 };
 
-function getMobileResultFrameStyle(
-  viewport: ViewportSize,
-  isVideo: boolean,
-): CSSProperties {
-  const availableWidth = Math.max(220, viewport.width - 32);
-  const heightByWidth = availableWidth * (16 / 9);
-  const reservedHeight = isVideo ? 228 : 212;
-  const remainingHeight = Math.max(180, viewport.height - reservedHeight);
-  const preferredHeight = viewport.height * (isVideo ? 0.58 : 0.62);
-  const maxHeight = isVideo ? 520 : 560;
-  const targetHeight = Math.min(
-    heightByWidth,
-    remainingHeight,
-    preferredHeight,
-    maxHeight,
-  );
-  const floorHeight = Math.min(256, heightByWidth, remainingHeight);
-  const frameHeight = Math.max(floorHeight, targetHeight);
-  const frameWidth = frameHeight * (9 / 16);
-
+function getMobileResultFrameStyle(): CSSProperties {
   return {
     ...RESULT_FRAME_STYLE,
-    height: `${Math.round(frameHeight)}px`,
-    width: `${Math.round(frameWidth)}px`,
-    maxHeight: `${Math.round(frameHeight)}px`,
+    height: "auto",
+    width: "min(calc(100vw - 2rem), 28rem)",
+    maxHeight: "none",
     maxWidth: "calc(100vw - 2rem)",
     minHeight: undefined,
     minWidth: undefined,
@@ -283,7 +264,7 @@ export function LarpResult({
         {resultUrls.map((url, index) => {
           const isVideo = resultType === "video" || isVideoResultUrl(url);
           const frameStyle = useMobileFrame
-            ? getMobileResultFrameStyle(viewport, isVideo)
+            ? getMobileResultFrameStyle()
             : isVideo
               ? VIDEO_RESULT_FRAME_STYLE
               : RESULT_FRAME_STYLE;

@@ -83,11 +83,18 @@ async function tryEncodeWithWebCodecs({
       target: new ArrayBufferTarget(),
       video: { codec: "avc", width, height, frameRate: fps },
       fastStart: "in-memory",
+      firstTimestampBehavior: "offset",
     });
 
     let encoderError: unknown = null;
     const encoder = new VideoEncoder({
-      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      output: (chunk, meta) => {
+        try {
+          muxer.addVideoChunk(chunk, meta);
+        } catch (error) {
+          encoderError = error;
+        }
+      },
       error: (error) => {
         encoderError = error;
       },

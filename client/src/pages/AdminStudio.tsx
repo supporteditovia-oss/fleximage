@@ -10,15 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { createCanvasSafeImageUrl } from "@/lib/canvas-image";
 import {
-  createCanvasSafeImageUrl,
-  createGrainPattern,
-  drawCoverImage,
-  loadDrawableImage,
-  roundedRectPath,
-} from "@/lib/canvas-image";
-import { downloadVideoAsMp4 } from "@/lib/video-export";
-import { recordCanvasTimeline } from "@/lib/canvas-recorder";
+  exportMarketingLoaderVideo,
+  marketingLoaderTimelineMs,
+  MARKETING_LOADER_BLUR_START_MS,
+  MARKETING_LOADER_IMAGE_APPEAR_MS,
+  MARKETING_LOADER_PREPARING_LABEL,
+  MARKETING_LOADER_PREPARING_MS,
+} from "@/components/admin/MarketingLoaderVideo";
 import {
   KeyboardWritingPreview,
   clampWritingSpeed,
@@ -110,14 +110,6 @@ const MAX_LOADER_DURATION_SECONDS = 120;
 const DEFAULT_LOADER_SPEED_MULTIPLIER = 3;
 const MIN_LOADER_SPEED_MULTIPLIER = 0.25;
 const MAX_LOADER_SPEED_MULTIPLIER = 10;
-const LOADER_EXPORT_WIDTH = 1080;
-const LOADER_EXPORT_HEIGHT = 1920;
-const LOADER_EXPORT_FPS = 30;
-const LOADER_IMAGE_APPEAR_MS = 300;
-const LOADER_BLUR_START_MS = 800;
-const LOADER_LOGO_START_MS = 1200;
-const LOADER_BLUR_DURATION_MS = 1800;
-const LOADER_LOGO_FADE_MS = 700;
 
 function clampLoaderDuration(value: unknown): number {
   const parsed =
@@ -370,154 +362,6 @@ async function getDownloadableImageFile({
   }
 }
 
-function easeOutCubic(value: number) {
-  const clamped = Math.min(1, Math.max(0, value));
-  return 1 - Math.pow(1 - clamped, 3);
-}
-
-async function exportLoaderVideo({
-  sourceUrl,
-  durationSeconds,
-  speedMultiplier,
-  filename,
-}: {
-  sourceUrl: string;
-  durationSeconds: number;
-  speedMultiplier: number;
-  filename: string;
-}) {
-  const objectUrlsToRevoke: string[] = [];
-
-  const safeSourceUrl = await createCanvasSafeImageUrl(sourceUrl);
-  if (safeSourceUrl.startsWith("blob:")) {
-    objectUrlsToRevoke.push(safeSourceUrl);
-  }
-
-  const [sourceImage, logoImage] = await Promise.all([
-    loadDrawableImage(safeSourceUrl),
-    loadDrawableImage("/assets/larpking.png"),
-  ]);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = LOADER_EXPORT_WIDTH;
-  canvas.height = LOADER_EXPORT_HEIGHT;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas non supporté");
-
-  const grainPattern = createGrainPattern(ctx);
-  const timelineTotalMs = LOADER_LOGO_START_MS + durationSeconds * 1000;
-  const outputTotalMs = timelineTotalMs / speedMultiplier;
-
-  const drawFrame = (elapsedMs: number) => {
-    ctx.save();
-    ctx.fillStyle = "hsl(0 0% 96%)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (grainPattern) {
-      ctx.fillStyle = grainPattern;
-      ctx.globalAlpha = 0.75;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = 1;
-    }
-
-    const cardHeight = canvas.height * 0.78;
-    const cardWidth = cardHeight * (9 / 16);
-    const cardX = (canvas.width - cardWidth) / 2;
-    const cardY = (canvas.height - cardHeight) / 2;
-    const cardRadius = 28;
-    const imageAlpha = easeOutCubic(
-      (elapsedMs - LOADER_IMAGE_APPEAR_MS) / 600,
-    );
-    const blurProgress = easeOutCubic(
-      (elapsedMs - LOADER_BLUR_START_MS) / LOADER_BLUR_DURATION_MS,
-    );
-
-    if (imageAlpha > 0) {
-      ctx.save();
-      roundedRectPath(ctx, cardX, cardY, cardWidth, cardHeight, cardRadius);
-      ctx.clip();
-      ctx.globalAlpha = imageAlpha;
-      ctx.filter = `blur(${24 * blurProgress}px) brightness(${1 - 0.32 * blurProgress})`;
-      drawCoverImage(
-        ctx,
-        sourceImage,
-        cardX,
-        cardY,
-        cardWidth,
-        cardHeight,
-        1 + 0.08 * blurProgress,
-      );
-      ctx.filter = "none";
-      ctx.globalAlpha = blurProgress * 0.12;
-      ctx.fillStyle = "#000";
-      ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
-      ctx.restore();
-    }
-
-    const logoAlpha = easeOutCubic(
-      (elapsedMs - LOADER_LOGO_START_MS) / LOADER_LOGO_FADE_MS,
-    );
-    if (logoAlpha > 0) {
-      ctx.save();
-      ctx.globalAlpha = logoAlpha;
-      ctx.shadowColor = "rgba(0,0,0,0.45)";
-      ctx.shadowBlur = 22;
-
-      const pulseCycleMs = 3500;
-      const pulseProgress =
-        ((elapsedMs - LOADER_LOGO_START_MS) % pulseCycleMs) / pulseCycleMs;
-      const pulseWave = (1 - Math.cos(pulseProgress * Math.PI * 2)) / 2;
-      const logoScale = 1 + 0.04 * pulseWave;
-      const baseLogoWidth = canvas.width * 0.58;
-      const logoWidth = baseLogoWidth * logoScale;
-      const logoHeight = logoWidth * (logoImage.naturalHeight / logoImage.naturalWidth);
-      const logoX = (canvas.width - logoWidth) / 2;
-      const logoY = canvas.height * 0.39 - logoHeight / 2;
-      ctx.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
-
-      const centerX = canvas.width / 2;
-      const spinnerY = canvas.height * 0.52;
-      const spinnerRadius = 24;
-      const rotation = (elapsedMs / 650) * Math.PI * 2;
-      ctx.lineWidth = 8;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(
-        centerX,
-        spinnerY,
-        spinnerRadius,
-        rotation,
-        rotation + Math.PI * 1.45,
-      );
-      ctx.stroke();
-
-      const seconds = Math.min(
-        durationSeconds,
-        Math.max(0, Math.floor((elapsedMs - LOADER_LOGO_START_MS) / 1000)),
-      );
-      ctx.font = "700 64px sans-serif";
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(`${seconds}s`, centerX, spinnerY + 62);
-      ctx.restore();
-    }
-
-    ctx.restore();
-  };
-
-  const blob = await recordCanvasTimeline({
-    canvas,
-    fps: LOADER_EXPORT_FPS,
-    durationMs: outputTotalMs,
-    drawFrame: (elapsedMs) =>
-      drawFrame(Math.min(timelineTotalMs, elapsedMs * speedMultiplier)),
-  });
-
-  objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
-  await downloadVideoAsMp4(blob, filename);
-}
-
 function AspectImageSlot({
   label,
   imageUrl,
@@ -653,7 +497,7 @@ function SimulatedMarketingVideoPreview({
 
     const updateElapsed = () => {
       const rawMs = Math.max(0, Date.now() - startedAt) * speedMultiplier;
-      const timelineTotalMs = LOADER_LOGO_START_MS + maxSeconds * 1000;
+      const timelineTotalMs = marketingLoaderTimelineMs(maxSeconds);
       setElapsedMs(Math.min(timelineTotalMs, rawMs));
 
       if (rawMs >= timelineTotalMs && !hasEndedRef.current) {
@@ -668,11 +512,18 @@ function SimulatedMarketingVideoPreview({
   }, [sourceUrl, startedAt, maxSeconds, speedMultiplier, onEnded]);
 
   const isPlaying = Boolean(sourceUrl && startedAt);
-  const imageVisible = !isPlaying || elapsedMs >= 300;
-  const isBlurring = isPlaying && elapsedMs >= 800;
-  const showLoader = isPlaying && elapsedMs >= 1200;
-  const displayedElapsed = showLoader
-    ? Math.min(maxSeconds, Math.max(0, Math.floor((elapsedMs - 1200) / 1000)))
+  const imageVisible = !isPlaying || elapsedMs >= MARKETING_LOADER_IMAGE_APPEAR_MS;
+  const isBlurring = isPlaying && elapsedMs >= MARKETING_LOADER_BLUR_START_MS;
+  const showLoader = isPlaying;
+  const showTimer = elapsedMs >= MARKETING_LOADER_PREPARING_MS;
+  const displayedElapsed = showTimer
+    ? Math.min(
+      maxSeconds,
+      Math.max(
+        0,
+        Math.floor((elapsedMs - MARKETING_LOADER_PREPARING_MS) / 1000),
+      ),
+    )
     : 0;
 
   return (
@@ -687,7 +538,7 @@ function SimulatedMarketingVideoPreview({
           <div className="absolute inset-0 flex items-center justify-center">
             <div
               className={cn(
-                "relative aspect-[9/16] h-[78%] max-h-[86%] w-auto max-w-[86%] overflow-hidden rounded-lg shadow-xl transition-opacity duration-600",
+                "relative aspect-[9/16] h-[78%] w-auto max-w-[92%] overflow-hidden rounded-lg shadow-xl transition-opacity duration-600",
                 imageVisible ? "opacity-100" : "opacity-0",
               )}
             >
@@ -697,28 +548,29 @@ function SimulatedMarketingVideoPreview({
                 className={cn(
                   "absolute inset-0 h-full w-full object-cover transition-[filter,transform] duration-[1800ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
                   isBlurring
-                    ? "scale-[1.08] blur-2xl brightness-[0.68]"
+                    ? "scale-[1.08] blur-[24px] brightness-[0.7]"
                     : "scale-100 blur-0 brightness-100",
-                )}
-              />
-              <div
-                className={cn(
-                  "absolute inset-0 bg-black/10 transition-opacity duration-700",
-                  isBlurring ? "opacity-100" : "opacity-0",
                 )}
               />
             </div>
           </div>
           {showLoader ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center animate-in fade-in zoom-in-95 duration-700">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center animate-in fade-in zoom-in-95 duration-700">
               <img
                 src="/assets/larpking.png"
                 alt="LarpKing"
-                className="h-20 w-auto object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse md:h-24"
+                className="h-24 w-auto object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
               />
               <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
-              <span className="text-lg font-semibold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
-                {displayedElapsed}s
+              <span
+                className={cn(
+                  "text-lg font-semibold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]",
+                  showTimer && "tabular-nums",
+                )}
+              >
+                {showTimer
+                  ? `${displayedElapsed}s`
+                  : MARKETING_LOADER_PREPARING_LABEL}
               </span>
             </div>
           ) : null}
@@ -1170,7 +1022,7 @@ export default function AdminStudio() {
 
     setIsExportingLoaderVideo(true);
     try {
-      await exportLoaderVideo({
+      await exportMarketingLoaderVideo({
         sourceUrl,
         durationSeconds: activeVideo.loaderDurationSeconds,
         speedMultiplier: activeVideo.loaderSpeedMultiplier,
