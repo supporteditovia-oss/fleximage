@@ -28,16 +28,14 @@ import {
 
 /** Compact media frame used by the generated result surface. */
 export const LARP_RESULT_FRAME_CLASS =
-  "relative shrink-0 overflow-hidden rounded-2xl bg-black shadow-xl";
+  "relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl md:h-[min(82svh,720px)]";
 
 /** Fullscreen portal viewer — same height-first 9:16 constraint */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
   "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-8rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
 
 const RESULT_MEDIA_CLASS =
-  "block max-h-[55svh] w-auto max-w-[calc(100vw-2rem)] object-contain md:max-h-[60vh]";
-const VIDEO_RESULT_FRAME_CLASS =
-  "relative aspect-[9/16] h-[min(55svh,calc(100svh-12rem))] w-auto max-w-[calc(100vw-2rem)] md:h-[min(60vh,calc(100vh-12rem))]";
+  "absolute inset-0 h-full w-full object-cover";
 const RESULT_ACTIONS_CLASS =
   "absolute inset-x-0 bottom-0 z-30 flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/60 to-transparent pb-4 pt-12";
 
@@ -192,14 +190,12 @@ export function LarpResult({
             >
               {isVideo ? (
                 <>
-                  <div className={VIDEO_RESULT_FRAME_CLASS}>
-                    <VideoResultPlayer
-                      src={url}
-                      poster={posterUrl}
-                      objectFit="contain"
-                      controls={false}
-                    />
-                  </div>
+                  <VideoResultPlayer
+                    src={url}
+                    poster={posterUrl}
+                    objectFit="cover"
+                    controls={false}
+                  />
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
                       <button
