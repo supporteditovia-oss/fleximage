@@ -655,40 +655,6 @@ export default function Generate() {
   const isSubmittingGeneration =
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
-  // Returning non-subscribers who already finished the fake loader → unlock step
-  useEffect(() => {
-    if (isAuthLoading || isReturningFromCheckout) return;
-    if (!profile || profile.is_subscriber || profile.role === "admin") return;
-    if (!shouldSkipFakeLoader) return;
-    if (
-      taskId ||
-      isFakeGenerating ||
-      showFakePaywall ||
-      savedPaywall ||
-      unlockingLarp ||
-      pendingLoading ||
-      autoGenerateReady
-    ) {
-      return;
-    }
-
-    console.log("[Generate] Fake paywall already reached — showing unlock step");
-    startOnboardingPaywallFlow({ showPaywallImmediately: true });
-  }, [
-    isAuthLoading,
-    isReturningFromCheckout,
-    profile,
-    shouldSkipFakeLoader,
-    taskId,
-    isFakeGenerating,
-    showFakePaywall,
-    savedPaywall,
-    unlockingLarp,
-    pendingLoading,
-    autoGenerateReady,
-    startOnboardingPaywallFlow,
-  ]);
-
   const handleGenerate = async () => {
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;

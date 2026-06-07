@@ -46,10 +46,11 @@ export function ImageUploadGrid({
                     <input
                       type="file"
                       accept="image/*"
-                      className="hidden"
+                      className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) onImageSelect(i, file);
+                        e.currentTarget.value = "";
                       }}
                     />
                     <div className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
