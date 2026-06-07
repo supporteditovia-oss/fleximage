@@ -59,8 +59,18 @@ export function GenerationProgress({
     if (showResult) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      document.documentElement.setAttribute("data-larp-result-visible", "true");
+      document.body.setAttribute("data-larp-result-visible", "true");
+      window.dispatchEvent(new Event("larpking:result-visible"));
       onResultVisible?.();
     }
+
+    return () => {
+      if (showResult) {
+        document.documentElement.removeAttribute("data-larp-result-visible");
+        document.body.removeAttribute("data-larp-result-visible");
+      }
+    };
   }, [onResultVisible, showResult]);
 
   const loaderStatus =
@@ -100,7 +110,10 @@ export function GenerationProgress({
 
     if (fatalConnectionError) {
       hasHandledFailure.current = true;
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      document.documentElement.removeAttribute("data-larp-result-visible");
+      document.body.removeAttribute("data-larp-result-visible");
       toast({
         variant: "destructive",
         title: t("progress.connectionError"),
@@ -113,7 +126,10 @@ export function GenerationProgress({
 
     if (data?.status === "fail") {
       hasHandledFailure.current = true;
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      document.documentElement.removeAttribute("data-larp-result-visible");
+      document.body.removeAttribute("data-larp-result-visible");
       toast({
         variant: "destructive",
         title: t("progress.generationFailed"),
@@ -168,7 +184,7 @@ export function GenerationProgress({
         data?.status === "success" &&
         hasResultMedia && (
           <div
-            className="mx-auto flex h-[calc(100svh-12rem)] w-full max-w-[28rem] flex-col items-center justify-start gap-3 overflow-hidden px-0 pb-2 pt-0 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:max-w-none md:justify-center md:gap-6 md:px-4 md:py-4"
+            className="mx-auto flex min-h-[calc(100svh-12rem)] w-full max-w-[28rem] flex-col items-center justify-start gap-3 overflow-visible px-0 pb-8 pt-0 animate-in fade-in duration-500 md:h-[calc(100dvh-12.5rem)] md:max-w-none md:justify-center md:gap-6 md:overflow-hidden md:px-4 md:py-4"
           >
             <h1 className="font-display w-full shrink-0 text-center text-[2rem] font-bold leading-none md:text-3xl">
               <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">

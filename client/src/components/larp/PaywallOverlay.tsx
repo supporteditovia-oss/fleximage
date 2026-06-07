@@ -270,6 +270,9 @@ export function PaywallOverlay({
       isModalPresentation
         ? "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 border-t border-border/50 bg-white/95 px-1 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]"
         : "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 px-1 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
+    const bulletClassName = "flex min-w-0 gap-1.5";
+    const mobileHiddenBulletClassName = "hidden min-w-0 gap-1.5 md:flex";
+    const visibleMobilePlanFeatureCount = selectedPlanCard.bonusKey ? 1 : 2;
 
     return (
       <>
@@ -312,8 +315,8 @@ export function PaywallOverlay({
                   whileTap={{ scale: 0.985 }}
                   className={`relative flex w-full flex-col overflow-hidden rounded-lg p-2.5 text-left transition-all md:p-3 ${
                     plan.id === "essential"
-                      ? "min-h-[8.75rem] md:min-h-[10.25rem] md:pt-4"
-                      : "min-h-[8.5rem] md:min-h-[10rem]"
+                      ? "min-h-[7.75rem] md:min-h-[9.5rem] md:pt-4"
+                      : "min-h-[7.5rem] md:min-h-[9.25rem]"
                   } ${
                     plan.id === "essential" ? "paywall-essential-card-border isolate border-0" : ""
                   } ${
@@ -328,7 +331,7 @@ export function PaywallOverlay({
                 >
                   <div className="flex items-start justify-between gap-1.5 md:gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate font-display text-sm font-bold leading-none md:text-lg">
+                      <h3 className="truncate font-display text-[13px] font-bold leading-none md:text-lg">
                         {t(`paywall.plans.${plan.id}.name`)}
                       </h3>
                       <p className="mt-1 text-[10px] font-semibold text-muted-foreground line-through">
@@ -339,10 +342,10 @@ export function PaywallOverlay({
                   </div>
 
                   <div className="mt-2 flex items-end gap-0.5 md:mt-3 md:gap-1">
-                    <span className="font-display text-[2.15rem] font-bold leading-[0.86] tracking-normal md:text-5xl">
+                    <span className="font-display text-[1.9rem] font-bold leading-[0.86] tracking-normal md:text-4xl">
                       {plan.euros}
                     </span>
-                    <span className="pb-0.5 text-xs font-bold leading-none text-muted-foreground md:pb-1 md:text-lg">
+                    <span className="pb-0.5 text-[11px] font-bold leading-none text-muted-foreground md:pb-1 md:text-base">
                       {plan.cents}
                     </span>
                     <span className="pb-0.5 text-[9px] font-bold leading-none text-muted-foreground md:pb-1 md:text-xs">
@@ -358,33 +361,40 @@ export function PaywallOverlay({
               );
             })}
               </div>
-              <div className="mt-6 min-h-[18rem] w-full flex-1 overflow-y-auto px-1 py-2 md:mt-6 md:min-h-0 md:max-w-[720px] md:flex-none md:overflow-visible md:px-1 md:py-0">
+              <div className="mt-4 min-h-[8.5rem] w-full flex-1 overflow-hidden px-1 py-2 md:mt-6 md:min-h-0 md:max-w-[720px] md:flex-none md:overflow-visible md:px-1 md:py-0">
                 <p className="text-sm font-bold text-foreground">
                   {t(`paywall.plans.${selectedPlanCard.id}.name`)}
                 </p>
-                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-[10px] font-semibold leading-tight text-foreground/78 min-[390px]:text-[11px] md:gap-x-8 md:gap-y-3 md:text-xs">
-                  <li className="flex min-w-0 gap-1.5">
+                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[10px] font-semibold leading-tight text-foreground/78 min-[390px]:text-[11px] md:gap-x-8 md:gap-y-3 md:text-xs">
+                  <li className={bulletClassName}>
                     <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
                     <span>{t(`paywall.plans.${selectedPlanCard.id}.creditsPerMonth`)}</span>
                   </li>
-                  <li className="flex min-w-0 gap-1.5">
+                  <li className={bulletClassName}>
                     <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
                     <span>{t("paywall.generationCosts")}</span>
                   </li>
                   {selectedPlanCard.bonusKey && (
-                    <li className="flex min-w-0 gap-1.5">
+                    <li className={bulletClassName}>
                       <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
                       <span>{t(`paywall.planBonuses.${selectedPlanCard.bonusKey}`)}</span>
                     </li>
                   )}
-                  {selectedPlanCard.featureKeys.map((feature) => (
-                    <li key={feature} className="flex min-w-0 gap-1.5">
+                  {selectedPlanCard.featureKeys.map((feature, index) => (
+                    <li
+                      key={feature}
+                      className={
+                        index < visibleMobilePlanFeatureCount
+                          ? bulletClassName
+                          : mobileHiddenBulletClassName
+                      }
+                    >
                       <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
                       <span>{t(`paywall.planFeatures.${feature}`)}</span>
                     </li>
                   ))}
                   {commonPlanFeatureKeys.map((feature) => (
-                    <li key={feature} className="flex min-w-0 gap-1.5">
+                    <li key={feature} className={mobileHiddenBulletClassName}>
                       <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
                       <span>{t(`paywall.planFeatures.${feature}`)}</span>
                     </li>

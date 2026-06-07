@@ -63,9 +63,9 @@ const VIDEO_RESULT_FRAME_STYLE: CSSProperties = {
 function getMobileResultFrameStyle(): CSSProperties {
   return {
     ...RESULT_FRAME_STYLE,
-    height: "min(78svh, 640px)",
+    height: "min(64svh, calc(100svh - 17rem), 560px)",
     width: "auto",
-    maxHeight: "min(78svh, 640px)",
+    maxHeight: "min(64svh, calc(100svh - 17rem), 560px)",
     maxWidth: "92vw",
     minHeight: undefined,
     minWidth: undefined,

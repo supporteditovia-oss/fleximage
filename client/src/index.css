@@ -33,6 +33,17 @@ body[data-fullscreen-overlay] .bottom-dock {
   pointer-events: none !important;
 }
 
+html[data-larp-result-visible],
+body[data-larp-result-visible] {
+  overflow-y: auto !important;
+  overscroll-behavior: auto;
+}
+
+body[data-larp-result-visible] .bottom-dock {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
 body[data-paywall-overlay] .floating-header {
   opacity: 1 !important;
   pointer-events: none !important;
