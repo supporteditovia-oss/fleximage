@@ -691,9 +691,16 @@ function StudioVideoStatusPoller({
   return null;
 }
 
+const STUDIO_TOAST_DURATION_MS = 1500;
+
 export default function AdminStudio() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
+  const notify = useCallback(
+    (props: Parameters<typeof toast>[0]) =>
+      toast({ ...props, duration: STUDIO_TOAST_DURATION_MS }),
+    [toast],
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
@@ -787,7 +794,7 @@ export default function AdminStudio() {
   const handleReferenceFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("image/")) {
-        toast({
+        notify({
           title: "Format non supporté",
           description: "Veuillez sélectionner une image.",
           variant: "destructive",
@@ -803,7 +810,7 @@ export default function AdminStudio() {
         updateVideoById(targetVideoId, (video) => ({ ...video, refUrl: url }));
       } catch (error: any) {
         updateVideoById(targetVideoId, (video) => ({ ...video, refUrl: null }));
-        toast({
+        notify({
           title: "Erreur d'upload",
           description: error.message,
           variant: "destructive",
@@ -845,7 +852,7 @@ export default function AdminStudio() {
         ...video,
         b1: { ...video.b1, isGenerating: false },
       }));
-      toast({
+      notify({
         title: "Erreur de génération",
         description: error.message,
         variant: "destructive",
@@ -881,7 +888,7 @@ export default function AdminStudio() {
         ...video,
         c1: { ...video.c1, isGenerating: false },
       }));
-      toast({
+      notify({
         title: "Erreur de génération",
         description: error.message,
         variant: "destructive",
@@ -935,7 +942,7 @@ export default function AdminStudio() {
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
-        toast({
+        notify({
           title: "Image téléchargée",
           description: file.name,
         });
@@ -943,7 +950,7 @@ export default function AdminStudio() {
         objectUrlsToRevoke.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
       }
     } catch (error: any) {
-      toast({
+      notify({
         title: "Téléchargement impossible",
         description: error?.message || "L’image n’a pas pu être téléchargée.",
         variant: "destructive",
@@ -969,7 +976,7 @@ export default function AdminStudio() {
 
   const handleCreateSimulatedVideo = () => {
     if (!beforeImageUrl) {
-      toast({
+      notify({
         title: "Image avant manquante",
         description: "Définissez une image comme avant avant de créer la vidéo.",
         variant: "destructive",
@@ -1022,12 +1029,12 @@ export default function AdminStudio() {
         speedMultiplier: activeVideo.loaderSpeedMultiplier,
         filename: `larpking-loader-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
-      toast({
+      notify({
         title: "Vidéo téléchargée",
         description: "Le loader a été généré côté navigateur.",
       });
     } catch (error: any) {
-      toast({
+      notify({
         title: "Export impossible",
         description:
           error?.message ||
@@ -1041,7 +1048,7 @@ export default function AdminStudio() {
 
   const handleCreateWriting = () => {
     if (!activeVideo.writingPrompt.trim()) {
-      toast({
+      notify({
         title: "Prompt manquant",
         description: "Saisissez le texte qui sera écrit dans la vidéo.",
         variant: "destructive",
@@ -1080,12 +1087,12 @@ export default function AdminStudio() {
         speedMultiplier: activeVideo.writingSpeedMultiplier,
         filename: `larpking-ecriture-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
-      toast({
+      notify({
         title: "Vidéo téléchargée",
         description: "L'écriture a été générée côté navigateur.",
       });
     } catch (error: any) {
-      toast({
+      notify({
         title: "Export impossible",
         description:
           error?.message ||
@@ -1099,7 +1106,7 @@ export default function AdminStudio() {
 
   const handleCreateHook = () => {
     if (!beforeImageUrl || !afterImageUrl) {
-      toast({
+      notify({
         title: "Images manquantes",
         description: "Définissez une image avant et une image après avant de créer le hook.",
         variant: "destructive",
@@ -1138,12 +1145,12 @@ export default function AdminStudio() {
         durationSeconds: activeVideo.hookDurationSeconds,
         filename: `larpking-hook-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
-      toast({
+      notify({
         title: "Vidéo téléchargée",
         description: "Le hook a été généré côté navigateur.",
       });
     } catch (error: any) {
-      toast({
+      notify({
         title: "Export impossible",
         description:
           error?.message ||
@@ -1157,7 +1164,7 @@ export default function AdminStudio() {
 
   const handleDownloadFullVideo = async () => {
     if (!beforeImageUrl || !afterImageUrl || !activeVideo.writingPrompt.trim()) {
-      toast({
+      notify({
         title: "Éléments manquants",
         description:
           "La vidéo complète nécessite une image avant, une image après et le prompt d'écriture.",
@@ -1178,12 +1185,12 @@ export default function AdminStudio() {
         loaderSpeedMultiplier: activeVideo.loaderSpeedMultiplier,
         filename: `larpking-video-complete-${activeVideo.label.toLowerCase().replace(/\s+/g, "-")}.mp4`,
       });
-      toast({
+      notify({
         title: "Vidéo complète téléchargée",
         description: "Les scènes hook, écriture et chargement ont été assemblées.",
       });
     } catch (error: any) {
-      toast({
+      notify({
         title: "Export impossible",
         description:
           error?.message ||
@@ -1240,7 +1247,7 @@ export default function AdminStudio() {
         },
       }));
 
-      toast({
+      notify({
         title: stage === "b1"
           ? "Génération échouée (étape A)"
           : "Génération échouée (étape B)",
