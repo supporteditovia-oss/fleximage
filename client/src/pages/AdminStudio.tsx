@@ -16,7 +16,6 @@ import {
   marketingLoaderTimelineMs,
   MARKETING_LOADER_BLUR_START_MS,
   MARKETING_LOADER_IMAGE_APPEAR_MS,
-  MARKETING_LOADER_PREPARING_LABEL,
   MARKETING_LOADER_PREPARING_MS,
 } from "@/components/admin/MarketingLoaderVideo";
 import {
@@ -562,16 +561,11 @@ function SimulatedMarketingVideoPreview({
                 className="h-24 w-auto object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
               />
               <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
-              <span
-                className={cn(
-                  "text-lg font-semibold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]",
-                  showTimer && "tabular-nums",
-                )}
-              >
-                {showTimer
-                  ? `${displayedElapsed}s`
-                  : MARKETING_LOADER_PREPARING_LABEL}
-              </span>
+              {showTimer ? (
+                <span className="text-lg font-semibold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+                  {displayedElapsed}s
+                </span>
+              ) : null}
             </div>
           ) : null}
           {!isPlaying ? (

@@ -10,12 +10,12 @@ import { downloadVideoAsMp4 } from "@/lib/video-export";
 export const MARKETING_LOADER_EXPORT_WIDTH = 1080;
 export const MARKETING_LOADER_EXPORT_HEIGHT = 1920;
 export const MARKETING_LOADER_EXPORT_FPS = 30;
-export const MARKETING_LOADER_IMAGE_APPEAR_MS = 300;
+export const MARKETING_LOADER_IMAGE_APPEAR_MS = 0;
 export const MARKETING_LOADER_IMAGE_FADE_MS = 600;
 export const MARKETING_LOADER_BLUR_START_MS = 800;
 export const MARKETING_LOADER_BLUR_DURATION_MS = 1800;
 export const MARKETING_LOADER_PREPARING_MS = 2000;
-export const MARKETING_LOADER_PREPARING_LABEL = "Pr\u00e9paration\u2026";
+export const MARKETING_LOADER_PREPARING_LABEL = "";
 const MARKETING_LOADER_FONT_READY_TIMEOUT_MS = 1200;
 
 const LOADER_DESIGN_WIDTH = 390;
@@ -38,17 +38,7 @@ type DrawMarketingLoaderFrameOptions = {
   elapsedMs: number;
   durationSeconds: number;
   gridPattern?: CanvasPattern | null;
-  sourceFrameCache?: MarketingLoaderSourceFrameCache | null;
   preparingLabel?: string;
-};
-
-export type MarketingLoaderSourceFrameCache = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  radius: number;
-  frames: HTMLCanvasElement[];
 };
 
 export function marketingLoaderTimelineMs(durationSeconds: number) {
@@ -127,66 +117,28 @@ export async function createMarketingLoaderGridPattern(
 ) {
   const scale = ctx.canvas.width / LOADER_DESIGN_WIDTH;
   const tileSize = Math.round(LOADER_BACKGROUND_TILE_CSS * scale);
-  const svg = `
-    <svg width="${tileSize}" height="${tileSize}" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-      <filter id="n">
-        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
-      </filter>
-      <rect width="100%" height="100%" filter="url(#n)" opacity="0.55"/>
-    </svg>
-  `;
-  const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
   try {
-    const image = await loadDrawableImage(url);
-    return ctx.createPattern(image, "repeat");
+    const patternCanvas = document.createElement("canvas");
+    patternCanvas.width = tileSize;
+    patternCanvas.height = tileSize;
+    const patternCtx = patternCanvas.getContext("2d");
+    if (!patternCtx) return null;
+
+    const imageData = patternCtx.createImageData(tileSize, tileSize);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const value = 220 + Math.random() * 28;
+      imageData.data[i] = value;
+      imageData.data[i + 1] = value;
+      imageData.data[i + 2] = value;
+      imageData.data[i + 3] = 46;
+    }
+    patternCtx.putImageData(imageData, 0, 0);
+
+    return ctx.createPattern(patternCanvas, "repeat");
   } catch {
     return null;
   }
-}
-
-export function createMarketingLoaderSourceFrameCache(
-  ctx: CanvasRenderingContext2D,
-  sourceImage: HTMLImageElement,
-) {
-  const { scale, width, height } = virtualViewportFor(
-    ctx.canvas.width,
-    ctx.canvas.height,
-  );
-  const card = loaderCardRect(scale, width, height);
-  const frameWidth = Math.max(1, Math.ceil(card.width));
-  const frameHeight = Math.max(1, Math.ceil(card.height));
-  const frameCount = 13;
-
-  const frames = Array.from({ length: frameCount }, (_, index) => {
-    const blurProgress = index / (frameCount - 1);
-    const frame = document.createElement("canvas");
-    frame.width = frameWidth;
-    frame.height = frameHeight;
-    const frameCtx = frame.getContext("2d");
-
-    if (frameCtx) {
-      frameCtx.filter = `blur(${px(24 * blurProgress, scale)}px) brightness(${
-        1 - 0.3 * blurProgress
-      })`;
-      drawCoverImage(
-        frameCtx,
-        sourceImage,
-        0,
-        0,
-        frameWidth,
-        frameHeight,
-        1 + 0.08 * blurProgress,
-      );
-    }
-
-    return frame;
-  });
-
-  return {
-    ...card,
-    frames,
-  };
 }
 
 function drawLoaderBackground(
@@ -208,7 +160,6 @@ function drawLoaderSourceImage({
   scale,
   viewportWidth,
   viewportHeight,
-  sourceFrameCache,
 }: {
   ctx: CanvasRenderingContext2D;
   sourceImage: HTMLImageElement;
@@ -216,7 +167,6 @@ function drawLoaderSourceImage({
   scale: number;
   viewportWidth: number;
   viewportHeight: number;
-  sourceFrameCache?: MarketingLoaderSourceFrameCache | null;
 }) {
   const imageAlpha = easeOutCubic(
     (elapsedMs - MARKETING_LOADER_IMAGE_APPEAR_MS) /
@@ -228,8 +178,7 @@ function drawLoaderSourceImage({
     (elapsedMs - MARKETING_LOADER_BLUR_START_MS) /
       MARKETING_LOADER_BLUR_DURATION_MS,
   );
-  const card = sourceFrameCache ??
-    loaderCardRect(scale, viewportWidth, viewportHeight);
+  const card = loaderCardRect(scale, viewportWidth, viewportHeight);
 
   ctx.save();
   ctx.shadowColor = "rgb(0 0 0 / 0.22)";
@@ -259,35 +208,18 @@ function drawLoaderSourceImage({
   ctx.clip();
   ctx.globalAlpha = imageAlpha;
 
-  if (sourceFrameCache) {
-    const frameIndex = Math.min(
-      sourceFrameCache.frames.length - 1,
-      Math.max(
-        0,
-        Math.round(blurProgress * (sourceFrameCache.frames.length - 1)),
-      ),
-    );
-    ctx.drawImage(
-      sourceFrameCache.frames[frameIndex],
-      card.x,
-      card.y,
-      card.width,
-      card.height,
-    );
-  } else {
-    ctx.filter = `blur(${px(24 * blurProgress, scale)}px) brightness(${
-      1 - 0.3 * blurProgress
-    })`;
-    drawCoverImage(
-      ctx,
-      sourceImage,
-      card.x,
-      card.y,
-      card.width,
-      card.height,
-      1 + 0.08 * blurProgress,
-    );
-  }
+  ctx.filter = `blur(${px(24 * blurProgress, scale)}px) brightness(${
+    1 - 0.3 * blurProgress
+  })`;
+  drawCoverImage(
+    ctx,
+    sourceImage,
+    card.x,
+    card.y,
+    card.width,
+    card.height,
+    1 + 0.08 * blurProgress,
+  );
   ctx.restore();
 }
 
@@ -391,6 +323,9 @@ function drawLoaderOverlay({
     LOADER_SPINNER_SIZE_CSS +
     LOADER_GAP_CSS;
   const drawTextY = groupCenterY + (textTop - groupCenterY) * groupScale;
+  const clockText = loaderClockText(elapsedMs, durationSeconds, preparingLabel);
+  if (!clockText) return;
+
   ctx.save();
   ctx.globalAlpha = enterProgress;
   ctx.fillStyle = "#fff";
@@ -401,7 +336,7 @@ function drawLoaderOverlay({
   ctx.shadowBlur = px(12, scale);
   ctx.shadowOffsetY = px(2, scale);
   ctx.fillText(
-    loaderClockText(elapsedMs, durationSeconds, preparingLabel),
+    clockText,
     px(centerX, scale),
     px(drawTextY, scale),
   );
@@ -415,7 +350,6 @@ export function drawMarketingLoaderFrame({
   elapsedMs,
   durationSeconds,
   gridPattern,
-  sourceFrameCache,
   preparingLabel = MARKETING_LOADER_PREPARING_LABEL,
 }: DrawMarketingLoaderFrameOptions) {
   const { scale, width, height } = virtualViewportFor(
@@ -432,7 +366,6 @@ export function drawMarketingLoaderFrame({
     scale,
     viewportWidth: width,
     viewportHeight: height,
-    sourceFrameCache,
   });
   drawLoaderOverlay({
     ctx,
@@ -491,10 +424,6 @@ export async function exportMarketingLoaderVideo({
     if (!ctx) throw new Error("Canvas non support\u00e9");
 
     const gridPattern = await createMarketingLoaderGridPattern(ctx);
-    const sourceFrameCache = createMarketingLoaderSourceFrameCache(
-      ctx,
-      sourceImage,
-    );
     const timelineTotalMs = marketingLoaderTimelineMs(durationSeconds);
     const outputTotalMs = timelineTotalMs / speedMultiplier;
 
@@ -510,7 +439,6 @@ export async function exportMarketingLoaderVideo({
           elapsedMs: Math.min(timelineTotalMs, elapsedMs * speedMultiplier),
           durationSeconds,
           gridPattern,
-          sourceFrameCache,
         });
       },
     });

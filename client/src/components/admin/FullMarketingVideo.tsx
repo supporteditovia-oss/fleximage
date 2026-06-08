@@ -13,7 +13,6 @@ import {
 } from "@/components/admin/KeyboardWritingVideo";
 import {
   createMarketingLoaderGridPattern,
-  createMarketingLoaderSourceFrameCache,
   drawMarketingLoaderFrame,
   marketingLoaderTimelineMs,
   waitForMarketingLoaderFonts,
@@ -109,10 +108,6 @@ export async function exportFullMarketingVideo({
 
   const grainPattern = createGrainPattern(ctx);
   const loaderGridPattern = await createMarketingLoaderGridPattern(ctx);
-  const loaderSourceFrameCache = createMarketingLoaderSourceFrameCache(
-    ctx,
-    beforeImage,
-  );
   const hookDurationMs = hookDurationSeconds * 1000;
   const writingTimeline = buildWritingTimeline(writingPrompt, writingSpeedMultiplier);
   const loaderTimelineMs = marketingLoaderTimelineMs(loaderDurationSeconds);
@@ -146,7 +141,6 @@ export async function exportFullMarketingVideo({
           elapsedMs: Math.min(loaderTimelineMs, loaderElapsed),
           durationSeconds: loaderDurationSeconds,
           gridPattern: loaderGridPattern,
-          sourceFrameCache: loaderSourceFrameCache,
         });
       }
     },
