@@ -34,7 +34,7 @@ import {
   resolvePreferredLocale,
   SIGNUP_LOCALE_STORAGE_KEY,
 } from "@shared/locales";
-import { isLegalNoindexPath } from "@shared/site-seo";
+import { isIndexableSitePath } from "@shared/site-seo";
 import { setRobotsMeta } from "@/lib/robots-meta";
 
 // OAuth callback handler — waits for Supabase to parse the hash fragment
@@ -209,7 +209,11 @@ function Router() {
 
   React.useEffect(() => {
     document.title = t(PAGE_TITLE_KEYS[pathname] || "meta:appName");
-    setRobotsMeta(isLegalNoindexPath(pathname) ? "noindex, nofollow" : null);
+    setRobotsMeta(
+      isIndexableSitePath(pathname)
+        ? "index, follow, max-image-preview:large"
+        : "noindex, nofollow",
+    );
   }, [pathname, t]);
 
   if (PROTECTED_PATHS.has(pathname)) {
