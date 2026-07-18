@@ -7,6 +7,7 @@
     "dev": "bun run kill-port && NODE_ENV=development bun run server/index.ts",
     "kill-port": "bun run script/kill-port.ts",
     "build": "bun run script/build.ts",
+    "vercel-build": "npx vite build",
     "start": "NODE_ENV=production bun run dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",

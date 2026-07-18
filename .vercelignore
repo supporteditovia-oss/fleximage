@@ -1,0 +1,12 @@
+# Keep the Vercel output limited to the Vite static site.
+# The Express server (Railway / elsewhere) is not deployed here.
+server
+script
+dist/index.js
+.env
+.env.*
+!.env.example
+.cursor
+attached_assets
+**/*.test.ts
+**/*.spec.ts
