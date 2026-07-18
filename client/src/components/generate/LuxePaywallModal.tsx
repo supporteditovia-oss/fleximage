@@ -113,10 +113,11 @@ export function LuxePaywallModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[min(92dvh,40rem)] w-[min(calc(100vw-1.25rem),28rem)] gap-0 overflow-y-auto rounded-3xl border border-[var(--lx-gold)]/30 bg-[var(--lx-surface)] p-0 shadow-[0_24px_80px_rgba(18,16,14,0.28)] sm:rounded-3xl [&>button]:hidden"
+        className="flex max-h-[min(92dvh,40rem)] w-[min(calc(100vw-1.25rem),28rem)] flex-col gap-0 overflow-hidden rounded-3xl border border-[var(--lx-gold)]/30 bg-[var(--lx-surface)] p-0 shadow-[0_24px_80px_rgba(18,16,14,0.28)] sm:rounded-3xl [&>button]:hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="relative overflow-hidden px-5 pb-5 pt-4 md:px-6 md:pb-6 md:pt-5">
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 [-webkit-overflow-scrolling:touch] touch-pan-y md:px-6 md:pb-6 md:pt-5">
           <div
             className="pointer-events-none absolute inset-0"
             aria-hidden

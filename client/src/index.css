@@ -35,6 +35,14 @@ body[data-fullscreen-overlay] .bottom-dock {
   pointer-events: none !important;
 }
 
+/* Hide header/dock without locking page scroll (e.g. /image-prete on mobile) */
+body[data-hide-app-chrome] .floating-header,
+body[data-hide-app-chrome] .bottom-dock {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 html[data-larp-result-mode],
 body[data-larp-result-mode] {
   overflow: hidden !important;

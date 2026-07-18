@@ -44,13 +44,11 @@ export default function ImagePrete() {
     }
   }, [profile?.id]);
 
-  // Hide global header + bottom dock; this page has its own top chrome
+  // Hide global header + bottom dock, but keep page scroll on mobile
   useLayoutEffect(() => {
-    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
-    document.body.setAttribute("data-fullscreen-overlay", "true");
+    document.body.setAttribute("data-hide-app-chrome", "true");
     return () => {
-      document.documentElement.removeAttribute("data-fullscreen-overlay");
-      document.body.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-hide-app-chrome");
     };
   }, []);
 
@@ -98,7 +96,7 @@ export default function ImagePrete() {
         </button>
       </div>
 
-      <div className="mx-auto flex min-h-[calc(100vh-12rem)] w-full max-w-md flex-col items-center justify-center gap-6 px-4 pb-8 pt-14">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] sm:min-h-[calc(100svh-6rem)] sm:justify-center sm:pb-8 sm:pt-14">
         <header className="w-full text-center">
           <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
             Ton image est prête
