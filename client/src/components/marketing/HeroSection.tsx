@@ -7,12 +7,12 @@ import {
   X,
   Shuffle,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import {
   getLarpChipsForLocale,
   getLarpIdeasForLocale,
 } from "@/lib/larp-data";
-import HeroHeadline from "@/components/marketing/HeroHeadline";
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
@@ -224,30 +224,40 @@ export default function HeroSection() {
   const hasUploadedImages = images.some((img) => img !== null);
 
   return (
-    <section className="relative h-[100svh] overflow-hidden flex flex-col items-center px-4">
+    <section className="lx-hero relative min-h-[100svh] overflow-hidden flex flex-col items-center px-4">
       <HeroBackgroundFrames />
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative z-10 flex flex-col items-center justify-center w-full flex-1"
+        className="lx-hero-content relative z-20 flex flex-col items-center justify-center w-full flex-1"
       >
-        <div className="w-full flex flex-col items-center gap-4 md:gap-6 pt-14 md:pt-14">
-        <HeroHeadline variants={itemVariants} showArrow={false} />
+        <div className="lx-hero-stack w-full flex flex-col items-center gap-4 md:gap-6 md:pt-8">
+        <motion.div
+          variants={itemVariants}
+          className="lx-hero-copy flex flex-col items-center text-center px-2"
+        >
+          <h1 className="lx-display mx-auto max-w-[20rem] text-balance text-[1.85rem] font-semibold leading-[1.12] text-[var(--lx-ink)] md:max-w-4xl md:text-5xl lg:text-6xl">
+            Crée un lifestyle hyper réaliste
+          </h1>
+          <p className="lx-hero-subtitle mt-3 max-w-xl text-sm font-medium leading-snug text-[var(--lx-muted)] md:mt-4 md:text-lg">
+            Transforme une simple photo en visuel bluffant, réaliste et premium
+          </p>
+        </motion.div>
 
         {/* Bottom group: drop zone + input */}
-        <div className="flex flex-col items-center gap-3 md:gap-4 w-full mt-[0.5rem] md:mt-[3rem] pb-8 md:pb-10">
+        <div className="lx-hero-tools flex flex-col items-center gap-3 md:gap-4 w-full md:mt-[2rem] pb-6 md:pb-24">
           {/* Image upload grid */}
           <motion.div
             variants={itemVariants}
-            className="w-full flex justify-center px-4 -mb-7 md:-mb-8"
+            className="lx-hero-dial-wrap w-full flex justify-center px-4 -mb-7 md:-mb-8"
           >
             <div className="flex items-end justify-center gap-2 md:gap-3 w-full max-w-md">
               {images.map((img, i) => (
                 <div
                   key={i}
-                  className="relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
+                  className="lx-hero-upload-slot relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
                 >
                   {img ? (
                     <>
@@ -359,6 +369,15 @@ export default function HeroSection() {
         </div>
         </div>
       </motion.div>
+
+      <a
+        href="#showcase"
+        className="lx-discover absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-[var(--lx-ink)]/70"
+      >
+        <span className="text-xs font-medium tracking-wide">Découvrir</span>
+        <ChevronDown className="h-5 w-5" aria-hidden />
+      </a>
+
       {taskId && createPortal(
         <GenerationProgress
           taskId={taskId}

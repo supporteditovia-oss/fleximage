@@ -18,5 +18,7 @@ export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // PKCE returns to redirectTo with ?code=… (must be allowlisted in Supabase)
+    flowType: "pkce",
   },
 });

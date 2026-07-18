@@ -111,16 +111,16 @@ export function BottomDock() {
     cn(
       "group flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 min-w-[56px] md:px-3 md:py-1 md:min-w-[56px] md:gap-0.5 md:text-xs",
       active
-        ? "text-primary scale-110"
-        : "text-muted-foreground hover:text-foreground hover:scale-105",
+        ? "text-[var(--lx-bronze)] scale-110"
+        : "text-[var(--lx-muted)] hover:text-[var(--lx-ink)] hover:scale-105",
     );
 
   const dockIconClass = (active: boolean) =>
     cn(
       "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 md:w-9 md:h-9",
       active
-        ? "bg-primary/10 shadow-sm group-hover:!bg-muted/60"
-        : "group-hover:bg-muted/60",
+        ? "bg-[var(--lx-gold)]/15 shadow-sm group-hover:!bg-[var(--lx-gold)]/20"
+        : "group-hover:bg-[var(--lx-ink)]/5",
     );
 
   return (
@@ -128,11 +128,11 @@ export function BottomDock() {
       "bottom-dock fixed bottom-0 left-0 w-full z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
       hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
     )}>
-      <nav className="w-full md:max-w-[360px] bg-white/85 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dock-nav border border-border/80">
+      <nav className="w-full md:max-w-[360px] border border-[var(--lx-gold)]/30 bg-[var(--lx-surface-2)]/92 backdrop-blur-xl shadow-[0_8px_32px_rgba(18,16,14,0.12)] dock-nav">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}
-          <Link href="/history" className={dockItemClass(isActive("/history"))}>
-            <div className={dockIconClass(isActive("/history"))}>
+          <Link href="/historique" className={dockItemClass(isActive("/historique") || isActive("/history"))}>
+            <div className={dockIconClass(isActive("/historique") || isActive("/history"))}>
               <History className="h-6 w-6 md:h-5 md:w-5" />
             </div>
             <span>{t("layout.dock.history")}</span>
@@ -159,10 +159,10 @@ export function BottomDock() {
                   "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <div className="flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-lg transition-all duration-200 group-hover:bg-muted/60">
+                <div className="flex items-center justify-center w-10 h-10 md:w-9 md:h-9 rounded-lg transition-all duration-200 group-hover:bg-[var(--lx-ink)]/5">
                   <Avatar className="h-7 w-7 md:h-6 md:w-6">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt="Avatar" />}
-                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                    <AvatarFallback className="text-[10px] bg-[var(--lx-gold)]/15 text-[var(--lx-bronze)]">
                       {profile?.email?.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -174,7 +174,7 @@ export function BottomDock() {
               side="top"
               align="center"
               sideOffset={12}
-              className="p-1.5 rounded-lg min-w-[200px] bg-card/95 backdrop-blur-xl border border-border/80 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+              className="p-1.5 rounded-lg min-w-[200px] bg-[var(--lx-surface-2)]/95 backdrop-blur-xl border border-[var(--lx-gold)]/30 shadow-[0_8px_32px_rgba(18,16,14,0.12)]"
             >
               <DropdownMenuItem
                 asChild

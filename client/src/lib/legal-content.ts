@@ -33,103 +33,97 @@ export interface LegalLocaleContent {
   };
 }
 
-const SITE_DOMAIN = "larpking.com";
-const CONTACT_EMAIL = "contact@larpking.com";
-const SERVICE_NAME = "LarpKing";
+const SITE_DOMAIN = "luxeflexia.com";
+const CONTACT_EMAIL = "support.luxeflexia@gmail.com";
+const SERVICE_NAME = "LuxeFlexIA";
 const COMPANY_STATUS_FR = "Auto-entrepreneur (Entreprise Individuelle)";
 const COMPANY_STATUS_EN = "Sole proprietor";
 const COMPANY_STATUS_ES = "Autonomo / empresa individual";
 const COMPANY_STATUS_DE = "Einzelunternehmer";
-const COMPANY_TRADE_NAME = "DEVINCK";
-const COMPANY_SIRET = "944 582 600 00010";
-const COMPANY_ADDRESS = "28 Rue Nicolas Leblanc, 59000 Lille, France";
+const COMPANY_TRADE_NAME = "LuxeFlexIA";
+const COMPANY_PUBLISHER = "Tayfur Taskiran";
+const COMPANY_SIRET = "106 200 389 00018";
+const COMPANY_ADDRESS = "224 Rue de Charlieu, 42300 Roanne, France";
+const COMPANY_PHONE = "07 49 43 46 98";
 
 const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   fr: [
     { label: "Nom commercial", text: COMPANY_TRADE_NAME },
-    { label: "Editeur", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
+    { label: "Éditeur", text: COMPANY_PUBLISHER },
     { label: "Statut", text: COMPANY_STATUS_FR },
     { label: "SIRET", text: COMPANY_SIRET },
     { label: "Adresse", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
+    { label: "Téléphone", text: COMPANY_PHONE },
   ],
   en: [
     { label: "Trade name", text: COMPANY_TRADE_NAME },
-    { label: "Publisher", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
+    { label: "Publisher", text: COMPANY_PUBLISHER },
     { label: "Status", text: COMPANY_STATUS_EN },
     { label: "Registration", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Address", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
+    { label: "Phone", text: COMPANY_PHONE },
   ],
   es: [
     { label: "Nombre comercial", text: COMPANY_TRADE_NAME },
-    { label: "Editor", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
+    { label: "Editor", text: COMPANY_PUBLISHER },
     { label: "Estatuto", text: COMPANY_STATUS_ES },
     { label: "Registro", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Direccion", text: COMPANY_ADDRESS },
     { label: "Email", text: CONTACT_EMAIL },
+    { label: "Telefono", text: COMPANY_PHONE },
   ],
   de: [
     { label: "Handelsname", text: COMPANY_TRADE_NAME },
-    { label: "Herausgeber", text: `${COMPANY_TRADE_NAME} (${SERVICE_NAME})` },
+    { label: "Herausgeber", text: COMPANY_PUBLISHER },
     { label: "Status", text: COMPANY_STATUS_DE },
     { label: "Registrierung", text: `SIRET ${COMPANY_SIRET}` },
     { label: "Adresse", text: COMPANY_ADDRESS },
     { label: "E-Mail", text: CONTACT_EMAIL },
+    { label: "Telefon", text: COMPANY_PHONE },
   ],
 };
 
-const HOSTING_DETAILS: Record<AppLocale, LegalBullet[]> = {
-  fr: [
-    { label: "Nom", text: "Railway Corporation" },
-    { label: "Site web", text: "railway.com" },
-    { label: "Adresse", text: "548 Market Street, San Francisco, CA 94104, Etats-Unis" },
-  ],
-  en: [
-    { label: "Name", text: "Railway Corporation" },
-    { label: "Website", text: "railway.com" },
-    { label: "Address", text: "548 Market Street, San Francisco, CA 94104, United States" },
-  ],
-  es: [
-    { label: "Nombre", text: "Railway Corporation" },
-    { label: "Sitio web", text: "railway.com" },
-    { label: "Direccion", text: "548 Market Street, San Francisco, CA 94104, Estados Unidos" },
-  ],
-  de: [
-    { label: "Name", text: "Railway Corporation" },
-    { label: "Website", text: "railway.com" },
-    { label: "Adresse", text: "548 Market Street, San Francisco, CA 94104, USA" },
-  ],
+const HOSTING_PLACEHOLDER: Record<AppLocale, string> = {
+  fr: "[À COMPLÉTER ultérieurement]",
+  en: "[TO BE COMPLETED later]",
+  es: "[POR COMPLETAR posteriormente]",
+  de: "[SPÄTER ZU ERGÄNZEN]",
 };
 
 const TECH_PROVIDERS: Record<AppLocale, LegalBullet[]> = {
   fr: [
-    { text: "Supabase pour l'authentification, la base de donnees et certains fichiers techniques." },
-    { text: "Stripe pour les paiements, abonnements, factures et portail client." },
-    { text: "Cloudflare R2 pour le stockage securise de fichiers image." },
-    { text: "Kie.ai et/ou prestataires similaires pour le traitement IA des generations." },
-    { text: "Railway pour l'hebergement applicatif." },
+    { text: "Supabase pour l'authentification et la base de données." },
+    { text: "Stripe pour les paiements, abonnements et factures." },
+    { text: "Cloudflare R2 pour le stockage sécurisé de fichiers image." },
+    {
+      text: "OneShotAPI (et/ou prestataires similaires) pour le traitement IA des générations.",
+    },
   ],
   en: [
-    { text: "Supabase for authentication, database services, and selected technical files." },
-    { text: "Stripe for payments, subscriptions, invoices, and the customer portal." },
+    { text: "Supabase for authentication and the database." },
+    { text: "Stripe for payments, subscriptions, and invoices." },
     { text: "Cloudflare R2 for secure image file storage." },
-    { text: "Kie.ai and/or similar providers for AI generation processing." },
-    { text: "Railway for application hosting." },
+    {
+      text: "OneShotAPI (and/or similar providers) for AI generation processing.",
+    },
   ],
   es: [
-    { text: "Supabase para autenticacion, base de datos y ciertos archivos tecnicos." },
-    { text: "Stripe para pagos, suscripciones, facturas y portal de cliente." },
+    { text: "Supabase para autenticacion y base de datos." },
+    { text: "Stripe para pagos, suscripciones y facturas." },
     { text: "Cloudflare R2 para almacenamiento seguro de archivos de imagen." },
-    { text: "Kie.ai y/o proveedores similares para el tratamiento de generaciones con IA." },
-    { text: "Railway para alojamiento de la aplicacion." },
+    {
+      text: "OneShotAPI (y/o proveedores similares) para el tratamiento de generaciones con IA.",
+    },
   ],
   de: [
-    { text: "Supabase fur Authentifizierung, Datenbank und bestimmte technische Dateien." },
-    { text: "Stripe fur Zahlungen, Abonnements, Rechnungen und Kundenportal." },
+    { text: "Supabase fur Authentifizierung und Datenbank." },
+    { text: "Stripe fur Zahlungen, Abonnements und Rechnungen." },
     { text: "Cloudflare R2 fur sichere Speicherung von Bilddateien." },
-    { text: "Kie.ai und/oder ahnliche Anbieter fur KI-Generierungsprozesse." },
-    { text: "Railway fur das Hosting der Anwendung." },
+    {
+      text: "OneShotAPI (und/oder ahnliche Anbieter) fur KI-Generierungsprozesse.",
+    },
   ],
 };
 
@@ -139,57 +133,57 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
     lastUpdated: "Derniere mise a jour : 31 mai 2026",
     docs: {
       cgu: {
-        title: "Conditions Generales d'Utilisation",
+        title: "Conditions Générales d'Utilisation — LuxeFlexIA",
         sections: [
           {
             id: "1",
             title: "1. Objet",
             paragraphs: [
-              `Les presentes Conditions Generales d'Utilisation (CGU) definissent les conditions d'acces et d'utilisation de LarpKing, service disponible sur ${SITE_DOMAIN}.`,
-              "LarpKing permet de transformer des images a l'aide de l'intelligence artificielle afin de creer des visuels lifestyle, sociaux, mode, voyage, restauration, luxe ou creatifs, a partir d'images et/ou d'instructions fournies par l'utilisateur.",
+              `Les présentes Conditions Générales d'Utilisation (CGU) définissent les conditions d'accès et d'utilisation de ${SERVICE_NAME}, service disponible sur ${SITE_DOMAIN}.`,
+              `${SERVICE_NAME} permet de transformer des images à l'aide de l'intelligence artificielle afin de créer des visuels lifestyle, sociaux, mode, voyage, restauration, luxe ou créatifs, à partir d'images et/ou d'instructions fournies par l'utilisateur.`,
             ],
           },
           {
             id: "2",
-            title: "2. Acceptation et acces",
+            title: "2. Acceptation et accès",
             paragraphs: [
-              "La creation d'un compte, la connexion ou l'utilisation du service implique l'acceptation pleine et entiere des presentes CGU.",
-              "L'utilisateur doit disposer de la capacite juridique necessaire pour utiliser le service. L'utilisation par un mineur suppose l'accord de son representant legal.",
-              "LarpKing peut suspendre ou limiter l'acces au service en cas de violation des presentes CGU, d'abus, de risque de securite ou de demande legale.",
+              "La création d'un compte, la connexion ou l'utilisation du service implique l'acceptation pleine et entière des présentes CGU.",
+              "L'utilisateur doit disposer de la capacité juridique nécessaire pour utiliser le service. L'utilisation par un mineur suppose l'accord de son représentant légal.",
+              `${SERVICE_NAME} peut suspendre ou limiter l'accès au service en cas de violation des présentes CGU, d'abus, de risque de sécurité ou de demande légale.`,
             ],
           },
           {
             id: "3",
             title: "3. Fonctionnement du service",
             paragraphs: [
-              "L'utilisateur peut importer une ou plusieurs images, choisir un template ou saisir un prompt, puis lancer une generation IA.",
-              "Les generations consomment des credits. Le cout en credits depend du type de generation, de la qualite demandee et des options disponibles dans l'application.",
-              "Les resultats peuvent etre realistes, stylises, imparfaits ou inattendus. LarpKing ne garantit pas qu'un rendu corresponde exactement a la demande initiale.",
+              "L'utilisateur peut importer une ou plusieurs images, choisir un template ou saisir un prompt, puis lancer une génération IA.",
+              "Les générations consomment des crédits. Le coût en crédits dépend du type de génération, de la qualité demandée et des options disponibles dans l'application.",
+              `Les résultats peuvent être réalistes, stylisés, imparfaits ou inattendus. ${SERVICE_NAME} ne garantit pas qu'un rendu corresponde exactement à la demande initiale.`,
             ],
           },
           {
             id: "4",
             title: "4. Compte utilisateur",
             paragraphs: [
-              "L'utilisateur s'engage a fournir des informations exactes, a maintenir la confidentialite de ses identifiants et a signaler toute utilisation non autorisee de son compte.",
-              `Le compte peut etre supprime depuis les parametres lorsque la fonctionnalite est disponible, ou en contactant ${CONTACT_EMAIL}.`,
-              "La suppression du compte peut entrainer la suppression de l'historique, des contenus et des credits non utilises, sauf obligations legales contraires.",
+              "L'utilisateur s'engage à fournir des informations exactes, à maintenir la confidentialité de ses identifiants et à signaler toute utilisation non autorisée de son compte.",
+              `Le compte peut être supprimé depuis les paramètres lorsque la fonctionnalité est disponible, ou en contactant ${CONTACT_EMAIL}.`,
+              "La suppression du compte peut entraîner la suppression de l'historique, des contenus et des crédits non utilisés, sauf obligations légales contraires.",
             ],
           },
           {
             id: "5",
             title: "5. Contenus fournis par l'utilisateur",
             paragraphs: [
-              "L'utilisateur conserve les droits qu'il detient sur les images, textes et autres contenus qu'il soumet a LarpKing.",
-              "En soumettant un contenu, l'utilisateur accorde a LarpKing une licence non exclusive, mondiale, gratuite et limitee a ce qui est necessaire pour heberger, traiter, transformer, afficher et fournir le service demande.",
-              "L'utilisateur garantit disposer des droits, autorisations et consentements necessaires, notamment lorsque l'image represente une personne identifiable, un lieu prive, une marque ou une oeuvre protegee.",
+              `L'utilisateur conserve les droits qu'il détient sur les images, textes et autres contenus qu'il soumet à ${SERVICE_NAME}.`,
+              `En soumettant un contenu, l'utilisateur accorde à ${SERVICE_NAME} une licence non exclusive, mondiale, gratuite et limitée à ce qui est nécessaire pour héberger, traiter, transformer, afficher et fournir le service demandé.`,
+              "L'utilisateur garantit disposer des droits, autorisations et consentements nécessaires, notamment lorsque l'image représente une personne identifiable, un lieu privé, une marque ou une œuvre protégée.",
             ],
           },
           {
             id: "6",
             title: "6. Usages interdits",
             paragraphs: [
-              "LarpKing est concu pour la creation d'images lifestyle et de contenus creatifs. Les usages suivants sont strictement interdits :",
+              `${SERVICE_NAME} est conçu pour la création d'images lifestyle et de contenus créatifs. Les usages suivants sont strictement interdits :`,
             ],
             bullets: [
               {
@@ -198,68 +192,68 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               },
               {
                 label: "Tromperie ou fraude",
-                text: "presenter un visuel genere ou modifie comme une preuve reelle, usurper une identite, obtenir un avantage indu ou tromper une plateforme, un employeur, une banque, une administration ou un tiers.",
+                text: "présenter un visuel généré ou modifié comme une preuve réelle, usurper une identité, obtenir un avantage indu ou tromper une plateforme, un employeur, une banque, une administration ou un tiers.",
               },
               {
-                label: "Atteinte a la reputation",
-                text: "creer des contenus humiliants, diffamatoires, menacants, harcelants ou visant a nuire a une personne ou une organisation.",
+                label: "Atteinte à la réputation",
+                text: "créer des contenus humiliants, diffamatoires, menaçants, harcelants ou visant à nuire à une personne ou une organisation.",
               },
               {
                 label: "Contenus sexuels ou sensibles non consentis",
-                text: "generer, modifier ou diffuser des contenus intimes, sexuels, nudite, mineurs, violence, haine, extremisme ou toute categorie illicite.",
+                text: "générer, modifier ou diffuser des contenus intimes, sexuels, nudité, mineurs, violence, haine, extrémisme ou toute catégorie illicite.",
               },
               {
-                label: "Droits de propriete intellectuelle",
-                text: "utiliser sans autorisation des marques, oeuvres, logos, photographies, personnages ou elements proteges.",
+                label: "Droits de propriété intellectuelle",
+                text: "utiliser sans autorisation des marques, œuvres, logos, photographies, personnages ou éléments protégés.",
               },
               {
                 label: "Automatisation abusive",
-                text: "extraire, copier, perturber, contourner les limites de credits ou utiliser le service pour du spam, du scraping ou une exploitation non autorisee.",
+                text: "extraire, copier, perturber, contourner les limites de crédits ou utiliser le service pour du spam, du scraping ou une exploitation non autorisée.",
               },
             ],
             bulletStyle: "disc",
           },
           {
             id: "7",
-            title: "7. Images generees et responsabilite",
+            title: "7. Images générées et responsabilité",
             paragraphs: [
-              "L'utilisateur est seul responsable de l'utilisation, de la publication et du partage des images generees.",
-              "Les images issues de LarpKing doivent etre utilisees de maniere loyale et ne doivent pas etre employees pour induire un tiers en erreur, porter atteinte a ses droits ou contourner une verification d'identite.",
-              "Lorsque le contexte le requiert, l'utilisateur doit signaler qu'une image est generee ou modifiee par IA.",
+              "L'utilisateur est seul responsable de l'utilisation, de la publication et du partage des images générées.",
+              `Les images issues de ${SERVICE_NAME} doivent être utilisées de manière loyale et ne doivent pas être employées pour induire un tiers en erreur, porter atteinte à ses droits ou contourner une vérification d'identité.`,
+              "Lorsque le contexte le requiert, l'utilisateur doit signaler qu'une image est générée ou modifiée par IA.",
             ],
           },
           {
             id: "8",
-            title: "8. Propriete intellectuelle de LarpKing",
+            title: "8. Propriété intellectuelle de LuxeFlexIA",
             paragraphs: [
-              "L'interface, les textes, graphismes, logos, logiciels, bases de donnees, templates et elements distinctifs de LarpKing sont proteges par les droits de propriete intellectuelle.",
-              "Toute reproduction, adaptation, extraction, distribution ou exploitation non autorisee de ces elements est interdite.",
+              `L'interface, les textes, graphismes, logos, logiciels, bases de données, templates et éléments distinctifs de ${SERVICE_NAME} sont protégés par les droits de propriété intellectuelle.`,
+              "Toute reproduction, adaptation, extraction, distribution ou exploitation non autorisée de ces éléments est interdite.",
             ],
           },
           {
             id: "9",
-            title: "9. Disponibilite et garanties",
+            title: "9. Disponibilité et garanties",
             paragraphs: [
-              "Le service est fourni avec diligence raisonnable, sans garantie de disponibilite continue, de resultat exact, d'absence d'erreur ou d'adequation a un usage particulier.",
-              "LarpKing peut faire evoluer, suspendre ou interrompre certaines fonctionnalites pour maintenance, securite, amelioration du produit ou contraintes de prestataires tiers.",
-              `${SERVICE_NAME} ne peut etre tenu responsable des dommages indirects, pertes de donnees, pertes d'opportunite, atteinte a l'image ou consequences liees a une utilisation non conforme du service.`,
+              "Le service est fourni avec diligence raisonnable, sans garantie de disponibilité continue, de résultat exact, d'absence d'erreur ou d'adéquation à un usage particulier.",
+              `${SERVICE_NAME} peut faire évoluer, suspendre ou interrompre certaines fonctionnalités pour maintenance, sécurité, amélioration du produit ou contraintes de prestataires tiers.`,
+              `${SERVICE_NAME} ne peut être tenu responsable des dommages indirects, pertes de données, pertes d'opportunité, atteinte à l'image ou conséquences liées à une utilisation non conforme du service.`,
             ],
           },
           {
             id: "10",
             title: "10. Modification des CGU",
             paragraphs: [
-              "Les CGU peuvent etre modifiees pour tenir compte de l'evolution du service, de la loi ou des pratiques operationnelles.",
-              "En cas de changement substantiel, LarpKing pourra informer les utilisateurs par tout moyen utile. L'utilisation continue du service apres mise a jour vaut acceptation des nouvelles conditions.",
+              "Les CGU peuvent être modifiées pour tenir compte de l'évolution du service, de la loi ou des pratiques opérationnelles.",
+              `En cas de changement substantiel, ${SERVICE_NAME} pourra informer les utilisateurs par tout moyen utile. L'utilisation continue du service après mise à jour vaut acceptation des nouvelles conditions.`,
             ],
           },
           {
             id: "11",
             title: "11. Droit applicable et contact",
             paragraphs: [
-              "Les presentes CGU sont soumises au droit francais.",
+              "Les présentes CGU sont soumises au droit français.",
               `Pour toute question relative aux CGU : ${CONTACT_EMAIL}.`,
-              "En cas de litige, les parties rechercheront une solution amiable avant toute action judiciaire. Les juridictions competentes seront determinees conformement aux regles de procedure applicables.",
+              "En cas de litige, les parties rechercheront une solution amiable avant toute action judiciaire. Les juridictions compétentes seront déterminées conformément aux règles de procédure applicables.",
             ],
           },
         ],
@@ -271,8 +265,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objet",
             paragraphs: [
-              "Les presentes Conditions Generales de Vente (CGV) encadrent la souscription, le paiement et l'utilisation des offres payantes LarpKing.",
-              `Le vendeur est ${COMPANY_TRADE_NAME}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              "Les presentes Conditions Generales de Vente (CGV) encadrent la souscription, le paiement et l'utilisation des offres payantes LuxeFlexIA.",
+              `Le vendeur est ${COMPANY_PUBLISHER}, auto-entrepreneur (SIRET : ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
             ],
           },
           {
@@ -298,14 +292,14 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               "Les prix affiches dans l'application et lors du paiement font foi au moment de la commande.",
               "A titre indicatif, les offres actuellement proposees sont 8,90 EUR, 19,90 EUR et 39,90 EUR par mois.",
               "TVA non applicable, article 293 B du Code general des impots, sauf changement de statut fiscal ou indication contraire au moment du paiement.",
-              "LarpKing peut modifier ses prix. Une modification s'applique au prochain cycle de facturation ou a toute nouvelle commande, jamais retroactivement sur une periode deja payee.",
+              "LuxeFlexIA peut modifier ses prix. Une modification s'applique au prochain cycle de facturation ou a toute nouvelle commande, jamais retroactivement sur une periode deja payee.",
             ],
           },
           {
             id: "4",
             title: "4. Souscription et renouvellement",
             paragraphs: [
-              "La souscription s'effectue en ligne depuis LarpKing via Stripe Checkout ou tout parcours de paiement affiche dans l'application.",
+              "La souscription s'effectue en ligne depuis LuxeFlexIA via Stripe Checkout ou tout parcours de paiement affiche dans l'application.",
               "Sauf mention contraire, l'abonnement est reconduit automatiquement a chaque periode de facturation jusqu'a resiliation par l'utilisateur.",
               "Avant validation du paiement, l'utilisateur peut verifier l'offre, le prix, la periodicite, les credits inclus et corriger ses informations.",
             ],
@@ -314,7 +308,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Paiement et facturation",
             paragraphs: [
-              "Les paiements sont traites par Stripe. LarpKing ne stocke pas les donnees completes de carte bancaire.",
+              "Les paiements sont traites par Stripe. LuxeFlexIA ne stocke pas les donnees completes de carte bancaire.",
               "En cas d'echec de paiement, l'acces aux fonctionnalites payantes peut etre suspendu jusqu'a regularisation.",
               "Les factures et recus, lorsqu'ils sont disponibles, peuvent etre consultes via le portail client Stripe ou demandes au support.",
             ],
@@ -334,7 +328,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "L'utilisateur peut resilier son abonnement a tout moment depuis ses parametres, le portail client Stripe ou en contactant le support.",
               "La resiliation prend effet a la fin de la periode payee en cours. L'acces payant reste actif jusqu'a cette date, sauf violation des CGU.",
-              "Aucun remboursement prorata temporis n'est du du seul fait d'une resiliation anticipee, sauf obligation legale ou geste commercial accorde par LarpKing.",
+              "Aucun remboursement prorata temporis n'est du du seul fait d'une resiliation anticipee, sauf obligation legale ou geste commercial accorde par LuxeFlexIA.",
             ],
           },
           {
@@ -343,7 +337,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Les demandes relatives a une erreur de facturation, un paiement non reconnu, un incident technique majeur ou un remboursement doivent etre adressees a ${CONTACT_EMAIL}.`,
               "Chaque demande est analysee au cas par cas, notamment au regard de l'utilisation des credits, de l'historique de paiement et de la nature de l'incident.",
-              "En cas d'indisponibilite prolongee imputable a LarpKing, une compensation peut etre proposee sous forme de credits, prolongation d'acces ou remboursement partiel.",
+              "En cas d'indisponibilite prolongee imputable a LuxeFlexIA, une compensation peut etre proposee sous forme de credits, prolongation d'acces ou remboursement partiel.",
             ],
           },
           {
@@ -351,7 +345,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Service client et mediation",
             paragraphs: [
               `Pour toute question sur une commande, un abonnement, un paiement ou une facture : ${CONTACT_EMAIL}.`,
-              "LarpKing s'efforce de repondre sous 48 heures ouvrables.",
+              "LuxeFlexIA s'efforce de repondre sous 48 heures ouvrables.",
               "En cas de litige de consommation non resolu amiablement, l'utilisateur consommateur peut recourir gratuitement a un mediateur de la consommation competent, conformement aux articles L.611-1 et suivants du Code de la consommation.",
             ],
           },
@@ -378,7 +372,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Donnees collectees",
-            paragraphs: ["Dans le cadre de LarpKing, nous pouvons collecter les categories de donnees suivantes :"],
+            paragraphs: ["Dans le cadre de LuxeFlexIA, nous pouvons collecter les categories de donnees suivantes :"],
             bullets: [
               { label: "Compte", text: "adresse email, identifiant utilisateur, langue preferee, statut d'abonnement, acceptation des conditions." },
               { label: "Contenus", text: "images importees, images generees, templates choisis, prompts, parametres de generation et historique." },
@@ -396,7 +390,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               { text: "Fournir les generations IA, templates, credits, historique et telechargements." },
               { text: "Gerer les paiements, abonnements, remboursements, factures et support client." },
               { text: "Prevenir les abus, la fraude, les usages interdits et securiser le service." },
-              { text: "Diagnostiquer les erreurs, mesurer la performance et ameliorer LarpKing." },
+              { text: "Diagnostiquer les erreurs, mesurer la performance et ameliorer LuxeFlexIA." },
               { text: "Respecter les obligations legales, comptables, fiscales et de preuve." },
             ],
             bulletStyle: "disc",
@@ -407,7 +401,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             bullets: [
               { label: "Execution du contrat", text: "fourniture du service, gestion du compte, generations, credits, abonnements et support." },
               { label: "Consentement", text: "actions volontairement realisees par l'utilisateur, communications optionnelles ou cookies non essentiels si de tels cookies sont actives." },
-              { label: "Interet legitime", text: "securite, prevention des abus, amelioration du produit, defense des droits de LarpKing." },
+              { label: "Interet legitime", text: "securite, prevention des abus, amelioration du produit, defense des droits de LuxeFlexIA." },
               { label: "Obligation legale", text: "facturation, comptabilite, fiscalite, reponse aux demandes des autorites competentes." },
             ],
             bulletStyle: "disc",
@@ -426,7 +420,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "6. Transferts hors Union europeenne",
             paragraphs: [
               "Certains prestataires peuvent traiter des donnees en dehors de l'Union europeenne.",
-              "Lorsque cela est necessaire, LarpKing s'appuie sur les mecanismes de transfert disponibles, notamment clauses contractuelles types, mesures contractuelles et garanties de securite proposees par les prestataires.",
+              "Lorsque cela est necessaire, LuxeFlexIA s'appuie sur les mecanismes de transfert disponibles, notamment clauses contractuelles types, mesures contractuelles et garanties de securite proposees par les prestataires.",
             ],
           },
           {
@@ -445,7 +439,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "8",
             title: "8. Cookies et stockage local",
             paragraphs: [
-              "LarpKing utilise des cookies ou technologies similaires necessaires a l'authentification, la securite, la session, la langue et le fonctionnement de l'application.",
+              "LuxeFlexIA utilise des cookies ou technologies similaires necessaires a l'authentification, la securite, la session, la langue et le fonctionnement de l'application.",
               "Aucun cookie publicitaire n'est depose sans base legale appropriee. Si des cookies non essentiels sont ajoutes, un mecanisme de choix sera propose lorsque requis.",
             ],
           },
@@ -468,7 +462,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "10",
             title: "10. Securite",
             paragraphs: [
-              "LarpKing met en place des mesures techniques et organisationnelles raisonnables pour proteger les donnees contre l'acces non autorise, la perte, l'alteration ou la divulgation.",
+              "LuxeFlexIA met en place des mesures techniques et organisationnelles raisonnables pour proteger les donnees contre l'acces non autorise, la perte, l'alteration ou la divulgation.",
               "Aucun service en ligne ne peut toutefois garantir une securite absolue. L'utilisateur doit proteger ses identifiants et signaler toute suspicion d'incident.",
             ],
           },
@@ -477,7 +471,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "11. Traitement IA des images",
             paragraphs: [
               "Les images importees peuvent contenir des donnees personnelles selon leur contenu. Elles sont traitees afin de produire la generation demandee.",
-              "LarpKing n'a pas pour finalite d'identifier une personne, d'authentifier une identite ou de prendre une decision produisant des effets juridiques a partir des images.",
+              "LuxeFlexIA n'a pas pour finalite d'identifier une personne, d'authentifier une identite ou de prendre une decision produisant des effets juridiques a partir des images.",
               "Les contenus peuvent etre transmis a des prestataires IA strictement pour executer la generation et exploiter le service, dans les conditions prevues par leurs propres garanties contractuelles.",
             ],
           },
@@ -492,63 +486,63 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
         ],
       },
       legalNotice: {
-        title: "Mentions Legales",
+        title: "Mentions légales — LuxeFlexIA",
         sections: [
           {
             id: "1",
-            title: "1. Editeur du site",
-            paragraphs: [`Le site ${SITE_DOMAIN} est edite par :`],
+            title: "1. Éditeur du site",
+            paragraphs: [`Le site ${SITE_DOMAIN} est édité par :`],
             bullets: COMPANY_DETAILS.fr,
             bulletStyle: "none",
           },
           {
             id: "2",
             title: "2. Directeur de la publication",
-            paragraphs: [`Le directeur de la publication est ${COMPANY_TRADE_NAME}, joignable a ${CONTACT_EMAIL}.`],
+            paragraphs: [
+              `Le directeur de la publication est ${COMPANY_PUBLISHER}, joignable à ${CONTACT_EMAIL}.`,
+            ],
           },
           {
             id: "3",
-            title: "3. Hebergement",
-            paragraphs: ["Le site est heberge par :"],
-            bullets: HOSTING_DETAILS.fr,
-            bulletStyle: "none",
+            title: "3. Hébergement",
+            paragraphs: [HOSTING_PLACEHOLDER.fr],
           },
           {
             id: "4",
             title: "4. Prestataires techniques",
-            paragraphs: ["LarpKing s'appuie notamment sur les prestataires techniques suivants :"],
+            paragraphs: [
+              `${SERVICE_NAME} s'appuie notamment sur les prestataires techniques suivants :`,
+            ],
             bullets: TECH_PROVIDERS.fr,
             bulletStyle: "disc",
           },
           {
             id: "5",
-            title: "5. Propriete intellectuelle",
+            title: "5. Propriété intellectuelle",
             paragraphs: [
-              "Les marques, logos, textes, interfaces, templates, logiciels, bases de donnees et elements graphiques de LarpKing sont proteges.",
-              "Toute reproduction, extraction, adaptation ou exploitation non autorisee est interdite.",
-              "Les utilisateurs conservent les droits sur les contenus qu'ils soumettent, sous reserve des droits accordes a LarpKing pour executer le service.",
+              `Les marques, logos, textes, interfaces, templates, logiciels, bases de données et éléments graphiques de ${SERVICE_NAME} sont protégés. Toute reproduction, extraction, adaptation ou exploitation non autorisée est interdite. Les utilisateurs conservent les droits sur les contenus qu'ils soumettent, sous réserve des droits accordés à ${SERVICE_NAME} pour exécuter le service.`,
             ],
           },
           {
             id: "6",
-            title: "6. Responsabilite",
+            title: "6. Responsabilité",
             paragraphs: [
-              "LarpKing fournit un service de transformation d'images par IA a finalite creative et lifestyle.",
-              "L'editeur ne peut garantir l'exactitude, la disponibilite permanente ou l'adequation des resultats a un usage specifique.",
-              "L'utilisateur reste responsable des images qu'il importe, genere, publie ou partage.",
+              `${SERVICE_NAME} fournit un service de transformation d'images par IA à finalité créative et lifestyle. L'éditeur ne peut garantir l'exactitude, la disponibilité permanente ou l'adéquation des résultats à un usage spécifique. L'utilisateur reste responsable des images qu'il importe, génère, publie ou partage.`,
             ],
           },
           {
             id: "7",
-            title: "7. Donnees personnelles et cookies",
+            title: "7. Données personnelles et cookies",
             paragraphs: [
-              "Les informations relatives aux donnees personnelles, aux cookies et aux droits des utilisateurs sont detaillees dans la Politique de Confidentialite.",
+              "Les informations relatives aux données personnelles, aux cookies et aux droits des utilisateurs sont détaillées dans la Politique de Confidentialité.",
             ],
           },
           {
             id: "8",
             title: "8. Contact",
-            paragraphs: [`Pour toute question relative aux mentions legales : ${CONTACT_EMAIL}.`],
+            paragraphs: [
+              `Pour toute question relative aux mentions légales : ${CONTACT_EMAIL}.`,
+            ],
           },
         ],
       },
@@ -565,8 +559,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Purpose",
             paragraphs: [
-              `These Terms of Use govern access to and use of LarpKing, available at ${SITE_DOMAIN}.`,
-              "LarpKing is an AI image transformation service for creating lifestyle, social, fashion, travel, restaurant, luxury, or creative visuals from images and/or prompts supplied by users.",
+              `These Terms of Use govern access to and use of LuxeFlexIA, available at ${SITE_DOMAIN}.`,
+              "LuxeFlexIA is an AI image transformation service for creating lifestyle, social, fashion, travel, restaurant, luxury, or creative visuals from images and/or prompts supplied by users.",
               "The French version of these Terms prevails over translations in case of inconsistency.",
             ],
           },
@@ -576,7 +570,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Creating an account, signing in, or using the service means accepting these Terms in full.",
               "You must have the legal capacity to use the service. Use by a minor requires permission from a legal guardian.",
-              "LarpKing may suspend or restrict access in case of breach, abuse, security risk, or legal request.",
+              "LuxeFlexIA may suspend or restrict access in case of breach, abuse, security risk, or legal request.",
             ],
           },
           {
@@ -585,7 +579,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Users may upload one or more images, choose a template or enter a prompt, then start an AI generation.",
               "Generations consume credits. The credit cost depends on generation type, requested quality, and options available in the app.",
-              "Outputs may be realistic, stylized, imperfect, or unexpected. LarpKing does not guarantee that an output will exactly match the initial request.",
+              "Outputs may be realistic, stylized, imperfect, or unexpected. LuxeFlexIA does not guarantee that an output will exactly match the initial request.",
             ],
           },
           {
@@ -601,8 +595,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. User content",
             paragraphs: [
-              "You keep the rights you hold in images, text, and other content submitted to LarpKing.",
-              "By submitting content, you grant LarpKing a non-exclusive, worldwide, royalty-free license limited to what is necessary to host, process, transform, display, and provide the requested service.",
+              "You keep the rights you hold in images, text, and other content submitted to LuxeFlexIA.",
+              "By submitting content, you grant LuxeFlexIA a non-exclusive, worldwide, royalty-free license limited to what is necessary to host, process, transform, display, and provide the requested service.",
               "You warrant that you hold all rights, permissions, and consents required, especially where an image shows an identifiable person, private place, trademark, or protected work.",
             ],
           },
@@ -610,7 +604,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "6",
             title: "6. Prohibited uses",
             paragraphs: [
-              "LarpKing is designed for lifestyle image creation and creative content. The following uses are strictly prohibited:",
+              "LuxeFlexIA is designed for lifestyle image creation and creative content. The following uses are strictly prohibited:",
             ],
             bullets: [
               { label: "No consent", text: "submitting or transforming an identifiable person's image without the required rights or consent." },
@@ -627,15 +621,15 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "7. Generated images and responsibility",
             paragraphs: [
               "You are solely responsible for using, publishing, and sharing generated images.",
-              "Images from LarpKing must be used fairly and must not be used to mislead others, infringe rights, or bypass identity checks.",
+              "Images from LuxeFlexIA must be used fairly and must not be used to mislead others, infringe rights, or bypass identity checks.",
               "Where context requires it, you must disclose that an image was generated or edited by AI.",
             ],
           },
           {
             id: "8",
-            title: "8. LarpKing intellectual property",
+            title: "8. LuxeFlexIA intellectual property",
             paragraphs: [
-              "LarpKing's interface, text, graphics, logos, software, databases, templates, and distinctive elements are protected by intellectual property rights.",
+              "LuxeFlexIA's interface, text, graphics, logos, software, databases, templates, and distinctive elements are protected by intellectual property rights.",
               "Unauthorized reproduction, adaptation, extraction, distribution, or exploitation is prohibited.",
             ],
           },
@@ -644,7 +638,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Availability and warranties",
             paragraphs: [
               "The service is provided with reasonable care, without any guarantee of continuous availability, exact results, error-free operation, or fitness for a particular purpose.",
-              "LarpKing may evolve, suspend, or discontinue features for maintenance, security, product improvement, or third-party provider constraints.",
+              "LuxeFlexIA may evolve, suspend, or discontinue features for maintenance, security, product improvement, or third-party provider constraints.",
               `${SERVICE_NAME} is not liable for indirect damages, loss of data, loss of opportunity, reputational harm, or consequences of non-compliant use.`,
             ],
           },
@@ -653,7 +647,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "10. Changes",
             paragraphs: [
               "These Terms may be updated to reflect changes to the service, law, or operating practices.",
-              "For material changes, LarpKing may notify users through any appropriate channel. Continued use after updates means accepting the new Terms.",
+              "For material changes, LuxeFlexIA may notify users through any appropriate channel. Continued use after updates means accepting the new Terms.",
             ],
           },
           {
@@ -674,8 +668,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Purpose",
             paragraphs: [
-              "These Sales Terms govern subscriptions, payments, and use of LarpKing paid offers.",
-              `The seller is ${COMPANY_TRADE_NAME}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              "These Sales Terms govern subscriptions, payments, and use of LuxeFlexIA paid offers.",
+              `The seller is ${COMPANY_PUBLISHER}, sole proprietor (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "The French version prevails over translations in case of inconsistency.",
             ],
           },
@@ -707,7 +701,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "4",
             title: "4. Subscription and renewal",
             paragraphs: [
-              "Subscriptions are purchased online through LarpKing via Stripe Checkout or any payment flow displayed in the app.",
+              "Subscriptions are purchased online through LuxeFlexIA via Stripe Checkout or any payment flow displayed in the app.",
               "Unless otherwise stated, subscriptions renew automatically at each billing period until cancelled by the user.",
               "Before confirming payment, users can review the offer, price, billing period, included credits, and correct information.",
             ],
@@ -716,7 +710,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Payment and invoices",
             paragraphs: [
-              "Payments are processed by Stripe. LarpKing does not store full card details.",
+              "Payments are processed by Stripe. LuxeFlexIA does not store full card details.",
               "If payment fails, access to paid features may be suspended until the issue is resolved.",
               "Invoices and receipts, when available, can be accessed through the Stripe customer portal or requested from support.",
             ],
@@ -745,7 +739,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Requests about billing errors, unrecognized payments, major technical incidents, or refunds must be sent to ${CONTACT_EMAIL}.`,
               "Each request is reviewed case by case, considering credit usage, payment history, and the nature of the incident.",
-              "In case of extended downtime attributable to LarpKing, compensation may be offered as credits, access extension, or partial refund.",
+              "In case of extended downtime attributable to LuxeFlexIA, compensation may be offered as credits, access extension, or partial refund.",
             ],
           },
           {
@@ -753,7 +747,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Customer support and mediation",
             paragraphs: [
               `For order, subscription, payment, or invoice questions: ${CONTACT_EMAIL}.`,
-              "LarpKing aims to respond within 48 business hours.",
+              "LuxeFlexIA aims to respond within 48 business hours.",
               "For unresolved consumer disputes, consumer users may use a competent consumer mediator free of charge under articles L.611-1 and following of the French Consumer Code.",
             ],
           },
@@ -780,7 +774,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Data we collect",
-            paragraphs: ["When using LarpKing, we may collect the following data categories:"],
+            paragraphs: ["When using LuxeFlexIA, we may collect the following data categories:"],
             bullets: [
               { label: "Account", text: "email address, user ID, preferred language, subscription status, acceptance of terms." },
               { label: "Content", text: "uploaded images, generated images, selected templates, prompts, generation settings, and history." },
@@ -798,7 +792,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               { text: "Provide AI generations, templates, credits, history, and downloads." },
               { text: "Manage payments, subscriptions, refunds, invoices, and customer support." },
               { text: "Prevent abuse, fraud, prohibited uses, and secure the service." },
-              { text: "Diagnose errors, measure performance, and improve LarpKing." },
+              { text: "Diagnose errors, measure performance, and improve LuxeFlexIA." },
               { text: "Meet legal, accounting, tax, and evidence obligations." },
             ],
             bulletStyle: "disc",
@@ -809,7 +803,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             bullets: [
               { label: "Contract performance", text: "service delivery, account management, generations, credits, subscriptions, and support." },
               { label: "Consent", text: "voluntary user actions, optional communications, or non-essential cookies if such cookies are enabled." },
-              { label: "Legitimate interest", text: "security, abuse prevention, product improvement, and defense of LarpKing's rights." },
+              { label: "Legitimate interest", text: "security, abuse prevention, product improvement, and defense of LuxeFlexIA's rights." },
               { label: "Legal obligation", text: "billing, accounting, taxes, and responses to competent authorities." },
             ],
             bulletStyle: "disc",
@@ -828,7 +822,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "6. Transfers outside the EU",
             paragraphs: [
               "Some providers may process data outside the European Union.",
-              "Where required, LarpKing relies on available transfer mechanisms, including standard contractual clauses, contractual safeguards, and provider security guarantees.",
+              "Where required, LuxeFlexIA relies on available transfer mechanisms, including standard contractual clauses, contractual safeguards, and provider security guarantees.",
             ],
           },
           {
@@ -847,7 +841,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "8",
             title: "8. Cookies and local storage",
             paragraphs: [
-              "LarpKing uses cookies or similar technologies required for authentication, security, session, language, and app operation.",
+              "LuxeFlexIA uses cookies or similar technologies required for authentication, security, session, language, and app operation.",
               "No advertising cookie is placed without an appropriate legal basis. If non-essential cookies are added, a choice mechanism will be provided where required.",
             ],
           },
@@ -870,7 +864,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "10",
             title: "10. Security",
             paragraphs: [
-              "LarpKing implements reasonable technical and organizational measures to protect data against unauthorized access, loss, alteration, or disclosure.",
+              "LuxeFlexIA implements reasonable technical and organizational measures to protect data against unauthorized access, loss, alteration, or disclosure.",
               "No online service can guarantee absolute security. Users must protect credentials and report suspected incidents.",
             ],
           },
@@ -879,7 +873,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "11. AI image processing",
             paragraphs: [
               "Uploaded images may contain personal data depending on their content. They are processed to produce the requested generation.",
-              "LarpKing does not aim to identify people, authenticate identity, or make decisions producing legal effects from images.",
+              "LuxeFlexIA does not aim to identify people, authenticate identity, or make decisions producing legal effects from images.",
               "Content may be sent to AI providers strictly to perform generations and operate the service, under their applicable contractual safeguards.",
             ],
           },
@@ -894,7 +888,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
         ],
       },
       legalNotice: {
-        title: "Legal Notice",
+        title: "Legal Notice — LuxeFlexIA",
         sections: [
           {
             id: "1",
@@ -906,19 +900,21 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Publication director",
-            paragraphs: [`The publication director is ${COMPANY_TRADE_NAME}, reachable at ${CONTACT_EMAIL}.`],
+            paragraphs: [
+              `The publication director is ${COMPANY_PUBLISHER}, reachable at ${CONTACT_EMAIL}.`,
+            ],
           },
           {
             id: "3",
             title: "3. Hosting",
-            paragraphs: ["The website is hosted by:"],
-            bullets: HOSTING_DETAILS.en,
-            bulletStyle: "none",
+            paragraphs: [HOSTING_PLACEHOLDER.en],
           },
           {
             id: "4",
             title: "4. Technical providers",
-            paragraphs: ["LarpKing relies in particular on the following technical providers:"],
+            paragraphs: [
+              `${SERVICE_NAME} relies in particular on the following technical providers:`,
+            ],
             bullets: TECH_PROVIDERS.en,
             bulletStyle: "disc",
           },
@@ -926,18 +922,14 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Intellectual property",
             paragraphs: [
-              "LarpKing's trademarks, logos, texts, interfaces, templates, software, databases, and graphics are protected.",
-              "Unauthorized reproduction, extraction, adaptation, or exploitation is prohibited.",
-              "Users retain rights to submitted content, subject to rights granted to LarpKing to perform the service.",
+              `The trademarks, logos, texts, interfaces, templates, software, databases, and graphics of ${SERVICE_NAME} are protected. Unauthorized reproduction, extraction, adaptation, or exploitation is prohibited. Users retain rights to submitted content, subject to rights granted to ${SERVICE_NAME} to perform the service.`,
             ],
           },
           {
             id: "6",
             title: "6. Liability",
             paragraphs: [
-              "LarpKing provides an AI image transformation service for creative and lifestyle purposes.",
-              "The publisher cannot guarantee accuracy, permanent availability, or suitability of outputs for a specific use.",
-              "Users remain responsible for images they upload, generate, publish, or share.",
+              `${SERVICE_NAME} provides an AI image transformation service for creative and lifestyle purposes. The publisher cannot guarantee accuracy, permanent availability, or suitability of outputs for a specific use. Users remain responsible for images they upload, generate, publish, or share.`,
             ],
           },
           {
@@ -967,8 +959,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objeto",
             paragraphs: [
-              `Estas Condiciones de Uso regulan el acceso y uso de LarpKing, disponible en ${SITE_DOMAIN}.`,
-              "LarpKing es un servicio de transformacion de imagenes con IA para crear visuales lifestyle, sociales, moda, viajes, restaurantes, lujo o creativos a partir de imagenes y/o prompts del usuario.",
+              `Estas Condiciones de Uso regulan el acceso y uso de LuxeFlexIA, disponible en ${SITE_DOMAIN}.`,
+              "LuxeFlexIA es un servicio de transformacion de imagenes con IA para crear visuales lifestyle, sociales, moda, viajes, restaurantes, lujo o creativos a partir de imagenes y/o prompts del usuario.",
               "La version francesa prevalece sobre cualquier traduccion en caso de contradiccion.",
             ],
           },
@@ -978,7 +970,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Crear una cuenta, iniciar sesion o usar el servicio implica aceptar estas condiciones.",
               "El usuario debe tener capacidad legal para usar el servicio. El uso por menores requiere autorizacion del representante legal.",
-              "LarpKing puede suspender o limitar el acceso en caso de incumplimiento, abuso, riesgo de seguridad o solicitud legal.",
+              "LuxeFlexIA puede suspender o limitar el acceso en caso de incumplimiento, abuso, riesgo de seguridad o solicitud legal.",
             ],
           },
           {
@@ -987,7 +979,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "El usuario puede subir una o varias imagenes, elegir una plantilla o introducir un prompt y lanzar una generacion con IA.",
               "Las generaciones consumen creditos. El coste depende del tipo de generacion, calidad solicitada y opciones disponibles.",
-              "Los resultados pueden ser realistas, estilizados, imperfectos o inesperados. LarpKing no garantiza que el resultado coincida exactamente con la solicitud inicial.",
+              "Los resultados pueden ser realistas, estilizados, imperfectos o inesperados. LuxeFlexIA no garantiza que el resultado coincida exactamente con la solicitud inicial.",
             ],
           },
           {
@@ -1003,15 +995,15 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Contenidos del usuario",
             paragraphs: [
-              "El usuario conserva los derechos que posea sobre imagenes, textos y otros contenidos enviados a LarpKing.",
-              "Al enviar contenido, concede a LarpKing una licencia no exclusiva, mundial, gratuita y limitada a lo necesario para alojar, procesar, transformar, mostrar y prestar el servicio solicitado.",
+              "El usuario conserva los derechos que posea sobre imagenes, textos y otros contenidos enviados a LuxeFlexIA.",
+              "Al enviar contenido, concede a LuxeFlexIA una licencia no exclusiva, mundial, gratuita y limitada a lo necesario para alojar, procesar, transformar, mostrar y prestar el servicio solicitado.",
               "El usuario garantiza tener derechos, permisos y consentimientos necesarios, especialmente si la imagen muestra una persona identificable, lugar privado, marca u obra protegida.",
             ],
           },
           {
             id: "6",
             title: "6. Usos prohibidos",
-            paragraphs: ["LarpKing esta pensado para creacion lifestyle y contenido creativo. Se prohibe:"],
+            paragraphs: ["LuxeFlexIA esta pensado para creacion lifestyle y contenido creativo. Se prohibe:"],
             bullets: [
               { label: "Falta de consentimiento", text: "enviar o transformar la imagen de una persona identificable sin derechos o consentimiento requerido." },
               { label: "Engano o fraude", text: "presentar visuales generados o editados como prueba real, suplantar identidades, obtener ventajas indebidas o enganar a plataformas, empleadores, bancos, autoridades o terceros." },
@@ -1027,15 +1019,15 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "7. Imagenes generadas y responsabilidad",
             paragraphs: [
               "El usuario es el unico responsable del uso, publicacion y comparticion de las imagenes generadas.",
-              "Las imagenes de LarpKing deben usarse de forma leal y no para enganar, infringir derechos o evitar verificaciones de identidad.",
+              "Las imagenes de LuxeFlexIA deben usarse de forma leal y no para enganar, infringir derechos o evitar verificaciones de identidad.",
               "Cuando el contexto lo requiera, el usuario debe indicar que una imagen ha sido generada o editada con IA.",
             ],
           },
           {
             id: "8",
-            title: "8. Propiedad intelectual de LarpKing",
+            title: "8. Propiedad intelectual de LuxeFlexIA",
             paragraphs: [
-              "La interfaz, textos, graficos, logos, software, bases de datos, plantillas y elementos distintivos de LarpKing estan protegidos.",
+              "La interfaz, textos, graficos, logos, software, bases de datos, plantillas y elementos distintivos de LuxeFlexIA estan protegidos.",
               "Se prohibe toda reproduccion, adaptacion, extraccion, distribucion o explotacion no autorizada.",
             ],
           },
@@ -1044,7 +1036,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Disponibilidad y garantias",
             paragraphs: [
               "El servicio se presta con diligencia razonable, sin garantia de disponibilidad continua, resultado exacto, ausencia de errores o adecuacion a un uso particular.",
-              "LarpKing puede modificar, suspender o interrumpir funciones por mantenimiento, seguridad, mejora del producto o restricciones de proveedores.",
+              "LuxeFlexIA puede modificar, suspender o interrumpir funciones por mantenimiento, seguridad, mejora del producto o restricciones de proveedores.",
               `${SERVICE_NAME} no responde por danos indirectos, perdida de datos, oportunidades, reputacion o consecuencias de un uso no conforme.`,
             ],
           },
@@ -1053,7 +1045,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "10. Cambios",
             paragraphs: [
               "Estas condiciones pueden actualizarse por cambios del servicio, ley o practicas operativas.",
-              "En cambios sustanciales, LarpKing podra informar a los usuarios por cualquier medio apropiado. El uso continuado implica aceptacion.",
+              "En cambios sustanciales, LuxeFlexIA podra informar a los usuarios por cualquier medio apropiado. El uso continuado implica aceptacion.",
             ],
           },
           {
@@ -1074,8 +1066,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Objeto",
             paragraphs: [
-              "Estas Condiciones de Venta regulan suscripciones, pagos y uso de las ofertas de pago de LarpKing.",
-              `El vendedor es ${COMPANY_TRADE_NAME}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              "Estas Condiciones de Venta regulan suscripciones, pagos y uso de las ofertas de pago de LuxeFlexIA.",
+              `El vendedor es ${COMPANY_PUBLISHER}, autonomo (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "La version francesa prevalece sobre cualquier traduccion en caso de contradiccion.",
             ],
           },
@@ -1116,7 +1108,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Pago y facturas",
             paragraphs: [
-              "Los pagos son procesados por Stripe. LarpKing no almacena datos completos de tarjeta.",
+              "Los pagos son procesados por Stripe. LuxeFlexIA no almacena datos completos de tarjeta.",
               "En caso de fallo de pago, el acceso a funciones de pago puede suspenderse hasta regularizacion.",
               "Facturas y recibos, cuando esten disponibles, se consultan en el portal de Stripe o pueden solicitarse a soporte.",
             ],
@@ -1145,7 +1137,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Las solicitudes sobre errores de facturacion, pagos no reconocidos, incidencias tecnicas graves o reembolsos deben enviarse a ${CONTACT_EMAIL}.`,
               "Cada solicitud se analiza caso por caso considerando uso de creditos, historial de pago y naturaleza de la incidencia.",
-              "En caso de indisponibilidad prolongada imputable a LarpKing, puede proponerse compensacion en creditos, extension de acceso o reembolso parcial.",
+              "En caso de indisponibilidad prolongada imputable a LuxeFlexIA, puede proponerse compensacion en creditos, extension de acceso o reembolso parcial.",
             ],
           },
           {
@@ -1153,7 +1145,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Soporte y mediacion",
             paragraphs: [
               `Para preguntas sobre pedidos, suscripciones, pagos o facturas: ${CONTACT_EMAIL}.`,
-              "LarpKing intenta responder en 48 horas laborables.",
+              "LuxeFlexIA intenta responder en 48 horas laborables.",
               "Para disputas de consumo no resueltas, el consumidor puede recurrir gratuitamente a un mediador competente segun los articulos L.611-1 y siguientes del Codigo de Consumo frances.",
             ],
           },
@@ -1180,7 +1172,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Datos recogidos",
-            paragraphs: ["Al usar LarpKing, podemos recoger las siguientes categorias:"],
+            paragraphs: ["Al usar LuxeFlexIA, podemos recoger las siguientes categorias:"],
             bullets: [
               { label: "Cuenta", text: "email, ID de usuario, idioma preferido, estado de suscripcion, aceptacion de condiciones." },
               { label: "Contenido", text: "imagenes subidas, imagenes generadas, plantillas seleccionadas, prompts, ajustes e historial." },
@@ -1198,7 +1190,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               { text: "Proporcionar generaciones IA, plantillas, creditos, historial y descargas." },
               { text: "Gestionar pagos, suscripciones, reembolsos, facturas y soporte." },
               { text: "Prevenir abusos, fraude, usos prohibidos y proteger el servicio." },
-              { text: "Diagnosticar errores, medir rendimiento y mejorar LarpKing." },
+              { text: "Diagnosticar errores, medir rendimiento y mejorar LuxeFlexIA." },
               { text: "Cumplir obligaciones legales, contables, fiscales y probatorias." },
             ],
             bulletStyle: "disc",
@@ -1209,7 +1201,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             bullets: [
               { label: "Ejecucion del contrato", text: "prestacion del servicio, cuenta, generaciones, creditos, suscripciones y soporte." },
               { label: "Consentimiento", text: "acciones voluntarias, comunicaciones opcionales o cookies no esenciales si se activan." },
-              { label: "Interes legitimo", text: "seguridad, prevencion de abusos, mejora del producto y defensa de derechos de LarpKing." },
+              { label: "Interes legitimo", text: "seguridad, prevencion de abusos, mejora del producto y defensa de derechos de LuxeFlexIA." },
               { label: "Obligacion legal", text: "facturacion, contabilidad, impuestos y respuesta a autoridades competentes." },
             ],
             bulletStyle: "disc",
@@ -1226,7 +1218,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "6. Transferencias fuera de la UE",
             paragraphs: [
               "Algunos proveedores pueden tratar datos fuera de la Union Europea.",
-              "Cuando sea necesario, LarpKing se apoya en mecanismos de transferencia disponibles, incluidas clausulas contractuales tipo, garantias contractuales y medidas de seguridad de proveedores.",
+              "Cuando sea necesario, LuxeFlexIA se apoya en mecanismos de transferencia disponibles, incluidas clausulas contractuales tipo, garantias contractuales y medidas de seguridad de proveedores.",
             ],
           },
           {
@@ -1245,7 +1237,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "8",
             title: "8. Cookies y almacenamiento local",
             paragraphs: [
-              "LarpKing usa cookies o tecnologias similares necesarias para autenticacion, seguridad, sesion, idioma y funcionamiento.",
+              "LuxeFlexIA usa cookies o tecnologias similares necesarias para autenticacion, seguridad, sesion, idioma y funcionamiento.",
               "No se instala cookie publicitaria sin base legal adecuada. Si se anaden cookies no esenciales, se ofrecera un mecanismo de eleccion cuando sea requerido.",
             ],
           },
@@ -1266,7 +1258,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "10",
             title: "10. Seguridad",
             paragraphs: [
-              "LarpKing aplica medidas tecnicas y organizativas razonables contra acceso no autorizado, perdida, alteracion o divulgacion.",
+              "LuxeFlexIA aplica medidas tecnicas y organizativas razonables contra acceso no autorizado, perdida, alteracion o divulgacion.",
               "Ningun servicio online garantiza seguridad absoluta. El usuario debe proteger sus credenciales y avisar de incidentes sospechosos.",
             ],
           },
@@ -1275,7 +1267,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "11. Tratamiento IA de imagenes",
             paragraphs: [
               "Las imagenes subidas pueden contener datos personales segun su contenido. Se tratan para producir la generacion solicitada.",
-              "LarpKing no tiene como finalidad identificar personas, autenticar identidades ni tomar decisiones con efectos juridicos desde imagenes.",
+              "LuxeFlexIA no tiene como finalidad identificar personas, autenticar identidades ni tomar decisiones con efectos juridicos desde imagenes.",
               "Los contenidos pueden enviarse a proveedores IA estrictamente para ejecutar generaciones y operar el servicio, segun sus garantias contractuales aplicables.",
             ],
           },
@@ -1290,7 +1282,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
         ],
       },
       legalNotice: {
-        title: "Aviso Legal",
+        title: "Aviso Legal — LuxeFlexIA",
         sections: [
           {
             id: "1",
@@ -1302,19 +1294,21 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Director de publicacion",
-            paragraphs: [`El director de publicacion es ${COMPANY_TRADE_NAME}, contactable en ${CONTACT_EMAIL}.`],
+            paragraphs: [
+              `El director de publicacion es ${COMPANY_PUBLISHER}, contactable en ${CONTACT_EMAIL}.`,
+            ],
           },
           {
             id: "3",
             title: "3. Alojamiento",
-            paragraphs: ["El sitio esta alojado por:"],
-            bullets: HOSTING_DETAILS.es,
-            bulletStyle: "none",
+            paragraphs: [HOSTING_PLACEHOLDER.es],
           },
           {
             id: "4",
             title: "4. Proveedores tecnicos",
-            paragraphs: ["LarpKing se apoya en particular en los siguientes proveedores:"],
+            paragraphs: [
+              `${SERVICE_NAME} se apoya en particular en los siguientes proveedores:`,
+            ],
             bullets: TECH_PROVIDERS.es,
             bulletStyle: "disc",
           },
@@ -1322,24 +1316,22 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Propiedad intelectual",
             paragraphs: [
-              "Marcas, logos, textos, interfaces, plantillas, software, bases de datos y graficos de LarpKing estan protegidos.",
-              "Se prohibe toda reproduccion, extraccion, adaptacion o explotacion no autorizada.",
-              "Los usuarios conservan derechos sobre sus contenidos, sujeto a los derechos concedidos a LarpKing para prestar el servicio.",
+              `Las marcas, logos, textos, interfaces, plantillas, software, bases de datos y graficos de ${SERVICE_NAME} estan protegidos. Se prohibe toda reproduccion, extraccion, adaptacion o explotacion no autorizada. Los usuarios conservan derechos sobre sus contenidos, sujeto a los derechos concedidos a ${SERVICE_NAME} para prestar el servicio.`,
             ],
           },
           {
             id: "6",
             title: "6. Responsabilidad",
             paragraphs: [
-              "LarpKing ofrece un servicio de transformacion de imagenes con IA para fines creativos y lifestyle.",
-              "El editor no garantiza exactitud, disponibilidad permanente ni adecuacion de resultados a un uso especifico.",
-              "El usuario sigue siendo responsable de las imagenes que sube, genera, publica o comparte.",
+              `${SERVICE_NAME} ofrece un servicio de transformacion de imagenes con IA para fines creativos y lifestyle. El editor no garantiza exactitud, disponibilidad permanente ni adecuacion de resultados a un uso especifico. El usuario sigue siendo responsable de las imagenes que sube, genera, publica o comparte.`,
             ],
           },
           {
             id: "7",
             title: "7. Datos personales y cookies",
-            paragraphs: ["La informacion sobre datos personales, cookies y derechos se detalla en la Politica de Privacidad."],
+            paragraphs: [
+              "La informacion sobre datos personales, cookies y derechos se detalla en la Politica de Privacidad.",
+            ],
           },
           {
             id: "8",
@@ -1361,8 +1353,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Zweck",
             paragraphs: [
-              `Diese Nutzungsbedingungen regeln den Zugang zu LarpKing und dessen Nutzung, verfugbar unter ${SITE_DOMAIN}.`,
-              "LarpKing ist ein KI-Bildtransformationsdienst zur Erstellung von Lifestyle-, Social-, Mode-, Reise-, Restaurant-, Luxus- oder Kreativvisuals aus Bildern und/oder Prompts der Nutzer.",
+              `Diese Nutzungsbedingungen regeln den Zugang zu LuxeFlexIA und dessen Nutzung, verfugbar unter ${SITE_DOMAIN}.`,
+              "LuxeFlexIA ist ein KI-Bildtransformationsdienst zur Erstellung von Lifestyle-, Social-, Mode-, Reise-, Restaurant-, Luxus- oder Kreativvisuals aus Bildern und/oder Prompts der Nutzer.",
               "Bei Widerspruchen ist die franzosische Fassung massgeblich.",
             ],
           },
@@ -1372,7 +1364,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Die Kontoerstellung, Anmeldung oder Nutzung des Dienstes bedeutet die vollstandige Annahme dieser Bedingungen.",
               "Nutzer mussen rechtsfahig sein. Die Nutzung durch Minderjahrige erfordert die Zustimmung eines gesetzlichen Vertreters.",
-              "LarpKing kann den Zugang bei Verstoss, Missbrauch, Sicherheitsrisiko oder rechtlicher Anfrage aussetzen oder beschranken.",
+              "LuxeFlexIA kann den Zugang bei Verstoss, Missbrauch, Sicherheitsrisiko oder rechtlicher Anfrage aussetzen oder beschranken.",
             ],
           },
           {
@@ -1381,7 +1373,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               "Nutzer konnen ein oder mehrere Bilder hochladen, ein Template auswahlen oder einen Prompt eingeben und eine KI-Generierung starten.",
               "Generierungen verbrauchen Credits. Die Kosten hangen von Typ, gewunschter Qualitat und verfugbaren Optionen ab.",
-              "Ergebnisse konnen realistisch, stilisiert, unvollkommen oder unerwartet sein. LarpKing garantiert keine exakte Ubereinstimmung mit der Anfrage.",
+              "Ergebnisse konnen realistisch, stilisiert, unvollkommen oder unerwartet sein. LuxeFlexIA garantiert keine exakte Ubereinstimmung mit der Anfrage.",
             ],
           },
           {
@@ -1397,15 +1389,15 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Nutzerinhalte",
             paragraphs: [
-              "Nutzer behalten die Rechte, die sie an Bildern, Texten und sonstigen an LarpKing ubermittelten Inhalten besitzen.",
-              "Mit der Ubermittlung gewahren Nutzer LarpKing eine nicht-exklusive, weltweite, unentgeltliche Lizenz, beschrankt auf Hosting, Verarbeitung, Transformation, Anzeige und Bereitstellung des angeforderten Dienstes.",
+              "Nutzer behalten die Rechte, die sie an Bildern, Texten und sonstigen an LuxeFlexIA ubermittelten Inhalten besitzen.",
+              "Mit der Ubermittlung gewahren Nutzer LuxeFlexIA eine nicht-exklusive, weltweite, unentgeltliche Lizenz, beschrankt auf Hosting, Verarbeitung, Transformation, Anzeige und Bereitstellung des angeforderten Dienstes.",
               "Nutzer sichern zu, alle erforderlichen Rechte, Erlaubnisse und Einwilligungen zu besitzen, insbesondere bei identifizierbaren Personen, privaten Orten, Marken oder geschutzten Werken.",
             ],
           },
           {
             id: "6",
             title: "6. Verbotene Nutzungen",
-            paragraphs: ["LarpKing ist fur Lifestyle-Bilder und kreative Inhalte bestimmt. Verboten sind:"],
+            paragraphs: ["LuxeFlexIA ist fur Lifestyle-Bilder und kreative Inhalte bestimmt. Verboten sind:"],
             bullets: [
               { label: "Keine Einwilligung", text: "Bilder identifizierbarer Personen ohne erforderliche Rechte oder Einwilligung hochzuladen oder zu transformieren." },
               { label: "Tauschung oder Betrug", text: "generierte oder bearbeitete Visuals als echte Beweise darzustellen, Identitaten vorzutauchen, unberechtigte Vorteile zu erlangen oder Plattformen, Arbeitgeber, Banken, Behorden oder Dritte zu tauschen." },
@@ -1421,15 +1413,15 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "7. Generierte Bilder und Verantwortung",
             paragraphs: [
               "Nutzer sind allein verantwortlich fur Nutzung, Veroffentlichung und Teilen generierter Bilder.",
-              "Bilder aus LarpKing mussen fair genutzt werden und durfen nicht zur Irrefuhrung, Rechtsverletzung oder Umgehung von Identitatsprufungen verwendet werden.",
+              "Bilder aus LuxeFlexIA mussen fair genutzt werden und durfen nicht zur Irrefuhrung, Rechtsverletzung oder Umgehung von Identitatsprufungen verwendet werden.",
               "Wenn der Kontext es erfordert, muss offengelegt werden, dass ein Bild durch KI generiert oder bearbeitet wurde.",
             ],
           },
           {
             id: "8",
-            title: "8. Geistiges Eigentum von LarpKing",
+            title: "8. Geistiges Eigentum von LuxeFlexIA",
             paragraphs: [
-              "Oberflache, Texte, Grafiken, Logos, Software, Datenbanken, Templates und Kennzeichen von LarpKing sind rechtlich geschutzt.",
+              "Oberflache, Texte, Grafiken, Logos, Software, Datenbanken, Templates und Kennzeichen von LuxeFlexIA sind rechtlich geschutzt.",
               "Nicht autorisierte Reproduktion, Anpassung, Extraktion, Verbreitung oder Nutzung ist verboten.",
             ],
           },
@@ -1438,7 +1430,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Verfugbarkeit und Gewahrleistung",
             paragraphs: [
               "Der Dienst wird mit angemessener Sorgfalt bereitgestellt, ohne Garantie kontinuierlicher Verfugbarkeit, exakter Ergebnisse, Fehlerfreiheit oder Eignung fur einen bestimmten Zweck.",
-              "LarpKing kann Funktionen wegen Wartung, Sicherheit, Produktverbesserung oder Vorgaben Dritter andern, aussetzen oder einstellen.",
+              "LuxeFlexIA kann Funktionen wegen Wartung, Sicherheit, Produktverbesserung oder Vorgaben Dritter andern, aussetzen oder einstellen.",
               `${SERVICE_NAME} haftet nicht fur mittelbare Schaden, Datenverlust, entgangene Chancen, Rufschaden oder Folgen nicht konformer Nutzung.`,
             ],
           },
@@ -1447,7 +1439,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "10. Anderungen",
             paragraphs: [
               "Diese Bedingungen konnen bei Anderungen des Dienstes, der Rechtslage oder betrieblicher Ablaufe aktualisiert werden.",
-              "Bei wesentlichen Anderungen kann LarpKing Nutzer uber geeignete Kanale informieren. Fortgesetzte Nutzung gilt als Annahme.",
+              "Bei wesentlichen Anderungen kann LuxeFlexIA Nutzer uber geeignete Kanale informieren. Fortgesetzte Nutzung gilt als Annahme.",
             ],
           },
           {
@@ -1468,8 +1460,8 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "1",
             title: "1. Zweck",
             paragraphs: [
-              "Diese Verkaufsbedingungen regeln Abonnements, Zahlungen und Nutzung kostenpflichtiger Angebote von LarpKing.",
-              `Verkaufer ist ${COMPANY_TRADE_NAME}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
+              "Diese Verkaufsbedingungen regeln Abonnements, Zahlungen und Nutzung kostenpflichtiger Angebote von LuxeFlexIA.",
+              `Verkaufer ist ${COMPANY_PUBLISHER}, Einzelunternehmer (SIRET: ${COMPANY_SIRET}), ${COMPANY_ADDRESS}.`,
               "Bei Widerspruchen ist die franzosische Fassung massgeblich.",
             ],
           },
@@ -1510,7 +1502,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Zahlung und Rechnungen",
             paragraphs: [
-              "Zahlungen werden von Stripe verarbeitet. LarpKing speichert keine vollstandigen Kartendaten.",
+              "Zahlungen werden von Stripe verarbeitet. LuxeFlexIA speichert keine vollstandigen Kartendaten.",
               "Bei fehlgeschlagener Zahlung kann der Zugang zu kostenpflichtigen Funktionen bis zur Klarung ausgesetzt werden.",
               "Rechnungen und Belege konnen, sofern verfugbar, im Stripe-Kundenportal eingesehen oder beim Support angefordert werden.",
             ],
@@ -1539,7 +1531,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             paragraphs: [
               `Anfragen zu Abrechnungsfehlern, unbekannten Zahlungen, schweren technischen Vorfallen oder Erstattungen sind an ${CONTACT_EMAIL} zu senden.`,
               "Jede Anfrage wird einzelfallbezogen unter Berucksichtigung von Credit-Nutzung, Zahlungshistorie und Art des Vorfalls gepruft.",
-              "Bei langerer Nichtverfugbarkeit, die LarpKing zuzurechnen ist, kann eine Kompensation als Credits, Zugangsverlangerung oder Teilerstattung angeboten werden.",
+              "Bei langerer Nichtverfugbarkeit, die LuxeFlexIA zuzurechnen ist, kann eine Kompensation als Credits, Zugangsverlangerung oder Teilerstattung angeboten werden.",
             ],
           },
           {
@@ -1547,7 +1539,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "9. Support und Mediation",
             paragraphs: [
               `Fragen zu Bestellung, Abonnement, Zahlung oder Rechnung: ${CONTACT_EMAIL}.`,
-              "LarpKing bemuht sich, innerhalb von 48 Geschaftsstunden zu antworten.",
+              "LuxeFlexIA bemuht sich, innerhalb von 48 Geschaftsstunden zu antworten.",
               "Bei ungelosten Verbraucherstreitigkeiten konnen Verbraucher nach Art. L.611-1 ff. des franzosischen Verbrauchergesetzbuchs kostenlos eine zustandige Verbraucherschlichtung nutzen.",
             ],
           },
@@ -1574,7 +1566,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Erhobene Daten",
-            paragraphs: ["Bei Nutzung von LarpKing konnen folgende Kategorien erhoben werden:"],
+            paragraphs: ["Bei Nutzung von LuxeFlexIA konnen folgende Kategorien erhoben werden:"],
             bullets: [
               { label: "Konto", text: "E-Mail, Nutzer-ID, bevorzugte Sprache, Abonnementstatus, Zustimmung zu Bedingungen." },
               { label: "Inhalte", text: "hochgeladene Bilder, generierte Bilder, ausgewahlte Templates, Prompts, Einstellungen und Verlauf." },
@@ -1592,7 +1584,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
               { text: "Bereitstellung von KI-Generierungen, Templates, Credits, Verlauf und Downloads." },
               { text: "Verwaltung von Zahlungen, Abonnements, Erstattungen, Rechnungen und Support." },
               { text: "Missbrauch, Betrug und verbotene Nutzungen verhindern und den Dienst sichern." },
-              { text: "Fehler diagnostizieren, Leistung messen und LarpKing verbessern." },
+              { text: "Fehler diagnostizieren, Leistung messen und LuxeFlexIA verbessern." },
               { text: "Gesetzliche, buchhalterische, steuerliche und Nachweispflichten erfullen." },
             ],
             bulletStyle: "disc",
@@ -1620,7 +1612,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "6. Ubermittlungen ausserhalb der EU",
             paragraphs: [
               "Einige Anbieter konnen Daten ausserhalb der Europaischen Union verarbeiten.",
-              "Soweit erforderlich, nutzt LarpKing verfugbare Transfermechanismen, insbesondere Standardvertragsklauseln, vertragliche Garantien und Sicherheitsmassnahmen der Anbieter.",
+              "Soweit erforderlich, nutzt LuxeFlexIA verfugbare Transfermechanismen, insbesondere Standardvertragsklauseln, vertragliche Garantien und Sicherheitsmassnahmen der Anbieter.",
             ],
           },
           {
@@ -1639,7 +1631,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "8",
             title: "8. Cookies und lokaler Speicher",
             paragraphs: [
-              "LarpKing nutzt Cookies oder ahnliche Technologien, die fur Authentifizierung, Sicherheit, Sitzung, Sprache und Betrieb erforderlich sind.",
+              "LuxeFlexIA nutzt Cookies oder ahnliche Technologien, die fur Authentifizierung, Sicherheit, Sitzung, Sprache und Betrieb erforderlich sind.",
               "Werbe-Cookies werden nicht ohne geeignete Rechtsgrundlage gesetzt. Werden nicht notwendige Cookies hinzugefugt, wird soweit erforderlich eine Auswahlmoglichkeit angeboten.",
             ],
           },
@@ -1660,7 +1652,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "10",
             title: "10. Sicherheit",
             paragraphs: [
-              "LarpKing setzt angemessene technische und organisatorische Massnahmen gegen unbefugten Zugriff, Verlust, Anderung oder Offenlegung ein.",
+              "LuxeFlexIA setzt angemessene technische und organisatorische Massnahmen gegen unbefugten Zugriff, Verlust, Anderung oder Offenlegung ein.",
               "Kein Online-Dienst kann absolute Sicherheit garantieren. Nutzer mussen Zugangsdaten schutzen und Verdachtsfalle melden.",
             ],
           },
@@ -1669,7 +1661,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "11. KI-Bildverarbeitung",
             paragraphs: [
               "Hochgeladene Bilder konnen je nach Inhalt personenbezogene Daten enthalten. Sie werden verarbeitet, um die angeforderte Generierung zu erstellen.",
-              "LarpKing bezweckt nicht, Personen zu identifizieren, Identitaten zu authentifizieren oder Entscheidungen mit rechtlicher Wirkung anhand von Bildern zu treffen.",
+              "LuxeFlexIA bezweckt nicht, Personen zu identifizieren, Identitaten zu authentifizieren oder Entscheidungen mit rechtlicher Wirkung anhand von Bildern zu treffen.",
               "Inhalte konnen streng zur Generierung und zum Betrieb des Dienstes an KI-Anbieter ubermittelt werden, nach deren anwendbaren vertraglichen Garantien.",
             ],
           },
@@ -1684,7 +1676,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
         ],
       },
       legalNotice: {
-        title: "Impressum",
+        title: "Impressum — LuxeFlexIA",
         sections: [
           {
             id: "1",
@@ -1696,19 +1688,21 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "2",
             title: "2. Verantwortlich fur die Veroffentlichung",
-            paragraphs: [`Verantwortlich fur die Veroffentlichung ist ${COMPANY_TRADE_NAME}, erreichbar unter ${CONTACT_EMAIL}.`],
+            paragraphs: [
+              `Verantwortlich fur die Veroffentlichung ist ${COMPANY_PUBLISHER}, erreichbar unter ${CONTACT_EMAIL}.`,
+            ],
           },
           {
             id: "3",
             title: "3. Hosting",
-            paragraphs: ["Die Website wird gehostet von:"],
-            bullets: HOSTING_DETAILS.de,
-            bulletStyle: "none",
+            paragraphs: [HOSTING_PLACEHOLDER.de],
           },
           {
             id: "4",
             title: "4. Technische Anbieter",
-            paragraphs: ["LarpKing nutzt insbesondere folgende technische Anbieter:"],
+            paragraphs: [
+              `${SERVICE_NAME} nutzt insbesondere folgende technische Anbieter:`,
+            ],
             bullets: TECH_PROVIDERS.de,
             bulletStyle: "disc",
           },
@@ -1716,24 +1710,22 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             id: "5",
             title: "5. Geistiges Eigentum",
             paragraphs: [
-              "Marken, Logos, Texte, Oberflachen, Templates, Software, Datenbanken und Grafiken von LarpKing sind geschutzt.",
-              "Nicht autorisierte Reproduktion, Extraktion, Anpassung oder Nutzung ist verboten.",
-              "Nutzer behalten Rechte an ihren Inhalten, vorbehaltlich der LarpKing zur Leistungserbringung gewahrten Rechte.",
+              `Marken, Logos, Texte, Oberflachen, Templates, Software, Datenbanken und Grafiken von ${SERVICE_NAME} sind geschutzt. Nicht autorisierte Reproduktion, Extraktion, Anpassung oder Nutzung ist verboten. Nutzer behalten Rechte an ihren Inhalten, vorbehaltlich der ${SERVICE_NAME} zur Leistungserbringung gewahrten Rechte.`,
             ],
           },
           {
             id: "6",
             title: "6. Haftung",
             paragraphs: [
-              "LarpKing bietet einen KI-Bildtransformationsdienst fur kreative und Lifestyle-Zwecke.",
-              "Der Herausgeber garantiert weder Genauigkeit, dauerhafte Verfugbarkeit noch Eignung der Ergebnisse fur bestimmte Zwecke.",
-              "Nutzer bleiben verantwortlich fur Bilder, die sie hochladen, generieren, veroffentlichen oder teilen.",
+              `${SERVICE_NAME} bietet einen KI-Bildtransformationsdienst fur kreative und Lifestyle-Zwecke. Der Herausgeber garantiert weder Genauigkeit, dauerhafte Verfugbarkeit noch Eignung der Ergebnisse fur bestimmte Zwecke. Nutzer bleiben verantwortlich fur Bilder, die sie hochladen, generieren, veroffentlichen oder teilen.`,
             ],
           },
           {
             id: "7",
             title: "7. Personenbezogene Daten und Cookies",
-            paragraphs: ["Informationen zu personenbezogenen Daten, Cookies und Nutzerrechten stehen in der Datenschutzerklarung."],
+            paragraphs: [
+              "Informationen zu personenbezogenen Daten, Cookies und Nutzerrechten stehen in der Datenschutzerklarung.",
+            ],
           },
           {
             id: "8",

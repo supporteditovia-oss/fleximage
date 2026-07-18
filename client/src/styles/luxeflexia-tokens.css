@@ -1,0 +1,44 @@
+/* Shared LuxeFlexIA brand tokens — used by SaaS + can be referenced by landing */
+:root {
+  --lx-gold: #c9a227;
+  --lx-gold-soft: #d4af37;
+  --lx-bronze: #8b6914;
+  --lx-ink: #12100e;
+  --lx-ink-soft: #1c1916;
+  --lx-surface: #e9e7e2;
+  --lx-surface-2: #f2f0ec;
+  --lx-muted: #5c564e;
+  --lx-display: "Playfair Display", Georgia, serif;
+  --lx-sans: "Plus Jakarta Sans", "DM Sans", sans-serif;
+}
+
+.lx-display {
+  font-family: var(--lx-display);
+}
+
+.lx-btn-gold {
+  background: linear-gradient(135deg, #e8c547 0%, #c9a227 45%, #8b6914 100%);
+  color: #1a1408;
+  box-shadow: 0 4px 18px rgba(201, 162, 39, 0.28);
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.lx-btn-gold:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 0 0 1px rgba(232, 197, 71, 0.35),
+    0 6px 28px rgba(201, 162, 39, 0.45),
+    0 0 40px rgba(201, 162, 39, 0.22);
+}
+
+.lx-btn-gold:active {
+  transform: scale(0.97);
+}
+
+.lx-btn-gold:disabled {
+  opacity: 0.6;
+  filter: none;
+}

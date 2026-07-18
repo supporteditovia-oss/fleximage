@@ -3799,22 +3799,12 @@ export async function registerRoutes(
     }
   });
 
-  // GET /api/larps/history
+  // GET /api/larps/history — accessible à tout utilisateur authentifié
   app.get(api.larps.history.path, requireAuth, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
       const supabaseAdmin = getSupabaseAdmin();
-
-      // Non-subscribers have no history access
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("is_subscriber, role")
-        .eq("id", authReq.userId)
-        .single();
-      const isSubscriber = profile?.is_subscriber || profile?.role === "admin";
-      if (!isSubscriber) {
-        return res.json([]);
-      }
 
       const { data, error } = await supabaseAdmin
         .from("generations")
@@ -3827,6 +3817,79 @@ export async function registerRoutes(
       res.json((data ?? []).map(toLarpDto));
     } catch (error: any) {
       logger.error({ err: error }, "Error fetching larp history");
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
+  // GET /api/larps/result — post-paiement uniquement (is_subscriber en base)
+  app.get(api.larps.result.path, requireAuth, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const locale = resolveLocaleFromRequest(req);
+      const supabaseAdmin = getSupabaseAdmin();
+      const larpIdParam =
+        typeof req.query.larpId === "string" ? req.query.larpId.trim() : "";
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("is_subscriber, role")
+        .eq("id", authReq.userId)
+        .single();
+      const isSubscriber = Boolean(
+        profile?.is_subscriber || profile?.role === "admin",
+      );
+      if (!isSubscriber) {
+        return res.status(403).json({
+          code: "PAYMENT_REQUIRED",
+          message: tBackend(locale, "larps.paymentRequired"),
+        });
+      }
+
+      let query = supabaseAdmin
+        .from("generations")
+        .select(
+          "id, status, output_assets, generation_type, created_at, provider_task_id",
+        )
+        .eq("user_id", authReq.userId)
+        .eq("status", "succeeded");
+
+      if (larpIdParam) {
+        query = query.eq("id", larpIdParam);
+      } else {
+        query = query.order("created_at", { ascending: false }).limit(1);
+      }
+
+      const { data: rows, error } = await query;
+      if (error) throw error;
+
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      if (!row) {
+        return res.status(404).json({
+          code: "NOT_FOUND",
+          message: tBackend(locale, "larps.notFound"),
+        });
+      }
+
+      const resultUrls = toAssetList(row.output_assets);
+      if (resultUrls.length === 0) {
+        return res.status(404).json({
+          code: "NOT_FOUND",
+          message: tBackend(locale, "larps.notFound"),
+        });
+      }
+
+      res.json({
+        larpId: row.id,
+        resultUrls,
+        resultType: row.generation_type === "video" ? "video" : "image",
+        createdAt: row.created_at,
+        taskId: row.provider_task_id ?? null,
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, "Error fetching paid result");
       const locale = resolveLocaleFromRequest(req);
       res
         .status(500)

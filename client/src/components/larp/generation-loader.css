@@ -1,0 +1,188 @@
+/* Animations scoped to the generation loader overlay */
+.lx-gen-loader {
+  --lx-gold: #c9a227;
+  --lx-display: "Playfair Display", Georgia, serif;
+}
+
+/* Base sombre sobre */
+.lx-gen-loader__base {
+  background: linear-gradient(180deg, #0a0a0a 0%, #141414 50%, #1a1a1a 100%);
+}
+
+/* Un seul halo doré discret qui se déplace très lentement */
+@keyframes lx-halo-drift {
+  0% {
+    transform: translate(-30%, -24%);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(26%, 20%);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-30%, -24%);
+    opacity: 0.15;
+  }
+}
+
+.lx-gen-loader__halo {
+  position: absolute;
+  width: min(72vw, 540px);
+  height: min(72vw, 540px);
+  left: 50%;
+  top: 50%;
+  margin-left: calc(min(72vw, 540px) / -2);
+  margin-top: calc(min(72vw, 540px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(201, 162, 39, 0.45) 0%,
+    rgba(201, 162, 39, 0.14) 38%,
+    transparent 70%
+  );
+  filter: blur(56px);
+  animation: lx-halo-drift 9s ease-in-out infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@keyframes lx-particle-rise {
+  0% {
+    transform: translateY(110vh) translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(var(--drift, 10px)) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.lx-gen-loader__particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(240, 216, 120, 0.45) 0%, rgba(201, 162, 39, 0.15) 50%, transparent 75%);
+  animation: lx-particle-rise var(--dur, 14s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  opacity: 0.28;
+}
+
+@keyframes lx-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lx-gen-loader__ring {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 100deg,
+    rgba(232, 197, 71, 0.2) 160deg,
+    #e8c547 220deg,
+    #c9a227 280deg,
+    transparent 330deg,
+    transparent 360deg
+  );
+  animation: lx-ring-spin 1.2s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(201, 162, 39, 0.4));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 2.5px)
+  );
+}
+
+@media (min-width: 768px) {
+  .lx-gen-loader__ring {
+    width: 5rem;
+    height: 5rem;
+  }
+}
+
+@keyframes lx-msg-fade {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  15%,
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lx-gen-loader__msg {
+  animation: lx-msg-fade 1.8s ease-in-out;
+}
+
+@keyframes lx-logo-breathe {
+  0%,
+  100% {
+    transform: scale(0.98);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.lx-gen-loader__brand {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.lx-gen-loader__brand-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  animation: lx-logo-breathe 2.6s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.lx-gen-loader__brand-inner > * {
+  margin: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-gen-loader__halo,
+  .lx-gen-loader__particle,
+  .lx-gen-loader__ring,
+  .lx-gen-loader__msg,
+  .lx-gen-loader__brand-inner {
+    animation: none;
+  }
+
+  .lx-gen-loader__halo {
+    opacity: 0.16;
+    transform: none;
+  }
+
+  .lx-gen-loader__msg {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lx-gen-loader__brand-inner {
+    transform: none;
+  }
+}

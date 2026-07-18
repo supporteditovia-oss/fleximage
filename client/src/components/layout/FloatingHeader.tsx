@@ -19,8 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import { createPortalSession } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarClock, CreditCard, Crown, Loader2 } from "lucide-react";
-import { CreditsTokenIcon } from "@/components/icons/CreditsTokenIcon";
+import { CalendarClock, CreditCard, Crown, Gem, Loader2 } from "lucide-react";
 
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
@@ -72,8 +71,19 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     return () => vv.removeEventListener("resize", onResize);
   }, [isMobile]);
 
+  const pathname = location.split("?")[0] || location;
   const logoHref = variant === "app" ? "/generate" : "/";
+  const isPostPayPage = pathname === "/resultat";
   const displayedCredits = plan?.credits ?? profile?.credits ?? 0;
+  const creditsLabel = React.useMemo(() => {
+    if (displayedCredits < 100_000) {
+      return displayedCredits.toLocaleString(i18n.resolvedLanguage ?? "fr");
+    }
+    return new Intl.NumberFormat(i18n.resolvedLanguage ?? "fr", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(displayedCredits);
+  }, [displayedCredits, i18n.resolvedLanguage]);
   const hasKnownCreditBalance =
     typeof plan?.credits === "number" || typeof profile?.credits === "number";
   const isCreditBalanceEmpty = hasKnownCreditBalance && displayedCredits <= 0;
@@ -113,6 +123,9 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     if (open && shouldOpenPaywallFromCredits) {
       setCreditsOpen(false);
       setCreditsPaywallOpen(true);
+      void import("@/lib/snap-pixel").then(({ trackSnapStartCheckout }) => {
+        trackSnapStartCheckout();
+      });
       return;
     }
 
@@ -150,24 +163,33 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative flex w-full items-center justify-center"
+        className="relative flex w-full items-center justify-between gap-2 sm:gap-3"
       >
-        {/* Logo — centered */}
+        {/* Logo — left, truncates instead of colliding with credits */}
         <Link
           href={logoHref}
-          className="pointer-events-auto flex max-w-[42vw] shrink min-w-0 cursor-pointer hover:opacity-80 transition-opacity sm:max-w-[36vw] md:max-w-[260px]"
+          className="pointer-events-auto flex min-w-0 flex-1 cursor-pointer items-center hover:opacity-80 transition-opacity"
         >
-          <img
-            src="/assets/larpking.png"
-            alt="LarpKing"
-            className="h-[clamp(2rem,6svh,2.5rem)] w-auto max-w-full object-contain md:h-[clamp(2.25rem,6svh,4rem)]"
-          />
+          <span className="lx-display inline-flex max-w-full min-w-0 items-center gap-1.5 sm:gap-2">
+            <Gem
+              className="h-5 w-5 shrink-0 text-[var(--lx-gold)] md:h-6 md:w-6"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span
+              className={`truncate text-lg font-semibold tracking-tight sm:text-xl md:text-2xl ${
+                isPostPayPage ? "text-[#f5f0e6]" : "text-[var(--lx-ink)]"
+              }`}
+            >
+              Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
+            </span>
+          </span>
         </Link>
 
         {variant === "landing" && user && !isLoading && (
           <Link
             href="/app"
-            className="pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 md:hidden"
+            className="pointer-events-auto shrink-0 md:hidden"
           >
             <Button
               size="sm"
@@ -185,14 +207,19 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`floating-header-credits absolute right-0 flex items-center gap-1.5 rounded-lg border border-border/80 bg-white/85 px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm shadow-black/10 backdrop-blur-xl transition hover:bg-white pointer-events-auto ${
+                className={`floating-header-credits pointer-events-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
+                title={String(displayedCredits)}
               >
-                <CreditsTokenIcon className="h-5 w-5" />
-                <span className="tabular-nums" aria-live="polite">
-                  {displayedCredits}
+                <Gem
+                  className="h-4 w-4 shrink-0 text-[var(--lx-gold)] sm:h-5 sm:w-5"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <span className="min-w-0 truncate tabular-nums" aria-live="polite">
+                  {creditsLabel}
                 </span>
               </button>
             </PopoverTrigger>
@@ -206,10 +233,14 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                   {t("billing.creditsTitle")}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <CreditsTokenIcon className="h-6 w-6" />
-                    <span className="font-display text-2xl font-bold leading-none">
-                      {displayedCredits}
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <Gem
+                      className="h-6 w-6 shrink-0 text-[var(--lx-gold)]"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                    <span className="lx-display truncate text-2xl font-bold leading-none tabular-nums">
+                      {displayedCredits.toLocaleString(i18n.resolvedLanguage ?? "fr")}
                     </span>
                   </div>
                   {isPlanFetching && (
@@ -255,7 +286,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                     type="button"
                     onClick={handleManageSubscription}
                     disabled={portalLoading}
-                    className="mt-0.5 h-9 w-full rounded-full text-xs"
+                    className="lx-btn-gold mt-0.5 h-9 w-full rounded-full text-xs font-semibold"
                   >
                     {portalLoading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -271,7 +302,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             </PopoverContent>
           </Popover>
           <Dialog open={creditsPaywallOpen} onOpenChange={setCreditsPaywallOpen}>
-            <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
+            <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-y-auto rounded-2xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)] p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-[var(--lx-gold)]/30 [&>button]:bg-white">
               <DialogTitle className="sr-only">{t("paywall.chooseTitle")}</DialogTitle>
               <PaywallOverlay
                 imageUrl=""
@@ -283,7 +314,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
           </>
         ) : !isLoading && (
           <div
-            className={`absolute right-0 flex items-center justify-end gap-2 sm:gap-3 pointer-events-auto ${
+            className={`flex shrink-0 items-center justify-end gap-2 sm:gap-3 pointer-events-auto ${
               user ? "hidden md:flex" : ""
             }`}
           >

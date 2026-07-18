@@ -142,6 +142,10 @@ export const api = {
       method: "GET" as const,
       path: "/api/larps/history",
     },
+    result: {
+      method: "GET" as const,
+      path: "/api/larps/result",
+    },
     download: {
       method: "GET" as const,
       path: "/api/larps/:larpId/download/:imageIndex",

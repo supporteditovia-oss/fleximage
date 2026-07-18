@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import "./generation-loader.css";
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
@@ -10,169 +11,206 @@ interface GenerationLoaderProps {
   onRevealComplete?: () => void;
 }
 
+const PROGRESS_MESSAGES = [
+  "Analyse de ton image...",
+  "Demande comprise...",
+  "Modification en cours...",
+  "Finalisation du rendu...",
+] as const;
+
+const COUNTDOWN_SECONDS = 8;
+const MESSAGE_INTERVAL_MS = 1800;
+const EXIT_FADE_MS = 500;
+
+const PARTICLES = [
+  { left: "12%", size: 2, dur: "14s", delay: "0s", drift: "12px" },
+  { left: "28%", size: 1.5, dur: "16s", delay: "2s", drift: "-10px" },
+  { left: "55%", size: 2, dur: "15s", delay: "4s", drift: "8px" },
+  { left: "78%", size: 1.5, dur: "17s", delay: "1s", drift: "-6px" },
+  { left: "90%", size: 2, dur: "15.5s", delay: "3.5s", drift: "10px" },
+] as const;
+
 export function GenerationLoader({
   status,
   inputImageUrl,
-  resultUrls,
+  resultUrls: _resultUrls,
   onRevealComplete,
 }: GenerationLoaderProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<"dissolve" | "blur" | "logo" | "result">(
     "dissolve",
   );
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [messageKey, setMessageKey] = useState(0);
+  const [remaining, setRemaining] = useState(COUNTDOWN_SECONDS);
+  const [isExiting, setIsExiting] = useState(false);
+  const revealFired = useRef(false);
 
-  // Phase 1 → 2: after layout dissolves, start blurring the image
   useEffect(() => {
     if (phase !== "dissolve") return;
     const timer = setTimeout(() => setPhase("blur"), 800);
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // Phase 2 → 3: after blur settles, reveal the logo
   useEffect(() => {
     if (phase !== "blur") return;
     const timer = setTimeout(() => setPhase("logo"), 1200);
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // When success arrives, transition to result (even if still dissolving — fast
-  // image generations used to stall because this required phase === "logo").
   useEffect(() => {
     if (status !== "success" || phase === "result") return;
-    const delay = phase === "logo" ? 600 : phase === "blur" ? 400 : 500;
+    const delay = phase === "logo" ? 400 : phase === "blur" ? 300 : 400;
     const timer = setTimeout(() => setPhase("result"), delay);
     return () => clearTimeout(timer);
   }, [status, phase]);
 
-  // Guarantee hand-off even if Framer onAnimationComplete does not fire.
+  // Fin : démarre le fondu et notifie le parent (crossfade), puis laisse le parent démonter
   useEffect(() => {
-    if (phase !== "result") return;
-    const timer = setTimeout(() => onRevealComplete?.(), 1200);
-    return () => clearTimeout(timer);
+    if (phase !== "result" || revealFired.current) return;
+    revealFired.current = true;
+    setIsExiting(true);
+    onRevealComplete?.();
   }, [phase, onRevealComplete]);
 
-  const handleRevealDone = useCallback(() => {
-    if (onRevealComplete) {
-      setTimeout(onRevealComplete, 400);
-    }
-  }, [onRevealComplete]);
-
-  // "Préparation" first, then elapsed timer (timer does not count prep time).
-  const PREPARING_MS = 2000;
-  const mountedAt = useRef(Date.now());
-  const startTime = useRef<number | null>(null);
-  const [showTimer, setShowTimer] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-
   useEffect(() => {
-    const remaining = Math.max(0, PREPARING_MS - (Date.now() - mountedAt.current));
-    const id = setTimeout(() => {
-      startTime.current = Date.now();
-      setShowTimer(true);
-    }, remaining);
-    return () => clearTimeout(id);
+    const startedAt = Date.now();
+    const id = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
+      setRemaining(Math.max(0, COUNTDOWN_SECONDS - elapsedSec));
+    }, 200);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    if (!showTimer) return;
     const id = setInterval(() => {
-      if (startTime.current === null) return;
-      setElapsed(
-        Math.floor((Date.now() - startTime.current) / 1000),
-      );
-    }, 200);
+      setMessageIndex((prev) => (prev + 1) % PROGRESS_MESSAGES.length);
+      setMessageKey((k) => k + 1);
+    }, MESSAGE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [showTimer]);
+  }, []);
 
   const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
-  const showLogo = phase !== "result";
+  const showContent = !isExiting;
+  const particles = useMemo(() => PARTICLES, []);
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
+      className="lx-gen-loader fixed inset-0 z-[100] overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: isExiting ? 0 : 1 }}
+      transition={{
+        duration: isExiting ? EXIT_FADE_MS / 1000 : 0.45,
+        ease: "easeInOut",
+      }}
     >
-      {/* Dark backdrop that dissolves the page behind */}
-      <motion.div
-        className="absolute inset-0 bg-background bg-grid"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, ease: "easeInOut" }}
-      />
+      {/* Fond sombre sobre */}
+      <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
 
-      {/* Input image — centered, blurs progressively */}
+      {/* Un seul halo doré subtil */}
+      <div className="lx-gen-loader__halo" aria-hidden />
+
+      {/* Poussière dorée très discrète */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {particles.map((p, i) => (
+          <span
+            key={i}
+            className="lx-gen-loader__particle"
+            style={
+              {
+                left: p.left,
+                width: p.size,
+                height: p.size,
+                "--dur": p.dur,
+                "--delay": p.delay,
+                "--drift": p.drift,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      {/* Image floutée en fond */}
       {inputImageUrl && (
         <motion.div
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          animate={{ opacity: isExiting ? 0 : 1 }}
+          transition={{ duration: 0.45 }}
         >
-          <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] rounded-lg overflow-hidden shadow-xl md:h-[min(82svh,720px)]">
+          <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-lg shadow-xl md:h-[min(82svh,720px)]">
             <motion.img
               src={inputImageUrl}
               alt={t("progress.inputAlt")}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               animate={{
-                filter: isBlurring ? "blur(24px) brightness(0.7)" : "blur(0px) brightness(1)",
-                scale: isBlurring ? 1.08 : 1,
+                filter: isBlurring
+                  ? "blur(24px) brightness(0.45)"
+                  : "blur(0px) brightness(1)",
+                scale: isBlurring ? 1.06 : 1,
               }}
               transition={{ duration: 1.8, ease: [0.4, 0, 0.2, 1] }}
             />
+            <div className="absolute inset-0 bg-black/45" />
           </div>
         </motion.div>
       )}
 
-      {/* Logo + status — visible immediately with "Préparation", then timer */}
-      <AnimatePresence>
-        {showLogo && (
-          <motion.div
-            key="logo-overlay"
-            className="relative z-10 flex flex-col items-center gap-4"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(8px)" }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <img
-              src="/assets/larpking.png"
-              alt="LarpKing"
-              className="h-24 md:h-32 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
-            />
-            <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
-            <span
-              className={`text-lg font-semibold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${showTimer ? "tabular-nums" : ""}`}
-            >
-              {showTimer ? `${elapsed}s` : t("progress.preparing")}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Result reveal — flash only, then hand off to result view */}
-      <AnimatePresence>
-        {phase === "result" && (
-          <motion.div
-            key="result"
-            className="relative z-10"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            onAnimationComplete={handleRevealDone}
-          >
-            {/* Flash */}
+      {/* Contenu centré (logo, spinner, timer, messages) */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center">
+        <AnimatePresence>
+          {showContent && (
             <motion.div
-              className="fixed inset-0 bg-white pointer-events-none z-20"
-              initial={{ opacity: 0.6 }}
-              animate={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+              key="loader-content"
+              className="flex w-full max-w-sm flex-col items-center justify-center gap-5 px-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <div className="lx-gen-loader__brand">
+                <div className="lx-gen-loader__brand-inner">
+                  <Gem
+                    className="block h-7 w-7 shrink-0 text-[#c9a227] md:h-8 md:w-8"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                  <span
+                    className="block text-3xl font-semibold leading-none tracking-tight text-white md:text-4xl"
+                    style={{ fontFamily: "var(--lx-display)" }}
+                  >
+                    Luxe<span className="text-[#c9a227]">Flex</span>IA
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center md:h-24 md:w-24">
+                <div className="lx-gen-loader__ring" aria-hidden />
+              </div>
+
+              <p
+                className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
+                style={{ fontFamily: "var(--lx-display)" }}
+                aria-live="polite"
+              >
+                <span>{remaining}</span>
+                <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
+                  sec
+                </span>
+              </p>
+
+              <div className="relative flex h-7 w-full items-center justify-center">
+                <span
+                  key={messageKey}
+                  className="lx-gen-loader__msg block w-full text-center text-sm font-medium text-[#f5e6b8]/85 md:text-base"
+                >
+                  {PROGRESS_MESSAGES[messageIndex]}
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   );
 }

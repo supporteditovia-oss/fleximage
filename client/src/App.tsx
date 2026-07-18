@@ -15,9 +15,13 @@ import AdminTemplates from "@/pages/AdminTemplates";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminStudio from "@/pages/AdminStudio";
 import Generate from "@/pages/Generate";
+import WelcomeLoader from "@/pages/WelcomeLoader";
+import ImagePrete from "@/pages/ImagePrete";
 import FaceCapture from "@/pages/FaceCapture";
-import LarpHistory from "@/pages/LarpHistory";
+import Historique from "@/pages/Historique";
+import Resultat from "@/pages/Resultat";
 import Settings from "@/pages/Settings";
+import { SnapPixelProvider } from "@/components/analytics/SnapPixelProvider";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
@@ -37,11 +41,36 @@ import {
 import { isIndexableSitePath } from "@shared/site-seo";
 import { setRobotsMeta } from "@/lib/robots-meta";
 
-// OAuth callback handler — waits for Supabase to parse the hash fragment
+// OAuth callback — consumes ?code= (PKCE) or hash tokens, then goes to /generate
 function AuthCallback() {
   const { user, isLoading } = useAuth();
+  const [bootstrapping, setBootstrapping] = React.useState(true);
 
-  if (isLoading) {
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const search = new URLSearchParams(window.location.search);
+      const code = search.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error && import.meta.env.DEV) {
+          console.warn("[auth] exchangeCodeForSession:", error.message);
+        }
+        window.history.replaceState({}, "", "/app");
+      }
+      // Ensure session state is refreshed after OAuth return
+      await supabase.auth.getSession();
+      if (!cancelled) setBootstrapping(false);
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading || bootstrapping) {
     return (
       <div className="flex h-screen w-full items-center justify-center" style={{ backgroundColor: "hsl(var(--background))" }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -56,6 +85,8 @@ function AuthCallback() {
 
 function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+  const pathname = location.split("?")[0] || location;
 
   React.useEffect(() => {
     if (!isLoading && !user) {
@@ -73,14 +104,26 @@ function ProtectedAppRoutes() {
 
   if (!user) return null;
 
+  if (pathname === "/welcome") {
+    return <WelcomeLoader />;
+  }
+
   return (
     <AppLayout>
       <ErrorBoundary>
         <Switch>
           <Route path="/generate" component={Generate} />
+          <Route path="/image-prete" component={ImagePrete} />
           <Route path="/face-capture" component={FaceCapture} />
           <Route path="/debug-generate" component={DebugGenerate} />
-          <Route path="/history" component={LarpHistory} />
+          <Route path="/resultat" component={Resultat} />
+          <Route path="/mon-resultat">
+            <Redirect to="/resultat" />
+          </Route>
+          <Route path="/historique" component={Historique} />
+          <Route path="/history">
+            <Redirect to="/historique" />
+          </Route>
           <Route path="/settings" component={Settings} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/users" component={AdminPage} />
@@ -98,7 +141,11 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/": "meta:titles.home",
   "/login": "meta:titles.login",
   "/register": "meta:titles.register",
+  "/welcome": "Bienvenue — LuxeFlexIA",
   "/generate": "meta:titles.generate",
+  "/image-prete": "Ton image est prête — LuxeFlexIA",
+  "/resultat": "Ton résultat — LuxeFlexIA",
+  "/historique": "Historique — LuxeFlexIA",
   "/history": "meta:titles.history",
   "/settings": "meta:titles.settings",
   "/admin": "meta:titles.admin",
@@ -113,9 +160,14 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 };
 
 const PROTECTED_PATHS = new Set([
+  "/welcome",
   "/generate",
+  "/image-prete",
   "/face-capture",
   "/debug-generate",
+  "/resultat",
+  "/mon-resultat",
+  "/historique",
   "/history",
   "/settings",
   "/admin",
@@ -252,6 +304,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
+          <SnapPixelProvider />
           <Router />
           <Toaster />
         </TooltipProvider>

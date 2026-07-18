@@ -8,163 +8,128 @@ import {
   getMobileCompatibleLandingImages,
   type LandingMarqueeImage,
 } from "@/lib/landing-marquee-images";
+import { buildExclusiveHeroRows } from "@/lib/hero-marquee-pools";
 
-const MIN_FRAMES = 10;
-const LOWER_ROW_IMAGE_IDS = new Set(["bb04deea-c7b1-46f0-a816-d3e8be84fec8"]);
-const FRAME_CLASS =
-  "relative h-[clamp(9rem,28vh,18rem)] aspect-[9/16] flex-shrink-0 rounded-lg border border-foreground/10 bg-white/45 shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden";
-type ImageFetchPriority = "high" | "low" | "auto";
+/** Villa / piscine — fond doux derrière le marquee */
+const HERO_BG_URL =
+  "https://images.unsplash.com/photo-1758192838598-a1de4da5dcaf?auto=format&fit=crop&w=1920&q=80";
 
-function padToMin<T>(items: T[], min: number): T[] {
-  if (items.length === 0) return items;
+const CARD_SIZES = [
+  "h-[180px]",
+  "h-[200px]",
+  "h-[220px]",
+  "h-[190px]",
+  "h-[210px]",
+  "h-[185px]",
+  "h-[205px]",
+] as const;
+
+const LOOP_COPIES = 3;
+const ROW_HEIGHT_PX = 220;
+const ROW_GAP_PX = 40;
+
+function repeatList<T>(items: T[], times: number): T[] {
   const result: T[] = [];
-  while (result.length < min) {
+  for (let i = 0; i < times; i += 1) {
     result.push(...items);
   }
   return result;
 }
 
-function splitFrameRows(items: LandingMarqueeImage[]) {
-  const upper: LandingMarqueeImage[] = [];
-  const lower: LandingMarqueeImage[] = [];
-
-  for (const item of items) {
-    if (LOWER_ROW_IMAGE_IDS.has(item.id)) {
-      lower.push(item);
-      continue;
-    }
-
-    if (upper.length <= lower.length) {
-      upper.push(item);
-    } else {
-      lower.push(item);
-    }
-  }
-
-  return { upper, lower };
-}
-
-function FrameCard({
-  template,
-  eager,
-  fetchPriority,
+function MarqueeCard({
+  image,
+  sizeClass,
 }: {
-  template: LandingMarqueeImage;
-  eager: boolean;
-  fetchPriority: ImageFetchPriority;
+  image: LandingMarqueeImage;
+  sizeClass: string;
 }) {
   return (
-    <div className={FRAME_CLASS}>
+    <div
+      className={cn(
+        "lx-pov-card relative aspect-[9/16] shrink-0 overflow-hidden rounded-[12px] border border-black/5 bg-white/30",
+        sizeClass,
+      )}
+      style={{
+        boxShadow:
+          "0 10px 28px rgba(18, 16, 14, 0.12), 0 2px 8px rgba(18, 16, 14, 0.06)",
+      }}
+    >
       <img
-        src={template.placeholder_url}
+        src={image.placeholder_url}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
       />
       <picture className="absolute inset-0 block h-full w-full">
-        {template.webp_url ? (
+        {image.webp_url ? (
           <source
             media="(max-width: 767px)"
-            srcSet={template.webp_url}
+            srcSet={image.webp_url}
             type="image/webp"
           />
         ) : null}
-        <source srcSet={template.avif_url} type="image/avif" />
-        {template.webp_url ? (
-          <source srcSet={template.webp_url} type="image/webp" />
+        {image.avif_url ? (
+          <source srcSet={image.avif_url} type="image/avif" />
+        ) : null}
+        {image.webp_url ? (
+          <source srcSet={image.webp_url} type="image/webp" />
         ) : null}
         <img
-          src={template.webp_url ?? template.avif_url}
+          src={image.webp_url ?? image.avif_url}
           alt=""
-          loading={eager ? "eager" : "lazy"}
-          {...{ fetchpriority: fetchPriority }}
+          loading="lazy"
           decoding="async"
-          className="h-full w-full object-cover opacity-95 saturate-100"
+          className="h-full w-full object-cover"
         />
       </picture>
-      <div className="absolute inset-0 hidden bg-gradient-to-t from-white/20 via-transparent to-white/10 md:block" />
     </div>
   );
 }
 
-function PlaceholderFrame({ index }: { index: number }) {
+function MarqueeRow({
+  images,
+  direction,
+  duration,
+  top,
+  rowClassName,
+}: {
+  images: LandingMarqueeImage[];
+  direction: "left" | "right";
+  duration: number;
+  top: string;
+  rowClassName?: string;
+}) {
+  const loopImages = React.useMemo(
+    () => repeatList(images, LOOP_COPIES),
+    [images],
+  );
+
   return (
     <div
       className={cn(
-        FRAME_CLASS,
-        "relative bg-[linear-gradient(145deg,rgba(255,255,255,0.72),rgba(0,0,0,0.03))]",
+        "lx-hero-marquee-row absolute left-0 right-0 overflow-hidden",
+        rowClassName,
       )}
+      style={{ top, height: "var(--lx-marquee-row-h, 220px)" }}
     >
-      <div className="absolute inset-x-4 top-4 h-[38%] rounded-md border border-foreground/8 bg-white/35" />
-      <div className="absolute inset-x-4 bottom-4 h-2 rounded-full bg-foreground/6" />
       <div
-        className="absolute inset-0 opacity-[0.08]"
-        style={{
-          backgroundImage:
-            index % 2 === 0
-              ? "linear-gradient(135deg, transparent 40%, rgba(0,0,0,0.15) 100%)"
-              : "linear-gradient(225deg, transparent 40%, rgba(0,0,0,0.12) 100%)",
-        }}
-      />
-    </div>
-  );
-}
-
-function FrameRow({
-  items,
-  placeholders,
-  duration,
-  offsetY,
-  mobileOffsetY,
-}: {
-  items: LandingMarqueeImage[];
-  placeholders: boolean;
-  duration: number;
-  offsetY: string;
-  mobileOffsetY: string;
-}) {
-  return (
-    <div
-      className="absolute left-0 right-0 top-[var(--mobile-offset-y)] flex overflow-hidden gap-4 md:top-[var(--desktop-offset-y)]"
-      style={
-        {
-          "--mobile-offset-y": mobileOffsetY,
-          "--desktop-offset-y": offsetY,
-        } as React.CSSProperties
-      }
-    >
-      {[0, 1].map((track) => (
-        <div
-          key={track}
-          className="flex min-w-full shrink-0 justify-around gap-4"
-          aria-hidden={track === 1}
-          style={{
-            animation: `scroll ${duration}s linear infinite`,
-          }}
-        >
-          {placeholders
-            ? Array.from({ length: 8 }, (_, i) => (
-                <PlaceholderFrame
-                  key={`placeholder-${track}-${i}`}
-                  index={i}
-                />
-              ))
-            : items.map((template, i) => {
-                const isPrimaryTrack = track === 0;
-                const fetchPriority =
-                  isPrimaryTrack && i < 4 ? "high" : "auto";
-
-                return (
-                  <FrameCard
-                    key={`frame-${track}-${i}-${template.id}`}
-                    template={template}
-                    eager
-                    fetchPriority={fetchPriority}
-                  />
-                );
-              })}
-        </div>
-      ))}
+        className={cn(
+          "lx-hero-marquee-track flex h-full w-max items-end gap-4 px-3",
+          direction === "left" ? "lx-marquee-track" : "lx-marquee-track-reverse",
+        )}
+        style={{ animationDuration: `${duration}s` }}
+      >
+        {loopImages.map((image, index) => {
+          const baseIndex = index % images.length;
+          return (
+            <MarqueeCard
+              key={`${direction}-${image.id}-${index}`}
+              image={image}
+              sizeClass={CARD_SIZES[baseIndex % CARD_SIZES.length]}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -180,17 +145,19 @@ export default function HeroBackgroundFrames() {
 
   const canLoadAvif = useCanLoadLandingAvif();
   const supportedTemplates = React.useMemo(() => {
-    if (!templates) return templates;
+    if (!templates) return [];
     return canLoadAvif === false
       ? getMobileCompatibleLandingImages(templates)
       : templates;
   }, [canLoadAvif, templates]);
 
-  const hasData = supportedTemplates && supportedTemplates.length > 0;
-  const frames = hasData ? padToMin(supportedTemplates, MIN_FRAMES) : [];
-  const { upper: row1, lower: row2 } = hasData
-    ? splitFrameRows(frames)
-    : { upper: [], lower: [] };
+  const { top: rowTop, bottom: rowBottom } = React.useMemo(() => {
+    const cdn =
+      supportedTemplates.length > 0
+        ? supportedTemplates
+        : LANDING_MARQUEE_IMAGES;
+    return buildExclusiveHeroRows(cdn);
+  }, [supportedTemplates]);
 
   return (
     <div
@@ -198,25 +165,53 @@ export default function HeroBackgroundFrames() {
       aria-hidden="true"
     >
       <div
-        className="absolute inset-0 opacity-90 [mask-image:radial-gradient(ellipse_min(300px,88vw)_min(500px,55vh)_at_50%_55%,transparent_0%,transparent_36%,rgba(0,0,0,0.35)_54%,black_74%)] md:opacity-85 md:[mask-image:radial-gradient(ellipse_min(340px,88vw)_min(520px,52vh)_at_50%_56%,transparent_0%,transparent_38%,rgba(0,0,0,0.35)_52%,black_72%)]"
-      >
-        <FrameRow
-          items={row1}
-          placeholders={!hasData}
-          duration={55}
-          mobileOffsetY="calc(50% - 7.25rem)"
-          offsetY="calc(50% - 4.5rem)"
-        />
-        <FrameRow
-          items={row2}
-          placeholders={!hasData}
-          duration={42}
-          mobileOffsetY="calc(50% - 1.25rem)"
-          offsetY="calc(50% + 1.5rem)"
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg, #ffffff 0%, #f5f0e8 50%, #ffffff 100%)",
+        }}
+      />
+
+      <div className="lx-hero-parallax absolute inset-0">
+        <img
+          src={HERO_BG_URL}
+          alt=""
+          className="h-full w-full scale-105 object-cover opacity-25 blur-[10px]"
+          {...{ fetchpriority: "high" as const }}
+          decoding="async"
         />
       </div>
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_min(280px,86vw)_min(450px,54vh)_at_50%_55%,rgba(255,255,255,0.3)_0%,rgba(255,255,255,0.16)_42%,transparent_68%)] md:bg-[radial-gradient(ellipse_min(320px,84vw)_min(500px,50vh)_at_50%_56%,rgba(255,255,255,0.94)_0%,rgba(255,255,255,0.72)_38%,rgba(255,255,255,0.18)_58%,transparent_72%)]" />
+      <div className="absolute inset-0 bg-white/40" />
+
+      <div className="lx-hero-marquee absolute inset-0 z-0 opacity-[0.55]">
+        {/* Bandeau des 2 rangées : référentiel pour centrer le cadran (top 50%) */}
+        <div
+          className="lx-hero-marquee-band absolute left-0 right-0"
+          style={{
+            top: "var(--lx-marquee-top, 30%)",
+            height:
+              "calc(2 * var(--lx-marquee-row-h, 220px) + var(--lx-marquee-gap, 40px))",
+          }}
+        >
+          <MarqueeRow
+            images={rowTop}
+            direction="left"
+            duration={72}
+            top="0"
+            rowClassName="lx-hero-marquee-row--top"
+          />
+          <MarqueeRow
+            images={rowBottom}
+            direction="right"
+            duration={84}
+            top="calc(var(--lx-marquee-row-h, 220px) + var(--lx-marquee-gap, 40px))"
+            rowClassName="lx-hero-marquee-row--bottom"
+          />
+        </div>
+      </div>
+
+      <div className="absolute inset-0 z-[1] bg-gradient-to-b from-white/50 via-transparent to-[var(--lx-surface)]" />
     </div>
   );
 }

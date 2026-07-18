@@ -7,17 +7,17 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, Loader2, ChevronDown, RefreshCw, ScanFace } from "lucide-react";
+import { Check, Loader2, RefreshCw, ScanFace, Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
-import { TemplateGallery } from "@/components/generate/TemplateGallery";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
+import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import {
   Dialog,
   DialogContent,
@@ -37,14 +37,15 @@ import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryKey } from "@/hooks/use-billing";
 import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
+import "./generate-page.css";
 import {
   getPaywalledResult,
   clearPaywalledResult,
 } from "@/lib/paywalled-result";
 import { savePaywallImage, getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
+import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
-  hasReachedFakePaywall,
   clearFakePaywallReached,
   getFakePaywallGenerationMode,
 } from "@/lib/fake-paywall-state";
@@ -58,31 +59,15 @@ import { useLatestFaceCapture } from "@/hooks/use-face-captures";
 import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
-import { templateRequiresFaceCapture, templateSupportsGenerationMode, getTemplateDefaultGenerationMode } from "@/lib/template-utils";
+import { templateRequiresFaceCapture, templateSupportsGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const FAKE_LOADER_MIN_DELAY_MS = 10_000;
-const FAKE_LOADER_MAX_DELAY_MS = 20_000;
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
 type GenerationMode = "image" | "video";
-type InsufficientCreditsContext = {
-  currentCredits: number;
-  requiredCredits: number;
-  generationMode: GenerationMode;
-};
-
-function getRandomFakeLoaderDelay() {
-  return (
-    FAKE_LOADER_MIN_DELAY_MS +
-    Math.floor(
-      Math.random() * (FAKE_LOADER_MAX_DELAY_MS - FAKE_LOADER_MIN_DELAY_MS + 1),
-    )
-  );
-}
 
 export default function Generate() {
   const { t } = useTranslation();
@@ -112,9 +97,9 @@ export default function Generate() {
   const [generationResultVisible, setGenerationResultVisible] = useState(false);
 
   // ── Fake generation / paywall state ─────────────────────────
-  const [isFakeGenerating, setIsFakeGenerating] = useState(false);
-  const [fakeLoaderStatus, setFakeLoaderStatus] = useState<"connecting" | "waiting" | "success">("connecting");
-  const [showFakePaywall, setShowFakePaywall] = useState(false);
+  const [showFakeOnboardingLoader, setShowFakeOnboardingLoader] = useState(false);
+  const [fakeLoaderImageUrl, setFakeLoaderImageUrl] = useState<string | null>(null);
+  const [showLuxePaywall, setShowLuxePaywall] = useState(false);
   const [fakePaywallReason, setFakePaywallReason] =
     useState<FakePaywallReason>("onboarding");
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
@@ -123,12 +108,6 @@ export default function Generate() {
   const [faceScanPreviewLoading, setFaceScanPreviewLoading] = useState(false);
   const [faceScanPreviewError, setFaceScanPreviewError] = useState<string | null>(null);
   const [holdFaceAutoEnable, setHoldFaceAutoEnable] = useState(false);
-  const [insufficientCreditsContext, setInsufficientCreditsContext] =
-    useState<InsufficientCreditsContext>({
-      currentCredits: 0,
-      requiredCredits: IMAGE_CREDIT_COST,
-      generationMode: "image",
-    });
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     larpId: string;
@@ -149,7 +128,6 @@ export default function Generate() {
     useState<GenerationMode>("image");
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
-  const galleryRef = useRef<HTMLDivElement>(null);
   const handledFaceScanReviewRef = useRef(false);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
@@ -251,6 +229,14 @@ export default function Generate() {
       cancelled = true;
     };
   }, [location, refetchLatestFaceCapture, t]);
+
+  // Fond LuxeFlexIA uniquement sur /generate
+  useEffect(() => {
+    document.documentElement.classList.add("luxeflexia-generate-page");
+    return () => {
+      document.documentElement.classList.remove("luxeflexia-generate-page");
+    };
+  }, []);
 
   const handleUseReviewedFaceScan = useCallback(() => {
     setHoldFaceAutoEnable(false);
@@ -368,11 +354,11 @@ export default function Generate() {
   }, [profile?.is_subscriber]);
 
   const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
-  const isPaywallOverlayActive = showFakePaywall || hasSavedPaywall;
+  const isPaywallOverlayActive = hasSavedPaywall;
   const isFullscreenOverlayActive =
+    showFakeOnboardingLoader ||
     pendingLoading ||
     (!!taskId && !generationResultVisible) ||
-    isFakeGenerating ||
     isPaywallOverlayActive ||
     unlockingLarp;
 
@@ -429,7 +415,7 @@ export default function Generate() {
           templateId: pending.templateId ?? null,
         });
         setPendingLoading(true);
-        setGenerationMode(pending.generationMode ?? "image");
+        setGenerationMode("image");
         setPendingTemplateId(pending.templateId ?? null);
         if (pending.prompt) setPrompt(pending.prompt);
         if (pending.templateId) {
@@ -482,11 +468,7 @@ export default function Generate() {
     const tpl = templatesList.find((t) => t.id === pendingTemplateId);
     if (!tpl) return;
     setSelectedTemplate(tpl);
-    setGenerationMode((current) =>
-      templateSupportsGenerationMode(tpl, current)
-        ? current
-        : getTemplateDefaultGenerationMode(tpl),
-    );
+    setGenerationMode("image");
   }, [pendingTemplateId, selectedTemplate, templatesList]);
 
   useEffect(() => {
@@ -543,7 +525,13 @@ export default function Generate() {
       }
       return next;
     });
-    if (index === 0) savePaywallImage(file);
+    if (index === 0) {
+      void toGenerationImageFile(file)
+        .then((imageFile) => savePaywallImage(imageFile))
+        .catch(() => {
+          // Paywall blur preview is optional; ignore frame extraction failures.
+        });
+    }
   };
 
   const removeSlot = (index: number) => {
@@ -562,7 +550,7 @@ export default function Generate() {
       prev.forEach(revokeSlotUrl);
       return [null];
     });
-    setGenerationMode(getTemplateDefaultGenerationMode(tpl));
+    setGenerationMode("image");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -578,32 +566,6 @@ export default function Generate() {
     });
   };
 
-  const handleGenerationModeChange = (mode: GenerationMode) => {
-    if (
-      selectedTemplate &&
-      !templateSupportsGenerationMode(selectedTemplate, mode)
-    ) {
-      return;
-    }
-
-    setGenerationMode(mode);
-    setPendingTemplateId(null);
-
-    if (!selectedTemplate) {
-      setImages((prev) => {
-        const next = mode === "video" ? prev.slice(0, 1) : prev;
-        return next.length === 0 ? [null] : next;
-      });
-    }
-  };
-
-  const imageModeDisabled =
-    Boolean(selectedTemplate) &&
-    !templateSupportsGenerationMode(selectedTemplate!, "image");
-  const videoModeDisabled =
-    Boolean(selectedTemplate) &&
-    !templateSupportsGenerationMode(selectedTemplate!, "video");
-
   // ── Generation ──────────────────────────────────────────────
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -614,38 +576,35 @@ export default function Generate() {
     });
 
   const startInsufficientCreditsFlow = useCallback(
-    (context?: Partial<InsufficientCreditsContext>) => {
-      const requiredCredits =
-        context?.requiredCredits ??
-        (generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST);
-
+    (context?: {
+      currentCredits?: number;
+      requiredCredits?: number;
+      generationMode?: GenerationMode;
+    }) => {
+      void context;
       setPendingLoading(false);
-      setShowFakePaywall(false);
-      setIsFakeGenerating(true);
+      setShowLuxePaywall(true);
       setPaywallDefaultPlan("essential");
       setFakePaywallReason("insufficientCredits");
-      setInsufficientCreditsContext({
-        currentCredits: context?.currentCredits ?? profile?.credits ?? 0,
-        requiredCredits,
-        generationMode: context?.generationMode ?? generationMode,
-      });
-    },
-    [generationMode, profile?.credits],
-  );
-
-  const startOnboardingPaywallFlow = useCallback(
-    (options?: { showPaywallImmediately?: boolean }) => {
-      const showPaywallImmediately = options?.showPaywallImmediately ?? false;
-      setPendingLoading(false);
-      setShowFakePaywall(showPaywallImmediately);
-      setFakePaywallReason("onboarding");
-      setIsFakeGenerating(!showPaywallImmediately);
     },
     [],
   );
 
-  const shouldSkipFakeLoader =
-    profile?.id != null && hasReachedFakePaywall(profile.id);
+  const finishFakeOnboardingLoader = useCallback(() => {
+    setShowFakeOnboardingLoader(false);
+    setFakeLoaderImageUrl(null);
+    markFakePaywallReached(profile?.id, "image");
+    navigate("/image-prete?paywall=1");
+  }, [navigate, profile?.id]);
+
+  const startOnboardingPaywallFlow = useCallback(() => {
+    setPendingLoading(false);
+    setFakePaywallReason("onboarding");
+    setShowLuxePaywall(false);
+    setFakeLoaderImageUrl(images[0]?.url || getPaywallImage() || null);
+    setShowFakeOnboardingLoader(true);
+  }, [images]);
+
   const storedPaywallGenerationMode =
     profile?.id != null
       ? getFakePaywallGenerationMode(profile.id)
@@ -692,8 +651,14 @@ export default function Generate() {
     } else if (filesForGeneration.length === 0) {
       toast({
         variant: "destructive",
-        title: t("generate.referenceImageRequiredTitle"),
-        description: t("generate.referenceImageRequiredDescription"),
+        title:
+          generationMode === "video"
+            ? t("generate.referenceVideoRequiredTitle")
+            : t("generate.referenceImageRequiredTitle"),
+        description:
+          generationMode === "video"
+            ? t("generate.referenceVideoRequiredDescription")
+            : t("generate.referenceImageRequiredDescription"),
       });
       return;
     }
@@ -735,11 +700,14 @@ export default function Generate() {
 
     const saveCurrentDraftForCheckout = async () => {
       try {
+        const draftImages = isTemplateGeneration
+          ? []
+          : await Promise.all(
+              filesForGeneration.map((f) => toGenerationImageFile(f.file)),
+            );
         await savePendingLarp({
           prompt: serverPrompt,
-          images: isTemplateGeneration
-            ? []
-            : filesForGeneration.map((f) => f.file),
+          images: draftImages,
           generationMode,
           templateId: selectedOrPendingTemplateId,
           timestamp: Date.now(),
@@ -753,13 +721,15 @@ export default function Generate() {
 
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
+    // Non-subscribers always get fake loading → paywall (even with 0 credits).
+    // Never open the paywall directly from Créer for this audience.
     const shouldUseOnboardingPaywall =
       profile &&
       !profile.is_subscriber &&
       profile.role !== "admin" &&
       !isReturningFromCheckout;
 
-    if (shouldUseOnboardingPaywall && isTemplateGeneration) {
+    if (shouldUseOnboardingPaywall) {
       const saved = await saveCurrentDraftForCheckout();
       if (!saved) {
         toast({
@@ -770,9 +740,17 @@ export default function Generate() {
         return;
       }
 
-      startOnboardingPaywallFlow({
-        showPaywallImmediately: shouldSkipFakeLoader,
-      });
+      if (filesForGeneration[0]) {
+        try {
+          await savePaywallImage(
+            await toGenerationImageFile(filesForGeneration[0].file),
+          );
+        } catch {
+          /* preview optional */
+        }
+      }
+
+      startOnboardingPaywallFlow();
       return;
     }
 
@@ -787,23 +765,6 @@ export default function Generate() {
         currentCredits: profile.credits,
         requiredCredits,
         generationMode,
-      });
-      return;
-    }
-
-    if (shouldUseOnboardingPaywall) {
-      const saved = await saveCurrentDraftForCheckout();
-      if (!saved) {
-        toast({
-          variant: "destructive",
-          title: t("common.messages.error"),
-          description: t("generate.serverRetry"),
-        });
-        return;
-      }
-
-      startOnboardingPaywallFlow({
-        showPaywallImmediately: shouldSkipFakeLoader,
       });
       return;
     }
@@ -831,7 +792,9 @@ export default function Generate() {
         const base64Images = isTemplateGeneration
           ? undefined
           : await Promise.all(
-              filesForGeneration.map((img) => fileToBase64(img.file)),
+              filesForGeneration.map(async (img) =>
+                fileToBase64(await toGenerationImageFile(img.file)),
+              ),
             );
 
         const result = await generateVideo.mutateAsync({
@@ -852,7 +815,9 @@ export default function Generate() {
       const base64Images = isTemplateGeneration
         ? undefined
         : await Promise.all(
-            filesForGeneration.map((img) => fileToBase64(img.file)),
+            filesForGeneration.map(async (img) =>
+              fileToBase64(await toGenerationImageFile(img.file)),
+            ),
           );
 
       const result = await generateDirect.mutateAsync({
@@ -905,7 +870,7 @@ export default function Generate() {
       ) {
         setPaywallDefaultPlan("essential");
         setFakePaywallReason("onboarding");
-        setShowFakePaywall(true);
+        setShowLuxePaywall(true);
         return;
       }
       if (
@@ -938,6 +903,7 @@ export default function Generate() {
     setPendingLoading(false);
     setAutoGenerateReady(false);
     setIsStartingGeneration(false);
+    setShowLuxePaywall(false);
     setPrompt("");
     setImages((prev) => {
       prev.forEach(revokeSlotUrl);
@@ -957,8 +923,7 @@ export default function Generate() {
       setUnlockedLarp(null);
       setUnlockingLarp(false);
       setSavedPaywall(null);
-      setShowFakePaywall(false);
-      setIsFakeGenerating(false);
+      setShowLuxePaywall(false);
       setTransitionBg(false);
       clearPendingLarp();
       clearPaywalledResult();
@@ -1004,16 +969,10 @@ export default function Generate() {
       profile.role !== "admin" &&
       !isReturningFromCheckout;
 
-    if (shouldUseOnboardingPaywall && (pendingTemplateId || selectedTemplate)) {
-      if (shouldSkipFakeLoader) {
-        console.log(
-          "[Generate] Template onboarding: fake paywall already reached, skipping loader",
-        );
-        startOnboardingPaywallFlow({ showPaywallImmediately: true });
-      } else {
-        console.log("[Generate] Starting template onboarding fake flow...");
-        startOnboardingPaywallFlow();
-      }
+    // Non-subscribers (incl. 0 credits): handleGenerate runs fake loader → paywall
+    if (shouldUseOnboardingPaywall) {
+      console.log("[Generate] Starting FAKE onboarding generation flow...");
+      void handleGenerate();
       return;
     }
 
@@ -1034,20 +993,6 @@ export default function Generate() {
       return;
     }
 
-    if (shouldUseOnboardingPaywall) {
-      if (shouldSkipFakeLoader) {
-        console.log(
-          "[Generate] Fake paywall already reached, skipping loader directly to paywall",
-        );
-        startOnboardingPaywallFlow({ showPaywallImmediately: true });
-        return;
-      }
-
-      console.log("[Generate] Starting FAKE generation flow...");
-      startOnboardingPaywallFlow();
-      return;
-    }
-
     // Real generation
     setTransitionBg(true);
     console.log("[Generate] Starting handleGenerate...");
@@ -1063,17 +1008,6 @@ export default function Generate() {
       });
   }, [autoGenerateReady, isAuthLoading]);
 
-  // ── Fake loader timing ──────────────────────────────────────
-  useEffect(() => {
-    if (isFakeGenerating) {
-      setFakeLoaderStatus("connecting");
-      const successDelay = getRandomFakeLoaderDelay();
-      const t1 = setTimeout(() => setFakeLoaderStatus("waiting"), 4000);
-      const t2 = setTimeout(() => setFakeLoaderStatus("success"), successDelay);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    }
-  }, [isFakeGenerating]);
-
   // ── Transition backdrop ─────────────────────────────────────
   const transitionBackdrop = transitionBg
     ? createPortal(
@@ -1088,9 +1022,7 @@ export default function Generate() {
     pendingLoading,
     transitionBg,
     savedPaywall: !!savedPaywall,
-    isFakeGenerating,
-    fakeLoaderStatus,
-    showFakePaywall
+    showLuxePaywall,
   });
 
   // ── Portal overlays ─────────────────────────────────────────
@@ -1107,39 +1039,32 @@ export default function Generate() {
   const portalOverlay = pendingLoading
     ? createPortal(
       <div
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background bg-grid"
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--lx-surface)] bg-grid"
       >
-        <img
-          src="/assets/larpking.png"
-          alt="LarpKing"
-          className="h-20 md:h-28 object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] mb-4"
-        />
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="lx-display mb-4 inline-flex items-center gap-2">
+          <Gem
+            className="h-8 w-8 text-[var(--lx-gold)] md:h-10 md:w-10"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
+            Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
+          </span>
+        </span>
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--lx-gold)]" />
       </div>,
       document.body,
     )
     : null;
-
-  const fakeLoaderOverlay = isFakeGenerating ? createPortal(
-    <GenerationLoader
-      status={fakeLoaderStatus}
-      inputImageUrl={loaderInputImageUrl}
-      onRevealComplete={() => {
-        setIsFakeGenerating(false);
-        if (fakePaywallReason === "onboarding") {
-          markFakePaywallReached(profile?.id, activePaywallGenerationMode);
-        }
-        setShowFakePaywall(true);
-      }}
-    />,
-    document.body
-  ) : null;
 
   const paywallOverlayClassName =
     "fixed inset-0 z-[100] overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
 
   const paywallOverlayInnerClassName =
     "absolute inset-x-0 top-20 bottom-0 flex min-h-0 items-stretch justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:top-24 md:bottom-10";
+
+  const luxePreviewImageUrl =
+    images[0]?.url || getPaywallImage() || "";
 
   const faceScanPromptTitle =
     faceScanPromptMode === "review"
@@ -1216,22 +1141,22 @@ export default function Generate() {
   // RENDER
   // ════════════════════════════════════════════════════════════
 
+  // -- Fake onboarding "generation" loader (no API)
+  if (showFakeOnboardingLoader) {
+    return (
+      <FakeOnboardingLoader
+        inputImageUrl={fakeLoaderImageUrl}
+        onComplete={finishFakeOnboardingLoader}
+      />
+    );
+  }
+
   // -- Generation in progress
   if (taskId) {
     return (
       <>
         {transitionBackdrop}
         {generationProgress}
-      </>
-    );
-  }
-
-  // -- Fake loader playing
-  if (isFakeGenerating) {
-    return (
-      <>
-        {transitionBackdrop}
-        {fakeLoaderOverlay}
       </>
     );
   }
@@ -1254,29 +1179,6 @@ export default function Generate() {
         <div className="w-full max-w-[260px] aspect-[9/16] rounded-lg bg-muted animate-pulse" />
         <div className="h-11 w-56 rounded-full bg-muted animate-pulse" />
       </div>
-    );
-  }
-
-  // -- Fake Paywall from onboarding
-  if (showFakePaywall) {
-    const paywallImageUrl = images[0]?.url || getPaywallImage() || "";
-    return createPortal(
-      <div className={paywallOverlayClassName}>
-        <div className={paywallOverlayInnerClassName}>
-          <PaywallOverlay
-            isFake={true}
-            imageUrl={paywallImageUrl}
-            defaultPlan={paywallDefaultPlan}
-            generationMode={
-              fakePaywallReason === "insufficientCredits"
-                ? insufficientCreditsContext.generationMode
-                : activePaywallGenerationMode
-            }
-            variant={fakePaywallReason === "insufficientCredits" ? "insufficientCredits" : "default"}
-          />
-        </div>
-      </div>,
-      document.body,
     );
   }
 
@@ -1323,48 +1225,6 @@ export default function Generate() {
       >
         {/* Images + input group */}
         <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
-          <div className="sticky top-[5.25rem] z-20 flex w-full max-w-md justify-center md:static">
-            <div
-              role="tablist"
-              aria-label="Generation mode"
-              className="relative grid shrink-0 grid-cols-2 rounded-full border border-border/80 bg-white/70 p-0.5 shadow-sm backdrop-blur-md"
-            >
-              <div
-                className={`absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,0,0,0.16)] transition-[transform,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  generationMode === "video" ? "translate-x-full" : "translate-x-0"
-                }`}
-              />
-              <button
-                type="button"
-                role="tab"
-                aria-selected={generationMode === "image"}
-                onClick={() => handleGenerationModeChange("image")}
-                disabled={imageModeDisabled}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-40 ${
-                  generationMode === "image"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground/75 hover:text-muted-foreground"
-                }`}
-              >
-                {t("generate.modeImage")}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={generationMode === "video"}
-                onClick={() => handleGenerationModeChange("video")}
-                disabled={videoModeDisabled}
-                className={`relative z-10 min-w-20 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-[color,opacity] duration-300 ease-out disabled:cursor-not-allowed disabled:opacity-40 ${
-                  generationMode === "video"
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground/75 hover:text-muted-foreground"
-                }`}
-              >
-                {t("generate.modeVideo")}
-              </button>
-            </div>
-          </div>
-
           {selectedTemplate ? (
             <TemplateSelectedPanel
               template={selectedTemplate}
@@ -1384,6 +1244,7 @@ export default function Generate() {
                 images={images}
                 onImageSelect={handleImageSelect}
                 onRemoveSlot={removeSlot}
+                generationMode="image"
               />
 
               <PromptInputBar
@@ -1391,6 +1252,7 @@ export default function Generate() {
                 onPromptChange={setPrompt}
                 onGenerate={handleGenerate}
                 isGenerating={isSubmittingGeneration}
+                goldCta
                 canGenerate={
                   images.some((img) => img !== null) &&
                   (!useFaceAsset || faceCaptureReady)
@@ -1406,26 +1268,15 @@ export default function Generate() {
               />
             </>
           )}
-
-          <button
-            onClick={() =>
-              galleryRef.current?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mt-1"
-          >
-            {t("generate.viewTemplates")}
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      <div ref={galleryRef}>
-        <TemplateGallery
-          selectedTemplateId={selectedTemplate?.id ?? null}
-          onSelectTemplate={selectTemplate}
-          onDeselectTemplate={deselectTemplate}
-        />
-      </div>
+      <LuxePaywallModal
+        open={showLuxePaywall}
+        onOpenChange={setShowLuxePaywall}
+        imageUrl={luxePreviewImageUrl}
+        defaultPlan={paywallDefaultPlan}
+      />
 
       {isMobile ? (
         <Drawer open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>

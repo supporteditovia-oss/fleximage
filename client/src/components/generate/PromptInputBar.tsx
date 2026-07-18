@@ -14,6 +14,8 @@ interface PromptInputBarProps {
   onGenerate: () => void;
   isGenerating: boolean;
   canGenerate?: boolean;
+  /** Style CTA doré LuxeFlexIA (page /generate uniquement) */
+  goldCta?: boolean;
 }
 
 export function PromptInputBar({
@@ -22,6 +24,7 @@ export function PromptInputBar({
   onGenerate,
   isGenerating,
   canGenerate = true,
+  goldCta = false,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const larpIdeas = useMemo(
@@ -64,7 +67,11 @@ export function PromptInputBar({
             <Shuffle className="w-4 h-4" />
           </button>
           <button
-            className="shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center text-white bg-primary hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50"
+            className={`shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center active:scale-95 transition-all disabled:opacity-50 ${
+              goldCta
+                ? "text-[#1a1408] bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] shadow-[0_4px_14px_rgba(201,162,39,0.28)] hover:brightness-105"
+                : "text-white bg-primary hover:bg-primary/90"
+            }`}
             onClick={onGenerate}
             disabled={isGenerating || !canGenerate}
             type="button"
@@ -77,7 +84,11 @@ export function PromptInputBar({
           </button>
           <Button
             size="sm"
-            className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
+            className={`rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 active:scale-95 transition-transform hidden md:flex ${
+              goldCta
+                ? "text-[#1a1408] bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] shadow-[0_4px_18px_rgba(201,162,39,0.28)] hover:brightness-105 hover:opacity-100"
+                : "shadow-none"
+            }`}
             onClick={onGenerate}
             disabled={isGenerating || !canGenerate}
             type="button"

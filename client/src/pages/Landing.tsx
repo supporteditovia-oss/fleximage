@@ -1,18 +1,21 @@
-import FloatingHeader from "@/components/layout/FloatingHeader";
+import LandingHeader from "@/components/marketing/LandingHeader";
 import HeroSection from "@/components/marketing/HeroSection";
-import LarpProSection from "@/components/marketing/LarpProSection";
+import ShowcaseSection from "@/components/marketing/ShowcaseSection";
+import FeaturesSection from "@/components/marketing/FeaturesSection";
 import FaqSection from "@/components/marketing/FaqSection";
 import CtaSection from "@/components/marketing/CtaSection";
 import Footer from "@/components/marketing/Footer";
+import "./landing.css";
 
 export default function Landing() {
   return (
-    <div className="relative overflow-hidden">
-      <FloatingHeader />
+    <div className="luxeflexia-landing relative overflow-x-hidden">
+      <LandingHeader />
       <HeroSection />
-      <LarpProSection />
-      <FaqSection />
+      <ShowcaseSection />
+      <FeaturesSection />
       <CtaSection />
+      <FaqSection />
       <Footer />
     </div>
   );

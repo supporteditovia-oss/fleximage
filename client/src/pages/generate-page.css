@@ -1,0 +1,12 @@
+/* Styles scoped to /generate only (via html.luxeflexia-generate-page) */
+html.luxeflexia-generate-page,
+html.luxeflexia-generate-page body {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f0e8 45%, #faf6ee 100%) !important;
+  background-attachment: fixed !important;
+}
+
+html.luxeflexia-generate-page body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 162, 39, 0.1), transparent 55%),
+    linear-gradient(135deg, #ffffff 0%, #f5f0e8 45%, #faf6ee 100%) !important;
+}

@@ -30,6 +30,17 @@ export async function authFetch(
     headers.set("Content-Type", "application/json");
   }
 
+  // Snap START_CHECKOUT when Stripe checkout is initiated (covers paywall CTAs)
+  if (
+    typeof url === "string" &&
+    url.includes("/api/stripe/create-checkout") &&
+    (options.method === "POST" || !options.method)
+  ) {
+    void import("@/lib/snap-pixel").then(({ trackSnapStartCheckout }) => {
+      trackSnapStartCheckout();
+    });
+  }
+
   const res = await fetch(url, { ...options, headers });
   const contentType = res.headers.get("Content-Type") ?? "";
 

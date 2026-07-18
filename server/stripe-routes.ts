@@ -152,7 +152,7 @@ export function registerStripeRoutes(app: Express): void {
       const sessionParams: Record<string, any> = {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=cancel`,
         metadata: {
           user_id: authReq.userId,
@@ -183,6 +183,28 @@ export function registerStripeRoutes(app: Express): void {
     } catch (error: any) {
       logger.error({ err: error }, "Error creating checkout session");
       const locale = resolveLocaleFromRequest(req);
+      const isAuthError =
+        error?.type === "StripeAuthenticationError" ||
+        error?.statusCode === 401 ||
+        /Invalid API Key/i.test(String(error?.message || ""));
+      const isMissingPrice =
+        /must be set/i.test(String(error?.message || "")) ||
+        error?.code === "resource_missing";
+
+      if (process.env.NODE_ENV !== "production" && isAuthError) {
+        return res.status(500).json({
+          message:
+            "Clé Stripe invalide. Mets ta vraie STRIPE_SECRET_KEY (Dashboard Stripe → Developers → API keys) dans .env, puis redémarre le serveur.",
+          code: "stripe_invalid_api_key",
+        });
+      }
+      if (isMissingPrice) {
+        return res.status(500).json({
+          message:
+            "Price ID Stripe introuvable pour ce plan. Vérifie STRIPE_*_PRICE_ID et que la clé API est du même mode (test/live).",
+          code: "stripe_price_missing",
+        });
+      }
       res
         .status(500)
         .json({ message: tBackend(locale, "common.internalServerError") });

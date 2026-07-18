@@ -71,33 +71,6 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 
-const CRISP_WEBSITE_ID = "e73cb8a0-2dd4-4239-967a-3913dcc35e2a";
-const CRISP_SCRIPT_ID = "larpking-crisp-script";
-
-declare global {
-  interface Window {
-    $crisp?: unknown[];
-    CRISP_WEBSITE_ID?: string;
-  }
-}
-
-function cleanupCrisp() {
-  try {
-    window.$crisp?.push(["do", "chat:close"]);
-  } catch {
-    // Crisp may already be partially unloaded.
-  }
-
-  document
-    .querySelectorAll(
-      `#${CRISP_SCRIPT_ID}, script[src*="client.crisp.chat"], #crisp-chatbox, .crisp-client`,
-    )
-    .forEach((node) => node.remove());
-
-  delete window.$crisp;
-  delete window.CRISP_WEBSITE_ID;
-}
-
 export default function Settings() {
   const [location, navigate] = useLocation();
   const { user, profile, signOut } = useAuth();
@@ -109,9 +82,6 @@ export default function Settings() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [supportChatOpen, setSupportChatOpen] = useState(false);
-  const [supportChatLoading, setSupportChatLoading] = useState(false);
-  const [supportChatLoaded, setSupportChatLoaded] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
   const latestFaceCapture = useLatestFaceCapture();
   const deleteLatestFaceCapture = useDeleteLatestFaceCapture();
@@ -141,7 +111,6 @@ export default function Settings() {
   const canManageBilling = Boolean(currentPlan?.canManageSubscription);
   const billingCanceled = !billingActive && canManageBilling;
   const canOpenPaywall = Boolean(profile?.id && !billingActive && !canManageBilling);
-  const hasSupportAccess = Boolean(billingActive || profile?.role === "admin");
 
   const form = useForm({
     resolver: zodResolver(
@@ -237,8 +206,6 @@ export default function Settings() {
       facePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [facePreviewUrls]);
-
-  useEffect(() => cleanupCrisp, []);
 
   const onSubmit = async (data: {
     full_name: string | null;
@@ -355,59 +322,7 @@ export default function Settings() {
   };
 
   const openSupportChat = () => {
-    if (!hasSupportAccess) {
-      if (canOpenPaywall) setPaywallOpen(true);
-      return;
-    }
-
-    if (supportChatLoaded) {
-      if (supportChatOpen) {
-        window.$crisp?.push(["do", "chat:close"]);
-        window.$crisp?.push(["do", "chat:hide"]);
-      } else {
-        window.$crisp?.push(["do", "chat:show"]);
-        window.$crisp?.push(["do", "chat:open"]);
-      }
-      return;
-    }
-
-    setSupportChatLoading(true);
-    cleanupCrisp();
-    window.$crisp = [];
-    window.CRISP_WEBSITE_ID = CRISP_WEBSITE_ID;
-    window.$crisp.push(["on", "chat:opened", () => setSupportChatOpen(true)]);
-    window.$crisp.push([
-      "on",
-      "chat:closed",
-      () => {
-        setSupportChatOpen(false);
-        window.$crisp?.push(["do", "chat:hide"]);
-      },
-    ]);
-    window.$crisp.push(["do", "chat:hide"]);
-
-    const script = document.createElement("script");
-    script.id = CRISP_SCRIPT_ID;
-    script.src = "https://client.crisp.chat/l.js";
-    script.async = true;
-    script.onload = () => {
-      setSupportChatLoaded(true);
-      setSupportChatLoading(false);
-      window.$crisp?.push(["do", "chat:show"]);
-      window.$crisp?.push(["do", "chat:open"]);
-    };
-    script.onerror = () => {
-      setSupportChatLoading(false);
-      cleanupCrisp();
-      toast({
-        variant: "destructive",
-        title: t("common.messages.error"),
-        description: t("support.loadError", {
-          defaultValue: "Impossible de charger le support.",
-        }),
-      });
-    };
-    document.head.appendChild(script);
+    window.$crisp?.push(["do", "chat:open"]);
   };
 
   const deleteDialogBody = (
@@ -471,8 +386,8 @@ export default function Settings() {
   return (
     <div className="space-y-8 pt-10 max-w-lg mx-auto">
       {/* Page title */}
-      <h1 className="font-display text-2xl md:text-3xl font-bold text-center w-full">
-        <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
+      <h1 className="lx-display w-full text-center text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-3xl">
+        <span className="decoration-[var(--lx-gold)]/40 underline decoration-2 underline-offset-4 sm:decoration-4">
           {t("settings.title")}
         </span>
       </h1>
@@ -482,7 +397,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.profile")}
         </h2>
-        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
+        <div className="overflow-hidden divide-y divide-[var(--lx-ink)]/8 rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
           {/* Name field */}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -607,7 +522,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.faceScan")}
         </h2>
-        <div className="overflow-hidden rounded-lg border border-border/80 bg-card/90 backdrop-blur">
+        <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
           <div className="flex items-center gap-4 px-4 py-3.5">
             {(facePreviewLoading || latestFaceCapture.isLoading || facePreviewUrls.length > 0) && (
               <div className="relative flex h-24 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/40">
@@ -706,7 +621,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.subscription")}
         </h2>
-        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
           <button
             type="button"
             onClick={handleSubscriptionAction}
@@ -749,31 +664,22 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("layout.dock.support")}
         </h2>
-        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
           <button
             type="button"
             onClick={openSupportChat}
-            disabled={supportChatLoading || (!hasSupportAccess && !canOpenPaywall)}
-            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30 disabled:cursor-default disabled:hover:bg-transparent"
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
           >
             <Headphones className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{t("support.settingsTitle")}</p>
               <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground/60">
-                {hasSupportAccess
-                  ? t("support.settingsDescription")
-                  : t("support.subscriberOnly", {
-                      defaultValue: "Disponible avec un abonnement actif.",
-                    })}
+                {t("support.settingsDescription")}
               </p>
             </div>
-            {supportChatLoading ? (
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground/50" />
-            ) : (
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <MessageCircle className="h-4 w-4" />
-              </span>
-            )}
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <MessageCircle className="h-4 w-4" />
+            </span>
           </button>
         </div>
       </section>
@@ -783,7 +689,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
           {t("settings.sections.account")}
         </h2>
-        <div className="rounded-lg border border-border/80 bg-card/90 backdrop-blur overflow-hidden divide-y divide-border/30">
+        <div className="overflow-hidden divide-y divide-[var(--lx-ink)]/8 rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
           {/* Sign out */}
           <button
             onClick={() => signOut()}
@@ -865,7 +771,7 @@ export default function Settings() {
       )}
 
       <Dialog open={paywallOpen} onOpenChange={setPaywallOpen}>
-        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-hidden rounded-2xl border border-border/70 bg-white p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-border/60 [&>button]:bg-white">
+        <DialogContent className="flex max-h-[min(92svh,720px)] w-[min(calc(100vw-1.5rem),68rem)] max-w-none flex-col overflow-hidden rounded-2xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)] p-0 shadow-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:z-30 [&>button]:border [&>button]:border-[var(--lx-gold)]/30 [&>button]:bg-white">
           <PaywallOverlay
             imageUrl=""
             defaultPlan="essential"

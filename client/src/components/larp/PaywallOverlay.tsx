@@ -48,31 +48,24 @@ const planCards: PlanCard[] = [
     id: "discovery",
     euros: "8",
     cents: "90",
-    featureKeys: ["photo", "realistic", "video", "hd", "history", "support"],
+    featureKeys: ["photo", "realistic", "hd", "history", "support"],
   },
   {
     id: "essential",
     euros: "19",
     cents: "90",
     bonusKey: "essentialBonus",
-    featureKeys: ["photo", "marketRealism", "details", "video", "prioritySupport"],
+    featureKeys: ["photo", "marketRealism", "details", "prioritySupport"],
   },
   {
     id: "ultimate",
     euros: "39",
     cents: "90",
-    featureKeys: ["photo", "indistinguishable", "video", "ulDetails", "immersion", "vipSupport"],
+    featureKeys: ["photo", "indistinguishable", "ulDetails", "immersion", "vipSupport"],
   },
 ];
 
 const commonPlanFeatureKeys = ["instantCredits", "monthlyRenewal"];
-
-const socialProofAvatars = [
-  { initial: "C", className: "bg-[radial-gradient(circle_at_30%_25%,#93c5fd,#2563eb_58%,#1e3a8a)]" },
-  { initial: "M", className: "bg-[radial-gradient(circle_at_30%_25%,#f0abfc,#c026d3_58%,#701a75)]" },
-  { initial: "Y", className: "bg-[radial-gradient(circle_at_30%_25%,#86efac,#16a34a_58%,#14532d)]" },
-  { initial: "N", className: "bg-[radial-gradient(circle_at_30%_25%,#fdba74,#ea580c_58%,#7c2d12)]" },
-];
 
 interface PaywallOverlayProps {
   imageUrl: string;
@@ -120,8 +113,21 @@ export function PaywallOverlay({
         window.location.href = url;
         return;
       }
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description: t("paywall.checkoutError"),
+      });
     } catch (error) {
       console.error("Checkout error:", error);
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : t("paywall.checkoutError"),
+      });
     }
     setIsLoading(false);
   };
@@ -172,11 +178,11 @@ export function PaywallOverlay({
     ? "absolute left-1/2 top-[34%] z-20 -translate-x-1/2 -translate-y-1/2"
     : "absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2";
   const ctaClassName = isInsufficientCredits
-    ? "paywall-credits-cta-border group relative isolate mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-visible rounded-lg bg-white py-3.5 text-sm font-bold tracking-tight text-slate-950 shadow-[0_10px_28px_rgba(15,23,42,0.16)] transition-[filter,opacity,box-shadow] hover:brightness-105 hover:shadow-[0_12px_32px_rgba(15,23,42,0.20)] active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
-    : "group relative flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-lg bg-primary py-3.5 text-sm font-bold tracking-tight text-primary-foreground ring-1 ring-primary/70 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70";
+    ? "paywall-credits-cta-border group relative isolate mt-5 flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-visible rounded-full lx-btn-gold py-3.5 text-sm font-bold tracking-tight transition-[filter,opacity,box-shadow] disabled:cursor-not-allowed disabled:opacity-70"
+    : "group relative flex w-full transform-gpu cursor-pointer select-none items-center justify-center overflow-hidden rounded-full lx-btn-gold py-3.5 text-sm font-bold tracking-tight disabled:cursor-not-allowed disabled:opacity-70";
   const ctaIconClassName = isInsufficientCredits
-    ? "h-4 w-4 text-slate-950"
-    : "h-4 w-4";
+    ? "h-4 w-4 text-[#1a1408]"
+    : "h-4 w-4 text-[#1a1408]";
   const shouldShowAccountMenu = presentation === "overlay";
   const accountMenu = shouldShowAccountMenu ? (
     <>
@@ -185,7 +191,7 @@ export function PaywallOverlay({
           <button
             type="button"
             aria-label={t("layout.dock.account")}
-            className="fixed right-5 top-[calc(1.5rem+clamp(2rem,6svh,2.5rem)/2-1rem)] z-[120] flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-card/90 text-muted-foreground/70 shadow-sm backdrop-blur transition-colors hover:bg-muted/30 hover:text-foreground md:right-8 md:top-[calc(1.5rem+clamp(2.25rem,6svh,4rem)/2-1rem)]"
+            className="fixed right-5 top-[calc(1.5rem+clamp(2rem,6svh,2.5rem)/2-1rem)] z-[120] flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 text-[var(--lx-muted)] shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-[var(--lx-ink)] md:right-8 md:top-[calc(1.5rem+clamp(2.25rem,6svh,4rem)/2-1rem)]"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
@@ -193,7 +199,7 @@ export function PaywallOverlay({
         <DropdownMenuContent
           align="end"
           sideOffset={8}
-          className="z-[130] min-w-[220px] rounded-xl border-border/80 bg-white/95 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl"
+          className="z-[130] min-w-[220px] rounded-xl border border-[var(--lx-gold)]/30 bg-[var(--lx-surface-2)]/95 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl"
         >
           <DropdownMenuItem
             onClick={() => void signOut()}
@@ -254,129 +260,130 @@ export function PaywallOverlay({
     const isModalPresentation = presentation === "modal";
     const selectedPlanCard =
       planCards.find((plan) => plan.id === selectedPlan) ?? planCards[0];
-    const shellClassName = isModalPresentation
-      ? "flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white text-foreground"
-      : "flex h-full min-h-0 w-full flex-col overflow-visible px-3 py-3 text-foreground md:px-4 md:py-4";
-    const innerClassName =
-      "mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col";
-    const headerClassName = isModalPresentation
-      ? "shrink-0 px-4 pb-2 pt-3 text-center sm:px-14"
-      : "flex shrink-0 flex-col gap-2 px-1 pb-2 text-center";
-    const gridWrapperClassName =
-      "flex min-h-0 flex-1 flex-col overflow-hidden px-1 pb-2 md:flex-none md:items-center md:justify-start md:overflow-visible md:px-0 md:pt-7";
-    const gridClassName =
-      "grid w-full shrink-0 grid-cols-3 items-end gap-2 pt-7 md:max-w-[720px] md:gap-3 md:pt-0";
-    const footerClassName =
-      isModalPresentation
-        ? "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 border-t border-border/50 bg-white/95 px-1 pt-3 backdrop-blur-sm pb-[max(1rem,env(safe-area-inset-bottom))]"
-        : "mx-auto flex w-full max-w-[720px] shrink-0 flex-col items-center justify-center gap-2 px-1 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]";
-    const bulletClassName = "flex min-w-0 gap-1.5";
-    const mobileHiddenBulletClassName = "hidden min-w-0 gap-1.5 md:flex";
+    const bulletClassName = "flex min-w-0 items-start gap-2";
+    const mobileHiddenBulletClassName = "hidden min-w-0 items-start gap-2 md:flex";
     const visibleMobilePlanFeatureCount = selectedPlanCard.bonusKey ? 3 : 4;
 
     return (
       <>
         {accountMenu}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          className={shellClassName}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className={
+            isModalPresentation
+              ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden text-[var(--lx-ink)]"
+              : "fixed inset-0 z-[101] flex min-h-0 w-full flex-col overflow-y-auto text-[var(--lx-ink)]"
+          }
         >
-          <div className={innerClassName}>
-            <div className={headerClassName}>
-              <div>
-                <h2 className="font-display text-xl font-bold leading-tight text-center text-foreground md:text-3xl">
-                  <span className="text-primary decoration-primary/30 underline decoration-2 underline-offset-4 sm:decoration-4">
-                    {t("paywall.pricingTitle")}
-                  </span>
-                </h2>
-              </div>
-            </div>
+          {/* Landing-like atmosphere */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            aria-hidden
+            style={{
+              background:
+                "linear-gradient(160deg, #ffffff 0%, #f5f0e8 42%, #ebe4d8 100%)",
+            }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-90"
+            aria-hidden
+            style={{
+              background:
+                "radial-gradient(ellipse 75% 50% at 50% -5%, rgba(201,162,39,0.18) 0%, transparent 58%)",
+            }}
+          />
 
-            <div className={gridWrapperClassName}>
-              <div className={gridClassName}>
-            {planCards.map((plan) => {
-              const isSelected = selectedPlan === plan.id;
+          <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
+            {/* Header */}
+            <header
+              className={
+                isModalPresentation
+                  ? "shrink-0 pb-4 pt-2 text-center sm:px-8"
+                  : "shrink-0 pb-5 pt-1 text-center"
+              }
+            >
+              <h2 className="lx-display text-balance text-2xl font-semibold leading-[1.15] tracking-tight text-[var(--lx-ink)] md:text-4xl">
+                {t("paywall.pricingTitle")}
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
+                {t("paywall.pricingSubtitle")}
+              </p>
+            </header>
 
-              return (
-                <div
-                  key={plan.id}
-                  className="relative"
-                >
-                  {plan.id === "essential" && (
-                    <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/15 bg-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-background shadow-sm md:inline-flex">
-                      {t("paywall.planBadges.recommended")}
-                    </span>
-                  )}
-                <motion.button
-                  type="button"
-                  onClick={() => setSelectedPlan(plan.id)}
-                  whileTap={{ scale: 0.985 }}
-                  className={`relative flex w-full flex-col overflow-hidden rounded-lg p-2.5 text-left transition-all md:p-3 ${
-                    plan.id === "essential"
-                      ? "min-h-[7.75rem] md:min-h-[9.5rem] md:pt-4"
-                      : "min-h-[7.5rem] md:min-h-[9.25rem]"
-                  } ${
-                    plan.id === "essential" ? "paywall-essential-card-border isolate border-0" : ""
-                  } ${
-                    isSelected
-                      ? plan.id === "essential"
-                        ? "bg-white shadow-[0_18px_45px_rgba(0,0,0,0.10)]"
-                        : "border border-foreground/80 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_18px_45px_rgba(0,0,0,0.10)]"
-                      : plan.id === "essential"
-                        ? "bg-muted/25 hover:bg-muted/40"
-                        : "border border-border/70 bg-muted/25 hover:border-foreground/25 hover:bg-muted/40"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-1.5 md:gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-display text-[13px] font-bold leading-none md:text-lg">
-                        {t(`paywall.plans.${plan.id}.name`)}
-                      </h3>
-                      <p className="mt-1 text-[10px] font-semibold text-muted-foreground line-through">
-                        {t(`paywall.plans.${plan.id}.oldPrice`)}
-                      </p>
+            {/* Plan cards */}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="grid shrink-0 grid-cols-3 items-stretch gap-2.5 md:gap-4">
+                {planCards.map((plan) => {
+                  const isSelected = selectedPlan === plan.id;
+                  const isEssential = plan.id === "essential";
+
+                  return (
+                    <div key={plan.id} className="relative pt-3">
+                      {isEssential && (
+                        <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-[var(--lx-gold)]/55 bg-[linear-gradient(135deg,#1a1408_0%,#2a2214_100%)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--lx-gold-soft)] shadow-[0_4px_14px_rgba(18,16,14,0.25)] md:px-3 md:text-[10px]">
+                          {t("paywall.planBadges.recommended")}
+                        </span>
+                      )}
+                      <motion.button
+                        type="button"
+                        onClick={() => setSelectedPlan(plan.id)}
+                        whileTap={{ scale: 0.98 }}
+                        className={`relative flex h-full min-h-[8.25rem] w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left transition-all md:min-h-[10.5rem] md:p-5 ${
+                          isEssential ? "paywall-essential-card-border isolate" : ""
+                        } ${
+                          isSelected
+                            ? "border border-[var(--lx-gold)] bg-white shadow-[0_16px_40px_rgba(18,16,14,0.12),0_0_0_1px_rgba(201,162,39,0.2)]"
+                            : "border border-black/8 bg-[var(--lx-surface-2)]/90 shadow-[0_8px_24px_rgba(18,16,14,0.05)] hover:border-[var(--lx-gold)]/35 hover:bg-white/90"
+                        }`}
+                      >
+                        <div>
+                          <h3 className="lx-display text-[13px] font-semibold leading-none text-[var(--lx-ink)] md:text-xl">
+                            {t(`paywall.plans.${plan.id}.name`)}
+                          </h3>
+                          <p className="mt-1.5 text-[10px] font-semibold text-[var(--lx-muted)] line-through md:text-xs">
+                            {t(`paywall.plans.${plan.id}.oldPrice`)}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 flex items-end gap-0.5 md:mt-4 md:gap-1">
+                          <span className="lx-display text-[2rem] font-semibold leading-[0.85] text-[var(--lx-ink)] md:text-5xl">
+                            {plan.euros}
+                          </span>
+                          <span className="pb-0.5 text-[12px] font-bold leading-none text-[var(--lx-bronze)] md:pb-1.5 md:text-lg">
+                            {plan.cents}
+                          </span>
+                          <span className="pb-0.5 text-[9px] font-bold leading-none text-[var(--lx-muted)] md:pb-1.5 md:text-sm">
+                            {t("paywall.currency")}
+                          </span>
+                          <span className="hidden pb-1.5 text-sm font-semibold leading-none text-[var(--lx-muted)] md:inline">
+                            {t("paywall.perMonthShort")}
+                          </span>
+                        </div>
+                      </motion.button>
                     </div>
-
-                  </div>
-
-                  <div className="mt-2 flex items-end gap-0.5 md:mt-3 md:gap-1">
-                    <span className="font-display text-[1.9rem] font-bold leading-[0.86] tracking-normal md:text-4xl">
-                      {plan.euros}
-                    </span>
-                    <span className="pb-0.5 text-[11px] font-bold leading-none text-muted-foreground md:pb-1 md:text-base">
-                      {plan.cents}
-                    </span>
-                    <span className="pb-0.5 text-[9px] font-bold leading-none text-muted-foreground md:pb-1 md:text-xs">
-                      {t("paywall.currency")}
-                    </span>
-                    <span className="hidden pb-1 text-xs font-bold leading-none text-muted-foreground md:inline">
-                      {t("paywall.perMonthShort")}
-                    </span>
-                  </div>
-
-                </motion.button>
-                </div>
-              );
-            })}
+                  );
+                })}
               </div>
-              <div className="mt-4 min-h-[8.5rem] w-full flex-1 overflow-hidden px-1 py-2 md:mt-6 md:min-h-0 md:max-w-[720px] md:flex-none md:overflow-visible md:px-1 md:py-0">
-                <p className="text-sm font-bold text-foreground">
+
+              {/* Features panel */}
+              <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-black/6 bg-[var(--lx-surface-2)]/95 p-4 shadow-[0_10px_30px_rgba(18,16,14,0.06)] md:mt-6 md:flex-none md:p-6">
+                <p className="lx-display text-base font-semibold text-[var(--lx-ink)] md:text-lg">
                   {t(`paywall.plans.${selectedPlanCard.id}.name`)}
                 </p>
-                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[10px] font-semibold leading-tight text-foreground/78 min-[390px]:text-[11px] md:gap-x-8 md:gap-y-3 md:text-xs">
+                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[10px] font-medium leading-snug text-[var(--lx-muted)] min-[390px]:text-[11px] md:mt-4 md:gap-x-8 md:gap-y-3 md:text-sm">
                   <li className={bulletClassName}>
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]" strokeWidth={2.75} />
                     <span>{t(`paywall.plans.${selectedPlanCard.id}.creditsPerMonth`)}</span>
                   </li>
                   <li className={bulletClassName}>
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]" strokeWidth={2.75} />
                     <span>{t("paywall.generationCosts")}</span>
                   </li>
                   {selectedPlanCard.bonusKey && (
                     <li className={bulletClassName}>
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]" strokeWidth={2.75} />
                       <span>{t(`paywall.planBonuses.${selectedPlanCard.bonusKey}`)}</span>
                     </li>
                   )}
@@ -389,13 +396,13 @@ export function PaywallOverlay({
                           : mobileHiddenBulletClassName
                       }
                     >
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]" strokeWidth={2.75} />
                       <span>{t(`paywall.planFeatures.${feature}`)}</span>
                     </li>
                   ))}
                   {commonPlanFeatureKeys.map((feature) => (
                     <li key={feature} className={mobileHiddenBulletClassName}>
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" strokeWidth={3} />
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]" strokeWidth={2.75} />
                       <span>{t(`paywall.planFeatures.${feature}`)}</span>
                     </li>
                   ))}
@@ -403,27 +410,13 @@ export function PaywallOverlay({
               </div>
             </div>
 
-            <div className={footerClassName}>
-              <div className="flex items-center justify-center gap-2.5 text-center">
-                <div className="flex shrink-0 -space-x-2" aria-hidden="true">
-                  {socialProofAvatars.map((avatar) => (
-                    <span
-                      key={avatar.initial}
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-black text-white shadow-sm ${avatar.className}`}
-                    >
-                      {avatar.initial}
-                    </span>
-                  ))}
-                </div>
-                <p className="min-w-0 text-[11px] font-bold leading-tight text-muted-foreground sm:text-xs">
-                  {t("paywall.socialProof")}
-                </p>
-              </div>
+            {/* Footer CTA */}
+            <footer className="mx-auto mt-4 flex w-full shrink-0 flex-col items-center gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:mt-6">
               <motion.button
                 onClick={handleSubscribe}
                 disabled={isLoading}
                 whileTap={!isLoading ? { scale: 0.97, y: 1 } : undefined}
-                className="group relative flex min-h-11 w-full items-center justify-center overflow-hidden rounded-lg bg-foreground px-7 text-sm font-bold text-background ring-1 ring-foreground/20 transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 md:min-h-12 md:px-10 md:text-base"
+                className="lx-btn-gold group relative flex min-h-12 w-full max-w-md items-center justify-center overflow-hidden rounded-full px-8 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70 md:min-h-14 md:text-base"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -433,15 +426,19 @@ export function PaywallOverlay({
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     {t("paywall.checkoutCta")}
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={3} />
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                      strokeWidth={2.75}
+                    />
                   </span>
                 )}
               </motion.button>
-              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold leading-tight text-muted-foreground/65">
-                <Lock className="h-3 w-3" strokeWidth={2.6} />
+
+              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-medium leading-tight text-[var(--lx-muted)]">
+                <Lock className="h-3 w-3 text-[var(--lx-gold)]" strokeWidth={2.5} />
                 {t("paywall.securePayment")}
               </p>
-            </div>
+            </footer>
           </div>
         </motion.div>
       </>

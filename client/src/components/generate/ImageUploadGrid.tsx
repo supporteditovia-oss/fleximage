@@ -5,33 +5,58 @@ interface ImageUploadGridProps {
   images: ({ url: string; file: File } | null)[];
   onImageSelect: (index: number, file: File) => void;
   onRemoveSlot: (index: number) => void;
+  /** Controls drop label + file picker filter (image vs video). */
+  generationMode?: "image" | "video";
 }
 
 export function ImageUploadGrid({
   images,
   onImageSelect,
   onRemoveSlot,
+  generationMode = "image",
 }: ImageUploadGridProps) {
   const { t } = useTranslation();
   const uploadedCount = images.filter(Boolean).length;
   const showEmptySlotText = uploadedCount < 2;
+  const isVideoMode = generationMode === "video";
+  const accept = isVideoMode
+    ? "video/mp4,video/webm,video/quicktime,video/*"
+    : "image/jpeg,image/png,image/webp,image/*";
+  const dropLabel = isVideoMode ? t("hero.dropVideo") : t("hero.dropImage");
 
   return (
     <div className="w-full flex justify-center -mb-7 md:-mb-8">
       <div className="flex flex-col w-full max-w-md">
         <div className="flex items-end justify-center gap-2 md:gap-3 w-full">
-          {images.map((img, i) => (
+          {images.map((img, i) => {
+            const isVideoPreview = Boolean(
+              img?.file.type.startsWith("video/"),
+            );
+
+            return (
             <div
               key={i}
               className="relative flex-shrink-1 min-w-0 h-[min(52vh,440px)] md:h-[min(58vh,520px)] aspect-[9/16] flex flex-col"
             >
               {img ? (
                 <>
-                  <img
-                    src={img.url}
-                    alt={t("imageUpload.imageAlt", { index: i + 1 })}
-                    className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                  />
+                  {isVideoPreview ? (
+                    <video
+                      src={img.url}
+                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                      muted
+                      playsInline
+                      loop
+                      autoPlay
+                      aria-label={t("imageUpload.videoAlt", { index: i + 1 })}
+                    />
+                  ) : (
+                    <img
+                      src={img.url}
+                      alt={t("imageUpload.imageAlt", { index: i + 1 })}
+                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                    />
+                  )}
                   <button
                     onClick={() => onRemoveSlot(i)}
                     className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
@@ -45,11 +70,18 @@ export function ImageUploadGrid({
                   <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all border-foreground/25 bg-white/80">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept={accept}
                       className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) onImageSelect(i, file);
+                        if (!file) {
+                          e.currentTarget.value = "";
+                          return;
+                        }
+                        const ok = isVideoMode
+                          ? file.type.startsWith("video/")
+                          : file.type.startsWith("image/");
+                        if (ok) onImageSelect(i, file);
                         e.currentTarget.value = "";
                       }}
                     />
@@ -58,7 +90,7 @@ export function ImageUploadGrid({
                     </div>
                     {showEmptySlotText && (
                       <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                        {t("hero.dropImage")}
+                        {dropLabel}
                       </p>
                     )}
                   </label>
@@ -66,7 +98,8 @@ export function ImageUploadGrid({
                 </>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

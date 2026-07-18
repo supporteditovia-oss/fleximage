@@ -1,0 +1,490 @@
+/* Styles scoped to the LuxeFlexIA landing page only */
+.luxeflexia-landing {
+  /* Inherits shared tokens from luxeflexia-tokens.css; keep aliases local for safety */
+  --lx-gold: #c9a227;
+  --lx-gold-soft: #d4af37;
+  --lx-bronze: #8b6914;
+  --lx-ink: #12100e;
+  --lx-ink-soft: #1c1916;
+  --lx-surface: #e9e7e2;
+  --lx-surface-2: #f2f0ec;
+  --lx-muted: #5c564e;
+  --lx-display: "Playfair Display", Georgia, serif;
+  --lx-sans: "Plus Jakarta Sans", "DM Sans", sans-serif;
+  color: var(--lx-ink);
+  background: var(--lx-surface);
+  font-family: var(--lx-sans);
+}
+
+.luxeflexia-landing .lx-display {
+  font-family: var(--lx-display);
+}
+
+.luxeflexia-landing .lx-btn-gold {
+  background: linear-gradient(135deg, #e8c547 0%, #c9a227 45%, #8b6914 100%);
+  color: #1a1408;
+  box-shadow: 0 4px 18px rgba(201, 162, 39, 0.28);
+  transition: box-shadow 0.25s ease, transform 0.2s ease, filter 0.2s ease;
+}
+
+.luxeflexia-landing .lx-btn-gold:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 0 0 1px rgba(232, 197, 71, 0.35),
+    0 6px 28px rgba(201, 162, 39, 0.45),
+    0 0 40px rgba(201, 162, 39, 0.22);
+}
+
+.luxeflexia-landing .lx-btn-gold:active {
+  transform: scale(0.97);
+}
+
+/* Boucle infinie continue (jamais alternate / jamais aller-retour).
+   3 copies bout à bout → on décale d'exactement 1/3 de la piste. */
+@keyframes lx-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333333%);
+  }
+}
+
+@keyframes lx-marquee-reverse {
+  from {
+    transform: translateX(-33.333333%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.luxeflexia-landing .lx-marquee-track {
+  animation-name: lx-marquee;
+  animation-duration: 55s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: normal;
+  animation-fill-mode: none;
+  width: max-content;
+  will-change: transform;
+}
+
+.luxeflexia-landing .lx-marquee-track-reverse {
+  animation-name: lx-marquee-reverse;
+  animation-duration: 55s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: normal;
+  animation-fill-mode: none;
+  width: max-content;
+  will-change: transform;
+}
+
+/* Léger rendu « smartphone » (pas un filtre flou) sur les cartes lifestyle */
+.luxeflexia-landing .lx-pov-card img:last-child {
+  filter: contrast(1.04) saturate(0.95);
+}
+
+.luxeflexia-landing .lx-pov-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+@keyframes lx-discover-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+}
+
+.luxeflexia-landing .lx-discover {
+  animation: lx-discover-pulse 1.8s ease-in-out infinite;
+}
+
+.luxeflexia-landing .lx-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.luxeflexia-landing .lx-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.luxeflexia-landing .lx-reveal-delay-1 {
+  transition-delay: 0.08s;
+}
+.luxeflexia-landing .lx-reveal-delay-2 {
+  transition-delay: 0.16s;
+}
+.luxeflexia-landing .lx-reveal-delay-3 {
+  transition-delay: 0.24s;
+}
+
+@keyframes lx-parallax-shift {
+  from {
+    transform: scale(1.14) translateY(0);
+  }
+  to {
+    transform: scale(1.14) translateY(10%);
+  }
+}
+
+.luxeflexia-landing .lx-hero-parallax {
+  will-change: transform;
+  animation: lx-parallax-shift linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0 100vh;
+}
+
+@supports not (animation-timeline: scroll()) {
+  .luxeflexia-landing .lx-hero-parallax {
+    animation: none;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luxeflexia-landing .lx-marquee-track,
+  .luxeflexia-landing .lx-marquee-track-reverse,
+  .luxeflexia-landing .lx-discover,
+  .luxeflexia-landing .lx-hero-parallax {
+    animation: none;
+  }
+
+  .luxeflexia-landing .lx-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Hero marquee — desktop defaults (overridden on mobile) */
+.luxeflexia-landing .lx-hero {
+  --lx-marquee-row-h: 220px;
+  --lx-marquee-gap: 40px;
+  --lx-marquee-top: 30%;
+  --lx-marquee-bottom: calc(30% + 220px + 40px);
+  --lx-hero-dial-h: min(40vh, 340px);
+}
+
+/* —— Mobile only (< 768px): iPhone XR / 14 Pro Max, etc. —— */
+@media (max-width: 767.98px) {
+  /* 1. Logo header centré, hamburger à droite */
+  .luxeflexia-landing .lx-header-inner {
+    position: relative;
+    justify-content: flex-end;
+  }
+
+  .luxeflexia-landing .lx-brand {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+
+  .luxeflexia-landing .lx-header-actions {
+    margin-left: auto;
+    z-index: 2;
+  }
+
+  /* 2. « Découvrir » : l’anim ne doit pas écraser le centrage horizontal */
+  @keyframes lx-discover-pulse-mobile {
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+      opacity: 0.75;
+    }
+    50% {
+      transform: translateX(-50%) translateY(6px);
+      opacity: 1;
+    }
+  }
+
+  .luxeflexia-landing .lx-discover {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    animation-name: lx-discover-pulse-mobile;
+  }
+
+  /* 3. Showcase mobile : cartes 9:16 empilées en éventail 3D + contour or */
+  .luxeflexia-landing .lx-showcase-grid {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    perspective: 1000px;
+    perspective-origin: 50% 45%;
+    padding: 1.5rem 0.25rem 2rem;
+  }
+
+  .luxeflexia-landing .lx-showcase-grid > * {
+    position: relative;
+    width: 42%;
+    flex: 0 0 auto;
+    margin-left: -14%;
+  }
+
+  .luxeflexia-landing .lx-showcase-grid > *:first-child {
+    margin-left: 0;
+    z-index: 1;
+  }
+
+  .luxeflexia-landing .lx-showcase-grid > *:nth-child(2) {
+    z-index: 3;
+  }
+
+  .luxeflexia-landing .lx-showcase-grid > *:nth-child(3) {
+    z-index: 2;
+  }
+
+  .luxeflexia-landing .lx-showcase-card {
+    aspect-ratio: 9 / 16;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    border: 1.5px solid var(--lx-gold);
+    border-radius: 0.85rem;
+    box-shadow:
+      0 0 0 1px rgba(232, 197, 71, 0.28),
+      0 14px 32px rgba(18, 16, 14, 0.28),
+      0 4px 10px rgba(18, 16, 14, 0.16);
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.45s ease;
+  }
+
+  /* Carte gauche — en retrait, pivotée */
+  .luxeflexia-landing .lx-showcase-grid > *:nth-child(1) .lx-showcase-card {
+    transform: rotateY(22deg) rotateZ(-7deg) translate3d(-4%, 12px, -40px)
+      scale(0.9);
+    box-shadow:
+      0 0 0 1px rgba(232, 197, 71, 0.22),
+      0 18px 36px rgba(18, 16, 14, 0.34),
+      0 6px 12px rgba(18, 16, 14, 0.18);
+  }
+
+  /* Carte centre — devant, légèrement relevée */
+  .luxeflexia-landing .lx-showcase-grid > *:nth-child(2) .lx-showcase-card {
+    transform: translate3d(0, -10px, 48px) scale(1.06);
+    border-color: var(--lx-gold-soft);
+    box-shadow:
+      0 0 0 1.5px rgba(232, 197, 71, 0.45),
+      0 22px 48px rgba(18, 16, 14, 0.38),
+      0 8px 16px rgba(18, 16, 14, 0.2);
+  }
+
+  /* Carte droite — en retrait, pivotée */
+  .luxeflexia-landing .lx-showcase-grid > *:nth-child(3) .lx-showcase-card {
+    transform: rotateY(-22deg) rotateZ(7deg) translate3d(4%, 12px, -40px)
+      scale(0.9);
+    box-shadow:
+      0 0 0 1px rgba(232, 197, 71, 0.22),
+      0 18px 36px rgba(18, 16, 14, 0.34),
+      0 6px 12px rgba(18, 16, 14, 0.18);
+  }
+
+  .luxeflexia-landing .lx-showcase-card img {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .luxeflexia-landing .lx-showcase-label {
+    padding: 0.5rem 0.55rem;
+    font-size: 0.65rem;
+    line-height: 1.25;
+  }
+
+  /* 4. Hero mobile : cadran à cheval ; texte resserré au-dessus du carrousel */
+  .luxeflexia-landing .lx-hero {
+    --lx-marquee-row-h: 148px;
+    --lx-hero-dial-h: 300px;
+    --lx-marquee-gap: 20px;
+    /* Bandes resserrées : moins de vide header↔titre↔sous-titre↔carrousel */
+    --lx-hero-copy-gap: 1.1rem;
+    --lx-hero-copy-h: 5.5rem;
+    --lx-hero-prompt-h: 3.25rem;
+    --lx-marquee-band-h: calc(
+      2 * var(--lx-marquee-row-h) + var(--lx-marquee-gap)
+    );
+    --lx-hero-block-h: calc(
+      var(--lx-hero-copy-h) + var(--lx-hero-copy-gap) + var(--lx-marquee-band-h) +
+        var(--lx-hero-prompt-h)
+    );
+    --lx-hero-block-top: max(
+      1.15rem,
+      calc((100% - var(--lx-hero-block-h) - 2.25rem) / 2 + 1.65rem)
+    );
+    --lx-marquee-top: calc(
+      var(--lx-hero-block-top) + var(--lx-hero-copy-h) + var(--lx-hero-copy-gap)
+    );
+    --lx-marquee-bottom: calc(
+      var(--lx-marquee-top) + var(--lx-marquee-row-h) + var(--lx-marquee-gap)
+    );
+  }
+
+  .luxeflexia-landing .lx-hero-content {
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    flex: 1 1 auto;
+    padding-top: 0;
+    width: 100%;
+    min-height: 100%;
+  }
+
+  /*
+   * Même référentiel que le marquee (section .lx-hero) :
+   * le stack couvre tout le hero → top/absolute alignés sur les rangées.
+   */
+  .luxeflexia-landing .lx-hero-stack {
+    position: absolute;
+    inset: 0;
+    padding-top: 0;
+    gap: 0;
+    width: 100%;
+  }
+
+  /* Titre + sous-titre centrés dans la bande au-dessus du carrousel (plus courte) */
+  .luxeflexia-landing .lx-hero-copy {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    height: var(--lx-marquee-top);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 21;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    padding-inline: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  .luxeflexia-landing .lx-hero-copy h1 {
+    margin: 0;
+    line-height: 1.08;
+  }
+
+  .luxeflexia-landing .lx-hero-copy p,
+  .luxeflexia-landing .lx-hero-subtitle {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+  }
+
+  /*
+   * Seam = 50% du bandeau .lx-hero-marquee-band (2 rangées + gap).
+   * Le cadran est recentré avec margin-top: -50% de sa hauteur
+   * (= top:50% + translateY(-50%) sur le cadran seul).
+   */
+  .luxeflexia-landing .lx-hero-tools {
+    position: absolute;
+    left: 50%;
+    top: calc(
+      var(--lx-marquee-top) +
+        (2 * var(--lx-marquee-row-h) + var(--lx-marquee-gap)) / 2
+    );
+    transform: translateX(-50%);
+    z-index: 20;
+    width: min(100%, 28rem);
+    margin-top: 0;
+    gap: 0.5rem;
+    padding-bottom: 0;
+    align-items: center;
+  }
+
+  /* Centre vertical du cadran pile sur la seam (= translateY(-50%)) */
+  .luxeflexia-landing .lx-hero-dial-wrap {
+    margin-top: calc(var(--lx-hero-dial-h) / -2);
+    margin-bottom: -1.75rem;
+    width: 100%;
+  }
+
+  .luxeflexia-landing .lx-hero-upload-slot {
+    height: var(--lx-hero-dial-h);
+  }
+
+  .luxeflexia-landing .lx-hero-tools > div {
+    width: 100%;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 5. Marquee : vignettes plus petites sur mobile, nettes */
+  .luxeflexia-landing .lx-hero-marquee-track {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: -2.75rem;
+    gap: 0.75rem;
+  }
+
+  .luxeflexia-landing .lx-hero-marquee .lx-pov-card {
+    height: 148px !important;
+  }
+}
+
+/* —— Desktop only (≥ 768px) —— */
+@media (min-width: 768px) {
+  /* Logo centré dans le header */
+  .luxeflexia-landing .lx-header-inner {
+    position: relative;
+    justify-content: flex-end;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .luxeflexia-landing .lx-brand {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+
+  .luxeflexia-landing .lx-header-nav {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+  }
+
+  .luxeflexia-landing .lx-header-actions {
+    position: relative;
+    z-index: 2;
+    margin-left: auto;
+    padding-right: 0.25rem;
+  }
+}
+
+@media (max-width: 767.98px) and (prefers-reduced-motion: reduce) {
+  .luxeflexia-landing .lx-discover {
+    animation: none;
+    transform: translateX(-50%);
+  }
+}

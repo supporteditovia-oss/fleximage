@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { logger } from "./logger";
 import { notifyDiscord } from "./discord";
+import { sendSnapPurchaseEvent } from "./snap-capi";
 import {
   getPlanForPriceId,
   getStripe,
@@ -215,6 +216,18 @@ export async function handleCheckoutCompleted(
   notifyDiscord(
     `💰 **Nouvel abonné !** ${notifProfile?.email || userId} vient de souscrire à LarpKing.`,
   );
+
+  // Snap Pixel PURCHASE — serveur uniquement, après confirmation webhook
+  const amountTotal =
+    typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
+  const currency = (session.currency || "eur").toUpperCase();
+  void sendSnapPurchaseEvent({
+    eventId: session.id,
+    value: amountTotal,
+    currency,
+    email: notifProfile?.email ?? session.customer_details?.email ?? null,
+    eventSourceUrl: `${process.env.APP_URL || process.env.SITE_URL || "https://larpking.com"}/resultat`,
+  });
 }
 
 /**

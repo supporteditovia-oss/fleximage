@@ -12,10 +12,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-[var(--lx-surface)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground font-medium animate-pulse">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--lx-gold)] border-t-transparent" />
+          <p className="font-medium animate-pulse text-[var(--lx-muted)]">
             {t("layout.loadingPlatform")}
           </p>
         </div>
@@ -24,7 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
+    <div className="luxeflexia-app flex min-h-screen w-full flex-col bg-[var(--lx-surface)] text-[var(--lx-ink)]">
       <FloatingHeader variant="app" />
       <main
         className={

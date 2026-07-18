@@ -76,6 +76,7 @@ export const extraResources = {
       titleSuffix: "hyper réaliste",
       dropHere: "Lâche ici",
       dropImage: "Ajoute ton image ici",
+      dropVideo: "Ajoute ta vidéo ici",
       randomIdea: "Idée aléatoire",
       create: "Créer",
       simpleCta: "Créer mon LARP",
@@ -157,6 +158,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Image requise",
       referenceImageRequiredDescription:
         "Ajoute au moins une image de référence pour lancer la génération.",
+      referenceVideoRequiredTitle: "Vidéo requise",
+      referenceVideoRequiredDescription:
+        "Ajoute au moins une vidéo de référence pour lancer la génération.",
       templateModeUnavailableTitle: "Mode indisponible",
       templateModeUnavailableDescription:
         "Ce template ne supporte pas ce mode de génération.",
@@ -193,6 +197,7 @@ export const extraResources = {
       optional: "Optionnel",
       photoLabel: "Photo {{label}}",
       imageAlt: "Image {{index}}",
+      videoAlt: "Vidéo {{index}}",
     },
     progress: {
       preparing: "Préparation…",
@@ -255,18 +260,18 @@ export const extraResources = {
       titlePrefix: "Questions",
       titleGradient: "fréquentes",
       items: {
-        larpkingQ: "C'est quoi LarpKing ?",
+        larpkingQ: "C'est quoi LuxeFlexIA ?",
         larpkingA:
-          "LarpKing est un outil IA pour générer des contenus LARP hyper réalistes en quelques secondes. Ajoute ta photo, décris ton idée, et l'IA fait le reste.",
+          "LuxeFlexIA est un outil IA pour générer des contenus LARP hyper réalistes en quelques secondes. Ajoute ta photo, décris ton idée, et l'IA fait le reste.",
         realisticQ: "Les images générées sont-elles réalistes ?",
         realisticA:
           "Oui, notre IA est entra\u00een\u00e9e pour produire des r\u00e9sultats tr\u00e8s convaincants. Parfait pour cr\u00e9er une mise en sc\u00e8ne cr\u00e9dible sans quitter ton canap\u00e9.",
         legalQ: "C'est légal ?",
         legalA:
-          "LarpKing est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
+          "LuxeFlexIA est conçu pour le divertissement entre proches. L'utilisation à des fins de harcèlement, diffamation ou fraude est strictement interdite et contraire à nos CGU.",
         pricingQ: "Qu'est-ce que le LARP ?",
         pricingA:
-          "Le LARP, ici, c'est l'art de créer une mise en scène crédible avec l'IA : une photo de voyage, une sortie premium, un achat luxe ou une situation inventée qui a l'air réelle. LarpKing sert à générer ce type de contenu pour s'amuser, surprendre ses proches ou construire une vibe visuelle.",
+          "Le LARP, ici, c'est l'art de créer une mise en scène crédible avec l'IA : une photo de voyage, une sortie premium, un achat luxe ou une situation inventée qui a l'air réelle. LuxeFlexIA sert à générer ce type de contenu pour s'amuser, surprendre ses proches ou construire une vibe visuelle.",
         storageQ: "Mes images sont-elles stockées ?",
         storageA:
           "Tes images sont traitées de manière sécurisée. Tu peux supprimer tes créations à tout moment depuis ton compte.",
@@ -286,7 +291,7 @@ export const extraResources = {
       cgu: "CGU",
       cgv: "CGV",
       privacy: "Confidentialité",
-      copyright: "© {{year}} LARPKING. Tous droits réservés.",
+      copyright: "© {{year}} LuxeFlexIA. Tous droits réservés.",
     },
     marquee: {
       titlePrefix: "Plus rien n'est",
@@ -308,7 +313,7 @@ export const extraResources = {
     },
     larpPro: {
       title: "Comment larper comme un pro",
-      subtitle: "Ce que tu peux faire avec LarpKing",
+      subtitle: "Ce que tu peux faire avec LuxeFlexIA",
       item1: "Achats dans des boutiques de luxe",
       item2: "Conduire une voiture de luxe ou une supercar",
       item3: "Manger dans des restaurants haut de gamme",
@@ -405,6 +410,7 @@ export const extraResources = {
       titleSuffix: "that look real",
       dropHere: "Drop here",
       dropImage: "Drop your image here",
+      dropVideo: "Add your video here",
       randomIdea: "Random idea",
       create: "Create",
       simpleCta: "Create my LARP",
@@ -485,6 +491,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Image required",
       referenceImageRequiredDescription:
         "Add at least one reference image to start generation.",
+      referenceVideoRequiredTitle: "Video required",
+      referenceVideoRequiredDescription:
+        "Add at least one reference video to start generation.",
       templateModeUnavailableTitle: "Mode unavailable",
       templateModeUnavailableDescription:
         "This template does not support this generation mode.",
@@ -521,6 +530,7 @@ export const extraResources = {
       optional: "Optional",
       photoLabel: "Photo {{label}}",
       imageAlt: "Image {{index}}",
+      videoAlt: "Video {{index}}",
     },
     progress: {
       preparing: "Preparing…",
@@ -582,18 +592,18 @@ export const extraResources = {
       titlePrefix: "Frequently",
       titleGradient: "asked questions",
       items: {
-        larpkingQ: "What is LarpKing?",
+        larpkingQ: "What is LuxeFlexIA?",
         larpkingA:
-          "LarpKing is an AI tool that generates ultra-realistic LARP content in seconds. Upload your photo, describe your idea, and the AI does the rest.",
+          "LuxeFlexIA is an AI tool that generates ultra-realistic LARP content in seconds. Upload your photo, describe your idea, and the AI does the rest.",
         realisticQ: "Are generated images realistic?",
         realisticA:
           "Yes. Our AI is trained to produce highly convincing results. Perfect for building a believable flex without leaving your couch.",
         legalQ: "Is it legal?",
         legalA:
-          "LarpKing is made for fun between friends. Harassment, defamation, fraud, or abuse are strictly prohibited and against our terms.",
+          "LuxeFlexIA is made for fun between friends. Harassment, defamation, fraud, or abuse are strictly prohibited and against our terms.",
         pricingQ: "What is a LARP?",
         pricingA:
-          "On LarpKing, a LARP is a believable AI-made scene: a travel photo, premium outing, luxury purchase, or invented situation that looks real. It is made for fun, social storytelling, and playful flexing.",
+          "On LuxeFlexIA, a LARP is a believable AI-made scene: a travel photo, premium outing, luxury purchase, or invented situation that looks real. It is made for fun, social storytelling, and playful flexing.",
         storageQ: "Are my images stored?",
         storageA:
           "Your images are processed securely. You can delete your creations anytime from your account.",
@@ -613,7 +623,7 @@ export const extraResources = {
       cgu: "Terms",
       cgv: "Sales terms",
       privacy: "Privacy",
-      copyright: "© {{year}} LARPKING. All rights reserved.",
+      copyright: "© {{year}} LuxeFlexIA. All rights reserved.",
     },
     marquee: {
       titlePrefix: "Nothing is Real",
@@ -635,7 +645,7 @@ export const extraResources = {
     },
     larpPro: {
       title: "How to LARP like a pro",
-      subtitle: "What you can do with LarpKing",
+      subtitle: "What you can do with LuxeFlexIA",
       item1: "Shopping at luxury boutiques",
       item2: "Driving a luxury / supercar",
       item3: "Dining at high-end restaurants",
@@ -731,6 +741,7 @@ export const extraResources = {
       titleSuffix: "muy realistas",
       dropHere: "Suelta aqui",
       dropImage: "Pon tu imagen aqui",
+      dropVideo: "Pon tu video aqui",
       randomIdea: "Idea aleatoria",
       create: "Crear",
       simpleCta: "Crear mi LARP",
@@ -783,6 +794,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Imagen requerida",
       referenceImageRequiredDescription:
         "Agrega al menos una imagen de referencia para iniciar la generacion.",
+      referenceVideoRequiredTitle: "Video requerido",
+      referenceVideoRequiredDescription:
+        "Agrega al menos un video de referencia para iniciar la generacion.",
       templateModeUnavailableTitle: "Modo no disponible",
       templateModeUnavailableDescription:
         "Esta plantilla no admite este modo de generacion.",
@@ -819,6 +833,7 @@ export const extraResources = {
       optional: "Opcional",
       photoLabel: "Foto {{label}}",
       imageAlt: "Imagen {{index}}",
+      videoAlt: "Video {{index}}",
     },
     progress: {
       preparing: "Preparando…",
@@ -880,18 +895,18 @@ export const extraResources = {
       titlePrefix: "Preguntas",
       titleGradient: "frecuentes",
       items: {
-        larpkingQ: "Que es LarpKing?",
+        larpkingQ: "Que es LuxeFlexIA?",
         larpkingA:
-          "LarpKing es una herramienta de IA que genera contenidos LARP ultra realistas en segundos. Sube tu foto, describe tu idea y la IA hace el resto.",
+          "LuxeFlexIA es una herramienta de IA que genera contenidos LARP ultra realistas en segundos. Sube tu foto, describe tu idea y la IA hace el resto.",
         realisticQ: "Las imagenes generadas son realistas?",
         realisticA:
           "Si. Nuestra IA esta entrenada para producir resultados convincentes. Perfecto para LARPs entre amigos.",
         legalQ: "Es legal?",
         legalA:
-          "LarpKing esta pensado para diversion entre amigos. El acoso, la difamacion, el fraude o usos maliciosos estan estrictamente prohibidos.",
+          "LuxeFlexIA esta pensado para diversion entre amigos. El acoso, la difamacion, el fraude o usos maliciosos estan estrictamente prohibidos.",
         pricingQ: "Que es un LARP?",
         pricingA:
-          "En LarpKing, un LARP es una escena creible creada con IA: un viaje, una salida premium, una compra de lujo o una situacion inventada que parece real. Sirve para divertirse, contar una historia visual y sorprender a los demas.",
+          "En LuxeFlexIA, un LARP es una escena creible creada con IA: un viaje, una salida premium, una compra de lujo o una situacion inventada que parece real. Sirve para divertirse, contar una historia visual y sorprender a los demas.",
         storageQ: "Se almacenan mis imagenes?",
         storageA:
           "Tus imagenes se procesan de forma segura. Puedes eliminar tus creaciones cuando quieras.",
@@ -911,7 +926,7 @@ export const extraResources = {
       cgu: "Terminos",
       cgv: "Condiciones de venta",
       privacy: "Privacidad",
-      copyright: "© {{year}} LARPKING. Todos los derechos reservados.",
+      copyright: "© {{year}} LuxeFlexIA. Todos los derechos reservados.",
     },
     marquee: {
       titlePrefix: "Nada es",
@@ -933,7 +948,7 @@ export const extraResources = {
     },
     larpPro: {
       title: "How to LARP like a pro",
-      subtitle: "What you can do with LarpKing",
+      subtitle: "What you can do with LuxeFlexIA",
       item1: "Compras en boutiques de lujo",
       item2: "Conducir un coche de lujo / superdeportivo",
       item3: "Comer en restaurantes de alta gama",
@@ -1030,6 +1045,7 @@ export const extraResources = {
       titleSuffix: "die echt aussehen",
       dropHere: "Hier ablegen",
       dropImage: "Lege dein Bild hier ab",
+      dropVideo: "Lege dein Video hier ab",
       randomIdea: "Zufallsidee",
       create: "Erstellen",
       simpleCta: "Meinen LARP erstellen",
@@ -1083,6 +1099,9 @@ export const extraResources = {
       referenceImageRequiredTitle: "Bild erforderlich",
       referenceImageRequiredDescription:
         "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
+      referenceVideoRequiredTitle: "Video erforderlich",
+      referenceVideoRequiredDescription:
+        "Fuege mindestens ein Referenzvideo hinzu, um die Generierung zu starten.",
       templateModeUnavailableTitle: "Modus nicht verfugbar",
       templateModeUnavailableDescription:
         "Diese Vorlage unterstutzt diesen Generierungsmodus nicht.",
@@ -1119,6 +1138,7 @@ export const extraResources = {
       optional: "Optional",
       photoLabel: "Foto {{label}}",
       imageAlt: "Bild {{index}}",
+      videoAlt: "Video {{index}}",
     },
     progress: {
       preparing: "Vorbereitung…",
@@ -1180,18 +1200,18 @@ export const extraResources = {
       titlePrefix: "Haufige",
       titleGradient: "Fragen",
       items: {
-        larpkingQ: "Was ist LarpKing?",
+        larpkingQ: "Was ist LuxeFlexIA?",
         larpkingA:
-          "LarpKing ist ein KI-Tool, das in Sekunden ultra-realistische LARP-Inhalte erstellt. Lade dein Foto hoch, beschreibe deine Idee und die KI erledigt den Rest.",
+          "LuxeFlexIA ist ein KI-Tool, das in Sekunden ultra-realistische LARP-Inhalte erstellt. Lade dein Foto hoch, beschreibe deine Idee und die KI erledigt den Rest.",
         realisticQ: "Sind die Ergebnisse realistisch?",
         realisticA:
           "Ja. Unsere KI ist auf ueberzeugende Ergebnisse trainiert. Perfekt fuer einen glaubwuerdigen Flex, ohne das Sofa zu verlassen.",
         legalQ: "Ist das legal?",
         legalA:
-          "LarpKing ist fuer Unterhaltung gedacht. Belaestigung, Verleumdung, Betrug oder missbrauchende Nutzung sind strikt verboten.",
+          "LuxeFlexIA ist fuer Unterhaltung gedacht. Belaestigung, Verleumdung, Betrug oder missbrauchende Nutzung sind strikt verboten.",
         pricingQ: "Was ist ein LARP?",
         pricingA:
-          "Auf LarpKing ist ein LARP eine glaubwuerdige KI-Szene: ein Reisebild, ein Premium-Ausflug, ein Luxuskauf oder eine erfundene Situation, die echt wirkt. Es geht um Spass, visuelles Storytelling und spielerischen Flex.",
+          "Auf LuxeFlexIA ist ein LARP eine glaubwuerdige KI-Szene: ein Reisebild, ein Premium-Ausflug, ein Luxuskauf oder eine erfundene Situation, die echt wirkt. Es geht um Spass, visuelles Storytelling und spielerischen Flex.",
         storageQ: "Werden meine Bilder gespeichert?",
         storageA:
           "Deine Bilder werden sicher verarbeitet. Du kannst deine Inhalte jederzeit loeschen.",
@@ -1211,7 +1231,7 @@ export const extraResources = {
       cgu: "Nutzungsbedingungen",
       cgv: "Verkaufsbedingungen",
       privacy: "Datenschutz",
-      copyright: "© {{year}} LARPKING. Alle Rechte vorbehalten.",
+      copyright: "© {{year}} LuxeFlexIA. Alle Rechte vorbehalten.",
     },
     marquee: {
       titlePrefix: "Nichts ist noch",
@@ -1233,7 +1253,7 @@ export const extraResources = {
     },
     larpPro: {
       title: "How to LARP like a pro",
-      subtitle: "What you can do with LarpKing",
+      subtitle: "What you can do with LuxeFlexIA",
       item1: "Einkaufen in Luxusboutiquen",
       item2: "Ein Luxus- / Supersportwagen fahren",
       item3: "In High-End-Restaurants essen",

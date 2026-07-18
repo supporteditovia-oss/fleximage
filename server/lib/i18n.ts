@@ -22,6 +22,7 @@ export type BackendMessageKey =
   | "larps.taskNotFound"
   | "larps.invalidImageIndex"
   | "larps.notFound"
+  | "larps.paymentRequired"
   | "larps.invalidUrls"
   | "larps.imageNotFound"
   | "larps.fetchImageFailed"
@@ -58,6 +59,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.taskNotFound": "Tache introuvable",
     "larps.invalidImageIndex": "Index d'image invalide",
     "larps.notFound": "LARP introuvable",
+    "larps.paymentRequired": "Paiement requis pour accéder à ce contenu",
     "larps.invalidUrls": "URLs invalides",
     "larps.imageNotFound": "Image introuvable",
     "larps.fetchImageFailed": "Impossible de recuperer l'image",
@@ -98,6 +100,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.taskNotFound": "Task not found",
     "larps.invalidImageIndex": "Invalid image index",
     "larps.notFound": "LARP not found",
+    "larps.paymentRequired": "Payment required to access this content",
     "larps.invalidUrls": "Invalid URLs",
     "larps.imageNotFound": "Image not found",
     "larps.fetchImageFailed": "Unable to fetch image",
@@ -135,6 +138,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.taskNotFound": "Tarea no encontrada",
     "larps.invalidImageIndex": "Indice de imagen invalido",
     "larps.notFound": "LARP no encontrado",
+    "larps.paymentRequired": "Pago requerido para acceder a este contenido",
     "larps.invalidUrls": "URLs invalidas",
     "larps.imageNotFound": "Imagen no encontrada",
     "larps.fetchImageFailed": "No se pudo recuperar la imagen",
@@ -176,6 +180,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.taskNotFound": "Aufgabe nicht gefunden",
     "larps.invalidImageIndex": "Ungueltiger Bildindex",
     "larps.notFound": "LARP nicht gefunden",
+    "larps.paymentRequired": "Zahlung erforderlich, um auf diesen Inhalt zuzugreifen",
     "larps.invalidUrls": "Ungueltige URLs",
     "larps.imageNotFound": "Bild nicht gefunden",
     "larps.fetchImageFailed": "Bild konnte nicht geladen werden",

@@ -1,0 +1,72 @@
+/* Shared dark premium chrome for /resultat only */
+html.luxeflexia-postpay,
+html.luxeflexia-postpay body {
+  background: linear-gradient(180deg, #0a0a0a 0%, #141414 55%, #1a1a1a 100%) !important;
+  background-attachment: fixed !important;
+  color: #f5f0e6;
+}
+
+html.luxeflexia-postpay body {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(201, 162, 39, 0.12), transparent 58%),
+    linear-gradient(180deg, #0a0a0a 0%, #141414 55%, #1a1a1a 100%) !important;
+}
+
+html.luxeflexia-postpay .floating-header-credits {
+  border-color: rgba(201, 162, 39, 0.35) !important;
+  background: rgba(20, 20, 20, 0.88) !important;
+  color: #f5f0e6 !important;
+}
+
+html.luxeflexia-postpay .bottom-dock .dock-nav {
+  background: rgba(18, 18, 18, 0.92) !important;
+  border-color: rgba(201, 162, 39, 0.28) !important;
+}
+
+.lx-postpay {
+  --lx-gold: #c9a227;
+  --lx-gold-soft: #e8c547;
+  --lx-display: "Playfair Display", Georgia, serif;
+  --lx-ink: #f5f0e6;
+  --lx-muted: rgba(245, 240, 230, 0.62);
+}
+
+.lx-postpay__frame {
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.45);
+  background: #0f0f0f;
+}
+
+.lx-postpay__btn-gold {
+  background: linear-gradient(135deg, #e8c547 0%, #c9a227 48%, #a8841a 100%);
+  color: #12100e;
+  border: none;
+  font-weight: 600;
+  transition: filter 0.2s ease, transform 0.15s ease;
+}
+
+.lx-postpay__btn-gold:hover {
+  filter: brightness(1.06);
+}
+
+.lx-postpay__btn-gold:active {
+  transform: scale(0.98);
+}
+
+.lx-postpay__btn-outline {
+  background: transparent;
+  color: #e8c547;
+  border: 1px solid rgba(201, 162, 39, 0.65);
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.lx-postpay__btn-outline:hover {
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.lx-postpay__btn-outline:active {
+  transform: scale(0.98);
+}
