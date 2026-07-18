@@ -1,22 +1,22 @@
 /** Canonical public site origin (no trailing slash). */
-export const DEFAULT_SITE_ORIGIN = "https://larpking.com";
+export const DEFAULT_SITE_ORIGIN = "https://www.luxeflexia.com";
 
-export const SITE_NAME = "LarpKing";
-export const SITE_TITLE = "LarpKing - Cree des LARPs ultra realistes avec l'IA";
+export const SITE_NAME = "LuxeFlexIA";
+export const SITE_TITLE = "LuxeFlexIA - Cree des LARPs ultra realistes avec l'IA";
 export const SITE_DESCRIPTION =
   "Genere des contenus LARP ultra realistes en quelques secondes avec l'IA. Ajoute une photo, decris une scene, et cree des images lifestyle credibles pour t'amuser.";
 export const SITE_OG_IMAGE = "/assets/og-image.png";
 
 export const FAQ_STRUCTURED_DATA = [
   {
-    question: "C'est quoi LarpKing ?",
+    question: "C'est quoi LuxeFlexIA ?",
     answer:
-      "LarpKing est un outil IA pour generer des contenus LARP hyper realistes en quelques secondes. Ajoute ta photo, decris ton idee, et l'IA fait le reste.",
+      "LuxeFlexIA est un outil IA pour generer des contenus LARP hyper realistes en quelques secondes. Ajoute ta photo, decris ton idee, et l'IA fait le reste.",
   },
   {
     question: "Les images generees sont-elles realistes ?",
     answer:
-      "Oui. LarpKing est concu pour produire des scenes visuelles credibles a partir d'une image de reference et d'une idee de mise en scene.",
+      "Oui. LuxeFlexIA est concu pour produire des scenes visuelles credibles a partir d'une image de reference et d'une idee de mise en scene.",
   },
   {
     question: "Quel type de LARPs peut-on creer ?",
@@ -24,9 +24,9 @@ export const FAQ_STRUCTURED_DATA = [
       "Tu peux creer des scenes de voyage, restaurant haut de gamme, lifestyle premium, achat luxe, supercar, travail ou storytelling social.",
   },
   {
-    question: "LarpKing est-il fait pour un usage responsable ?",
+    question: "LuxeFlexIA est-il fait pour un usage responsable ?",
     answer:
-      "Oui. LarpKing est destine au divertissement entre proches. Le harcelement, la diffamation, la fraude et les usages malveillants sont interdits.",
+      "Oui. LuxeFlexIA est destine au divertissement entre proches. Le harcelement, la diffamation, la fraude et les usages malveillants sont interdits.",
   },
 ] as const;
 
@@ -40,7 +40,7 @@ export const INDEXABLE_SITE_PAGES = [
     images: [
       {
         loc: SITE_OG_IMAGE,
-        title: "LarpKing - generateur de contenus LARP realistes",
+        title: "LuxeFlexIA - generateur de contenus LARP realistes",
       },
     ],
   },
