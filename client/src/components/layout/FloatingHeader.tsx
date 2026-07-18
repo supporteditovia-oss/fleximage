@@ -163,14 +163,14 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative flex w-full items-center justify-between gap-2 sm:gap-3"
+        className="relative flex min-h-10 w-full items-center justify-end gap-2 sm:gap-3 md:min-h-11"
       >
-        {/* Logo — left, truncates instead of colliding with credits */}
+        {/* Logo — centered */}
         <Link
           href={logoHref}
-          className="pointer-events-auto flex min-w-0 flex-1 cursor-pointer items-center hover:opacity-80 transition-opacity"
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center hover:opacity-80 transition-opacity"
         >
-          <span className="lx-display inline-flex max-w-full min-w-0 items-center gap-1.5 sm:gap-2">
+          <span className="lx-display inline-flex max-w-[min(70vw,20rem)] items-center gap-1.5 sm:gap-2">
             <Gem
               className="h-5 w-5 shrink-0 text-[var(--lx-gold)] md:h-6 md:w-6"
               strokeWidth={1.75}
@@ -207,7 +207,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`floating-header-credits pointer-events-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
+                className={`floating-header-credits pointer-events-auto relative z-20 flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}

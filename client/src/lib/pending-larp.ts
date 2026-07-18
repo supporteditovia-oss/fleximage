@@ -28,10 +28,46 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+/** Shrink photos before IndexedDB — large HEIC/JPEG from phones often fail on Safari. */
+async function compressImageForIdb(file: File, maxEdge = 1280): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(maxEdge / bitmap.width, maxEdge / bitmap.height, 1);
+    if (scale >= 1 && file.size < 1_200_000) {
+      bitmap.close();
+      return file;
+    }
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.82),
+    );
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg") || "photo.jpg", {
+      type: "image/jpeg",
+    });
+  } catch {
+    return file;
+  }
+}
+
 export async function savePendingLarp(data: PendingLarp): Promise<void> {
   try {
+    const compressed = await Promise.all(
+      data.images.map((f) => compressImageForIdb(f)),
+    );
     const imageBuffers = await Promise.all(
-      data.images.map(async (f) => ({
+      compressed.map(async (f) => ({
         name: f.name,
         type: f.type,
         buffer: await f.arrayBuffer(),

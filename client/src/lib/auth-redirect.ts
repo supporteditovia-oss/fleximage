@@ -11,7 +11,8 @@ import { AUTH_CONFIG } from "@/config/auth";
  * Required Redirect URLs (add in Supabase Dashboard):
  *   http://localhost:5000/**
  *   http://127.0.0.1:5000/**
- *   https://larpking.com/**
+ *   https://www.luxeflexia.com/**
+ *   https://luxeflexia.com/**
  *   (remove obsolete https://*.replit.dev/** if present)
  */
 export function getAuthRedirectTo(
@@ -20,7 +21,12 @@ export function getAuthRedirectTo(
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}${normalizedPath}`;
+    let origin = window.location.origin;
+    // Keep OAuth return + localStorage on the same host as production traffic
+    if (origin === "https://luxeflexia.com") {
+      origin = "https://www.luxeflexia.com";
+    }
+    return `${origin}${normalizedPath}`;
   }
 
   const fromEnv = (

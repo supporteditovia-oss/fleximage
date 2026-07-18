@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" fill="none" role="img" aria-label="LuxeFlexIA">
+  <rect width="960" height="240" fill="#f7f4ed"/>
+  <g transform="translate(56, 68) scale(4.2)">
+    <path d="M6 3h12l4 6-10 13L2 9Z" stroke="#c9a227" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11 3 8 9l4 13 4-13-3-6" stroke="#c9a227" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M2 9h20" stroke="#c9a227" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="200" y="148" font-family="Georgia, 'Times New Roman', serif" font-size="92" font-weight="600" letter-spacing="-1">
+    <tspan fill="#1a1612">Luxe</tspan><tspan fill="#c9a227">Flex</tspan><tspan fill="#1a1612">IA</tspan>
+  </text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="160" viewBox="0 0 720 160" fill="none" role="img" aria-label="LuxeFlexIA">
+  <!-- Exact landing logo: Lucide Gem + Playfair-style wordmark -->
+  <g transform="translate(28, 40) scale(3.3)">
+    <path
+      d="M6 3h12l4 6-10 13L2 9Z"
+      stroke="#c9a227"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M11 3 8 9l4 13 4-13-3-6"
+      stroke="#c9a227"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M2 9h20"
+      stroke="#c9a227"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+  <text
+    x="140"
+    y="102"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="72"
+    font-weight="600"
+    letter-spacing="-0.5"
+  >
+    <tspan fill="#1a1612">Luxe</tspan><tspan fill="#c9a227">Flex</tspan><tspan fill="#1a1612">IA</tspan>
+  </text>
+</svg>

@@ -43,6 +43,12 @@ import {
   clearPaywalledResult,
 } from "@/lib/paywalled-result";
 import { savePaywallImage, getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
+import {
+  markOnboardingResume,
+  getOnboardingResume,
+  clearOnboardingResume,
+  dataUrlToFile,
+} from "@/lib/onboarding-resume";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -391,7 +397,7 @@ export default function Generate() {
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
-  // ── Restore pending LARP from IndexedDB ─────────────────────
+  // ── Restore pending LARP from IndexedDB (or localStorage resume) ─
   useEffect(() => {
     let cancelled = false;
     const timeout = setTimeout(() => {
@@ -400,12 +406,36 @@ export default function Generate() {
         setPendingLoading(false);
       }
     }, 5000);
+
+    const resumeFromLocalStorage = () => {
+      const resume = getOnboardingResume();
+      const paywallPreview = getPaywallImage();
+      if (!resume || !paywallPreview) {
+        console.log("[Generate] No pending LARP / onboarding resume found");
+        setPendingLoading(false);
+        return;
+      }
+
+      console.log("[Generate] Resuming onboarding from localStorage");
+      setPendingLoading(true);
+      setGenerationMode(resume.generationMode);
+      if (resume.prompt) setPrompt(resume.prompt);
+
+      const file = dataUrlToFile(paywallPreview);
+      if (file) {
+        setImages([{ url: paywallPreview, file }]);
+      }
+
+      if (!isReturningFromCheckout) {
+        setAutoGenerateReady(true);
+      }
+    };
+
     getPendingLarp()
       .then((pending) => {
         if (cancelled) return;
         if (!pending) {
-          console.log("[Generate] No pending LARP found");
-          setPendingLoading(false);
+          resumeFromLocalStorage();
           return;
         }
         console.log("[Generate] Pending LARP found:", {
@@ -438,8 +468,19 @@ export default function Generate() {
             file,
           }));
           setImages(restored);
-          savePaywallImage(pending.images[0]);
+          void savePaywallImage(pending.images[0]);
+        } else {
+          // IDB draft without images — still try localStorage preview
+          const paywallPreview = getPaywallImage();
+          const file = paywallPreview ? dataUrlToFile(paywallPreview) : null;
+          if (file && paywallPreview) {
+            setImages([{ url: paywallPreview, file }]);
+          }
         }
+        markOnboardingResume({
+          prompt: pending.prompt || "",
+          generationMode: pending.generationMode === "video" ? "video" : "image",
+        });
         // When returning from checkout, don't trigger auto-generate immediately.
         // The checkout handler will trigger it after verify-session completes.
         if (!isReturningFromCheckout) {
@@ -455,7 +496,7 @@ export default function Generate() {
       })
       .catch((err) => {
         console.error("[Generate] getPendingLarp error:", err);
-        if (!cancelled) setPendingLoading(false);
+        if (!cancelled) resumeFromLocalStorage();
       });
     return () => {
       cancelled = true;
@@ -594,6 +635,7 @@ export default function Generate() {
     setShowFakeOnboardingLoader(false);
     setFakeLoaderImageUrl(null);
     markFakePaywallReached(profile?.id, "image");
+    clearOnboardingResume();
     navigate("/image-prete?paywall=1");
   }, [navigate, profile?.id]);
 
@@ -601,7 +643,9 @@ export default function Generate() {
     setPendingLoading(false);
     setFakePaywallReason("onboarding");
     setShowLuxePaywall(false);
-    setFakeLoaderImageUrl(images[0]?.url || getPaywallImage() || null);
+    setFakeLoaderImageUrl(
+      images[0]?.url || getPaywallImage() || null,
+    );
     setShowFakeOnboardingLoader(true);
   }, [images]);
 
@@ -730,15 +774,10 @@ export default function Generate() {
       !isReturningFromCheckout;
 
     if (shouldUseOnboardingPaywall) {
-      const saved = await saveCurrentDraftForCheckout();
-      if (!saved) {
-        toast({
-          variant: "destructive",
-          title: t("common.messages.error"),
-          description: t("generate.serverRetry"),
-        });
-        return;
-      }
+      markOnboardingResume({
+        prompt: serverPrompt,
+        generationMode,
+      });
 
       if (filesForGeneration[0]) {
         try {
@@ -748,7 +787,23 @@ export default function Generate() {
         } catch {
           /* preview optional */
         }
+      } else if (!getPaywallImage()) {
+        toast({
+          variant: "destructive",
+          title:
+            generationMode === "video"
+              ? t("generate.referenceVideoRequiredTitle")
+              : t("generate.referenceImageRequiredTitle"),
+          description:
+            generationMode === "video"
+              ? t("generate.referenceVideoRequiredDescription")
+              : t("generate.referenceImageRequiredDescription"),
+        });
+        return;
       }
+
+      // Best-effort draft for Stripe return — never block the fake loader on IDB failure (common on mobile Safari).
+      await saveCurrentDraftForCheckout();
 
       startOnboardingPaywallFlow();
       return;
@@ -928,6 +983,7 @@ export default function Generate() {
       clearPendingLarp();
       clearPaywalledResult();
       clearPaywallImage();
+      clearOnboardingResume();
       handleReset();
       window.requestAnimationFrame(() => {
         topRef.current?.scrollIntoView({ block: "start" });
@@ -956,7 +1012,10 @@ export default function Generate() {
       JSON.stringify(prompt.slice(0, 50)),
     );
     const canAutoGenerate =
-      Boolean(pendingTemplateId || selectedTemplate) || prompt.trim().length > 0;
+      Boolean(pendingTemplateId || selectedTemplate) ||
+      prompt.trim().length > 0 ||
+      images.some((img) => img !== null) ||
+      Boolean(getPaywallImage());
     if (!canAutoGenerate) {
       console.log("[Generate] Nothing to auto-generate, skipping");
       setPendingLoading(false);
@@ -970,7 +1029,16 @@ export default function Generate() {
       !isReturningFromCheckout;
 
     // Non-subscribers (incl. 0 credits): handleGenerate runs fake loader → paywall
+    // If form state is still empty but we have a localStorage preview, start directly.
     if (shouldUseOnboardingPaywall) {
+      const hasFormImage = images.some((img) => img !== null);
+      if (!hasFormImage && getPaywallImage()) {
+        console.log("[Generate] Starting FAKE onboarding from localStorage preview...");
+        setFakeLoaderImageUrl(getPaywallImage());
+        setShowFakeOnboardingLoader(true);
+        setPendingLoading(false);
+        return;
+      }
       console.log("[Generate] Starting FAKE onboarding generation flow...");
       void handleGenerate();
       return;

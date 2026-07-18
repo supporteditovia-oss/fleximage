@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24" fill="none" role="img" aria-label="LuxeFlexIA diamond">
+  <!-- Exact Lucide Gem icon from the landing page -->
+  <path
+    d="M6 3h12l4 6-10 13L2 9Z"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M11 3 8 9l4 13 4-13-3-6"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M2 9h20"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

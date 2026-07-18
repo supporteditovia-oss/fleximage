@@ -5,9 +5,12 @@ import {
   getMobileCompatibleLandingImages,
   LANDING_MARQUEE_IMAGES,
 } from "@/lib/landing-marquee-images";
+import { getOnboardingResume } from "@/lib/onboarding-resume";
+import { getPaywallImage } from "@/lib/paywall-image";
 import "./welcome.css";
 
 const WELCOME_DURATION_MS = 2500;
+const WELCOME_ONBOARDING_DURATION_MS = 900;
 
 const bgImages = getMobileCompatibleLandingImages(LANDING_MARQUEE_IMAGES).slice(
   0,
@@ -18,9 +21,15 @@ export default function WelcomeLoader() {
   const [, navigate] = useLocation();
 
   useEffect(() => {
+    const hasOnboardingDraft =
+      Boolean(getOnboardingResume()) && Boolean(getPaywallImage());
+    const duration = hasOnboardingDraft
+      ? WELCOME_ONBOARDING_DURATION_MS
+      : WELCOME_DURATION_MS;
+
     const timer = window.setTimeout(() => {
       navigate("/generate", { replace: true });
-    }, WELCOME_DURATION_MS);
+    }, duration);
 
     return () => window.clearTimeout(timer);
   }, [navigate]);

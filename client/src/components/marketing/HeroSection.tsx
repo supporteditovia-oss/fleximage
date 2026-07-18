@@ -16,6 +16,8 @@ import {
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
+import { savePaywallImage } from "@/lib/paywall-image";
+import { markOnboardingResume } from "@/lib/onboarding-resume";
 import { useAuth } from "@/hooks/use-auth";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
@@ -201,9 +203,20 @@ export default function HeroSection() {
         });
       }
     } else {
+      const guestPrompt = prompt.trim() || t("hero.surprisePrompt");
+      // localStorage survives Google OAuth on mobile Safari better than huge IDB blobs
+      markOnboardingResume({
+        prompt: guestPrompt,
+        generationMode: "image",
+      });
+      try {
+        await savePaywallImage(files[0].file);
+      } catch (error) {
+        console.error("Ignored paywall image save error:", error);
+      }
       try {
         await savePendingLarp({
-          prompt,
+          prompt: guestPrompt,
           images: files.map((f) => f.file),
           generationMode: "image",
           timestamp: Date.now(),
