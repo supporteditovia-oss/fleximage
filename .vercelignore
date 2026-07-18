@@ -4,8 +4,6 @@ server
 script
 dist/index.js
 .env
-.env.*
-!.env.example
 .cursor
 attached_assets
 **/*.test.ts
