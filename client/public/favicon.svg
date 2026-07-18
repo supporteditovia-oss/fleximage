@@ -1,26 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LuxeFlexIA">
-  <!-- Diamond / gem mark matching the in-app Lucide Gem icon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="LuxeFlexIA">
+  <!-- Exact Lucide "Gem" icon used next to LuxeFlexIA on the landing page -->
   <path
-    fill="#c9a227"
-    d="M12.5 24.5 24 8h16l11.5 16.5L32 56 12.5 24.5Z"
-  />
-  <path
-    fill="#e8c547"
-    d="M12.5 24.5h39L32 56 12.5 24.5Z"
-    opacity="0.35"
-  />
-  <path
-    fill="none"
-    stroke="#1a1408"
-    stroke-width="2.5"
+    d="M6 3h12l4 6-10 13L2 9Z"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
     stroke-linejoin="round"
-    d="M12.5 24.5 24 8h16l11.5 16.5L32 56 12.5 24.5Z"
   />
   <path
-    fill="none"
-    stroke="#1a1408"
-    stroke-width="2.5"
+    d="M11 3 8 9l4 13 4-13-3-6"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
     stroke-linejoin="round"
-    d="M12.5 24.5h39M24 8l8 16.5L40 8M32 24.5V56"
+  />
+  <path
+    d="M2 9h20"
+    stroke="#c9a227"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
   />
 </svg>
