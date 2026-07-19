@@ -360,7 +360,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
         ],
       },
       privacy: {
-        title: "Politique de Confidentialite",
+        title: "Politique de Confidentialite — LuxeFlexIA",
         sections: [
           {
             id: "1",

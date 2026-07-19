@@ -44,15 +44,34 @@ export const INDEXABLE_SITE_PAGES = [
       },
     ],
   },
+  {
+    path: "/cgu",
+    title: "Conditions Generales d'Utilisation — LuxeFlexIA",
+    description:
+      "Conditions Generales d'Utilisation du service LuxeFlexIA (luxeflexia.com).",
+    changefreq: "yearly" as const,
+    priority: "0.3",
+    images: [],
+  },
+  {
+    path: "/confidentialite",
+    title: "Politique de Confidentialite — LuxeFlexIA",
+    description:
+      "Politique de confidentialite de LuxeFlexIA : donnees collectees, finalites et droits.",
+    changefreq: "yearly" as const,
+    priority: "0.3",
+    images: [],
+  },
 ] as const;
 
-/** Legal pages: noindex in HTML/headers; omitted from sitemap.xml. */
+/** Legal pages that stay noindex (not used for Google OAuth branding). */
 export const LEGAL_NOINDEX_PATHS = [
   "/mentions-legales",
-  "/cgu",
   "/cgv",
-  "/confidentialite",
 ] as const;
+
+/** Legal pages Google OAuth branding must be able to crawl. */
+export const LEGAL_PUBLIC_PATHS = ["/cgu", "/confidentialite"] as const;
 
 export type LegalNoindexPath = (typeof LEGAL_NOINDEX_PATHS)[number];
 

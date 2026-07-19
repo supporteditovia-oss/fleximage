@@ -18,9 +18,14 @@ export default function LegalPageLayout({ pageKey }: LegalPageLayoutProps) {
   const doc = content.docs[pageKey];
 
   useEffect(() => {
-    setRobotsMeta("noindex, nofollow");
+    // Privacy + CGU must stay crawlable for Google OAuth brand verification.
+    if (pageKey === "privacy" || pageKey === "cgu") {
+      setRobotsMeta("index, follow");
+    } else {
+      setRobotsMeta("noindex, nofollow");
+    }
     return () => setRobotsMeta(null);
-  }, []);
+  }, [pageKey]);
 
   return (
     <div className="min-h-screen bg-background py-20 px-4">
