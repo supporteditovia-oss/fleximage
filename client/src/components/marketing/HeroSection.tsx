@@ -19,6 +19,7 @@ import { savePendingLarp } from "@/lib/pending-larp";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
 import { savePaywallPrompt } from "@/lib/paywall-prompt";
+import { clearPaywallExpiry } from "@/lib/paywall-expiry";
 import { useAuth } from "@/hooks/use-auth";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
@@ -211,6 +212,7 @@ export default function HeroSection() {
         generationMode: "image",
       });
       savePaywallPrompt(guestPrompt);
+      clearPaywallExpiry();
       try {
         await savePaywallImage(files[0].file);
       } catch (error) {

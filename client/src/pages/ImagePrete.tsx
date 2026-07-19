@@ -6,9 +6,11 @@ import { getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
 import { getPaywallPrompt, clearPaywallPrompt } from "@/lib/paywall-prompt";
 import {
   clearPaywallExpiry,
+  ensurePaywallExpiry,
   formatPaywallCountdown,
+  getPaywallExpiresAt,
   getPaywallMsRemaining,
-  startPaywallExpiry,
+  isPaywallExpired,
 } from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
@@ -50,6 +52,8 @@ export default function ImagePrete() {
   useEffect(() => {
     const image = getPaywallImage();
     const prompt = getPaywallPrompt();
+    const existingExpiry = getPaywallExpiresAt();
+    const now = Date.now();
 
     if (!image) {
       setImageUrl(null);
@@ -61,12 +65,22 @@ export default function ImagePrete() {
       return;
     }
 
-    // Fresh 5:00 every visit — never resume a previous countdown.
-    const deadline = startPaywallExpiry();
+    if (isPaywallExpired(existingExpiry, now)) {
+      purgeExpiredPreview();
+      setImageUrl(null);
+      setUserPrompt(null);
+      setExpiresAt(null);
+      setMsRemaining(0);
+      setExpired(true);
+      return;
+    }
+
+    // Persist across refresh: resume the same deadline if still valid.
+    const deadline = ensurePaywallExpiry(now);
     setImageUrl(image);
     setUserPrompt(prompt);
     setExpiresAt(deadline);
-    setMsRemaining(getPaywallMsRemaining(deadline));
+    setMsRemaining(getPaywallMsRemaining(deadline, now));
     setExpired(false);
   }, []);
 

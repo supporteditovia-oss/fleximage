@@ -781,6 +781,7 @@ export default function Generate() {
           await savePaywallImage(
             await toGenerationImageFile(filesForGeneration[0].file),
           );
+          clearPaywallExpiry();
         } catch {
           /* preview optional */
         }
