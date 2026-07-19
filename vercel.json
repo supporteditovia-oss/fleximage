@@ -6,7 +6,7 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
-      "source": "/((?!assets/|cgu(?:/.*)?$|confidentialite(?:/.*)?$).*)",
+      "source": "/((?!api/|assets/|cgu(?:/.*)?$|confidentialite(?:/.*)?$).*)",
       "destination": "/index.html"
     }
   ]
