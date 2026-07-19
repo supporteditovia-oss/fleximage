@@ -7,7 +7,7 @@
     "dev": "bun run kill-port && NODE_ENV=development bun run server/index.ts",
     "kill-port": "bun run script/kill-port.ts",
     "build": "bun run script/build.ts",
-    "vercel-build": "node script/generate-seo-static.mjs && npx vite build",
+    "vercel-build": "npx vite build",
     "seo:static": "node script/generate-seo-static.mjs",
     "start": "NODE_ENV=production bun run dist/index.js",
     "check": "tsc",

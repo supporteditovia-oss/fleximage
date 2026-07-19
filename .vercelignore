@@ -2,6 +2,7 @@
 # The Express server (Railway / elsewhere) is not deployed here.
 server
 script
+!script/generate-seo-static.mjs
 dist/index.js
 .env
 .cursor
