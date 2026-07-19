@@ -1,13 +1,27 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
-import { Gem, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Clock3, Gem, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getPaywallImage } from "@/lib/paywall-image";
-import { getPaywallPrompt } from "@/lib/paywall-prompt";
+import { getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
+import { getPaywallPrompt, clearPaywallPrompt } from "@/lib/paywall-prompt";
+import {
+  clearPaywallExpiry,
+  ensurePaywallExpiry,
+  formatPaywallCountdown,
+  getPaywallExpiresAt,
+  getPaywallMsRemaining,
+  isPaywallExpired,
+} from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
 import { useAuth } from "@/hooks/use-auth";
+
+function purgeExpiredPreview() {
+  clearPaywallImage();
+  clearPaywallPrompt();
+  clearPaywallExpiry();
+}
 
 export default function ImagePrete() {
   const [location] = useLocation();
@@ -15,6 +29,9 @@ export default function ImagePrete() {
   const { t, i18n } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userPrompt, setUserPrompt] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [msRemaining, setMsRemaining] = useState(0);
+  const [expired, setExpired] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -29,17 +46,69 @@ export default function ImagePrete() {
     }).format(credits);
   }, [credits, i18n.resolvedLanguage]);
 
+  const countdownLabel = formatPaywallCountdown(msRemaining);
+  const isUrgent = !expired && msRemaining > 0 && msRemaining <= 60_000;
+
   useEffect(() => {
-    setImageUrl(getPaywallImage());
-    setUserPrompt(getPaywallPrompt());
+    const image = getPaywallImage();
+    const prompt = getPaywallPrompt();
+    const existingExpiry = getPaywallExpiresAt();
+    const now = Date.now();
+
+    if (!image) {
+      setImageUrl(null);
+      setUserPrompt(null);
+      setExpiresAt(null);
+      setMsRemaining(0);
+      setExpired(true);
+      clearPaywallExpiry();
+      return;
+    }
+
+    if (isPaywallExpired(existingExpiry, now)) {
+      purgeExpiredPreview();
+      setImageUrl(null);
+      setUserPrompt(null);
+      setExpiresAt(null);
+      setMsRemaining(0);
+      setExpired(true);
+      return;
+    }
+
+    const deadline = ensurePaywallExpiry(now);
+    setImageUrl(image);
+    setUserPrompt(prompt);
+    setExpiresAt(deadline);
+    setMsRemaining(getPaywallMsRemaining(deadline, now));
+    setExpired(false);
   }, []);
 
   useEffect(() => {
+    if (!expiresAt || expired) return;
+
+    const tick = () => {
+      const remaining = getPaywallMsRemaining(expiresAt);
+      setMsRemaining(remaining);
+      if (remaining <= 0) {
+        purgeExpiredPreview();
+        setImageUrl(null);
+        setUserPrompt(null);
+        setExpired(true);
+        setPaywallOpen(false);
+      }
+    };
+
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [expiresAt, expired]);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.split("?")[1] || "");
-    if (params.get("paywall") === "1") {
+    if (params.get("paywall") === "1" && !expired && imageUrl) {
       setPaywallOpen(true);
     }
-  }, [location]);
+  }, [location, expired, imageUrl]);
 
   useEffect(() => {
     if (profile?.id) {
@@ -68,24 +137,26 @@ export default function ImagePrete() {
   return (
     <>
       <div className="pointer-events-none fixed inset-x-0 top-0 z-[120] flex items-center justify-end gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
-        <button
-          type="button"
-          onClick={() => setPaywallOpen(true)}
-          className={`pointer-events-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
-            credits <= 0 ? "credits-zero-attention" : ""
-          }`}
-          aria-label={t("billing.openCreditsMenu")}
-          title={String(credits)}
-        >
-          <Gem
-            className="h-4 w-4 shrink-0 text-[var(--lx-gold)] sm:h-5 sm:w-5"
-            strokeWidth={1.75}
-            aria-hidden
-          />
-          <span className="min-w-0 truncate tabular-nums" aria-live="polite">
-            {creditsLabel}
-          </span>
-        </button>
+        {!expired ? (
+          <button
+            type="button"
+            onClick={() => setPaywallOpen(true)}
+            className={`pointer-events-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
+              credits <= 0 ? "credits-zero-attention" : ""
+            }`}
+            aria-label={t("billing.openCreditsMenu")}
+            title={String(credits)}
+          >
+            <Gem
+              className="h-4 w-4 shrink-0 text-[var(--lx-gold)] sm:h-5 sm:w-5"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span className="min-w-0 truncate tabular-nums" aria-live="polite">
+              {creditsLabel}
+            </span>
+          </button>
+        ) : null}
 
         <button
           type="button"
@@ -100,39 +171,96 @@ export default function ImagePrete() {
       </div>
 
       <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] sm:min-h-[calc(100svh-6rem)] sm:justify-center sm:pb-8 sm:pt-14">
-        <header className="w-full text-center">
-          <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-            Ton image est prête
-          </h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
-            {userPrompt
-              ? "On a préparé ton rendu à partir de ta demande. Débloque-le en HD pour le voir clairement."
-              : "Débloque ton rendu en HD pour la voir clairement et la télécharger."}
-          </p>
-        </header>
+        {expired ? (
+          <>
+            <header className="w-full text-center">
+              <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
+                Aperçu supprimé
+              </h1>
+              <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
+                Le délai de 5 minutes est écoulé. Ton aperçu a été effacé —
+                relance une création pour en générer un nouveau.
+              </p>
+            </header>
 
-        <BlurredLockedImage
-          imageUrl={imageUrl}
-          prompt={userPrompt}
-          size="page"
-          className="w-full max-w-[280px]"
-        />
+            <div className="flex aspect-[9/16] w-full max-w-[280px] items-center justify-center rounded-2xl border border-dashed border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/80 px-6 text-center">
+              <p className="text-sm font-medium text-[var(--lx-muted)]">
+                Image indisponible
+              </p>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => setPaywallOpen(true)}
-          className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
-        >
-          Débloquer mon image
-        </button>
+            <Link
+              href="/generate"
+              className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
+            >
+              Créer une nouvelle image
+            </Link>
+          </>
+        ) : (
+          <>
+            <header className="w-full text-center">
+              <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
+                Ton image est prête
+              </h1>
+              <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
+                {userPrompt
+                  ? "On a préparé ton rendu à partir de ta demande. Débloque-le en HD avant qu’il disparaisse."
+                  : "Débloque ton rendu en HD avant la fin du délai — sinon l’aperçu est effacé."}
+              </p>
+            </header>
 
-        <LuxePaywallModal
-          open={paywallOpen}
-          onOpenChange={setPaywallOpen}
-          imageUrl={imageUrl}
-          prompt={userPrompt}
-          defaultPlan="essential"
-        />
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold tabular-nums shadow-sm ${
+                isUrgent
+                  ? "animate-pulse border-red-500/45 bg-red-50 text-red-700"
+                  : "border-[var(--lx-gold)]/40 bg-[var(--lx-surface-2)] text-[var(--lx-ink)]"
+              }`}
+              role="timer"
+              aria-live="polite"
+              aria-label={`Temps restant ${countdownLabel}`}
+            >
+              <Clock3
+                className={`h-4 w-4 shrink-0 ${
+                  isUrgent ? "text-red-600" : "text-[var(--lx-gold)]"
+                }`}
+                strokeWidth={2}
+                aria-hidden
+              />
+              <span>
+                Suppression dans{" "}
+                <span className="tracking-wide">{countdownLabel}</span>
+              </span>
+            </div>
+
+            <BlurredLockedImage
+              imageUrl={imageUrl}
+              prompt={userPrompt}
+              size="page"
+              className="w-full max-w-[280px]"
+            />
+
+            <button
+              type="button"
+              onClick={() => setPaywallOpen(true)}
+              className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
+            >
+              Débloquer mon image
+            </button>
+
+            <p className="max-w-xs text-center text-xs font-medium leading-relaxed text-[var(--lx-muted)]">
+              Après 5 minutes sans déblocage, l’aperçu est automatiquement
+              supprimé.
+            </p>
+
+            <LuxePaywallModal
+              open={paywallOpen}
+              onOpenChange={setPaywallOpen}
+              imageUrl={imageUrl}
+              prompt={userPrompt}
+              defaultPlan="essential"
+            />
+          </>
+        )}
       </div>
     </>
   );

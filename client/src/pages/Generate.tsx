@@ -49,6 +49,7 @@ import {
   dataUrlToFile,
 } from "@/lib/onboarding-resume";
 import { savePaywallPrompt, clearPaywallPrompt, getPaywallPrompt } from "@/lib/paywall-prompt";
+import { clearPaywallExpiry } from "@/lib/paywall-expiry";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -270,6 +271,7 @@ export default function Generate() {
       clearFakePaywallReached();
       clearPaywallImage();
       clearPaywallPrompt();
+      clearPaywallExpiry();
 
       const waitForWebhookActivation = async () => {
         for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -979,6 +981,7 @@ export default function Generate() {
       clearPaywalledResult();
       clearPaywallImage();
       clearPaywallPrompt();
+      clearPaywallExpiry();
       clearOnboardingResume();
       handleReset();
       window.requestAnimationFrame(() => {
