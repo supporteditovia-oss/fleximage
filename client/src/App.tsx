@@ -157,6 +157,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
   "/confidentialite": "meta:titles.privacy",
+  "/pricing": "meta:titles.pricing",
 };
 
 const PROTECTED_PATHS = new Set([
@@ -276,6 +277,7 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path={AUTH_CONFIG.LANDING_PATH} component={Landing} />
+      <Route path="/pricing" component={Landing} />
       <Route path="/mentions-legales" component={MentionsLegales} />
       <Route path="/cgu" component={CGU} />
       <Route path="/cgv" component={CGV} />

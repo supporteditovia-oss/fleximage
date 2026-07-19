@@ -1,5 +1,4 @@
-# Served dynamically by the app from shared/site-seo.ts (see GET /robots.txt).
-# This file is a fallback for static previews only.
-
 User-agent: *
 Allow: /
+
+Sitemap: https://www.luxeflexia.com/sitemap.xml

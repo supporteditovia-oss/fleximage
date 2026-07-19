@@ -2,9 +2,9 @@
 export const DEFAULT_SITE_ORIGIN = "https://www.luxeflexia.com";
 
 export const SITE_NAME = "LuxeFlexIA";
-export const SITE_TITLE = "LuxeFlexIA - Cree des LARPs ultra realistes avec l'IA";
+export const SITE_TITLE = "LuxeFlexIA - Créateur de photos lifestyle par IA";
 export const SITE_DESCRIPTION =
-  "Genere des contenus LARP ultra realistes en quelques secondes avec l'IA. Ajoute une photo, decris une scene, et cree des images lifestyle credibles pour t'amuser.";
+  "Générez des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Créez votre alibi parfait avec LuxeFlexIA.";
 export const SITE_OG_IMAGE = "/assets/og-image.png";
 
 export const FAQ_STRUCTURED_DATA = [
@@ -40,9 +40,27 @@ export const INDEXABLE_SITE_PAGES = [
     images: [
       {
         loc: SITE_OG_IMAGE,
-        title: "LuxeFlexIA - generateur de contenus LARP realistes",
+        title: "LuxeFlexIA - Créateur de photos lifestyle par IA",
       },
     ],
+  },
+  {
+    path: "/generate",
+    title: "Créer une image — LuxeFlexIA",
+    description:
+      "Créez des photos lifestyle hyper-réalistes avec LuxeFlexIA : uploadez une photo et générez votre scène de luxe.",
+    changefreq: "weekly" as const,
+    priority: "0.8",
+    images: [],
+  },
+  {
+    path: "/pricing",
+    title: "Tarifs — LuxeFlexIA",
+    description:
+      "Découvrez les abonnements LuxeFlexIA : Discovery, Essential et Ultimate pour générer vos photos lifestyle par IA.",
+    changefreq: "weekly" as const,
+    priority: "0.8",
+    images: [],
   },
   {
     path: "/cgu",
@@ -82,7 +100,6 @@ export const APP_NOINDEX_PATHS = [
   "/admin/logs",
   "/admin/studio",
   "/app",
-  "/generate",
   "/history",
   "/historique",
   "/resultat",
@@ -100,9 +117,7 @@ export const NOINDEX_SITE_PATHS = [
 ] as const;
 
 /** Robots.txt is for crawl control. noindex paths stay crawlable so bots can see X-Robots-Tag. */
-export const ROBOTS_DISALLOW_PATHS = [
-  "/api/",
-] as const;
+export const ROBOTS_DISALLOW_PATHS = [] as const;
 
 export const SITEMAP_ENTRIES = INDEXABLE_SITE_PAGES;
 
@@ -186,21 +201,19 @@ export function getSeoPageMeta(pathname: string): (typeof INDEXABLE_SITE_PAGES)[
 }
 
 export function buildRobotsTxt(origin: string): string {
-  const disallowLines = ROBOTS_DISALLOW_PATHS.map(
-    (path) => `Disallow: ${path}`,
-  ).join("\n");
-
-  return [
+  const lines = [
     `# ${origin}/robots.txt`,
     "",
     "User-agent: *",
     "Allow: /",
-    "",
-    disallowLines,
-    "",
-    `Sitemap: ${origin}/sitemap.xml`,
-    "",
-  ].join("\n");
+  ];
+
+  for (const path of ROBOTS_DISALLOW_PATHS) {
+    lines.push(`Disallow: ${path}`);
+  }
+
+  lines.push("", `Sitemap: ${origin}/sitemap.xml`, "");
+  return lines.join("\n");
 }
 
 function escapeXml(value: string): string {

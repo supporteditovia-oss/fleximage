@@ -256,7 +256,7 @@ export default function HeroSection() {
           className="lx-hero-copy flex flex-col items-center text-center px-2"
         >
           <h1 className="lx-display mx-auto max-w-[20rem] text-balance text-[1.85rem] font-semibold leading-[1.12] text-[var(--lx-ink)] md:max-w-4xl md:text-5xl lg:text-6xl">
-            Crée un lifestyle hyper réaliste
+            LuxeFlexIA — Crée un lifestyle hyper réaliste
           </h1>
           <p className="lx-hero-subtitle mt-3 max-w-xl text-sm font-medium leading-snug text-[var(--lx-muted)] md:mt-4 md:text-lg">
             Transforme une simple photo en visuel bluffant, réaliste et premium

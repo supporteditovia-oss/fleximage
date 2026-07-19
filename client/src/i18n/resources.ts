@@ -366,7 +366,7 @@ export const resources = {
     meta: {
       appName: "LuxeFlexIA",
       titles: {
-        home: "LuxeFlexIA — Crée des LARPs ultra réalistes avec l'IA",
+        home: "LuxeFlexIA - Créateur de photos lifestyle par IA",
         login: "Connexion — LuxeFlexIA",
         register: "Inscription — LuxeFlexIA",
         generate: "Crée ton LARP — LuxeFlexIA",
@@ -381,6 +381,7 @@ export const resources = {
         cgu: "CGU — LuxeFlexIA",
         cgv: "CGV — LuxeFlexIA",
         privacy: "Politique de confidentialité — LuxeFlexIA",
+        pricing: "Tarifs — LuxeFlexIA",
       },
     },
   },
@@ -746,7 +747,7 @@ export const resources = {
     meta: {
       appName: "LuxeFlexIA",
       titles: {
-        home: "LuxeFlexIA — Create ultra-realistic AI LARPs",
+        home: "LuxeFlexIA - Créateur de photos lifestyle par IA",
         login: "Sign in — LuxeFlexIA",
         register: "Sign up — LuxeFlexIA",
         generate: "Create your LARP — LuxeFlexIA",
@@ -761,6 +762,7 @@ export const resources = {
         cgu: "Terms — LuxeFlexIA",
         cgv: "Sales terms — LuxeFlexIA",
         privacy: "Privacy policy — LuxeFlexIA",
+        pricing: "Pricing — LuxeFlexIA",
       },
     },
   },
@@ -1145,6 +1147,7 @@ export const resources = {
         cgu: "Términos — LuxeFlexIA",
         cgv: "Condiciones de venta — LuxeFlexIA",
         privacy: "Política de privacidad — LuxeFlexIA",
+        pricing: "Precios — LuxeFlexIA",
       },
     },
   },
@@ -1530,6 +1533,7 @@ export const resources = {
         cgu: "Nutzungsbedingungen — LuxeFlexIA",
         cgv: "Verkaufsbedingungen — LuxeFlexIA",
         privacy: "Datenschutzrichtlinie — LuxeFlexIA",
+        pricing: "Preise — LuxeFlexIA",
       },
     },
   },
