@@ -6,11 +6,9 @@ import { getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
 import { getPaywallPrompt, clearPaywallPrompt } from "@/lib/paywall-prompt";
 import {
   clearPaywallExpiry,
-  ensurePaywallExpiry,
   formatPaywallCountdown,
-  getPaywallExpiresAt,
   getPaywallMsRemaining,
-  isPaywallExpired,
+  startPaywallExpiry,
 } from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
@@ -52,8 +50,6 @@ export default function ImagePrete() {
   useEffect(() => {
     const image = getPaywallImage();
     const prompt = getPaywallPrompt();
-    const existingExpiry = getPaywallExpiresAt();
-    const now = Date.now();
 
     if (!image) {
       setImageUrl(null);
@@ -65,21 +61,12 @@ export default function ImagePrete() {
       return;
     }
 
-    if (isPaywallExpired(existingExpiry, now)) {
-      purgeExpiredPreview();
-      setImageUrl(null);
-      setUserPrompt(null);
-      setExpiresAt(null);
-      setMsRemaining(0);
-      setExpired(true);
-      return;
-    }
-
-    const deadline = ensurePaywallExpiry(now);
+    // Fresh 5:00 every visit — never resume a previous countdown.
+    const deadline = startPaywallExpiry();
     setImageUrl(image);
     setUserPrompt(prompt);
     setExpiresAt(deadline);
-    setMsRemaining(getPaywallMsRemaining(deadline, now));
+    setMsRemaining(getPaywallMsRemaining(deadline));
     setExpired(false);
   }, []);
 
@@ -116,7 +103,6 @@ export default function ImagePrete() {
     }
   }, [profile?.id]);
 
-  // Hide global header + bottom dock, but keep page scroll on mobile
   useLayoutEffect(() => {
     document.body.setAttribute("data-hide-app-chrome", "true");
     return () => {
@@ -175,11 +161,11 @@ export default function ImagePrete() {
           <>
             <header className="w-full text-center">
               <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-                Aperçu supprimé
+                Ton image a été supprimée
               </h1>
               <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
-                Le délai de 5 minutes est écoulé. Ton aperçu a été effacé —
-                relance une création pour en générer un nouveau.
+                Le délai est écoulé. Relance une création pour générer un nouvel
+                aperçu.
               </p>
             </header>
 
@@ -205,19 +191,19 @@ export default function ImagePrete() {
               <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
                 {userPrompt
                   ? "On a préparé ton rendu à partir de ta demande. Débloque-le en HD avant qu’il disparaisse."
-                  : "Débloque ton rendu en HD avant la fin du délai — sinon l’aperçu est effacé."}
+                  : "Débloque ton rendu en HD avant la fin du délai — sinon l’image est effacée."}
               </p>
             </header>
 
             <div
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold tabular-nums shadow-sm ${
+              className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold shadow-sm ${
                 isUrgent
                   ? "animate-pulse border-red-500/45 bg-red-50 text-red-700"
                   : "border-[var(--lx-gold)]/40 bg-[var(--lx-surface-2)] text-[var(--lx-ink)]"
               }`}
               role="timer"
               aria-live="polite"
-              aria-label={`Temps restant ${countdownLabel}`}
+              aria-label={`Ton image sera supprimée dans ${countdownLabel}`}
             >
               <Clock3
                 className={`h-4 w-4 shrink-0 ${
@@ -226,9 +212,11 @@ export default function ImagePrete() {
                 strokeWidth={2}
                 aria-hidden
               />
-              <span>
-                Suppression dans{" "}
-                <span className="tracking-wide">{countdownLabel}</span>
+              <span className="min-w-0">
+                Ton image sera supprimée dans{" "}
+                <span className="tabular-nums tracking-wide">
+                  {countdownLabel}
+                </span>
               </span>
             </div>
 
@@ -246,11 +234,6 @@ export default function ImagePrete() {
             >
               Débloquer mon image
             </button>
-
-            <p className="max-w-xs text-center text-xs font-medium leading-relaxed text-[var(--lx-muted)]">
-              Après 5 minutes sans déblocage, l’aperçu est automatiquement
-              supprimé.
-            </p>
 
             <LuxePaywallModal
               open={paywallOpen}
