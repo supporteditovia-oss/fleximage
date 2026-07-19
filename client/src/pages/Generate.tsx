@@ -64,7 +64,7 @@ import { useLatestFaceCapture } from "@/hooks/use-face-captures";
 import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
-import { templateRequiresFaceCapture, templateSupportsGenerationMode } from "@/lib/template-utils";
+import { templateSupportsGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -705,10 +705,6 @@ export default function Generate() {
       });
       return;
     }
-
-    const templateNeedsFace = activeTemplate
-      ? templateRequiresFaceCapture(activeTemplate)
-      : true;
 
     if (isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
       toast({
