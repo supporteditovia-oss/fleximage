@@ -85,11 +85,50 @@ const COMPANY_DETAILS: Record<AppLocale, LegalBullet[]> = {
   ],
 };
 
-const HOSTING_PLACEHOLDER: Record<AppLocale, string> = {
-  fr: "[À COMPLÉTER ultérieurement]",
-  en: "[TO BE COMPLETED later]",
-  es: "[POR COMPLETAR posteriormente]",
-  de: "[SPÄTER ZU ERGÄNZEN]",
+const HOSTING_INTRO: Record<AppLocale, string> = {
+  fr: `Le site ${SITE_DOMAIN} est hébergé par la société Vercel Inc. :`,
+  en: `The website ${SITE_DOMAIN} is hosted by Vercel Inc.:`,
+  es: `El sitio ${SITE_DOMAIN} esta alojado por la sociedad Vercel Inc.:`,
+  de: `Die Website ${SITE_DOMAIN} wird von Vercel Inc. gehostet:`,
+};
+
+const HOSTING_DETAILS: Record<AppLocale, LegalBullet[]> = {
+  fr: [
+    { label: "Raison sociale", text: "Vercel Inc." },
+    {
+      label: "Adresse du siège social",
+      text: "440 N Barranca Ave #4133, Covina, CA 91723, États-Unis",
+    },
+    { label: "Site web", text: "https://vercel.com" },
+    { label: "Contact e-mail", text: "privacy@vercel.com" },
+  ],
+  en: [
+    { label: "Legal name", text: "Vercel Inc." },
+    {
+      label: "Registered office",
+      text: "440 N Barranca Ave #4133, Covina, CA 91723, United States",
+    },
+    { label: "Website", text: "https://vercel.com" },
+    { label: "Contact email", text: "privacy@vercel.com" },
+  ],
+  es: [
+    { label: "Razon social", text: "Vercel Inc." },
+    {
+      label: "Domicilio social",
+      text: "440 N Barranca Ave #4133, Covina, CA 91723, Estados Unidos",
+    },
+    { label: "Sitio web", text: "https://vercel.com" },
+    { label: "Correo de contacto", text: "privacy@vercel.com" },
+  ],
+  de: [
+    { label: "Firmenname", text: "Vercel Inc." },
+    {
+      label: "Sitz der Gesellschaft",
+      text: "440 N Barranca Ave #4133, Covina, CA 91723, Vereinigte Staaten",
+    },
+    { label: "Website", text: "https://vercel.com" },
+    { label: "Kontakt-E-Mail", text: "privacy@vercel.com" },
+  ],
 };
 
 const TECH_PROVIDERS: Record<AppLocale, LegalBullet[]> = {
@@ -505,7 +544,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "3",
             title: "3. Hébergement",
-            paragraphs: [HOSTING_PLACEHOLDER.fr],
+            paragraphs: [HOSTING_INTRO.fr],
+            bullets: HOSTING_DETAILS.fr,
+            bulletStyle: "none",
           },
           {
             id: "4",
@@ -907,7 +948,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "3",
             title: "3. Hosting",
-            paragraphs: [HOSTING_PLACEHOLDER.en],
+            paragraphs: [HOSTING_INTRO.en],
+            bullets: HOSTING_DETAILS.en,
+            bulletStyle: "none",
           },
           {
             id: "4",
@@ -1301,7 +1344,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "3",
             title: "3. Alojamiento",
-            paragraphs: [HOSTING_PLACEHOLDER.es],
+            paragraphs: [HOSTING_INTRO.es],
+            bullets: HOSTING_DETAILS.es,
+            bulletStyle: "none",
           },
           {
             id: "4",
@@ -1695,7 +1740,9 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
           {
             id: "3",
             title: "3. Hosting",
-            paragraphs: [HOSTING_PLACEHOLDER.de],
+            paragraphs: [HOSTING_INTRO.de],
+            bullets: HOSTING_DETAILS.de,
+            bulletStyle: "none",
           },
           {
             id: "4",
