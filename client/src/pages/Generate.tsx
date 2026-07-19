@@ -15,7 +15,6 @@ import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverl
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
-import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import {
@@ -729,15 +728,6 @@ export default function Generate() {
       return;
     }
 
-    if (isTemplateGeneration && templateNeedsFace && !useFaceAsset) {
-      toast({
-        variant: "destructive",
-        title: t("templateSelected.faceRequiredForTemplate"),
-        description: t("templateSelected.useFace"),
-      });
-      return;
-    }
-
     const serverPrompt = isTemplateGeneration
       ? selectedTemplate?.prompt_text?.trim() || " "
       : prompt.trim();
@@ -1297,11 +1287,6 @@ export default function Generate() {
             <TemplateSelectedPanel
               template={selectedTemplate}
               generationMode={generationMode}
-              requiresFaceCapture={templateRequiresFaceCapture(selectedTemplate)}
-              useFaceAsset={useFaceAsset}
-              onUseFaceAssetChange={handleUseFaceAssetChange}
-              faceCaptureReady={faceCaptureReady}
-              faceCaptureLoading={latestFaceCapture.isLoading}
               onDeselect={deselectTemplate}
               onGenerate={handleGenerate}
               isGenerating={isSubmittingGeneration}
@@ -1321,18 +1306,7 @@ export default function Generate() {
                 onGenerate={handleGenerate}
                 isGenerating={isSubmittingGeneration}
                 goldCta
-                canGenerate={
-                  images.some((img) => img !== null) &&
-                  (!useFaceAsset || faceCaptureReady)
-                }
-              />
-
-              <FaceAssetControls
-                idPrefix="free-prompt-face-asset"
-                useFaceAsset={useFaceAsset}
-                onUseFaceAssetChange={handleUseFaceAssetChange}
-                faceCaptureReady={faceCaptureReady}
-                faceCaptureLoading={latestFaceCapture.isLoading}
+                canGenerate={images.some((img) => img !== null)}
               />
             </>
           )}

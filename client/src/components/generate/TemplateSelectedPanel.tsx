@@ -2,7 +2,6 @@ import { Loader2, X } from "lucide-react";
 import { icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TemplateIllustrationMedia } from "@/components/templates/TemplateIllustrationMedia";
-import { FaceAssetControls } from "@/components/generate/FaceAssetControls";
 import { getLocalizedTemplateName } from "@/lib/template-utils";
 import type { PromptTemplate } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -10,11 +9,6 @@ import { useTranslation } from "react-i18next";
 interface TemplateSelectedPanelProps {
   template: PromptTemplate;
   generationMode: "image" | "video";
-  requiresFaceCapture: boolean;
-  useFaceAsset: boolean;
-  onUseFaceAssetChange: (value: boolean) => void;
-  faceCaptureReady: boolean;
-  faceCaptureLoading: boolean;
   onDeselect: () => void;
   onGenerate: () => void;
   isGenerating: boolean;
@@ -23,11 +17,6 @@ interface TemplateSelectedPanelProps {
 export function TemplateSelectedPanel({
   template,
   generationMode,
-  requiresFaceCapture,
-  useFaceAsset,
-  onUseFaceAssetChange,
-  faceCaptureReady,
-  faceCaptureLoading,
   onDeselect,
   onGenerate,
   isGenerating,
@@ -41,10 +30,7 @@ export function TemplateSelectedPanel({
     template.example_after_url || template.example_before_url || null;
 
   const hasReferenceImages = (template.reference_image_count ?? 0) > 0;
-  const generateBlockedByFace =
-    (requiresFaceCapture && !useFaceAsset) ||
-    (useFaceAsset && !faceCaptureReady);
-  const generateBlocked = generateBlockedByFace || !hasReferenceImages;
+  const generateBlocked = !hasReferenceImages;
 
   return (
     <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-4">
@@ -90,20 +76,6 @@ export function TemplateSelectedPanel({
         </div>
       </div>
 
-      <FaceAssetControls
-        idPrefix="template-face-asset"
-        useFaceAsset={useFaceAsset}
-        onUseFaceAssetChange={onUseFaceAssetChange}
-        faceCaptureReady={faceCaptureReady}
-        faceCaptureLoading={faceCaptureLoading}
-      />
-
-      {requiresFaceCapture && !useFaceAsset && (
-        <p className="text-center text-xs text-destructive px-4">
-          {t("templateSelected.faceRequiredForTemplate")}
-        </p>
-      )}
-
       {!hasReferenceImages && (
         <p className="text-center text-xs text-destructive px-4">
           {t("templateSelected.noReferenceImages")}
@@ -114,7 +86,7 @@ export function TemplateSelectedPanel({
         type="button"
         className="h-11 w-full rounded-lg text-sm font-semibold shadow-sm"
         onClick={onGenerate}
-        disabled={isGenerating || faceCaptureLoading || generateBlocked}
+        disabled={isGenerating || generateBlocked}
       >
         {isGenerating ? (
           <>
