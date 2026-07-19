@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { logger } from "./logger";
+import { resolvePublicAppUrl } from "@shared/site-seo";
 
 const SNAP_CAPI_BASE = "https://tr.snapchat.com/v3";
 
@@ -33,7 +34,10 @@ export async function sendSnapPurchaseEvent(
     return;
   }
 
-  const appUrl = process.env.APP_URL || process.env.SITE_URL || "https://larpking.com";
+  const appUrl = resolvePublicAppUrl(
+    process.env.SITE_URL,
+    process.env.APP_URL,
+  );
   const userData: Record<string, string> = {};
   if (payload.email) {
     userData.em = sha256Hex(payload.email);

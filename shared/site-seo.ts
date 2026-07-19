@@ -112,6 +112,31 @@ export function resolveSiteOrigin(envOrigin?: string | null): string {
   }
 }
 
+/**
+ * Public app origin for OAuth / Stripe / emails.
+ * Never returns localhost in production — always luxeflexia.com.
+ */
+export function resolvePublicAppUrl(
+  ...candidates: Array<string | null | undefined>
+): string {
+  const allowLocal =
+    typeof process !== "undefined" && process.env?.NODE_ENV !== "production";
+
+  for (const candidate of candidates) {
+    const raw = candidate?.toString().trim().replace(/\/$/, "");
+    if (!raw) continue;
+    try {
+      const origin = new URL(raw.includes("://") ? raw : `https://${raw}`).origin;
+      if (isPublicSiteOrigin(origin)) return origin;
+      if (allowLocal && !isPublicSiteOrigin(origin)) return origin;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return DEFAULT_SITE_ORIGIN;
+}
+
 export function normalizeSitePathname(pathname: string): string {
   const raw = pathname.split("?")[0]?.split("#")[0] || "/";
   const withSlash = raw.startsWith("/") ? raw : `/${raw}`;

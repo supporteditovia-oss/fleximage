@@ -1,4 +1,5 @@
 import { AUTH_CONFIG } from "@/config/auth";
+import { DEFAULT_SITE_ORIGIN } from "@shared/site-seo";
 
 /**
  * Post-OAuth / email-confirm landing URL for Supabase Auth.
@@ -26,6 +27,17 @@ export function getAuthRedirectTo(
     if (origin === "https://luxeflexia.com") {
       origin = "https://www.luxeflexia.com";
     }
+    // Never send production users to a stale localhost origin
+    if (
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1")
+    ) {
+      // Only allow localhost when actually developing locally
+      if (import.meta.env.DEV) {
+        return `${origin}${normalizedPath}`;
+      }
+      return `${DEFAULT_SITE_ORIGIN}${normalizedPath}`;
+    }
     return `${origin}${normalizedPath}`;
   }
 
@@ -38,11 +50,15 @@ export function getAuthRedirectTo(
     .trim()
     .replace(/\/$/, "");
 
-  if (fromEnv) {
+  if (fromEnv && !fromEnv.includes("localhost") && !fromEnv.includes("127.0.0.1")) {
     return `${fromEnv}${normalizedPath}`;
   }
 
-  return `http://localhost:5000${normalizedPath}`;
+  if (import.meta.env.DEV && fromEnv) {
+    return `${fromEnv}${normalizedPath}`;
+  }
+
+  return `${DEFAULT_SITE_ORIGIN}${normalizedPath}`;
 }
 
 /** Final in-app destination after /app consumes the OAuth session. */

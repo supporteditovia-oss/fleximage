@@ -20,6 +20,7 @@ import {
   handleSubscriptionDeleted,
   handleSubscriptionUpdated,
 } from "./lib/stripe-webhooks";
+import { resolvePublicAppUrl } from "@shared/site-seo";
 
 const createCheckoutBodySchema = z.object({
   plan: z
@@ -149,11 +150,16 @@ export function registerStripeRoutes(app: Express): void {
           .json({ message: tBackend(locale, "stripe.alreadySubscribed") });
       }
 
+      const appOrigin = resolvePublicAppUrl(
+        typeof req.headers.origin === "string" ? req.headers.origin : null,
+        process.env.SITE_URL,
+        process.env.APP_URL,
+      );
       const sessionParams: Record<string, any> = {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}/generate?checkout=cancel`,
+        success_url: `${appOrigin}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appOrigin}/generate?checkout=cancel`,
         metadata: {
           user_id: authReq.userId,
           price_id: priceId,
@@ -230,7 +236,11 @@ export function registerStripeRoutes(app: Express): void {
           .json({ message: tBackend(locale, "stripe.noStripeSubscription") });
       }
 
-      const returnUrl = `${req.headers.origin || process.env.APP_URL || "http://localhost:5000"}${req.body?.returnPath === "/generate" ? "/generate" : "/settings"}`;
+      const returnUrl = `${resolvePublicAppUrl(
+        typeof req.headers.origin === "string" ? req.headers.origin : null,
+        process.env.SITE_URL,
+        process.env.APP_URL,
+      )}${req.body?.returnPath === "/generate" ? "/generate" : "/settings"}`;
       const sessionParams: any = {
         customer: profile.stripe_customer_id,
         return_url: returnUrl,
