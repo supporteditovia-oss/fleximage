@@ -18,6 +18,7 @@ import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
+import { savePaywallPrompt } from "@/lib/paywall-prompt";
 import { useAuth } from "@/hooks/use-auth";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
@@ -209,6 +210,7 @@ export default function HeroSection() {
         prompt: guestPrompt,
         generationMode: "image",
       });
+      savePaywallPrompt(guestPrompt);
       try {
         await savePaywallImage(files[0].file);
       } catch (error) {

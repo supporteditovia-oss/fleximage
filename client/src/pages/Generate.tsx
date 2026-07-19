@@ -48,6 +48,7 @@ import {
   clearOnboardingResume,
   dataUrlToFile,
 } from "@/lib/onboarding-resume";
+import { savePaywallPrompt, clearPaywallPrompt, getPaywallPrompt } from "@/lib/paywall-prompt";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -268,6 +269,7 @@ export default function Generate() {
       setSavedPaywall(null);
       clearFakePaywallReached();
       clearPaywallImage();
+      clearPaywallPrompt();
 
       const waitForWebhookActivation = async () => {
         for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -418,7 +420,10 @@ export default function Generate() {
       console.log("[Generate] Resuming onboarding from localStorage");
       setPendingLoading(true);
       setGenerationMode(resume.generationMode);
-      if (resume.prompt) setPrompt(resume.prompt);
+      if (resume.prompt) {
+        setPrompt(resume.prompt);
+        savePaywallPrompt(resume.prompt);
+      }
 
       const file = dataUrlToFile(paywallPreview);
       if (file) {
@@ -480,6 +485,9 @@ export default function Generate() {
           prompt: pending.prompt || "",
           generationMode: pending.generationMode === "video" ? "video" : "image",
         });
+        if (pending.prompt) {
+          savePaywallPrompt(pending.prompt);
+        }
         // When returning from checkout, don't trigger auto-generate immediately.
         // The checkout handler will trigger it after verify-session completes.
         if (!isReturningFromCheckout) {
@@ -764,6 +772,7 @@ export default function Generate() {
         prompt: serverPrompt,
         generationMode,
       });
+      savePaywallPrompt(serverPrompt);
 
       if (filesForGeneration[0]) {
         try {
@@ -969,6 +978,7 @@ export default function Generate() {
       clearPendingLarp();
       clearPaywalledResult();
       clearPaywallImage();
+      clearPaywallPrompt();
       clearOnboardingResume();
       handleReset();
       window.requestAnimationFrame(() => {
@@ -1119,6 +1129,7 @@ export default function Generate() {
 
   const luxePreviewImageUrl =
     images[0]?.url || getPaywallImage() || "";
+  const luxePreviewPrompt = prompt.trim() || getPaywallPrompt() || null;
 
   const faceScanPromptTitle =
     faceScanPromptMode === "review"
@@ -1313,6 +1324,7 @@ export default function Generate() {
         open={showLuxePaywall}
         onOpenChange={setShowLuxePaywall}
         imageUrl={luxePreviewImageUrl}
+        prompt={luxePreviewPrompt}
         defaultPlan={paywallDefaultPlan}
       />
 

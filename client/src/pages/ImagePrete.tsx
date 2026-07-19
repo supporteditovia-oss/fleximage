@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Gem, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getPaywallImage } from "@/lib/paywall-image";
+import { getPaywallPrompt } from "@/lib/paywall-prompt";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
@@ -13,6 +14,7 @@ export default function ImagePrete() {
   const { profile, signOut } = useAuth();
   const { t, i18n } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [userPrompt, setUserPrompt] = useState<string | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -29,6 +31,7 @@ export default function ImagePrete() {
 
   useEffect(() => {
     setImageUrl(getPaywallImage());
+    setUserPrompt(getPaywallPrompt());
   }, []);
 
   useEffect(() => {
@@ -102,12 +105,15 @@ export default function ImagePrete() {
             Ton image est prête
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
-            Débloque ton rendu en HD pour la voir clairement et la télécharger.
+            {userPrompt
+              ? "On a préparé ton rendu à partir de ta demande. Débloque-le en HD pour le voir clairement."
+              : "Débloque ton rendu en HD pour la voir clairement et la télécharger."}
           </p>
         </header>
 
         <BlurredLockedImage
           imageUrl={imageUrl}
+          prompt={userPrompt}
           size="page"
           className="w-full max-w-[280px]"
         />
@@ -124,6 +130,7 @@ export default function ImagePrete() {
           open={paywallOpen}
           onOpenChange={setPaywallOpen}
           imageUrl={imageUrl}
+          prompt={userPrompt}
           defaultPlan="essential"
         />
       </div>

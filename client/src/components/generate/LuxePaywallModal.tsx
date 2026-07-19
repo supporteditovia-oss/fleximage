@@ -50,6 +50,7 @@ interface LuxePaywallModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageUrl?: string | null;
+  prompt?: string | null;
   defaultPlan?: PaywallPlan;
 }
 
@@ -57,6 +58,7 @@ export function LuxePaywallModal({
   open,
   onOpenChange,
   imageUrl,
+  prompt = null,
   defaultPlan = "essential",
 }: LuxePaywallModalProps) {
   const { t } = useTranslation();
@@ -147,6 +149,7 @@ export function LuxePaywallModal({
             {imageUrl ? (
               <BlurredLockedImage
                 imageUrl={imageUrl}
+                prompt={prompt}
                 size="modal"
                 className="mx-auto mt-4 w-24 sm:w-28"
               />
