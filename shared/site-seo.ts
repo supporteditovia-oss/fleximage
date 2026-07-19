@@ -1,3 +1,11 @@
+import {
+  getSeoNicheBySlug,
+  getSeoNichePath,
+  parseSeoNicheSlugFromPath,
+  SEO_DIRECTORY_PATH,
+  SEO_NICHES,
+} from "./seo-niches";
+
 /** Canonical public site origin (no trailing slash). */
 export const DEFAULT_SITE_ORIGIN = "https://www.luxeflexia.com";
 
@@ -6,6 +14,15 @@ export const SITE_TITLE = "LuxeFlexIA - Créateur de photos lifestyle par IA";
 export const SITE_DESCRIPTION =
   "Générez des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Créez votre alibi parfait avec LuxeFlexIA.";
 export const SITE_OG_IMAGE = "/assets/og-image.png";
+
+export type SitemapEntry = {
+  path: string;
+  title: string;
+  description: string;
+  changefreq: "weekly" | "yearly" | "monthly" | "daily";
+  priority: string;
+  images: Array<{ loc: string; title: string }>;
+};
 
 export const FAQ_STRUCTURED_DATA = [
   {
@@ -80,6 +97,15 @@ export const INDEXABLE_SITE_PAGES = [
     priority: "0.3",
     images: [],
   },
+  {
+    path: SEO_DIRECTORY_PATH,
+    title: "Tous nos générateurs IA (Pranks, Luxe, Voyage) — LuxeFlexIA",
+    description:
+      "Annuaire LuxeFlexIA : générateurs de photos IA pour voitures de luxe, voyages, restaurants, pranks et flex lifestyle.",
+    changefreq: "weekly" as const,
+    priority: "0.7",
+    images: [],
+  },
 ] as const;
 
 /** Legal pages that stay noindex (not used for Google OAuth branding). */
@@ -120,6 +146,22 @@ export const NOINDEX_SITE_PATHS = [
 export const ROBOTS_DISALLOW_PATHS = [] as const;
 
 export const SITEMAP_ENTRIES = INDEXABLE_SITE_PAGES;
+
+export function getSitemapEntries(): SitemapEntry[] {
+  const nicheEntries: SitemapEntry[] = SEO_NICHES.map((niche) => ({
+    path: getSeoNichePath(niche.slug),
+    title: niche.metaTitle,
+    description: niche.metaDescription,
+    changefreq: "weekly",
+    priority: "0.7",
+    images: [],
+  }));
+
+  return [
+    ...(INDEXABLE_SITE_PAGES as unknown as SitemapEntry[]),
+    ...nicheEntries,
+  ];
+}
 
 const NON_PUBLIC_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -181,7 +223,11 @@ export function normalizeSitePathname(pathname: string): string {
 
 export function isIndexableSitePath(pathname: string): boolean {
   const normalized = normalizeSitePathname(pathname);
-  return INDEXABLE_SITE_PAGES.some((page) => page.path === normalized);
+  if (INDEXABLE_SITE_PAGES.some((page) => page.path === normalized)) {
+    return true;
+  }
+  const nicheSlug = parseSeoNicheSlugFromPath(normalized);
+  return Boolean(nicheSlug && getSeoNicheBySlug(nicheSlug));
 }
 
 export function isKnownSitePath(pathname: string): boolean {
@@ -192,11 +238,27 @@ export function isKnownSitePath(pathname: string): boolean {
   );
 }
 
-export function getSeoPageMeta(pathname: string): (typeof INDEXABLE_SITE_PAGES)[number] {
+export function getSeoPageMeta(pathname: string): SitemapEntry {
   const normalized = normalizeSitePathname(pathname);
+  const nicheSlug = parseSeoNicheSlugFromPath(normalized);
+  if (nicheSlug) {
+    const niche = getSeoNicheBySlug(nicheSlug);
+    if (niche) {
+      return {
+        path: getSeoNichePath(niche.slug),
+        title: niche.metaTitle,
+        description: niche.metaDescription,
+        changefreq: "weekly",
+        priority: "0.7",
+        images: [],
+      };
+    }
+  }
+
   return (
-    INDEXABLE_SITE_PAGES.find((page) => page.path === normalized) ??
-    INDEXABLE_SITE_PAGES[0]
+    (INDEXABLE_SITE_PAGES.find((page) => page.path === normalized) as
+      | SitemapEntry
+      | undefined) ?? (INDEXABLE_SITE_PAGES[0] as unknown as SitemapEntry)
   );
 }
 
@@ -232,27 +294,29 @@ function absoluteUrl(origin: string, pathOrUrl: string): string {
 
 export function buildSitemapXml(origin: string): string {
   const lastmod = new Date().toISOString().slice(0, 10);
-  const urls = SITEMAP_ENTRIES.map((entry) => {
-    const loc = `${origin}${entry.path === "/" ? "/" : entry.path}`;
-    const images = (entry.images || []).map((image) =>
-      [
-        "    <image:image>",
-        `      <image:loc>${escapeXml(absoluteUrl(origin, image.loc))}</image:loc>`,
-        `      <image:title>${escapeXml(image.title)}</image:title>`,
-        "    </image:image>",
-      ].join("\n"),
-    );
+  const urls = getSitemapEntries()
+    .map((entry) => {
+      const loc = `${origin}${entry.path === "/" ? "/" : entry.path}`;
+      const images = (entry.images || []).map((image) =>
+        [
+          "    <image:image>",
+          `      <image:loc>${escapeXml(absoluteUrl(origin, image.loc))}</image:loc>`,
+          `      <image:title>${escapeXml(image.title)}</image:title>`,
+          "    </image:image>",
+        ].join("\n"),
+      );
 
-    return [
-      "  <url>",
-      `    <loc>${escapeXml(loc)}</loc>`,
-      `    <lastmod>${lastmod}</lastmod>`,
-      `    <changefreq>${entry.changefreq}</changefreq>`,
-      `    <priority>${entry.priority}</priority>`,
-      ...images,
-      "  </url>",
-    ].join("\n");
-  }).join("\n");
+      return [
+        "  <url>",
+        `    <loc>${escapeXml(loc)}</loc>`,
+        `    <lastmod>${lastmod}</lastmod>`,
+        `    <changefreq>${entry.changefreq}</changefreq>`,
+        `    <priority>${entry.priority}</priority>`,
+        ...images,
+        "  </url>",
+      ].join("\n");
+    })
+    .join("\n");
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

@@ -27,6 +27,8 @@ import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
 import Confidentialite from "@/pages/Confidentialite";
 import DebugGenerate from "@/pages/DebugGenerate";
+import SeoNicheLanding from "@/pages/SeoNicheLanding";
+import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
 import { supabase } from "@/lib/supabase";
 
 import { Loader2 } from "lucide-react";
@@ -39,6 +41,7 @@ import {
   SIGNUP_LOCALE_STORAGE_KEY,
 } from "@shared/locales";
 import { isIndexableSitePath } from "@shared/site-seo";
+import { parseSeoNicheSlugFromPath } from "@shared/seo-niches";
 import { setRobotsMeta } from "@/lib/robots-meta";
 
 // OAuth callback — consumes ?code= (PKCE) or hash tokens, then goes to /generate
@@ -261,6 +264,15 @@ function Router() {
   }, [i18n, profile?.preferred_locale, user]);
 
   React.useEffect(() => {
+    // Niche / directory pages manage their own document title + description.
+    if (
+      pathname === "/tous-les-generateurs" ||
+      parseSeoNicheSlugFromPath(pathname)
+    ) {
+      setRobotsMeta("index, follow, max-image-preview:large");
+      return;
+    }
+
     document.title = t(PAGE_TITLE_KEYS[pathname] || "meta:appName");
     setRobotsMeta(
       isIndexableSitePath(pathname)
@@ -278,6 +290,8 @@ function Router() {
       {/* Public Routes */}
       <Route path={AUTH_CONFIG.LANDING_PATH} component={Landing} />
       <Route path="/pricing" component={Landing} />
+      <Route path="/tous-les-generateurs" component={TousLesGenerateurs} />
+      <Route path="/generateur/:slug" component={SeoNicheLanding} />
       <Route path="/mentions-legales" component={MentionsLegales} />
       <Route path="/cgu" component={CGU} />
       <Route path="/cgv" component={CGV} />

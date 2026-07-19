@@ -1,6 +1,10 @@
 import { Gem } from "lucide-react";
 
 const FOOTER_LINKS = [
+  {
+    href: "/tous-les-generateurs",
+    label: "Tous nos générateurs (Pranks, Luxe, Voyage)",
+  },
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/cgu", label: "CGU" },
   { href: "/cgv", label: "CGV" },
@@ -24,7 +28,7 @@ export default function Footer() {
 
         <nav
           className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-[var(--lx-muted)]"
-          aria-label="Liens légaux"
+          aria-label="Liens du site"
         >
           {FOOTER_LINKS.map((link, index) => (
             <span key={link.href} className="inline-flex items-center gap-5">

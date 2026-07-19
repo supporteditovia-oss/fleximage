@@ -2,11 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "npm install",
-  "buildCommand": "npx vite build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
   "rewrites": [
     {
-      "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$|cgu(?:/.*)?$|confidentialite(?:/.*)?$).*)",
+      "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$|cgu(?:/.*)?$|confidentialite(?:/.*)?$|tous-les-generateurs(?:/.*)?$|generateur(?:/.*)?$).*)",
       "destination": "/index.html"
     }
   ]
