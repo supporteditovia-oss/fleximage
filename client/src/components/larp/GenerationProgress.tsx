@@ -3,11 +3,13 @@ import { createPortal } from "react-dom";
 import { AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Gem } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLarpStatus } from "@/hooks/use-larps";
 import { useToast } from "@/hooks/use-toast";
 import { LarpResult } from "./LarpResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
+import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -16,6 +18,9 @@ interface GenerationProgressProps {
   onResultVisible?: () => void;
   resultType?: "image" | "video";
 }
+
+const LX_AUTH_BG =
+  "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)";
 
 export function GenerationProgress({
   taskId,
@@ -27,17 +32,52 @@ export function GenerationProgress({
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading, error, isError } = useLarpStatus(taskId);
-  const [revealDone, setRevealDone] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+  const restored = getLastGeneration();
+  const restoredReady =
+    restored?.taskId === taskId && (restored.resultUrls?.length ?? 0) > 0;
+  const [revealDone, setRevealDone] = useState(restoredReady);
+  const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
+  const hasPersistedResult = useRef(false);
   // Grace window before a sustained, unrecoverable connection failure is
   // surfaced. Transient blips (5xx, network) during polling are ignored —
   // the generation keeps running server-side.
   const connectionErrorSince = useRef<number | null>(null);
   const CONNECTION_ERROR_GRACE_MS = 60_000;
   const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
+  const displayUrls = hasResultMedia
+    ? data!.resultUrls
+    : restoredReady
+      ? restored!.resultUrls
+      : [];
+  const displayLarpId = data?.larpId ?? (restoredReady ? restored!.larpId : null);
+  const displayResultType =
+    data?.resultType ??
+    (restoredReady ? restored!.resultType : undefined) ??
+    resultType;
+  const canShowResult =
+    showResult &&
+    displayUrls.length > 0 &&
+    !!displayLarpId &&
+    (data?.status === "success" || restoredReady);
+
+  // Persist successful result so revisiting Créer does not re-bill.
+  useEffect(() => {
+    if (hasPersistedResult.current) return;
+    if (data?.status !== "success" || !hasResultMedia || !data.larpId) return;
+    hasPersistedResult.current = true;
+    saveLastGeneration({
+      taskId,
+      larpId: data.larpId,
+      resultUrls: data.resultUrls,
+      resultType: data.resultType ?? resultType,
+      savedAt: Date.now(),
+    });
+    void queryClient.invalidateQueries({ queryKey: ["larp-history"] });
+  }, [data?.status, data?.larpId, data?.resultUrls, data?.resultType, hasResultMedia, resultType, taskId, queryClient]);
 
   // Wait for loader exit animation before showing result
   useEffect(() => {
@@ -179,11 +219,19 @@ export function GenerationProgress({
       </AnimatePresence>
 
       {/* After reveal: show the result */}
-      {showResult &&
-        data?.status === "success" &&
-        hasResultMedia &&
+      {canShowResult &&
         createPortal(
-          <div className="fixed inset-0 z-40 overflow-hidden bg-[var(--lx-surface)] bg-grid px-4 animate-in fade-in duration-500">
+          <div className="fixed inset-0 z-40 overflow-hidden px-4 animate-in fade-in duration-500">
+            {/* Same backdrop as /login & /register (Auth.tsx) */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              aria-hidden
+              style={{
+                background: LX_AUTH_BG,
+                backgroundImage: LX_AUTH_BG,
+              }}
+            />
+
             <span className="lx-display absolute left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-20 flex -translate-x-1/2 items-center gap-2 md:top-6">
               <Gem
                 className="h-5 w-5 text-[var(--lx-gold)] md:h-6 md:w-6"
@@ -196,11 +244,11 @@ export function GenerationProgress({
             </span>
 
             {/* LARP result with download/share actions */}
-            <div className="absolute left-1/2 top-[calc(50%-1.25rem)] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center md:top-1/2">
+            <div className="absolute left-1/2 top-[calc(50%-1.25rem)] z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center md:top-1/2">
               <LarpResult
-                resultUrls={data.resultUrls}
-                larpId={data.larpId}
-                resultType={data.resultType ?? resultType}
+                resultUrls={displayUrls}
+                larpId={displayLarpId!}
+                resultType={displayResultType}
                 posterUrl={inputImageUrl}
               />
             </div>

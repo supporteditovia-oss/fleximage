@@ -153,7 +153,7 @@ export default function Generate() {
   const handledFaceScanReviewRef = useRef(false);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
-  const { profile, isLoading: isAuthLoading } = useAuth();
+  const { profile, user, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
   const latestFaceCapture = useLatestFaceCapture();
@@ -963,6 +963,25 @@ export default function Generate() {
       clearPendingLarp();
       clearOnboardingResume();
 
+      // Instant UI debit so the header diamond updates on click (server still authoritative).
+      if (profile?.role !== "admin" && user?.id) {
+        const debit = requiredCredits;
+        queryClient.setQueryData(["profile", user.id], (old: typeof profile) => {
+          if (!old) return old;
+          return {
+            ...old,
+            credits: Math.max(0, (old.credits ?? 0) - debit),
+          };
+        });
+        queryClient.setQueryData(currentPlanQueryKey, (old: any) => {
+          if (!old || typeof old.credits !== "number") return old;
+          return {
+            ...old,
+            credits: Math.max(0, old.credits - debit),
+          };
+        });
+      }
+
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
         const base64Images = isTemplateGeneration
@@ -1008,6 +1027,9 @@ export default function Generate() {
       void refetchEligibility();
     } catch (error: any) {
       setPendingLoading(false);
+      // Restore balances from server if generation failed after optimistic debit.
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+      void queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
       if (error.code === "FACE_CAPTURE_REQUIRED") {
         toast({
           variant: "destructive",
@@ -1189,6 +1211,8 @@ export default function Generate() {
 
   const lxCreamBgStyle = {
     background:
+      "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)",
+    backgroundImage:
       "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)",
   } as const;
 

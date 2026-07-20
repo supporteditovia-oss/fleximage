@@ -1,12 +1,21 @@
-/* Styles scoped to /generate only (via html.luxeflexia-generate-page) */
+/* Styles scoped to /generate only (via html.luxeflexia-generate-page)
+   Match Auth login/register cream backdrop exactly. */
 html.luxeflexia-generate-page,
 html.luxeflexia-generate-page body {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f0e8 45%, #faf6ee 100%) !important;
+  background: linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%) !important;
   background-attachment: fixed !important;
+  background-image: none !important;
 }
 
 html.luxeflexia-generate-page body {
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 162, 39, 0.1), transparent 55%),
-    linear-gradient(135deg, #ffffff 0%, #f5f0e8 45%, #faf6ee 100%) !important;
+  background-image: linear-gradient(
+    160deg,
+    #ffffff 0%,
+    #f5f0e8 48%,
+    #ebe6df 100%
+  ) !important;
+}
+
+html.luxeflexia-generate-page .luxeflexia-app {
+  background: transparent !important;
 }

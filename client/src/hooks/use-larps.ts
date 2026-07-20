@@ -106,6 +106,7 @@ export function useGenerateDirectLarp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["larp-history"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["stripe", "current-plan"] });
     },
   });
 }
@@ -123,6 +124,7 @@ export function useGenerateVideoLarp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["larp-history"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["stripe", "current-plan"] });
     },
   });
 }
@@ -165,8 +167,11 @@ export function useLarpHistory() {
     queryKey: ["larp-history"],
     queryFn: async () => {
       const res = await authFetch("/api/larps/history");
-      return res.json();
+      const body = await res.json();
+      return Array.isArray(body) ? body : [];
     },
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
 
