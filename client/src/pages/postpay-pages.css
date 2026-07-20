@@ -4,7 +4,7 @@ html.luxeflexia-postpay,
 html.luxeflexia-postpay body {
   background: var(--lx-surface, #e9e7e2) !important;
   background-attachment: fixed !important;
-  color: var(--lx-ink, #1a1814);
+  color: #1a1814 !important;
 }
 
 html.luxeflexia-postpay body {
@@ -14,12 +14,25 @@ html.luxeflexia-postpay body {
     linear-gradient(180deg, #f2f0ec 0%, #e9e7e2 45%, #e4e1da 100%) !important;
 }
 
+/* Keep chrome identical to the rest of the app (no dark overrides). */
+html.luxeflexia-postpay .floating-header-credits {
+  border-color: rgba(201, 162, 39, 0.35) !important;
+  background: rgba(242, 240, 236, 0.92) !important;
+  color: #1a1814 !important;
+}
+
+html.luxeflexia-postpay .bottom-dock .dock-nav {
+  background: rgba(242, 240, 236, 0.92) !important;
+  border-color: rgba(201, 162, 39, 0.3) !important;
+  color: #1a1814 !important;
+}
+
 .lx-postpay {
   --lx-gold: #c9a227;
   --lx-gold-soft: #d4af37;
   --lx-display: "Playfair Display", Georgia, serif;
   --lx-ink: #1a1814;
-  --lx-muted: rgba(26, 24, 20, 0.62);
+  --lx-muted: rgba(26, 24, 20, 0.72);
 }
 
 .lx-postpay__frame {
@@ -50,7 +63,7 @@ html.luxeflexia-postpay body {
 
 .lx-postpay__btn-outline {
   background: transparent;
-  color: #8a7018;
+  color: #1a1814;
   border: 1px solid rgba(201, 162, 39, 0.55);
   font-weight: 600;
   transition: background 0.2s ease, transform 0.15s ease;
@@ -145,7 +158,7 @@ html.luxeflexia-postpay body {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #9a7b1c;
+  color: #7a6416;
 }
 
 .lx-welcome__title {
@@ -154,7 +167,7 @@ html.luxeflexia-postpay body {
   font-size: clamp(1.85rem, 5.5vw, 2.55rem);
   font-weight: 600;
   line-height: 1.15;
-  color: #1a1814;
+  color: #111111;
   letter-spacing: -0.02em;
 }
 
@@ -163,16 +176,16 @@ html.luxeflexia-postpay body {
 }
 
 .lx-welcome__name {
-  color: #a8841a;
+  color: #9a7b1c;
   font-style: italic;
 }
 
 .lx-welcome__lede {
   margin: 0;
   max-width: 22rem;
-  font-size: 0.98rem;
+  font-size: 1rem;
   line-height: 1.55;
-  color: rgba(26, 24, 20, 0.68);
+  color: #2a2722;
 }
 
 .lx-welcome__divider {
@@ -198,7 +211,7 @@ html.luxeflexia-postpay body {
   padding: 0.4rem 0.5rem;
   font-size: 0.85rem;
   font-weight: 500;
-  color: rgba(26, 24, 20, 0.55);
+  color: #3a3530;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -213,7 +226,7 @@ html.luxeflexia-postpay body {
   margin: 0;
   font-family: var(--lx-display);
   font-size: 0.95rem;
-  color: rgba(26, 24, 20, 0.65);
+  color: #2a2722;
 }
 
 .lx-welcome__inline {

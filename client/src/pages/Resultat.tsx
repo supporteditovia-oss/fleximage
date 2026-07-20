@@ -44,6 +44,55 @@ function firstNameFromProfile(profile: {
   return "";
 }
 
+const CHECKOUT_WELCOME_KEY = "luxeflexia:checkout-welcome";
+
+function readCheckoutParams(locationPath: string): {
+  checkout: string | null;
+  sessionId: string | null;
+  larpId: string | null;
+} {
+  // wouter's location often omits the query string — always prefer window.location.search.
+  const fromWindow =
+    typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+  const fromLocation = locationPath.includes("?")
+    ? locationPath.split("?")[1] || ""
+    : "";
+  const params = new URLSearchParams(fromWindow || fromLocation);
+  return {
+    checkout: params.get("checkout"),
+    sessionId: params.get("session_id"),
+    larpId: params.get("larpId"),
+  };
+}
+
+function markCheckoutWelcome(): void {
+  try {
+    sessionStorage.setItem(CHECKOUT_WELCOME_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+function consumeCheckoutWelcomeFlag(): boolean {
+  try {
+    if (sessionStorage.getItem(CHECKOUT_WELCOME_KEY) === "1") {
+      sessionStorage.removeItem(CHECKOUT_WELCOME_KEY);
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+function peekCheckoutWelcomeFlag(): boolean {
+  try {
+    return sessionStorage.getItem(CHECKOUT_WELCOME_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
   const res = await authFetch("/api/stripe/verify-session", {
     method: "POST",
@@ -61,7 +110,9 @@ export default function Resultat() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<ResultPayload | null>(null);
-  const [checkoutWelcome, setCheckoutWelcome] = useState(false);
+  const [checkoutWelcome, setCheckoutWelcome] = useState(
+    () => peekCheckoutWelcomeFlag(),
+  );
   const [activating, setActivating] = useState(false);
 
   const firstName = useMemo(() => firstNameFromProfile(profile), [profile]);
@@ -122,16 +173,16 @@ export default function Resultat() {
 
     const run = async () => {
       setLoading(true);
-      const params = new URLSearchParams(location.split("?")[1] || "");
-      const checkout = params.get("checkout");
-      const sessionId = params.get("session_id");
-      const larpIdFromQuery = params.get("larpId");
+      const { checkout, sessionId, larpId: larpIdFromQuery } = readCheckoutParams(
+        location,
+      );
       const stashed = getPaywalledResult();
       const preferredLarpId = larpIdFromQuery || stashed?.larpId || null;
       const fromCheckout = checkout === "success" && Boolean(sessionId);
 
       try {
         if (fromCheckout && sessionId) {
+          markCheckoutWelcome();
           setCheckoutWelcome(true);
           setActivating(true);
           let active = false;
@@ -151,6 +202,8 @@ export default function Resultat() {
                 "Ton abonnement s'active. Tu peux déjà créer une image — rafraîchis si les crédits mettent une seconde à apparaître.",
             });
           }
+        } else if (peekCheckoutWelcomeFlag()) {
+          setCheckoutWelcome(true);
         }
 
         if (cancelled) return;
@@ -241,7 +294,10 @@ export default function Resultat() {
 
           <button
             type="button"
-            onClick={() => setLocation("/generate")}
+            onClick={() => {
+              consumeCheckoutWelcomeFlag();
+              setLocation("/generate");
+            }}
             className="lx-postpay__btn-gold lx-welcome__cta inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg px-6 text-sm"
           >
             Créer une image
@@ -249,7 +305,10 @@ export default function Resultat() {
 
           <button
             type="button"
-            onClick={() => setLocation("/settings")}
+            onClick={() => {
+              consumeCheckoutWelcomeFlag();
+              setLocation("/settings");
+            }}
             className="lx-welcome__link"
           >
             Voir mon abonnement

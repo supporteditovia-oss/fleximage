@@ -18,6 +18,7 @@ import { useCurrentPlan, type CurrentPlanType } from "@/hooks/use-billing";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import { createPortalSession } from "@/lib/stripe";
+import { formatCredits, formatShortDate } from "@/lib/format-locale";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarClock, CreditCard, Crown, Gem, Loader2 } from "lucide-react";
 
@@ -73,17 +74,11 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
 
   const pathname = location.split("?")[0] || location;
   const logoHref = variant === "app" ? "/generate" : "/";
-  const isPostPayPage = pathname === "/resultat";
   const displayedCredits = plan?.credits ?? profile?.credits ?? 0;
-  const creditsLabel = React.useMemo(() => {
-    if (displayedCredits < 100_000) {
-      return displayedCredits.toLocaleString(i18n.resolvedLanguage ?? "fr");
-    }
-    return new Intl.NumberFormat(i18n.resolvedLanguage ?? "fr", {
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(displayedCredits);
-  }, [displayedCredits, i18n.resolvedLanguage]);
+  const creditsLabel = React.useMemo(
+    () => formatCredits(displayedCredits, i18n.resolvedLanguage),
+    [displayedCredits, i18n.resolvedLanguage],
+  );
   const hasKnownCreditBalance =
     typeof plan?.credits === "number" || typeof profile?.credits === "number";
   const isCreditBalanceEmpty = hasKnownCreditBalance && displayedCredits <= 0;
@@ -91,7 +86,14 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     plan?.isSubscriber || profile?.is_subscriber || profile?.role === "admin",
   );
   const shouldOpenPaywallFromCredits = Boolean(user && !hasActiveSubscription);
-  const planType = (plan?.planType ?? "free") as CurrentPlanType;
+  const rawPlanType = plan?.planType ?? "free";
+  const planType = (
+    ["free", "admin", "unknown", "discovery", "essential", "ultimate"].includes(
+      rawPlanType,
+    )
+      ? rawPlanType
+      : "unknown"
+  ) as CurrentPlanType;
   const planLabels: Record<CurrentPlanType, string> = {
     free: t("billing.plans.free"),
     admin: t("billing.plans.admin"),
@@ -106,11 +108,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         defaultValue: plan?.subscriptionStatus || t("billing.status.inactive"),
       });
   const periodEndLabel = plan?.currentPeriodEnd
-    ? new Intl.DateTimeFormat(i18n.resolvedLanguage ?? "fr", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(new Date(plan.currentPeriodEnd))
+    ? formatShortDate(plan.currentPeriodEnd, i18n.resolvedLanguage)
     : null;
 
   React.useEffect(() => {
@@ -177,9 +175,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
               aria-hidden
             />
             <span
-              className={`truncate text-lg font-semibold tracking-tight sm:text-xl md:text-2xl ${
-                isPostPayPage ? "text-[#f5f0e6]" : "text-[var(--lx-ink)]"
-              }`}
+              className="truncate text-lg font-semibold tracking-tight text-[var(--lx-ink)] sm:text-xl md:text-2xl"
             >
               Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
             </span>
@@ -211,7 +207,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
-                title={String(displayedCredits)}
+                title={`${displayedCredits} ${t("billing.creditsShort")}`}
               >
                 <Gem
                   className="h-4 w-4 shrink-0 text-[var(--lx-gold)] sm:h-5 sm:w-5"
@@ -220,6 +216,9 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 />
                 <span className="min-w-0 truncate tabular-nums" aria-live="polite">
                   {creditsLabel}
+                </span>
+                <span className="shrink-0 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
+                  {t("billing.creditsShort")}
                 </span>
               </button>
             </PopoverTrigger>
@@ -240,7 +239,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                       aria-hidden
                     />
                     <span className="lx-display truncate text-2xl font-bold leading-none tabular-nums">
-                      {displayedCredits.toLocaleString(i18n.resolvedLanguage ?? "fr")}
+                      {formatCredits(displayedCredits, i18n.resolvedLanguage)}
                     </span>
                   </div>
                   {isPlanFetching && (
