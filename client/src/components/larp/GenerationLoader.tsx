@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { BrandMark } from "@/components/BrandMark";
 import "./generation-loader.css";
 
 interface GenerationLoaderProps {
@@ -157,30 +158,35 @@ export function GenerationLoader({
       )}
 
       {/* Contenu centré (logo, spinner, timer, messages) */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center">
+      <div className="absolute inset-0 z-10 flex w-full items-center justify-center px-4">
         <AnimatePresence>
           {showContent && (
             <motion.div
               key="loader-content"
-              className="flex w-full max-w-sm flex-col items-center justify-center gap-5 px-0"
+              className="flex w-full max-w-sm flex-col items-center justify-center gap-5"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
             >
-              <div className="lx-gen-loader__brand">
-                <div className="lx-gen-loader__brand-inner">
-                  <Gem
-                    className="block h-7 w-7 shrink-0 text-[#c9a227] md:h-8 md:w-8"
-                    strokeWidth={1.75}
-                    aria-hidden
-                  />
-                  <span
-                    className="block text-3xl font-semibold leading-none tracking-tight text-white md:text-4xl"
-                    style={{ fontFamily: "var(--lx-display)" }}
-                  >
-                    Luxe<span className="text-[#c9a227]">Flex</span>IA
-                  </span>
+              <div className="flex w-full items-center justify-center">
+                <div className="lx-gen-loader__brand">
+                  <div className="lx-gen-loader__brand-inner">
+                    <span
+                      className="relative inline-block text-3xl font-semibold leading-none tracking-tight text-white md:text-4xl"
+                      style={{ fontFamily: "var(--lx-display)" }}
+                    >
+                      <Gem
+                        className="absolute left-0 top-1/2 block h-7 w-7 shrink-0 -translate-x-[calc(100%+0.5rem)] -translate-y-1/2 text-[#c9a227] md:h-8 md:w-8 md:-translate-x-[calc(100%+0.625rem)]"
+                        strokeWidth={1.75}
+                        aria-hidden
+                      />
+                      <BrandMark
+                        className="text-inherit font-semibold leading-none tracking-tight"
+                        accentClassName="text-[#c9a227]"
+                      />
+                    </span>
+                  </div>
                 </div>
               </div>
 

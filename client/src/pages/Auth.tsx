@@ -14,6 +14,7 @@ import {
   resolvePreferredLocale,
   SIGNUP_LOCALE_STORAGE_KEY,
 } from "@shared/locales";
+import { BrandMark } from "@/components/BrandMark";
 import "./landing.css";
 
 type PasswordRule = {
@@ -246,9 +247,7 @@ export default function AuthPage() {
           strokeWidth={1.75}
           aria-hidden
         />
-        <span className="lx-display text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-3xl">
-          Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-        </span>
+        <BrandMark className="text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-3xl" />
       </Link>
 
       <div className="relative z-10 w-full max-w-md">

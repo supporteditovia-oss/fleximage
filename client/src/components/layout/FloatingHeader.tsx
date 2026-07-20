@@ -21,6 +21,7 @@ import { createPortalSession } from "@/lib/stripe";
 import { formatCredits, formatShortDate } from "@/lib/format-locale";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarClock, CreditCard, Crown, Gem, Loader2 } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
@@ -174,11 +175,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
               strokeWidth={1.75}
               aria-hidden
             />
-            <span
-              className="truncate text-lg font-semibold tracking-tight text-[var(--lx-ink)] sm:text-xl md:text-2xl"
-            >
-              Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-            </span>
+            <BrandMark className="truncate text-lg font-semibold tracking-tight text-[var(--lx-ink)] sm:text-xl md:text-2xl" />
           </span>
         </Link>
 

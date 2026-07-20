@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link } from "wouter";
 import { Menu, X, Gem } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { BrandMark } from "@/components/BrandMark";
 
 function BrandLogo({ className = "" }: { className?: string }) {
   return (
@@ -15,9 +16,7 @@ function BrandLogo({ className = "" }: { className?: string }) {
         strokeWidth={1.75}
         aria-hidden
       />
-      <span className="lx-display text-xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-2xl">
-        Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-      </span>
+      <BrandMark className="text-xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-2xl" />
     </Link>
   );
 }

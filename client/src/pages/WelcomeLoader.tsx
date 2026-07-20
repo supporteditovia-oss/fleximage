@@ -7,6 +7,7 @@ import {
 } from "@/lib/landing-marquee-images";
 import { getOnboardingResume } from "@/lib/onboarding-resume";
 import { getPaywallImage } from "@/lib/paywall-image";
+import { BrandMark } from "@/components/BrandMark";
 import "./welcome.css";
 
 const WELCOME_DURATION_MS = 2500;
@@ -53,9 +54,10 @@ export default function WelcomeLoader() {
       <div className="welcome-content">
         <div className="welcome-brand">
           <Gem className="welcome-brand-mark" strokeWidth={1.75} aria-hidden />
-          <span className="welcome-brand-text">
-            Luxe<span className="welcome-brand-accent">Flex</span>IA
-          </span>
+          <BrandMark
+            className="welcome-brand-text"
+            accentClassName="welcome-brand-accent"
+          />
         </div>
         <div className="welcome-spinner" aria-hidden="true" />
         <p className="welcome-caption">Préparation de ton espace…</p>

@@ -55,7 +55,7 @@
 .welcome-glow {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 50%;
   width: min(90vw, 520px);
   height: min(90vw, 520px);
   transform: translate(-50%, -50%);
@@ -75,38 +75,49 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.75rem;
+  justify-content: center;
+  width: 100%;
+  max-width: 24rem;
+  gap: 0;
   padding: 1.5rem;
   text-align: center;
   animation: welcome-fade-in 0.6s ease-out both;
 }
 
 .welcome-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
+  position: relative;
+  display: inline-block;
 }
 
 .welcome-brand-mark {
+  position: absolute;
+  left: 0;
+  top: 50%;
   width: 1.75rem;
   height: 1.75rem;
   color: var(--welcome-gold);
+  transform: translate(-100%, -50%) translateX(-0.5rem);
 }
 
 .welcome-brand-text {
   font-family: "Playfair Display", Georgia, serif;
   font-size: clamp(1.75rem, 5vw, 2.5rem);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.045em;
   line-height: 1;
   color: #f5f0e8;
+  white-space: nowrap;
 }
 
 .welcome-brand-accent {
   color: var(--welcome-gold);
+  letter-spacing: inherit;
+  margin: 0;
+  padding: 0;
 }
 
 .welcome-spinner {
+  margin-top: 2rem; /* mt-8 */
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 50%;
@@ -118,7 +129,7 @@
 }
 
 .welcome-caption {
-  margin: 0;
+  margin: 1rem 0 0;
   font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.04em;

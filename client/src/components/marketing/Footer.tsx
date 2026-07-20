@@ -1,4 +1,5 @@
 import { Gem } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 const FOOTER_LINKS = [
   {
@@ -21,9 +22,7 @@ export default function Footer() {
             strokeWidth={1.75}
             aria-hidden
           />
-          <span className="lx-display text-xl font-semibold tracking-tight text-[var(--lx-ink)]">
-            Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-          </span>
+          <BrandMark className="text-xl font-semibold tracking-tight text-[var(--lx-ink)]" />
         </div>
 
         <nav

@@ -10,6 +10,7 @@ import { LarpResult } from "./LarpResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
+import { BrandMark } from "@/components/BrandMark";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -232,15 +233,13 @@ export function GenerationProgress({
               }}
             />
 
-            <span className="lx-display absolute left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-20 flex -translate-x-1/2 items-center gap-2 md:top-6">
+            <span className="absolute left-1/2 top-[calc(1rem+env(safe-area-inset-top))] z-20 flex -translate-x-1/2 items-center gap-2 md:top-6">
               <Gem
                 className="h-5 w-5 text-[var(--lx-gold)] md:h-6 md:w-6"
                 strokeWidth={1.75}
                 aria-hidden
               />
-              <span className="text-xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-2xl">
-                Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-              </span>
+              <BrandMark className="text-xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-2xl" />
             </span>
 
             {/* LARP result with download/share actions */}

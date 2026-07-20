@@ -16,6 +16,22 @@
   font-family: var(--lx-display);
 }
 
+/* Wordmark: glued LuxeFlexIA (no optical gaps between colored parts) */
+.lx-brand-mark {
+  display: inline-block;
+  white-space: nowrap;
+  letter-spacing: -0.045em;
+  font-kerning: none;
+  font-feature-settings: "kern" 0;
+}
+
+.lx-brand-mark__accent {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  letter-spacing: inherit;
+}
+
 .lx-btn-gold {
   background: linear-gradient(135deg, #e8c547 0%, #c9a227 45%, #8b6914 100%);
   color: #1a1408;

@@ -1,5 +1,6 @@
 import { ShieldCheck, Zap, Sparkles } from "lucide-react";
 import ScrollReveal from "@/components/marketing/ScrollReveal";
+import { BrandMark } from "@/components/BrandMark";
 
 const FEATURES = [
   {
@@ -31,10 +32,7 @@ export default function FeaturesSection() {
       <div className="mx-auto max-w-6xl">
         <ScrollReveal>
           <h2 className="lx-display text-center text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-            Pourquoi{" "}
-            <span className="whitespace-nowrap">
-              Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-            </span>
+            Pourquoi <BrandMark className="whitespace-nowrap text-[inherit] font-semibold tracking-tight" />
           </h2>
         </ScrollReveal>
 
