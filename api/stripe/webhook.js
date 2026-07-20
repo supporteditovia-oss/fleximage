@@ -134,6 +134,60 @@ async function handleInvoicePaid(supabase, invoice) {
     .eq("stripe_subscription_id", subscriptionId);
 }
 
+async function handleSubscriptionUpdated(supabase, subscription) {
+  const subscriptionId = subscription.id;
+  const status = subscription.status;
+  const isActive = status === "active" || status === "trialing";
+  const userId =
+    (subscription.metadata && subscription.metadata.user_id) || null;
+
+  const profileFilter = userId
+    ? { column: "id", value: userId }
+    : { column: "stripe_subscription_id", value: subscriptionId };
+
+  await supabase
+    .from("profiles")
+    .update({
+      subscription_status: status,
+      is_subscriber: isActive,
+      // Keep access until period end when cancel is scheduled.
+      ...(isActive ? {} : { stripe_subscription_id: null }),
+      updated_at: new Date().toISOString(),
+    })
+    .eq(profileFilter.column, profileFilter.value);
+
+  const periodStart = subscription.current_period_start;
+  const periodEnd = subscription.current_period_end;
+
+  await supabase
+    .from("subscriptions")
+    .update({
+      status,
+      cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+      canceled_at:
+        subscription.canceled_at != null
+          ? new Date(subscription.canceled_at * 1000).toISOString()
+          : subscription.cancel_at_period_end
+            ? new Date().toISOString()
+            : null,
+      current_period_start: periodStart
+        ? new Date(periodStart * 1000).toISOString()
+        : null,
+      current_period_end: periodEnd
+        ? new Date(periodEnd * 1000).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscriptionId);
+
+  console.log("customer.subscription.updated synced", {
+    subscriptionId,
+    status,
+    cancel_at_period_end: subscription.cancel_at_period_end,
+    userId,
+  });
+}
+
 async function handleSubscriptionDeleted(supabase, subscription) {
   const userId = subscription.metadata && subscription.metadata.user_id;
   if (userId) {
@@ -146,10 +200,25 @@ async function handleSubscriptionDeleted(supabase, subscription) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
+  } else {
+    await supabase
+      .from("profiles")
+      .update({
+        is_subscriber: false,
+        subscription_status: "canceled",
+        stripe_subscription_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_subscription_id", subscription.id);
   }
   await supabase
     .from("subscriptions")
-    .update({ status: "canceled" })
+    .update({
+      status: "canceled",
+      cancel_at_period_end: false,
+      canceled_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     .eq("stripe_subscription_id", subscription.id);
 }
 
@@ -204,6 +273,9 @@ module.exports = async function handler(req, res) {
       }
       case "invoice.paid":
         await handleInvoicePaid(supabase, event.data.object);
+        break;
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(supabase, event.data.object);
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(supabase, event.data.object);

@@ -79,6 +79,7 @@ if (!i18n.isInitialized) {
         "larpPro",
         "legalCommon",
         "notFound",
+        "billing",
       ],
       detection: {
         order: ["localStorage", "navigator"],

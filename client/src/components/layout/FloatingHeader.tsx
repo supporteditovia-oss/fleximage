@@ -207,7 +207,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
-                title={`${displayedCredits} ${t("billing.creditsShort")}`}
+                title={creditsLabel}
               >
                 <Gem
                   className="h-4 w-4 shrink-0 text-[var(--lx-gold)] sm:h-5 sm:w-5"
@@ -216,9 +216,6 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
                 />
                 <span className="min-w-0 truncate tabular-nums" aria-live="polite">
                   {creditsLabel}
-                </span>
-                <span className="shrink-0 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
-                  {t("billing.creditsShort")}
                 </span>
               </button>
             </PopoverTrigger>
