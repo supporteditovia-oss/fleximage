@@ -1,4 +1,4 @@
-const { requireAdmin, sendError } = require("../../../_lib/admin-auth");
+const { requireAdmin, sendError } = require("../admin-auth");
 
 function toClientStatus(status) {
   if (status === "success" || status === "completed" || status === "done") return "success";

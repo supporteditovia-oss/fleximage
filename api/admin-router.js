@@ -1,5 +1,5 @@
-const usersIdHandler = require("./admin/users/[id]");
-const usersActivityHandler = require("./admin/users/[id]/activity");
+const usersIdHandler = require("./_lib/handlers/admin-users-id");
+const usersActivityHandler = require("./_lib/handlers/admin-users-activity");
 const creditsHandler = require("./admin/credits");
 const settingsHandler = require("./admin/settings");
 

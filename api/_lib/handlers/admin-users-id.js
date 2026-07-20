@@ -1,4 +1,4 @@
-const { requireAdmin, readBody, sendError } = require("../../_lib/admin-auth");
+const { requireAdmin, readBody, sendError } = require("../admin-auth");
 
 const PLAN_CREDITS = {
   discovery: 250,
