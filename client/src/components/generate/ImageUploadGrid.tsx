@@ -26,78 +26,78 @@ export function ImageUploadGrid({
 
   return (
     <div className="w-full flex justify-center -mb-7 md:-mb-8">
-      <div className="flex flex-col w-full max-w-md">
-        <div className="flex items-end justify-center gap-2 md:gap-3 w-full">
+      <div className="flex w-full max-w-md flex-col">
+        <div className="mx-auto grid w-full max-w-[22rem] grid-cols-3 gap-2 sm:gap-3 md:max-w-[26rem]">
           {images.map((img, i) => {
             const isVideoPreview = Boolean(
               img?.file.type.startsWith("video/"),
             );
 
             return (
-            <div
-              key={i}
-              className="relative flex-shrink-1 min-w-0 h-[min(52vh,440px)] md:h-[min(58vh,520px)] aspect-[9/16] flex flex-col"
-            >
-              {img ? (
-                <>
-                  {isVideoPreview ? (
-                    <video
-                      src={img.url}
-                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                      muted
-                      playsInline
-                      loop
-                      autoPlay
-                      aria-label={t("imageUpload.videoAlt", { index: i + 1 })}
-                    />
-                  ) : (
-                    <img
-                      src={img.url}
-                      alt={t("imageUpload.imageAlt", { index: i + 1 })}
-                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
-                    />
-                  )}
-                  <button
-                    onClick={() => onRemoveSlot(i)}
-                    className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                    type="button"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <label className="group absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg border-2 cursor-pointer transition-all border-foreground/25 bg-white/80">
-                    <input
-                      type="file"
-                      accept={accept}
-                      className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) {
-                          e.currentTarget.value = "";
-                          return;
-                        }
-                        const ok = isVideoMode
-                          ? file.type.startsWith("video/")
-                          : file.type.startsWith("image/");
-                        if (ok) onImageSelect(i, file);
-                        e.currentTarget.value = "";
-                      }}
-                    />
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors bg-primary/10 group-hover:bg-primary/15">
-                      <Plus className="w-7 h-7 transition-colors text-primary" />
-                    </div>
-                    {showEmptySlotText && (
-                      <p className="text-base md:text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors text-center px-2 whitespace-nowrap">
-                        {dropLabel}
-                      </p>
+              <div
+                key={i}
+                className="relative aspect-square w-full min-w-0 overflow-hidden"
+              >
+                {img ? (
+                  <>
+                    {isVideoPreview ? (
+                      <video
+                        src={img.url}
+                        className="absolute inset-0 h-full w-full rounded-lg object-cover"
+                        muted
+                        playsInline
+                        loop
+                        autoPlay
+                        aria-label={t("imageUpload.videoAlt", { index: i + 1 })}
+                      />
+                    ) : (
+                      <img
+                        src={img.url}
+                        alt={t("imageUpload.imageAlt", { index: i + 1 })}
+                        className="absolute inset-0 h-full w-full rounded-lg object-cover"
+                      />
                     )}
-                  </label>
-                  <span className="hero-image-slot absolute inset-0 z-10 rounded-lg pointer-events-none" />
-                </>
-              )}
-            </div>
+                    <button
+                      onClick={() => onRemoveSlot(i)}
+                      className="absolute top-1.5 right-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                      type="button"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <label className="group absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-foreground/25 bg-white/80 transition-all sm:gap-2">
+                      <input
+                        type="file"
+                        accept={accept}
+                        className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) {
+                            e.currentTarget.value = "";
+                            return;
+                          }
+                          const ok = isVideoMode
+                            ? file.type.startsWith("video/")
+                            : file.type.startsWith("image/");
+                          if (ok) onImageSelect(i, file);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15 sm:h-12 sm:w-12">
+                        <Plus className="h-6 w-6 text-primary transition-colors sm:h-7 sm:w-7" />
+                      </div>
+                      {showEmptySlotText && (
+                        <p className="px-1 text-center text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-foreground sm:text-sm">
+                          {dropLabel}
+                        </p>
+                      )}
+                    </label>
+                    <span className="hero-image-slot pointer-events-none absolute inset-0 z-10 rounded-lg" />
+                  </>
+                )}
+              </div>
             );
           })}
         </div>

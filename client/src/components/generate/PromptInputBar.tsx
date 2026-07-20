@@ -1,4 +1,4 @@
-import { SendHorizonal, Loader2, Shuffle } from "lucide-react";
+import { SendHorizonal, Loader2, Shuffle, Gem } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import {
@@ -16,6 +16,8 @@ interface PromptInputBarProps {
   canGenerate?: boolean;
   /** Style CTA doré LuxeFlexIA (page /generate uniquement) */
   goldCta?: boolean;
+  /** Coût affiché (ex. 10 crédits / image) */
+  creditCost?: number;
 }
 
 export function PromptInputBar({
@@ -25,6 +27,7 @@ export function PromptInputBar({
   isGenerating,
   canGenerate = true,
   goldCta = false,
+  creditCost,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const larpIdeas = useMemo(
@@ -45,6 +48,8 @@ export function PromptInputBar({
     const random = larpChips[Math.floor(Math.random() * larpChips.length)];
     onPromptChange(random.example);
   };
+
+  const showCreditCost = typeof creditCost === "number" && creditCost > 0;
 
   return (
     <div className="relative z-10 w-full flex justify-center">
@@ -75,6 +80,11 @@ export function PromptInputBar({
             onClick={onGenerate}
             disabled={isGenerating || !canGenerate}
             type="button"
+            title={
+              showCreditCost
+                ? t("promptInput.creditCostHint", { count: creditCost })
+                : undefined
+            }
           >
             {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -96,6 +106,21 @@ export function PromptInputBar({
             {isGenerating ? t("promptInput.creating") : t("promptInput.create")}
           </Button>
         </div>
+        {showCreditCost && (
+          <div
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--lx-gold)]/50 bg-[linear-gradient(135deg,rgba(232,197,71,0.18),rgba(201,162,39,0.1))] px-3 py-2 text-center shadow-sm"
+            role="note"
+          >
+            <Gem
+              className="h-4 w-4 shrink-0 text-[var(--lx-gold)]"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span className="text-[13px] font-bold tracking-wide text-[#3d320c] sm:text-sm">
+              {t("promptInput.creditCostHint", { count: creditCost })}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

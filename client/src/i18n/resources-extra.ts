@@ -179,6 +179,10 @@ export const extraResources = {
       randomIdea: "Idée aléatoire",
       create: "Créer",
       creating: "Création...",
+      creditCostPerImage: "{{count}} crédits / image",
+      creditCostHint:
+        "Chaque génération coûte {{count}} crédits — débités de votre solde.",
+      creditCostShort: "{{count}} crédits",
       textFallbackLabel: "Texte {{index}}",
       enterValue: "Entrer {{label}}...",
       enterValueFallback: "Entrer une valeur...",
@@ -512,6 +516,10 @@ export const extraResources = {
       randomIdea: "Random idea",
       create: "Create",
       creating: "Creating...",
+      creditCostPerImage: "{{count}} credits / image",
+      creditCostHint:
+        "Each generation costs {{count}} credits — deducted from your balance.",
+      creditCostShort: "{{count}} credits",
       textFallbackLabel: "Text {{index}}",
       enterValue: "Enter {{label}}...",
       enterValueFallback: "Enter a value...",
@@ -815,6 +823,10 @@ export const extraResources = {
       randomIdea: "Idea aleatoria",
       create: "Crear",
       creating: "Creando...",
+      creditCostPerImage: "{{count}} creditos / imagen",
+      creditCostHint:
+        "Cada generación cuesta {{count}} créditos — se descuentan de tu saldo.",
+      creditCostShort: "{{count}} créditos",
       textFallbackLabel: "Texto {{index}}",
       enterValue: "Introduce {{label}}...",
       enterValueFallback: "Introduce un valor...",
@@ -1120,6 +1132,10 @@ export const extraResources = {
       randomIdea: "Zufallsidee",
       create: "Erstellen",
       creating: "Erstelle...",
+      creditCostPerImage: "{{count}} Credits / Bild",
+      creditCostHint:
+        "Jede Generierung kostet {{count}} Credits — abgezogen von deinem Guthaben.",
+      creditCostShort: "{{count}} Credits",
       textFallbackLabel: "Text {{index}}",
       enterValue: "{{label}} eingeben...",
       enterValueFallback: "Wert eingeben...",
