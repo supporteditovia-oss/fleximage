@@ -414,7 +414,7 @@ export async function exportMarketingLoaderVideo({
 
     const [sourceImage, logoImage] = await Promise.all([
       loadDrawableImage(safeSourceUrl),
-      loadDrawableImage("/assets/larpking.png"),
+      loadDrawableImage("/luxeflexia-logo.png"),
     ]);
 
     const canvas = document.createElement("canvas");

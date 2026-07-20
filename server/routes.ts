@@ -1481,7 +1481,7 @@ async function listLandingMarqueeImages(): Promise<LandingMarqueeImage[]> {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, avifUrl], index) => ({
       id,
-      alt: `LarpKing example ${index + 1}`,
+    alt: `LuxeFlexIA example ${index + 1}`,
       avif_url: avifUrl,
       webp_url: webpById.get(id) ?? null,
     }));
@@ -3808,7 +3808,7 @@ export async function registerRoutes(
 
       const { data, error } = await supabaseAdmin
         .from("generations")
-        .select("*, templates(name, name_en, template_categories(slug, name, name_en))")
+        .select("*, templates(name, template_categories(slug, name))")
         .eq("user_id", authReq.userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -4026,7 +4026,7 @@ export async function registerRoutes(
         const { data, error } = await supabaseAdmin
           .from("generations")
           .select(
-            "*, profiles(email), templates(name, name_en, template_categories(slug, name, name_en))",
+            "*, profiles(email), templates(name, template_categories(slug, name))",
           )
           .order("created_at", { ascending: false })
           .limit(limit);
@@ -4222,7 +4222,7 @@ export async function registerRoutes(
         const [generationsResult, ledgerResult] = await Promise.all([
           supabaseAdmin
             .from("generations")
-            .select("*, templates(name, name_en, template_categories(slug, name, name_en))")
+            .select("*, templates(name, template_categories(slug, name))")
             .eq("user_id", id)
             .order("created_at", { ascending: false })
             .limit(100),
@@ -4340,23 +4340,28 @@ export async function registerRoutes(
     requireAdmin,
     async (req, res) => {
       try {
+        const authReq = req as AuthenticatedRequest;
         const { id } = req.params;
         const supabaseAdmin = getSupabaseAdmin();
 
-        // Delete profile first (cascade will handle related data)
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .delete()
-          .eq("id", id);
+        if (id === authReq.userId) {
+          return res.status(400).json({
+            message: "Impossible de supprimer ton propre compte admin.",
+          });
+        }
 
-        if (profileError) throw profileError;
-
-        // Delete the auth user entry
+        // Delete Auth user first — profiles.id references auth.users(id) ON DELETE CASCADE
         const { error: authError } =
           await supabaseAdmin.auth.admin.deleteUser(id);
-        if (authError) throw authError;
+        if (authError) {
+          const missing = /not\s*found/i.test(authError.message || "");
+          if (!missing) throw authError;
+        }
 
-        res.json({ message: "Utilisateur supprimé" });
+        // Best-effort leftover profile cleanup
+        await supabaseAdmin.from("profiles").delete().eq("id", id);
+
+        res.json({ message: "Utilisateur supprimé", deleted: true });
       } catch (error: any) {
         logger.error({ err: error }, "Error deleting user");
         res.status(500).json({ message: error.message });

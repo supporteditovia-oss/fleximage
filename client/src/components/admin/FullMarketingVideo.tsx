@@ -96,7 +96,7 @@ export async function exportFullMarketingVideo({
   const [beforeImage, afterImage, logoImage] = await Promise.all([
     loadDrawableImage(safeBefore),
     loadDrawableImage(safeAfter),
-    loadDrawableImage("/assets/larpking.png"),
+    loadDrawableImage("/luxeflexia-logo.png"),
   ]);
   await waitForMarketingLoaderFonts();
 

@@ -4,10 +4,56 @@
   "installCommand": "npm install",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/api/larps/(.*)",
+      "destination": "/api/larps-router?__larpsPath=$1"
+    },
     {
       "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$|cgu(?:/.*)?$|confidentialite(?:/.*)?$|tous-les-generateurs(?:/.*)?$|generateur(?:/.*)?$).*)",
       "destination": "/index.html"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/assets/larpking.png",
+      "destination": "/luxeflexia-logo.png",
+      "permanent": true
+    },
+    { "source": "/.env", "destination": "/404", "permanent": false },
+    { "source": "/.env.local", "destination": "/404", "permanent": false },
+    { "source": "/.git/(.*)", "destination": "/404", "permanent": false },
+    { "source": "/server/(.*)", "destination": "/404", "permanent": false },
+    { "source": "/package.json", "destination": "/404", "permanent": false },
+    { "source": "/.cursor/(.*)", "destination": "/404", "permanent": false }
   ]
 }

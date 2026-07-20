@@ -83,7 +83,7 @@ const LANDING_MARQUEE_PLACEHOLDERS: Record<string, string> = {
 export const LANDING_MARQUEE_IMAGES: LandingMarqueeImage[] =
   LANDING_MARQUEE_IMAGE_IDS.map((id, index) => ({
     id,
-    alt: `LarpKing example ${index + 1}`,
+    alt: `LuxeFlexIA example ${index + 1}`,
     avif_url: `${LANDING_MARQUEE_PUBLIC_BASE_URL}/avif/${id}.avif`,
     webp_url: AVIF_ONLY_IMAGE_IDS.has(id)
       ? null

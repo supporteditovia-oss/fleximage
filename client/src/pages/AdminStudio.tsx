@@ -556,8 +556,8 @@ function SimulatedMarketingVideoPreview({
           {showLoader ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center animate-in fade-in zoom-in-95 duration-700">
               <img
-                src="/assets/larpking.png"
-                alt="LarpKing"
+                src="/luxeflexia-logo.png"
+                alt="LuxeFlexIA"
                 className="h-24 w-auto object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
               />
               <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />

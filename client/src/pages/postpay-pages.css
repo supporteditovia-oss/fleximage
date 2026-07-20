@@ -1,41 +1,32 @@
-/* Shared dark premium chrome for /resultat only */
+/* Post-checkout / result page — aligned with LuxeFlexIA cream + gold brand */
+
 html.luxeflexia-postpay,
 html.luxeflexia-postpay body {
-  background: linear-gradient(180deg, #0a0a0a 0%, #141414 55%, #1a1a1a 100%) !important;
+  background: var(--lx-surface, #e9e7e2) !important;
   background-attachment: fixed !important;
-  color: #f5f0e6;
+  color: var(--lx-ink, #1a1814);
 }
 
 html.luxeflexia-postpay body {
   background-image:
-    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(201, 162, 39, 0.12), transparent 58%),
-    linear-gradient(180deg, #0a0a0a 0%, #141414 55%, #1a1a1a 100%) !important;
-}
-
-html.luxeflexia-postpay .floating-header-credits {
-  border-color: rgba(201, 162, 39, 0.35) !important;
-  background: rgba(20, 20, 20, 0.88) !important;
-  color: #f5f0e6 !important;
-}
-
-html.luxeflexia-postpay .bottom-dock .dock-nav {
-  background: rgba(18, 18, 18, 0.92) !important;
-  border-color: rgba(201, 162, 39, 0.28) !important;
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201, 162, 39, 0.16), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 80%, rgba(201, 162, 39, 0.06), transparent 50%),
+    linear-gradient(180deg, #f2f0ec 0%, #e9e7e2 45%, #e4e1da 100%) !important;
 }
 
 .lx-postpay {
   --lx-gold: #c9a227;
-  --lx-gold-soft: #e8c547;
+  --lx-gold-soft: #d4af37;
   --lx-display: "Playfair Display", Georgia, serif;
-  --lx-ink: #f5f0e6;
-  --lx-muted: rgba(245, 240, 230, 0.62);
+  --lx-ink: #1a1814;
+  --lx-muted: rgba(26, 24, 20, 0.62);
 }
 
 .lx-postpay__frame {
-  border: 1px solid rgba(201, 162, 39, 0.55);
+  border: 1px solid rgba(201, 162, 39, 0.45);
   box-shadow:
-    0 0 0 1px rgba(201, 162, 39, 0.12),
-    0 24px 64px rgba(0, 0, 0, 0.45);
+    0 0 0 1px rgba(201, 162, 39, 0.08),
+    0 20px 48px rgba(26, 24, 20, 0.12);
   background: #0f0f0f;
 }
 
@@ -44,11 +35,13 @@ html.luxeflexia-postpay .bottom-dock .dock-nav {
   color: #12100e;
   border: none;
   font-weight: 600;
-  transition: filter 0.2s ease, transform 0.15s ease;
+  letter-spacing: 0.01em;
+  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(201, 162, 39, 0.28);
 }
 
 .lx-postpay__btn-gold:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.05);
 }
 
 .lx-postpay__btn-gold:active {
@@ -57,8 +50,8 @@ html.luxeflexia-postpay .bottom-dock .dock-nav {
 
 .lx-postpay__btn-outline {
   background: transparent;
-  color: #e8c547;
-  border: 1px solid rgba(201, 162, 39, 0.65);
+  color: #8a7018;
+  border: 1px solid rgba(201, 162, 39, 0.55);
   font-weight: 600;
   transition: background 0.2s ease, transform 0.15s ease;
 }
@@ -69,4 +62,221 @@ html.luxeflexia-postpay .bottom-dock .dock-nav {
 
 .lx-postpay__btn-outline:active {
   transform: scale(0.98);
+}
+
+/* ── Checkout welcome ───────────────────────────────────────── */
+
+.lx-welcome {
+  position: relative;
+  display: flex;
+  min-height: min(70vh, 640px);
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 0 2rem;
+}
+
+.lx-welcome__glow {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(92vw, 420px);
+  height: min(92vw, 420px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(201, 162, 39, 0.22) 0%,
+    rgba(201, 162, 39, 0.08) 42%,
+    transparent 70%
+  );
+  animation: lx-welcome-glow 4.5s ease-in-out infinite;
+}
+
+.lx-welcome__card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 26rem;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  animation: lx-welcome-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lx-welcome__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 0.35rem;
+  animation: lx-welcome-mark 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.lx-welcome__diamond {
+  position: absolute;
+  inset: 0.35rem;
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  transform: rotate(45deg);
+  border-radius: 0.35rem;
+  background: linear-gradient(
+    145deg,
+    rgba(232, 197, 71, 0.18),
+    rgba(201, 162, 39, 0.05)
+  );
+  box-shadow: 0 10px 28px rgba(201, 162, 39, 0.18);
+}
+
+.lx-welcome__spark {
+  position: relative;
+  z-index: 1;
+  width: 1.65rem;
+  height: 1.65rem;
+  color: #c9a227;
+  animation: lx-welcome-spark 2.8s ease-in-out infinite;
+}
+
+.lx-welcome__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #9a7b1c;
+}
+
+.lx-welcome__title {
+  margin: 0;
+  font-family: var(--lx-display);
+  font-size: clamp(1.85rem, 5.5vw, 2.55rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: #1a1814;
+  letter-spacing: -0.02em;
+}
+
+.lx-welcome__title--sm {
+  font-size: clamp(1.45rem, 4vw, 1.9rem);
+}
+
+.lx-welcome__name {
+  color: #a8841a;
+  font-style: italic;
+}
+
+.lx-welcome__lede {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgba(26, 24, 20, 0.68);
+}
+
+.lx-welcome__divider {
+  width: 3.5rem;
+  height: 1px;
+  margin: 0.35rem 0 0.15rem;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 162, 39, 0.7),
+    transparent
+  );
+}
+
+.lx-welcome__cta {
+  margin-top: 0.35rem;
+}
+
+.lx-welcome__link {
+  margin-top: 0.15rem;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(26, 24, 20, 0.55);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.lx-welcome__link:hover {
+  color: #8a7018;
+}
+
+.lx-welcome__loading {
+  margin: 0;
+  font-family: var(--lx-display);
+  font-size: 0.95rem;
+  color: rgba(26, 24, 20, 0.65);
+}
+
+.lx-welcome__inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  animation: lx-welcome-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lx-welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lx-welcome-mark {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lx-welcome-spark {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08) rotate(8deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes lx-welcome-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-welcome__card,
+  .lx-welcome__mark,
+  .lx-welcome__spark,
+  .lx-welcome__glow,
+  .lx-welcome__inline {
+    animation: none !important;
+  }
 }

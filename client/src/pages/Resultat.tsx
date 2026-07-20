@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Download, Loader2, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import { currentPlanQueryKey } from "@/hooks/use-billing";
+import { useAuth } from "@/hooks/use-auth";
 import {
   clearPaywalledResult,
   getPaywalledResult,
@@ -25,6 +26,24 @@ interface ResultPayload {
   taskId: string | null;
 }
 
+function firstNameFromProfile(profile: {
+  full_name: string | null;
+  email: string | null;
+} | null): string {
+  const full = profile?.full_name?.trim();
+  if (full) return full.split(/\s+/)[0]!;
+  const email = profile?.email?.trim();
+  if (email) {
+    const local = email.split("@")[0] || "";
+    const cleaned = local.replace(/[._-]+/g, " ").trim();
+    if (cleaned) {
+      const part = cleaned.split(/\s+/)[0]!;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }
+  }
+  return "";
+}
+
 async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
   const res = await authFetch("/api/stripe/verify-session", {
     method: "POST",
@@ -38,9 +57,14 @@ export default function Resultat() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<ResultPayload | null>(null);
+  const [checkoutWelcome, setCheckoutWelcome] = useState(false);
+  const [activating, setActivating] = useState(false);
+
+  const firstName = useMemo(() => firstNameFromProfile(profile), [profile]);
 
   const redirectToPaywall = useCallback(() => {
     setLocation("/generate");
@@ -104,9 +128,12 @@ export default function Resultat() {
       const larpIdFromQuery = params.get("larpId");
       const stashed = getPaywalledResult();
       const preferredLarpId = larpIdFromQuery || stashed?.larpId || null;
+      const fromCheckout = checkout === "success" && Boolean(sessionId);
 
       try {
-        if (checkout === "success" && sessionId) {
+        if (fromCheckout && sessionId) {
+          setCheckoutWelcome(true);
+          setActivating(true);
           let active = false;
           for (let i = 0; i < 10; i++) {
             active = await verifyCheckoutSession(sessionId);
@@ -116,15 +143,13 @@ export default function Resultat() {
           await queryClient.invalidateQueries({ queryKey: ["profile"] });
           await queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
           window.history.replaceState({}, "", "/resultat");
+          if (!cancelled) setActivating(false);
           if (!active) {
-            // Payment succeeded on Stripe — don't bounce back to the paywall.
             toast({
               title: "Paiement reçu",
               description:
-                "Ton abonnement s'active. Ouvre Paramètres ou rafraîchis la page dans quelques secondes.",
+                "Ton abonnement s'active. Tu peux déjà créer une image — rafraîchis si les crédits mettent une seconde à apparaître.",
             });
-            setLocation("/settings");
-            return;
           }
         }
 
@@ -146,7 +171,7 @@ export default function Resultat() {
     return () => {
       cancelled = true;
     };
-  }, [fetchResult, location, redirectToPaywall, toast]);
+  }, [fetchResult, location, queryClient, toast]);
 
   async function handleDownload() {
     if (!result) return;
@@ -171,36 +196,82 @@ export default function Resultat() {
     }
   }
 
-  if (loading) {
+  if (loading || activating) {
     return (
-      <div className="lx-postpay flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-[#c9a227]" />
-        <p
-          className="text-sm text-[var(--lx-muted)]"
-          style={{ fontFamily: "var(--lx-display)" }}
-        >
-          Préparation de ton image…
+      <div className="lx-postpay lx-welcome flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--lx-gold)]" />
+        <p className="lx-welcome__loading">
+          {activating
+            ? "Activation de ton abonnement…"
+            : "Préparation de ton espace…"}
         </p>
+      </div>
+    );
+  }
+
+  // After a successful Stripe checkout: celebratory welcome (not "no result").
+  if (checkoutWelcome && !result) {
+    return (
+      <div className="lx-postpay lx-welcome">
+        <div className="lx-welcome__glow" aria-hidden />
+        <div className="lx-welcome__card">
+          <div className="lx-welcome__mark" aria-hidden>
+            <span className="lx-welcome__diamond" />
+            <Sparkles className="lx-welcome__spark" strokeWidth={1.25} />
+          </div>
+
+          <p className="lx-welcome__eyebrow">Bienvenue chez LuxeFlexIA</p>
+
+          <h1 className="lx-welcome__title">
+            {firstName ? (
+              <>
+                Félicitations, <span className="lx-welcome__name">{firstName}</span>
+              </>
+            ) : (
+              "Félicitations"
+            )}
+          </h1>
+
+          <p className="lx-welcome__lede">
+            Ton abonnement est confirmé. Tes crédits sont prêts — il ne reste plus
+            qu&apos;à créer ta première image.
+          </p>
+
+          <div className="lx-welcome__divider" aria-hidden />
+
+          <button
+            type="button"
+            onClick={() => setLocation("/generate")}
+            className="lx-postpay__btn-gold lx-welcome__cta inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg px-6 text-sm"
+          >
+            Créer une image
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLocation("/settings")}
+            className="lx-welcome__link"
+          >
+            Voir mon abonnement
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!result) {
     return (
-      <div className="lx-postpay mx-auto flex max-w-lg flex-col items-center gap-6 py-16 text-center">
-        <Sparkles className="h-10 w-10 text-[#c9a227]" strokeWidth={1.5} />
-        <h1
-          className="text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl"
-          style={{ fontFamily: "var(--lx-display)" }}
-        >
-          Aucun résultat disponible
+      <div className="lx-postpay lx-welcome mx-auto flex max-w-lg flex-col items-center gap-6 py-16 text-center">
+        <Sparkles className="h-10 w-10 text-[var(--lx-gold)]" strokeWidth={1.5} />
+        <h1 className="lx-welcome__title lx-welcome__title--sm">
+          Aucun résultat pour le moment
         </h1>
-        <p className="text-sm text-[var(--lx-muted)]">
-          Crée une image pour la retrouver ici après paiement.
+        <p className="lx-welcome__lede">
+          Crée une image pour la retrouver ici, prête à télécharger.
         </p>
         <button
           type="button"
-          onClick={() => setLocation("/")}
+          onClick={() => setLocation("/generate")}
           className="lx-postpay__btn-gold inline-flex h-12 items-center justify-center rounded-lg px-6 text-sm"
         >
           Créer une image
@@ -213,12 +284,23 @@ export default function Resultat() {
 
   return (
     <div className="lx-postpay mx-auto flex w-full max-w-xl flex-col items-center gap-6 py-4 md:py-8">
-      <h1
-        className="text-center text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl"
-        style={{ fontFamily: "var(--lx-display)" }}
-      >
-        Ton image est prête
-      </h1>
+      {checkoutWelcome ? (
+        <div className="lx-welcome__inline">
+          <p className="lx-welcome__eyebrow">Abonnement activé</p>
+          <h1 className="lx-welcome__title lx-welcome__title--sm">
+            {firstName
+              ? `Bravo ${firstName}, ton image est prête`
+              : "Ton image est prête"}
+          </h1>
+        </div>
+      ) : (
+        <h1
+          className="text-center text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl"
+          style={{ fontFamily: "var(--lx-display)" }}
+        >
+          Ton image est prête
+        </h1>
+      )}
 
       <div className="lx-postpay__frame relative w-full max-w-[min(92vw,420px)] overflow-hidden rounded-lg">
         <div className="relative aspect-[9/16] w-full">
@@ -250,7 +332,7 @@ export default function Resultat() {
         </button>
         <button
           type="button"
-          onClick={() => setLocation("/")}
+          onClick={() => setLocation("/generate")}
           className="lx-postpay__btn-outline inline-flex h-12 flex-1 items-center justify-center rounded-lg px-4 text-sm"
         >
           Créer une autre image

@@ -61,7 +61,10 @@ function nicheHtml({ title, description, canonicalPath, h1, subtitle, relatedLin
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:site_name" content="LuxeFlexIA" />
-    <meta property="og:image" content="${ORIGIN}/assets/og-image.png" />
+    <meta property="og:image" content="${ORIGIN}/assets/og-image.png?v=20260720" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LuxeFlexIA — créateur de photos lifestyle par IA" />
     <style>
       body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: #f2f0ec; color: #12100e; line-height: 1.55; }
       main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }

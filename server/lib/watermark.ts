@@ -9,8 +9,10 @@ async function getLogoBuffer(): Promise<Buffer> {
   if (logoCacheBuffer) return logoCacheBuffer;
 
   const candidates = [
-    path.resolve(process.cwd(), "client/public/assets/larpking.png"),
-    path.resolve(process.cwd(), "dist/public/assets/larpking.png"),
+    path.resolve(process.cwd(), "client/public/luxeflexia-logo.png"),
+    path.resolve(process.cwd(), "dist/public/luxeflexia-logo.png"),
+    path.resolve(process.cwd(), "client/public/luxeflexia-logo-cream.png"),
+    path.resolve(process.cwd(), "dist/public/luxeflexia-logo-cream.png"),
   ];
 
   for (const p of candidates) {
@@ -20,7 +22,7 @@ async function getLogoBuffer(): Promise<Buffer> {
     }
   }
 
-  throw new Error("LarpKing logo not found");
+  throw new Error("LuxeFlexIA logo not found");
 }
 
 export async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {
