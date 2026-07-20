@@ -1,6 +1,12 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 
+const BRAND_DISPLAY_NAME = "LuxeFlexIA";
+const CHECKOUT_APP_ORIGIN = "https://www.luxeflexia.com";
+
+/** API version that supports Checkout Session branding_settings.display_name */
+const STRIPE_API_VERSION = "2026-02-25.clover";
+
 const PLAN_CREDITS = {
   discovery: 250,
   essential: 1100,
@@ -13,35 +19,18 @@ const PLAN_ENV_KEYS = {
   ultimate: "STRIPE_ULTIMATE_PRICE_ID",
 };
 
+const PLAN_LABELS = {
+  discovery: "Abonnement LuxeFlexIA Discovery",
+  essential: "Abonnement LuxeFlexIA Essential",
+  ultimate: "Abonnement LuxeFlexIA Ultimate",
+};
+
 function normalizePlan(plan) {
   if (plan === "ultimate") return "ultimate";
   if (plan === "essential" || plan === "monthly" || plan === "video") {
     return "essential";
   }
   return "discovery";
-}
-
-function resolveAppOrigin(originHeader) {
-  const candidates = [
-    Array.isArray(originHeader) ? originHeader[0] : originHeader,
-    process.env.SITE_URL,
-    process.env.APP_URL,
-    process.env.VITE_PUBLIC_APP_URL,
-    "https://www.luxeflexia.com",
-  ];
-
-  for (const candidate of candidates) {
-    const raw = candidate && String(candidate).trim().replace(/\/$/, "");
-    if (!raw) continue;
-    try {
-      const origin = new URL(raw.includes("://") ? raw : `https://${raw}`).origin;
-      if (origin.includes("localhost") || origin.includes("127.0.0.1")) continue;
-      return origin;
-    } catch {
-      // try next
-    }
-  }
-  return "https://www.luxeflexia.com";
 }
 
 function readBody(req) {
@@ -120,27 +109,59 @@ module.exports = async function handler(req, res) {
     }
 
     const creditsPerCycle = PLAN_CREDITS[plan];
-    const appOrigin = resolveAppOrigin(req.headers.origin);
-    const stripe = new Stripe(secretKey);
+    const stripe = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION });
+
+    // Keep Product name in Stripe aligned with LuxeFlexIA (best-effort).
+    try {
+      const price = await stripe.prices.retrieve(priceId);
+      const productId =
+        typeof price.product === "string" ? price.product : price.product?.id;
+      if (productId) {
+        await stripe.products.update(productId, {
+          name: PLAN_LABELS[plan],
+          metadata: {
+            app: "luxeflexia",
+            luxeflexia_plan: plan,
+          },
+        });
+      }
+    } catch (productErr) {
+      console.warn("checkout product rename skipped", productErr);
+    }
+
     const sessionParams = {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appOrigin}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appOrigin}/generate?checkout=cancel`,
+      success_url: `${CHECKOUT_APP_ORIGIN}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${CHECKOUT_APP_ORIGIN}/generate?checkout=cancel`,
+      // Overrides the Checkout header business name (Editovia → LuxeFlexIA).
+      // Note: receipts / bank statement / some legal footers can still use
+      // Stripe Dashboard → Public details until you change them there.
+      branding_settings: {
+        display_name: BRAND_DISPLAY_NAME,
+      },
+      custom_text: {
+        submit: {
+          message: `Abonnement ${BRAND_DISPLAY_NAME} — paiement sécurisé`,
+        },
+      },
       metadata: {
         user_id: userId,
         price_id: priceId,
         plan_type: plan,
         credits_per_cycle: String(creditsPerCycle),
         billing_interval: "month",
+        brand: BRAND_DISPLAY_NAME,
       },
       subscription_data: {
+        description: PLAN_LABELS[plan],
         metadata: {
           user_id: userId,
           price_id: priceId,
           plan_type: plan,
           credits_per_cycle: String(creditsPerCycle),
           billing_interval: "month",
+          brand: BRAND_DISPLAY_NAME,
         },
       },
     };
@@ -157,6 +178,7 @@ module.exports = async function handler(req, res) {
     console.error("create-checkout error", error);
     res.status(500).json({
       message: error && error.message ? String(error.message) : "Erreur serveur",
+      code: error && error.code ? error.code : undefined,
     });
   }
 };

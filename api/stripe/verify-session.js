@@ -1,19 +1,6 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
-
-const PLAN_CREDITS = {
-  discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
-};
-
-function normalizePlan(plan) {
-  if (plan === "ultimate") return "ultimate";
-  if (plan === "essential" || plan === "monthly" || plan === "video") {
-    return "essential";
-  }
-  return "discovery";
-}
+const { reconcilePaidCheckoutSession } = require("../_lib/stripe-billing");
 
 function readBody(req) {
   if (!req.body) return {};
@@ -25,75 +12,6 @@ function readBody(req) {
     }
   }
   return req.body;
-}
-
-async function applyCreditDelta(supabase, params) {
-  if (!params.delta) return;
-  const { error } = await supabase.rpc("apply_credit_delta", {
-    p_user_id: params.userId,
-    p_delta: params.delta,
-    p_reason: "subscription_grant",
-    p_generation_id: null,
-    p_subscription_id: params.subscriptionId || null,
-    p_idempotency_key: params.idempotencyKey,
-    p_metadata: params.metadata || {},
-  });
-  if (error) throw error;
-}
-
-async function reconcileCheckoutSession(supabase, session) {
-  const userId = session.metadata && session.metadata.user_id;
-  if (!userId) return;
-
-  const customerId = session.customer;
-  const subscriptionId = session.subscription;
-  if (!customerId || !subscriptionId) return;
-
-  const plan = normalizePlan(session.metadata && session.metadata.plan_type);
-  const creditsPerCycle =
-    Number(session.metadata && session.metadata.credits_per_cycle) ||
-    PLAN_CREDITS[plan];
-  const priceId = (session.metadata && session.metadata.price_id) || "";
-
-  await supabase
-    .from("profiles")
-    .update({
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      subscription_status: "active",
-      is_subscriber: true,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-
-  const { data: subscriptionRow } = await supabase
-    .from("subscriptions")
-    .upsert(
-      {
-        user_id: userId,
-        stripe_subscription_id: subscriptionId,
-        stripe_customer_id: customerId,
-        status: "active",
-        price_id: priceId,
-        plan_type: plan,
-        credits_per_cycle: creditsPerCycle,
-        billing_interval: "month",
-      },
-      { onConflict: "stripe_subscription_id" },
-    )
-    .select("id")
-    .single();
-
-  await applyCreditDelta(supabase, {
-    userId,
-    delta: creditsPerCycle,
-    subscriptionId: subscriptionRow && subscriptionRow.id,
-    idempotencyKey: `stripe:checkout:${session.id}:credits`,
-    metadata: {
-      source: "verify-session",
-      checkout_session_id: session.id,
-    },
-  });
 }
 
 module.exports = async function handler(req, res) {
@@ -135,6 +53,8 @@ module.exports = async function handler(req, res) {
 
     const body = readBody(req);
     const sessionId = body.session_id;
+    let reconcile = null;
+
     if (sessionId) {
       const stripe = new Stripe(secretKey);
       const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -142,12 +62,28 @@ module.exports = async function handler(req, res) {
         res.status(403).json({ message: "Invalid checkout session" });
         return;
       }
-      if (
-        session.mode === "subscription" &&
-        session.status === "complete" &&
-        session.payment_status === "paid"
-      ) {
-        await reconcileCheckoutSession(supabase, session);
+      try {
+        reconcile = await reconcilePaidCheckoutSession(
+          supabase,
+          stripe,
+          session,
+          "verify-session",
+        );
+        if (!reconcile.ok) {
+          console.warn("verify-session reconcile skipped", {
+            sessionId,
+            reason: reconcile.reason,
+            payment_status: session.payment_status,
+            status: session.status,
+          });
+        }
+      } catch (reconcileErr) {
+        console.error("verify-session reconcile error", reconcileErr);
+        res.status(500).json({
+          message: "Activation abonnement échouée",
+          code: "reconcile_failed",
+        });
+        return;
       }
     }
 
@@ -161,6 +97,9 @@ module.exports = async function handler(req, res) {
       status: (profile && profile.subscription_status) || "pending_webhook",
       active: !!(profile && profile.is_subscriber),
       credits: (profile && profile.credits) || 0,
+      reconcile: reconcile
+        ? { ok: reconcile.ok, reason: reconcile.reason || null }
+        : null,
     });
   } catch (error) {
     console.error("verify-session error", error);

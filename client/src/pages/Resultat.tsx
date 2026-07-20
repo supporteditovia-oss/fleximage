@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Download, Loader2, Sparkles } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
+import { currentPlanQueryKey } from "@/hooks/use-billing";
 import {
   clearPaywalledResult,
   getPaywalledResult,
@@ -26,7 +28,7 @@ interface ResultPayload {
 async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
   const res = await authFetch("/api/stripe/verify-session", {
     method: "POST",
-    body: JSON.stringify({ sessionId }),
+    body: JSON.stringify({ session_id: sessionId }),
   });
   const data = (await res.json()) as { active?: boolean };
   return Boolean(data.active);
@@ -35,6 +37,7 @@ async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
 export default function Resultat() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<ResultPayload | null>(null);
@@ -105,16 +108,24 @@ export default function Resultat() {
       try {
         if (checkout === "success" && sessionId) {
           let active = false;
-          for (let i = 0; i < 6; i++) {
+          for (let i = 0; i < 10; i++) {
             active = await verifyCheckoutSession(sessionId);
             if (active) break;
-            await new Promise((r) => setTimeout(r, 800));
+            await new Promise((r) => setTimeout(r, 1000));
           }
+          await queryClient.invalidateQueries({ queryKey: ["profile"] });
+          await queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
+          window.history.replaceState({}, "", "/resultat");
           if (!active) {
-            redirectToPaywall();
+            // Payment succeeded on Stripe — don't bounce back to the paywall.
+            toast({
+              title: "Paiement reçu",
+              description:
+                "Ton abonnement s'active. Ouvre Paramètres ou rafraîchis la page dans quelques secondes.",
+            });
+            setLocation("/settings");
             return;
           }
-          window.history.replaceState({}, "", "/resultat");
         }
 
         if (cancelled) return;

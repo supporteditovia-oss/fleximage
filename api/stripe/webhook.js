@@ -1,118 +1,137 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
+const {
+  applyCreditDelta,
+  normalizePlan,
+  asStripeId,
+  reconcilePaidCheckoutSession,
+  PLAN_CREDITS,
+} = require("../_lib/stripe-billing");
 
+/**
+ * Read the request body as raw bytes when possible.
+ * Never re-serialize a parsed JSON object — that breaks Stripe signatures.
+ */
 async function readRawBody(req) {
-  if (Buffer.isBuffer(req.body)) return req.body;
-  if (typeof req.body === "string") return Buffer.from(req.body);
-  if (req.body && typeof req.body === "object") {
-    return Buffer.from(JSON.stringify(req.body));
+  if (Buffer.isBuffer(req.body)) return { raw: req.body, parsed: null };
+  if (typeof req.rawBody === "string") {
+    return { raw: Buffer.from(req.rawBody), parsed: null };
   }
+  if (Buffer.isBuffer(req.rawBody)) return { raw: req.rawBody, parsed: null };
+  if (typeof req.body === "string") {
+    return { raw: Buffer.from(req.body), parsed: null };
+  }
+
+  // Already-parsed object: keep it for events.retrieve fallback only.
+  if (req.body && typeof req.body === "object") {
+    return { raw: null, parsed: req.body };
+  }
+
   const chunks = [];
   for await (const chunk of req) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  return Buffer.concat(chunks);
+  return { raw: Buffer.concat(chunks), parsed: null };
 }
 
-const PLAN_CREDITS = {
-  discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
-};
+async function constructStripeEvent(req, stripe, webhookSecret) {
+  const sig = req.headers["stripe-signature"];
+  const { raw, parsed } = await readRawBody(req);
 
-function normalizePlan(plan) {
-  if (plan === "ultimate") return "ultimate";
-  if (plan === "essential" || plan === "monthly" || plan === "video") {
-    return "essential";
-  }
-  return "discovery";
-}
-
-async function applyCreditDelta(supabase, params) {
-  if (!params.delta) return;
-  const { error } = await supabase.rpc("apply_credit_delta", {
-    p_user_id: params.userId,
-    p_delta: params.delta,
-    p_reason: "subscription_grant",
-    p_generation_id: null,
-    p_subscription_id: params.subscriptionId || null,
-    p_idempotency_key: params.idempotencyKey,
-    p_metadata: params.metadata || {},
-  });
-  if (error) throw error;
-}
-
-async function handleCheckoutCompleted(supabase, stripe, session) {
-  const userId = session.metadata && session.metadata.user_id;
-  if (!userId) return;
-
-  const customerId = session.customer;
-  const subscriptionId = session.subscription;
-  if (!customerId || !subscriptionId) return;
-
-  let priceId = (session.metadata && session.metadata.price_id) || "";
-  const plan = normalizePlan(session.metadata && session.metadata.plan_type);
-  try {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ["items.data.price"],
-    });
-    priceId =
-      (subscription.items.data[0] &&
-        subscription.items.data[0].price &&
-        subscription.items.data[0].price.id) ||
-      priceId;
-  } catch {
-    // keep metadata
+  if (raw && sig) {
+    try {
+      return {
+        event: stripe.webhooks.constructEvent(raw, sig, webhookSecret),
+        via: "signature",
+      };
+    } catch (err) {
+      console.warn("stripe webhook signature verify failed", {
+        message: err && err.message,
+      });
+    }
   }
 
-  const creditsPerCycle =
-    Number(session.metadata && session.metadata.credits_per_cycle) ||
-    PLAN_CREDITS[plan];
+  // Fallback when the platform already parsed JSON (signature bytes lost).
+  // Trust only Stripe API contents via events.retrieve — not the POST body.
+  let eventId = parsed && parsed.id;
+  if (!eventId && raw) {
+    try {
+      const asJson = JSON.parse(raw.toString("utf8"));
+      eventId = asJson && asJson.id;
+    } catch {
+      // ignore
+    }
+  }
 
-  const { error: profileErr } = await supabase
-    .from("profiles")
-    .update({
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      subscription_status: "active",
-      is_subscriber: true,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-  if (profileErr) throw profileErr;
+  if (typeof eventId === "string" && eventId.startsWith("evt_")) {
+    const event = await stripe.events.retrieve(eventId);
+    return { event, via: "events.retrieve" };
+  }
 
-  const { data: subscriptionRow, error: subErr } = await supabase
+  throw new Error(
+    "Unable to verify Stripe webhook (raw body missing and no event id)",
+  );
+}
+
+async function handleInvoicePaid(supabase, invoice) {
+  const subscriptionId =
+    asStripeId(invoice.subscription) ||
+    asStripeId(
+      invoice.parent &&
+        invoice.parent.subscription_details &&
+        invoice.parent.subscription_details.subscription,
+    );
+  if (!subscriptionId) return;
+
+  // First invoice is already granted via checkout.session.completed
+  if (invoice.billing_reason !== "subscription_cycle") {
+    return;
+  }
+
+  const { data: subscriptionRow } = await supabase
     .from("subscriptions")
-    .upsert(
-      {
-        user_id: userId,
-        stripe_subscription_id: subscriptionId,
-        stripe_customer_id: customerId,
-        status: "active",
-        price_id: priceId,
-        plan_type: plan,
-        credits_per_cycle: creditsPerCycle,
-        billing_interval: "month",
-      },
-      { onConflict: "stripe_subscription_id" },
-    )
-    .select("id")
-    .single();
-  if (subErr) throw subErr;
+    .select("id, user_id, price_id, plan_type, credits_per_cycle")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (!subscriptionRow) {
+    console.warn("invoice.paid: no subscription row", subscriptionId);
+    return;
+  }
+
+  const plan = normalizePlan(subscriptionRow.plan_type);
+  const creditsPerCycle =
+    Number(subscriptionRow.credits_per_cycle) || PLAN_CREDITS[plan] || 0;
+  if (!creditsPerCycle) return;
 
   await applyCreditDelta(supabase, {
-    userId,
+    userId: subscriptionRow.user_id,
     delta: creditsPerCycle,
-    subscriptionId: subscriptionRow && subscriptionRow.id,
-    idempotencyKey: `stripe:checkout:${session.id}:credits`,
+    subscriptionId: subscriptionRow.id,
+    idempotencyKey: `stripe:invoice:${invoice.id}:credits`,
     metadata: {
-      source: "checkout.session.completed",
-      checkout_session_id: session.id,
+      source: "invoice.paid",
+      stripe_invoice_id: invoice.id,
       stripe_subscription_id: subscriptionId,
-      price_id: priceId,
+      billing_reason: invoice.billing_reason,
       plan_type: plan,
     },
   });
+
+  await supabase
+    .from("subscriptions")
+    .update({
+      current_period_start: invoice.period_start
+        ? new Date(invoice.period_start * 1000).toISOString()
+        : null,
+      current_period_end: invoice.period_end
+        ? new Date(invoice.period_end * 1000).toISOString()
+        : null,
+      credits_per_cycle: creditsPerCycle,
+      status: "active",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscriptionId);
 }
 
 async function handleSubscriptionDeleted(supabase, subscription) {
@@ -153,20 +172,38 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const sig = req.headers["stripe-signature"];
-    if (!sig) {
+    if (!req.headers["stripe-signature"] && !req.body) {
       res.status(400).json({ message: "Missing stripe-signature header" });
       return;
     }
 
-    const rawBody = await readRawBody(req);
     const stripe = new Stripe(secretKey);
-    const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    const { event, via } = await constructStripeEvent(
+      req,
+      stripe,
+      webhookSecret,
+    );
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    console.log("stripe webhook event", {
+      type: event.type,
+      id: event.id,
+      via,
+    });
+
     switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutCompleted(supabase, stripe, event.data.object);
+      case "checkout.session.completed": {
+        const result = await reconcilePaidCheckoutSession(
+          supabase,
+          stripe,
+          event.data.object,
+          "checkout.session.completed",
+        );
+        console.log("checkout.session.completed result", result);
+        break;
+      }
+      case "invoice.paid":
+        await handleInvoicePaid(supabase, event.data.object);
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(supabase, event.data.object);
@@ -175,7 +212,7 @@ module.exports = async function handler(req, res) {
         break;
     }
 
-    res.status(200).json({ received: true });
+    res.status(200).json({ received: true, via });
   } catch (error) {
     console.error("stripe webhook error", error);
     res.status(400).json({
@@ -184,6 +221,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
+// Critical for Stripe signature verification on Vercel/Node builders.
 module.exports.config = {
   api: {
     bodyParser: false,

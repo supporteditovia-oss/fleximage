@@ -49,12 +49,22 @@ import {
   dataUrlToFile,
 } from "@/lib/onboarding-resume";
 import { savePaywallPrompt, clearPaywallPrompt, getPaywallPrompt } from "@/lib/paywall-prompt";
-import { clearPaywallExpiry } from "@/lib/paywall-expiry";
+import {
+  clearPaywallExpiry,
+  getPaywallExpiresAt,
+  isPaywallExpired,
+  resetPaywallExpiry,
+} from "@/lib/paywall-expiry";
+import {
+  clearLastGeneration,
+  getLastGeneration,
+} from "@/lib/last-generation";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
   clearFakePaywallReached,
   getFakePaywallGenerationMode,
+  hasReachedFakePaywall,
 } from "@/lib/fake-paywall-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
@@ -96,12 +106,17 @@ export default function Generate() {
   const [facePreviewUrl, setFacePreviewUrl] = useState<string | null>(null);
 
   // ── Generation state ────────────────────────────────────────
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(() => {
+    if (isReturningFromCheckout) return null;
+    return getLastGeneration()?.taskId ?? null;
+  });
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
   const [transitionBg, setTransitionBg] = useState(false);
-  const [generationResultVisible, setGenerationResultVisible] = useState(false);
+  const [generationResultVisible, setGenerationResultVisible] = useState(
+    () => !isReturningFromCheckout && !!getLastGeneration()?.taskId,
+  );
 
   // ── Fake generation / paywall state ─────────────────────────
   const [showFakeOnboardingLoader, setShowFakeOnboardingLoader] = useState(false);
@@ -274,7 +289,7 @@ export default function Generate() {
       clearPaywallExpiry();
 
       const waitForWebhookActivation = async () => {
-        for (let attempt = 0; attempt < 6; attempt += 1) {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
           const res = await authFetch("/api/stripe/verify-session", {
             method: "POST",
             body: checkoutSessionId
@@ -284,7 +299,7 @@ export default function Generate() {
           const data = await res.json();
           console.log("[Checkout] verify-session result:", data);
           if (data.active) return true;
-          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+          await new Promise((resolve) => window.setTimeout(resolve, 1000));
         }
         return false;
       };
@@ -400,8 +415,126 @@ export default function Generate() {
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
-  // ── Restore pending LARP from IndexedDB (or localStorage resume) ─
+  // ── Fresh visit: keep landing onboarding draft, else blank form ─
   useEffect(() => {
+    if (isReturningFromCheckout) return;
+
+    const resume = getOnboardingResume();
+    const paywallPreview = getPaywallImage();
+    const hasOnboardingDraft = Boolean(resume && paywallPreview);
+
+    if (hasOnboardingDraft && resume && paywallPreview) {
+      console.log("[Generate] Preserving landing onboarding draft");
+      if (resume.prompt) {
+        setPrompt(resume.prompt);
+        savePaywallPrompt(resume.prompt);
+      }
+      const file = dataUrlToFile(paywallPreview);
+      if (file) {
+        setImages([{ url: paywallPreview, file }]);
+      }
+      setGenerationMode(resume.generationMode === "video" ? "video" : "image");
+      setTaskId(null);
+      setGenerationResultVisible(false);
+      setUnlockedLarp(null);
+      setSavedPaywall(null);
+      setShowLuxePaywall(false);
+      setPendingLoading(false);
+      setAutoGenerateReady(false);
+      return;
+    }
+
+    // No onboarding draft: clear sticky leftovers for a clean Créer form.
+    console.log("[Generate] Clearing leftover drafts; restoring last result if any");
+    clearPendingLarp();
+    clearPaywallImage();
+    clearPaywallPrompt();
+    clearPaywallExpiry();
+    clearOnboardingResume();
+    clearPaywalledResult();
+    clearFakePaywallReached();
+
+    setPrompt("");
+    setImages((prev) => {
+      prev.forEach((slot) => {
+        if (slot?.url) URL.revokeObjectURL(slot.url);
+      });
+      return [null];
+    });
+    setSelectedTemplate(null);
+    setPendingTemplateId(null);
+    setPendingLoading(false);
+    setAutoGenerateReady(false);
+    setUnlockedLarp(null);
+    setSavedPaywall(null);
+    setShowLuxePaywall(false);
+    setShowFakeOnboardingLoader(false);
+
+    const last = getLastGeneration();
+    if (last?.taskId) {
+      setTaskId(last.taskId);
+      setGenerationResultVisible(true);
+    } else {
+      setTaskId(null);
+      setGenerationResultVisible(false);
+    }
+  }, [isReturningFromCheckout]);
+
+  // Resume landing → auth → fake loader → blurred lock paywall.
+  useEffect(() => {
+    if (isReturningFromCheckout || isAuthLoading) return;
+    if (showFakeOnboardingLoader || taskId || pendingLoading || unlockingLarp) {
+      return;
+    }
+    if (profile?.is_subscriber || profile?.role === "admin") return;
+
+    const resume = getOnboardingResume();
+    const paywallPreview = getPaywallImage();
+    if (!paywallPreview) return;
+
+    // Already showed the loader once: jump back to locked preview if still valid.
+    if (hasReachedFakePaywall(profile?.id)) {
+      if (resume) clearOnboardingResume();
+      if (!isPaywallExpired(getPaywallExpiresAt())) {
+        navigate("/image-prete?paywall=1");
+      }
+      return;
+    }
+
+    // Need an onboarding intent (landing CTA) to auto-start the fake flow.
+    if (!resume) return;
+
+    console.log("[Generate] Starting onboarding fake loader → image-prete");
+    if (resume.prompt) {
+      setPrompt(resume.prompt);
+      savePaywallPrompt(resume.prompt);
+    }
+    const file = dataUrlToFile(paywallPreview);
+    if (file) {
+      setImages([{ url: paywallPreview, file }]);
+    }
+    setGenerationMode(resume.generationMode === "video" ? "video" : "image");
+    setFakePaywallReason("onboarding");
+    setShowLuxePaywall(false);
+    setFakeLoaderImageUrl(paywallPreview);
+    setShowFakeOnboardingLoader(true);
+  }, [
+    isAuthLoading,
+    isReturningFromCheckout,
+    navigate,
+    pendingLoading,
+    profile?.id,
+    profile?.is_subscriber,
+    profile?.role,
+    showFakeOnboardingLoader,
+    taskId,
+    unlockingLarp,
+  ]);
+
+  // ── Restore pending LARP only after Stripe checkout return ─
+  useEffect(() => {
+    if (!isReturningFromCheckout) return;
+
     let cancelled = false;
     const timeout = setTimeout(() => {
       if (!cancelled) {
@@ -419,7 +552,7 @@ export default function Generate() {
         return;
       }
 
-      console.log("[Generate] Resuming onboarding from localStorage");
+      console.log("[Generate] Resuming onboarding from localStorage (checkout)");
       setPendingLoading(true);
       setGenerationMode(resume.generationMode);
       if (resume.prompt) {
@@ -431,10 +564,7 @@ export default function Generate() {
       if (file) {
         setImages([{ url: paywallPreview, file }]);
       }
-
-      if (!isReturningFromCheckout) {
-        setAutoGenerateReady(true);
-      }
+      setAutoGenerateReady(true);
     };
 
     getPendingLarp()
@@ -444,7 +574,7 @@ export default function Generate() {
           resumeFromLocalStorage();
           return;
         }
-        console.log("[Generate] Pending LARP found:", {
+        console.log("[Generate] Pending LARP found for checkout:", {
           prompt: pending.prompt,
           images: pending.images.length,
           generationMode: pending.generationMode ?? "image",
@@ -476,7 +606,6 @@ export default function Generate() {
           setImages(restored);
           void savePaywallImage(pending.images[0]);
         } else {
-          // IDB draft without images — still try localStorage preview
           const paywallPreview = getPaywallImage();
           const file = paywallPreview ? dataUrlToFile(paywallPreview) : null;
           if (file && paywallPreview) {
@@ -490,28 +619,18 @@ export default function Generate() {
         if (pending.prompt) {
           savePaywallPrompt(pending.prompt);
         }
-        // When returning from checkout, don't trigger auto-generate immediately.
-        // The checkout handler will trigger it after verify-session completes.
-        if (!isReturningFromCheckout) {
-          setAutoGenerateReady(true);
-        } else {
-          console.log("[Generate] Returning from checkout, keeping loader while waiting for verify-session");
-          // Keep pendingLoading=true so the fullscreen loader stays visible
-          // until the checkout handler triggers auto-generate.
-        }
-        // NOTE: We do NOT clear the pending LARP here.
-        // It will be cleared when a real generation starts (in handleGenerate).
-        // This ensures data persists through the fake loader → paywall → Stripe checkout flow.
+        console.log("[Generate] Returning from checkout, keeping loader while waiting for verify-session");
       })
       .catch((err) => {
         console.error("[Generate] getPendingLarp error:", err);
         if (!cancelled) resumeFromLocalStorage();
       });
+
     return () => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, []);
+  }, [isReturningFromCheckout]);
 
   useEffect(() => {
     if (!pendingTemplateId || selectedTemplate || !templatesList) return;
@@ -644,6 +763,8 @@ export default function Generate() {
     setShowFakeOnboardingLoader(false);
     setFakeLoaderImageUrl(null);
     markFakePaywallReached(profile?.id, "image");
+    // Fresh 15:00 countdown starts when the locked preview is shown.
+    resetPaywallExpiry();
     clearOnboardingResume();
     navigate("/image-prete?paywall=1");
   }, [navigate, profile?.id]);
@@ -838,7 +959,9 @@ export default function Generate() {
     try {
       setIsStartingGeneration(true);
       setPendingLoading(true);
+      clearLastGeneration();
       clearPendingLarp();
+      clearOnboardingResume();
 
       // ── Video mode ───────────────────────────────────────────
       if (generationMode === "video") {
@@ -957,6 +1080,8 @@ export default function Generate() {
     setAutoGenerateReady(false);
     setIsStartingGeneration(false);
     setShowLuxePaywall(false);
+    clearLastGeneration();
+    clearPendingLarp();
     setPrompt("");
     setImages((prev) => {
       prev.forEach(revokeSlotUrl);
@@ -1007,6 +1132,15 @@ export default function Generate() {
       return; // effect will re-fire when isAuthLoading changes
     }
     setAutoGenerateReady(false);
+
+    // Hard guard: never auto-bill when revisiting Créer.
+    // Real auto-generate is allowed only right after Stripe checkout.
+    if (!isReturningFromCheckout) {
+      console.log("[Generate] Skipping auto-generate (not a checkout return)");
+      setPendingLoading(false);
+      return;
+    }
+
     console.log(
       "[Generate] Auto-generate ready, prompt:",
       JSON.stringify(prompt.slice(0, 50)),
@@ -1022,32 +1156,9 @@ export default function Generate() {
       return;
     }
 
-    const shouldUseOnboardingPaywall =
-      profile &&
-      !profile.is_subscriber &&
-      profile.role !== "admin" &&
-      !isReturningFromCheckout;
-
-    // Non-subscribers (incl. 0 credits): handleGenerate runs fake loader → paywall
-    // If form state is still empty but we have a localStorage preview, start directly.
-    if (shouldUseOnboardingPaywall) {
-      const hasFormImage = images.some((img) => img !== null);
-      if (!hasFormImage && getPaywallImage()) {
-        console.log("[Generate] Starting FAKE onboarding from localStorage preview...");
-        setFakeLoaderImageUrl(getPaywallImage());
-        setShowFakeOnboardingLoader(true);
-        setPendingLoading(false);
-        return;
-      }
-      console.log("[Generate] Starting FAKE onboarding generation flow...");
-      void handleGenerate();
-      return;
-    }
-
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
     if (
-      !isReturningFromCheckout &&
       profile &&
       profile.role !== "admin" &&
       profile.credits < requiredCredits
@@ -1061,7 +1172,7 @@ export default function Generate() {
       return;
     }
 
-    // Real generation
+    // Real generation after checkout
     setTransitionBg(true);
     console.log("[Generate] Starting handleGenerate...");
     handleGenerate()
@@ -1076,10 +1187,15 @@ export default function Generate() {
       });
   }, [autoGenerateReady, isAuthLoading]);
 
+  const lxCreamBgStyle = {
+    background:
+      "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)",
+  } as const;
+
   // ── Transition backdrop ─────────────────────────────────────
   const transitionBackdrop = transitionBg
     ? createPortal(
-      <div className="fixed inset-0 z-[99] bg-background bg-grid" />,
+      <div className="fixed inset-0 z-[99]" style={lxCreamBgStyle} />,
       document.body,
     )
     : null;
@@ -1107,26 +1223,32 @@ export default function Generate() {
   const portalOverlay = pendingLoading
     ? createPortal(
       <div
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--lx-surface)] bg-grid"
+        className="fixed inset-0 z-[100] w-full"
+        style={lxCreamBgStyle}
+        role="status"
+        aria-live="polite"
       >
-        <span className="lx-display mb-4 inline-flex items-center gap-2">
-          <Gem
-            className="h-8 w-8 text-[var(--lx-gold)] md:h-10 md:w-10"
-            strokeWidth={1.75}
-            aria-hidden
-          />
-          <span className="text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-            Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
-          </span>
-        </span>
-        <Loader2 className="h-6 w-6 animate-spin text-[var(--lx-gold)]" />
+        {/* Wordmark pinned to true viewport center; spinner sits below with mt-8 */}
+        <div className="absolute left-1/2 top-1/2 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center px-4">
+          <div className="relative flex w-full items-center justify-center">
+            <span className="lx-display relative inline-block text-3xl font-semibold leading-none tracking-tight text-[var(--lx-ink)] md:text-4xl">
+              <Gem
+                className="absolute left-0 top-1/2 h-8 w-8 shrink-0 -translate-x-[calc(100%+0.5rem)] -translate-y-1/2 text-[var(--lx-gold)] md:h-10 md:w-10 md:-translate-x-[calc(100%+0.625rem)]"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              Luxe<span className="text-[var(--lx-gold)]">Flex</span>IA
+            </span>
+          </div>
+          <Loader2 className="mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
+        </div>
       </div>,
       document.body,
     )
     : null;
 
   const paywallOverlayClassName =
-    "fixed inset-0 z-[100] overflow-hidden bg-background bg-grid animate-in fade-in duration-300";
+    "fixed inset-0 z-[100] overflow-hidden animate-in fade-in duration-300";
 
   const paywallOverlayInnerClassName =
     "absolute inset-x-0 top-20 bottom-0 flex min-h-0 items-stretch justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:top-24 md:bottom-10";
@@ -1270,9 +1392,9 @@ export default function Generate() {
   }
 
   // -- Persistent paywall for non-subscribers with a previous generation
-  if (hasSavedPaywall) {
+  if (hasSavedPaywall && savedPaywall?.resultUrls?.[0]) {
     return createPortal(
-      <div className={paywallOverlayClassName}>
+      <div className={paywallOverlayClassName} style={lxCreamBgStyle}>
         <div className={paywallOverlayInnerClassName}>
           <PaywallOverlay
             imageUrl={savedPaywall.resultUrls[0]}
@@ -1301,6 +1423,7 @@ export default function Generate() {
               onDeselect={deselectTemplate}
               onGenerate={handleGenerate}
               isGenerating={isSubmittingGeneration}
+              creditCost={IMAGE_CREDIT_COST}
             />
           ) : (
             <>
@@ -1317,6 +1440,7 @@ export default function Generate() {
                 onGenerate={handleGenerate}
                 isGenerating={isSubmittingGeneration}
                 goldCta
+                creditCost={IMAGE_CREDIT_COST}
                 canGenerate={images.some((img) => img !== null)}
               />
             </>
