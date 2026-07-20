@@ -86,17 +86,19 @@
 
 .welcome-brand {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
 }
 
 .welcome-brand-mark {
-  position: absolute;
-  left: 0;
-  top: 50%;
+  position: static;
   width: 1.75rem;
   height: 1.75rem;
+  flex-shrink: 0;
   color: var(--welcome-gold);
-  transform: translate(-100%, -50%) translateX(-0.5rem);
+  transform: none;
 }
 
 .welcome-brand-text {

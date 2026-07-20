@@ -39,9 +39,12 @@ const getInitialLocale = () => {
     return DEFAULT_LOCALE;
   }
 
+  // Prefer an explicit user choice; otherwise always French for this product.
   const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
-  const browser = window.navigator.language;
-  return resolvePreferredLocale(stored ?? browser, DEFAULT_LOCALE);
+  if (stored) {
+    return resolvePreferredLocale(stored, DEFAULT_LOCALE);
+  }
+  return DEFAULT_LOCALE;
 };
 
 const initialLocale = getInitialLocale();
@@ -82,7 +85,8 @@ if (!i18n.isInitialized) {
         "billing",
       ],
       detection: {
-        order: ["localStorage", "navigator"],
+        // Do not auto-switch to English from the phone browser language.
+        order: ["localStorage"],
         lookupLocalStorage: APP_LOCALE_STORAGE_KEY,
         caches: ["localStorage"],
       },
@@ -95,6 +99,18 @@ if (!i18n.isInitialized) {
 
 if (typeof document !== "undefined") {
   document.documentElement.lang = i18n.resolvedLanguage ?? initialLocale;
+}
+
+// One-time fix: older builds cached English from the phone browser.
+// Prefer French unless the user explicitly chose another language in Settings.
+const LOCALE_CHOSEN_KEY = "luxeflexia:locale_chosen";
+if (typeof window !== "undefined") {
+  const chosen = window.localStorage.getItem(LOCALE_CHOSEN_KEY);
+  const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+  if (!chosen && stored === "en") {
+    window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, DEFAULT_LOCALE);
+    void i18n.changeLanguage(DEFAULT_LOCALE);
+  }
 }
 
 i18n.on("languageChanged", (lng) => {
@@ -111,6 +127,10 @@ i18n.on("languageChanged", (lng) => {
 
 export function setAppLanguage(locale: string) {
   const normalized = resolvePreferredLocale(locale, DEFAULT_LOCALE);
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("luxeflexia:locale_chosen", "1");
+  }
 
   if (i18n.resolvedLanguage !== normalized) {
     void i18n.changeLanguage(normalized);

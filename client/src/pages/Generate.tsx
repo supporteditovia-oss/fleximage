@@ -1255,15 +1255,13 @@ export default function Generate() {
       >
         {/* Wordmark pinned to true viewport center; spinner sits below with mt-8 */}
         <div className="absolute left-1/2 top-1/2 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center px-4">
-          <div className="relative flex w-full items-center justify-center">
-            <span className="relative inline-block">
-              <Gem
-                className="absolute left-0 top-1/2 h-8 w-8 shrink-0 -translate-x-[calc(100%+0.5rem)] -translate-y-1/2 text-[var(--lx-gold)] md:h-10 md:w-10 md:-translate-x-[calc(100%+0.625rem)]"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <BrandMark className="text-3xl font-semibold leading-none tracking-tight text-[var(--lx-ink)] md:text-4xl" />
-            </span>
+          <div className="inline-flex items-center justify-center gap-2.5 md:gap-3">
+            <Gem
+              className="h-8 w-8 shrink-0 text-[var(--lx-gold)] md:h-10 md:w-10"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <BrandMark className="text-3xl font-semibold leading-none text-[var(--lx-ink)] md:text-4xl" />
           </div>
           <Loader2 className="mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
         </div>

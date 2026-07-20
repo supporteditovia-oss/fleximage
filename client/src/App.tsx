@@ -256,6 +256,14 @@ function Router() {
       DEFAULT_LOCALE,
     );
 
+    // Don't re-apply auto-detected English from older signups.
+    const localeChosen =
+      typeof window !== "undefined" &&
+      window.localStorage.getItem("luxeflexia:locale_chosen");
+    if (!localeChosen && preferredLocale === "en") {
+      return;
+    }
+
     if (preferredLocale !== i18n.resolvedLanguage) {
       void i18n.changeLanguage(preferredLocale);
     }

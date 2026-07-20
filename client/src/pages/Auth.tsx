@@ -10,6 +10,7 @@ import { translateSupabaseError } from "@/lib/error-translator";
 import { getAuthRedirectTo } from "@/lib/auth-redirect";
 import { useTranslation } from "react-i18next";
 import {
+  APP_LOCALE_STORAGE_KEY,
   DEFAULT_LOCALE,
   resolvePreferredLocale,
   SIGNUP_LOCALE_STORAGE_KEY,
@@ -62,7 +63,9 @@ export default function AuthPage() {
 
   const getSignupLocale = () =>
     resolvePreferredLocale(
-      i18n.resolvedLanguage ?? window.navigator.language,
+      window.localStorage.getItem(APP_LOCALE_STORAGE_KEY) ??
+        i18n.resolvedLanguage ??
+        DEFAULT_LOCALE,
       DEFAULT_LOCALE,
     );
 
