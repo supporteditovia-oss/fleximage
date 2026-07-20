@@ -97,7 +97,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -328,6 +327,8 @@ function UsersManagementPage() {
   const [creditAmount, setCreditAmount] = useState("");
   const [activityUser, setActivityUser] = useState<AdminProfile | null>(null);
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const {
     data: activity,
     isLoading: isActivityLoading,
@@ -368,9 +369,37 @@ function UsersManagementPage() {
   };
 
   const handleDeleteUser = async (id: string) => {
+    setDeletingUser(true);
     try {
       await deleteProfile(id);
-      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
+
+      // Close portals BEFORE mutating the table, otherwise Radix removeChild races
+      // when the row that owned the dialog unmounts mid-animation.
+      setDeleteTarget(null);
+      if (activityUser?.id === id) {
+        setActivityDialogOpen(false);
+        setActivityUser(null);
+      }
+
+      queryClient.setQueriesData<{ profiles: AdminProfile[]; totalCount: number }>(
+        { queryKey: ["profiles-paginated"] },
+        (current) => {
+          if (!current) return current;
+          return {
+            profiles: current.profiles.filter((profile) => profile.id !== id),
+            totalCount: Math.max(0, current.totalCount - 1),
+          };
+        },
+      );
+
+      // Refresh after the dialog has left the tree.
+      window.setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
+        void queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        void queryClient.invalidateQueries({ queryKey: ["admin-metrics"] });
+        void queryClient.invalidateQueries({ queryKey: ["user-growth"] });
+      }, 0);
+
       toast({ title: "Utilisateur supprimé", description: "L'utilisateur a été retiré avec succès." });
     } catch (error: any) {
       toast({
@@ -381,6 +410,8 @@ function UsersManagementPage() {
           "Impossible de supprimer cet utilisateur pour le moment.",
       });
       throw error;
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -616,7 +647,18 @@ function UsersManagementPage() {
                         >
                           <Coins className="h-3.5 w-3.5" />
                         </Button>
-                        <DeleteUserDialog profile={profile} onDelete={() => handleDeleteUser(profile.id)} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeleteTarget(profile);
+                          }}
+                          title="Supprimer l'utilisateur"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -695,6 +737,39 @@ function UsersManagementPage() {
           }
         }}
       />
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !deletingUser) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Cela supprimera définitivement le
+              compte (connexion + données) de {deleteTarget?.email}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingUser}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingUser || !deleteTarget}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!deleteTarget) return;
+                void handleDeleteUser(deleteTarget.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingUser ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Credit Dialog */}
       <Dialog open={creditDialogOpen} onOpenChange={(open) => {
@@ -1255,66 +1330,6 @@ function GrowthChart({ data }: any) {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function DeleteUserDialog({
-  profile,
-  onDelete,
-}: {
-  profile: { id: string; email: string | null };
-  onDelete: () => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  const handleConfirm = async () => {
-    setDeleting(true);
-    try {
-      await onDelete();
-      setOpen(false);
-    } catch {
-      // Toast already shown by caller; keep dialog open for retry.
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Cette action est irréversible. Cela supprimera définitivement le
-            compte (connexion + données) de {profile.email}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={deleting}
-            onClick={(event) => {
-              event.preventDefault();
-              void handleConfirm();
-            }}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {deleting ? "Suppression…" : "Supprimer"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
 

@@ -14,6 +14,16 @@ interface State {
 
 const LAST_ERROR_KEY = "luxeflexia:last-ui-error";
 
+function isBenignDomRaceError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message || "";
+  return (
+    error.name === "NotFoundError" ||
+    /Failed to execute '(removeChild|insertBefore)' on 'Node'/i.test(message) ||
+    /The node to be removed is not a child/i.test(message)
+  );
+}
+
 function persistError(error: Error, errorInfo?: React.ErrorInfo) {
   try {
     sessionStorage.setItem(
@@ -39,10 +49,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    // Known Radix/React portal race (dialog close while list row unmounts).
+    // Recover silently instead of trapping the admin page.
+    if (isBenignDomRaceError(error)) {
+      return { hasError: false };
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (isBenignDomRaceError(error)) {
+      console.warn("Ignored benign DOM race", error);
+      queueMicrotask(() => {
+        this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+      });
+      return;
+    }
     console.error("ErrorBoundary caught an error", error, errorInfo);
     persistError(error, errorInfo);
     this.setState({
