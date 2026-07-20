@@ -69,7 +69,17 @@ export async function authFetch(
         message = json.message || json.details || message;
         code = json.code;
       } catch {
-        if (!text.startsWith("<")) message = text;
+        const looksMissing =
+          res.status === 404 ||
+          /NOT_FOUND/i.test(text) ||
+          /page could not be found/i.test(text) ||
+          /Page introuvable/i.test(text);
+        if (looksMissing) {
+          message =
+            "API indisponible (route introuvable). Vérifie le déploiement backend.";
+        } else if (!text.startsWith("<")) {
+          message = text.slice(0, 300);
+        }
       }
     }
     const error = new Error(message) as Error & { code?: string; status?: number };

@@ -39,6 +39,10 @@
       "destination": "/api/larps-router?__larpsPath=$1"
     },
     {
+      "source": "/api/admin/(.*)",
+      "destination": "/api/admin-router?__adminPath=$1"
+    },
+    {
       "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$|cgu(?:/.*)?$|confidentialite(?:/.*)?$|tous-les-generateurs(?:/.*)?$|generateur(?:/.*)?$).*)",
       "destination": "/index.html"
     }

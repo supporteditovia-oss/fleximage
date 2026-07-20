@@ -373,7 +373,14 @@ function UsersManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       toast({ title: "Utilisateur supprimé", description: "L'utilisateur a été retiré avec succès." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Échec de la suppression", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Échec de la suppression",
+        description:
+          error?.message ||
+          "Impossible de supprimer cet utilisateur pour le moment.",
+      });
+      throw error;
     }
   };
 
@@ -1251,9 +1258,30 @@ function GrowthChart({ data }: any) {
   );
 }
 
-function DeleteUserDialog({ profile, onDelete }: any) {
+function DeleteUserDialog({
+  profile,
+  onDelete,
+}: {
+  profile: { id: string; email: string | null };
+  onDelete: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    try {
+      await onDelete();
+      setOpen(false);
+    } catch {
+      // Toast already shown by caller; keep dialog open for retry.
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
@@ -1268,16 +1296,21 @@ function DeleteUserDialog({ profile, onDelete }: any) {
         <AlertDialogHeader>
           <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
           <AlertDialogDescription>
-            Cette action est irréversible. Cela supprimera définitivement le profil utilisateur de {profile.email}.
+            Cette action est irréversible. Cela supprimera définitivement le
+            compte (connexion + données) de {profile.email}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onDelete}
+          <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={deleting}
+            onClick={(event) => {
+              event.preventDefault();
+              void handleConfirm();
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Supprimer
+            {deleting ? "Suppression…" : "Supprimer"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

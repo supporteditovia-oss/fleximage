@@ -94,18 +94,16 @@ export function useProfile() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await authFetch(`/api/admin/users/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const err = await res
-          .json()
-          .catch(() => ({ message: "Erreur serveur" }));
-        throw new Error(err.message || "Erreur serveur");
-      }
+      const isSelf = Boolean(user?.id && user.id === id);
+      const url = isSelf
+        ? "/api/profiles/me"
+        : `/api/admin/users/${encodeURIComponent(id)}`;
+      // authFetch throws on non-OK (including Vercel NOT_FOUND HTML pages)
+      await authFetch(url, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["profiles-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["admin-metrics"] });
       queryClient.invalidateQueries({ queryKey: ["user-growth"] });
     },
