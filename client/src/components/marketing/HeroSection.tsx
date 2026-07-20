@@ -274,7 +274,7 @@ export default function HeroSection() {
               {images.map((img, i) => (
                 <div
                   key={i}
-                  className="lx-hero-upload-slot relative flex-shrink-1 min-w-0 h-[min(40vh,340px)] md:h-[min(47vh,420px)] aspect-[9/16]"
+                  className="lx-hero-upload-slot relative aspect-[9/16] h-[min(40vh,340px)] w-auto flex-shrink-0 md:h-[min(47vh,420px)]"
                 >
                   {img ? (
                     <>

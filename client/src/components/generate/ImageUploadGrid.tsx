@@ -16,18 +16,17 @@ export function ImageUploadGrid({
   generationMode = "image",
 }: ImageUploadGridProps) {
   const { t } = useTranslation();
-  const uploadedCount = images.filter(Boolean).length;
-  const showEmptySlotText = uploadedCount < 2;
   const isVideoMode = generationMode === "video";
   const accept = isVideoMode
     ? "video/mp4,video/webm,video/quicktime,video/*"
     : "image/jpeg,image/png,image/webp,image/*";
   const dropLabel = isVideoMode ? t("hero.dropVideo") : t("hero.dropImage");
+  const singleEmptySlot = images.length === 1 && !images[0];
 
   return (
-    <div className="w-full flex justify-center -mb-7 md:-mb-8">
-      <div className="flex w-full max-w-md flex-col">
-        <div className="mx-auto grid w-full max-w-[22rem] grid-cols-3 gap-2 sm:gap-3 md:max-w-[26rem]">
+    <div className="flex w-full justify-center -mb-7 md:-mb-8">
+      <div className="flex w-full max-w-full justify-center overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-end justify-center gap-2 md:gap-3">
           {images.map((img, i) => {
             const isVideoPreview = Boolean(
               img?.file.type.startsWith("video/"),
@@ -36,7 +35,7 @@ export function ImageUploadGrid({
             return (
               <div
                 key={i}
-                className="relative aspect-square w-full min-w-0 overflow-hidden"
+                className="relative aspect-[9/16] h-[min(52vh,440px)] w-auto flex-shrink-0 md:h-[min(58vh,520px)]"
               >
                 {img ? (
                   <>
@@ -59,7 +58,7 @@ export function ImageUploadGrid({
                     )}
                     <button
                       onClick={() => onRemoveSlot(i)}
-                      className="absolute top-1.5 right-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                      className="absolute top-2 right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
                       type="button"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -67,7 +66,7 @@ export function ImageUploadGrid({
                   </>
                 ) : (
                   <>
-                    <label className="group absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-foreground/25 bg-white/80 transition-all sm:gap-2">
+                    <label className="group absolute inset-0 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-foreground/25 bg-white/80 transition-all">
                       <input
                         type="file"
                         accept={accept}
@@ -85,13 +84,17 @@ export function ImageUploadGrid({
                           e.currentTarget.value = "";
                         }}
                       />
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15 sm:h-12 sm:w-12">
-                        <Plus className="h-6 w-6 text-primary transition-colors sm:h-7 sm:w-7" />
-                      </div>
-                      {showEmptySlotText && (
-                        <p className="px-1 text-center text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-foreground sm:text-sm">
-                          {dropLabel}
-                        </p>
+                      {singleEmptySlot ? (
+                        <>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
+                            <Plus className="h-7 w-7 text-primary transition-colors" />
+                          </div>
+                          <p className="px-2 text-center text-base font-medium whitespace-nowrap text-muted-foreground transition-colors group-hover:text-foreground md:text-lg">
+                            {dropLabel}
+                          </p>
+                        </>
+                      ) : (
+                        <Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-foreground" />
                       )}
                     </label>
                     <span className="hero-image-slot pointer-events-none absolute inset-0 z-10 rounded-lg" />
