@@ -460,6 +460,9 @@ export const appSettings = pgTable("app_settings", {
 // --- Video generation ---
 /** Vertical portrait format for all image and video generations. */
 export const OUTPUT_ASPECT_RATIO = "9:16" as const;
+/** Max visual fidelity for Nano Banana 2 (Kie) — 4K lossless PNG. */
+export const IMAGE_OUTPUT_RESOLUTION = "4K" as const;
+export const IMAGE_OUTPUT_FORMAT = "png" as const;
 
 export const generateVideoBodySchema = z.object({
   prompt: z.string().min(1).max(2000),

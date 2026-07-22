@@ -103,8 +103,16 @@ export async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {
 
     if (composites.length === 0) return imageBuffer;
 
-    const watermarked = await image.composite(composites).toBuffer();
-    return watermarked;
+    // Preserve source format — never recompress PNG into lossy JPEG.
+    const format = (metadata.format || "").toLowerCase();
+    const composed = image.composite(composites);
+    if (format === "png") {
+      return composed.png({ compressionLevel: 6 }).toBuffer();
+    }
+    if (format === "webp") {
+      return composed.webp({ quality: 100, lossless: true }).toBuffer();
+    }
+    return composed.jpeg({ quality: 100, mozjpeg: true }).toBuffer();
   } catch (error) {
     logger.error({ err: error }, "Failed to apply watermark");
     return imageBuffer;

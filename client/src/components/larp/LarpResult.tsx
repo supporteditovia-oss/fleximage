@@ -14,19 +14,24 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 import {
+  assertMediaBlob,
   inferDownloadExtension,
   randomLarpDownloadName,
   saveMediaBlob,
 } from "@/lib/download-media";
 import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
-import { shareMediaToPlatform } from "@/lib/share-media";
+import {
+  fetchShareBlob,
+  shareMediaToPlatform,
+  type SharePlatform,
+} from "@/lib/share-media";
 
 /** Compact media frame used by the generated result surface. */
 export const LARP_RESULT_FRAME_CLASS =
@@ -71,6 +76,42 @@ export function LarpResult({
     platform: string;
     imageIndex: number;
   } | null>(null);
+  const [prefetchedBlob, setPrefetchedBlob] = useState<Blob | null>(null);
+
+  // Prefetch as soon as the result is shown so Snapchat share stays in the tap gesture.
+  useEffect(() => {
+    if (!resultUrls[0] || !larpId) return;
+    let cancelled = false;
+    void fetchShareBlob(larpId, 0, resultUrls[0])
+      .then((blob) => {
+        if (!cancelled) setPrefetchedBlob(blob);
+      })
+      .catch(() => {
+        /* ignore — will fetch on share */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [larpId, resultUrls]);
+
+  useEffect(() => {
+    if (!shareDialog) return;
+    let cancelled = false;
+    void fetchShareBlob(
+      larpId,
+      shareDialog.imageIndex,
+      resultUrls[shareDialog.imageIndex],
+    )
+      .then((blob) => {
+        if (!cancelled) setPrefetchedBlob(blob);
+      })
+      .catch(() => {
+        if (!cancelled) setPrefetchedBlob(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shareDialog, larpId, resultUrls]);
 
   if (!resultUrls.length) {
     return (
@@ -78,7 +119,7 @@ export function LarpResult({
     );
   }
 
-  async function handleDownload(imageIndex: number) {
+  async function handleDownload(imageIndex: number): Promise<boolean> {
     const assetUrl = resultUrls[imageIndex];
     const isVideo =
       resultType === "video" ||
@@ -91,45 +132,39 @@ export function LarpResult({
           `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
         blob = await res.blob();
+        assertMediaBlob(blob);
       } catch {
         blob = null;
       }
 
-      if ((!blob || blob.size === 0) && assetUrl) {
+      if (!blob && assetUrl) {
         const res = await fetch(assetUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         blob = await res.blob();
+        assertMediaBlob(blob);
       }
 
-      if (!blob || blob.size === 0) throw new Error("empty");
+      if (!blob) throw new Error("empty");
 
       const ext = inferDownloadExtension(blob, {
         resultType: isVideo ? "video" : "image",
         url: assetUrl,
       });
-      await saveMediaBlob(blob, randomLarpDownloadName(ext), {
+      const outcome = await saveMediaBlob(blob, randomLarpDownloadName(ext), {
         resultType: isVideo ? "video" : "image",
         fallbackUrl: assetUrl,
       });
+      if (outcome === "aborted") return false;
+      return true;
     } catch {
-      if (assetUrl && typeof navigator.share === "function") {
-        try {
-          await navigator.share({ url: assetUrl });
-          return;
-        } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") return;
-        }
-      }
       toast({ title: t("result.downloadError"), variant: "destructive" });
+      return false;
     }
   }
 
-  async function handleShare(
-    imageIndex: number,
-    platform: "whatsapp" | "snapchat" | "instagram" | "tiktok",
-  ) {
+  async function handleShare(imageIndex: number, platform: SharePlatform) {
     setShareDialog(null);
-    const names: Record<string, string> = {
+    const names: Record<SharePlatform, string> = {
       whatsapp: "WhatsApp",
       snapchat: "Snapchat",
       instagram: "Instagram",
@@ -142,7 +177,11 @@ export function LarpResult({
         assetUrl: resultUrls[imageIndex],
         resultType,
         platform,
+        blob: prefetchedBlob,
       });
+      if (outcome === "cancelled" || outcome === "shared" || outcome === "opened-app") {
+        return;
+      }
       if (outcome === "saved-guide") {
         setTimeout(() => {
           setShareGuide({ platform: names[platform], imageIndex });
@@ -177,7 +216,7 @@ export function LarpResult({
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
                       <button
-                        onClick={() => handleDownload(index)}
+                        onClick={() => void handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                         title={t("result.download")}
                       >
@@ -204,7 +243,7 @@ export function LarpResult({
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
                       <button
-                        onClick={() => handleDownload(index)}
+                        onClick={() => void handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
                         title={t("result.download")}
                       >
@@ -243,7 +282,7 @@ export function LarpResult({
               <DrawerHeader className="text-center">
                 <DrawerTitle>{t("result.shareTitle")}</DrawerTitle>
                 <DrawerDescription>
-                  {t("result.shareDescription")}
+                  Choisis Snapchat : la photo est déjà attachée, tu n&apos;as plus qu&apos;à l&apos;envoyer.
                 </DrawerDescription>
               </DrawerHeader>
             </div>
@@ -309,9 +348,11 @@ export function LarpResult({
               <Button
                 className="w-full rounded-full"
                 onClick={async () => {
-                  if (shareGuide) {
-                    await handleDownload(shareGuide.imageIndex);
+                  if (!shareGuide) return;
+                  const ok = await handleDownload(shareGuide.imageIndex);
+                  if (ok) {
                     toast({ title: t("result.imageDownloaded") });
+                    setShareGuide(null);
                   }
                 }}
               >
@@ -357,8 +398,9 @@ export function LarpResult({
               <Button
                 className="w-full rounded-full"
                 onClick={async () => {
-                  if (shareGuide) {
-                    await handleDownload(shareGuide.imageIndex);
+                  if (!shareGuide) return;
+                  const ok = await handleDownload(shareGuide.imageIndex);
+                  if (ok) {
                     toast({ title: t("result.imageDownloaded") });
                     setShareGuide(null);
                   }

@@ -130,7 +130,7 @@ export default function LarpHistory() {
     larpId: string,
     imageIndex: number = 0,
     options?: { resultType?: "image" | "video"; url?: string },
-  ) {
+  ): Promise<boolean> {
     try {
       const res = await authFetch(
         `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
@@ -138,11 +138,13 @@ export default function LarpHistory() {
       const blob = await res.blob();
       const ext = inferDownloadExtension(blob, options);
       triggerBlobDownload(blob, randomLarpDownloadName(ext));
+      return true;
     } catch {
       toast({
         title: t("history.downloadError"),
         variant: "destructive",
       });
+      return false;
     }
   }
 
@@ -675,7 +677,7 @@ export default function LarpHistory() {
                 className="w-full rounded-full"
                 onClick={async () => {
                   if (shareGuide) {
-                    await handleDownload(
+                    const ok = await handleDownload(
                       shareGuide.larpId,
                       shareGuide.imageIndex,
                       getDownloadOptions(
@@ -683,8 +685,10 @@ export default function LarpHistory() {
                         shareGuide.imageIndex,
                       ),
                     );
-                    toast({ title: t("history.imageDownloaded") });
-                    setShareGuide(null);
+                    if (ok) {
+                      toast({ title: t("history.imageDownloaded") });
+                      setShareGuide(null);
+                    }
                   }
                 }}
               >
@@ -725,7 +729,7 @@ export default function LarpHistory() {
                 className="w-full rounded-full"
                 onClick={async () => {
                   if (shareGuide) {
-                    await handleDownload(
+                    const ok = await handleDownload(
                       shareGuide.larpId,
                       shareGuide.imageIndex,
                       getDownloadOptions(
@@ -733,7 +737,10 @@ export default function LarpHistory() {
                         shareGuide.imageIndex,
                       ),
                     );
-                    toast({ title: t("history.imageDownloaded") });
+                    if (ok) {
+                      toast({ title: t("history.imageDownloaded") });
+                      setShareGuide(null);
+                    }
                   }
                 }}
               >

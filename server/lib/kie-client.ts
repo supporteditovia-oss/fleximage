@@ -1,3 +1,7 @@
+import {
+  IMAGE_OUTPUT_FORMAT,
+  IMAGE_OUTPUT_RESOLUTION,
+} from "@shared/schema";
 import { logger } from "./logger";
 
 const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
@@ -52,7 +56,11 @@ export async function createKieTask(input: CreateTaskInput): Promise<CreateTaskR
     },
     body: JSON.stringify({
       model: "nano-banana-2",
-      input,
+      input: {
+        ...input,
+        resolution: input.resolution ?? IMAGE_OUTPUT_RESOLUTION,
+        output_format: input.output_format ?? IMAGE_OUTPUT_FORMAT,
+      },
     }),
   });
 

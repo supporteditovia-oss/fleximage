@@ -224,7 +224,7 @@ export async function createOneshotJob(
     model: "nano-banana",
     prompt,
     options: {
-      modelVariant: "fast",
+      modelVariant: "quality",
       aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }

@@ -10,9 +10,10 @@ import {
   getPaywalledResult,
 } from "@/lib/paywalled-result";
 import {
+  assertMediaBlob,
   inferDownloadExtension,
   randomLarpDownloadName,
-  triggerBlobDownload,
+  saveMediaBlob,
 } from "@/lib/download-media";
 import { useToast } from "@/hooks/use-toast";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
@@ -234,11 +235,17 @@ export default function Resultat() {
         `/api/larps/${encodeURIComponent(result.larpId)}/download/0`,
       );
       const blob = await res.blob();
+      assertMediaBlob(blob);
       const ext = inferDownloadExtension(blob, {
         resultType: result.resultType,
         url: result.resultUrls[0],
       });
-      triggerBlobDownload(blob, randomLarpDownloadName(ext));
+      const outcome = await saveMediaBlob(blob, randomLarpDownloadName(ext), {
+        resultType: result.resultType,
+        fallbackUrl: result.resultUrls[0],
+      });
+      if (outcome === "aborted") return;
+      toast({ title: "Image téléchargée !" });
     } catch {
       toast({
         title: "Téléchargement impossible",

@@ -1,15 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Download, Loader2, Share2, Sparkles, Trash2, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useDeleteLarp, useLarpHistory } from "@/hooks/use-larps";
 import { authFetch } from "@/lib/api";
 import {
+  assertMediaBlob,
   inferDownloadExtension,
   randomLarpDownloadName,
   saveMediaBlob,
 } from "@/lib/download-media";
-import { shareMediaToPlatform, type SharePlatform } from "@/lib/share-media";
+import {
+  fetchShareBlob,
+  shareMediaToPlatform,
+  type SharePlatform,
+} from "@/lib/share-media";
 import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
 import { clearLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +60,13 @@ function formatCreatedAt(iso: string): string {
   }
 }
 
+const PLATFORM_LABEL: Record<SharePlatform, string> = {
+  whatsapp: "WhatsApp",
+  snapchat: "Snapchat",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+};
+
 export default function Historique() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -74,6 +86,27 @@ export default function Historique() {
     url: string;
     resultType: "image" | "video";
   } | null>(null);
+  const [prefetchedShareBlob, setPrefetchedShareBlob] = useState<Blob | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!shareTarget) {
+      setPrefetchedShareBlob(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchShareBlob(shareTarget.larpId, 0, shareTarget.url)
+      .then((blob) => {
+        if (!cancelled) setPrefetchedShareBlob(blob);
+      })
+      .catch(() => {
+        if (!cancelled) setPrefetchedShareBlob(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shareTarget]);
 
   const successLarps = useMemo(
     () =>
@@ -100,40 +133,33 @@ export default function Historique() {
           `/api/larps/${encodeURIComponent(larpId)}/download/${imageIndex}`,
         );
         blob = await res.blob();
+        assertMediaBlob(blob);
       } catch {
         blob = null;
       }
 
-      if ((!blob || blob.size === 0) && options?.url) {
+      if (!blob && options?.url) {
         const res = await fetch(options.url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         blob = await res.blob();
+        assertMediaBlob(blob);
       }
 
-      if (!blob || blob.size === 0) throw new Error("empty");
+      if (!blob) throw new Error("empty");
 
       const ext = inferDownloadExtension(blob, options);
-      await saveMediaBlob(blob, randomLarpDownloadName(ext), {
+      const outcome = await saveMediaBlob(blob, randomLarpDownloadName(ext), {
         resultType: options?.resultType,
         fallbackUrl: options?.url,
       });
+      if (outcome === "aborted") return;
+      toast({ title: "Image téléchargée !" });
     } catch {
-      if (options?.url && typeof navigator.share === "function") {
-        try {
-          await navigator.share({ url: options.url });
-          return;
-        } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") return;
-        }
-      }
       toast({
         title: "Téléchargement impossible",
         description: "Réessaie, ou appuie longuement sur l’image pour l’enregistrer.",
         variant: "destructive",
       });
-      if (options?.url) {
-        window.open(options.url, "_blank", "noopener,noreferrer");
-      }
     } finally {
       setDownloadingId(null);
     }
@@ -142,15 +168,26 @@ export default function Historique() {
   async function handleShare(platform: SharePlatform) {
     if (!shareTarget) return;
     const target = shareTarget;
+    const blob = prefetchedShareBlob;
     setShareTarget(null);
     try {
-      await shareMediaToPlatform({
+      const outcome = await shareMediaToPlatform({
         larpId: target.larpId,
         imageIndex: 0,
         assetUrl: target.url,
         resultType: target.resultType,
         platform,
+        blob,
       });
+      if (outcome === "cancelled" || outcome === "shared" || outcome === "opened-app") {
+        return;
+      }
+      if (outcome === "saved-guide") {
+        toast({
+          title: "Image prête à envoyer",
+          description: `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
+        });
+      }
     } catch {
       toast({
         title: "Partage impossible",
@@ -236,7 +273,7 @@ export default function Historique() {
   }
 
   const actionBtnClass =
-    "flex h-9 w-9 items-center justify-center rounded-full border bg-black/55 opacity-100 transition-opacity disabled:opacity-60";
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white shadow-md backdrop-blur-sm transition hover:bg-black/85 active:scale-95 disabled:opacity-60";
 
   return (
     <div className="space-y-8 py-6">
@@ -260,7 +297,7 @@ export default function Historique() {
           return (
             <div
               key={larp.id}
-              className="group relative aspect-[9/16] cursor-pointer overflow-hidden rounded-lg border border-[var(--lx-gold)]/40 bg-[var(--lx-ink-soft)]"
+              className="group/hist relative aspect-[9/16] cursor-pointer overflow-hidden rounded-lg border border-[var(--lx-gold)]/40 bg-[var(--lx-ink-soft)]"
               onClick={() =>
                 setSelected({
                   url: urls[0],
@@ -273,73 +310,79 @@ export default function Historique() {
               {resultType === "video" ? (
                 <VideoHistoryCardPreview
                   posterUrl={posterUrl}
-                  className="transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="transition-transform duration-500 group-hover/hist:scale-[1.03]"
                 />
               ) : (
                 <img
                   src={urls[0]}
                   alt="Création"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/hist:scale-[1.03]"
                   loading="lazy"
                 />
               )}
 
-              <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-3 pt-10">
+              {/* Date — always visible */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-3 pb-3 pt-14">
                 <p className="text-xs font-medium text-white/90">
                   {formatCreatedAt(larp.createdAt)}
                 </p>
               </div>
 
-              <button
-                type="button"
-                title="Supprimer"
-                disabled={busyDelete || deleteLarp.isPending}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleDelete(larp.id);
-                }}
-                className={`${actionBtnClass} absolute left-2 top-2 z-20 border-red-400/50 text-red-400`}
+              {/*
+                Action bar: Share + Download + Delete.
+                Visible on hover (desktop) and always on touch (no hover).
+                Named group/hist avoids parent `.group` conflicts.
+              */}
+              <div
+                className="absolute inset-x-0 top-0 z-30 flex items-start justify-end gap-1.5 bg-gradient-to-b from-black/55 to-transparent p-2 opacity-100 transition-opacity duration-200 max-md:opacity-100 md:opacity-0 md:group-hover/hist:opacity-100 md:group-focus-within/hist:opacity-100"
+                onClick={(e) => e.stopPropagation()}
               >
-                {busyDelete ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </button>
-
-              <div className="absolute right-2 top-2 z-20 flex flex-col gap-2">
                 <button
                   type="button"
                   title="Partager"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  aria-label="Partager"
+                  onClick={() =>
                     setShareTarget({
                       larpId: larp.id,
                       url: urls[0],
                       resultType,
-                    });
-                  }}
-                  className={`${actionBtnClass} border-[var(--lx-gold)]/45 text-[var(--lx-gold-soft)]`}
+                    })
+                  }
+                  className={actionBtnClass}
                 >
-                  <Share2 className="h-4 w-4" />
+                  <Share2 className="h-4 w-4 text-[var(--lx-gold-soft)]" />
                 </button>
                 <button
                   type="button"
                   title="Télécharger"
+                  aria-label="Télécharger"
                   disabled={busyDownload}
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={() =>
                     void handleDownload(larp.id, 0, {
                       resultType,
                       url: urls[0],
-                    });
-                  }}
-                  className={`${actionBtnClass} border-[var(--lx-gold)]/45 text-[var(--lx-gold-soft)]`}
+                    })
+                  }
+                  className={actionBtnClass}
                 >
                   {busyDownload ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--lx-gold-soft)]" />
                   ) : (
-                    <Download className="h-4 w-4" />
+                    <Download className="h-4 w-4 text-[var(--lx-gold-soft)]" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  title="Supprimer"
+                  aria-label="Supprimer"
+                  disabled={busyDelete || deleteLarp.isPending}
+                  onClick={() => void handleDelete(larp.id)}
+                  className={`${actionBtnClass} border-red-400/60`}
+                >
+                  {busyDelete ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-red-300" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 text-red-300" />
                   )}
                 </button>
               </div>

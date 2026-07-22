@@ -50,7 +50,7 @@ export function inferDownloadMediaMeta(
     return { contentType: "video/mp4", extension: "mp4" };
   }
 
-  return { contentType: "image/jpeg", extension: "jpg" };
+  return { contentType: "image/png", extension: "png" };
 }
 
 function extensionFromVideoMime(mime: string): string {

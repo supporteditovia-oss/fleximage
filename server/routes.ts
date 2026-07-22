@@ -3965,7 +3965,7 @@ export async function registerRoutes(
       res.setHeader("Content-Type", contentType);
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="larp-${randomSuffix}.${extension}"`,
+        `attachment; filename="luxeflexia-${randomSuffix}.${extension}"`,
       );
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
