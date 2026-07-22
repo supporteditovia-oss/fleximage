@@ -183,6 +183,12 @@ export function LarpResult({
         return;
       }
       if (outcome === "saved-guide") {
+        if (platform === "snapchat" || platform === "instagram") {
+          toast({
+            title: "Image enregistrée",
+            description: `Ouvre ${names[platform]}, choisis la photo dans ta galerie, puis envoie-la.`,
+          });
+        }
         setTimeout(() => {
           setShareGuide({ platform: names[platform], imageIndex });
         }, 0);

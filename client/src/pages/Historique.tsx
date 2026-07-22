@@ -184,8 +184,11 @@ export default function Historique() {
       }
       if (outcome === "saved-guide") {
         toast({
-          title: "Image prête à envoyer",
-          description: `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
+          title: "Image enregistrée",
+          description:
+            platform === "snapchat"
+              ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
+              : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
         });
       }
     } catch {
