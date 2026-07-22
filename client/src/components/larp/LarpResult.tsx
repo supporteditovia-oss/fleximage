@@ -14,7 +14,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { authFetch } from "@/lib/api";
@@ -26,7 +27,7 @@ import {
   randomLarpDownloadName,
   saveMediaBlob,
 } from "@/lib/download-media";
-import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
+import { ShareSheet } from "@/components/larp/ShareSheet";
 import {
   cleanupShareUiLocks,
   fetchShareBlob,
@@ -82,6 +83,12 @@ export function LarpResult({
   const [prefetchedShareFile, setPrefetchedShareFile] = useState<File | null>(
     null,
   );
+  const shareDialogRef = useRef(shareDialog);
+  const blobRef = useRef(prefetchedBlob);
+  const fileRef = useRef(prefetchedShareFile);
+  shareDialogRef.current = shareDialog;
+  blobRef.current = prefetchedBlob;
+  fileRef.current = prefetchedShareFile;
 
   // Prefetch as soon as the result is shown so Snapchat share stays in the tap gesture.
   useEffect(() => {
@@ -191,39 +198,32 @@ export function LarpResult({
       tiktok: "TikTok",
     };
 
-    const runShare = () =>
-      shareMediaToPlatform({
-        larpId,
-        imageIndex,
-        assetUrl: resultUrls[imageIndex],
-        resultType,
-        platform,
-        blob: prefetchedBlob,
-        shareFile: prefetchedShareFile,
-      });
+    const sharePromise = shareMediaToPlatform({
+      larpId,
+      imageIndex,
+      assetUrl: resultUrls[imageIndex],
+      resultType,
+      platform,
+      blob: blobRef.current,
+      shareFile: fileRef.current,
+    });
+
+    flushSync(() => {
+      setShareDialog(null);
+    });
+    cleanupShareUiLocks();
 
     try {
-      // Snapchat/IG: share while the tap gesture is still valid, then close UI.
-      const outcome =
-        platform === "snapchat" || platform === "instagram"
-          ? await runShare()
-          : await (async () => {
-              setShareDialog(null);
-              await new Promise((r) => window.setTimeout(r, 300));
-              cleanupShareUiLocks();
-              return runShare();
-            })();
+      const outcome = await sharePromise;
 
-      setShareDialog(null);
       cleanupShareUiLocks();
-
       if (outcome === "cancelled") return;
 
       if (outcome === "shared" && platform === "snapchat") {
         toast({
-          title: "Envoie ton Snap",
+          title: "Presque !",
           description:
-            "Choisis Snapchat dans la liste — ta photo s’ouvre déjà prête à envoyer.",
+            "Dans la liste, appuie sur Snapchat — ta photo s’ouvre déjà en Snap.",
         });
         return;
       }
@@ -240,7 +240,6 @@ export function LarpResult({
         });
       }
     } catch {
-      setShareDialog(null);
       cleanupShareUiLocks();
       setTimeout(() => {
         setShareGuide({ platform: names[platform], imageIndex });
@@ -319,59 +318,19 @@ export function LarpResult({
         })}
       </div>
 
-      {/* Share platform picker — same as history */}
-      {isMobile ? (
-        <Drawer
-          open={!!shareDialog}
-          onOpenChange={(open) => !open && setShareDialog(null)}
-        >
-          <DrawerContent>
-            <div className="relative">
-              <button
-                onClick={() => setShareDialog(null)}
-                className="absolute top-0 right-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <DrawerHeader className="text-center">
-                <DrawerTitle>{t("result.shareTitle")}</DrawerTitle>
-                <DrawerDescription>
-                  Choisis Snapchat : la photo est déjà attachée, tu n&apos;as plus qu&apos;à l&apos;envoyer.
-                </DrawerDescription>
-              </DrawerHeader>
-            </div>
-            <SharePlatformGrid
-              className="px-4 pb-6 pt-2"
-              onSelect={(platform) => {
-                if (shareDialog) void handleShare(shareDialog.imageIndex, platform);
-              }}
-            />
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog
-          open={!!shareDialog}
-          onOpenChange={(open) => !open && setShareDialog(null)}
-        >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="text-center">
-                {t("result.shareTitle")}
-              </DialogTitle>
-              <DialogDescription className="text-center">
-                {t("result.shareDescription")}
-              </DialogDescription>
-            </DialogHeader>
-            <SharePlatformGrid
-              className="gap-3 pt-2"
-              iconClassName="h-12 w-12 shadow-sm"
-              onSelect={(platform) => {
-                if (shareDialog) void handleShare(shareDialog.imageIndex, platform);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <ShareSheet
+        open={Boolean(shareDialog)}
+        title={t("result.shareTitle")}
+        description="Snapchat : ta photo part avec le Snap."
+        onClose={() => {
+          setShareDialog(null);
+          cleanupShareUiLocks();
+        }}
+        onSelect={(platform) => {
+          const idx = shareDialogRef.current?.imageIndex ?? 0;
+          void handleShare(idx, platform);
+        }}
+      />
 
       {/* Share guide fallback */}
       {!isMobile ? (

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Download, Loader2, Share2, Sparkles, Trash2, X } from "lucide-react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useDeleteLarp, useLarpHistory } from "@/hooks/use-larps";
 import { authFetch } from "@/lib/api";
 import {
@@ -17,27 +17,12 @@ import {
   toSnapFriendlyImageFile,
   type SharePlatform,
 } from "@/lib/share-media";
-import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
+import { ShareSheet } from "@/components/larp/ShareSheet";
 import { clearLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { VideoHistoryCardPreview } from "@/components/larp/VideoHistoryCardPreview";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 import { pickVideoPosterUrl } from "@/lib/video-poster";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 
 function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   if (!assets) return [];
@@ -72,7 +57,6 @@ const PLATFORM_LABEL: Record<SharePlatform, string> = {
 export default function Historique() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const { data: larps, isLoading, isError, refetch, isFetching } = useLarpHistory();
   const deleteLarp = useDeleteLarp();
   const [selected, setSelected] = useState<{
@@ -94,6 +78,12 @@ export default function Historique() {
   const [prefetchedShareFile, setPrefetchedShareFile] = useState<File | null>(
     null,
   );
+  const shareTargetRef = useRef(shareTarget);
+  const shareBlobRef = useRef(prefetchedShareBlob);
+  const shareFileRef = useRef(prefetchedShareFile);
+  shareTargetRef.current = shareTarget;
+  shareBlobRef.current = prefetchedShareBlob;
+  shareFileRef.current = prefetchedShareFile;
 
   useEffect(() => {
     if (!shareTarget) {
@@ -184,60 +174,43 @@ export default function Historique() {
   }
 
   async function handleShare(platform: SharePlatform) {
-    if (!shareTarget) return;
-    const target = shareTarget;
-    const blob = prefetchedShareBlob;
-    const shareFile = prefetchedShareFile;
+    const target = shareTargetRef.current;
+    if (!target) return;
+    const blob = shareBlobRef.current;
+    const shareFile = shareFileRef.current;
 
-    // For Snapchat: keep the tap gesture — share FIRST, then close the drawer.
-    // Closing first + waiting was killing the share sheet / photo handoff.
-    const runShare = () =>
-      shareMediaToPlatform({
-        larpId: target.larpId,
-        imageIndex: 0,
-        assetUrl: target.url,
-        resultType: target.resultType,
-        platform,
-        blob,
-        shareFile,
-      });
+    // Start share in the same tap gesture, then remove our sheet (no black scrim).
+    const sharePromise = shareMediaToPlatform({
+      larpId: target.larpId,
+      imageIndex: 0,
+      assetUrl: target.url,
+      resultType: target.resultType,
+      platform,
+      blob,
+      shareFile,
+    });
+
+    flushSync(() => {
+      setShareTarget(null);
+    });
+    cleanupShareUiLocks();
 
     try {
-      const outcome =
-        platform === "snapchat" || platform === "instagram"
-          ? await runShare()
-          : await (async () => {
-              setShareTarget(null);
-              await new Promise((r) => window.setTimeout(r, 300));
-              cleanupShareUiLocks();
-              return runShare();
-            })();
+      const outcome = await sharePromise;
 
-      setShareTarget(null);
       cleanupShareUiLocks();
-
       if (outcome === "cancelled") return;
 
-      if (outcome === "shared") {
-        if (platform === "snapchat") {
-          toast({
-            title: "Envoie ton Snap",
-            description:
-              "Choisis Snapchat dans la liste — ta photo s’ouvre déjà prête à envoyer.",
-          });
-        }
+      if (outcome === "shared" && platform === "snapchat") {
+        toast({
+          title: "Presque !",
+          description:
+            "Dans la liste, appuie sur Snapchat — ta photo s’ouvre déjà en Snap.",
+        });
         return;
       }
 
-      if (outcome === "opened-app") {
-        if (platform === "snapchat") {
-          toast({
-            title: "Snapchat",
-            description: "Ta photo devrait être prête à envoyer en Snap.",
-          });
-        }
-        return;
-      }
+      if (outcome === "shared" || outcome === "opened-app") return;
 
       toast({
         title: "Image enregistrée",
@@ -247,7 +220,6 @@ export default function Historique() {
             : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
       });
     } catch {
-      setShareTarget(null);
       cleanupShareUiLocks();
       toast({
         title: "Partage impossible",
@@ -532,44 +504,14 @@ export default function Historique() {
           document.body,
         )}
 
-      {isMobile ? (
-        <Drawer
-          open={Boolean(shareTarget)}
-          onOpenChange={(open) => !open && setShareTarget(null)}
-        >
-          <DrawerContent>
-            <DrawerHeader className="text-center">
-              <DrawerTitle>Partager</DrawerTitle>
-              <DrawerDescription>
-                Snapchat : ta photo s&apos;ouvre déjà prête à envoyer en Snap.
-              </DrawerDescription>
-            </DrawerHeader>
-            <SharePlatformGrid
-              className="px-4 pb-6 pt-2"
-              onSelect={(platform) => void handleShare(platform)}
-            />
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog
-          open={Boolean(shareTarget)}
-          onOpenChange={(open) => !open && setShareTarget(null)}
-        >
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="text-center">Partager</DialogTitle>
-              <DialogDescription className="text-center">
-                Envoie-la sur Snapchat, Instagram, WhatsApp…
-              </DialogDescription>
-            </DialogHeader>
-            <SharePlatformGrid
-              className="gap-3 pt-2"
-              iconClassName="h-12 w-12 shadow-sm"
-              onSelect={(platform) => void handleShare(platform)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <ShareSheet
+        open={Boolean(shareTarget)}
+        onClose={() => {
+          setShareTarget(null);
+          cleanupShareUiLocks();
+        }}
+        onSelect={(platform) => void handleShare(platform)}
+      />
     </div>
   );
 }
