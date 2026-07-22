@@ -11,6 +11,7 @@ import {
   saveMediaBlob,
 } from "@/lib/download-media";
 import {
+  cleanupShareUiLocks,
   fetchShareBlob,
   shareMediaToPlatform,
   type SharePlatform,
@@ -169,7 +170,11 @@ export default function Historique() {
     if (!shareTarget) return;
     const target = shareTarget;
     const blob = prefetchedShareBlob;
+    // Close the drawer first so the black overlay cannot stick.
     setShareTarget(null);
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    cleanupShareUiLocks();
+
     try {
       const outcome = await shareMediaToPlatform({
         larpId: target.larpId,
@@ -179,19 +184,26 @@ export default function Historique() {
         platform,
         blob,
       });
-      if (outcome === "cancelled" || outcome === "shared" || outcome === "opened-app") {
+      if (outcome === "cancelled") return;
+      if (outcome === "shared" || outcome === "opened-app") {
+        if (platform === "snapchat") {
+          toast({
+            title: "Snapchat ouvert",
+            description:
+              "Ta photo est enregistrée — envoie-la depuis ta galerie dans Snapchat.",
+          });
+        }
         return;
       }
-      if (outcome === "saved-guide") {
-        toast({
-          title: "Image enregistrée",
-          description:
-            platform === "snapchat"
-              ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
-              : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
-        });
-      }
+      toast({
+        title: "Image enregistrée",
+        description:
+          platform === "snapchat"
+            ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
+            : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
+      });
     } catch {
+      cleanupShareUiLocks();
       toast({
         title: "Partage impossible",
         description: "Télécharge l’image puis ouvre l’appli pour l’envoyer.",
@@ -484,7 +496,7 @@ export default function Historique() {
             <DrawerHeader className="text-center">
               <DrawerTitle>Partager</DrawerTitle>
               <DrawerDescription>
-                Envoie-la sur Snapchat, Instagram, WhatsApp…
+                Snapchat s&apos;ouvre directement avec ta photo enregistrée.
               </DrawerDescription>
             </DrawerHeader>
             <SharePlatformGrid

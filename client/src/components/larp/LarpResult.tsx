@@ -28,6 +28,7 @@ import {
 } from "@/lib/download-media";
 import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
 import {
+  cleanupShareUiLocks,
   fetchShareBlob,
   shareMediaToPlatform,
   type SharePlatform,
@@ -164,6 +165,9 @@ export function LarpResult({
 
   async function handleShare(imageIndex: number, platform: SharePlatform) {
     setShareDialog(null);
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    cleanupShareUiLocks();
+
     const names: Record<SharePlatform, string> = {
       whatsapp: "WhatsApp",
       snapchat: "Snapchat",
@@ -179,21 +183,33 @@ export function LarpResult({
         platform,
         blob: prefetchedBlob,
       });
-      if (outcome === "cancelled" || outcome === "shared" || outcome === "opened-app") {
+      if (outcome === "cancelled") return;
+      if (outcome === "shared" || outcome === "opened-app") {
+        if (platform === "snapchat") {
+          toast({
+            title: "Snapchat ouvert",
+            description:
+              "Ta photo est enregistrée — envoie-la depuis ta galerie dans Snapchat.",
+          });
+        }
         return;
       }
       if (outcome === "saved-guide") {
-        if (platform === "snapchat" || platform === "instagram") {
-          toast({
-            title: "Image enregistrée",
-            description: `Ouvre ${names[platform]}, choisis la photo dans ta galerie, puis envoie-la.`,
-          });
+        toast({
+          title: "Image enregistrée",
+          description:
+            platform === "snapchat"
+              ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
+              : `Ouvre ${names[platform]} et envoie-la depuis ta galerie.`,
+        });
+        if (platform !== "snapchat") {
+          setTimeout(() => {
+            setShareGuide({ platform: names[platform], imageIndex });
+          }, 0);
         }
-        setTimeout(() => {
-          setShareGuide({ platform: names[platform], imageIndex });
-        }, 0);
       }
     } catch {
+      cleanupShareUiLocks();
       setTimeout(() => {
         setShareGuide({ platform: names[platform], imageIndex });
       }, 0);

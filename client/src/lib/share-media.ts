@@ -3,7 +3,7 @@ import {
   assertMediaBlob,
   inferDownloadExtension,
   randomLarpDownloadName,
-  saveMediaBlob,
+  triggerBlobDownload,
 } from "@/lib/download-media";
 
 export type SharePlatform = "whatsapp" | "snapchat" | "instagram" | "tiktok";
@@ -33,6 +33,21 @@ function isMobileUa(): boolean {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 }
 
+/** Clear stuck Vaul/Radix black overlays after the share drawer closes. */
+export function cleanupShareUiLocks() {
+  if (typeof document === "undefined") return;
+  document.body.style.removeProperty("pointer-events");
+  document.body.style.removeProperty("overflow");
+  document.documentElement.style.removeProperty("overflow");
+  document.querySelectorAll("[data-vaul-overlay]").forEach((node) => {
+    node.parentElement?.removeChild(node);
+  });
+  document.querySelectorAll("[data-radix-dialog-overlay]").forEach((node) => {
+    if (node instanceof HTMLElement && node.dataset.state === "open") return;
+    node.parentElement?.removeChild(node);
+  });
+}
+
 export async function fetchShareBlob(
   larpId: string,
   imageIndex: number,
@@ -60,72 +75,6 @@ export async function fetchShareBlob(
   throw new Error("empty");
 }
 
-/**
- * Snapchat / Instagram handle JPEG more reliably than huge 4K PNGs in the
- * system share sheet. Download keeps the original; share gets a social-friendly copy.
- */
-async function toSocialShareFile(
-  blob: Blob,
-  isVideo: boolean,
-): Promise<File> {
-  const ext = inferDownloadExtension(blob, {
-    resultType: isVideo ? "video" : "image",
-  });
-
-  if (isVideo || !blob.type.startsWith("image/")) {
-    const mime =
-      blob.type ||
-      `video/${ext === "mov" ? "quicktime" : ext === "webm" ? "webm" : "mp4"}`;
-    return new File([blob], randomLarpDownloadName(ext), { type: mime });
-  }
-
-  try {
-    const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("no_canvas");
-    ctx.drawImage(bitmap, 0, 0);
-    bitmap.close();
-
-    const jpegBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (out) => (out ? resolve(out) : reject(new Error("toBlob_failed"))),
-        "image/jpeg",
-        0.95,
-      );
-    });
-
-    return new File([jpegBlob], randomLarpDownloadName("jpg"), {
-      type: "image/jpeg",
-    });
-  } catch {
-    const mime = blob.type || (ext === "png" ? "image/png" : "image/jpeg");
-    return new File([blob], randomLarpDownloadName(ext), { type: mime });
-  }
-}
-
-async function tryNativeFileShare(file: File): Promise<"shared" | "cancelled" | "unsupported"> {
-  if (typeof navigator.share !== "function") return "unsupported";
-
-  try {
-    if (typeof navigator.canShare === "function") {
-      if (!navigator.canShare({ files: [file] })) return "unsupported";
-    }
-    await navigator.share({
-      files: [file],
-      title: "LuxeFlexIA",
-      text: "Créé avec LuxeFlexIA",
-    });
-    return "shared";
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") return "cancelled";
-    // Some browsers throw NotAllowedError / DataError — treat as unsupported.
-    return "unsupported";
-  }
-}
-
 function openWhatsApp(assetUrl?: string | null) {
   const href = assetUrl
     ? `https://api.whatsapp.com/send?text=${encodeURIComponent(assetUrl)}`
@@ -134,33 +83,58 @@ function openWhatsApp(assetUrl?: string | null) {
 }
 
 /**
- * Deep-link into the native app on phones only.
- * Never window.open() custom schemes on desktop — that creates a black blank tab.
+ * Open Snapchat / Instagram / TikTok without navigating the page to a black screen.
+ * Uses a hidden <a> click instead of location.href / window.open.
  */
-function openNativeAppScheme(platform: Exclude<SharePlatform, "whatsapp">) {
+function openNativeApp(platform: Exclude<SharePlatform, "whatsapp">): boolean {
   if (!isMobileUa()) return false;
 
-  const schemes: Record<Exclude<SharePlatform, "whatsapp">, string> = {
-    snapchat: "snapchat://camera",
-    instagram: "instagram://app",
-    tiktok: "tiktok://",
+  const schemes: Record<Exclude<SharePlatform, "whatsapp">, string[]> = {
+    snapchat: ["snapchat://camera", "snapchat://"],
+    instagram: ["instagram://app", "instagram://share"],
+    tiktok: ["tiktok://"],
   };
 
+  for (const href of schemes[platform]) {
+    try {
+      const a = document.createElement("a");
+      a.href = href;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return true;
+    } catch {
+      /* try next */
+    }
+  }
+  return false;
+}
+
+async function tryWhatsAppFileShare(file: File): Promise<"shared" | "cancelled" | "unsupported"> {
+  if (typeof navigator.share !== "function") return "unsupported";
   try {
-    // Same-tab deep link avoids a black empty popup tab.
-    window.location.href = schemes[platform];
-    return true;
-  } catch {
-    return false;
+    if (typeof navigator.canShare === "function" && !navigator.canShare({ files: [file] })) {
+      return "unsupported";
+    }
+    await navigator.share({
+      files: [file],
+      title: "LuxeFlexIA",
+    });
+    return "shared";
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return "cancelled";
+    return "unsupported";
   }
 }
 
 /**
- * Share a generated asset to Snapchat / IG / WhatsApp / TikTok.
+ * Share to a chosen platform.
  *
- * Reality on the web: only the OS share sheet with a file can open Snapchat
- * with the photo already attached. Custom schemes cannot inject an image, and
- * opening them on desktop produces a black blank page — so we never do that.
+ * Snapchat / Instagram / TikTok: NEVER open the OS multi-app share sheet
+ * (that was the black box + list of apps). Instead: save the photo, then
+ * open the app directly on phones.
  */
 export async function shareMediaToPlatform(
   options: ShareMediaOptions,
@@ -176,40 +150,32 @@ export async function shareMediaToPlatform(
 
   assertMediaBlob(blob);
 
-  const file = await toSocialShareFile(blob, isVideo);
+  const ext = inferDownloadExtension(blob, {
+    resultType: isVideo ? "video" : "image",
+    url: options.assetUrl ?? undefined,
+  });
+  const filename = randomLarpDownloadName(ext);
+  const mime =
+    blob.type ||
+    (isVideo
+      ? `video/${ext === "mov" ? "quicktime" : ext}`
+      : ext === "png"
+        ? "image/png"
+        : "image/jpeg");
+  const file = new File([blob], filename, { type: mime });
 
-  // 1) System share sheet with the photo attached (Snapchat appears here on phones).
-  const shareResult = await tryNativeFileShare(file);
-  if (shareResult === "shared" || shareResult === "cancelled") {
-    return shareResult;
-  }
-
-  // 2) WhatsApp can fall back to a URL on any device.
+  // WhatsApp: OS share with file is useful; URL fallback otherwise.
   if (options.platform === "whatsapp") {
+    const shared = await tryWhatsAppFileShare(file);
+    if (shared === "shared" || shared === "cancelled") return shared;
     openWhatsApp(options.assetUrl);
     return "opened-app";
   }
 
-  // 3) Save the original full-quality file so it's in Downloads / Photos.
-  const originalExt = inferDownloadExtension(blob, {
-    resultType: isVideo ? "video" : "image",
-    url: options.assetUrl ?? undefined,
-  });
-  try {
-    const saved = await saveMediaBlob(blob, randomLarpDownloadName(originalExt), {
-      resultType: isVideo ? "video" : "image",
-      fallbackUrl: options.assetUrl ?? undefined,
-    });
-    if (saved === "aborted") return "cancelled";
-  } catch {
-    /* still continue with guidance */
-  }
+  // Snapchat / Instagram / TikTok — direct path (no system app picker).
+  // Use triggerBlobDownload only: saveMediaBlob would reopen the iOS share sheet.
+  triggerBlobDownload(blob, filename);
 
-  // 4) On phones only, try to bring Snapchat/IG to the foreground (no photo inject).
-  //    Never open snapchat:// or snapchat.com on desktop — black screen bug.
-  if (isMobileUa()) {
-    openNativeAppScheme(options.platform);
-  }
-
-  return "saved-guide";
+  const opened = openNativeApp(options.platform);
+  return opened ? "opened-app" : "saved-guide";
 }
