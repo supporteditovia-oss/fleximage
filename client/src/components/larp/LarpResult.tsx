@@ -31,6 +31,7 @@ import {
   cleanupShareUiLocks,
   fetchShareBlob,
   shareMediaToPlatform,
+  toSnapFriendlyImageFile,
   type SharePlatform,
 } from "@/lib/share-media";
 
@@ -78,14 +79,26 @@ export function LarpResult({
     imageIndex: number;
   } | null>(null);
   const [prefetchedBlob, setPrefetchedBlob] = useState<Blob | null>(null);
+  const [prefetchedShareFile, setPrefetchedShareFile] = useState<File | null>(
+    null,
+  );
 
   // Prefetch as soon as the result is shown so Snapchat share stays in the tap gesture.
   useEffect(() => {
     if (!resultUrls[0] || !larpId) return;
     let cancelled = false;
     void fetchShareBlob(larpId, 0, resultUrls[0])
-      .then((blob) => {
-        if (!cancelled) setPrefetchedBlob(blob);
+      .then(async (blob) => {
+        if (cancelled) return;
+        setPrefetchedBlob(blob);
+        if (resultType !== "video") {
+          try {
+            const file = await toSnapFriendlyImageFile(blob);
+            if (!cancelled) setPrefetchedShareFile(file);
+          } catch {
+            /* ignore */
+          }
+        }
       })
       .catch(() => {
         /* ignore — will fetch on share */
@@ -93,7 +106,7 @@ export function LarpResult({
     return () => {
       cancelled = true;
     };
-  }, [larpId, resultUrls]);
+  }, [larpId, resultUrls, resultType]);
 
   useEffect(() => {
     if (!shareDialog) return;
@@ -103,8 +116,15 @@ export function LarpResult({
       shareDialog.imageIndex,
       resultUrls[shareDialog.imageIndex],
     )
-      .then((blob) => {
-        if (!cancelled) setPrefetchedBlob(blob);
+      .then(async (blob) => {
+        if (cancelled) return;
+        setPrefetchedBlob(blob);
+        try {
+          const file = await toSnapFriendlyImageFile(blob);
+          if (!cancelled) setPrefetchedShareFile(file);
+        } catch {
+          /* ignore */
+        }
       })
       .catch(() => {
         if (!cancelled) setPrefetchedBlob(null);
@@ -164,36 +184,52 @@ export function LarpResult({
   }
 
   async function handleShare(imageIndex: number, platform: SharePlatform) {
-    setShareDialog(null);
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    cleanupShareUiLocks();
-
     const names: Record<SharePlatform, string> = {
       whatsapp: "WhatsApp",
       snapchat: "Snapchat",
       instagram: "Instagram",
       tiktok: "TikTok",
     };
-    try {
-      const outcome = await shareMediaToPlatform({
+
+    const runShare = () =>
+      shareMediaToPlatform({
         larpId,
         imageIndex,
         assetUrl: resultUrls[imageIndex],
         resultType,
         platform,
         blob: prefetchedBlob,
+        shareFile: prefetchedShareFile,
       });
+
+    try {
+      // Snapchat/IG: share while the tap gesture is still valid, then close UI.
+      const outcome =
+        platform === "snapchat" || platform === "instagram"
+          ? await runShare()
+          : await (async () => {
+              setShareDialog(null);
+              await new Promise((r) => window.setTimeout(r, 300));
+              cleanupShareUiLocks();
+              return runShare();
+            })();
+
+      setShareDialog(null);
+      cleanupShareUiLocks();
+
       if (outcome === "cancelled") return;
-      if (outcome === "shared" || outcome === "opened-app") {
-        if (platform === "snapchat") {
-          toast({
-            title: "Snapchat ouvert",
-            description:
-              "Ta photo est enregistrée — envoie-la depuis ta galerie dans Snapchat.",
-          });
-        }
+
+      if (outcome === "shared" && platform === "snapchat") {
+        toast({
+          title: "Envoie ton Snap",
+          description:
+            "Choisis Snapchat dans la liste — ta photo s’ouvre déjà prête à envoyer.",
+        });
         return;
       }
+
+      if (outcome === "opened-app" || outcome === "shared") return;
+
       if (outcome === "saved-guide") {
         toast({
           title: "Image enregistrée",
@@ -202,13 +238,9 @@ export function LarpResult({
               ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
               : `Ouvre ${names[platform]} et envoie-la depuis ta galerie.`,
         });
-        if (platform !== "snapchat") {
-          setTimeout(() => {
-            setShareGuide({ platform: names[platform], imageIndex });
-          }, 0);
-        }
       }
     } catch {
+      setShareDialog(null);
       cleanupShareUiLocks();
       setTimeout(() => {
         setShareGuide({ platform: names[platform], imageIndex });

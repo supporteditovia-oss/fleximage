@@ -14,6 +14,7 @@ import {
   cleanupShareUiLocks,
   fetchShareBlob,
   shareMediaToPlatform,
+  toSnapFriendlyImageFile,
   type SharePlatform,
 } from "@/lib/share-media";
 import { SharePlatformGrid } from "@/components/larp/SharePlatformGrid";
@@ -90,19 +91,35 @@ export default function Historique() {
   const [prefetchedShareBlob, setPrefetchedShareBlob] = useState<Blob | null>(
     null,
   );
+  const [prefetchedShareFile, setPrefetchedShareFile] = useState<File | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!shareTarget) {
       setPrefetchedShareBlob(null);
+      setPrefetchedShareFile(null);
       return;
     }
     let cancelled = false;
     void fetchShareBlob(shareTarget.larpId, 0, shareTarget.url)
-      .then((blob) => {
-        if (!cancelled) setPrefetchedShareBlob(blob);
+      .then(async (blob) => {
+        if (cancelled) return;
+        setPrefetchedShareBlob(blob);
+        if (shareTarget.resultType !== "video") {
+          try {
+            const file = await toSnapFriendlyImageFile(blob);
+            if (!cancelled) setPrefetchedShareFile(file);
+          } catch {
+            /* share will convert on demand */
+          }
+        }
       })
       .catch(() => {
-        if (!cancelled) setPrefetchedShareBlob(null);
+        if (!cancelled) {
+          setPrefetchedShareBlob(null);
+          setPrefetchedShareFile(null);
+        }
       });
     return () => {
       cancelled = true;
@@ -170,31 +187,58 @@ export default function Historique() {
     if (!shareTarget) return;
     const target = shareTarget;
     const blob = prefetchedShareBlob;
-    // Close the drawer first so the black overlay cannot stick.
-    setShareTarget(null);
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    cleanupShareUiLocks();
+    const shareFile = prefetchedShareFile;
 
-    try {
-      const outcome = await shareMediaToPlatform({
+    // For Snapchat: keep the tap gesture — share FIRST, then close the drawer.
+    // Closing first + waiting was killing the share sheet / photo handoff.
+    const runShare = () =>
+      shareMediaToPlatform({
         larpId: target.larpId,
         imageIndex: 0,
         assetUrl: target.url,
         resultType: target.resultType,
         platform,
         blob,
+        shareFile,
       });
+
+    try {
+      const outcome =
+        platform === "snapchat" || platform === "instagram"
+          ? await runShare()
+          : await (async () => {
+              setShareTarget(null);
+              await new Promise((r) => window.setTimeout(r, 300));
+              cleanupShareUiLocks();
+              return runShare();
+            })();
+
+      setShareTarget(null);
+      cleanupShareUiLocks();
+
       if (outcome === "cancelled") return;
-      if (outcome === "shared" || outcome === "opened-app") {
+
+      if (outcome === "shared") {
         if (platform === "snapchat") {
           toast({
-            title: "Snapchat ouvert",
+            title: "Envoie ton Snap",
             description:
-              "Ta photo est enregistrée — envoie-la depuis ta galerie dans Snapchat.",
+              "Choisis Snapchat dans la liste — ta photo s’ouvre déjà prête à envoyer.",
           });
         }
         return;
       }
+
+      if (outcome === "opened-app") {
+        if (platform === "snapchat") {
+          toast({
+            title: "Snapchat",
+            description: "Ta photo devrait être prête à envoyer en Snap.",
+          });
+        }
+        return;
+      }
+
       toast({
         title: "Image enregistrée",
         description:
@@ -203,6 +247,7 @@ export default function Historique() {
             : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
       });
     } catch {
+      setShareTarget(null);
       cleanupShareUiLocks();
       toast({
         title: "Partage impossible",
@@ -496,7 +541,7 @@ export default function Historique() {
             <DrawerHeader className="text-center">
               <DrawerTitle>Partager</DrawerTitle>
               <DrawerDescription>
-                Snapchat s&apos;ouvre directement avec ta photo enregistrée.
+                Snapchat : ta photo s&apos;ouvre déjà prête à envoyer en Snap.
               </DrawerDescription>
             </DrawerHeader>
             <SharePlatformGrid
