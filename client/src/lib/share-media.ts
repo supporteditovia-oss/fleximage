@@ -82,33 +82,70 @@ function openWhatsApp(assetUrl?: string | null) {
   window.open(href, "_blank", "noopener,noreferrer");
 }
 
+function isAndroidUa(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent || "");
+}
+
+function isIOSUa(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+function clickHref(href: string) {
+  const a = document.createElement("a");
+  a.href = href;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 /**
- * Open Snapchat / Instagram / TikTok without navigating the page to a black screen.
- * Uses a hidden <a> click instead of location.href / window.open.
+ * Open Snapchat / Instagram / TikTok without a broken product deep-link.
+ * `snapchat://camera` triggers Snapchat's “try again later” product error — never use it.
  */
 function openNativeApp(platform: Exclude<SharePlatform, "whatsapp">): boolean {
   if (!isMobileUa()) return false;
 
-  const schemes: Record<Exclude<SharePlatform, "whatsapp">, string[]> = {
-    snapchat: ["snapchat://camera", "snapchat://"],
-    instagram: ["instagram://app", "instagram://share"],
-    tiktok: ["tiktok://"],
-  };
-
-  for (const href of schemes[platform]) {
-    try {
-      const a = document.createElement("a");
-      a.href = href;
-      a.rel = "noopener";
-      a.style.display = "none";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+  try {
+    if (platform === "snapchat") {
+      if (isAndroidUa()) {
+        // Launch the installed app's main screen (no Creative Kit / camera product URL).
+        clickHref(
+          "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.snapchat.android;end",
+        );
+        return true;
+      }
+      if (isIOSUa()) {
+        // Bare scheme opens Snapchat normally. Do NOT use snapchat://camera.
+        clickHref("snapchat://");
+        return true;
+      }
+      clickHref("snapchat://");
       return true;
-    } catch {
-      /* try next */
     }
+
+    if (platform === "instagram") {
+      clickHref(isAndroidUa()
+        ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.instagram.android;end"
+        : "instagram://app");
+      return true;
+    }
+
+    if (platform === "tiktok") {
+      clickHref(isAndroidUa()
+        ? "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.zhiliaoapp.musically;end"
+        : "tiktok://");
+      return true;
+    }
+  } catch {
+    return false;
   }
+
   return false;
 }
 
@@ -175,6 +212,9 @@ export async function shareMediaToPlatform(
   // Snapchat / Instagram / TikTok — direct path (no system app picker).
   // Use triggerBlobDownload only: saveMediaBlob would reopen the iOS share sheet.
   triggerBlobDownload(blob, filename);
+
+  // Let the download start before switching apps (avoids race / broken handoff).
+  await new Promise((resolve) => window.setTimeout(resolve, 450));
 
   const opened = openNativeApp(options.platform);
   return opened ? "opened-app" : "saved-guide";
