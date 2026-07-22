@@ -24,7 +24,7 @@ async function applyCreditDelta(supabase, params) {
   const { error } = await supabase.rpc("apply_credit_delta", {
     p_user_id: params.userId,
     p_delta: params.delta,
-    p_reason: "subscription_grant",
+    p_reason: params.reason || "subscription_grant",
     p_generation_id: null,
     p_subscription_id: params.subscriptionId || null,
     p_idempotency_key: params.idempotencyKey,

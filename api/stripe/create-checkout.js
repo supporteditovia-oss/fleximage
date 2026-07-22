@@ -1,5 +1,6 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
+const { assertCustomerCanStartCheckout } = require("../_lib/checkout-guard");
 
 const BRAND_DISPLAY_NAME = "LuxeFlexIA";
 const CHECKOUT_APP_ORIGIN = "https://www.luxeflexia.com";
@@ -110,6 +111,20 @@ module.exports = async function handler(req, res) {
 
     const creditsPerCycle = PLAN_CREDITS[plan];
     const stripe = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION });
+
+    if (profile && profile.stripe_customer_id) {
+      const guard = await assertCustomerCanStartCheckout(
+        stripe,
+        profile.stripe_customer_id,
+      );
+      if (!guard.ok) {
+        res.status(400).json({
+          message: guard.message,
+          code: guard.code,
+        });
+        return;
+      }
+    }
 
     // Keep Product name in Stripe aligned with LuxeFlexIA (best-effort).
     try {

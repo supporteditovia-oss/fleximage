@@ -14,12 +14,22 @@ export function extractClientIp(req: Request): string {
 }
 
 // General API rate limiter: 500 requests per 15 minutes per IP
+// Stripe webhooks must never be throttled — Stripe retries from shared IPs.
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => extractClientIp(req),
+  skip: (req) => {
+    const path = req.path || "";
+    const url = req.originalUrl || req.url || "";
+    return (
+      path === "/stripe/webhook" ||
+      path.endsWith("/stripe/webhook") ||
+      url.includes("/api/stripe/webhook")
+    );
+  },
   handler: (req, res, _next, options) => {
     const locale = resolveLocaleFromRequest(req);
     res.status(options.statusCode).json({

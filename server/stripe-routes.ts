@@ -14,6 +14,7 @@ import {
   normalizeStripePlanType,
   validateStripeRuntimeConfig,
 } from "./lib/stripe";
+import { assertCustomerCanStartCheckout } from "./lib/checkout-guard";
 import {
   handleCheckoutCompleted,
   handleInvoicePaid,
@@ -150,30 +151,50 @@ export function registerStripeRoutes(app: Express): void {
           .json({ message: tBackend(locale, "stripe.alreadySubscribed") });
       }
 
-      const appOrigin = resolvePublicAppUrl(
-        typeof req.headers.origin === "string" ? req.headers.origin : null,
-        process.env.SITE_URL,
-        process.env.APP_URL,
-      );
+      if (profile?.stripe_customer_id) {
+        const guard = await assertCustomerCanStartCheckout(
+          stripe,
+          profile.stripe_customer_id,
+        );
+        if (!guard.ok) {
+          return res.status(400).json({
+            message: tBackend(locale, "stripe.alreadySubscribed"),
+            code: guard.code,
+          });
+        }
+      }
+
+      const appOrigin = "https://www.luxeflexia.com";
       const sessionParams: Record<string, any> = {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${appOrigin}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appOrigin}/generate?checkout=cancel`,
+        branding_settings: {
+          display_name: "LuxeFlexIA",
+        },
+        custom_text: {
+          submit: {
+            message: "Abonnement LuxeFlexIA — paiement sécurisé",
+          },
+        },
         metadata: {
           user_id: authReq.userId,
           price_id: priceId,
           plan_type: planConfig.planType,
           credits_per_cycle: String(planConfig.creditsPerCycle),
           billing_interval: planConfig.billingInterval,
+          brand: "LuxeFlexIA",
         },
         subscription_data: {
+          description: planConfig.name,
           metadata: {
             user_id: authReq.userId,
             price_id: priceId,
             plan_type: planConfig.planType,
             credits_per_cycle: String(planConfig.creditsPerCycle),
             billing_interval: planConfig.billingInterval,
+            brand: "LuxeFlexIA",
           },
         },
       };
