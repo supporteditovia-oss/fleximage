@@ -7,7 +7,7 @@
     "dev": "bun run kill-port && NODE_ENV=development bun run server/index.ts",
     "kill-port": "bun run script/kill-port.ts",
     "build": "bun run script/build.ts",
-    "vercel-build": "node script/gen-favicon.mjs && node script/gen-og-image.mjs && npx vite build",
+    "vercel-build": "npx vite build",
     "seo:static": "node script/generate-seo-static.mjs",
     "start": "NODE_ENV=production bun run dist/index.js",
     "check": "tsc",
@@ -15,8 +15,7 @@
     "cleanup:larps": "bun run script/purge-larps.ts",
     "stripe:audit": "bun run script/audit-stripe.ts",
     "stripe:plans": "bun run script/create-stripe-plans.ts",
-    "stripe:webhook": "bun run script/create-stripe-webhook.ts",
-    "auth:google-oauth": "node script/setup-google-oauth-supabase.mjs"
+    "stripe:webhook": "bun run script/create-stripe-webhook.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1006.0",
