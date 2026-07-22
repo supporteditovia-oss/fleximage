@@ -1,4 +1,5 @@
 const Stripe = require("stripe");
+const { buffer } = require("micro");
 const { createClient } = require("@supabase/supabase-js");
 const {
   applyCreditDelta,
@@ -9,75 +10,63 @@ const {
 } = require("../_lib/stripe-billing");
 
 /**
- * Read the request body as raw bytes when possible.
+ * Read the request body as raw bytes.
  * Never re-serialize a parsed JSON object — that breaks Stripe signatures.
  */
 async function readRawBody(req) {
-  if (Buffer.isBuffer(req.body)) return { raw: req.body, parsed: null };
   if (typeof req.rawBody === "string") {
-    return { raw: Buffer.from(req.rawBody), parsed: null };
+    return Buffer.from(req.rawBody);
   }
-  if (Buffer.isBuffer(req.rawBody)) return { raw: req.rawBody, parsed: null };
-  if (typeof req.body === "string") {
-    return { raw: Buffer.from(req.body), parsed: null };
+  if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
+  if (Buffer.isBuffer(req.body)) return req.body;
+  if (typeof req.body === "string") return Buffer.from(req.body);
+
+  // Vercel / Node with bodyParser:false — read the unread stream.
+  try {
+    const buf = await buffer(req);
+    if (buf && buf.length) return buf;
+  } catch {
+    // Stream may already be consumed.
   }
 
-  // Already-parsed object: keep it for events.retrieve fallback only.
-  if (req.body && typeof req.body === "object") {
-    return { raw: null, parsed: req.body };
+  // Last resort: unread async iterator
+  if (req.readable && !req.readableEnded) {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    if (chunks.length) return Buffer.concat(chunks);
   }
 
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return { raw: Buffer.concat(chunks), parsed: null };
+  return null;
 }
 
 async function constructStripeEvent(req, stripe, webhookSecret) {
   const sig = req.headers["stripe-signature"];
-  const { raw, parsed } = await readRawBody(req);
-
-  // Prefer cryptographic verification of the raw body.
-  if (raw && sig) {
-    try {
-      const event = await stripe.webhooks.constructEventAsync(
-        raw,
-        sig,
-        webhookSecret,
-      );
-      return { event, via: "signature" };
-    } catch (err) {
-      console.warn("stripe webhook signature verify failed", {
-        message: err && err.message,
-      });
-      // Do NOT fall through to events.retrieve after a failed signature —
-      // that would let anyone replay evt_* ids without a valid signature.
-      throw err;
-    }
+  if (!sig) {
+    throw new Error("Missing stripe-signature header");
   }
 
-  // Fallback only when the platform already parsed JSON (signature bytes lost).
-  // Trust Stripe API contents via events.retrieve — not the POST body payload.
-  let eventId = parsed && parsed.id;
-  if (!eventId && raw && !sig) {
-    try {
-      const asJson = JSON.parse(raw.toString("utf8"));
-      eventId = asJson && asJson.id;
-    } catch {
-      // ignore
-    }
+  const raw = await readRawBody(req);
+  if (!raw || !raw.length) {
+    throw new Error(
+      "Raw body required for Stripe signature verification (bodyParser must be false)",
+    );
   }
 
-  if (typeof eventId === "string" && eventId.startsWith("evt_")) {
-    console.warn("stripe webhook using events.retrieve fallback (no usable signature)");
-    const event = await stripe.events.retrieve(eventId);
-    return { event, via: "events.retrieve" };
+  try {
+    const event = await stripe.webhooks.constructEventAsync(
+      raw,
+      sig,
+      webhookSecret,
+    );
+    return { event, via: "signature" };
+  } catch (err) {
+    console.warn("stripe webhook signature verify failed", {
+      message: err && err.message,
+    });
+    throw err;
   }
-
-  throw new Error(
-    "Unable to verify Stripe webhook (raw body missing and no event id)",
-  );
 }
 
 async function handleInvoicePaid(supabase, invoice) {
@@ -355,8 +344,11 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (!req.headers["stripe-signature"] && !req.body) {
-    res.status(400).json({ message: "Missing stripe-signature header" });
+  if (!req.headers["stripe-signature"]) {
+    res.status(400).json({
+      message: "Missing stripe-signature header",
+      code: "stripe_signature_invalid",
+    });
     return;
   }
 
