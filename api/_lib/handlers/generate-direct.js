@@ -7,7 +7,7 @@ const {
   uploadImageUrlsToOneshot,
   createOneshotJob,
 } = require("../oneshot");
-const { createKieTask } = require("../kie");
+const { createKieTask, isKieConfigured } = require("../kie");
 const {
   OUTPUT_ASPECT_RATIO,
   checkGenerationLimits,
@@ -81,8 +81,21 @@ module.exports = async function handler(req, res) {
 
     const oneshotConfig = getOneshotApiConfig();
     const appSettings = await getAppSettings(supabase);
+    const kieReady = isKieConfigured();
     let externalTaskId;
     let provider = "oneshot";
+
+    const createWithKie = async () => {
+      const kieResponse = await createKieTask({
+        prompt: finalPrompt,
+        aspect_ratio: OUTPUT_ASPECT_RATIO,
+        image_input: imageUrls,
+      });
+      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+        return null;
+      }
+      return kieResponse.data.taskId;
+    };
 
     if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
       try {
@@ -103,31 +116,38 @@ module.exports = async function handler(req, res) {
           });
           return;
         }
+        if (!kieReady) {
+          console.error("OneshotAPI failed (no Kie fallback configured)", err);
+          const detail =
+            err && err.message ? String(err.message).slice(0, 240) : "erreur Oneshot";
+          res.status(502).json({
+            message: `Échec de la génération Oneshot (${detail})`,
+          });
+          return;
+        }
         console.error("OneshotAPI failed, falling back to Kie AI", err);
         provider = "kie";
-        const kieResponse = await createKieTask({
-          prompt: finalPrompt,
-          aspect_ratio: OUTPUT_ASPECT_RATIO,
-          image_input: imageUrls,
-        });
-        if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+        const kieTaskId = await createWithKie();
+        if (!kieTaskId) {
           res.status(502).json({ message: "Échec de création de la tâche" });
           return;
         }
-        externalTaskId = kieResponse.data.taskId;
+        externalTaskId = kieTaskId;
       }
-    } else {
+    } else if (kieReady) {
       provider = "kie";
-      const kieResponse = await createKieTask({
-        prompt: finalPrompt,
-        aspect_ratio: OUTPUT_ASPECT_RATIO,
-        image_input: imageUrls,
-      });
-      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+      const kieTaskId = await createWithKie();
+      if (!kieTaskId) {
         res.status(502).json({ message: "Échec de création de la tâche" });
         return;
       }
-      externalTaskId = kieResponse.data.taskId;
+      externalTaskId = kieTaskId;
+    } else {
+      res.status(503).json({
+        message:
+          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
+      });
+      return;
     }
 
     const { data: larp, error: insertErr } = await supabase

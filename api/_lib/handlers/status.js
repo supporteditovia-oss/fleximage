@@ -5,7 +5,7 @@ const {
   isGoogleAiPromptFlagged,
   getOneshotJobStatus,
 } = require("../oneshot");
-const { createKieTask, getKieTaskStatus } = require("../kie");
+const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
 const {
   OUTPUT_ASPECT_RATIO,
   PROVIDER_POLL_HARD_TIMEOUT_MS,
@@ -166,6 +166,15 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = "Prompt refusé par la politique de sécurité.";
         } else {
+          if (!isKieConfigured()) {
+            apiStatus = "fail";
+            apiFailMsg =
+              customStatus && customStatus.error
+                ? String(customStatus.error)
+                : isTimeout
+                  ? "Timeout Oneshot (pas de fallback Kie configuré)"
+                  : "Échec Oneshot (pas de fallback Kie configuré)";
+          } else {
           // Atomic claim so concurrent polls don't each create a Kie task
           // then race to mark the generation failed.
           const oneshotTaskId = larp.provider_task_id;
@@ -251,6 +260,7 @@ module.exports = async function handler(req, res) {
                 ? fallbackErr.message
                 : "erreur"
             })`;
+          }
           }
         }
       }

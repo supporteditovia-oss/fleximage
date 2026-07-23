@@ -129,7 +129,7 @@ export interface OneshotJobPayload {
   model: "nano-banana";
   prompt: string;
   options?: {
-    modelVariant?: "fast" | "quality";
+    modelVariant?: "default" | "fast" | "flash" | "flash-lite" | "pro";
     aspectRatio?: string;
     referenceFileIds?: string[];
   };
@@ -224,7 +224,8 @@ export async function createOneshotJob(
     model: "nano-banana",
     prompt,
     options: {
-      modelVariant: "quality",
+      // nano-banana only accepts default | fast
+      modelVariant: "default",
       aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }

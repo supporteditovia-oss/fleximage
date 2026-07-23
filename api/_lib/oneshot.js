@@ -115,7 +115,8 @@ async function createOneshotJob(prompt, options) {
     model: "nano-banana",
     prompt,
     options: {
-      modelVariant: "quality",
+      // nano-banana only accepts default | fast
+      modelVariant: "default",
       aspectRatio: (options && options.aspectRatio) || "9:16",
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }

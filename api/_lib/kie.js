@@ -2,9 +2,15 @@ const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 const IMAGE_OUTPUT_RESOLUTION = "4K";
 const IMAGE_OUTPUT_FORMAT = "png";
 
+function isKieConfigured() {
+  return Boolean(process.env.KIE_AI_API_KEY && process.env.KIE_AI_API_KEY.trim());
+}
+
 function getApiKey() {
   const key = process.env.KIE_AI_API_KEY;
-  if (!key) throw new Error("KIE_AI_API_KEY environment variable is not set");
+  if (!key || !key.trim()) {
+    throw new Error("KIE_AI_API_KEY environment variable is not set");
+  }
   return key;
 }
 
@@ -51,6 +57,7 @@ async function getKieTaskStatus(taskId) {
 }
 
 module.exports = {
+  isKieConfigured,
   createKieTask,
   getKieTaskStatus,
 };
