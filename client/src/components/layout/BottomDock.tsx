@@ -42,11 +42,17 @@ export function BottomDock() {
     let maxHeight = window.innerHeight;
     let lastY = window.scrollY;
     const thresh = 10;
-          
+
     const handleResizeOrScroll = () => {
+      // Result screen: dock must stay visible (nav is the escape hatch).
+      if (document.body.hasAttribute("data-larp-result-mode")) {
+        setHidden(false);
+        return;
+      }
+
       const vv = window.visualViewport;
       if (!vv) return;
-      
+
       const currentY = window.scrollY;
       const currentH = vv.height;
       if (currentH > maxHeight) maxHeight = currentH;
@@ -57,14 +63,14 @@ export function BottomDock() {
         lastY = currentY;
         return;
       }
-      
+
       // 2. Top of page: always show dock
       if (currentY <= 50) {
         setHidden(false);
         lastY = currentY;
         return;
       }
-      
+
       // 3. Browser UI expanded (URL bar visible): height is significantly less than max
       // This is a very strong signal on mobile that the user scrolled up or tapped the top
       if (currentH < maxHeight - 15) {
@@ -72,7 +78,7 @@ export function BottomDock() {
         lastY = currentY;
         return;
       }
-      
+
       // 4. Fallback to scroll delta for desktop or when URL bar is fully collapsed
       if (currentY > lastY + thresh) {
         setHidden(true); // scrolling down
@@ -80,6 +86,12 @@ export function BottomDock() {
       } else if (currentY < lastY - thresh) {
         setHidden(false); // scrolling up
         lastY = currentY;
+      }
+    };
+
+    const syncResultMode = () => {
+      if (document.body.hasAttribute("data-larp-result-mode")) {
+        setHidden(false);
       }
     };
 
@@ -91,11 +103,19 @@ export function BottomDock() {
       handleResizeOrScroll();
     }
 
+    const observer = new MutationObserver(syncResultMode);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-larp-result-mode"],
+    });
+    syncResultMode();
+
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", handleResizeOrScroll);
         window.visualViewport.removeEventListener("scroll", handleResizeOrScroll);
       }
+      observer.disconnect();
     };
   }, []);
 

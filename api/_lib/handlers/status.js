@@ -93,6 +93,19 @@ module.exports = async function handler(req, res) {
     }
 
     const activeTaskId = (larp.provider_task_id || "").split(",").pop();
+    if (activeTaskId === "__claiming__") {
+      res.status(200).json({
+        larpId: larp.id,
+        status: "waiting",
+        resultUrls: [],
+        failMessage: null,
+        costTime: null,
+        isSubscriber: false,
+        requiresPaywall: false,
+        resultType: "image",
+      });
+      return;
+    }
     const isCustomApi = activeTaskId.startsWith("custom_");
     let apiStatus = "waiting";
     let apiResultJson = null;
@@ -101,24 +114,42 @@ module.exports = async function handler(req, res) {
 
     if (isCustomApi) {
       const jobId = activeTaskId.replace("custom_", "");
+      const currentSettings = await getAppSettings(supabase);
+      const ageInMs = Date.now() - new Date(larp.created_at).getTime();
+      const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
+
       let customStatus;
       try {
         customStatus = await getOneshotJobStatus(jobId);
       } catch (err) {
         console.error("Failed to poll OneshotAPI", err);
-        customStatus = {
-          status: "failed",
-          error: isGoogleAiPromptFlagged(err)
-            ? err instanceof Error
-              ? err.message
-              : String(err)
-            : "Erreur de polling",
-        };
+        if (isGoogleAiPromptFlagged(err)) {
+          customStatus = {
+            status: "failed",
+            error:
+              err instanceof Error ? err.message : String(err),
+          };
+        } else if (isTimeout) {
+          customStatus = {
+            status: "failed",
+            error: "Timeout provider",
+          };
+        } else {
+          // Transient network/5xx — keep waiting (mirrors Kie poll path).
+          res.status(200).json({
+            larpId: larp.id,
+            status: "waiting",
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType: "image",
+          });
+          return;
+        }
       }
 
-      const currentSettings = await getAppSettings(supabase);
-      const ageInMs = Date.now() - new Date(larp.created_at).getTime();
-      const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
       const isCustomApiFailed =
         customStatus.status === "failed" || customStatus.status === "fail";
       const isPolicyViolation =
@@ -135,6 +166,40 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = "Prompt refusé par la politique de sécurité.";
         } else {
+          // Atomic claim so concurrent polls don't each create a Kie task
+          // then race to mark the generation failed.
+          const oneshotTaskId = larp.provider_task_id;
+          const claimMarker = `${oneshotTaskId},__claiming__`;
+          const { data: claimedRows, error: claimErr } = await supabase
+            .from("generations")
+            .update({
+              provider: "fallback",
+              provider_task_id: claimMarker,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", larp.id)
+            .eq("provider", "oneshot")
+            .select("id");
+
+          if (claimErr) {
+            console.error("fallback claim failed", claimErr);
+          }
+
+          if (!claimedRows || claimedRows.length === 0) {
+            // Another poll already claimed / moved to Kie.
+            res.status(200).json({
+              larpId: larp.id,
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType: "image",
+            });
+            return;
+          }
+
           try {
             const imageUrls = Array.isArray(larp.input_assets)
               ? larp.input_assets
@@ -149,7 +214,7 @@ module.exports = async function handler(req, res) {
               fallbackKieResponse.code === 200 &&
               fallbackKieResponse.data?.taskId
             ) {
-              const newKieTaskIdString = `${larp.provider_task_id},${fallbackKieResponse.data.taskId}`;
+              const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
               await supabase
                 .from("generations")
                 .update({
@@ -172,12 +237,20 @@ module.exports = async function handler(req, res) {
               return;
             }
 
+            const kieMsg =
+              fallbackKieResponse && fallbackKieResponse.msg
+                ? String(fallbackKieResponse.msg)
+                : "réponse invalide";
             apiStatus = "fail";
-            apiFailMsg = "Échec du fallback";
+            apiFailMsg = `Échec du fallback (${kieMsg})`;
           } catch (fallbackErr) {
             console.error("Kie fallback failed", fallbackErr);
             apiStatus = "fail";
-            apiFailMsg = "Échec du fallback";
+            apiFailMsg = `Échec du fallback (${
+              fallbackErr && fallbackErr.message
+                ? fallbackErr.message
+                : "erreur"
+            })`;
           }
         }
       }

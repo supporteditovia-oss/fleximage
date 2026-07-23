@@ -1,4 +1,6 @@
 const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
+const IMAGE_OUTPUT_RESOLUTION = "4K";
+const IMAGE_OUTPUT_FORMAT = "png";
 
 function getApiKey() {
   const key = process.env.KIE_AI_API_KEY;
@@ -15,7 +17,11 @@ async function createKieTask(input) {
     },
     body: JSON.stringify({
       model: "nano-banana-2",
-      input,
+      input: {
+        ...input,
+        resolution: input.resolution || IMAGE_OUTPUT_RESOLUTION,
+        output_format: input.output_format || IMAGE_OUTPUT_FORMAT,
+      },
     }),
   });
 

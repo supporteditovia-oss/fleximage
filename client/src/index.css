@@ -58,7 +58,9 @@ body[data-larp-result-mode] .bottom-dock {
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: translateY(0) !important;
-  z-index: 40 !important;
+  visibility: visible !important;
+  /* Above result portal (z-40) so Créer / Historique / Compte stay tappable */
+  z-index: 60 !important;
 }
 
 body[data-paywall-overlay] .floating-header {

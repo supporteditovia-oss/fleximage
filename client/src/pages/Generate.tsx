@@ -41,10 +41,7 @@ import {
   isPaywallExpired,
   resetPaywallExpiry,
 } from "@/lib/paywall-expiry";
-import {
-  clearLastGeneration,
-  getLastGeneration,
-} from "@/lib/last-generation";
+import { clearLastGeneration } from "@/lib/last-generation";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -85,17 +82,12 @@ export default function Generate() {
   );
 
   // ── Generation state ────────────────────────────────────────
-  const [taskId, setTaskId] = useState<string | null>(() => {
-    if (isReturningFromCheckout) return null;
-    return getLastGeneration()?.taskId ?? null;
-  });
+  const [taskId, setTaskId] = useState<string | null>(null);
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
   const [transitionBg, setTransitionBg] = useState(false);
-  const [generationResultVisible, setGenerationResultVisible] = useState(
-    () => !isReturningFromCheckout && !!getLastGeneration()?.taskId,
-  );
+  const [generationResultVisible, setGenerationResultVisible] = useState(false);
 
   // ── Fake generation / paywall state ─────────────────────────
   const [showFakeOnboardingLoader, setShowFakeOnboardingLoader] = useState(false);
@@ -309,7 +301,9 @@ export default function Generate() {
     }
 
     // No onboarding draft: clear sticky leftovers for a clean Créer form.
-    console.log("[Generate] Clearing leftover drafts; restoring last result if any");
+    // Do NOT auto-restore the last fullscreen result — that trapped users on mobile
+    // with no way out. Last result stays in Historique.
+    console.log("[Generate] Clearing leftover drafts for clean Créer form");
     clearPendingLarp();
     clearPaywallImage();
     clearPaywallPrompt();
@@ -317,6 +311,7 @@ export default function Generate() {
     clearOnboardingResume();
     clearPaywalledResult();
     clearFakePaywallReached();
+    clearLastGeneration();
 
     setPrompt("");
     setImages((prev) => {
@@ -333,15 +328,8 @@ export default function Generate() {
     setSavedPaywall(null);
     setShowLuxePaywall(false);
     setShowFakeOnboardingLoader(false);
-
-    const last = getLastGeneration();
-    if (last?.taskId) {
-      setTaskId(last.taskId);
-      setGenerationResultVisible(true);
-    } else {
-      setTaskId(null);
-      setGenerationResultVisible(false);
-    }
+    setTaskId(null);
+    setGenerationResultVisible(false);
   }, [isReturningFromCheckout]);
 
   // Resume landing → auth → fake loader → blurred lock paywall.
@@ -1051,6 +1039,7 @@ export default function Generate() {
   // ── Portal overlays ─────────────────────────────────────────
   const generationProgress = taskId ? (
     <GenerationProgress
+      key={taskId}
       taskId={taskId}
       inputImageUrl={loaderInputImageUrl}
       onReset={handleReset}

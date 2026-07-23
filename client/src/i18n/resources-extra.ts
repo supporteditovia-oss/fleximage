@@ -151,7 +151,7 @@ export const extraResources = {
       textFallbackLabel: "Texte {{index}}",
       serverRetry: "Erreur serveur. Veuillez réessayer.",
       resultTitle: "Voici ton LARP !",
-      createAnother: "Créer un autre LARP",
+      createAnother: "Nouvelle création",
     },
     promptInput: {
       describePlaceholder: "Décris ton LARP...",
@@ -190,7 +190,7 @@ export const extraResources = {
       restart: "Recommencer",
       retry: "Réessayer",
       resultTitle: "Voici ton LARP !",
-      createAnother: "Créer un autre LARP",
+      createAnother: "Nouvelle création",
       inputAlt: "Image source",
     },
     history: {
@@ -468,7 +468,7 @@ export const extraResources = {
       textFallbackLabel: "Text {{index}}",
       serverRetry: "Server error. Please try again.",
       resultTitle: "Your LARP is ready!",
-      createAnother: "Create another LARP",
+      createAnother: "Create another",
     },
     promptInput: {
       describePlaceholder: "Describe your LARP...",
@@ -507,7 +507,7 @@ export const extraResources = {
       restart: "Start over",
       retry: "Try again",
       resultTitle: "Your LARP is ready!",
-      createAnother: "Create another LARP",
+      createAnother: "Create another",
       inputAlt: "Source image",
     },
     history: {

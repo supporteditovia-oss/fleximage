@@ -243,13 +243,22 @@ export function GenerationProgress({
             </span>
 
             {/* LARP result with download/share actions */}
-            <div className="absolute left-1/2 top-[calc(50%-1.25rem)] z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center md:top-1/2">
+            <div className="absolute left-1/2 top-[calc(50%-1.25rem)] z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-4 md:top-1/2">
               <LarpResult
                 resultUrls={displayUrls}
                 larpId={displayLarpId!}
                 resultType={displayResultType}
                 posterUrl={inputImageUrl}
               />
+              <button
+                type="button"
+                onClick={() => {
+                  onReset();
+                }}
+                className="pointer-events-auto rounded-full border border-[var(--lx-gold)]/40 bg-white/95 px-5 py-2.5 text-sm font-semibold text-[var(--lx-ink)] shadow-md backdrop-blur-sm transition active:scale-[0.98]"
+              >
+                {t("progress.createAnother")}
+              </button>
             </div>
           </div>,
           document.body,
