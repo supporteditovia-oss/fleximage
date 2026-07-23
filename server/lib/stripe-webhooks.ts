@@ -194,6 +194,7 @@ export async function handleCheckoutCompleted(
         plan_type: planConfig.planType,
         credits_per_cycle: planConfig.creditsPerCycle,
         billing_interval: planConfig.billingInterval,
+        monthly_amount_cents: planConfig.monthlyAmount,
       },
       { onConflict: "stripe_subscription_id" },
     )

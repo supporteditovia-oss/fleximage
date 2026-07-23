@@ -57,7 +57,7 @@ function resolveRange(range) {
 
 function pct(n, d) {
   if (!d) return null;
-  return Math.round((n / d) * 1000) / 10;
+  return Math.round((Number(n) / Number(d)) * 1000) / 10;
 }
 
 function median(values) {
@@ -67,10 +67,6 @@ function median(values) {
   return sorted.length % 2
     ? sorted[mid]
     : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 10) / 10;
-}
-
-function planMrrCents(planType) {
-  return PLAN_MRR_CENTS[planType] || 0;
 }
 
 function topCounts(map, limit = 8) {
@@ -89,6 +85,21 @@ function hourBucketParis(iso) {
   return Number(dtf.format(new Date(iso)));
 }
 
+/** Paginate Supabase selects past the 1000-row default cap. */
+async function fetchAllRows(buildQuery) {
+  const pageSize = 1000;
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await buildQuery().range(from, to);
+    if (error) throw error;
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+  return rows;
+}
+
 async function fetchCommandCenter(supabase, range) {
   const { from, to, now } = resolveRange(range);
   const fromIso = from ? from.toISOString() : null;
@@ -100,171 +111,131 @@ async function fetchCommandCenter(supabase, range) {
     fromIso ? q.gte(col, fromIso) : q;
   const lt = (q, col = "created_at") => (toIso ? q.lt(col, toIso) : q);
 
+  // Core KPIs: exact SQL aggregates (no 1000-row truncation).
+  const { data: core, error: coreErr } = await supabase.rpc(
+    "admin_hq_core_stats",
+    {
+      p_from: fromIso,
+      p_to: toIso,
+      p_today_start: todayStart,
+    },
+  );
+  if (coreErr) throw coreErr;
+
+  const mrrCents = Number(core.mrr_cents) || 0;
+  const activeCount = Number(core.active_subscribers) || 0;
+  const cancelAtPeriodEnd = Number(core.cancel_at_period_end) || 0;
+  const signupsCount = Number(core.signups_period) || 0;
+  const signupsToday = Number(core.signups_today) || 0;
+  const gensTotal = Number(core.gens_period) || 0;
+  const gensSuccess = Number(core.gens_succeeded) || 0;
+  const gensFailed = Number(core.gens_failed) || 0;
+  const gensProcessing = Number(core.gens_processing) || 0;
+  const gensToday = Number(core.gens_today) || 0;
+  const creditsBurned = Number(core.credits_burned) || 0;
+  const creditsGranted = Number(core.credits_granted) || 0;
+  const floatingCredits = Number(core.floating_credits) || 0;
+  const zeroCreditSubscribers = Number(core.zero_credit_subscribers) || 0;
+  const stuckCount = Number(core.stuck_processing) || 0;
+  const newSubsPeriod = Number(core.new_subs_period) || 0;
+  const churnedPeriod = Number(core.churned_period) || 0;
+  const totalUsers = Number(core.total_users) || 0;
+  const totalSubscriptions = Number(core.total_subscriptions) || 0;
+  const signupsPeriodSubscribers =
+    Number(core.signups_period_subscribers) || 0;
+
+  const byPlanRows = Array.isArray(core.by_plan) ? core.by_plan : [];
+  const byPlan = byPlanRows.map((p) => ({
+    plan: p.plan || "unknown",
+    count: Number(p.count) || 0,
+    mrrEur: Math.round(((Number(p.mrr_cents) || 0) / 100) * 100) / 100,
+    priceEur: (PLAN_MRR_CENTS[p.plan] || 0) / 100,
+  }));
+
+  // Detail rows (paginated) for funnel / attribution / providers / pulse.
   const [
-    activeSubsRes,
-    canceledPeriodRes,
-    newSubsPeriodRes,
-    signupsPeriodRes,
-    signupsTodayRes,
-    gensPeriodRes,
-    gensTodayRes,
-    ledgerPeriodRes,
-    profilesTotalRes,
-    subsTotalRes,
-    funnelLandedRes,
-    recentGensRes,
-    stuckGensRes,
-    zeroCreditSubsRes,
-    creditBalanceRes,
+    funnelLanded,
+    gensDetail,
+    signupsDetail,
+    canceledDetail,
+    newSubsDetail,
+    recentGens,
   ] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("plan_type, credits_per_cycle, status, cancel_at_period_end, created_at")
-      .eq("status", "active"),
-    (() => {
-      let q = supabase
-        .from("subscriptions")
-        .select("id, plan_type, canceled_at")
-        .not("canceled_at", "is", null);
-      if (fromIso) q = q.gte("canceled_at", fromIso);
-      if (toIso) q = q.lt("canceled_at", toIso);
-      return q;
-    })(),
-    (() => {
-      let q = supabase
-        .from("subscriptions")
-        .select("id, plan_type, created_at, status")
-        .eq("status", "active");
-      return lt(gte(q));
-    })(),
-    (() => {
-      let q = supabase
-        .from("profiles")
-        .select("id, created_at, is_subscriber, credits, generation_count, last_active_at, preferred_locale, role")
-        .neq("role", "admin");
-      return lt(gte(q));
-    })(),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", todayStart)
-      .neq("role", "admin"),
-    (() => {
-      let q = supabase
-        .from("generations")
-        .select(
-          "id, status, provider, credit_cost, cost_time, fail_message, created_at, completed_at, user_id, generation_type",
-        );
-      return lt(gte(q));
-    })(),
-    supabase
-      .from("generations")
-      .select("id, status", { count: "exact" })
-      .gte("created_at", todayStart),
-    (() => {
-      let q = supabase
-        .from("credit_ledger")
-        .select("delta, reason, created_at");
-      return lt(gte(q));
-    })(),
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .neq("role", "admin"),
-    supabase.from("subscriptions").select("id", { count: "exact", head: true }),
-    (() => {
+    fetchAllRows(() => {
       let q = supabase
         .from("funnel_events")
         .select("session_id, created_at, meta")
-        .eq("step", "landing");
+        .eq("step", "landing")
+        .order("created_at", { ascending: true });
       return lt(gte(q));
-    })(),
+    }),
+    fetchAllRows(() => {
+      let q = supabase
+        .from("generations")
+        .select(
+          "id, status, provider, cost_time, fail_message, generation_type, created_at",
+        )
+        .order("created_at", { ascending: true });
+      return lt(gte(q));
+    }),
+    fetchAllRows(() => {
+      let q = supabase
+        .from("profiles")
+        .select(
+          "id, created_at, is_subscriber, generation_count, preferred_locale, role",
+        )
+        .neq("role", "admin")
+        .order("created_at", { ascending: true });
+      return lt(gte(q));
+    }),
+    fetchAllRows(() => {
+      let q = supabase
+        .from("subscriptions")
+        .select("id, plan_type, canceled_at, monthly_amount_cents")
+        .not("canceled_at", "is", null)
+        .order("canceled_at", { ascending: true });
+      if (fromIso) q = q.gte("canceled_at", fromIso);
+      if (toIso) q = q.lt("canceled_at", toIso);
+      return q;
+    }),
+    fetchAllRows(() => {
+      let q = supabase
+        .from("subscriptions")
+        .select("id, plan_type, created_at, monthly_amount_cents, status")
+        .eq("status", "active")
+        .order("created_at", { ascending: true });
+      return lt(gte(q));
+    }),
     supabase
       .from("generations")
       .select(
         "id, status, provider, fail_message, created_at, credit_cost, user_id",
       )
       .order("created_at", { ascending: false })
-      .limit(25),
-    supabase
-      .from("generations")
-      .select("id, created_at, provider, status", { count: "exact" })
-      .eq("status", "processing")
-      .lt("created_at", new Date(now.getTime() - 60 * 60 * 1000).toISOString()),
-    supabase
-      .from("profiles")
-      .select("id, email, credits")
-      .eq("is_subscriber", true)
-      .lte("credits", 0)
-      .limit(20),
-    supabase
-      .from("profiles")
-      .select("credits")
-      .neq("role", "admin"),
+      .limit(25)
+      .then((r) => {
+        if (r.error) throw r.error;
+        return r.data || [];
+      }),
   ]);
 
-  const landed = funnelLandedRes.data || [];
-  const landedSet = new Set(landed.map((r) => r.session_id));
+  const landedSet = new Set(funnelLanded.map((r) => r.session_id));
   const landedIds = [...landedSet];
   const funnelEvents = [];
   for (let i = 0; i < landedIds.length; i += 100) {
     const chunk = landedIds.slice(i, i + 100);
-    if (chunk.length === 0) break;
-    const { data: chunkRows } = await supabase
-      .from("funnel_events")
-      .select("session_id, step, created_at, meta, user_id, path")
-      .in("session_id", chunk);
-    if (chunkRows) funnelEvents.push(...chunkRows);
+    const chunkRows = await fetchAllRows(() =>
+      supabase
+        .from("funnel_events")
+        .select("session_id, step, created_at, meta, user_id, path")
+        .in("session_id", chunk)
+        .order("created_at", { ascending: true }),
+    );
+    funnelEvents.push(...chunkRows);
   }
 
-  const activeSubs = activeSubsRes.data || [];
-  const mrrCents = activeSubs.reduce(
-    (sum, s) => sum + planMrrCents(s.plan_type),
-    0,
-  );
-  const byPlan = {};
-  for (const s of activeSubs) {
-    const key = s.plan_type || "unknown";
-    if (!byPlan[key]) {
-      byPlan[key] = { count: 0, mrrCents: 0, creditsPerCycle: 0 };
-    }
-    byPlan[key].count += 1;
-    byPlan[key].mrrCents += planMrrCents(key);
-    byPlan[key].creditsPerCycle += Number(s.credits_per_cycle) || 0;
-  }
-
-  const canceled = canceledPeriodRes.data || [];
-  const newSubs = newSubsPeriodRes.data || [];
-  const signups = signupsPeriodRes.data || [];
-  const gens = gensPeriodRes.data || [];
-  const ledger = ledgerPeriodRes.data || [];
-
-  const gensSuccess = gens.filter((g) => g.status === "succeeded").length;
-  const gensFailed = gens.filter((g) => g.status === "failed").length;
-  const gensProcessing = gens.filter((g) => g.status === "processing").length;
-  const byProvider = {};
-  for (const g of gens) {
-    const p = g.provider || "unknown";
-    if (!byProvider[p]) byProvider[p] = { total: 0, success: 0, fail: 0 };
-    byProvider[p].total += 1;
-    if (g.status === "succeeded") byProvider[p].success += 1;
-    if (g.status === "failed") byProvider[p].fail += 1;
-  }
-
-  const creditsBurned = ledger
-    .filter((e) => e.reason === "generation_charge" && e.delta < 0)
-    .reduce((s, e) => s + Math.abs(e.delta), 0);
-  const creditsGranted = ledger
-    .filter((e) => e.delta > 0)
-    .reduce((s, e) => s + e.delta, 0);
-
-  const costTimes = gens
-    .map((g) => Number(g.cost_time))
-    .filter((n) => Number.isFinite(n) && n > 0);
-
-  // Funnel cohort from landings in period
   const stepCounts = {
-    landing: 0,
+    landing: landedSet.size,
     signup: 0,
     upload: 0,
     generate: 0,
@@ -280,14 +251,12 @@ async function fetchCommandCenter(supabase, range) {
       bag[e.step] = e.created_at;
     }
   }
-  // Count landings from period query (authoritative)
-  stepCounts.landing = landedSet.size;
   for (const [, bag] of sessionSteps) {
     for (const step of Object.keys(stepCounts)) {
       if (step !== "landing" && bag[step]) stepCounts[step] += 1;
     }
   }
-  // If landing events weren't in the 8000 window, still count landedSet
+
   const FUNNEL_ORDER = [
     "landing",
     "signup",
@@ -311,19 +280,20 @@ async function fetchCommandCenter(supabase, range) {
     };
   });
 
-  // Attribution from landing meta
   const utmSource = {};
   const utmCampaign = {};
   const devices = {};
   const referrers = {};
-  for (const row of landed) {
+  for (const row of funnelLanded) {
     const meta = row.meta || {};
-    const src = String(meta.utm_source || meta.source || "").toLowerCase() || "(direct)";
+    const src =
+      String(meta.utm_source || meta.source || "").toLowerCase() || "(direct)";
     const camp = String(meta.utm_campaign || "").toLowerCase() || "(none)";
     const device = String(meta.device || "unknown");
     let refHost = "(direct)";
     try {
-      if (meta.referrer) refHost = new URL(String(meta.referrer)).hostname || "(direct)";
+      if (meta.referrer)
+        refHost = new URL(String(meta.referrer)).hostname || "(direct)";
     } catch {
       refHost = String(meta.referrer || "(direct)").slice(0, 80);
     }
@@ -333,7 +303,6 @@ async function fetchCommandCenter(supabase, range) {
     referrers[refHost] = (referrers[refHost] || 0) + 1;
   }
 
-  // Timing: landing → signup / signup → subscribed (hours)
   const landToSignup = [];
   const signupToPaid = [];
   for (const [, bag] of sessionSteps) {
@@ -349,50 +318,64 @@ async function fetchCommandCenter(supabase, range) {
     }
   }
 
-  // Hourly pulse today (landings)
   const hourly = Array.from({ length: 24 }, () => 0);
-  for (const row of landed) {
+  for (const row of funnelLanded) {
     if (new Date(row.created_at) >= new Date(todayStart)) {
       hourly[hourBucketParis(row.created_at)] += 1;
     }
   }
 
-  // Locale mix of new signups
   const locales = {};
-  for (const p of signups) {
+  for (const p of signupsDetail) {
     const loc = p.preferred_locale || "fr";
     locales[loc] = (locales[loc] || 0) + 1;
   }
 
-  // Fail message top
+  const byProvider = {};
   const failMsgs = {};
-  for (const g of gens.filter((x) => x.status === "failed")) {
-    const msg = String(g.fail_message || "unknown").slice(0, 120);
-    failMsgs[msg] = (failMsgs[msg] || 0) + 1;
+  const byType = {};
+  const costTimes = [];
+  for (const g of gensDetail) {
+    const p = g.provider || "unknown";
+    if (!byProvider[p]) byProvider[p] = { total: 0, success: 0, fail: 0 };
+    byProvider[p].total += 1;
+    if (g.status === "succeeded") byProvider[p].success += 1;
+    if (g.status === "failed") {
+      byProvider[p].fail += 1;
+      const msg = String(g.fail_message || "unknown").slice(0, 120);
+      failMsgs[msg] = (failMsgs[msg] || 0) + 1;
+    }
+    const t = g.generation_type || "image";
+    byType[t] = (byType[t] || 0) + 1;
+    const ct = Number(g.cost_time);
+    if (Number.isFinite(ct) && ct > 0) costTimes.push(ct);
   }
 
-  const creditBalances = creditBalanceRes.data || [];
-  const totalCreditsFloat = creditBalances.reduce(
-    (s, p) => s + (Number(p.credits) || 0),
+  const newMrrCents = newSubsDetail.reduce(
+    (s, x) => s + (Number(x.monthly_amount_cents) || PLAN_MRR_CENTS[x.plan_type] || 0),
+    0,
+  );
+  const churnedMrrCents = canceledDetail.reduce(
+    (s, x) => s + (Number(x.monthly_amount_cents) || PLAN_MRR_CENTS[x.plan_type] || 0),
     0,
   );
 
+  const recentSignups = signupsDetail.filter(
+    (p) => new Date(p.created_at) >= new Date(weekAgo),
+  );
+  const cohortPaid = recentSignups.filter((p) => p.is_subscriber).length;
+
   const paidInPeriod = stepCounts.subscribed;
-  const signupsCount = signups.length;
-  const activeCount = activeSubs.length;
-  const cancelAtPeriodEnd = activeSubs.filter((s) => s.cancel_at_period_end)
-    .length;
+  const failRate = pct(gensFailed, gensTotal);
 
   const alerts = [];
-  const failRate = pct(gensFailed, gens.length);
-  if (failRate != null && failRate >= 15 && gens.length >= 5) {
+  if (failRate != null && failRate >= 15 && gensTotal >= 5) {
     alerts.push({
       level: "critical",
       code: "high_fail_rate",
-      message: `Taux d'échec générations élevé: ${failRate}% (${gensFailed}/${gens.length})`,
+      message: `Taux d'échec générations élevé: ${failRate}% (${gensFailed}/${gensTotal})`,
     });
   }
-  const stuckCount = stuckGensRes.count || (stuckGensRes.data || []).length;
   if (stuckCount > 0) {
     alerts.push({
       level: "warning",
@@ -400,18 +383,21 @@ async function fetchCommandCenter(supabase, range) {
       message: `${stuckCount} génération(s) bloquée(s) en processing > 1h`,
     });
   }
-  const zeroCreds = zeroCreditSubsRes.data || [];
-  if (zeroCreds.length > 0) {
+  if (zeroCreditSubscribers > 0) {
     alerts.push({
       level: "warning",
       code: "zero_credit_subs",
-      message: `${zeroCreds.length} abonné(s) à 0 crédit`,
+      message: `${zeroCreditSubscribers} abonné(s) à 0 crédit`,
     });
   }
   const worstDrop = [...funnelSteps]
     .filter((s) => s.step !== "landing" && s.dropOffPct != null)
     .sort((a, b) => (b.dropOffPct || 0) - (a.dropOffPct || 0))[0];
-  if (worstDrop && (worstDrop.dropOffPct || 0) >= 50 && stepCounts.landing >= 10) {
+  if (
+    worstDrop &&
+    (worstDrop.dropOffPct || 0) >= 50 &&
+    stepCounts.landing >= 10
+  ) {
     alerts.push({
       level: "info",
       code: "funnel_bottleneck",
@@ -426,69 +412,59 @@ async function fetchCommandCenter(supabase, range) {
     });
   }
 
-  // Simple 7-day signup→paid cohort (from profiles created last 7d)
-  const recentSignups = signups.filter(
-    (p) => new Date(p.created_at) >= new Date(weekAgo),
-  );
-  const cohortPaid = recentSignups.filter((p) => p.is_subscriber).length;
-
   return {
     range,
     from: fromIso,
     to: toIso,
     generatedAt: now.toISOString(),
+    dataQuality: {
+      coreStats: "supabase_rpc_admin_hq_core_stats",
+      mrr: "sum(subscriptions.monthly_amount_cents) where status=active",
+      noMockData: true,
+      clientCacheDisabled: true,
+    },
     kpis: {
       mrrEur: Math.round((mrrCents / 100) * 100) / 100,
-      arrEur: Math.round((mrrCents * 12) / 100 * 100) / 100,
+      arrEur: Math.round(((mrrCents * 12) / 100) * 100) / 100,
       activeSubscribers: activeCount,
       arpuEur:
         activeCount > 0
           ? Math.round((mrrCents / activeCount / 100) * 100) / 100
           : 0,
       signupsPeriod: signupsCount,
-      signupsToday: signupsTodayRes.count || 0,
+      signupsToday,
       paidPeriod: paidInPeriod,
       landingToPaidPct: pct(paidInPeriod, stepCounts.landing),
-      signupToPaidPct: pct(
-        signups.filter((p) => p.is_subscriber).length,
-        signupsCount,
-      ),
-      gensPeriod: gens.length,
-      genSuccessRate: pct(gensSuccess, gens.length),
+      signupToPaidPct: pct(signupsPeriodSubscribers, signupsCount),
+      gensPeriod: gensTotal,
+      genSuccessRate: pct(gensSuccess, gensTotal),
       creditsBurnedPeriod: creditsBurned,
-      totalUsers: profilesTotalRes.count || 0,
-      totalSubscriptions: subsTotalRes.count || 0,
+      totalUsers,
+      totalSubscriptions,
     },
     revenue: {
       mrrCents,
       mrrEur: Math.round((mrrCents / 100) * 100) / 100,
-      arrEur: Math.round((mrrCents * 12) / 100 * 100) / 100,
-      byPlan: Object.entries(byPlan).map(([plan, v]) => ({
-        plan,
-        count: v.count,
-        mrrEur: Math.round((v.mrrCents / 100) * 100) / 100,
-        priceEur: (PLAN_MRR_CENTS[plan] || 0) / 100,
-      })),
-      newSubscribersPeriod: newSubs.length,
-      newMrrEur: Math.round(
-        (newSubs.reduce((s, x) => s + planMrrCents(x.plan_type), 0) / 100) * 100,
-      ) / 100,
-      churnedPeriod: canceled.length,
-      churnedMrrEur: Math.round(
-        (canceled.reduce((s, x) => s + planMrrCents(x.plan_type), 0) / 100) *
-          100,
-      ) / 100,
+      arrEur: Math.round(((mrrCents * 12) / 100) * 100) / 100,
+      byPlan,
+      newSubscribersPeriod: newSubsPeriod,
+      newMrrEur: Math.round((newMrrCents / 100) * 100) / 100,
+      churnedPeriod,
+      churnedMrrEur: Math.round((churnedMrrCents / 100) * 100) / 100,
       cancelAtPeriodEnd,
-      netNewSubscribers: newSubs.length - canceled.length,
+      netNewSubscribers: newSubsPeriod - churnedPeriod,
     },
     growth: {
       signupsPeriod: signupsCount,
-      signupsToday: signupsTodayRes.count || 0,
-      subscribersAmongSignups: signups.filter((p) => p.is_subscriber).length,
+      signupsToday,
+      subscribersAmongSignups: signupsPeriodSubscribers,
       avgGenerationsAmongSignups:
         signupsCount > 0
           ? Math.round(
-              (signups.reduce((s, p) => s + (p.generation_count || 0), 0) /
+              (signupsDetail.reduce(
+                (s, p) => s + (p.generation_count || 0),
+                0,
+              ) /
                 signupsCount) *
                 10,
             ) / 10
@@ -501,12 +477,12 @@ async function fetchCommandCenter(supabase, range) {
       },
     },
     product: {
-      total: gens.length,
+      total: gensTotal,
       succeeded: gensSuccess,
       failed: gensFailed,
       processing: gensProcessing,
-      successRate: pct(gensSuccess, gens.length),
-      todayCount: gensTodayRes.count || (gensTodayRes.data || []).length,
+      successRate: pct(gensSuccess, gensTotal),
+      todayCount: gensToday,
       byProvider: Object.entries(byProvider).map(([provider, v]) => ({
         provider,
         ...v,
@@ -516,19 +492,12 @@ async function fetchCommandCenter(supabase, range) {
       creditsBurned,
       creditsGranted,
       topFailMessages: topCounts(failMsgs, 6),
-      byType: (() => {
-        const map = {};
-        for (const g of gens) {
-          const t = g.generation_type || "image";
-          map[t] = (map[t] || 0) + 1;
-        }
-        return topCounts(map);
-      })(),
+      byType: topCounts(byType),
     },
     economy: {
       creditsBurnedPeriod: creditsBurned,
       creditsGrantedPeriod: creditsGranted,
-      floatingCreditsTotal: totalCreditsFloat,
+      floatingCreditsTotal: floatingCredits,
       revenuePer1kCreditsEur:
         creditsBurned > 0
           ? Math.round((mrrCents / 100 / (creditsBurned / 1000)) * 100) / 100
@@ -558,7 +527,7 @@ async function fetchCommandCenter(supabase, range) {
     },
     pulse: {
       hourlyLandingsToday: hourly,
-      recentGenerations: (recentGensRes.data || []).map((g) => ({
+      recentGenerations: recentGens.map((g) => ({
         id: g.id,
         status: g.status,
         provider: g.provider,
@@ -570,7 +539,7 @@ async function fetchCommandCenter(supabase, range) {
     health: {
       alerts,
       stuckProcessing: stuckCount,
-      zeroCreditSubscribers: zeroCreds.length,
+      zeroCreditSubscribers,
       failRate,
     },
   };

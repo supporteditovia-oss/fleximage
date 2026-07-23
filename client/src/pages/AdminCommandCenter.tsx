@@ -202,7 +202,10 @@ export default function AdminCommandCenter() {
       return res.json();
     },
     enabled: isAdmin,
-    staleTime: 10_000,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     refetchInterval: range === "today" ? 20_000 : 60_000,
   });
 
@@ -300,43 +303,43 @@ export default function AdminCommandCenter() {
                 <Kpi
                   title="MRR"
                   value={formatEur(data.kpis.mrrEur as number)}
-                  hint={`ARR ${formatEur(data.kpis.arrEur as number)}`}
+                  hint={`SUM abos actifs · ARR ${formatEur(data.kpis.arrEur as number)} (= MRR×12)`}
                   icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Abonnés actifs"
                   value={formatNum(data.kpis.activeSubscribers as number)}
-                  hint={`ARPU ${formatEur(data.kpis.arpuEur as number)}`}
+                  hint={`ARPU ${formatEur(data.kpis.arpuEur as number)} · COUNT subscriptions status=active`}
                   icon={<Users className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Landing → Payé"
                   value={formatPct(data.kpis.landingToPaidPct as number)}
-                  hint={`${formatNum(data.funnel.landing)} landings · ${formatNum(data.kpis.paidPeriod as number)} payés`}
+                  hint={`${formatNum(data.funnel.landing)} landings · ${formatNum(data.kpis.paidPeriod as number)} payés (funnel_events)`}
                   icon={<GitBranch className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Succès générations"
                   value={formatPct(data.kpis.genSuccessRate as number)}
-                  hint={`${formatNum(data.kpis.gensPeriod as number)} jobs période`}
+                  hint={`${formatNum(data.kpis.gensPeriod as number)} jobs · COUNT generations`}
                   icon={<Sparkles className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Inscriptions"
                   value={formatNum(data.kpis.signupsPeriod as number)}
-                  hint={`Aujourd'hui ${formatNum(data.kpis.signupsToday as number)}`}
+                  hint={`Aujourd'hui ${formatNum(data.kpis.signupsToday as number)} · COUNT profiles`}
                   icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Crédits brûlés"
                   value={formatNum(data.kpis.creditsBurnedPeriod as number)}
-                  hint="Débits génération sur la période"
+                  hint="SUM |delta| credit_ledger generation_charge"
                   icon={<Flame className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
                   title="Utilisateurs total"
                   value={formatNum(data.kpis.totalUsers as number)}
-                  hint={`${formatNum(data.kpis.totalSubscriptions as number)} abonnements historiques`}
+                  hint={`${formatNum(data.kpis.totalSubscriptions as number)} abonnements · COUNT profiles ≠ admin`}
                   icon={<Users className="h-4 w-4 text-muted-foreground" />}
                 />
                 <Kpi
@@ -344,7 +347,7 @@ export default function AdminCommandCenter() {
                   value={formatNum(data.health.alerts.length)}
                   hint={
                     data.health.alerts[0]?.message?.slice(0, 48) ||
-                    "Aucune alerte critique"
+                    "Règles calculées sur métriques live DB"
                   }
                   icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
                 />

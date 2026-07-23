@@ -4,6 +4,12 @@ const PLAN_CREDITS = {
   ultimate: 2500,
 };
 
+const PLAN_MRR_CENTS = {
+  discovery: 890,
+  essential: 1990,
+  ultimate: 3990,
+};
+
 function normalizePlan(plan) {
   if (plan === "ultimate") return "ultimate";
   if (plan === "essential" || plan === "monthly" || plan === "video") {
@@ -123,6 +129,7 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
         plan_type: plan,
         credits_per_cycle: creditsPerCycle,
         billing_interval: "month",
+        monthly_amount_cents: PLAN_MRR_CENTS[plan] || PLAN_MRR_CENTS.essential,
       },
       { onConflict: "stripe_subscription_id" },
     )
