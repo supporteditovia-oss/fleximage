@@ -3,6 +3,7 @@ const usersActivityHandler = require("./_lib/handlers/admin-users-activity");
 const creditsHandler = require("./admin/credits");
 const settingsHandler = require("./admin/settings");
 const funnelHandler = require("./_lib/handlers/admin-funnel");
+const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__adminPath;
@@ -62,6 +63,11 @@ module.exports = async function handler(req, res) {
   // GET /api/admin/funnel
   if (parts[0] === "funnel" && !parts[1]) {
     return funnelHandler(req, res);
+  }
+
+  // GET /api/admin/command-center
+  if (parts[0] === "command-center" && !parts[1]) {
+    return commandCenterHandler(req, res);
   }
 
   res.status(404).json({

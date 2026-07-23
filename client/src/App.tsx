@@ -15,6 +15,7 @@ import AdminTemplates from "@/pages/AdminTemplates";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminStudio from "@/pages/AdminStudio";
 import AdminFunnel from "@/pages/AdminFunnel";
+import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
@@ -130,6 +131,7 @@ function ProtectedAppRoutes() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/users" component={AdminPage} />
           <Route path="/admin/funnel" component={AdminFunnel} />
+          <Route path="/admin/hq" component={AdminCommandCenter} />
           <Route path="/admin/templates" component={AdminTemplates} />
           <Route path="/admin/logs" component={AdminLogs} />
           <Route path="/admin/studio" component={AdminStudio} />
@@ -154,6 +156,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/admin": "meta:titles.admin",
   "/admin/users": "meta:titles.adminUsers",
   "/admin/funnel": "Funnel — LuxeFlexIA",
+  "/admin/hq": "HQ — LuxeFlexIA",
   "/admin/templates": "meta:titles.adminTemplates",
   "/admin/logs": "meta:titles.adminLogs",
   "/admin/studio": "Studio",
@@ -177,6 +180,7 @@ const PROTECTED_PATHS = new Set([
   "/admin",
   "/admin/users",
   "/admin/funnel",
+  "/admin/hq",
   "/admin/templates",
   "/admin/logs",
   "/admin/studio",

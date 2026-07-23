@@ -4516,83 +4516,35 @@ export async function registerRoutes(
         const range = ["today", "7d", "30d", "all"].includes(rangeRaw)
           ? rangeRaw
           : "today";
-        const now = new Date();
-        let from: Date | null = null;
-        const to: Date | null = range === "all" ? null : now;
-        if (range === "7d") from = new Date(now.getTime() - 7 * 86400000);
-        else if (range === "30d") from = new Date(now.getTime() - 30 * 86400000);
-        else if (range === "today") {
-          // Europe/Paris start of day
-          const offset =
-            new Date(
-              new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }),
-            ).getTime() - Date.now();
-          const local = new Date(Date.now() + offset);
-          from = new Date(
-            Date.UTC(local.getFullYear(), local.getMonth(), local.getDate()) -
-              offset,
-          );
-        }
-
+        const { fetchFunnelStats } = await import("../../api/_lib/funnel.js");
         const supabaseAdmin = getSupabaseAdmin();
-        const { data, error } = await supabaseAdmin.rpc("admin_funnel_stats", {
-          p_from: from ? from.toISOString() : null,
-          p_to: to ? to.toISOString() : null,
-        });
-        if (error) throw error;
-
-        const stepsOrder = [
-          "landing",
-          "signup",
-          "upload",
-          "generate",
-          "preview",
-          "paywall",
-          "subscribed",
-        ] as const;
-        const counts: Record<string, number> = Object.fromEntries(
-          stepsOrder.map((s) => [s, 0]),
-        );
-        for (const row of data || []) {
-          if (row?.step && counts[row.step] !== undefined) {
-            counts[row.step] = Number(row.sessions) || 0;
-          }
-        }
-        const landing = counts.landing;
-        const steps = stepsOrder.map((step, index) => {
-          const count = counts[step];
-          const prevCount = index === 0 ? null : counts[stepsOrder[index - 1]];
-          const pctOfLanding =
-            landing > 0 ? Math.round((count / landing) * 1000) / 10 : null;
-          const pctOfPrevious =
-            prevCount != null && prevCount > 0
-              ? Math.round((count / prevCount) * 1000) / 10
-              : null;
-          const dropOffCount =
-            prevCount != null ? Math.max(0, prevCount - count) : 0;
-          const dropOffPct =
-            prevCount != null && prevCount > 0
-              ? Math.round((dropOffCount / prevCount) * 1000) / 10
-              : null;
-          return {
-            step,
-            count,
-            pctOfLanding,
-            pctOfPrevious,
-            dropOffCount,
-            dropOffPct,
-          };
-        });
-
-        res.json({
-          range,
-          from: from ? from.toISOString() : null,
-          to: to ? to.toISOString() : null,
-          landing,
-          steps,
-        });
+        const stats = await fetchFunnelStats(supabaseAdmin, range);
+        res.json(stats);
       } catch (error: any) {
         logger.error({ err: error }, "admin funnel error");
+        res.status(500).json({ message: error.message || "Erreur serveur" });
+      }
+    },
+  );
+
+  app.get(
+    api.admin.commandCenter.path,
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const rangeRaw = String(req.query.range || "today");
+        const range = ["today", "7d", "30d", "all"].includes(rangeRaw)
+          ? rangeRaw
+          : "today";
+        const { fetchCommandCenter } = await import(
+          "../../api/_lib/command-center.js"
+        );
+        const supabaseAdmin = getSupabaseAdmin();
+        const data = await fetchCommandCenter(supabaseAdmin, range);
+        res.json(data);
+      } catch (error: any) {
+        logger.error({ err: error }, "admin command-center error");
         res.status(500).json({ message: error.message || "Erreur serveur" });
       }
     },

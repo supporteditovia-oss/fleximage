@@ -214,6 +214,10 @@ export const api = {
       method: "GET" as const,
       path: "/api/admin/funnel",
     },
+    commandCenter: {
+      method: "GET" as const,
+      path: "/api/admin/command-center",
+    },
     marketingUpload: {
       method: "POST" as const,
       path: "/api/admin/marketing/upload",
