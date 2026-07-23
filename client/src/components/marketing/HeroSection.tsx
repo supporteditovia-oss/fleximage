@@ -89,6 +89,9 @@ export default function HeroSection() {
       }
       return next;
     });
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("upload", { source: "landing_hero", slot: index });
+    });
   };
 
   const removeSlot = (index: number) => {

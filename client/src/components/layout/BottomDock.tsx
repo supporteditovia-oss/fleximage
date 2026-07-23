@@ -10,6 +10,7 @@ import {
   FileText,
   ScrollText,
   Clapperboard,
+  GitBranch,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ export function BottomDock() {
 
   const adminNavItems = [
     { href: "/admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
+    { href: "/admin/funnel", label: "Funnel", icon: GitBranch },
     { href: "/admin/users", label: t("layout.dock.users"), icon: Users },
     { href: "/admin/templates", label: t("layout.dock.templates"), icon: FileText },
     { href: "/admin/studio", label: "Studio", icon: Clapperboard },

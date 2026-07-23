@@ -2,6 +2,7 @@ const usersIdHandler = require("./_lib/handlers/admin-users-id");
 const usersActivityHandler = require("./_lib/handlers/admin-users-activity");
 const creditsHandler = require("./admin/credits");
 const settingsHandler = require("./admin/settings");
+const funnelHandler = require("./_lib/handlers/admin-funnel");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__adminPath;
@@ -56,6 +57,11 @@ module.exports = async function handler(req, res) {
   // GET|PATCH /api/admin/settings
   if (parts[0] === "settings" && !parts[1]) {
     return settingsHandler(req, res);
+  }
+
+  // GET /api/admin/funnel
+  if (parts[0] === "funnel" && !parts[1]) {
+    return funnelHandler(req, res);
   }
 
   res.status(404).json({

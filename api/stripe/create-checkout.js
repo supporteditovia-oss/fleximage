@@ -167,6 +167,10 @@ module.exports = async function handler(req, res) {
         credits_per_cycle: String(creditsPerCycle),
         billing_interval: "month",
         brand: BRAND_DISPLAY_NAME,
+        ...(typeof body.funnel_session_id === "string" &&
+        body.funnel_session_id.trim().length >= 8
+          ? { funnel_session_id: body.funnel_session_id.trim().slice(0, 128) }
+          : {}),
       },
       subscription_data: {
         description: PLAN_LABELS[plan],
@@ -177,6 +181,10 @@ module.exports = async function handler(req, res) {
           credits_per_cycle: String(creditsPerCycle),
           billing_interval: "month",
           brand: BRAND_DISPLAY_NAME,
+          ...(typeof body.funnel_session_id === "string" &&
+          body.funnel_session_id.trim().length >= 8
+            ? { funnel_session_id: body.funnel_session_id.trim().slice(0, 128) }
+            : {}),
         },
       },
     };

@@ -28,6 +28,7 @@ const createCheckoutBodySchema = z.object({
     .enum(["discovery", "essential", "ultimate", "weekly", "monthly", "image", "video"])
     .optional()
     .default("essential"),
+  funnel_session_id: z.string().min(8).max(128).optional(),
 });
 
 const verifySessionBodySchema = z
@@ -185,6 +186,9 @@ export function registerStripeRoutes(app: Express): void {
           credits_per_cycle: String(planConfig.creditsPerCycle),
           billing_interval: planConfig.billingInterval,
           brand: "LuxeFlexIA",
+          ...(typeof req.body.funnel_session_id === "string"
+            ? { funnel_session_id: req.body.funnel_session_id }
+            : {}),
         },
         subscription_data: {
           description: planConfig.name,
@@ -195,6 +199,9 @@ export function registerStripeRoutes(app: Express): void {
             credits_per_cycle: String(planConfig.creditsPerCycle),
             billing_interval: planConfig.billingInterval,
             brand: "LuxeFlexIA",
+            ...(typeof req.body.funnel_session_id === "string"
+              ? { funnel_session_id: req.body.funnel_session_id }
+              : {}),
           },
         },
       };

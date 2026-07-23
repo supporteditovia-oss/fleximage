@@ -167,6 +167,8 @@ export default function AuthPage() {
 
         const { trackSnapSignUp } = await import("@/lib/snap-pixel");
         trackSnapSignUp();
+        const { trackFunnelStep } = await import("@/lib/funnel-tracker");
+        trackFunnelStep("signup", { method: "email" });
 
         setLocation("/login");
       }
@@ -213,6 +215,8 @@ export default function AuthPage() {
       if (!isLogin) {
         const { trackSnapSignUpGoogle } = await import("@/lib/snap-pixel");
         trackSnapSignUpGoogle();
+        const { trackFunnelStep } = await import("@/lib/funnel-tracker");
+        trackFunnelStep("signup", { method: "google" });
       }
     } catch (error: any) {
       if (!isLogin) {

@@ -186,6 +186,9 @@ export default function Resultat() {
           markCheckoutWelcome();
           setCheckoutWelcome(true);
           setActivating(true);
+          void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+            trackFunnelStep("subscribed", { source: "resultat_checkout" });
+          });
           let active = false;
           for (let i = 0; i < 10; i++) {
             active = await verifyCheckoutSession(sessionId);

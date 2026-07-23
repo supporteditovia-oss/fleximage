@@ -144,6 +144,27 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
     },
   });
 
+  // First-party funnel: payment success
+  try {
+    const { recordFunnelEvent } = require("./funnel");
+    const funnelSessionId =
+      (session.metadata && session.metadata.funnel_session_id) ||
+      `user_${userId}`;
+    await recordFunnelEvent(supabase, {
+      sessionId: funnelSessionId,
+      step: "subscribed",
+      userId,
+      path: "/stripe/webhook",
+      meta: {
+        source,
+        checkout_session_id: session.id,
+        plan_type: plan,
+      },
+    });
+  } catch (funnelErr) {
+    console.error("funnel subscribed track failed", funnelErr);
+  }
+
   return {
     ok: true,
     userId,

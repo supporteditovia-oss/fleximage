@@ -210,6 +210,10 @@ export const api = {
       method: "PATCH" as const,
       path: "/api/admin/settings",
     },
+    funnel: {
+      method: "GET" as const,
+      path: "/api/admin/funnel",
+    },
     marketingUpload: {
       method: "POST" as const,
       path: "/api/admin/marketing/upload",
@@ -265,6 +269,12 @@ export const api = {
     verifySession: {
       method: "POST" as const,
       path: "/api/stripe/verify-session",
+    },
+  },
+  funnel: {
+    track: {
+      method: "POST" as const,
+      path: "/api/funnel/track",
     },
   },
   favorites: {

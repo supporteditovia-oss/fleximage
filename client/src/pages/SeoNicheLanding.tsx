@@ -68,6 +68,9 @@ export default function SeoNicheLanding() {
       description: niche.metaDescription,
       canonicalPath: getSeoNichePath(niche.slug),
     });
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("landing", { source: "seo_niche", slug: niche.slug });
+    });
   }, [niche]);
 
   if (!niche) {

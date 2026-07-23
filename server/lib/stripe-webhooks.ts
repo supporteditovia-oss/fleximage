@@ -235,6 +235,29 @@ export async function handleCheckoutCompleted(
     "Subscription activated via checkout",
   );
 
+  // First-party funnel (Express path) — payment success
+  try {
+    const funnelSessionId =
+      (typeof session.metadata?.funnel_session_id === "string" &&
+        session.metadata.funnel_session_id.trim()) ||
+      `user_${userId}`;
+    await supabase.from("funnel_events").upsert(
+      {
+        session_id: funnelSessionId.slice(0, 128),
+        step: "subscribed",
+        user_id: userId,
+        path: "/stripe/webhook",
+        meta: {
+          source: "checkout.session.completed",
+          checkout_session_id: session.id,
+        },
+      },
+      { onConflict: "session_id,step", ignoreDuplicates: true },
+    );
+  } catch (funnelErr) {
+    logger.error({ err: funnelErr }, "funnel subscribed track failed");
+  }
+
   // Discord notification
   const { data: notifProfile } = await supabase
     .from("profiles")

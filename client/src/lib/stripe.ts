@@ -1,4 +1,5 @@
 import { authFetch } from "./api";
+import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
 
 export type CheckoutPlan = "discovery" | "essential" | "ultimate";
 
@@ -8,9 +9,13 @@ export type CheckoutPlan = "discovery" | "essential" | "ultimate";
 export async function createCheckoutSession(
   plan: CheckoutPlan = "essential",
 ): Promise<string | null> {
+  trackFunnelStep("paywall", { source: "create_checkout", plan });
   const res = await authFetch("/api/stripe/create-checkout", {
     method: "POST",
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify({
+      plan,
+      funnel_session_id: getFunnelSessionId(),
+    }),
   });
   const data = await res.json();
   return data.url || null;

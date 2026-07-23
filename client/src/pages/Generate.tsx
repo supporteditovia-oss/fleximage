@@ -527,6 +527,9 @@ export default function Generate() {
       }
       return next;
     });
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("upload", { source: "generate", slot: index });
+    });
     if (index === 0) {
       void toGenerationImageFile(file)
         .then((imageFile) => savePaywallImage(imageFile))
@@ -586,6 +589,10 @@ export default function Generate() {
       setShowLuxePaywall(true);
       setPaywallDefaultPlan("essential");
       setFakePaywallReason("insufficientCredits");
+      void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+        trackFunnelStep("preview", { source: "insufficient_credits" });
+        trackFunnelStep("paywall", { source: "insufficient_credits" });
+      });
     },
     [],
   );
@@ -597,6 +604,9 @@ export default function Generate() {
     // Fresh 15:00 countdown starts when the locked preview is shown.
     resetPaywallExpiry();
     clearOnboardingResume();
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("preview", { source: "fake_onboarding" });
+    });
     navigate("/image-prete?paywall=1");
   }, [navigate, profile?.id]);
 
@@ -608,6 +618,9 @@ export default function Generate() {
       images[0]?.url || getPaywallImage() || null,
     );
     setShowFakeOnboardingLoader(true);
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("generate", { source: "fake_onboarding" });
+    });
   }, [images]);
 
   const storedPaywallGenerationMode =
@@ -815,6 +828,9 @@ export default function Generate() {
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
         setPendingLoading(false);
+        void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+          trackFunnelStep("generate", { source: "video", taskId: result.taskId });
+        });
         void refetchEligibility();
         return;
       }
@@ -837,6 +853,9 @@ export default function Generate() {
       });
       setTaskId(result.taskId);
       setPendingLoading(false);
+      void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+        trackFunnelStep("generate", { source: "image", taskId: result.taskId });
+      });
       void refetchEligibility();
     } catch (error: any) {
       setPendingLoading(false);

@@ -99,14 +99,22 @@ export function PaywallOverlay({
     setSelectedPlan(defaultPlan);
     setIsChoosingPlan(initialChoosingPlan);
     setIsLoading(false);
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("preview", { source: "paywall_overlay" });
+      trackFunnelStep("paywall", { source: "paywall_overlay" });
+    });
   }, [defaultPlan, imageUrl, initialChoosingPlan]);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
     try {
+      const { getFunnelSessionId } = await import("@/lib/funnel-tracker");
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
-        body: JSON.stringify({ plan: selectedPlan }),
+        body: JSON.stringify({
+          plan: selectedPlan,
+          funnel_session_id: getFunnelSessionId(),
+        }),
       });
       const { url } = await res.json();
       if (url) {

@@ -16,6 +16,7 @@ import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
 import { useAuth } from "@/hooks/use-auth";
+import { formatCredits } from "@/lib/format-locale";
 
 function purgeExpiredPreview() {
   clearPaywallImage();
@@ -31,20 +32,16 @@ export default function ImagePrete() {
   const [userPrompt, setUserPrompt] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [msRemaining, setMsRemaining] = useState(0);
-  const [expired, setExpired] = useState(false);
+  const [expired, setExpired] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   const credits = profile?.credits ?? 0;
-  const creditsLabel = useMemo(() => {
-    if (credits < 100_000) {
-      return credits.toLocaleString(i18n.resolvedLanguage ?? "fr");
-    }
-    return new Intl.NumberFormat(i18n.resolvedLanguage ?? "fr", {
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(credits);
-  }, [credits, i18n.resolvedLanguage]);
+  const creditsLabel = useMemo(
+    () => formatCredits(credits, i18n.resolvedLanguage),
+    [credits, i18n.resolvedLanguage],
+  );
 
   const countdownLabel = formatPaywallCountdown(msRemaining);
   const isUrgent = !expired && msRemaining > 0 && msRemaining <= 60_000;
@@ -62,6 +59,7 @@ export default function ImagePrete() {
       setMsRemaining(0);
       setExpired(true);
       clearPaywallExpiry();
+      setHydrated(true);
       return;
     }
 
@@ -72,6 +70,7 @@ export default function ImagePrete() {
       setExpiresAt(null);
       setMsRemaining(0);
       setExpired(true);
+      setHydrated(true);
       return;
     }
 
@@ -82,6 +81,10 @@ export default function ImagePrete() {
     setExpiresAt(deadline);
     setMsRemaining(getPaywallMsRemaining(deadline, now));
     setExpired(false);
+    setHydrated(true);
+    void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+      trackFunnelStep("preview", { source: "image_prete" });
+    });
   }, []);
 
   useEffect(() => {
@@ -108,6 +111,9 @@ export default function ImagePrete() {
     const params = new URLSearchParams(location.split("?")[1] || "");
     if (params.get("paywall") === "1" && !expired && imageUrl) {
       setPaywallOpen(true);
+      void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+        trackFunnelStep("paywall", { source: "image_prete" });
+      });
     }
   }, [location, expired, imageUrl]);
 
@@ -171,7 +177,11 @@ export default function ImagePrete() {
       </div>
 
       <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] sm:min-h-[calc(100svh-6rem)] sm:justify-center sm:pb-8 sm:pt-14">
-        {expired ? (
+        {!hydrated ? (
+          <div className="flex min-h-[40vh] w-full items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lx-gold)] border-t-transparent" />
+          </div>
+        ) : expired ? (
           <>
             <header className="w-full text-center">
               <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">

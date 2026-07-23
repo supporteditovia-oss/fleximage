@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authFetch } from "@/lib/api";
+import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
 import type { PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +71,8 @@ export function LuxePaywallModal({
     if (open) {
       setSelectedPlan(defaultPlan);
       setIsLoading(false);
+      trackFunnelStep("preview", { source: "luxe_paywall_modal" });
+      trackFunnelStep("paywall", { source: "luxe_paywall_modal" });
     }
   }, [open, defaultPlan]);
 
@@ -83,7 +86,10 @@ export function LuxePaywallModal({
     try {
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
-        body: JSON.stringify({ plan: selectedPlan }),
+        body: JSON.stringify({
+          plan: selectedPlan,
+          funnel_session_id: getFunnelSessionId(),
+        }),
       });
       const { url } = await res.json();
       if (url) {
