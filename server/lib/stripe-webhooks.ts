@@ -51,7 +51,8 @@ async function applyCreditDelta(params: {
     | "generation_charge"
     | "admin_adjustment"
     | "refund"
-    | "system_adjustment";
+    | "system_adjustment"
+    | "credit_expiry";
   subscriptionId?: string | null;
   idempotencyKey: string;
   metadata?: Record<string, unknown>;
@@ -69,6 +70,33 @@ async function applyCreditDelta(params: {
     p_metadata: params.metadata ?? {},
   });
 
+  if (error) throw error;
+}
+
+async function grantSubscriptionCredits(params: {
+  userId: string;
+  monthlyQuota: number;
+  subscriptionId?: string | null;
+  idempotencyKey: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.rpc("grant_subscription_credits", {
+    p_user_id: params.userId,
+    p_monthly_quota: params.monthlyQuota,
+    p_subscription_id: params.subscriptionId ?? null,
+    p_idempotency_key: params.idempotencyKey,
+    p_metadata: params.metadata ?? {},
+    p_cap_multiplier: 2,
+  });
+  if (error) throw error;
+}
+
+async function clearUserCreditLots(userId: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.rpc("clear_user_credit_lots", {
+    p_user_id: userId,
+  });
   if (error) throw error;
 }
 
@@ -181,10 +209,9 @@ export async function handleCheckoutCompleted(
   }
 
   try {
-    await applyCreditDelta({
+    await grantSubscriptionCredits({
       userId,
-      delta: planConfig.creditsPerCycle,
-      reason: "subscription_grant",
+      monthlyQuota: planConfig.creditsPerCycle,
       subscriptionId: subscriptionRow?.id ?? null,
       idempotencyKey: `stripe:checkout:${session.id}:credits`,
       metadata: {
@@ -215,7 +242,7 @@ export async function handleCheckoutCompleted(
     .eq("id", userId)
     .single();
   notifyDiscord(
-    `💰 **Nouvel abonné !** ${notifProfile?.email || userId} vient de souscrire à LarpKing.`,
+    `💰 **Nouvel abonné !** ${notifProfile?.email || userId} vient de souscrire à LuxeFlexIA.`,
   );
 
   // Snap Pixel PURCHASE — serveur uniquement, après confirmation webhook
@@ -277,10 +304,9 @@ export async function handleInvoicePaid(
   const creditsPerCycle = planConfig.creditsPerCycle;
 
   try {
-    await applyCreditDelta({
+    await grantSubscriptionCredits({
       userId: subscriptionRow.user_id,
-      delta: creditsPerCycle,
-      reason: "subscription_grant",
+      monthlyQuota: creditsPerCycle,
       subscriptionId: subscriptionRow.id,
       idempotencyKey: `stripe:invoice:${invoice.id}:credits`,
       metadata: {
@@ -372,6 +398,7 @@ export async function handleSubscriptionDeleted(
 
   if (previousProfile?.id && previousProfile.credits > 0) {
     try {
+      await clearUserCreditLots(previousProfile.id);
       await applyCreditDelta({
         userId: previousProfile.id,
         delta: -previousProfile.credits,
@@ -389,6 +416,8 @@ export async function handleSubscriptionDeleted(
       );
       throw creditErr;
     }
+  } else if (previousProfile?.id) {
+    await clearUserCreditLots(previousProfile.id).catch(() => undefined);
   }
 
   logger.info({ subscriptionId }, "Subscription canceled");
@@ -460,45 +489,49 @@ export async function handleSubscriptionUpdated(
   const planChanged = !!previousPlanType && previousPlanType !== planConfig.planType;
 
   if (isActive && prevProfile?.id && planChanged) {
-    const delta = planConfig.creditsPerCycle - (prevProfile.credits || 0);
-    try {
-      await applyCreditDelta({
-        userId: prevProfile.id,
-        delta,
-        reason: "subscription_grant",
-        subscriptionId: prevSubscription?.id ?? null,
-        idempotencyKey: `stripe:subscription:${subscriptionId}:plan:${planConfig.priceId}:credits`,
-        metadata: {
-          source: "customer.subscription.updated",
-          stripe_subscription_id: subscriptionId,
-          previous_plan: previousPlanType,
-          new_plan: planConfig.planType,
-          price_id: planConfig.priceId,
-        },
-      });
-      logger.info(
-        {
+    // Rollover stays; only trim if over the new plan's 2x cap.
+    const newCap = planConfig.creditsPerCycle * 2;
+    const excess = (prevProfile.credits || 0) - newCap;
+    if (excess > 0) {
+      try {
+        await applyCreditDelta({
           userId: prevProfile.id,
-          subscriptionId,
-          previousPlan: previousPlanType,
-          newPlan: planConfig.planType,
-          credits: planConfig.creditsPerCycle,
-        },
-        "Credits reconciled after plan change",
-      );
-    } catch (creditErr) {
-      logger.error(
-        { err: creditErr, userId: prevProfile.id, subscriptionId },
-        "Failed to reconcile credits after plan change",
-      );
-      throw creditErr;
+          delta: -excess,
+          reason: "system_adjustment",
+          subscriptionId: prevSubscription?.id ?? null,
+          idempotencyKey: `stripe:subscription:${subscriptionId}:plan:${planConfig.priceId}:trim_cap`,
+          metadata: {
+            source: "customer.subscription.updated",
+            stripe_subscription_id: subscriptionId,
+            previous_plan: previousPlanType,
+            new_plan: planConfig.planType,
+            price_id: planConfig.priceId,
+            balance_cap: newCap,
+          },
+        });
+        logger.info(
+          {
+            userId: prevProfile.id,
+            subscriptionId,
+            previousPlan: previousPlanType,
+            newPlan: planConfig.planType,
+            trimmed: excess,
+          },
+          "Credits trimmed to new plan rollover cap",
+        );
+      } catch (creditErr) {
+        logger.error(
+          { err: creditErr, userId: prevProfile.id, subscriptionId },
+          "Failed to trim credits after plan change",
+        );
+        throw creditErr;
+      }
     }
   } else if (isActive && wasInactive && prevProfile?.id) {
     try {
-      await applyCreditDelta({
+      await grantSubscriptionCredits({
         userId: prevProfile.id,
-        delta: planConfig.creditsPerCycle,
-        reason: "subscription_grant",
+        monthlyQuota: planConfig.creditsPerCycle,
         subscriptionId: prevSubscription?.id ?? null,
         idempotencyKey: `stripe:subscription:${subscriptionId}:reactivation:${planConfig.priceId}:credits`,
         metadata: {

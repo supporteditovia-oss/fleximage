@@ -3,6 +3,8 @@ const { buffer } = require("micro");
 const { createClient } = require("@supabase/supabase-js");
 const {
   applyCreditDelta,
+  grantSubscriptionCredits,
+  clearUserCreditLots,
   normalizePlan,
   asStripeId,
   reconcilePaidCheckoutSession,
@@ -100,9 +102,9 @@ async function handleInvoicePaid(supabase, invoice) {
     Number(subscriptionRow.credits_per_cycle) || PLAN_CREDITS[plan] || 0;
   if (!creditsPerCycle) return;
 
-  await applyCreditDelta(supabase, {
+  await grantSubscriptionCredits(supabase, {
     userId: subscriptionRow.user_id,
-    delta: creditsPerCycle,
+    monthlyQuota: creditsPerCycle,
     subscriptionId: subscriptionRow.id,
     idempotencyKey: `stripe:invoice:${invoice.id}:credits`,
     metadata: {
@@ -186,31 +188,34 @@ async function handleSubscriptionUpdated(supabase, subscription) {
   const planChanged = Boolean(previousPlanType && previousPlanType !== plan);
 
   if (isActive && prevProfile?.id && planChanged && creditsPerCycle) {
-    const delta = creditsPerCycle - (prevProfile.credits || 0);
-    await applyCreditDelta(supabase, {
-      userId: prevProfile.id,
-      delta,
-      reason: "subscription_grant",
-      subscriptionId: prevSubscription?.id || null,
-      idempotencyKey: `stripe:subscription:${subscriptionId}:plan:${priceId || plan}:credits`,
-      metadata: {
-        source: "customer.subscription.updated",
-        stripe_subscription_id: subscriptionId,
-        previous_plan: previousPlanType,
-        new_plan: plan,
-        price_id: priceId,
-      },
-    });
+    const newCap = creditsPerCycle * 2;
+    const excess = (prevProfile.credits || 0) - newCap;
+    if (excess > 0) {
+      await applyCreditDelta(supabase, {
+        userId: prevProfile.id,
+        delta: -excess,
+        reason: "system_adjustment",
+        subscriptionId: prevSubscription?.id || null,
+        idempotencyKey: `stripe:subscription:${subscriptionId}:plan:${priceId || plan}:trim_cap`,
+        metadata: {
+          source: "customer.subscription.updated",
+          stripe_subscription_id: subscriptionId,
+          previous_plan: previousPlanType,
+          new_plan: plan,
+          price_id: priceId,
+          balance_cap: newCap,
+        },
+      });
+    }
   } else if (
     isActive &&
     wasInactive &&
     prevProfile?.id &&
     creditsPerCycle
   ) {
-    await applyCreditDelta(supabase, {
+    await grantSubscriptionCredits(supabase, {
       userId: prevProfile.id,
-      delta: creditsPerCycle,
-      reason: "subscription_grant",
+      monthlyQuota: creditsPerCycle,
       subscriptionId: prevSubscription?.id || null,
       idempotencyKey: `stripe:subscription:${subscriptionId}:reactivation:${priceId || plan}:credits`,
       metadata: {
@@ -312,6 +317,9 @@ async function handleSubscriptionDeleted(supabase, subscription) {
   if (subErr) throw subErr;
 
   const credits = previousProfile?.credits || 0;
+  if (previousProfile?.id) {
+    await clearUserCreditLots(supabase, previousProfile.id);
+  }
   if (previousProfile?.id && credits > 0) {
     await applyCreditDelta(supabase, {
       userId: previousProfile.id,

@@ -34,6 +34,29 @@ async function applyCreditDelta(supabase, params) {
 }
 
 /**
+ * Grant monthly subscription credits with 2x rollover cap + 3-month lots.
+ */
+async function grantSubscriptionCredits(supabase, params) {
+  const { data, error } = await supabase.rpc("grant_subscription_credits", {
+    p_user_id: params.userId,
+    p_monthly_quota: params.monthlyQuota,
+    p_subscription_id: params.subscriptionId || null,
+    p_idempotency_key: params.idempotencyKey || null,
+    p_metadata: params.metadata || {},
+    p_cap_multiplier: params.capMultiplier ?? 2,
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function clearUserCreditLots(supabase, userId) {
+  const { error } = await supabase.rpc("clear_user_credit_lots", {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+}
+
+/**
  * Activate subscriber + grant cycle credits for a paid Checkout Session.
  * Safe to call from webhook and verify-session (idempotent via ledger key).
  */
@@ -107,9 +130,9 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
     .single();
   if (subErr) throw subErr;
 
-  await applyCreditDelta(supabase, {
+  await grantSubscriptionCredits(supabase, {
     userId,
-    delta: creditsPerCycle,
+    monthlyQuota: creditsPerCycle,
     subscriptionId: subscriptionRow && subscriptionRow.id,
     idempotencyKey: `stripe:checkout:${session.id}:credits`,
     metadata: {
@@ -135,5 +158,7 @@ module.exports = {
   normalizePlan,
   asStripeId,
   applyCreditDelta,
+  grantSubscriptionCredits,
+  clearUserCreditLots,
   reconcilePaidCheckoutSession,
 };
