@@ -167,15 +167,15 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         {/* Logo — centered */}
         <Link
           href={logoHref}
-          className="pointer-events-auto absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center hover:opacity-80 transition-opacity"
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-10 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center hover:opacity-80 transition-opacity"
         >
-          <span className="lx-display inline-flex max-w-[min(70vw,20rem)] items-center gap-1.5 sm:gap-2">
+          <span className="lx-display inline-flex max-w-full items-center gap-1.5 sm:gap-2">
             <Gem
               className="h-5 w-5 shrink-0 text-[var(--lx-gold)] md:h-6 md:w-6"
               strokeWidth={1.75}
               aria-hidden
             />
-            <BrandMark className="truncate text-lg font-semibold tracking-tight text-[var(--lx-ink)] sm:text-xl md:text-2xl" />
+            <BrandMark className="min-w-0 truncate text-base font-semibold tracking-tight text-[var(--lx-ink)] sm:text-xl md:text-2xl" />
           </span>
         </Link>
 

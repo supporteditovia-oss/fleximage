@@ -75,12 +75,12 @@
 @keyframes lx-fake-logo-pulse {
   0%,
   100% {
-    transform: scale(0.88);
-    filter: drop-shadow(0 0 8px rgba(201, 162, 39, 0.2));
+    transform: scale(0.98);
+    filter: drop-shadow(0 0 8px rgba(201, 162, 39, 0.25));
   }
   50% {
-    transform: scale(1.12);
-    filter: drop-shadow(0 0 28px rgba(232, 197, 71, 0.55));
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 16px rgba(232, 197, 71, 0.4));
   }
 }
 
@@ -92,12 +92,12 @@
 }
 
 .lx-fake-loader__brand-inner {
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  animation: lx-fake-logo-pulse 1.7s ease-in-out infinite;
+  gap: 0.625rem;
+  animation: lx-fake-logo-pulse 2.6s ease-in-out infinite;
   transform-origin: center center;
   will-change: transform, filter;
 }

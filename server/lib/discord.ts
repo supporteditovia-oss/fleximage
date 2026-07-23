@@ -1,11 +1,20 @@
 import { logger } from "./logger";
 
-const DISCORD_WEBHOOK_URL =
-  "https://discord.com/api/webhooks/1512860903001952328/XeBJyfjzZzmBRxsfwj9p0fWj66KmclMYR-y7uFGn8pTAHihQB5dLJvW6XSdzYwj2nvbw";
+function getDiscordWebhookUrl(): string | null {
+  const fromEnv = process.env.DISCORD_WEBHOOK_URL?.trim();
+  if (fromEnv) return fromEnv;
+  return null;
+}
 
 export async function notifyDiscord(content: string): Promise<void> {
+  const webhookUrl = getDiscordWebhookUrl();
+  if (!webhookUrl) {
+    logger.warn("DISCORD_WEBHOOK_URL not set — Discord notify skipped");
+    return;
+  }
+
   try {
-    const res = await fetch(DISCORD_WEBHOOK_URL, {
+    const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),

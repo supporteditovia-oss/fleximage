@@ -114,16 +114,16 @@ export function FakeOnboardingLoader({
             <div className="lx-fake-loader__brand">
               <div className="lx-fake-loader__brand-inner">
                 <span
-                  className="inline-flex items-center justify-center gap-2.5 text-3xl font-semibold leading-none text-white md:gap-3 md:text-5xl"
+                  className="inline-flex max-w-full items-center justify-center gap-2.5 text-[clamp(1.5rem,6vw,2.25rem)] font-semibold leading-none text-white"
                   style={{ fontFamily: "var(--lx-display)" }}
                 >
                   <Gem
-                    className="h-8 w-8 shrink-0 text-[#c9a227] md:h-10 md:w-10"
+                    className="h-[0.9em] w-[0.9em] shrink-0 text-[#c9a227]"
                     strokeWidth={1.75}
                     aria-hidden
                   />
                   <BrandMark
-                    className="text-inherit font-semibold leading-none"
+                    className="min-w-0 text-inherit font-semibold leading-none"
                     accentClassName="text-[#c9a227]"
                   />
                 </span>

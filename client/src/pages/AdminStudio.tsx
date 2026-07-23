@@ -42,7 +42,9 @@ import {
   Play,
   ShieldAlert,
   X,
+  Gem,
 } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 type ImageType = "avant" | "apres";
 
@@ -555,11 +557,17 @@ function SimulatedMarketingVideoPreview({
           </div>
           {showLoader ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center animate-in fade-in zoom-in-95 duration-700">
-              <img
-                src="/luxeflexia-logo.png"
-                alt="LuxeFlexIA"
-                className="h-24 w-auto object-contain drop-shadow-[0_0_40px_hsl(var(--primary)/0.5)] loader-logo-pulse"
-              />
+              <div className="inline-flex items-center justify-center gap-2.5 text-white loader-logo-pulse">
+                <Gem
+                  className="h-8 w-8 shrink-0 text-[#c9a227]"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <BrandMark
+                  className="text-3xl font-semibold leading-none text-white"
+                  accentClassName="text-[#c9a227]"
+                />
+              </div>
               <Loader2 className="h-6 w-6 animate-spin text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]" />
               {showTimer ? (
                 <span className="text-lg font-semibold tabular-nums text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">

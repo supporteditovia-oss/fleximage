@@ -197,6 +197,12 @@
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 1;
+    max-width: calc(100% - 7.5rem);
+  }
+
+  .luxeflexia-landing .lx-brand .lx-display,
+  .luxeflexia-landing .lx-brand span {
+    max-width: 100%;
   }
 
   .luxeflexia-landing .lx-header-actions {

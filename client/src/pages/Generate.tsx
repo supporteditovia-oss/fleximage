@@ -1067,17 +1067,19 @@ export default function Generate() {
         role="status"
         aria-live="polite"
       >
-        {/* Wordmark pinned to true viewport center; spinner sits below with mt-8 */}
-        <div className="absolute left-1/2 top-1/2 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center px-4">
-          <div className="inline-flex items-center justify-center gap-2.5 md:gap-3">
-            <Gem
-              className="h-8 w-8 shrink-0 text-[var(--lx-gold)] md:h-10 md:w-10"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <BrandMark className="text-3xl font-semibold leading-none text-[var(--lx-ink)] md:text-4xl" />
+        {/* Wordmark pinned to true viewport center; spinner sits below without shifting the brand */}
+        <div className="absolute inset-0 flex items-center justify-center px-4">
+          <div className="relative flex flex-col items-center">
+            <div className="inline-flex items-center justify-center gap-2.5 md:gap-3">
+              <Gem
+                className="h-8 w-8 shrink-0 text-[var(--lx-gold)] md:h-10 md:w-10"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <BrandMark className="text-[clamp(1.5rem,6vw,2.25rem)] font-semibold leading-none text-[var(--lx-ink)]" />
+            </div>
+            <Loader2 className="absolute top-full mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
           </div>
-          <Loader2 className="mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
         </div>
       </div>,
       document.body,
@@ -1131,7 +1133,7 @@ export default function Generate() {
   // -- Loading unlocked LARP after payment
   if (unlockingLarp) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100vh-12rem)] animate-in fade-in duration-300">
+      <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100svh-12rem)] animate-in fade-in duration-300">
         <div className="h-7 w-48 rounded-full bg-muted animate-pulse" />
         <div className="w-full max-w-[260px] aspect-[9/16] rounded-lg bg-muted animate-pulse" />
         <div className="h-11 w-56 rounded-full bg-muted animate-pulse" />
