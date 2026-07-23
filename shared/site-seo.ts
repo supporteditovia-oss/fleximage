@@ -12,7 +12,7 @@ export const DEFAULT_SITE_ORIGIN = "https://www.luxeflexia.com";
 export const SITE_NAME = "LuxeFlexIA";
 export const SITE_TITLE = "LuxeFlexIA - Créateur de photos lifestyle par IA";
 export const SITE_DESCRIPTION =
-  "LuxeFlexIA (aussi écrit Luxe Flexia ou Lux Flexia) génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle.";
+  "LuxeFlexIA génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle.";
 export const SITE_OG_IMAGE = "/assets/og-image.png?v=20260720";
 
 export type SitemapEntry = {
@@ -28,7 +28,7 @@ export const FAQ_STRUCTURED_DATA = [
   {
     question: "C'est quoi LuxeFlexIA ?",
     answer:
-      "LuxeFlexIA (Luxe Flexia) est un outil IA pour generer des photos lifestyle hyper realistes en quelques secondes. Ajoute ta photo, decris ton idee, et l'IA fait le reste.",
+      "LuxeFlexIA est un outil IA pour generer des photos lifestyle hyper realistes en quelques secondes. Ajoute ta photo, decris ton idee, et l'IA fait le reste.",
   },
   {
     question: "Les images generees sont-elles realistes ?",
@@ -134,7 +134,6 @@ export const APP_NOINDEX_PATHS = [
   "/login",
   "/register",
   "/debug-generate",
-  "/face-capture",
 ] as const;
 
 export const NOINDEX_SITE_PATHS = [

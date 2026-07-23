@@ -7,7 +7,7 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, Loader2, RefreshCw, ScanFace, Gem } from "lucide-react";
+import { Loader2, Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
@@ -17,20 +17,6 @@ import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
@@ -68,18 +54,12 @@ import {
 } from "@/lib/fake-paywall-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
-import {
-  hasCompleteFaceCapture,
-  loadFaceCapturePreviewUrl,
-} from "@/lib/face-capture-generation";
-import { useLatestFaceCapture } from "@/hooks/use-face-captures";
 import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { templateSupportsGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandMark } from "@/components/BrandMark";
 
 const IMAGE_CREDIT_COST = 10;
@@ -89,8 +69,7 @@ type GenerationMode = "image" | "video";
 
 export default function Generate() {
   const { t } = useTranslation();
-  const [location, navigate] = useLocation();
-  const isMobile = useIsMobile();
+  const [, navigate] = useLocation();
   const [isReturningFromCheckout] = useState(() => {
     return new URLSearchParams(window.location.search).get("checkout") === "success";
   });
@@ -104,7 +83,6 @@ export default function Generate() {
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(
     null,
   );
-  const [facePreviewUrl, setFacePreviewUrl] = useState<string | null>(null);
 
   // ── Generation state ────────────────────────────────────────
   const [taskId, setTaskId] = useState<string | null>(() => {
@@ -126,11 +104,6 @@ export default function Generate() {
   const [fakePaywallReason, setFakePaywallReason] =
     useState<FakePaywallReason>("onboarding");
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
-  const [faceScanPromptOpen, setFaceScanPromptOpen] = useState(false);
-  const [faceScanPromptMode, setFaceScanPromptMode] = useState<"start" | "review">("start");
-  const [faceScanPreviewLoading, setFaceScanPreviewLoading] = useState(false);
-  const [faceScanPreviewError, setFaceScanPreviewError] = useState<string | null>(null);
-  const [holdFaceAutoEnable, setHoldFaceAutoEnable] = useState(false);
   const [savedPaywall, setSavedPaywall] = useState<{
     resultUrls: string[];
     larpId: string;
@@ -151,107 +124,11 @@ export default function Generate() {
     useState<GenerationMode>("image");
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
-  const handledFaceScanReviewRef = useRef(false);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
   const { profile, user, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
-  const latestFaceCapture = useLatestFaceCapture();
-  const refetchLatestFaceCapture = latestFaceCapture.refetch;
-  const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
-  const [useFaceAsset, setUseFaceAsset] = useState(false);
-
-  useEffect(() => {
-    if (!faceCaptureReady) {
-      setUseFaceAsset(false);
-      return;
-    }
-
-    if (!holdFaceAutoEnable) {
-      setUseFaceAsset(true);
-    }
-  }, [faceCaptureReady, holdFaceAutoEnable, selectedTemplate?.id]);
-
-  const handleUseFaceAssetChange = useCallback(
-    (value: boolean) => {
-      if (value && !faceCaptureReady) {
-        setUseFaceAsset(false);
-        setFaceScanPromptMode("start");
-        setFaceScanPromptOpen(true);
-        return;
-      }
-
-      setUseFaceAsset(value);
-      if (value) {
-        setHoldFaceAutoEnable(false);
-      }
-    },
-    [faceCaptureReady],
-  );
-
-  const handleStartFaceScan = useCallback(() => {
-    setFaceScanPromptOpen(false);
-    setFaceScanPromptMode("start");
-    navigate("/face-capture");
-  }, [navigate]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("faceScan") !== "review") return;
-    if (handledFaceScanReviewRef.current) return;
-    handledFaceScanReviewRef.current = true;
-
-    window.history.replaceState({}, "", "/generate");
-    setHoldFaceAutoEnable(true);
-    setUseFaceAsset(false);
-    setFacePreviewUrl((previousUrl) => {
-      if (previousUrl) URL.revokeObjectURL(previousUrl);
-      return null;
-    });
-    setFaceScanPromptMode("review");
-    setFaceScanPromptOpen(true);
-    setFaceScanPreviewLoading(true);
-    setFaceScanPreviewError(null);
-
-    let cancelled = false;
-    void refetchLatestFaceCapture();
-    loadFaceCapturePreviewUrl()
-      .then((url) => {
-        if (cancelled) {
-          if (url) URL.revokeObjectURL(url);
-          return;
-        }
-        if (!url) {
-          setFaceScanPreviewError(
-            t("templateSelected.faceScanReviewLoadError", {
-              defaultValue: "Impossible de charger la preview du scan.",
-            }),
-          );
-          return;
-        }
-        setFacePreviewUrl((previousUrl) => {
-          if (previousUrl) URL.revokeObjectURL(previousUrl);
-          return url;
-        });
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFaceScanPreviewError(
-            t("templateSelected.faceScanReviewLoadError", {
-              defaultValue: "Impossible de charger la preview du scan.",
-            }),
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setFaceScanPreviewLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [location, refetchLatestFaceCapture, t]);
 
   // Fond LuxeFlexIA uniquement sur /generate
   useEffect(() => {
@@ -259,20 +136,6 @@ export default function Generate() {
     return () => {
       document.documentElement.classList.remove("luxeflexia-generate-page");
     };
-  }, []);
-
-  const handleUseReviewedFaceScan = useCallback(() => {
-    setHoldFaceAutoEnable(false);
-    setUseFaceAsset(true);
-    setFaceScanPromptOpen(false);
-    setFaceScanPromptMode("start");
-  }, []);
-
-  const handleFaceScanPromptOpenChange = useCallback((open: boolean) => {
-    setFaceScanPromptOpen(open);
-    if (!open) {
-      setFaceScanPromptMode("start");
-    }
   }, []);
 
   // ── Stripe checkout return ──────────────────────────────────
@@ -585,32 +448,20 @@ export default function Generate() {
         setGenerationMode("image");
         setPendingTemplateId(pending.templateId ?? null);
         if (pending.prompt) setPrompt(pending.prompt);
-        if (pending.templateId) {
-          void (async () => {
-            const url = await loadFaceCapturePreviewUrl();
-            if (!url) return;
-            setFacePreviewUrl(url);
-            try {
-              const blob = await fetch(url).then((r) => r.blob());
-              await savePaywallImage(
-                new File([blob], "face-frontal.jpg", { type: "image/jpeg" }),
-              );
-            } catch {
-              /* paywall preview optional */
+        if (!pending.templateId) {
+          if (pending.images.length > 0) {
+            const restored = pending.images.map((file) => ({
+              url: URL.createObjectURL(file),
+              file,
+            }));
+            setImages(restored);
+            void savePaywallImage(pending.images[0]);
+          } else {
+            const paywallPreview = getPaywallImage();
+            const file = paywallPreview ? dataUrlToFile(paywallPreview) : null;
+            if (file && paywallPreview) {
+              setImages([{ url: paywallPreview, file }]);
             }
-          })();
-        } else if (pending.images.length > 0) {
-          const restored = pending.images.map((file) => ({
-            url: URL.createObjectURL(file),
-            file,
-          }));
-          setImages(restored);
-          void savePaywallImage(pending.images[0]);
-        } else {
-          const paywallPreview = getPaywallImage();
-          const file = paywallPreview ? dataUrlToFile(paywallPreview) : null;
-          if (file && paywallPreview) {
-            setImages([{ url: paywallPreview, file }]);
           }
         }
         markOnboardingResume({
@@ -641,12 +492,6 @@ export default function Generate() {
     setGenerationMode("image");
   }, [pendingTemplateId, selectedTemplate, templatesList]);
 
-  useEffect(() => {
-    return () => {
-      if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
-    };
-  }, [facePreviewUrl]);
-
   const loaderInputImageUrl = useMemo(() => {
     if (images[0]?.url) return images[0].url;
 
@@ -664,13 +509,12 @@ export default function Generate() {
       );
     }
 
-    return facePreviewUrl ?? undefined;
+    return undefined;
   }, [
     images,
     selectedTemplate,
     pendingTemplateId,
     templatesList,
-    facePreviewUrl,
   ]);
 
   // ── Image & template handlers ───────────────────────────────
@@ -725,8 +569,6 @@ export default function Generate() {
   };
 
   const deselectTemplate = () => {
-    if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
-    setFacePreviewUrl(null);
     setSelectedTemplate(null);
     setPendingTemplateId(null);
     setPrompt("");
@@ -834,24 +676,6 @@ export default function Generate() {
           generationMode === "video"
             ? t("generate.referenceVideoRequiredDescription")
             : t("generate.referenceImageRequiredDescription"),
-      });
-      return;
-    }
-
-    if (isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
-      toast({
-        variant: "destructive",
-        title: t("templateSelected.faceRequired"),
-        description: t("generate.scanFace"),
-      });
-      return;
-    }
-
-    if (!isTemplateGeneration && useFaceAsset && !faceCaptureReady) {
-      toast({
-        variant: "destructive",
-        title: t("templateSelected.faceRequired"),
-        description: t("generate.scanFace"),
       });
       return;
     }
@@ -998,7 +822,7 @@ export default function Generate() {
           aspect_ratio: OUTPUT_ASPECT_RATIO,
           images: base64Images && base64Images.length > 0 ? base64Images : undefined,
           template_id: selectedOrPendingTemplateId,
-          use_face_asset: useFaceAsset,
+          use_face_asset: false,
         });
         setPaywallDefaultPlan("essential");
         setTaskId(result.taskId);
@@ -1021,7 +845,7 @@ export default function Generate() {
         aspect_ratio: OUTPUT_ASPECT_RATIO,
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
-        use_face_asset: useFaceAsset,
+        use_face_asset: false,
       });
       setTaskId(result.taskId);
       setPendingLoading(false);
@@ -1031,14 +855,6 @@ export default function Generate() {
       // Restore balances from server if generation failed after optimistic debit.
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
       void queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
-      if (error.code === "FACE_CAPTURE_REQUIRED") {
-        toast({
-          variant: "destructive",
-          title: t("templateSelected.faceRequired"),
-          description: t("generate.scanFace"),
-        });
-        return;
-      }
       if (error.code === "REFERENCE_IMAGE_REQUIRED") {
         toast({
           variant: "destructive",
@@ -1112,12 +928,10 @@ export default function Generate() {
     });
     setSelectedTemplate(null);
     setPendingTemplateId(null);
-    if (facePreviewUrl) URL.revokeObjectURL(facePreviewUrl);
-    setFacePreviewUrl(null);
     setGenerationMode("image");
     setFakePaywallReason("onboarding");
     refetchEligibility();
-  }, [facePreviewUrl, refetchEligibility]);
+  }, [refetchEligibility]);
 
   useEffect(() => {
     const handleCreateNewLarp = () => {
@@ -1280,77 +1094,6 @@ export default function Generate() {
     images[0]?.url || getPaywallImage() || "";
   const luxePreviewPrompt = prompt.trim() || getPaywallPrompt() || null;
 
-  const faceScanPromptTitle =
-    faceScanPromptMode === "review"
-      ? t("templateSelected.faceScanReviewTitle")
-      : t("templateSelected.faceScanPromptTitle");
-
-  const faceScanPromptContent =
-    faceScanPromptMode === "review" ? (
-      <div className="w-full space-y-4">
-        <p className="text-center text-sm font-medium leading-5 text-foreground">
-          {t("templateSelected.faceScanReviewSubtitle")}
-        </p>
-
-        <div className="relative mx-auto aspect-[9/8] w-full max-w-sm overflow-hidden rounded-lg border border-border/70 bg-muted/40">
-          {faceScanPreviewLoading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              {t("templateSelected.faceScanReviewLoading")}
-            </div>
-          ) : facePreviewUrl ? (
-            <img
-              src={facePreviewUrl}
-              alt={t("templateSelected.faceScanReviewAlt")}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center px-5 text-center text-sm font-medium text-muted-foreground">
-              {faceScanPreviewError ?? t("templateSelected.faceScanReviewLoadError")}
-            </div>
-          )}
-        </div>
-
-        <div className="flex w-full flex-col gap-2.5">
-          <Button
-            type="button"
-            onClick={handleUseReviewedFaceScan}
-            disabled={faceScanPreviewLoading || !facePreviewUrl}
-            className="h-10 rounded-lg text-sm font-semibold"
-          >
-            <Check className="mr-2 h-4 w-4" />
-            {t("templateSelected.faceScanReviewUse")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleStartFaceScan}
-            className="h-10 rounded-lg text-sm font-semibold"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {t("templateSelected.faceScanReviewRetake")}
-          </Button>
-        </div>
-      </div>
-    ) : (
-      <div className="w-full space-y-4">
-        <p className="text-center text-sm font-medium leading-5 text-foreground">
-          {t("templateSelected.faceScanPromptSubtitle")}
-        </p>
-        <p className="text-center text-xs font-medium leading-5 text-muted-foreground">
-          {t("templateSelected.faceScanPromptDescription")}
-        </p>
-        <Button
-          type="button"
-          onClick={handleStartFaceScan}
-          className="h-10 w-full rounded-lg text-sm font-semibold"
-        >
-          <ScanFace className="mr-2 h-4 w-4" />
-          {t("generate.scanFace")}
-        </Button>
-      </div>
-    );
-
   // ════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════
@@ -1404,7 +1147,7 @@ export default function Generate() {
         larpId={unlockedLarp.larpId}
         resultType={unlockedLarp.resultType}
         posterUrl={
-          images[0]?.url ?? facePreviewUrl ?? getPaywallImage() ?? undefined
+          images[0]?.url ?? getPaywallImage() ?? undefined
         }
         onReset={() => {
           setUnlockedLarp(null);
@@ -1478,36 +1221,6 @@ export default function Generate() {
         prompt={luxePreviewPrompt}
         defaultPlan={paywallDefaultPlan}
       />
-
-      {isMobile ? (
-        <Drawer open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>
-          <DrawerContent className="rounded-t-2xl border-border/70 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <DrawerHeader className="w-full px-0 pb-3 pt-4 text-center">
-              <DrawerTitle className="flex items-center justify-center gap-2 font-display text-2xl font-bold">
-                <ScanFace className="h-5 w-5" />
-                {faceScanPromptTitle}
-              </DrawerTitle>
-              <DrawerDescription className="sr-only">
-                {t("templateSelected.faceScanPromptDescription")}
-              </DrawerDescription>
-            </DrawerHeader>
-            {faceScanPromptContent}
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog open={faceScanPromptOpen} onOpenChange={handleFaceScanPromptOpenChange}>
-          <DialogContent className="w-[min(calc(100vw-2rem),28rem)] rounded-2xl border border-border/70 bg-white p-6 shadow-2xl">
-            <DialogTitle className="flex items-center justify-center gap-2 text-center font-display text-2xl font-bold">
-              <ScanFace className="h-5 w-5" />
-              {faceScanPromptTitle}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              {t("templateSelected.faceScanPromptDescription")}
-            </DialogDescription>
-            {faceScanPromptContent}
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

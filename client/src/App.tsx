@@ -17,7 +17,6 @@ import AdminStudio from "@/pages/AdminStudio";
 import Generate from "@/pages/Generate";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
-import FaceCapture from "@/pages/FaceCapture";
 import Historique from "@/pages/Historique";
 import Resultat from "@/pages/Resultat";
 import Settings from "@/pages/Settings";
@@ -117,7 +116,6 @@ function ProtectedAppRoutes() {
         <Switch>
           <Route path="/generate" component={Generate} />
           <Route path="/image-prete" component={ImagePrete} />
-          <Route path="/face-capture" component={FaceCapture} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />
           <Route path="/mon-resultat">
@@ -167,7 +165,6 @@ const PROTECTED_PATHS = new Set([
   "/welcome",
   "/generate",
   "/image-prete",
-  "/face-capture",
   "/debug-generate",
   "/resultat",
   "/mon-resultat",

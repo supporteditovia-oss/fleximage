@@ -107,33 +107,12 @@ export const extraResources = {
       generate: "Générer",
       modeImage: "Génération image",
       modeVideo: "Génération vidéo",
-      faceReady: "Tes photos visage seront utilisées automatiquement.",
-      faceRequired:
-        "Scanne ton visage (face + profils) pour utiliser ce template.",
-      useFace: "Utiliser mon visage",
-      useFaceDisabledTooltip:
-        "Scanne ton visage (face + profils) pour activer cette option.",
-      faceScanPromptTitle: "Scanne ta tête",
-      faceScanPromptSubtitle: "Tu dois créer ton scan visage avant d'activer cette option.",
-      faceScanPromptDescription:
-        "On a besoin de ton visage de face et de profil pour générer des LARPs cohérents avec toi.",
-      faceScanReviewTitle: "Ton scan est prêt",
-      faceScanReviewSubtitle: "Vérifie le rendu avant de l'utiliser pour tes générations.",
-      faceScanReviewLoading: "Chargement du scan",
-      faceScanReviewAlt: "Preview du scan visage",
-      faceScanReviewLoadError: "Impossible de charger la preview du scan.",
-      faceScanReviewUse: "Utiliser ce scan",
-      faceScanReviewRetake: "Refaire un scan",
-      faceRequiredForTemplate:
-        "Ce template nécessite ton visage pour toutes ses images de référence.",
-      loadingFace: "Vérification des photos visage…",
       noReferenceImages:
         "Ce template n'a pas encore d'images de référence. Choisis-en un autre.",
     },
     generate: {
       modeImage: "Image",
       modeVideo: "Vidéo",
-      scanFace: "Scanner mon visage",
       viewTemplates: "Voir les mod\u00e8les",
       insufficientCreditsTitle: "Crédits insuffisants",
       insufficientCreditsDescription:
@@ -445,32 +424,12 @@ export const extraResources = {
       generate: "Generate",
       modeImage: "Image generation",
       modeVideo: "Video generation",
-      faceReady: "Your face photos will be used automatically.",
-      faceRequired: "Scan your face (front + profiles) to use this template.",
-      useFace: "Use my face",
-      useFaceDisabledTooltip:
-        "Scan your face (front + profiles) to enable this option.",
-      faceScanPromptTitle: "Scan your face",
-      faceScanPromptSubtitle: "Create your face scan before enabling this option.",
-      faceScanPromptDescription:
-        "We need front and profile face photos to generate LARPs that look consistent with you.",
-      faceScanReviewTitle: "Your scan is ready",
-      faceScanReviewSubtitle: "Review it before using it for your generations.",
-      faceScanReviewLoading: "Loading scan",
-      faceScanReviewAlt: "Face scan preview",
-      faceScanReviewLoadError: "Unable to load the scan preview.",
-      faceScanReviewUse: "Use this scan",
-      faceScanReviewRetake: "Retake scan",
-      faceRequiredForTemplate:
-        "This template requires your face for all of its reference images.",
-      loadingFace: "Checking face photos…",
       noReferenceImages:
         "This template has no reference images yet. Pick another one.",
     },
     generate: {
       modeImage: "Image",
       modeVideo: "Video",
-      scanFace: "Scan my face",
       viewTemplates: "View templates",
       insufficientCreditsTitle: "Not enough credits",
       insufficientCreditsDescription:
@@ -777,7 +736,6 @@ export const extraResources = {
     generate: {
       modeImage: "Imagen",
       modeVideo: "Video",
-      scanFace: "Escanear mi rostro",
       viewTemplates: "Ver plantillas",
       insufficientCreditsTitle: "Creditos insuficientes",
       insufficientCreditsDescription:
@@ -1086,7 +1044,6 @@ export const extraResources = {
     generate: {
       modeImage: "Bild",
       modeVideo: "Video",
-      scanFace: "Gesicht scannen",
       viewTemplates: "Vorlagen ansehen",
       insufficientCreditsTitle: "Nicht genug Credits",
       insufficientCreditsDescription:

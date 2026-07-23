@@ -61,21 +61,3 @@ export function getTemplateDefaultGenerationMode(
 ): "image" | "video" {
   return template.generation_type === "video" ? "video" : "image";
 }
-
-/** Whether the user must complete face capture before generating with this template. */
-export function templateRequiresFaceCapture(
-  template: Pick<
-    PromptTemplate,
-    | "requires_face_capture"
-    | "reference_image_count"
-    | "has_face_optional_reference_image"
-  >,
-): boolean {
-  if (typeof template.requires_face_capture === "boolean") {
-    return template.requires_face_capture;
-  }
-  return (
-    template.reference_image_count === 0 ||
-    !template.has_face_optional_reference_image
-  );
-}

@@ -1,18 +1,9 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
 import { useCurrentPlan } from "@/hooks/use-billing";
-import {
-  fetchFaceCaptureAssetBlob,
-  useDeleteLatestFaceCapture,
-  useLatestFaceCapture,
-} from "@/hooks/use-face-captures";
 import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { setAppLanguage } from "@/i18n";
-import {
-  FACE_CAPTURE_POSES,
-  hasCompleteFaceCapture,
-} from "@/lib/face-capture-generation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,16 +37,12 @@ import {
   ChevronRight,
   X,
   Languages,
-  ScanFace,
-  RefreshCw,
-  Check,
   Headphones,
   MessageCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +59,6 @@ import {
 } from "@/components/ui/drawer";
 
 export default function Settings() {
-  const [location, navigate] = useLocation();
   const { user, profile, signOut } = useAuth();
   const { updateOwnProfile, deleteProfile, isDeleting } = useProfile();
   const { toast } = useToast();
@@ -83,12 +69,6 @@ export default function Settings() {
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
-  const latestFaceCapture = useLatestFaceCapture();
-  const deleteLatestFaceCapture = useDeleteLatestFaceCapture();
-  const [facePreviewUrls, setFacePreviewUrls] = useState<string[]>([]);
-  const [facePreviewLoading, setFacePreviewLoading] = useState(false);
-  const [facePreviewError, setFacePreviewError] = useState<string | null>(null);
-  const faceCaptureReady = hasCompleteFaceCapture(latestFaceCapture.data);
 
   const subscriptionPrice = (() => {
     if (!currentPlan) return t("settings.subscription.price");
@@ -131,81 +111,6 @@ export default function Settings() {
       preferred_locale: profile?.preferred_locale || "fr",
     });
   }, [form, profile?.full_name, profile?.preferred_locale]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    setFacePreviewError(null);
-
-    if (!faceCaptureReady) {
-      setFacePreviewUrls((previousUrls) => {
-        previousUrls.forEach((url) => URL.revokeObjectURL(url));
-        return [];
-      });
-      setFacePreviewLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setFacePreviewLoading(true);
-    const captures = latestFaceCapture.data?.session?.captures ?? [];
-    const orderedCaptures = FACE_CAPTURE_POSES.map((poseId) =>
-      captures.find((capture) => capture.poseId === poseId),
-    );
-
-    Promise.all(
-      orderedCaptures.map(async (capture) => {
-        if (!capture) throw new Error("FACE_CAPTURE_REQUIRED");
-        const blob = await fetchFaceCaptureAssetBlob(capture.imageUrl);
-        return URL.createObjectURL(blob);
-      }),
-    )
-      .then((urls) => {
-        if (cancelled) {
-          urls.forEach((url) => URL.revokeObjectURL(url));
-          return;
-        }
-
-        setFacePreviewUrls((previousUrls) => {
-          previousUrls.forEach((url) => URL.revokeObjectURL(url));
-          return urls;
-        });
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFacePreviewError(t("settings.faceScan.loadError"));
-          setFacePreviewUrls((previousUrls) => {
-            previousUrls.forEach((url) => URL.revokeObjectURL(url));
-            return [];
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setFacePreviewLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [faceCaptureReady, latestFaceCapture.data?.session?.id, t]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("faceScan") !== "review") return;
-    window.history.replaceState({}, "", "/settings");
-    void latestFaceCapture.refetch();
-    toast({
-      title: t("settings.faceScan.updatedTitle"),
-      description: t("settings.faceScan.updatedDescription"),
-    });
-  }, [latestFaceCapture, location, t, toast]);
-
-  useEffect(() => {
-    return () => {
-      facePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [facePreviewUrls]);
 
   const onSubmit = async (data: {
     full_name: string | null;
@@ -294,30 +199,6 @@ export default function Settings() {
 
     if (canOpenPaywall) {
       setPaywallOpen(true);
-    }
-  };
-
-  const handleRetakeFaceScan = () => {
-    navigate("/face-capture?returnTo=settings");
-  };
-
-  const handleDeleteFaceScan = async () => {
-    try {
-      await deleteLatestFaceCapture.mutateAsync();
-      setFacePreviewUrls((previousUrls) => {
-        previousUrls.forEach((url) => URL.revokeObjectURL(url));
-        return [];
-      });
-      toast({
-        title: t("settings.faceScan.deletedTitle"),
-        description: t("settings.faceScan.deletedDescription"),
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: t("common.messages.error"),
-        description: error.message,
-      });
     }
   };
 
@@ -512,105 +393,6 @@ export default function Settings() {
               <p className="text-[11px] text-muted-foreground/50">
                 {t("settings.profile.emailImmutable")}
               </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Face scan section */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
-          {t("settings.sections.faceScan")}
-        </h2>
-        <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
-          <div className="flex items-center gap-4 px-4 py-3.5">
-            {(facePreviewLoading || latestFaceCapture.isLoading || facePreviewUrls.length > 0) && (
-              <div className="relative flex h-24 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/40">
-                {facePreviewLoading || latestFaceCapture.isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                ) : (
-                <>
-                  <div className="grid h-full w-full grid-cols-3">
-                    {facePreviewUrls.map((url, index) => (
-                      <img
-                        key={url}
-                        src={url}
-                        alt={t("settings.faceScan.previewAlt")}
-                        className={`h-full w-full object-cover ${
-                          index > 0 ? "border-l border-white/70" : ""
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="absolute right-1 top-1 inline-flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white/90 text-[#42a5f6] shadow-sm backdrop-blur">
-                    <Check className="h-3 w-3" />
-                  </span>
-                </>
-                )}
-              </div>
-            )}
-
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">
-                {faceCaptureReady
-                  ? t("settings.faceScan.readyTitle")
-                  : t("settings.faceScan.emptyTitle")}
-              </p>
-              <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground/60">
-                {facePreviewError ??
-                  (faceCaptureReady
-                    ? t("settings.faceScan.readyDescription")
-                    : t("settings.faceScan.emptyDescription"))}
-              </p>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1.5">
-              {faceCaptureReady ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleRetakeFaceScan}
-                    disabled={deleteLatestFaceCapture.isPending}
-                    size="sm"
-                    className="h-9 w-9 rounded-full p-0 text-foreground/80 shadow-none hover:bg-muted hover:text-foreground"
-                    title={t("settings.faceScan.retake")}
-                    aria-label={t("settings.faceScan.retake")}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleDeleteFaceScan}
-                    disabled={deleteLatestFaceCapture.isPending}
-                    size="sm"
-                    className="h-9 w-9 rounded-full p-0 text-destructive/80 shadow-none hover:bg-destructive/10 hover:text-destructive"
-                    title={t("settings.faceScan.delete")}
-                    aria-label={t("settings.faceScan.delete")}
-                  >
-                    {deleteLatestFaceCapture.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleRetakeFaceScan}
-                  disabled={deleteLatestFaceCapture.isPending}
-                  size="sm"
-                  className="h-9 shrink-0 gap-1.5 rounded-full px-2.5 text-xs font-semibold text-foreground/80 shadow-none hover:bg-muted hover:text-foreground"
-                  title={t("settings.faceScan.createFaceScan")}
-                  aria-label={t("settings.faceScan.createFaceScan")}
-                >
-                  <ScanFace className="h-4 w-4" />
-                  <span>{t("settings.faceScan.scan")}</span>
-                </Button>
-              )}
             </div>
           </div>
         </div>
