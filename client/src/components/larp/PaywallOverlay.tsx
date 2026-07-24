@@ -108,6 +108,23 @@ export function PaywallOverlay({
   const handleSubscribe = async () => {
     setIsLoading(true);
     try {
+      const { supabase } = await import("@/lib/supabase");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({
+          variant: "destructive",
+          title: t("common.messages.error"),
+          description: t("paywall.checkoutAuthRequired", {
+            defaultValue: "Reconnecte-toi pour finaliser le paiement.",
+          }),
+        });
+        const returnTo = `${window.location.pathname}${window.location.search || ""}`;
+        window.location.href = `/auth?redirect=${encodeURIComponent(returnTo)}`;
+        return;
+      }
+
       const { getFunnelSessionId, trackFunnelStep } = await import(
         "@/lib/funnel-tracker"
       );

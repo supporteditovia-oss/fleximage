@@ -105,7 +105,10 @@ module.exports = async function handler(req, res) {
       .single();
 
     if (profile && profile.is_subscriber) {
-      res.status(400).json({ message: "Tu as déjà un abonnement actif." });
+      res.status(400).json({
+        message: "Tu as déjà un abonnement actif.",
+        code: "already_subscribed",
+      });
       return;
     }
 

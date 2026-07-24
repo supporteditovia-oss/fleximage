@@ -147,9 +147,10 @@ export function registerStripeRoutes(app: Express): void {
         .single();
 
       if (profile?.is_subscriber) {
-        return res
-          .status(400)
-          .json({ message: tBackend(locale, "stripe.alreadySubscribed") });
+        return res.status(400).json({
+          message: tBackend(locale, "stripe.alreadySubscribed"),
+          code: "already_subscribed",
+        });
       }
 
       if (profile?.stripe_customer_id) {
