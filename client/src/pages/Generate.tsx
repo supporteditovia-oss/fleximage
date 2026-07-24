@@ -132,6 +132,21 @@ export default function Generate() {
     };
   }, []);
 
+  // After preview expiry → "Créer une nouvelle image" lands with ?fresh=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("fresh") !== "1") return;
+    clearFakePaywallReached();
+    clearPaywallImage();
+    clearPaywallPrompt();
+    clearPaywallExpiry();
+    clearOnboardingResume();
+    setImages([null]);
+    setPrompt("");
+    setSelectedTemplate(null);
+    window.history.replaceState({}, "", "/generate");
+  }, []);
+
   // ── Stripe checkout return ──────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -344,14 +359,28 @@ export default function Generate() {
 
     const resume = getOnboardingResume();
     const paywallPreview = getPaywallImage();
+    const paywallExpiresAt = getPaywallExpiresAt();
+    const previewStillValid =
+      Boolean(paywallPreview) &&
+      Boolean(paywallExpiresAt) &&
+      !isPaywallExpired(paywallExpiresAt);
+
+    // Stale expired lock — wipe flags so the user can upload again.
+    if (hasReachedFakePaywall(profile?.id) && !previewStillValid) {
+      clearFakePaywallReached();
+      clearPaywallImage();
+      clearPaywallPrompt();
+      clearPaywallExpiry();
+      if (resume) clearOnboardingResume();
+      return;
+    }
+
     if (!paywallPreview) return;
 
     // Already showed the loader once: jump back to locked preview if still valid.
-    if (hasReachedFakePaywall(profile?.id)) {
+    if (hasReachedFakePaywall(profile?.id) && previewStillValid) {
       if (resume) clearOnboardingResume();
-      if (!isPaywallExpired(getPaywallExpiresAt())) {
-        navigate("/image-prete?paywall=1");
-      }
+      navigate("/image-prete?paywall=1");
       return;
     }
 

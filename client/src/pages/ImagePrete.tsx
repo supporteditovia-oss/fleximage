@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Clock3, Gem, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
@@ -15,7 +15,7 @@ import {
 } from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
-import { markFakePaywallReached } from "@/lib/fake-paywall-state";
+import { markFakePaywallReached, clearFakePaywallReached } from "@/lib/fake-paywall-state";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCredits } from "@/lib/format-locale";
 
@@ -23,10 +23,11 @@ function purgeExpiredPreview() {
   clearPaywallImage();
   clearPaywallPrompt();
   clearPaywallExpiry();
+  clearFakePaywallReached();
 }
 
 export default function ImagePrete() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { profile, signOut } = useAuth();
   const { t, i18n } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -151,10 +152,10 @@ export default function ImagePrete() {
   }, [location, expired, imageUrl]);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (profile?.id && !expired && imageUrl) {
       markFakePaywallReached(profile.id, "image");
     }
-  }, [profile?.id]);
+  }, [profile?.id, expired, imageUrl]);
 
   useLayoutEffect(() => {
     document.body.setAttribute("data-hide-app-chrome", "true");
@@ -171,6 +172,11 @@ export default function ImagePrete() {
     } finally {
       setSigningOut(false);
     }
+  };
+
+  const goCreateNewImage = () => {
+    purgeExpiredPreview();
+    setLocation("/generate?fresh=1");
   };
 
   return (
@@ -232,12 +238,13 @@ export default function ImagePrete() {
               </p>
             </div>
 
-            <Link
-              href="/generate"
+            <button
+              type="button"
+              onClick={goCreateNewImage}
               className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
             >
               Créer une nouvelle image
-            </Link>
+            </button>
           </>
         ) : (
           <>
