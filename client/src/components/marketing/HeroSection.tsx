@@ -28,6 +28,7 @@ import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
+import { toGenerationImageFile } from "@/lib/video-frame";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -152,7 +153,11 @@ export default function HeroSection() {
       }
 
       try {
-        const base64Images = await Promise.all(files.map((img) => fileToBase64(img.file)));
+        const base64Images = await Promise.all(
+          files.map(async (img) =>
+            fileToBase64(await toGenerationImageFile(img.file)),
+          ),
+        );
         const payload = {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: OUTPUT_ASPECT_RATIO,

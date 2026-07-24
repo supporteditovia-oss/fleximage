@@ -74,7 +74,16 @@ export async function authFetch(
       defaultValue: "Server error",
     });
     let code: string | undefined;
-    if (text) {
+    if (
+      res.status === 413 ||
+      /FUNCTION_PAYLOAD_TOO_LARGE|Request Entity Too Large/i.test(text)
+    ) {
+      message = i18n.t("errors.generic.payloadTooLarge", {
+        defaultValue:
+          "Image trop lourde. Réessaie — on compresse automatiquement, ou choisis une photo plus légère.",
+      });
+      code = "FUNCTION_PAYLOAD_TOO_LARGE";
+    } else if (text) {
       try {
         const json = JSON.parse(text);
         message = json.message || json.details || message;

@@ -1,3 +1,5 @@
+import { compressImageForGeneration } from "@/lib/compress-image";
+
 /**
  * Extract a JPEG still from a video file (first readable frame).
  * Used so video-mode uploads can still feed image-to-video providers.
@@ -67,7 +69,8 @@ export async function extractVideoFrameAsJpegFile(file: File): Promise<File> {
 
 export async function toGenerationImageFile(file: File): Promise<File> {
   if (file.type.startsWith("video/")) {
-    return extractVideoFrameAsJpegFile(file);
+    // Frame extract can still be huge on 4K video — compress after.
+    return compressImageForGeneration(await extractVideoFrameAsJpegFile(file));
   }
-  return file;
+  return compressImageForGeneration(file);
 }
