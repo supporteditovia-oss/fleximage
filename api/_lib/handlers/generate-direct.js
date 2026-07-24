@@ -16,6 +16,10 @@ const {
   recordGeneration,
 } = require("../generation");
 
+function normalizeAspectRatio(value) {
+  return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -32,6 +36,7 @@ module.exports = async function handler(req, res) {
     const body = readBody(req);
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const images = Array.isArray(body.images) ? body.images : [];
+    const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
     const templateId =
       typeof body.template_id === "string" && body.template_id.trim()
         ? body.template_id.trim()
@@ -88,7 +93,7 @@ module.exports = async function handler(req, res) {
     const createWithKie = async () => {
       const kieResponse = await createKieTask({
         prompt: finalPrompt,
-        aspect_ratio: OUTPUT_ASPECT_RATIO,
+        aspect_ratio: aspectRatio,
         image_input: imageUrls,
       });
       if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
@@ -101,7 +106,7 @@ module.exports = async function handler(req, res) {
       try {
         const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
         const oneshotResponse = await createOneshotJob(finalPrompt, {
-          aspectRatio: OUTPUT_ASPECT_RATIO,
+          aspectRatio,
           ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
         });
         if (!oneshotResponse || !oneshotResponse.id) {
@@ -161,7 +166,7 @@ module.exports = async function handler(req, res) {
         provider,
         provider_task_id: externalTaskId,
         status: "processing",
-        aspect_ratio: OUTPUT_ASPECT_RATIO,
+        aspect_ratio: aspectRatio,
         input_assets: imageUrls,
         credit_cost: creditCost,
         metadata: {},

@@ -53,7 +53,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import { useTemplates } from "@/hooks/use-templates";
 import type { PromptTemplate } from "@shared/schema";
-import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
+import { OUTPUT_ASPECT_RATIO, type GenerationAspectRatio } from "@shared/schema";
 import { templateSupportsGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -114,6 +114,8 @@ export default function Generate() {
   // ── Mode state ─────────────────────────────────────────────
   const [generationMode, setGenerationMode] =
     useState<GenerationMode>("image");
+  const [aspectRatio, setAspectRatio] =
+    useState<GenerationAspectRatio>(OUTPUT_ASPECT_RATIO);
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const { data: eligibility, refetch: refetchEligibility } =
@@ -820,7 +822,7 @@ export default function Generate() {
 
         const result = await generateVideo.mutateAsync({
           prompt: serverPrompt,
-          aspect_ratio: OUTPUT_ASPECT_RATIO,
+          aspect_ratio: aspectRatio,
           images: base64Images && base64Images.length > 0 ? base64Images : undefined,
           template_id: selectedOrPendingTemplateId,
           use_face_asset: false,
@@ -846,7 +848,7 @@ export default function Generate() {
 
       const result = await generateDirect.mutateAsync({
         prompt: serverPrompt,
-        aspect_ratio: OUTPUT_ASPECT_RATIO,
+        aspect_ratio: aspectRatio,
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
@@ -1218,6 +1220,8 @@ export default function Generate() {
                 goldCta
                 creditCost={IMAGE_CREDIT_COST}
                 canGenerate={images.some((img) => img !== null)}
+                aspectRatio={aspectRatio}
+                onAspectRatioChange={setAspectRatio}
               />
             </>
           )}

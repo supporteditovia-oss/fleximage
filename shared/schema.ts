@@ -458,8 +458,23 @@ export const appSettings = pgTable("app_settings", {
 });
 
 // --- Video generation ---
-/** Vertical portrait format for all image and video generations. */
+/** Default vertical portrait format for image and video generations. */
 export const OUTPUT_ASPECT_RATIO = "9:16" as const;
+export const LANDSCAPE_ASPECT_RATIO = "16:9" as const;
+export const GENERATION_ASPECT_RATIOS = [
+  OUTPUT_ASPECT_RATIO,
+  LANDSCAPE_ASPECT_RATIO,
+] as const;
+export type GenerationAspectRatio = (typeof GENERATION_ASPECT_RATIOS)[number];
+
+export function normalizeGenerationAspectRatio(
+  value: unknown,
+): GenerationAspectRatio {
+  return value === LANDSCAPE_ASPECT_RATIO
+    ? LANDSCAPE_ASPECT_RATIO
+    : OUTPUT_ASPECT_RATIO;
+}
+
 /** Max visual fidelity for Nano Banana 2 (Kie) — 4K lossless PNG. */
 export const IMAGE_OUTPUT_RESOLUTION = "4K" as const;
 export const IMAGE_OUTPUT_FORMAT = "png" as const;

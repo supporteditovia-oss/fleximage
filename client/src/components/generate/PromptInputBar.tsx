@@ -1,4 +1,4 @@
-import { SendHorizonal, Loader2, Shuffle, Gem } from "lucide-react";
+import { SendHorizonal, Loader2, Shuffle, Gem, RectangleVertical, RectangleHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import {
@@ -7,6 +7,11 @@ import {
 } from "@/lib/larp-data";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  LANDSCAPE_ASPECT_RATIO,
+  OUTPUT_ASPECT_RATIO,
+  type GenerationAspectRatio,
+} from "@shared/schema";
 
 interface PromptInputBarProps {
   prompt: string;
@@ -18,6 +23,8 @@ interface PromptInputBarProps {
   goldCta?: boolean;
   /** Coût affiché (ex. 10 crédits / image) */
   creditCost?: number;
+  aspectRatio?: GenerationAspectRatio;
+  onAspectRatioChange?: (value: GenerationAspectRatio) => void;
 }
 
 export function PromptInputBar({
@@ -28,6 +35,8 @@ export function PromptInputBar({
   canGenerate = true,
   goldCta = false,
   creditCost,
+  aspectRatio = OUTPUT_ASPECT_RATIO,
+  onAspectRatioChange,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const larpIdeas = useMemo(
@@ -50,6 +59,14 @@ export function PromptInputBar({
   };
 
   const showCreditCost = typeof creditCost === "number" && creditCost > 0;
+  const isLandscape = aspectRatio === LANDSCAPE_ASPECT_RATIO;
+
+  const toggleAspectRatio = () => {
+    if (!onAspectRatioChange) return;
+    onAspectRatioChange(
+      isLandscape ? OUTPUT_ASPECT_RATIO : LANDSCAPE_ASPECT_RATIO,
+    );
+  };
 
   return (
     <div className="relative z-10 w-full flex justify-center">
@@ -63,6 +80,40 @@ export function PromptInputBar({
             placeholder={t("promptInput.describePlaceholder")}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
           />
+          {onAspectRatioChange ? (
+            <button
+              type="button"
+              onClick={toggleAspectRatio}
+              className="shrink-0 h-8 min-w-8 rounded-lg flex items-center justify-center gap-1 px-1.5 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"
+              title={
+                isLandscape
+                  ? t("promptInput.aspectLandscape", {
+                      defaultValue: "Format paysage (16:9)",
+                    })
+                  : t("promptInput.aspectPortrait", {
+                      defaultValue: "Format portrait (9:16)",
+                    })
+              }
+              aria-label={
+                isLandscape
+                  ? t("promptInput.aspectLandscape", {
+                      defaultValue: "Format paysage (16:9)",
+                    })
+                  : t("promptInput.aspectPortrait", {
+                      defaultValue: "Format portrait (9:16)",
+                    })
+              }
+            >
+              {isLandscape ? (
+                <RectangleHorizontal className="w-4 h-4" strokeWidth={2} />
+              ) : (
+                <RectangleVertical className="w-4 h-4" strokeWidth={2} />
+              )}
+              <span className="hidden sm:inline text-[10px] font-bold tabular-nums tracking-tight">
+                {aspectRatio}
+              </span>
+            </button>
+          ) : null}
           <button
             onClick={shuffleIdea}
             className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all"

@@ -162,6 +162,8 @@ export const extraResources = {
       creditCostHint:
         "Chaque génération coûte {{count}} crédits — débités de votre solde.",
       creditCostShort: "{{count}} crédits",
+      aspectPortrait: "Format portrait (9:16)",
+      aspectLandscape: "Format paysage (16:9)",
       textFallbackLabel: "Texte {{index}}",
       enterValue: "Entrer {{label}}...",
       enterValueFallback: "Entrer une valeur...",
@@ -479,6 +481,8 @@ export const extraResources = {
       creditCostHint:
         "Each generation costs {{count}} credits — deducted from your balance.",
       creditCostShort: "{{count}} credits",
+      aspectPortrait: "Portrait format (9:16)",
+      aspectLandscape: "Landscape format (16:9)",
       textFallbackLabel: "Text {{index}}",
       enterValue: "Enter {{label}}...",
       enterValueFallback: "Enter a value...",
@@ -785,6 +789,8 @@ export const extraResources = {
       creditCostHint:
         "Cada generación cuesta {{count}} créditos — se descuentan de tu saldo.",
       creditCostShort: "{{count}} créditos",
+      aspectPortrait: "Formato vertical (9:16)",
+      aspectLandscape: "Formato horizontal (16:9)",
       textFallbackLabel: "Texto {{index}}",
       enterValue: "Introduce {{label}}...",
       enterValueFallback: "Introduce un valor...",
@@ -1093,6 +1099,8 @@ export const extraResources = {
       creditCostHint:
         "Jede Generierung kostet {{count}} Credits — abgezogen von deinem Guthaben.",
       creditCostShort: "{{count}} Credits",
+      aspectPortrait: "Hochformat (9:16)",
+      aspectLandscape: "Querformat (16:9)",
       textFallbackLabel: "Text {{index}}",
       enterValue: "{{label}} eingeben...",
       enterValueFallback: "Wert eingeben...",
