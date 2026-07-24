@@ -15,6 +15,7 @@ const {
   deductGenerationCredits,
   recordGeneration,
 } = require("../generation");
+const { buildIdentityPreservingPrompt } = require("../prompt-guard");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -62,7 +63,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let finalPrompt = prompt.replace(/tanas?|92i/gi, "jolies filles");
+    let finalPrompt = buildIdentityPreservingPrompt(prompt);
     let imageUrls = [];
 
     // Free-prompt path (Generate page): upload user images to R2.
