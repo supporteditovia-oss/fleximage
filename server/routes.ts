@@ -4462,6 +4462,7 @@ export async function registerRoutes(
       "generate",
       "preview",
       "paywall",
+      "checkout",
       "subscribed",
     ]),
     path: z.string().max(500).optional().nullable(),

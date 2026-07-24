@@ -170,7 +170,7 @@ export function registerStripeRoutes(app: Express): void {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${appOrigin}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${appOrigin}/generate?checkout=cancel`,
+        cancel_url: `${appOrigin}/image-prete?paywall=1&checkout=cancel`,
         branding_settings: {
           display_name: "LuxeFlexIA",
         },

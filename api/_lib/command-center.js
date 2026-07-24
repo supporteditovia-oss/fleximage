@@ -264,6 +264,7 @@ async function fetchCommandCenter(supabase, range) {
     "generate",
     "preview",
     "paywall",
+    "checkout",
     "subscribed",
   ];
   const funnelSteps = FUNNEL_ORDER.map((step, index) => {

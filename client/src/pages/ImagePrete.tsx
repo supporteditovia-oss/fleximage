@@ -11,6 +11,7 @@ import {
   getPaywallExpiresAt,
   getPaywallMsRemaining,
   isPaywallExpired,
+  PAYWALL_PREVIEW_TTL_MS,
 } from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
@@ -90,6 +91,13 @@ export default function ImagePrete() {
   useEffect(() => {
     if (!expiresAt || expired) return;
 
+    // While the paywall is open, freeze the countdown so the modal
+    // doesn't vanish mid-decision (common on TikTok / slow readers).
+    if (paywallOpen) {
+      setMsRemaining(getPaywallMsRemaining(expiresAt));
+      return;
+    }
+
     const tick = () => {
       const remaining = getPaywallMsRemaining(expiresAt);
       setMsRemaining(remaining);
@@ -105,10 +113,35 @@ export default function ImagePrete() {
     tick();
     const id = window.setInterval(tick, 250);
     return () => window.clearInterval(id);
-  }, [expiresAt, expired]);
+  }, [expiresAt, expired, paywallOpen]);
+
+  // Opening the paywall extends the preview window so closing the modal
+  // doesn't instantly delete the image after a long read.
+  useEffect(() => {
+    if (!paywallOpen || expired || !imageUrl) return;
+    const minLeft = Math.min(PAYWALL_PREVIEW_TTL_MS, 10 * 60 * 1000);
+    const now = Date.now();
+    setExpiresAt((prev) => {
+      if (prev && prev - now >= minLeft) return prev;
+      const next = now + minLeft;
+      try {
+        window.localStorage.setItem("luxeflexia_paywall_expires_at", String(next));
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+    setMsRemaining((prev) => Math.max(prev, minLeft));
+  }, [paywallOpen, expired, imageUrl]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.split("?")[1] || "");
+    const params = new URLSearchParams(
+      typeof window !== "undefined"
+        ? window.location.search
+        : location.includes("?")
+          ? location.split("?")[1] || ""
+          : "",
+    );
     if (params.get("paywall") === "1" && !expired && imageUrl) {
       setPaywallOpen(true);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {

@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authFetch } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
 import type { PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
@@ -84,6 +85,27 @@ export function LuxePaywallModal({
   const handleSubscribe = async () => {
     setIsLoading(true);
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({
+          variant: "destructive",
+          title: t("common.messages.error"),
+          description: t("paywall.checkoutAuthRequired", {
+            defaultValue: "Reconnecte-toi pour finaliser le paiement.",
+          }),
+        });
+        const returnTo = `${window.location.pathname}${window.location.search || ""}`;
+        window.location.href = `/auth?redirect=${encodeURIComponent(returnTo)}`;
+        return;
+      }
+
+      trackFunnelStep("checkout", {
+        source: "luxe_paywall_modal",
+        plan: selectedPlan,
+      });
+
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
         body: JSON.stringify({
@@ -93,7 +115,8 @@ export function LuxePaywallModal({
       });
       const { url } = await res.json();
       if (url) {
-        window.location.href = url;
+        // Full navigation — works in iOS Safari / Android / TikTok in-app (no popup).
+        window.location.assign(url);
         return;
       }
       toast({
@@ -103,6 +126,27 @@ export function LuxePaywallModal({
       });
     } catch (error) {
       console.error("Checkout error:", error);
+      const code = (error as Error & { code?: string })?.code;
+      if (code === "already_subscribed") {
+        try {
+          const { createPortalSession } = await import("@/lib/stripe");
+          const portalUrl = await createPortalSession("/settings");
+          if (portalUrl) {
+            toast({
+              title: t("paywall.alreadySubscribedTitle", {
+                defaultValue: "Abonnement déjà actif",
+              }),
+              description: t("paywall.alreadySubscribedPortal", {
+                defaultValue: "On t’ouvre la gestion Stripe…",
+              }),
+            });
+            window.location.assign(portalUrl);
+            return;
+          }
+        } catch {
+          /* fall through to toast */
+        }
+      }
       toast({
         variant: "destructive",
         title: t("common.messages.error"),
@@ -125,7 +169,7 @@ export function LuxePaywallModal({
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 [-webkit-overflow-scrolling:touch] touch-pan-y md:px-6 md:pb-6 md:pt-5">
+        <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-3 pt-4 [-webkit-overflow-scrolling:touch] touch-pan-y md:px-6 md:pt-5">
           <div
             className="pointer-events-none absolute inset-0"
             aria-hidden
@@ -251,28 +295,31 @@ export function LuxePaywallModal({
                 ))}
               </ul>
             </div>
-
-            <button
-              type="button"
-              onClick={() => void handleSubscribe()}
-              disabled={isLoading}
-              className="lx-btn-gold mt-4 flex min-h-12 w-full items-center justify-center rounded-full px-6 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("common.actions.redirecting")}
-                </span>
-              ) : (
-                t("paywall.checkoutCta")
-              )}
-            </button>
-
-            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-[var(--lx-muted)]">
-              <Lock className="h-3 w-3 text-[var(--lx-gold)]" strokeWidth={2.5} />
-              {t("paywall.securePayment")}
-            </p>
           </div>
+        </div>
+
+        {/* Sticky CTA — always visible on iPhone / TikTok webview without scrolling */}
+        <div className="relative z-20 shrink-0 border-t border-black/6 bg-[var(--lx-surface)] px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
+          <button
+            type="button"
+            onClick={() => void handleSubscribe()}
+            disabled={isLoading}
+            className="lx-btn-gold flex min-h-12 w-full items-center justify-center rounded-full px-6 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t("common.actions.redirecting")}
+              </span>
+            ) : (
+              t("paywall.checkoutCta")
+            )}
+          </button>
+
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-[var(--lx-muted)]">
+            <Lock className="h-3 w-3 text-[var(--lx-gold)]" strokeWidth={2.5} />
+            {t("paywall.securePayment")}
+          </p>
         </div>
       </DialogContent>
     </Dialog>

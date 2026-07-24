@@ -10,6 +10,7 @@ export async function createCheckoutSession(
   plan: CheckoutPlan = "essential",
 ): Promise<string | null> {
   trackFunnelStep("paywall", { source: "create_checkout", plan });
+  trackFunnelStep("checkout", { source: "create_checkout", plan });
   const res = await authFetch("/api/stripe/create-checkout", {
     method: "POST",
     body: JSON.stringify({

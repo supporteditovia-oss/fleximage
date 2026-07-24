@@ -148,7 +148,8 @@ module.exports = async function handler(req, res) {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${CHECKOUT_APP_ORIGIN}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${CHECKOUT_APP_ORIGIN}/generate?checkout=cancel`,
+      // Return to locked preview so cancel doesn't drop the urgency context.
+      cancel_url: `${CHECKOUT_APP_ORIGIN}/image-prete?paywall=1&checkout=cancel`,
       // Overrides the Checkout header business name (Editovia → LuxeFlexIA).
       // Note: receipts / bank statement / some legal footers can still use
       // Stripe Dashboard → Public details until you change them there.

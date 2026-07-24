@@ -47,6 +47,7 @@ const STEP_LABELS: Record<string, string> = {
   generate: "Génération",
   preview: "Preview floutée",
   paywall: "Paywall",
+  checkout: "Clic paiement",
   subscribed: "Paiement réussi",
 };
 

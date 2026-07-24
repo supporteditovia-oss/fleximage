@@ -10,9 +10,20 @@ export async function authFetch(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Checkout / verify need a fresh token (iOS Safari + TikTok handoff).
+  const needsFreshSession =
+    typeof url === "string" &&
+    (url.includes("/api/stripe/create-checkout") ||
+      url.includes("/api/stripe/verify-session") ||
+      url.includes("/api/stripe/create-portal"));
+
+  let session = (await supabase.auth.getSession()).data.session;
+  if (needsFreshSession) {
+    const refreshed = await supabase.auth.refreshSession();
+    if (refreshed.data.session) {
+      session = refreshed.data.session;
+    }
+  }
 
   const headers = new Headers(options.headers);
   const storedLocale = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);

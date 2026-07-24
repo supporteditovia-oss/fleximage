@@ -262,8 +262,8 @@ async function main() {
         "webhook deleted handler must clear credits",
       );
       assert(
-        src.includes("Do NOT fall through"),
-        "failed signatures must not fall through to events.retrieve",
+        !src.includes("events.retrieve"),
+        "insecure events.retrieve fallback must be removed",
       );
       console.log("   processing-failure + signature contracts ok");
     }

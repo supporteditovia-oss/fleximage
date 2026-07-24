@@ -5,6 +5,7 @@ const FUNNEL_STEPS = [
   "generate",
   "preview",
   "paywall",
+  "checkout",
   "subscribed",
 ];
 

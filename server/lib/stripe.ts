@@ -27,7 +27,7 @@ const PLAN_DEFINITIONS: Record<
   }
 > = {
   discovery: {
-    name: "Decouverte",
+    name: "Abonnement LuxeFlexIA Discovery",
     monthlyAmount: 890,
     creditsPerCycle: 250,
     envKeys: ["STRIPE_DISCOVERY_PRICE_ID"],
@@ -38,14 +38,14 @@ const PLAN_DEFINITIONS: Record<
     ],
   },
   essential: {
-    name: "Essentiel",
+    name: "Abonnement LuxeFlexIA Essential",
     monthlyAmount: 1990,
     creditsPerCycle: 1100,
     envKeys: ["STRIPE_ESSENTIAL_PRICE_ID"],
     legacyEnvKeys: ["STRIPE_MONTHLY_PRICE_ID", "STRIPE_VIDEO_PRICE_ID"],
   },
   ultimate: {
-    name: "Ultimate",
+    name: "Abonnement LuxeFlexIA Ultimate",
     monthlyAmount: 3990,
     creditsPerCycle: 2500,
     envKeys: ["STRIPE_ULTIMATE_PRICE_ID"],
@@ -61,7 +61,10 @@ export function getStripe(): Stripe {
   }
   assertStripeKeyAllowedForRuntime(secretKey);
 
-  _stripe = new Stripe(secretKey);
+  _stripe = new Stripe(secretKey, {
+    // Checkout Session branding_settings.display_name (since 2025-09-30.clover)
+    apiVersion: "2026-02-25.clover",
+  });
   return _stripe;
 }
 

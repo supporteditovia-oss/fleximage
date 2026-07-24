@@ -108,7 +108,13 @@ export function PaywallOverlay({
   const handleSubscribe = async () => {
     setIsLoading(true);
     try {
-      const { getFunnelSessionId } = await import("@/lib/funnel-tracker");
+      const { getFunnelSessionId, trackFunnelStep } = await import(
+        "@/lib/funnel-tracker"
+      );
+      trackFunnelStep("checkout", {
+        source: "paywall_overlay",
+        plan: selectedPlan,
+      });
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
         body: JSON.stringify({
@@ -118,7 +124,7 @@ export function PaywallOverlay({
       });
       const { url } = await res.json();
       if (url) {
-        window.location.href = url;
+        window.location.assign(url);
         return;
       }
       toast({
@@ -128,6 +134,27 @@ export function PaywallOverlay({
       });
     } catch (error) {
       console.error("Checkout error:", error);
+      const code = (error as Error & { code?: string })?.code;
+      if (code === "already_subscribed") {
+        try {
+          const { createPortalSession } = await import("@/lib/stripe");
+          const portalUrl = await createPortalSession("/settings");
+          if (portalUrl) {
+            toast({
+              title: t("paywall.alreadySubscribedTitle", {
+                defaultValue: "Abonnement déjà actif",
+              }),
+              description: t("paywall.alreadySubscribedPortal", {
+                defaultValue: "On t’ouvre la gestion Stripe…",
+              }),
+            });
+            window.location.assign(portalUrl);
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+      }
       toast({
         variant: "destructive",
         title: t("common.messages.error"),

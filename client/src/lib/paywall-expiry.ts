@@ -1,5 +1,6 @@
 const STORAGE_KEY = "luxeflexia_paywall_expires_at";
-export const PAYWALL_PREVIEW_TTL_MS = 5 * 60 * 1000;
+/** 15 min — TikTok / mobile users need time to read plans + open Stripe. */
+export const PAYWALL_PREVIEW_TTL_MS = 15 * 60 * 1000;
 
 export function getPaywallExpiresAt(): number | null {
   try {
@@ -14,7 +15,7 @@ export function getPaywallExpiresAt(): number | null {
 
 /**
  * Keep the existing deadline across refresh / return visits.
- * Only starts a fresh 5:00 when none exists (or the previous one already expired).
+ * Only starts a fresh TTL window when none exists (or the previous one already expired).
  */
 export function ensurePaywallExpiry(now = Date.now()): number {
   const existing = getPaywallExpiresAt();
@@ -31,7 +32,7 @@ export function ensurePaywallExpiry(now = Date.now()): number {
   return expiresAt;
 }
 
-/** Force a brand-new 5:00 window (call when a new locked preview is created). */
+/** Force a brand-new TTL window (call when a new locked preview is created). */
 export function resetPaywallExpiry(now = Date.now()): number {
   clearPaywallExpiry();
   return ensurePaywallExpiry(now);

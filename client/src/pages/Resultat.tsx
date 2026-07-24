@@ -186,20 +186,37 @@ export default function Resultat() {
           markCheckoutWelcome();
           setCheckoutWelcome(true);
           setActivating(true);
-          void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
-            trackFunnelStep("subscribed", { source: "resultat_checkout" });
-          });
           let active = false;
+          let verifyAuthFailed = false;
           for (let i = 0; i < 10; i++) {
-            active = await verifyCheckoutSession(sessionId);
-            if (active) break;
+            try {
+              active = await verifyCheckoutSession(sessionId);
+              if (active) break;
+            } catch (err) {
+              const status = (err as { status?: number } | null)?.status;
+              if (status === 401 || status === 403) {
+                verifyAuthFailed = true;
+                break;
+              }
+            }
             await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (active) {
+            void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
+              trackFunnelStep("subscribed", { source: "resultat_checkout" });
+            });
           }
           await queryClient.invalidateQueries({ queryKey: ["profile"] });
           await queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
           window.history.replaceState({}, "", "/resultat");
           if (!cancelled) setActivating(false);
-          if (!active) {
+          if (verifyAuthFailed) {
+            toast({
+              title: "Paiement reçu",
+              description:
+                "Reconnecte-toi pour activer ton abonnement sur cet appareil (surtout après TikTok → Safari).",
+            });
+          } else if (!active) {
             toast({
               title: "Paiement reçu",
               description:
@@ -212,10 +229,14 @@ export default function Resultat() {
 
         if (cancelled) return;
         await fetchResult(preferredLarpId);
-      } catch {
+      } catch (err) {
         if (!cancelled) {
+          const status = (err as { status?: number } | null)?.status;
           toast({
-            title: "Impossible de charger ton résultat",
+            title:
+              status === 401 || status === 403
+                ? "Reconnecte-toi pour voir ton résultat"
+                : "Impossible de charger ton résultat",
             variant: "destructive",
           });
         }
