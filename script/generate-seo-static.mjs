@@ -38,7 +38,66 @@ function writeFile(filePath, contents) {
   fs.writeFileSync(filePath, contents, "utf8");
 }
 
-function nicheHtml({ title, description, canonicalPath, h1, subtitle, relatedLinks }) {
+function nicheJsonLd(niche) {
+  const url = `${ORIGIN}${nichePath(niche.slug)}`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        name: niche.metaTitle,
+        description: niche.metaDescription,
+        url,
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: (niche.faqs || []).map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: { "@type": "Answer", text: faq.answer },
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Accueil",
+            item: `${ORIGIN}/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Générateurs",
+            item: `${ORIGIN}${DIRECTORY_PATH}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: niche.h1,
+            item: url,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function nicheHtml({
+  title,
+  description,
+  canonicalPath,
+  h1,
+  subtitle,
+  intro,
+  bullets,
+  promptIdeas,
+  faqs,
+  searchPhrases,
+  relatedLinks,
+  jsonLd,
+}) {
   const canonical = `${ORIGIN}${canonicalPath}`;
   const related = relatedLinks
     .map(
@@ -46,6 +105,22 @@ function nicheHtml({ title, description, canonicalPath, h1, subtitle, relatedLin
         `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`,
     )
     .join("\n          ");
+  const bulletList = (bullets || [])
+    .map((b) => `<li>${escapeHtml(b)}</li>`)
+    .join("\n          ");
+  const prompts = (promptIdeas || [])
+    .map((p) => `<li><code>${escapeHtml(p)}</code></li>`)
+    .join("\n          ");
+  const faqHtml = (faqs || [])
+    .map(
+      (faq) =>
+        `<h3>${escapeHtml(faq.question)}</h3>\n      <p>${escapeHtml(faq.answer)}</p>`,
+    )
+    .join("\n      ");
+  const phrases =
+    searchPhrases && searchPhrases.length
+      ? `<p>Recherches fréquentes : ${escapeHtml(searchPhrases.join(" · "))}.</p>`
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -61,20 +136,25 @@ function nicheHtml({ title, description, canonicalPath, h1, subtitle, relatedLin
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:site_name" content="LuxeFlexIA" />
+    <meta property="og:locale" content="fr_FR" />
     <meta property="og:image" content="${ORIGIN}/assets/og-image.png?v=20260720" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="LuxeFlexIA — créateur de photos lifestyle par IA" />
+    <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
     <style>
       body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: #f2f0ec; color: #12100e; line-height: 1.55; }
       main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
       a { color: #8b6914; }
       h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; margin: 0 0 0.75rem; }
+      h2 { margin-top: 2rem; font-size: 1.25rem; }
+      h3 { margin-top: 1.25rem; font-size: 1.05rem; }
       .brand { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: #8b6914; font-weight: 700; }
       .sub { color: #5c564e; margin: 0 0 1.5rem; }
       .cta { display: inline-block; margin: 0.35rem 0.5rem 0.35rem 0; padding: 0.85rem 1.2rem; border-radius: 999px; background: linear-gradient(135deg, #e8c547, #c9a227 45%, #8b6914); color: #1a1408; text-decoration: none; font-weight: 700; font-family: system-ui, sans-serif; font-size: 0.9rem; }
       .ghost { background: #fff; border: 1px solid rgba(0,0,0,0.1); color: #12100e; }
       ul { padding-left: 1.1rem; }
+      code { font-family: system-ui, sans-serif; font-size: 0.9rem; }
     </style>
   </head>
   <body>
@@ -86,7 +166,18 @@ function nicheHtml({ title, description, canonicalPath, h1, subtitle, relatedLin
         <a class="cta" href="/register">Créer ma photo maintenant</a>
         <a class="cta ghost" href="/generate">Ouvrir le générateur</a>
       </p>
-      <p><a href="${DIRECTORY_PATH}">← Tous nos générateurs (Pranks, Luxe, Voyage)</a></p>
+      <p>${escapeHtml(intro || "")}</p>
+      ${bulletList ? `<h2>Pourquoi LuxeFlexIA</h2>\n      <ul>\n          ${bulletList}\n      </ul>` : ""}
+      <h2>Comment ça marche</h2>
+      <ol>
+        <li>Uploadez une photo claire de vous.</li>
+        <li>Décrivez la scène ou collez un prompt.</li>
+        <li>Générez une image IA hyper-réaliste en quelques secondes.</li>
+      </ol>
+      ${prompts ? `<h2>Idées de prompts</h2>\n      <ul>\n          ${prompts}\n      </ul>` : ""}
+      ${faqHtml ? `<h2>Questions fréquentes</h2>\n      ${faqHtml}` : ""}
+      ${phrases}
+      <p><a href="${DIRECTORY_PATH}">← Tous nos générateurs (Dimash, Watch Lux, pranks, luxe)</a></p>
       ${
         related
           ? `<h2>Idées proches</h2>
@@ -123,9 +214,9 @@ function directoryHtml() {
     .join("\n    ");
 
   const title =
-    "Tous nos générateurs IA (Pranks, Luxe, Voyage) — LuxeFlexIA";
+    "Tous nos générateurs IA (Dimash Lux, Watch Lux, Pranks) — LuxeFlexIA";
   const description =
-    "Annuaire LuxeFlexIA : générateurs de photos IA pour voitures de luxe, voyages, restaurants, pranks et flex lifestyle.";
+    "Annuaire LuxeFlexIA : génération image IA, Dimash Lux, Watch Lux, restaurant, pranks TikTok, voiture de luxe et flex lifestyle.";
   const canonical = `${ORIGIN}${DIRECTORY_PATH}`;
 
   return `<!DOCTYPE html>
@@ -151,7 +242,7 @@ function directoryHtml() {
   <body>
     <main>
       <p><a href="/">← Accueil LuxeFlexIA</a></p>
-      <h1>Tous nos générateurs (Pranks, Luxe, Voyage)</h1>
+      <h1>Tous nos générateurs IA (Dimash, Watch Lux, Pranks, Luxe)</h1>
       <p>${escapeHtml(description)}</p>
       ${sections}
     </main>
@@ -163,19 +254,19 @@ function directoryHtml() {
 function buildSitemap() {
   const lastmod = new Date().toISOString().slice(0, 10);
   const staticPages = [
-    { path: "/", priority: "1.0", changefreq: "weekly" },
-    { path: "/generate", priority: "0.8", changefreq: "weekly" },
+    { path: "/", priority: "1.0", changefreq: "daily" },
+    { path: "/generate", priority: "0.9", changefreq: "weekly" },
     { path: "/pricing", priority: "0.8", changefreq: "weekly" },
     { path: "/cgu", priority: "0.3", changefreq: "yearly" },
     { path: "/confidentialite", priority: "0.3", changefreq: "yearly" },
-    { path: DIRECTORY_PATH, priority: "0.7", changefreq: "weekly" },
+    { path: DIRECTORY_PATH, priority: "0.9", changefreq: "daily" },
   ];
 
   const urls = [
     ...staticPages,
     ...niches.map((niche) => ({
       path: nichePath(niche.slug),
-      priority: "0.7",
+      priority: "0.8",
       changefreq: "weekly",
     })),
   ]
@@ -205,7 +296,7 @@ for (const niche of niches) {
       (item) =>
         item.categoryId === niche.categoryId && item.slug !== niche.slug,
     )
-    .slice(0, 4)
+    .slice(0, 6)
     .map((item) => ({
       href: nichePath(item.slug),
       label: item.h1,
@@ -219,7 +310,13 @@ for (const niche of niches) {
       canonicalPath: nichePath(niche.slug),
       h1: niche.h1,
       subtitle: niche.heroSubtitle,
+      intro: niche.intro,
+      bullets: niche.bullets,
+      promptIdeas: niche.promptIdeas,
+      faqs: niche.faqs,
+      searchPhrases: niche.searchPhrases,
       relatedLinks: related,
+      jsonLd: nicheJsonLd(niche),
     }),
   );
 }

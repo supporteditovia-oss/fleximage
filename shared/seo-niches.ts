@@ -8,12 +8,18 @@ export type SeoNicheCategoryId =
   | "vehicules"
   | "voyages"
   | "pranks"
-  | "lifestyle";
+  | "lifestyle"
+  | "generation";
 
 export interface SeoNicheCategory {
   id: SeoNicheCategoryId;
   label: string;
   description: string;
+}
+
+export interface SeoNicheFaq {
+  question: string;
+  answer: string;
 }
 
 export interface SeoNiche {
@@ -25,6 +31,16 @@ export interface SeoNiche {
   metaDescription: string;
   /** Short hero supporting line */
   heroSubtitle: string;
+  /** Longer intro paragraph for topical depth */
+  intro: string;
+  /** Benefit / use-case bullets */
+  bullets: readonly string[];
+  /** Example prompts users can try */
+  promptIdeas: readonly string[];
+  /** FAQ for on-page + JSON-LD */
+  faqs: readonly SeoNicheFaq[];
+  /** Extra search phrases mentioned in body (not a meta keywords dump) */
+  searchPhrases: readonly string[];
 }
 
 export const SEO_NICHE_CATEGORIES =

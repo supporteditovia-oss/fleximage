@@ -1,6 +1,11 @@
 {
   "categories": [
     {
+      "id": "generation",
+      "label": "Génération image IA",
+      "description": "Les recherches TikTok et Google autour de la génération d’images IA, du Dimash Lux aux flex lifestyle."
+    },
+    {
       "id": "vehicules",
       "label": "Véhicules de luxe",
       "description": "Voitures de sport, jets privés et yachts pour flexer en un clic."
@@ -18,17 +23,405 @@
     {
       "id": "lifestyle",
       "label": "Lifestyle & flex",
-      "description": "Shopping luxe, montres et glow-up musculation."
+      "description": "Shopping luxe, montres, Rolex, glow-up et flex argent."
     }
   ],
   "niches": [
+    {
+      "slug": "generation-image-ia",
+      "categoryId": "generation",
+      "h1": "Génération d’image IA réaliste avec LuxeFlexIA",
+      "metaTitle": "Génération Image IA Réaliste — LuxeFlexIA",
+      "metaDescription": "Générez une image IA ultra réaliste à partir de votre photo avec LuxeFlexIA. Outil de génération d’images IA pour flex, lifestyle, prank et réseaux sociaux.",
+      "heroSubtitle": "Uploadez une photo, décrivez la scène : LuxeFlexIA génère une image IA crédible en quelques secondes.",
+      "intro": "Vous cherchez une génération d’image IA qui ressemble vraiment à vous ? LuxeFlexIA transforme votre selfie en photo lifestyle premium : voiture de luxe, restaurant, montre, voyage, soirée VIP. Idéal si vous tapez « génération image IA », « générer photo IA » ou « photo IA réaliste » sur Google ou TikTok.",
+      "bullets": [
+        "Votre visage reste reconnaissable dans la scène générée",
+        "Formats adaptés aux stories et TikTok (portrait 9:16)",
+        "Scènes luxe, voyage, prank et lifestyle en un seul outil",
+        "Résultat prêt à partager sans logiciel compliqué"
+      ],
+      "promptIdeas": [
+        "Moi dans un restaurant gastronomique, lumière chaude, tenue élégante, ultra réaliste",
+        "Moi au volant d’une voiture de sport à Monaco, soirée, photo lifestyle",
+        "Moi avec une montre de luxe au poignet, cadrage poignet + visage, détail premium"
+      ],
+      "faqs": [
+        {
+          "question": "Comment faire une génération d’image IA avec ma photo ?",
+          "answer": "Créez un compte LuxeFlexIA, uploadez une photo claire de vous, décrivez la scène souhaitée, puis lancez la génération. L’IA produit une image réaliste en quelques secondes."
+        },
+        {
+          "question": "LuxeFlexIA convient-il aux recherches « génération image IA » TikTok ?",
+          "answer": "Oui. Beaucoup d’utilisateurs cherchent exactement ce type de génération après avoir vu des flex, Dimash Lux ou pranks sur TikTok. LuxeFlexIA est conçu pour ces scènes."
+        }
+      ],
+      "searchPhrases": [
+        "génération image IA",
+        "générer photo IA",
+        "photo IA réaliste",
+        "création image intelligence artificielle"
+      ]
+    },
+    {
+      "slug": "generation-dimash-lux",
+      "categoryId": "generation",
+      "h1": "Génération Dimash Lux : photos flex IA comme sur TikTok",
+      "metaTitle": "Génération Dimash Lux IA — LuxeFlexIA",
+      "metaDescription": "Faites une génération Dimash Lux avec LuxeFlexIA : photos flex luxe IA ultra réalistes, style TikTok. Uploadez votre photo et créez votre scène Dimash Lux.",
+      "heroSubtitle": "Le style Dimash Lux en un clic : flex premium, rendu réaliste, prêt pour TikTok.",
+      "intro": "« Génération Dimash Lux » est l’une des recherches les plus tapées après les vidéos TikTok de flex IA. LuxeFlexIA vous permet de créer ce type de génération : vous dans une scène luxe (voiture, montre, restaurant, jet) avec un rendu crédible. Plus besoin de chercher un outil au hasard — démarrez ici.",
+      "bullets": [
+        "Scènes Dimash Lux : auto, montre, jet, restaurant, palace",
+        "Visage préservé pour un flex crédible",
+        "Parfait pour stories TikTok et Instagram",
+        "Workflow simple : photo + prompt + génération"
+      ],
+      "promptIdeas": [
+        "Style Dimash Lux : moi devant une supercar noire, nuit, néons, ultra réaliste",
+        "Dimash Lux : moi à une table VIP restaurant, champagne, lumière dorée",
+        "Dimash Lux : moi dans un jet privé, cabine cuir, vue hublot"
+      ],
+      "faqs": [
+        {
+          "question": "C’est quoi une génération Dimash Lux ?",
+          "answer": "C’est une photo générée par IA dans un style flex luxe popularisé sur TikTok : supercars, montres, voyages, restaurants VIP. LuxeFlexIA produit ce type de scènes à partir de votre photo."
+        },
+        {
+          "question": "Puis-je faire Dimash Lux sans savoir écrire un prompt ?",
+          "answer": "Oui. Choisissez une idée (voiture, montre, restaurant…) ou collez un des exemples de cette page. LuxeFlexIA s’occupe du rendu."
+        }
+      ],
+      "searchPhrases": [
+        "génération dimash lux",
+        "dimash lux",
+        "dimash lux IA",
+        "génération dimash"
+      ]
+    },
+    {
+      "slug": "generation-dimash-prank",
+      "categoryId": "generation",
+      "h1": "Génération Dimash Prank : bluffez vos amis avec l’IA",
+      "metaTitle": "Génération Dimash Prank IA — LuxeFlexIA",
+      "metaDescription": "Créez une génération Dimash Prank hyper réaliste avec LuxeFlexIA. Prank flex IA style TikTok : fausse richesse, fausse soirée, fausse rencontre — pour rire entre proches.",
+      "heroSubtitle": "Le Dimash Prank ultime : une photo IA tellement réelle que vos potes y croient.",
+      "intro": "Vous avez vu un Dimash Prank sur TikTok et vous voulez le même effet ? LuxeFlexIA génère des photos prank bluffantes : fausse soirée VIP, fausse voiture de luxe, faux voyage. Utilisez-les pour rire entre amis — pas pour arnaquer.",
+      "bullets": [
+        "Pranks Dimash prêts pour TikTok et Snap",
+        "Rendu réaliste pour maximiser la réaction",
+        "Scènes flex, couple, VIP, voyage",
+        "À utiliser uniquement pour le divertissement"
+      ],
+      "promptIdeas": [
+        "Prank Dimash : moi dans un club VIP avec table réservée, flash, ambiance cash",
+        "Prank Dimash : moi sortant d’un yacht à Monaco, soleil, selfie",
+        "Prank Dimash : moi avec shopping sacs de luxe, rue premium"
+      ],
+      "faqs": [
+        {
+          "question": "Comment faire une génération Dimash Prank ?",
+          "answer": "Uploadez votre photo sur LuxeFlexIA, choisissez une scène flex (VIP, voiture, yacht…) et générez. Envoyez le résultat à vos proches pour le prank."
+        },
+        {
+          "question": "Le Dimash Prank est-il légal / ok à poster ?",
+          "answer": "Oui pour du divertissement et des pranks entre adultes consentants. Évitez d’usurper une identité réelle ou de tromper pour de l’argent."
+        }
+      ],
+      "searchPhrases": [
+        "génération dimash prank",
+        "dimash prank",
+        "prank dimash IA",
+        "prank flex IA"
+      ]
+    },
+    {
+      "slug": "generation-watch-lux",
+      "categoryId": "generation",
+      "h1": "Génération Watch Lux : montre de luxe au poignet par IA",
+      "metaTitle": "Génération Watch Lux / Montre Luxe IA — LuxeFlexIA",
+      "metaDescription": "Génération Watch Lux avec LuxeFlexIA : ajoutez une montre de luxe réaliste à votre poignet. Idéal pour « génération watch lux », Rolex flex et contenus TikTok.",
+      "heroSubtitle": "Watch Lux en IA : cadran brillant, détail poignet, flex horloger crédible.",
+      "intro": "Les recherches « génération watch lux » et « génération montre luxe » explosent sur Google et TikTok. LuxeFlexIA place une montre prestige sur votre poignet tout en gardant votre identité. Parfait pour un flex discret ou un prank entre potes.",
+      "bullets": [
+        "Cible Watch Lux / montre luxe / Rolex flex",
+        "Détail poignet ultra net",
+        "Compatible stories verticales",
+        "Couplez avec shopping luxe ou restaurant"
+      ],
+      "promptIdeas": [
+        "Watch Lux : gros plan poignet avec montre de luxe, moi visible en arrière-plan, lumière naturelle",
+        "Moi bras croisés, montre prestige au poignet, costume sombre, ultra réaliste",
+        "Selfie casual avec montre luxe visible, café terrasse premium"
+      ],
+      "faqs": [
+        {
+          "question": "Quelle différence entre Watch Lux et montre de luxe ?",
+          "answer": "C’est la même intention : une photo IA avec une montre prestige. « Watch Lux » est le wording TikTok anglais ; LuxeFlexIA couvre les deux."
+        },
+        {
+          "question": "Puis-je faire une génération Rolex / watch premium ?",
+          "answer": "Oui, décrivez le style de montre souhaité dans le prompt. LuxeFlexIA génère un rendu lifestyle réaliste."
+        }
+      ],
+      "searchPhrases": [
+        "génération watch lux",
+        "watch lux",
+        "génération montre luxe",
+        "photo montre Rolex IA"
+      ]
+    },
+    {
+      "slug": "generation-fille-ia",
+      "categoryId": "generation",
+      "h1": "Génération image IA fille : portrait & lifestyle mode",
+      "metaTitle": "Génération Image IA Fille / Portrait — LuxeFlexIA",
+      "metaDescription": "Génération image IA fille réaliste avec LuxeFlexIA : portraits lifestyle, mode, sortie restaurant ou voyage. Uploadez une photo et créez une scène premium.",
+      "heroSubtitle": "Portrait et lifestyle féminin en IA : mode, sortie, voyage — rendu soigné et réaliste.",
+      "intro": "Beaucoup cherchent « génération image IA fille » pour des portraits lifestyle, looks mode ou scènes de sortie. LuxeFlexIA génère des photos réalistes à partir d’une vraie photo : tenue élégante, restaurant, voyage, shopping. Contenu lifestyle uniquement — pas de contenu pornographique.",
+      "bullets": [
+        "Portraits lifestyle et mode réalistes",
+        "Scènes restaurant, voyage, shopping, soirée",
+        "Préservation de l’identité sur la photo source",
+        "Usage responsable, contenus SFW uniquement"
+      ],
+      "promptIdeas": [
+        "Portrait lifestyle fille, robe élégante, restaurant chic, lumière douce, ultra réaliste",
+        "Look mode street luxe, shopping sacs, journée ensoleillée",
+        "Selfie voyage Dubaï, tenue premium, skyline en fond"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je générer une image IA d’une fille à partir de ma photo ?",
+          "answer": "Oui si vous uploadez une photo de vous (ou une photo pour laquelle vous avez le droit). LuxeFlexIA crée un portrait / scène lifestyle réaliste."
+        },
+        {
+          "question": "Est-ce adapté aux recherches TikTok « génération fille IA » ?",
+          "answer": "Oui pour du lifestyle, mode et flex. Les contenus explicites sont refusés."
+        }
+      ],
+      "searchPhrases": [
+        "génération image IA fille",
+        "génération fille IA",
+        "photo IA fille lifestyle",
+        "portrait IA mode"
+      ]
+    },
+    {
+      "slug": "generation-restaurant",
+      "categoryId": "generation",
+      "h1": "Génération restaurant : photo IA dans un resto gastronomique",
+      "metaTitle": "Génération Restaurant Photo IA — LuxeFlexIA",
+      "metaDescription": "Génération restaurant avec LuxeFlexIA : créez une photo IA de vous dans un restaurant étoilé. Idéal pour flex lifestyle, storytelling et recherches « génération restaurant ».",
+      "heroSubtitle": "Table dressée, lumière chaude, ambiance gastronomique : votre soirée resto en IA.",
+      "intro": "Envie d’une génération restaurant bluffante ? LuxeFlexIA vous place dans un restaurant gastronomique ou une table VIP. Parfait si vous cherchez « génération restaurant », « photo resto IA » ou un flex dinner lifestyle.",
+      "bullets": [
+        "Ambiance restaurant étoilé / VIP",
+        "Idéal pour stories food & lifestyle",
+        "Couplez avec montre luxe ou shopping",
+        "Rendu photo crédible pour pranks entre amis"
+      ],
+      "promptIdeas": [
+        "Moi à une table de restaurant gastronomique, assiette signature, lumière chaude",
+        "Dîner VIP, champagne, tenue élégante, photo lifestyle",
+        "Brunch palace, terrasse, lumière naturelle, ultra réaliste"
+      ],
+      "faqs": [
+        {
+          "question": "Comment faire une génération restaurant IA ?",
+          "answer": "Uploadez votre photo, indiquez restaurant gastronomique / table VIP dans le prompt, générez avec LuxeFlexIA."
+        },
+        {
+          "question": "Ça marche pour un prank « faux resto étoilé » ?",
+          "answer": "Oui, beaucoup l’utilisent pour surprendre leurs proches. Restez dans le cadre du divertissement."
+        }
+      ],
+      "searchPhrases": [
+        "génération restaurant",
+        "photo restaurant IA",
+        "génération resto luxe",
+        "fausse photo restaurant"
+      ]
+    },
+    {
+      "slug": "photo-ia-realiste",
+      "categoryId": "generation",
+      "h1": "Photo IA réaliste à partir de votre selfie",
+      "metaTitle": "Photo IA Réaliste (Selfie → Scène) — LuxeFlexIA",
+      "metaDescription": "Créez une photo IA réaliste avec LuxeFlexIA. Transformez votre selfie en scène luxe, voyage ou prank. Générateur d’images IA pour un rendu crédible.",
+      "heroSubtitle": "Le critère n°1 : que ça ait l’air vrai. LuxeFlexIA vise le réalisme lifestyle.",
+      "intro": "Si votre critère est « photo IA réaliste », vous êtes au bon endroit. LuxeFlexIA est pensé pour des scènes crédibles — pas des illustrations cartoon. Uploadez un selfie net et décrivez la scène.",
+      "bullets": [
+        "Priorité au réalisme photo",
+        "Scènes luxe, voyage, social, lifestyle",
+        "Workflow mobile-friendly",
+        "Résultats adaptés TikTok / Instagram"
+      ],
+      "promptIdeas": [
+        "Photo ultra réaliste de moi dans une suite palace, lumière naturelle",
+        "Selfie réaliste en jet privé, cabine premium",
+        "Portrait réaliste soirée VIP, bokeh lumières"
+      ],
+      "faqs": [
+        {
+          "question": "Pourquoi ma photo IA n’est pas assez réaliste ?",
+          "answer": "Utilisez une photo source claire, de face, bonne lumière. Évitez les selfies flous ou trop filtrés. Décrivez la scène précisément."
+        },
+        {
+          "question": "LuxeFlexIA fait-il du dessin ou de la vraie photo ?",
+          "answer": "L’objectif est un rendu photo lifestyle réaliste, pas un style cartoon."
+        }
+      ],
+      "searchPhrases": [
+        "photo IA réaliste",
+        "image IA réaliste",
+        "générateur photo réaliste",
+        "selfie vers photo IA"
+      ]
+    },
+    {
+      "slug": "generer-photo-ia",
+      "categoryId": "generation",
+      "h1": "Générer une photo IA en quelques secondes",
+      "metaTitle": "Générer une Photo IA — LuxeFlexIA",
+      "metaDescription": "Générer une photo IA facilement avec LuxeFlexIA : uploadez, décrivez, générez. Outil simple pour flex, prank et lifestyle sur TikTok.",
+      "heroSubtitle": "Pas besoin d’être expert : 3 étapes pour générer votre photo IA.",
+      "intro": "« Générer photo IA » est une intention claire : vous voulez un résultat maintenant. LuxeFlexIA réduit le friction — compte, photo, prompt, génération. Ensuite partagez sur TikTok, Snap ou Instagram.",
+      "bullets": [
+        "Parcours simple mobile",
+        "Idées de prompts prêts à coller",
+        "Scènes populaires TikTok intégrées",
+        "Annuaire de générateurs thématiques"
+      ],
+      "promptIdeas": [
+        "Génère une photo de moi en voiture de sport, Monaco, nuit",
+        "Génère une photo de moi shopping luxe, sacs premium",
+        "Génère une photo de moi en villa avec piscine, sunset"
+      ],
+      "faqs": [
+        {
+          "question": "Combien de temps pour générer une photo IA ?",
+          "answer": "En général quelques secondes après l’envoi de la photo et du prompt."
+        },
+        {
+          "question": "Faut-il un PC ?",
+          "answer": "Non. LuxeFlexIA fonctionne sur téléphone, là où partent la plupart des recherches TikTok."
+        }
+      ],
+      "searchPhrases": [
+        "générer photo IA",
+        "générer une image IA",
+        "créer photo IA",
+        "outil génération photo"
+      ]
+    },
+    {
+      "slug": "generation-luxe-flex",
+      "categoryId": "generation",
+      "h1": "Génération luxe flex : simulez une vie premium en IA",
+      "metaTitle": "Génération Luxe Flex IA — LuxeFlexIA",
+      "metaDescription": "Génération luxe flex avec LuxeFlexIA : supercars, montres, jets, restaurants, shopping. Créez votre flex IA comme sur TikTok.",
+      "heroSubtitle": "Tout le flex luxe en un générateur : auto, watch, jet, resto, palace.",
+      "intro": "Le « luxe flex » est le cœur de LuxeFlexIA. Que vous cherchiez génération luxe, flex IA ou lifestyle premium, vous pouvez enchaîner les scènes et publier des contenus qui matchent les tendances TikTok.",
+      "bullets": [
+        "Catalogue de scènes flex ready",
+        "Cohérence visage d’une scène à l’autre",
+        "Parfait pour chaînes TikTok flex",
+        "Liens vers Dimash Lux, Watch Lux, restaurant…"
+      ],
+      "promptIdeas": [
+        "Flex luxe complet : moi + supercar + montre + sunset Monaco",
+        "Lifestyle premium : shopping + restaurant le même soir",
+        "Flex voyage : jet privé puis villa Dubaï"
+      ],
+      "faqs": [
+        {
+          "question": "Qu’est-ce qu’une génération luxe flex ?",
+          "answer": "Une image IA qui vous montre dans un décor premium (richesse, voyage, mode) pour du contenu social ou un prank."
+        },
+        {
+          "question": "Par où commencer ?",
+          "answer": "Essayez Dimash Lux, Watch Lux ou Voiture de sport — ce sont les scènes les plus demandées."
+        }
+      ],
+      "searchPhrases": [
+        "génération luxe flex",
+        "flex IA",
+        "génération luxe",
+        "photo flex TikTok"
+      ]
+    },
+    {
+      "slug": "prank-ia-tiktok",
+      "categoryId": "generation",
+      "h1": "Prank IA TikTok : photos bluffantes pour vos potes",
+      "metaTitle": "Prank IA TikTok — Photos Bluffantes | LuxeFlexIA",
+      "metaDescription": "Créez un prank IA TikTok avec LuxeFlexIA : fausse richesse, fausse copine, faux voyage. Générations prank réalistes prêtes à poster.",
+      "heroSubtitle": "Le prank TikTok qui marche : une photo IA trop vraie pour être ignorée.",
+      "intro": "Les pranks IA dominent TikTok. LuxeFlexIA vous donne les scènes qui marchent : Dimash Prank, fausse copine, soirée VIP, passage TV. Générez, envoyez, filmez la réaction.",
+      "bullets": [
+        "Scènes prank éprouvées TikTok",
+        "Rendu réaliste = meilleure réaction",
+        "Mobile-first",
+        "Usage fun entre proches uniquement"
+      ],
+      "promptIdeas": [
+        "Prank TikTok : moi en red carpet, paparazzi, flash",
+        "Prank : moi avec fausse table VIP club",
+        "Prank : moi en vacances Dubaï villa piscine"
+      ],
+      "faqs": [
+        {
+          "question": "Quel prank IA marche le mieux sur TikTok ?",
+          "answer": "Dimash Lux / Dimash Prank, fausse richesse (voiture, montre) et faux voyage sont parmi les plus viraux."
+        },
+        {
+          "question": "Puis-je poster le prank publiquement ?",
+          "answer": "Oui si c’est présenté comme du divertissement. Respectez la vie privée des personnes filmées."
+        }
+      ],
+      "searchPhrases": [
+        "prank IA TikTok",
+        "génération prank IA",
+        "photo prank IA",
+        "prank flex TikTok"
+      ]
+    },
     {
       "slug": "voiture-luxe",
       "categoryId": "vehicules",
       "h1": "Générateur de photos voiture de sport avec LuxeFlexIA",
       "metaTitle": "Générateur Photos Voiture de Sport IA — LuxeFlexIA",
       "metaDescription": "Créez une fausse photo de vous au volant d'une voiture de sport hyper-réaliste avec LuxeFlexIA. Uploadez une photo et générez votre flex auto en quelques secondes.",
-      "heroSubtitle": "Mettez-vous au volant d'une supercar en IA : réaliste, premium, prêt à partager."
+      "heroSubtitle": "Mettez-vous au volant d'une supercar en IA : réaliste, premium, prêt à partager.",
+      "intro": "La génération voiture de luxe / supercar est un classique du flex TikTok. LuxeFlexIA vous place au volant ou à côté d’une voiture de sport ultra réaliste — parfait pour Dimash Lux auto ou un prank potes.",
+      "bullets": [
+        "Supercar, sport car, night drive",
+        "Compatible génération Dimash Lux",
+        "Rendu photo pour stories verticales",
+        "Idéal combo avec montre au poignet"
+      ],
+      "promptIdeas": [
+        "Moi au volant d’une voiture de sport noire, Monaco, nuit, néons",
+        "Moi appuyé sur une supercar rouge, sunset, tenue premium",
+        "Selfie intérieur cuir, volant sport, lumière ville"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je choisir le modèle de voiture ?",
+          "answer": "Décrivez le style (noir mat, rouge, cabriolet…). LuxeFlexIA génère une scène cohérente lifestyle."
+        },
+        {
+          "question": "Ça marche pour un prank « j’ai une nouvelle caisse » ?",
+          "answer": "Oui, c’est un usage très fréquent. Prévenez ensuite que c’était un prank."
+        }
+      ],
+      "searchPhrases": [
+        "génération voiture luxe",
+        "photo supercar IA",
+        "fausse photo voiture sport",
+        "génération auto flex"
+      ]
     },
     {
       "slug": "jet-prive",
@@ -36,7 +429,35 @@
       "h1": "Fausse photo en jet privé générée par IA",
       "metaTitle": "Fausse Photo en Jet Privé par IA — LuxeFlexIA",
       "metaDescription": "Générez une photo de vous dans un jet privé ultra réaliste avec LuxeFlexIA. L'outil IA parfait pour un flex voyage ou un prank entre amis.",
-      "heroSubtitle": "Installez-vous en cabine privée : lumière premium, ambiance VIP, rendu bluffant."
+      "heroSubtitle": "Installez-vous en cabine privée : lumière premium, ambiance VIP, rendu bluffant.",
+      "intro": "La génération jet privé est un hit des recherches flex. Avec LuxeFlexIA, créez une photo cabine VIP crédible pour TikTok, Snap ou un Dimash Lux voyage.",
+      "bullets": [
+        "Cabine cuir, hublot, champagne",
+        "Parfait pour prank voyage",
+        "Combo avec Dubaï / yacht",
+        "Rendu réaliste mobile"
+      ],
+      "promptIdeas": [
+        "Moi dans un jet privé, cabine beige, hublot, lumière douce",
+        "Selfie jet privé avec champagne, tenue élégante",
+        "Assis face caméra dans un private jet, ambiance nuit"
+      ],
+      "faqs": [
+        {
+          "question": "Comment faire une fausse photo jet privé ?",
+          "answer": "Uploadez votre photo sur LuxeFlexIA et demandez une scène jet privé / private jet VIP."
+        },
+        {
+          "question": "C’est bon pour Dimash Lux voyage ?",
+          "answer": "Oui, jet privé + villa ou Dubaï est un combo très demandé."
+        }
+      ],
+      "searchPhrases": [
+        "génération jet privé",
+        "fausse photo jet privé",
+        "private jet IA",
+        "flex avion privé"
+      ]
     },
     {
       "slug": "yacht-monaco",
@@ -44,7 +465,35 @@
       "h1": "Photo sur un yacht de luxe à Monaco par IA",
       "metaTitle": "Photo Yacht de Luxe Monaco IA — LuxeFlexIA",
       "metaDescription": "Créez une fausse photo de vous sur un yacht de luxe à Monaco avec LuxeFlexIA. Générateur IA pour scènes lifestyle, flex et pranks crédibles.",
-      "heroSubtitle": "Pont ensoleillé, horizon Méditerranée : votre scène yacht prête en un instant."
+      "heroSubtitle": "Pont ensoleillé, horizon Méditerranée : votre scène yacht prête en un instant.",
+      "intro": "Monaco + yacht = la scène flex ultime. LuxeFlexIA génère votre photo sur un yacht de luxe pour du contenu TikTok ou un prank Dimash.",
+      "bullets": [
+        "Ambiance Monaco / Méditerranée",
+        "Pont yacht, soleil, mer",
+        "Lifestyle premium crédible",
+        "Compatible prank et flex"
+      ],
+      "promptIdeas": [
+        "Moi sur le pont d’un yacht à Monaco, soleil, horizon mer",
+        "Selfie yacht luxe, champagne, journée ensoleillée",
+        "Photo lifestyle yacht blanc, Monaco, tenue été premium"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je faire yacht sans être à Monaco ?",
+          "answer": "Oui — c’est justement l’intérêt de la génération IA. Décrivez Monaco ou une marina de luxe."
+        },
+        {
+          "question": "Idée de combo viral ?",
+          "answer": "Yacht Monaco puis montre Watch Lux en gros plan pour une série TikTok."
+        }
+      ],
+      "searchPhrases": [
+        "génération yacht Monaco",
+        "photo yacht luxe IA",
+        "flex yacht",
+        "fausse photo Monaco"
+      ]
     },
     {
       "slug": "vacances-dubai",
@@ -52,7 +501,35 @@
       "h1": "Faux voyage à Dubaï généré par intelligence artificielle",
       "metaTitle": "Faux Voyage à Dubaï par IA — LuxeFlexIA",
       "metaDescription": "Simulez des vacances à Dubaï avec des photos IA hyper-réalistes grâce à LuxeFlexIA. Créez votre alibi voyage ou un prank bluffant en quelques clics.",
-      "heroSubtitle": "Skyline, désert ou pool villa : inventez votre escapade Dubaï en IA."
+      "heroSubtitle": "Skyline, désert ou pool villa : inventez votre escapade Dubaï en IA.",
+      "intro": "« Génération Dubaï » et faux voyage IA sont ultra recherchés. LuxeFlexIA crée des photos vacances Dubaï réalistes pour flex ou prank.",
+      "bullets": [
+        "Skyline, désert, villa piscine",
+        "Parfait prank « je suis à Dubaï »",
+        "Combo jet privé + villa",
+        "Stories verticales ready"
+      ],
+      "promptIdeas": [
+        "Moi devant la skyline de Dubaï au sunset, tenue premium",
+        "Villa Dubaï piscine, selfie, journée ensoleillée",
+        "Désert Dubaï, 4x4 luxe, tenue safari chic"
+      ],
+      "faqs": [
+        {
+          "question": "Comment simuler un voyage à Dubaï en IA ?",
+          "answer": "Uploadez votre photo et demandez skyline Dubaï, villa ou désert. LuxeFlexIA génère la scène."
+        },
+        {
+          "question": "Ça marche pour une série TikTok voyage ?",
+          "answer": "Oui : enchaînez jet privé, Dubaï, restaurant, yacht."
+        }
+      ],
+      "searchPhrases": [
+        "génération Dubaï",
+        "faux voyage Dubaï IA",
+        "photo Dubaï IA",
+        "prank vacances Dubaï"
+      ]
     },
     {
       "slug": "restaurant-etoile",
@@ -60,7 +537,35 @@
       "h1": "Photo dans un restaurant gastronomique générée par IA",
       "metaTitle": "Photo Restaurant Gastronomique IA — LuxeFlexIA",
       "metaDescription": "Générez une fausse photo de vous dans un restaurant étoilé avec LuxeFlexIA. Idéal pour flex lifestyle, storytelling social ou prank entre proches.",
-      "heroSubtitle": "Table dressée, assiettes signature, ambiance gastronomique ultra crédible."
+      "heroSubtitle": "Table dressée, assiettes signature, ambiance gastronomique ultra crédible.",
+      "intro": "Restaurant étoilé, table VIP, dîner gastronomique : LuxeFlexIA couvre les recherches « génération restaurant » et photo resto IA avec un rendu lifestyle premium.",
+      "bullets": [
+        "Ambiance gastronomique crédible",
+        "Flex dinner lifestyle",
+        "Prank « j’étais au resto étoilé »",
+        "Lié à génération restaurant"
+      ],
+      "promptIdeas": [
+        "Restaurant gastronomique, table élégante, lumière chaude, moi en tenue soignée",
+        "Table VIP, champagne, assiette signature",
+        "Rooftop restaurant, skyline, soirée"
+      ],
+      "faqs": [
+        {
+          "question": "Différence avec la page Génération restaurant ?",
+          "answer": "Même intention produit. Cette page cible aussi « restaurant gastronomique / étoilé » ; l’autre cible la requête « génération restaurant »."
+        },
+        {
+          "question": "Puis-je ajouter une montre dans la scène ?",
+          "answer": "Oui, mentionnez Watch Lux / montre au poignet dans le prompt."
+        }
+      ],
+      "searchPhrases": [
+        "restaurant gastronomique IA",
+        "photo resto étoilé",
+        "génération restaurant luxe",
+        "dîner VIP IA"
+      ]
     },
     {
       "slug": "suite-palace",
@@ -68,7 +573,35 @@
       "h1": "Fausse photo dans une suite de luxe par IA",
       "metaTitle": "Fausse Photo Suite de Luxe IA — LuxeFlexIA",
       "metaDescription": "Créez une photo de vous dans une suite palace hyper-réaliste avec LuxeFlexIA. Générateur IA pour décors hôtel de luxe, flex et contenus sociaux.",
-      "heroSubtitle": "Suite vue mer, marbre et lumière douce : le palace version IA."
+      "heroSubtitle": "Suite vue mer, marbre et lumière douce : le palace version IA.",
+      "intro": "Suite palace, hôtel 5 étoiles, villa premium : une génération classique du flex voyage. LuxeFlexIA pose votre visage dans un décor palace crédible.",
+      "bullets": [
+        "Suite, palace, villa premium",
+        "Combo voyage Dubaï / Monaco",
+        "Parfait pour stories hotel flex",
+        "Rendu photo réaliste"
+      ],
+      "promptIdeas": [
+        "Moi dans une suite palace, vue mer, lumière douce",
+        "Chambre hôtel luxe, peignoir, petit-déjeuner",
+        "Villa premium salon design, baie vitrée piscine"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je faire une villa plutôt qu’une suite ?",
+          "answer": "Oui, précisez villa avec piscine ou suite palace dans le prompt."
+        },
+        {
+          "question": "Idée série TikTok ?",
+          "answer": "Suite palace → restaurant → Watch Lux en chaîne de vidéos."
+        }
+      ],
+      "searchPhrases": [
+        "génération suite palace",
+        "photo hôtel luxe IA",
+        "fausse photo suite",
+        "villa premium IA"
+      ]
     },
     {
       "slug": "prank-fausse-copine",
@@ -76,7 +609,35 @@
       "h1": "Générateur fausse copine / faux date (prank) avec LuxeFlexIA",
       "metaTitle": "Générateur Fausse Copine / Faux Date Prank — LuxeFlexIA",
       "metaDescription": "Créez une fausse photo de couple ou de date pour un prank avec LuxeFlexIA. Générateur IA de fausse copine / faux date hyper-réaliste, à utiliser pour rire entre proches.",
-      "heroSubtitle": "Le prank social ultime : une photo de date bluffante, générée en secondes."
+      "heroSubtitle": "Le prank social ultime : une photo de date bluffante, générée en secondes.",
+      "intro": "Le prank fausse copine / faux date reste viral. LuxeFlexIA génère une scène de couple lifestyle réaliste pour surprendre vos amis — divertissement uniquement, pas de deepfake malveillant.",
+      "bullets": [
+        "Prank couple / date lifestyle",
+        "Rendu réaliste pour max réactions",
+        "Usage fun entre adultes",
+        "Compatible TikTok prank IA"
+      ],
+      "promptIdeas": [
+        "Photo de date restaurant chic, ambiance couple, lumière chaude",
+        "Selfie duo terrasse café premium",
+        "Soirée cinéma, look casual élégant, selfie couple"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je utiliser la photo de quelqu’un d’autre ?",
+          "answer": "Uniquement avec consentement. Ne créez pas de deepfake non consenti."
+        },
+        {
+          "question": "C’est lié à Dimash Prank ?",
+          "answer": "Oui, beaucoup combinent fausse richesse Dimash et prank social / couple."
+        }
+      ],
+      "searchPhrases": [
+        "génération fausse copine",
+        "prank faux date IA",
+        "photo couple IA prank",
+        "générateur fausse copine"
+      ]
     },
     {
       "slug": "prank-rencontre-star",
@@ -84,7 +645,35 @@
       "h1": "Fausse photo avec une célébrité générée par IA",
       "metaTitle": "Fausse Photo avec une Célébrité IA — LuxeFlexIA",
       "metaDescription": "Générez une fausse photo de rencontre avec une star grâce à LuxeFlexIA. Prank IA réaliste pour surprendre vos amis sur les réseaux sociaux.",
-      "heroSubtitle": "Selfie VIP avec une célébrité : le prank qui fait le buzz."
+      "heroSubtitle": "Selfie VIP avec une célébrité : le prank qui fait le buzz.",
+      "intro": "Prank rencontre star / célébrité : un classique TikTok. LuxeFlexIA crée une scène VIP crédible autour de votre photo pour un effet waouh.",
+      "bullets": [
+        "Ambiance red carpet / backstage",
+        "Prank viral TikTok",
+        "Combo soirée VIP",
+        "Divertissement responsable"
+      ],
+      "promptIdeas": [
+        "Moi en backstage avec ambiance célébrité, flash paparazzi",
+        "Selfie red carpet, tenue élégante, lumières événement",
+        "Photo VIP after-party, bokeh, ambiance star"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je nommer une vraie célébrité ?",
+          "answer": "Préférez une ambiance « style célébrité / red carpet » pour rester dans un usage prank responsable."
+        },
+        {
+          "question": "Ça marche sur mobile ?",
+          "answer": "Oui, LuxeFlexIA est pensé pour le mobile TikTok."
+        }
+      ],
+      "searchPhrases": [
+        "fausse photo célébrité",
+        "prank rencontre star IA",
+        "génération photo star",
+        "selfie VIP IA"
+      ]
     },
     {
       "slug": "prank-soiree-vip",
@@ -92,7 +681,35 @@
       "h1": "S'incruster dans une soirée VIP grâce à l'IA",
       "metaTitle": "Prank Soirée VIP Photo IA — LuxeFlexIA",
       "metaDescription": "Créez une fausse photo de soirée VIP ultra réaliste avec LuxeFlexIA. Incrustez-vous dans une ambiance club, red carpet ou after-party en un clic.",
-      "heroSubtitle": "Lumières, velvet rope, champagne : votre entrée VIP générée par IA."
+      "heroSubtitle": "Lumières, velvet rope, champagne : votre entrée VIP générée par IA.",
+      "intro": "Soirée VIP, club, after-party : la génération idéale pour un Dimash Prank ou un flex social. LuxeFlexIA pose votre visage dans l’ambiance cash.",
+      "bullets": [
+        "Club VIP / after-party",
+        "Flash, velvet rope, champagne",
+        "Prank TikTok ready",
+        "Combo Watch Lux possible"
+      ],
+      "promptIdeas": [
+        "Moi en club VIP, table réservée, lumières violettes et or",
+        "Entrée velvet rope, tenue noire, flash",
+        "After-party rooftop, skyline, champagne"
+      ],
+      "faqs": [
+        {
+          "question": "Idéal pour quel type de contenu ?",
+          "answer": "Prank Dimash, flex lifestyle, stories « j’étais en VIP »."
+        },
+        {
+          "question": "Puis-je enchaîner plusieurs scènes ?",
+          "answer": "Oui : VIP → restaurant → voiture pour une story complète."
+        }
+      ],
+      "searchPhrases": [
+        "génération soirée VIP",
+        "photo club VIP IA",
+        "prank after-party",
+        "flex club IA"
+      ]
     },
     {
       "slug": "prank-tv",
@@ -100,7 +717,35 @@
       "h1": "Faux passage à la télévision généré par IA",
       "metaTitle": "Faux Passage à la Télévision IA — LuxeFlexIA",
       "metaDescription": "Simulez un faux passage TV avec une photo IA hyper-réaliste via LuxeFlexIA. Parfait pour un prank, un meme ou un storytelling social crédible.",
-      "heroSubtitle": "Plateau TV, caméras, lumière studio : votre moment média en IA."
+      "heroSubtitle": "Plateau TV, caméras, lumière studio : votre moment média en IA.",
+      "intro": "Faux passage TV / plateau télé : un prank IA très fort en réactions. LuxeFlexIA génère l’ambiance studio autour de votre photo.",
+      "bullets": [
+        "Plateau TV / studio",
+        "Prank meme ready",
+        "Lumière studio réaliste",
+        "Stories et TikTok"
+      ],
+      "promptIdeas": [
+        "Moi sur un plateau TV, caméras, lumière studio",
+        "Interview télé, fond blur, micro, tenue chic",
+        "Emission TV lifestyle, décor premium"
+      ],
+      "faqs": [
+        {
+          "question": "Ça marche pour un meme ?",
+          "answer": "Oui, le faux passage TV est souvent utilisé en meme ou prank story."
+        },
+        {
+          "question": "Faut-il un prompt long ?",
+          "answer": "Non : « plateau TV, caméras, lumière studio » suffit souvent."
+        }
+      ],
+      "searchPhrases": [
+        "faux passage TV IA",
+        "génération plateau télé",
+        "prank télévision IA",
+        "photo studio TV"
+      ]
     },
     {
       "slug": "shopping-luxe",
@@ -108,15 +753,71 @@
       "h1": "Photo avec sacs de luxe (Rolex, Vuitton) générée par IA",
       "metaTitle": "Photo Shopping Luxe IA (Vuitton, Rolex) — LuxeFlexIA",
       "metaDescription": "Générez une photo de shopping luxe avec sacs et accessoires premium grâce à LuxeFlexIA. Flex IA réaliste pour réseaux sociaux et pranks lifestyle.",
-      "heroSubtitle": "Sacs iconiques, vitrine prestige : le flex shopping en version IA."
+      "heroSubtitle": "Sacs iconiques, vitrine prestige : le flex shopping en version IA.",
+      "intro": "Shopping luxe, sacs prestige, look full black : une génération lifestyle très demandée. Combinez avec Watch Lux pour un flex TikTok complet.",
+      "bullets": [
+        "Sacs / shopping premium",
+        "Combo Rolex / montre",
+        "Street luxe réaliste",
+        "Prank et flex"
+      ],
+      "promptIdeas": [
+        "Moi avec sacs de luxe, rue premium, journée ensoleillée",
+        "Shopping full black, vitrine prestige, selfie",
+        "Sortie boutique, sacs + montre au poignet"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je viser un style Vuitton / shopping iconique ?",
+          "answer": "Décrivez le style shopping prestige souhaité. LuxeFlexIA génère une scène lifestyle cohérente."
+        },
+        {
+          "question": "Lien avec génération Watch Lux ?",
+          "answer": "Oui — shopping + watch est un duo viral."
+        }
+      ],
+      "searchPhrases": [
+        "génération shopping luxe",
+        "photo sacs luxe IA",
+        "flex Vuitton IA",
+        "shopping prestige IA"
+      ]
     },
     {
       "slug": "montre-luxe",
       "categoryId": "lifestyle",
       "h1": "Photo avec montre de luxe au poignet par IA",
       "metaTitle": "Photo Montre de Luxe au Poignet IA — LuxeFlexIA",
-      "metaDescription": "Ajoutez une montre de luxe ultra réaliste à votre poignet avec LuxeFlexIA. Générateur IA pour flex horloger, lifestyle premium et contenus sociaux.",
-      "heroSubtitle": "Cadran brillant, détail poignet : la montre prestige générée par IA."
+      "metaDescription": "Ajoutez une montre de luxe ultra réaliste à votre poignet avec LuxeFlexIA. Générateur IA pour flex horloger, Watch Lux, lifestyle premium et contenus sociaux.",
+      "heroSubtitle": "Cadran brillant, détail poignet : la montre prestige générée par IA.",
+      "intro": "Montre de luxe au poignet = la requête sœur de « génération watch lux ». LuxeFlexIA détaille le poignet et le cadran pour un flex horloger crédible.",
+      "bullets": [
+        "Alias français de Watch Lux",
+        "Détail poignet premium",
+        "Combo costume / casual chic",
+        "TikTok flex ready"
+      ],
+      "promptIdeas": [
+        "Gros plan poignet montre de luxe, moi en arrière-plan flou",
+        "Bras croisés, montre prestige, costume",
+        "Selfie café, montre visible, lumière naturelle"
+      ],
+      "faqs": [
+        {
+          "question": "Watch Lux ou montre luxe ?",
+          "answer": "Même produit. Utilisez la page Watch Lux si vous cherchez le wording TikTok anglais."
+        },
+        {
+          "question": "Puis-je faire un style Rolex ?",
+          "answer": "Oui, décrivez une montre prestige / sport luxe dans le prompt."
+        }
+      ],
+      "searchPhrases": [
+        "génération montre luxe",
+        "photo montre IA",
+        "flex Rolex IA",
+        "montre au poignet IA"
+      ]
     },
     {
       "slug": "glow-up-muscu",
@@ -124,7 +825,215 @@
       "h1": "Faux corps musclé (glow-up) généré par IA",
       "metaTitle": "Faux Corps Musclé Glow-Up Prank IA — LuxeFlexIA",
       "metaDescription": "Créez un faux glow-up musculation hyper-réaliste avec LuxeFlexIA. Générateur IA pour prank transformation physique ou contenu lifestyle bluffant.",
-      "heroSubtitle": "Avant/après muscu en un clic : le glow-up IA qui surprend tout le monde."
+      "heroSubtitle": "Avant/après muscu en un clic : le glow-up IA qui surprend tout le monde.",
+      "intro": "Glow-up muscu / faux corps musclé : un prank transformation très recherché. LuxeFlexIA génère une version lifestyle crédible pour surprendre vos proches.",
+      "bullets": [
+        "Prank transformation physique",
+        "Rendu lifestyle réaliste",
+        "Stories avant/après",
+        "Divertissement responsable"
+      ],
+      "promptIdeas": [
+        "Glow-up musculation, photo lifestyle sport, lumière naturelle",
+        "Portrait confiant, silhouette athlétique, tenue street premium",
+        "Selfie salle de sport esthétique, look transformation"
+      ],
+      "faqs": [
+        {
+          "question": "C’est pour du contenu sérieux fitness ?",
+          "answer": "C’est surtout un outil prank / lifestyle. Ne présentez pas le résultat comme une vraie transformation médicale."
+        },
+        {
+          "question": "Combo viral ?",
+          "answer": "Glow-up + Watch Lux + voiture pour une série flex TikTok."
+        }
+      ],
+      "searchPhrases": [
+        "génération glow-up",
+        "faux corps musclé IA",
+        "prank transformation IA",
+        "glow up muscu IA"
+      ]
+    },
+    {
+      "slug": "generation-rolex",
+      "categoryId": "lifestyle",
+      "h1": "Génération Rolex : flex montre prestige par IA",
+      "metaTitle": "Génération Rolex / Montre Prestige IA — LuxeFlexIA",
+      "metaDescription": "Génération Rolex et flex montre prestige avec LuxeFlexIA. Créez une photo IA avec montre de luxe au poignet, style TikTok Watch Lux.",
+      "heroSubtitle": "Le flex montre qui cartonne : génération Rolex / prestige en IA.",
+      "intro": "Beaucoup tapent « génération Rolex » ou « photo Rolex IA » après des vidéos TikTok. LuxeFlexIA crée un flex horloger réaliste (watch prestige) à partir de votre photo.",
+      "bullets": [
+        "Cible Rolex / watch prestige",
+        "Lié à Watch Lux et montre luxe",
+        "Détail cadran / poignet",
+        "Prank et flex TikTok"
+      ],
+      "promptIdeas": [
+        "Moi avec montre prestige style sport luxe au poignet, gros plan",
+        "Selfie costume, montre brillant, lumière bureau premium",
+        "Bras sur volant supercar, montre visible"
+      ],
+      "faqs": [
+        {
+          "question": "Est-ce une vraie Rolex sur la photo ?",
+          "answer": "Non — c’est une génération IA lifestyle pour divertissement et flex social, pas une publicité de marque."
+        },
+        {
+          "question": "Où aller si je cherche Watch Lux ?",
+          "answer": "Voir la page Génération Watch Lux — même famille de scènes."
+        }
+      ],
+      "searchPhrases": [
+        "génération Rolex",
+        "photo Rolex IA",
+        "flex Rolex TikTok",
+        "montre prestige IA"
+      ]
+    },
+    {
+      "slug": "generation-villa-luxe",
+      "categoryId": "voyages",
+      "h1": "Génération villa luxe : piscine, sunset, flex maison IA",
+      "metaTitle": "Génération Villa Luxe IA — LuxeFlexIA",
+      "metaDescription": "Génération villa luxe avec LuxeFlexIA : piscine, sunset, maison premium. Créez une photo IA de vous dans une villa de rêve.",
+      "heroSubtitle": "Villa avec piscine, sunset doré : le flex maison en version IA.",
+      "intro": "Villa luxe, maison avec piscine, sunset Instagram : une génération voyage/lifestyle très demandée, souvent après Dimash Lux immobilier.",
+      "bullets": [
+        "Villa / piscine / sunset",
+        "Combo Dubaï ou Monaco",
+        "Stories immobilier flex",
+        "Prank « j’ai acheté une villa »"
+      ],
+      "promptIdeas": [
+        "Moi devant une villa luxe avec piscine, sunset",
+        "Selfie bord de piscine, villa moderne, lumière dorée",
+        "Terrasse villa vue mer, tenue été premium"
+      ],
+      "faqs": [
+        {
+          "question": "Villa ou suite palace ?",
+          "answer": "Villa = extérieur / piscine. Suite palace = intérieur hôtel. Les deux existent sur LuxeFlexIA."
+        },
+        {
+          "question": "Bon pour Dimash Lux ?",
+          "answer": "Oui, villa luxe est une scène Dimash classique."
+        }
+      ],
+      "searchPhrases": [
+        "génération villa luxe",
+        "photo villa piscine IA",
+        "flex maison IA",
+        "fausse villa TikTok"
+      ]
+    },
+    {
+      "slug": "generation-argent-flex",
+      "categoryId": "lifestyle",
+      "h1": "Génération argent flex : dashboard, cash lifestyle IA",
+      "metaTitle": "Génération Argent Flex / Dashboard IA — LuxeFlexIA",
+      "metaDescription": "Génération argent flex avec LuxeFlexIA : ambiance réussite, dashboard, lifestyle cash. Photos IA pour contenus TikTok motivation / prank (divertissement).",
+      "heroSubtitle": "Ambiance réussite et cash lifestyle — pour du contenu, pas pour tromper.",
+      "intro": "Les recherches autour du flex argent / dashboard revenus sont fréquentes sur TikTok. LuxeFlexIA génère des scènes lifestyle « réussite » à des fins de divertissement ou storytelling — jamais pour arnaquer.",
+      "bullets": [
+        "Ambiance réussite / cash lifestyle",
+        "Divertissement et storytelling uniquement",
+        "Combo Watch Lux + voiture",
+        "Pas d’usage frauduleux"
+      ],
+      "promptIdeas": [
+        "Moi dans un bureau premium, écrans, lumière ville la nuit, ambiance réussite",
+        "Lifestyle cash discret : montre + costume + skyline",
+        "Selfie voiture luxe, vibe entrepreneur"
+      ],
+      "faqs": [
+        {
+          "question": "Puis-je inventer de faux revenus ?",
+          "answer": "Pour un prank entre proches ou du fiction storytelling, oui. Ne trompez personne pour de l’argent réel."
+        },
+        {
+          "question": "Lien avec Dimash Lux ?",
+          "answer": "Oui, le flex argent fait souvent partie des séries Dimash."
+        }
+      ],
+      "searchPhrases": [
+        "génération argent flex",
+        "flex dashboard IA",
+        "photo réussite IA",
+        "prank riche IA"
+      ]
+    },
+    {
+      "slug": "generation-couple-ia",
+      "categoryId": "pranks",
+      "h1": "Génération couple IA : photo de duo lifestyle réaliste",
+      "metaTitle": "Génération Couple IA / Photo Duo — LuxeFlexIA",
+      "metaDescription": "Génération couple IA avec LuxeFlexIA : créez une photo de duo lifestyle réaliste pour prank ou storytelling. Divertissement responsable uniquement.",
+      "heroSubtitle": "Duo lifestyle, date, voyage à deux — génération couple en IA.",
+      "intro": "Au-delà du prank fausse copine, beaucoup veulent une génération couple IA lifestyle (resto, voyage, soirée). LuxeFlexIA couvre ces scènes avec un usage éthique.",
+      "bullets": [
+        "Scènes duo / date / voyage",
+        "Prank ou storytelling",
+        "Consentement obligatoire",
+        "Lié à fausse copine / Dimash Prank"
+      ],
+      "promptIdeas": [
+        "Photo couple restaurant chic, lumière chaude",
+        "Duo voyage Dubaï, skyline, tenue premium",
+        "Selfie couple soirée VIP, bokeh"
+      ],
+      "faqs": [
+        {
+          "question": "Faut-il deux photos ?",
+          "answer": "Selon le flux : commencez avec votre photo et décrivez la scène duo. Respectez toujours le consentement."
+        },
+        {
+          "question": "Différence avec fausse copine ?",
+          "answer": "Fausse copine = angle prank. Génération couple = angle lifestyle / duo plus large."
+        }
+      ],
+      "searchPhrases": [
+        "génération couple IA",
+        "photo duo IA",
+        "génération image couple",
+        "prank couple TikTok"
+      ]
+    },
+    {
+      "slug": "generation-selfie-ia",
+      "categoryId": "generation",
+      "h1": "Génération selfie IA : transformez votre selfie en scène luxe",
+      "metaTitle": "Génération Selfie IA → Scène Luxe — LuxeFlexIA",
+      "metaDescription": "Génération selfie IA avec LuxeFlexIA : partez d’un selfie et obtenez une scène luxe, voyage ou prank ultra réaliste.",
+      "heroSubtitle": "Un selfie net suffit pour lancer une génération Dimash Lux ou flex lifestyle.",
+      "intro": "La plupart des générations TikTok partent d’un simple selfie. LuxeFlexIA est optimisé pour ça : selfie clair → scène Dimash Lux, restaurant, watch, villa.",
+      "bullets": [
+        "Optimisé selfie téléphone",
+        "Vers scènes luxe / prank",
+        "Mobile-first",
+        "Idées de prompts inclus"
+      ],
+      "promptIdeas": [
+        "À partir de mon selfie : scène restaurant gastronomique",
+        "À partir de mon selfie : Watch Lux au poignet",
+        "À partir de mon selfie : supercar Monaco nuit"
+      ],
+      "faqs": [
+        {
+          "question": "Quel selfie marche le mieux ?",
+          "answer": "Visage bien éclairé, de face ou 3/4, sans gros filtre, fond simple."
+        },
+        {
+          "question": "Selfie flou = mauvais résultat ?",
+          "answer": "Souvent oui. Reprenez une photo nette avant de générer."
+        }
+      ],
+      "searchPhrases": [
+        "génération selfie IA",
+        "selfie vers photo IA",
+        "transformer selfie IA",
+        "génération photo selfie"
+      ]
     }
   ]
 }

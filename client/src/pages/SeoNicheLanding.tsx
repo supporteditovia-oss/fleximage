@@ -13,11 +13,12 @@ import {
   SEO_NICHES,
   type SeoNiche,
 } from "@shared/seo-niches";
+import { DEFAULT_SITE_ORIGIN } from "@shared/site-seo";
 import "@/pages/landing.css";
 
 function NicheHero({ niche }: { niche: SeoNiche }) {
   return (
-    <section className="relative overflow-hidden px-4 pb-16 pt-10 md:pb-24 md:pt-16">
+    <section className="relative overflow-hidden px-4 pb-12 pt-10 md:pb-16 md:pt-16">
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
@@ -56,6 +57,73 @@ function NicheHero({ niche }: { niche: SeoNiche }) {
   );
 }
 
+function buildNicheJsonLd(niche: SeoNiche) {
+  const url = `${DEFAULT_SITE_ORIGIN}${getSeoNichePath(niche.slug)}`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        name: niche.metaTitle,
+        description: niche.metaDescription,
+        url,
+        isPartOf: {
+          "@type": "WebSite",
+          name: "LuxeFlexIA",
+          url: DEFAULT_SITE_ORIGIN,
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "LuxeFlexIA",
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Web",
+        url: DEFAULT_SITE_ORIGIN,
+        description: niche.metaDescription,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "EUR",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: niche.faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Accueil",
+            item: `${DEFAULT_SITE_ORIGIN}/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Générateurs",
+            item: `${DEFAULT_SITE_ORIGIN}${SEO_DIRECTORY_PATH}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: niche.h1,
+            item: url,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export default function SeoNicheLanding() {
   const params = useParams<{ slug?: string }>();
   const slug = params.slug || "";
@@ -80,23 +148,82 @@ export default function SeoNicheLanding() {
   const category = getSeoNicheCategory(niche.categoryId);
   const related = SEO_NICHES.filter(
     (item) => item.categoryId === niche.categoryId && item.slug !== niche.slug,
-  ).slice(0, 4);
+  ).slice(0, 6);
+  const jsonLd = buildNicheJsonLd(niche);
 
   return (
     <div className="luxeflexia-landing relative min-h-screen overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <LandingHeader />
       <NicheHero niche={niche} />
 
-      <section className="mx-auto max-w-3xl px-4 pb-16">
+      <section className="mx-auto max-w-3xl px-4 pb-12">
+        <p className="text-base leading-relaxed text-[var(--lx-muted)]">
+          {niche.intro}
+        </p>
+        <ul className="mt-6 space-y-2 text-[var(--lx-muted)]">
+          {niche.bullets.map((bullet) => (
+            <li key={bullet} className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--lx-gold)]" />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-4 pb-12">
         <h2 className="lx-display text-2xl font-semibold text-[var(--lx-ink)]">
           Comment ça marche avec LuxeFlexIA
         </h2>
         <ol className="mt-5 space-y-3 text-[var(--lx-muted)]">
-          <li>1. Uploadez une photo claire de vous.</li>
-          <li>2. Décrivez la scène ({niche.h1.toLowerCase()}).</li>
+          <li>1. Uploadez une photo claire de vous (selfie net de préférence).</li>
+          <li>2. Décrivez la scène ou collez une idée de prompt ci-dessous.</li>
           <li>3. Laissez l&apos;IA générer un rendu hyper-réaliste en quelques secondes.</li>
         </ol>
-        <p className="mt-6 text-sm leading-relaxed text-[var(--lx-muted)]">
+      </section>
+
+      <section className="mx-auto max-w-3xl px-4 pb-12">
+        <h2 className="lx-display text-2xl font-semibold text-[var(--lx-ink)]">
+          Idées de prompts à coller
+        </h2>
+        <ul className="mt-5 space-y-3">
+          {niche.promptIdeas.map((idea) => (
+            <li
+              key={idea}
+              className="rounded-2xl border border-black/8 bg-white/70 px-4 py-3 text-sm leading-relaxed text-[var(--lx-ink)]"
+            >
+              {idea}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-4 pb-12">
+        <h2 className="lx-display text-2xl font-semibold text-[var(--lx-ink)]">
+          Questions fréquentes
+        </h2>
+        <div className="mt-5 space-y-4">
+          {niche.faqs.map((faq) => (
+            <div key={faq.question}>
+              <h3 className="text-base font-semibold text-[var(--lx-ink)]">
+                {faq.question}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-[var(--lx-muted)]">
+                {faq.answer}
+              </p>
+            </div>
+          ))}
+        </div>
+        {niche.searchPhrases.length > 0 ? (
+          <p className="mt-6 text-sm leading-relaxed text-[var(--lx-muted)]">
+            Recherches fréquentes autour de cette page :{" "}
+            {niche.searchPhrases.join(" · ")}.
+          </p>
+        ) : null}
+        <p className="mt-4 text-sm leading-relaxed text-[var(--lx-muted)]">
           {category
             ? `Cette page fait partie de la catégorie « ${category.label} ». `
             : null}
@@ -108,7 +235,7 @@ export default function SeoNicheLanding() {
             href={SEO_DIRECTORY_PATH}
             className="text-sm font-semibold text-[var(--lx-bronze)] underline-offset-4 hover:underline"
           >
-            Voir tous nos générateurs (pranks, luxe, voyage)
+            Voir tous nos générateurs (Dimash, Watch Lux, pranks, luxe…)
           </Link>
         </p>
       </section>
@@ -117,7 +244,7 @@ export default function SeoNicheLanding() {
         <section className="border-t border-black/8 bg-[var(--lx-surface-2)]/60 px-4 py-14">
           <div className="mx-auto max-w-5xl">
             <h2 className="lx-display text-center text-2xl font-semibold text-[var(--lx-ink)]">
-              Autres idées dans la même catégorie
+              Autres générations dans la même catégorie
             </h2>
             <ul className="mt-8 grid gap-4 sm:grid-cols-2">
               {related.map((item) => (

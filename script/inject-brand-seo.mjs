@@ -105,7 +105,7 @@ html = html
   )
   .replace(
     /<meta name="keywords" content="[^"]*" \/>/,
-    `<meta name="keywords" content="LuxeFlexIA, Luxeflexia, luxeflexia.com, Luxe Flex IA, photos IA, lifestyle IA, générateur photo IA, photo luxe IA" />`,
+    `<meta name="keywords" content="LuxeFlexIA, Luxeflexia, génération image IA, génération Dimash Lux, génération Dimash Prank, génération Watch Lux, génération restaurant, photo IA réaliste, générateur photo IA, prank IA TikTok, flex luxe IA" />`,
   )
   .replace(
     /content="LuxeFlexIA - Créateur de photos lifestyle par IA"/g,
@@ -175,27 +175,12 @@ if (r.status !== 0) {
   );
 }
 
-// IndexNow key (Bing/Yandex) — helps discovery; Google uses Search Console.
-const indexNowKey = "luxeflexia2026indexnowbrand";
-fs.writeFileSync(path.join(PUBLIC_DIR, `${indexNowKey}.txt`), indexNowKey, "utf8");
-try {
-  await fetch("https://api.indexnow.org/indexnow", {
-    method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({
-      host: "www.luxeflexia.com",
-      key: indexNowKey,
-      keyLocation: `https://www.luxeflexia.com/${indexNowKey}.txt`,
-      urlList: [
-        "https://www.luxeflexia.com/",
-        "https://www.luxeflexia.com/generate",
-        "https://www.luxeflexia.com/pricing",
-        "https://www.luxeflexia.com/tous-les-generateurs",
-        "https://www.luxeflexia.com/sitemap.xml",
-      ],
-    }),
-  });
-  console.log("[seo:brand] IndexNow ping sent");
-} catch (err) {
-  console.warn("[seo:brand] IndexNow ping skipped", err?.message || err);
+// IndexNow — submit all niche URLs (not only core pages).
+const indexNow = spawnSync(
+  process.execPath,
+  [path.join(__dirname, "ping-indexnow.mjs")],
+  { cwd: ROOT, stdio: "inherit" },
+);
+if (indexNow.status !== 0) {
+  console.warn("[seo:brand] IndexNow ping failed");
 }

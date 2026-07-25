@@ -14,9 +14,9 @@ import {
 import "@/pages/landing.css";
 
 const DIRECTORY_TITLE =
-  "Tous nos générateurs IA (Pranks, Luxe, Voyage) — LuxeFlexIA";
+  "Tous nos générateurs IA (Dimash Lux, Watch Lux, Pranks) — LuxeFlexIA";
 const DIRECTORY_DESCRIPTION =
-  "Annuaire LuxeFlexIA : générateurs de photos IA pour voitures de luxe, voyages, restaurants, pranks (fausse copine, soirée VIP) et flex lifestyle.";
+  "Annuaire LuxeFlexIA : génération image IA, Dimash Lux, Watch Lux, restaurant, pranks TikTok, voiture de luxe et flex lifestyle.";
 
 export default function TousLesGenerateurs() {
   React.useEffect(() => {
@@ -37,7 +37,7 @@ export default function TousLesGenerateurs() {
             Annuaire LuxeFlexIA
           </p>
           <h1 className="lx-display mt-3 text-balance text-3xl font-semibold text-[var(--lx-ink)] md:text-5xl">
-            Tous nos générateurs (Pranks, Luxe, Voyage)
+            Tous nos générateurs (Dimash, Watch Lux, Pranks, Luxe)
           </h1>
           <p className="mt-4 text-base font-medium text-[var(--lx-muted)] md:text-lg">
             {SEO_NICHES.length} scénarios prêts à générer : choisissez une niche

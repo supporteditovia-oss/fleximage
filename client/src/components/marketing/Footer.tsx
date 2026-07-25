@@ -4,7 +4,7 @@ import { BrandMark } from "@/components/BrandMark";
 const FOOTER_LINKS = [
   {
     href: "/tous-les-generateurs",
-    label: "Tous nos générateurs (Pranks, Luxe, Voyage)",
+    label: "Tous nos générateurs (Dimash, Watch Lux, Pranks)",
   },
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/cgu", label: "CGU" },
