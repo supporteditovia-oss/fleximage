@@ -1,7 +1,7 @@
 # Keep the Vercel output limited to the Vite static site.
 # The Express server (Railway / elsewhere) is not deployed here.
 server
-script
+script/*
 !script/generate-seo-static.mjs
 !script/inject-brand-seo.mjs
 dist/index.js
