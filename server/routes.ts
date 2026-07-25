@@ -26,7 +26,11 @@ import {
 } from "./lib/auth-middleware";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
-import { buildIdentityPreservingPrompt } from "./lib/prompt-guard";
+import {
+  buildIdentityPreservingPrompt,
+  needsLuxuryDetailGuard,
+  LUXURY_DETAIL_GUARD,
+} from "./lib/prompt-guard";
 import {
   createRunwayVideoTask,
   getRunwayVideoStatus,
@@ -2756,6 +2760,9 @@ export async function registerRoutes(
 
           // Soft lock: keep the uploaded person's face/skin when a face ref is used.
           finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance.`;
+          if (needsLuxuryDetailGuard(finalPrompt)) {
+            finalPrompt = `${finalPrompt} ${LUXURY_DETAIL_GUARD}`;
+          }
           finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
         } else {
           // Free prompt (Rolex, store scene, etc.): hard identity + pose lock.
