@@ -10,10 +10,20 @@ import {
 export const DEFAULT_SITE_ORIGIN = "https://www.luxeflexia.com";
 
 export const SITE_NAME = "LuxeFlexIA";
-export const SITE_TITLE = "LuxeFlexIA - Créateur de photos lifestyle par IA";
+/** Brand spellings people type in Google / ads / TikTok. */
+export const SITE_ALTERNATE_NAMES = [
+  "Luxeflexia",
+  "Luxe Flex IA",
+  "LuxeFlexia",
+  "luxeflexia.com",
+  "www.luxeflexia.com",
+] as const;
+export const SITE_TITLE = "LuxeFlexIA (Luxeflexia) — Créateur de photos lifestyle par IA";
 export const SITE_DESCRIPTION =
-  "LuxeFlexIA génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle.";
-export const SITE_OG_IMAGE = "/assets/og-image.png?v=20260720";
+  "LuxeFlexIA (aussi écrit Luxeflexia) génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Site officiel : luxeflexia.com.";
+export const SITE_OG_IMAGE = "/assets/og-image.png?v=20260725";
+export const SITE_KEYWORDS =
+  "LuxeFlexIA, Luxeflexia, luxeflexia.com, Luxe Flex IA, photos IA, lifestyle IA, générateur photo IA, photo luxe IA";
 
 export type SitemapEntry = {
   path: string;
@@ -337,21 +347,36 @@ export function buildStructuredData(origin: string) {
         "@type": "WebSite",
         "@id": `${homeUrl}#website`,
         name: SITE_NAME,
+        alternateName: [...SITE_ALTERNATE_NAMES],
         url: homeUrl,
         inLanguage: "fr-FR",
         description: SITE_DESCRIPTION,
+        publisher: { "@id": `${homeUrl}#organization` },
       },
       {
         "@type": "Organization",
         "@id": `${homeUrl}#organization`,
         name: SITE_NAME,
+        legalName: SITE_NAME,
+        alternateName: [...SITE_ALTERNATE_NAMES],
         url: homeUrl,
-        logo: imageUrl,
+        logo: {
+          "@type": "ImageObject",
+          url: imageUrl,
+        },
+        description: SITE_DESCRIPTION,
+        foundingDate: "2026",
+        brand: {
+          "@type": "Brand",
+          name: SITE_NAME,
+          alternateName: [...SITE_ALTERNATE_NAMES],
+        },
       },
       {
         "@type": "SoftwareApplication",
         "@id": `${homeUrl}#app`,
         name: SITE_NAME,
+        alternateName: [...SITE_ALTERNATE_NAMES],
         applicationCategory: "MultimediaApplication",
         operatingSystem: "Web",
         url: homeUrl,
@@ -360,19 +385,19 @@ export function buildStructuredData(origin: string) {
         offers: [
           {
             "@type": "Offer",
-            name: "Decouverte",
+            name: "Abonnement LuxeFlexIA Discovery",
             price: "8.90",
             priceCurrency: "EUR",
           },
           {
             "@type": "Offer",
-            name: "Essentiel",
+            name: "Abonnement LuxeFlexIA Essential",
             price: "19.90",
             priceCurrency: "EUR",
           },
           {
             "@type": "Offer",
-            name: "Ultimate",
+            name: "Abonnement LuxeFlexIA Ultimate",
             price: "39.90",
             priceCurrency: "EUR",
           },

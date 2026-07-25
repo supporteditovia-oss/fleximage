@@ -3,6 +3,7 @@
 server
 script
 !script/generate-seo-static.mjs
+!script/inject-brand-seo.mjs
 dist/index.js
 .env
 .cursor
