@@ -224,8 +224,8 @@ export async function createOneshotJob(
     model: "nano-banana",
     prompt,
     options: {
-      // nano-banana only accepts default | fast
-      modelVariant: "default",
+      // default = Nano Banana Pro (cher) | fast = Nano Banana 2
+      modelVariant: "fast",
       aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }
