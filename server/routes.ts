@@ -28,8 +28,7 @@ import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
 import {
   buildIdentityPreservingPrompt,
-  needsLuxuryDetailGuard,
-  LUXURY_DETAIL_GUARD,
+  REALISM_QUALITY_GUARD,
 } from "./lib/prompt-guard";
 import {
   createRunwayVideoTask,
@@ -2759,13 +2758,10 @@ export async function registerRoutes(
           if (!faceOk) return;
 
           // Soft lock: keep the uploaded person's face/skin when a face ref is used.
-          finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance.`;
-          if (needsLuxuryDetailGuard(finalPrompt)) {
-            finalPrompt = `${finalPrompt} ${LUXURY_DETAIL_GUARD}`;
-          }
+          finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance. ${REALISM_QUALITY_GUARD}`;
           finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
         } else {
-          // Free prompt (Rolex, store scene, etc.): hard identity + pose lock.
+          // Free prompt: hard identity + pose lock + photoreal real products.
           finalPrompt = buildIdentityPreservingPrompt(prompt);
         }
         let imageUrls: string[] = [];

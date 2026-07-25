@@ -1,7 +1,7 @@
 /**
  * Wrap free-prompt edits so Nano Banana 2 keeps identity/pose/skin
- * unless the user explicitly asks to change them, and luxury logos
- * (Rolex, etc.) stay sharp and correctly spelled.
+ * unless the user asks to change them, and all products / scenes
+ * stay photoreal with real-world brands and sharp readable text.
  * Keep in sync with api/_lib/prompt-guard.js (Vercel).
  */
 export const IDENTITY_GUARD =
@@ -13,20 +13,24 @@ export const IDENTITY_GUARD =
   "same posture and position (if sitting, stay sitting; if standing, stay standing; same limb placement), " +
   "same camera angle, framing, and crop. " +
   "Do not invent body parts that are cropped out. " +
-  "Change ONLY what the user requests (e.g. add a Rolex, change the background/store scene) while keeping the person locked. " +
+  "Change ONLY what the user requests while keeping the person locked. " +
   "User request:";
 
-/** Photoreal luxury logos/text — critical for watch / flex niche. */
-export const LUXURY_DETAIL_GUARD =
-  "LUXURY DETAIL QUALITY (mandatory): brand names and dial text must be perfectly readable and correctly spelled " +
-  "(Rolex = R-O-L-E-X with every letter present and sharp). " +
-  "No gibberish text, no missing letters, no warped/melted fonts, no burnt or overexposed dial, no fake symbols. " +
-  "Watch crown, bezel, hands, indices, and date window must look like a real high-end product photo — crisp metal, clean reflections, photorealistic.";
+/**
+ * Always applied — watches, cars, shoes, bags, keys, outfits, screens, pranks, etc.
+ */
+export const REALISM_QUALITY_GUARD =
+  "PHOTOREAL QUALITY (mandatory): ultra-sharp high-detail photo, clean lighting, no blur, no burnt highlights, no muddy compression. " +
+  "REAL PRODUCTS ONLY: every watch, car, shoe, bag, key, phone, outfit, or branded object must be a real existing model from the real world — never invent fake models or fantasy logos. " +
+  "If a brand is named (Rolex, Patek Philippe, Richard Mille, Audemars Piguet, Cartier, Omega, Ferrari, Lamborghini, Porsche, Mercedes, BMW, Louis Vuitton, Gucci, Nike, etc.), " +
+  "use a real recognizable product and spell every logo letter perfectly — no missing letters, no gibberish, no warped/melted text. " +
+  "Metal, glass, leather, fabric, and screen cracks must look physically real. Prank effects (broken screen, etc.) must stay believable and sharp.";
 
-const LUXURY_DETAIL_RE =
-  /\b(rolex|cartier|patek|audemars|ap\b|omega|breitling|hublot|tag\s*heuer|richard\s*mille|iwc|jaeger|montre|watch|wristwatch|vuitton|louis\s*vuit|gucci|herm[eè]s|chanel|dior|balenciaga|prada|fendi|rolex|submariner|daytona|datejust)\b/i;
+/** @deprecated alias — same as REALISM_QUALITY_GUARD */
+export const LUXURY_DETAIL_GUARD = REALISM_QUALITY_GUARD;
 
-export const MAX_FINAL_PROMPT = 1900;
+/** OneShot allows up to 3000; leave margin for safety. */
+export const MAX_FINAL_PROMPT = 2900;
 
 export function sanitizeUserPrompt(prompt: string): string {
   return String(prompt || "")
@@ -34,26 +38,26 @@ export function sanitizeUserPrompt(prompt: string): string {
     .replace(/tanas?|92i/gi, "jolies filles");
 }
 
-export function needsLuxuryDetailGuard(prompt: string): boolean {
-  return LUXURY_DETAIL_RE.test(prompt);
+/** @deprecated realism guard is now always on */
+export function needsLuxuryDetailGuard(_prompt: string): boolean {
+  return true;
 }
 
 function joinPromptParts(parts: Array<string | undefined>): string {
   const combined = parts.filter(Boolean).join(" ");
   if (combined.length <= MAX_FINAL_PROMPT) return combined;
 
-  const [guard, userPart, luxury] = parts;
+  const [guard, userPart, realism] = parts;
   const fixedLen =
-    (guard ? guard.length + 1 : 0) + (luxury ? luxury.length + 1 : 0);
+    (guard ? guard.length + 1 : 0) + (realism ? realism.length + 1 : 0);
   const budget = Math.max(120, MAX_FINAL_PROMPT - fixedLen);
   const trimmedUser = String(userPart || "").slice(0, budget);
-  return [guard, trimmedUser, luxury].filter(Boolean).join(" ");
+  return [guard, trimmedUser, realism].filter(Boolean).join(" ");
 }
 
 export function buildIdentityPreservingPrompt(userPrompt: string): string {
   const cleaned = sanitizeUserPrompt(userPrompt);
   if (!cleaned) return cleaned;
 
-  const luxury = needsLuxuryDetailGuard(cleaned) ? LUXURY_DETAIL_GUARD : "";
-  return joinPromptParts([IDENTITY_GUARD, cleaned, luxury]);
+  return joinPromptParts([IDENTITY_GUARD, cleaned, REALISM_QUALITY_GUARD]);
 }
