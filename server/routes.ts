@@ -16,6 +16,7 @@ import {
   uploadReferenceImageItemSchema,
   updateReferenceImageSchema,
   OUTPUT_ASPECT_RATIO,
+  normalizeGenerationAspectRatio,
 } from "@shared/schema";
 import { logger } from "./lib/logger";
 import {
@@ -25,6 +26,7 @@ import {
 } from "./lib/auth-middleware";
 import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
+import { buildIdentityPreservingPrompt } from "./lib/prompt-guard";
 import {
   createRunwayVideoTask,
   getRunwayVideoStatus,
@@ -2673,7 +2675,9 @@ export async function registerRoutes(
       try {
         const authReq = req as AuthenticatedRequest;
         let { prompt, images, template_id, use_face_asset } = req.body;
-        const aspect_ratio = OUTPUT_ASPECT_RATIO;
+        const aspect_ratio = normalizeGenerationAspectRatio(
+          req.body.aspect_ratio,
+        );
         const locale = resolveLocaleFromRequest(req);
 
         const supabaseAdmin = getSupabaseAdmin();
@@ -2749,11 +2753,14 @@ export async function registerRoutes(
             res,
           );
           if (!faceOk) return;
+
+          // Soft lock: keep the uploaded person's face/skin when a face ref is used.
+          finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance.`;
+          finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
+        } else {
+          // Free prompt (Rolex, store scene, etc.): hard identity + pose lock.
+          finalPrompt = buildIdentityPreservingPrompt(prompt);
         }
-
-        // Apply global mapping for "Tana" and "92i"
-        finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
-
         let imageUrls: string[] = [];
         if (template_id) {
           imageUrls = await buildTemplateGenerationImageUrls(
@@ -2807,7 +2814,7 @@ export async function registerRoutes(
 
             logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
             const oneshotResponse = await createOneshotJob(finalPrompt, {
-              aspectRatio: OUTPUT_ASPECT_RATIO,
+              aspectRatio: aspect_ratio,
               ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
             });
             if (oneshotResponse && oneshotResponse.id) {
@@ -2831,7 +2838,7 @@ export async function registerRoutes(
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
-              aspect_ratio: OUTPUT_ASPECT_RATIO,
+              aspect_ratio,
               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
             });
             if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
@@ -2847,7 +2854,7 @@ export async function registerRoutes(
           logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
           const kieResponse = await createKieTask({
             prompt: finalPrompt,
-            aspect_ratio: OUTPUT_ASPECT_RATIO,
+            aspect_ratio,
             ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
           });
 

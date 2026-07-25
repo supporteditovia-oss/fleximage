@@ -1,8 +1,9 @@
 /**
  * Wrap free-prompt edits so Nano Banana 2 keeps identity/pose/skin
  * unless the user explicitly asks to change them.
+ * Keep in sync with api/_lib/prompt-guard.js (Vercel).
  */
-const IDENTITY_GUARD =
+export const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
   "LOCK identity and pose unless the user explicitly asks to change them: " +
   "same face, same head, same hair, same age, same gender presentation, " +
@@ -14,15 +15,15 @@ const IDENTITY_GUARD =
   "Change ONLY what the user requests (e.g. add a Rolex, change the background/store scene) while keeping the person locked. " +
   "User request:";
 
-const MAX_FINAL_PROMPT = 1900;
+export const MAX_FINAL_PROMPT = 1900;
 
-function sanitizeUserPrompt(prompt) {
+export function sanitizeUserPrompt(prompt: string): string {
   return String(prompt || "")
     .trim()
     .replace(/tanas?|92i/gi, "jolies filles");
 }
 
-function buildIdentityPreservingPrompt(userPrompt) {
+export function buildIdentityPreservingPrompt(userPrompt: string): string {
   const cleaned = sanitizeUserPrompt(userPrompt);
   if (!cleaned) return cleaned;
 
@@ -32,10 +33,3 @@ function buildIdentityPreservingPrompt(userPrompt) {
   const budget = Math.max(200, MAX_FINAL_PROMPT - IDENTITY_GUARD.length - 1);
   return `${IDENTITY_GUARD} ${cleaned.slice(0, budget)}`;
 }
-
-module.exports = {
-  buildIdentityPreservingPrompt,
-  sanitizeUserPrompt,
-  IDENTITY_GUARD,
-  MAX_FINAL_PROMPT,
-};
