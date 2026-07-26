@@ -175,6 +175,17 @@ export default function HeroSection() {
           });
           return;
         }
+        if (error.code === "PROMPT_POLICY_VIOLATION") {
+          toast({
+            variant: "destructive",
+            title: "Contenu non autorisé",
+            description:
+              typeof error.message === "string" && error.message
+                ? error.message
+                : "Le contenu demandé n'est pas autorisé. Aucun jeton n'est perdu.",
+          });
+          return;
+        }
         let message = error.message;
         try {
           const parsed = JSON.parse(error.message);

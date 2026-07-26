@@ -15,6 +15,7 @@ const {
   toClientStatus,
   toDbStatus,
 } = require("../generation");
+const { CONTENT_POLICY_MESSAGE_FR } = require("../content-policy");
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
 function toUserFailMessage(value, fallback = "Échec de la génération") {
@@ -173,6 +174,8 @@ module.exports = async function handler(req, res) {
 
       const isCustomApiFailed =
         customStatus.status === "failed" || customStatus.status === "fail";
+      const isPolicyViolation =
+        isCustomApiFailed && isGoogleAiPromptFlagged(customStatus);
 
       if (
         customStatus.status === "completed" ||
@@ -181,16 +184,17 @@ module.exports = async function handler(req, res) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
       } else if (isCustomApiFailed || isTimeout) {
-        // Including Google policy flags: try Kie fallback instead of hard-blocking the user.
-        if (!isKieConfigured()) {
+        // Safety / adult policy: fail clearly in French and refund (no Kie bypass).
+        if (isPolicyViolation) {
+          apiStatus = "fail";
+          apiFailMsg = CONTENT_POLICY_MESSAGE_FR;
+        } else if (!isKieConfigured()) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             customStatus && customStatus.error,
             isTimeout
               ? "Timeout Oneshot (pas de fallback Kie configuré)"
-              : isGoogleAiPromptFlagged(customStatus)
-                ? "Prompt refusé par le fournisseur (configure Kie pour un fallback)."
-                : "Échec Oneshot (pas de fallback Kie configuré)",
+              : "Échec Oneshot (pas de fallback Kie configuré)",
           );
         } else {
           // Atomic claim so concurrent polls don't each create a Kie task
@@ -367,7 +371,7 @@ module.exports = async function handler(req, res) {
           userId,
           generationId: larp.id,
           source: "failed_generation",
-          failMessage: apiFailMsg,
+          failMessage: toUserFailMessage(apiFailMsg, null) || apiFailMsg,
         }).catch((err) => console.error("refund failed", err));
       }
 
@@ -376,7 +380,7 @@ module.exports = async function handler(req, res) {
         status: apiStatus,
         resultUrls,
         watermarkedUrls: [],
-        failMessage: apiFailMsg,
+        failMessage: toUserFailMessage(apiFailMsg, null) || apiFailMsg,
         costTime: apiCostTime == null ? null : Number(apiCostTime),
         isSubscriber,
         requiresPaywall: false,

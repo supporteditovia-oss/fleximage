@@ -920,6 +920,17 @@ export default function Generate() {
         });
         return;
       }
+      if (error.code === "PROMPT_POLICY_VIOLATION") {
+        toast({
+          variant: "destructive",
+          title: "Contenu non autorisé",
+          description:
+            typeof error.message === "string" && error.message
+              ? error.message
+              : "Le contenu demandé n'est pas autorisé. Aucun jeton n'est perdu.",
+        });
+        return;
+      }
       let message =
         typeof error?.message === "string" && error.message !== "[object Object]"
           ? error.message

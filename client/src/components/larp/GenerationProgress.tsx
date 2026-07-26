@@ -170,16 +170,23 @@ export function GenerationProgress({
       document.body.removeAttribute("data-fullscreen-overlay");
       document.documentElement.removeAttribute("data-larp-result-mode");
       document.body.removeAttribute("data-larp-result-mode");
+      const failMessage =
+        typeof data.failMessage === "string" &&
+        data.failMessage &&
+        data.failMessage !== "[object Object]"
+          ? data.failMessage
+          : t("progress.generationFailedDefault");
+      const isPolicyFail =
+        /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito/i.test(
+          failMessage,
+        );
       toast({
         variant: "destructive",
-        title: t("progress.generationFailed"),
-        description:
-          typeof data.failMessage === "string" &&
-          data.failMessage &&
-          data.failMessage !== "[object Object]"
-            ? data.failMessage
-            : t("progress.generationFailedDefault"),
+        title: isPolicyFail ? "Contenu non autorisé" : t("progress.generationFailed"),
+        description: failMessage,
       });
+      // Credits may have been refunded server-side on policy/provider fail.
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
       onReset();
       navigate("/generate");
     }
@@ -190,6 +197,7 @@ export function GenerationProgress({
     error,
     navigate,
     onReset,
+    queryClient,
     t,
     toast,
   ]);

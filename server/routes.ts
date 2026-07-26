@@ -28,8 +28,12 @@ import { getSupabaseAdmin } from "./lib/supabase-admin";
 import { createKieTask, getKieTaskStatus } from "./lib/kie-client";
 import {
   buildIdentityPreservingPrompt,
-  REALISM_QUALITY_GUARD,
+  appendProductionPromptRules,
 } from "./lib/prompt-guard";
+import {
+  isDisallowedAdultPrompt,
+  CONTENT_POLICY_CODE,
+} from "./lib/content-policy";
 import {
   createRunwayVideoTask,
   getRunwayVideoStatus,
@@ -2559,15 +2563,17 @@ export async function registerRoutes(
               throw new Error("Invalid response from OneshotAPI");
             }
           } catch (err) {
-            // Google/OneShot policy blocks: fall through to Kie instead of hard-failing.
             if (isGoogleAiPromptFlagged(err)) {
               logger.warn(
                 { err },
-                "OneshotAPI flagged prompt — falling back to Kie AI",
+                "OneshotAPI flagged prompt — refusing without continuing",
               );
-            } else {
-              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+              return res.status(422).json({
+                code: CONTENT_POLICY_CODE,
+                message: tBackend(locale, "larps.policyViolation"),
+              });
             }
+            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
@@ -2678,6 +2684,13 @@ export async function registerRoutes(
         );
         const locale = resolveLocaleFromRequest(req);
 
+        if (typeof prompt === "string" && isDisallowedAdultPrompt(prompt)) {
+          return res.status(422).json({
+            code: CONTENT_POLICY_CODE,
+            message: tBackend(locale, "larps.policyViolation"),
+          });
+        }
+
         const supabaseAdmin = getSupabaseAdmin();
 
         // 0. Check generation limits & credits
@@ -2753,10 +2766,11 @@ export async function registerRoutes(
           if (!faceOk) return;
 
           // Soft lock: keep the uploaded person's face/skin when a face ref is used.
-          finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance. ${REALISM_QUALITY_GUARD}`;
+          finalPrompt = `${finalPrompt} Keep the exact same person from the user reference: same face, head, skin tone, and ethnicity unless the scene prompt explicitly changes appearance.`;
           finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
+          finalPrompt = appendProductionPromptRules(finalPrompt);
         } else {
-          // Free prompt: hard identity + pose lock + photoreal real products.
+          // Free prompt: hard identity + pose lock + photoreal + system/negative rules.
           finalPrompt = buildIdentityPreservingPrompt(prompt);
         }
         let imageUrls: string[] = [];
@@ -2797,71 +2811,8 @@ export async function registerRoutes(
             }
           : {};
 
-        // 3. Call Image API
-        const oneshotConfig = getOneshotApiConfig();
-        const appSettings = await getAppSettings();
-        let externalTaskId: string;
-        let provider: "oneshot" | "kie" = "oneshot";
-
-        if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
-          try {
-            // Upload images to OneshotAPI servers if any
-            const referenceFileIds = imageUrls.length > 0
-              ? await uploadImageUrlsToOneshot(imageUrls)
-              : [];
-
-            logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
-            const oneshotResponse = await createOneshotJob(finalPrompt, {
-              aspectRatio: aspect_ratio,
-              ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-            });
-            if (oneshotResponse && oneshotResponse.id) {
-              externalTaskId = `custom_${oneshotResponse.id}`;
-            } else {
-              throw new Error("Invalid response from OneshotAPI");
-            }
-          } catch (err) {
-            if (isGoogleAiPromptFlagged(err)) {
-              logger.warn(
-                { err },
-                "OneshotAPI flagged prompt — falling back to Kie AI",
-              );
-            } else {
-              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
-            }
-            provider = "kie";
-            const kieResponse = await createKieTask({
-              prompt: finalPrompt,
-              aspect_ratio,
-              ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-            });
-            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-              return res
-                .status(502)
-                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-            }
-            externalTaskId = kieResponse.data.taskId;
-          }
-        } else {
-          provider = "kie";
-          logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
-          const kieResponse = await createKieTask({
-            prompt: finalPrompt,
-            aspect_ratio,
-            ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-          });
-
-          if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-            logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-            return res
-              .status(502)
-              .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-          }
-          externalTaskId = kieResponse.data.taskId;
-        }
-
-        // 4. Store in generations, then charge through the credit ledger.
+        // 3) Reserve generation + debit BEFORE calling the AI provider.
+        const pendingTaskId = `pending_${randomUUID()}`;
         const { data: larp, error: insertErr } = await supabaseAdmin
           .from("generations")
           .insert({
@@ -2870,8 +2821,8 @@ export async function registerRoutes(
             generation_type: "image",
             prompt: finalPrompt,
             final_prompt: finalPrompt,
-            provider,
-            provider_task_id: externalTaskId,
+            provider: "oneshot",
+            provider_task_id: pendingTaskId,
             status: "processing",
             aspect_ratio,
             input_assets: imageUrls,
@@ -2889,8 +2840,7 @@ export async function registerRoutes(
           generationId: larp.id,
           source: "direct_generation",
           metadata: {
-            provider,
-            provider_task_id: externalTaskId,
+            phase: "pre_provider",
             ...referenceMetadata,
           },
         });
@@ -2903,8 +2853,130 @@ export async function registerRoutes(
             .json({ message: tBackend(locale, "larps.creditDeductionFailed") });
         }
 
-        // Record generation for limit tracking
         await recordGeneration(authReq.userId);
+
+        const failAndRefund = async (failMessage: string, source: string) => {
+          await supabaseAdmin
+            .from("generations")
+            .update({
+              status: "failed",
+              fail_message: failMessage,
+              updated_at: new Date().toISOString(),
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", larp.id);
+          await refundGenerationCreditsIfCharged(supabaseAdmin, {
+            userId: authReq.userId,
+            generationId: larp.id,
+            source,
+            failMessage,
+          }).catch((err) =>
+            logger.error({ err }, "refund after pre-provider failure failed"),
+          );
+        };
+
+        // 4) Call Image API (credits already reserved).
+        const oneshotConfig = getOneshotApiConfig();
+        const appSettings = await getAppSettings();
+        let externalTaskId: string;
+        let provider: "oneshot" | "kie" = "oneshot";
+
+        try {
+          if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
+            try {
+              const referenceFileIds = imageUrls.length > 0
+                ? await uploadImageUrlsToOneshot(imageUrls)
+                : [];
+
+              logger.info({ imageCount: imageUrls.length, referenceFileIds }, "Calling OneshotAPI");
+              const oneshotResponse = await createOneshotJob(finalPrompt, {
+                aspectRatio: aspect_ratio,
+                ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+              });
+              if (oneshotResponse && oneshotResponse.id) {
+                externalTaskId = `custom_${oneshotResponse.id}`;
+              } else {
+                throw new Error("Invalid response from OneshotAPI");
+              }
+            } catch (err) {
+              if (isGoogleAiPromptFlagged(err)) {
+                logger.warn(
+                  { err },
+                  "OneshotAPI flagged prompt — refunding credits",
+                );
+                await failAndRefund(
+                  tBackend(locale, "larps.policyViolation"),
+                  "policy_block_pre_provider",
+                );
+                return res.status(422).json({
+                  code: CONTENT_POLICY_CODE,
+                  message: tBackend(locale, "larps.policyViolation"),
+                });
+              }
+              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+              provider = "kie";
+              const kieResponse = await createKieTask({
+                prompt: finalPrompt,
+                aspect_ratio,
+                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+              });
+              if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+                logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+                await failAndRefund(
+                  tBackend(locale, "larps.taskCreateFailed"),
+                  "kie_create_failed",
+                );
+                return res
+                  .status(502)
+                  .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+              }
+              externalTaskId = kieResponse.data.taskId;
+            }
+          } else {
+            provider = "kie";
+            logger.info({ imageCount: imageUrls.length, imageUrls }, "Calling Kie.ai with images");
+            const kieResponse = await createKieTask({
+              prompt: finalPrompt,
+              aspect_ratio,
+              ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+            });
+
+            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+              await failAndRefund(
+                tBackend(locale, "larps.taskCreateFailed"),
+                "kie_create_failed",
+              );
+              return res
+                .status(502)
+                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+            }
+            externalTaskId = kieResponse.data.taskId;
+          }
+        } catch (providerErr) {
+          logger.error({ err: providerErr }, "provider create exception — refunding");
+          await failAndRefund(
+            tBackend(locale, "larps.taskCreateFailed"),
+            "provider_create_exception",
+          );
+          return res
+            .status(502)
+            .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+        }
+
+        await supabaseAdmin
+          .from("generations")
+          .update({
+            provider,
+            provider_task_id: externalTaskId,
+            updated_at: new Date().toISOString(),
+            metadata: {
+              ...referenceMetadata,
+              provider,
+              provider_task_id: externalTaskId,
+            },
+          })
+          .eq("id", larp.id);
 
         res.status(201).json({
           id: larp.id,
@@ -3582,16 +3654,19 @@ export async function registerRoutes(
           apiStatus = "success";
           apiResultJson = JSON.stringify(customStatus);
         } else if (isCustomApiFailed || isTimeout) {
-          // Including Google policy flags: try Kie fallback instead of hard-blocking.
-          logger.info(
-            {
-              larpId: larp.id,
-              isTimeout,
-              policyFlagged: isPolicyViolation,
-            },
-            "Custom API failed or timeout, triggering Kie AI fallback",
-          );
-          try {
+          if (isPolicyViolation) {
+            logger.warn(
+              { larpId: larp.id, jobId },
+              "OneshotAPI flagged prompt — failing with policy message (credits refunded)",
+            );
+            apiStatus = "fail";
+            apiFailMsg = tBackend(locale, "larps.policyViolation");
+          } else {
+            logger.info(
+              { larpId: larp.id, isTimeout },
+              "Custom API failed or timeout, triggering Kie AI fallback",
+            );
+            try {
               const aspect_ratio = larp.aspect_ratio || OUTPUT_ASPECT_RATIO;
               const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
               const fallbackKieResponse = await createKieTask({
@@ -3629,6 +3704,7 @@ export async function registerRoutes(
               apiStatus = "fail";
               apiFailMsg = tBackend(locale, "larps.fallbackFailed");
             }
+          }
         }
       } else {
         try {

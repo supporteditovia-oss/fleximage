@@ -1,3 +1,4 @@
+const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
@@ -13,12 +14,37 @@ const {
   checkGenerationLimits,
   getBillableCreditCost,
   deductGenerationCredits,
+  refundGenerationCreditsIfCharged,
   recordGeneration,
 } = require("../generation");
 const { buildIdentityPreservingPrompt } = require("../prompt-guard");
+const {
+  isDisallowedAdultPrompt,
+  contentPolicyResponse,
+  CONTENT_POLICY_MESSAGE_FR,
+} = require("../content-policy");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
+}
+
+async function failAndRefund(supabase, { userId, generationId, failMessage, source }) {
+  await supabase
+    .from("generations")
+    .update({
+      status: "failed",
+      fail_message: failMessage,
+      updated_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", generationId);
+
+  await refundGenerationCreditsIfCharged(supabase, {
+    userId,
+    generationId,
+    source,
+    failMessage,
+  }).catch((err) => console.error("refund failed", err));
 }
 
 module.exports = async function handler(req, res) {
@@ -48,6 +74,13 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // 1) Content filter — before upload, debit, or AI.
+    if (isDisallowedAdultPrompt(prompt)) {
+      res.status(422).json(contentPolicyResponse());
+      return;
+    }
+
+    // 2) Credit check — before AI.
     const limitResult = await checkGenerationLimits(supabase, userId);
     if (!limitResult.allowed) {
       res.status(403).json({ message: limitResult.reason });
@@ -63,9 +96,6 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let finalPrompt = buildIdentityPreservingPrompt(prompt);
-    let imageUrls = [];
-
     // Free-prompt path (Generate page): upload user images to R2.
     // Template-driven generations remain on the Express server when available.
     if (templateId && images.length === 0) {
@@ -75,7 +105,9 @@ module.exports = async function handler(req, res) {
       });
       return;
     }
-    imageUrls = await uploadInputImagesToR2(userId, images);
+
+    const finalPrompt = buildIdentityPreservingPrompt(prompt);
+    const imageUrls = await uploadInputImagesToR2(userId, images);
 
     if (imageUrls.length === 0) {
       res.status(422).json({
@@ -88,67 +120,11 @@ module.exports = async function handler(req, res) {
     const oneshotConfig = getOneshotApiConfig();
     const appSettings = await getAppSettings(supabase);
     const kieReady = isKieConfigured();
-    let externalTaskId;
-    let provider = "oneshot";
 
-    const createWithKie = async () => {
-      const kieResponse = await createKieTask({
-        prompt: finalPrompt,
-        aspect_ratio: aspectRatio,
-        image_input: imageUrls,
-      });
-      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-        return null;
-      }
-      return kieResponse.data.taskId;
-    };
-
-    if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
-      try {
-        const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
-        const oneshotResponse = await createOneshotJob(finalPrompt, {
-          aspectRatio,
-          ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-        });
-        if (!oneshotResponse || !oneshotResponse.id) {
-          throw new Error("Invalid response from OneshotAPI");
-        }
-        externalTaskId = `custom_${oneshotResponse.id}`;
-      } catch (err) {
-        // Google/OneShot policy blocks: fall through to Kie instead of hard-failing.
-        if (isGoogleAiPromptFlagged(err)) {
-          console.warn(
-            "OneshotAPI flagged prompt — falling back to Kie AI",
-            err && err.message ? err.message : err,
-          );
-        }
-        if (!kieReady) {
-          console.error("OneshotAPI failed (no Kie fallback configured)", err);
-          const detail =
-            err && err.message ? String(err.message).slice(0, 240) : "erreur Oneshot";
-          res.status(502).json({
-            message: `Échec de la génération Oneshot (${detail})`,
-          });
-          return;
-        }
-        console.error("OneshotAPI failed, falling back to Kie AI", err);
-        provider = "kie";
-        const kieTaskId = await createWithKie();
-        if (!kieTaskId) {
-          res.status(502).json({ message: "Échec de création de la tâche" });
-          return;
-        }
-        externalTaskId = kieTaskId;
-      }
-    } else if (kieReady) {
-      provider = "kie";
-      const kieTaskId = await createWithKie();
-      if (!kieTaskId) {
-        res.status(502).json({ message: "Échec de création de la tâche" });
-        return;
-      }
-      externalTaskId = kieTaskId;
-    } else {
+    if (
+      (appSettings.forceKieAi || !oneshotConfig.url || !oneshotConfig.key) &&
+      !kieReady
+    ) {
       res.status(503).json({
         message:
           "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
@@ -156,6 +132,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // 3) Reserve generation row + debit credits BEFORE calling the AI.
+    const pendingTaskId = `pending_${randomUUID()}`;
     const { data: larp, error: insertErr } = await supabase
       .from("generations")
       .insert({
@@ -164,8 +142,8 @@ module.exports = async function handler(req, res) {
         generation_type: "image",
         prompt: finalPrompt,
         final_prompt: finalPrompt,
-        provider,
-        provider_task_id: externalTaskId,
+        provider: "oneshot",
+        provider_task_id: pendingTaskId,
         status: "processing",
         aspect_ratio: aspectRatio,
         input_assets: imageUrls,
@@ -183,8 +161,7 @@ module.exports = async function handler(req, res) {
       generationId: larp.id,
       metadata: {
         source: "direct_generation",
-        provider,
-        provider_task_id: externalTaskId,
+        phase: "pre_provider",
       },
     });
 
@@ -202,6 +179,119 @@ module.exports = async function handler(req, res) {
     }
 
     await recordGeneration(supabase, userId);
+
+    // 4) Call image provider (credits already reserved).
+    let externalTaskId;
+    let provider = "oneshot";
+
+    const createWithKie = async () => {
+      const kieResponse = await createKieTask({
+        prompt: finalPrompt,
+        aspect_ratio: aspectRatio,
+        image_input: imageUrls,
+      });
+      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+        return null;
+      }
+      return kieResponse.data.taskId;
+    };
+
+    try {
+      if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
+        try {
+          const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
+          const oneshotResponse = await createOneshotJob(finalPrompt, {
+            aspectRatio,
+            ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+          });
+          if (!oneshotResponse || !oneshotResponse.id) {
+            throw new Error("Invalid response from OneshotAPI");
+          }
+          externalTaskId = `custom_${oneshotResponse.id}`;
+        } catch (err) {
+          if (isGoogleAiPromptFlagged(err)) {
+            console.warn(
+              "OneshotAPI flagged prompt — refunding credits",
+              err && err.message ? err.message : err,
+            );
+            await failAndRefund(supabase, {
+              userId,
+              generationId: larp.id,
+              failMessage: CONTENT_POLICY_MESSAGE_FR,
+              source: "policy_block_pre_provider",
+            });
+            res.status(422).json({
+              code: "PROMPT_POLICY_VIOLATION",
+              message: CONTENT_POLICY_MESSAGE_FR,
+            });
+            return;
+          }
+          if (!kieReady) {
+            console.error("OneshotAPI failed (no Kie fallback configured)", err);
+            const detail =
+              err && err.message
+                ? String(err.message).slice(0, 240)
+                : "erreur Oneshot";
+            const failMessage = `Échec de la génération Oneshot (${detail})`;
+            await failAndRefund(supabase, {
+              userId,
+              generationId: larp.id,
+              failMessage,
+              source: "oneshot_create_failed",
+            });
+            res.status(502).json({ message: failMessage });
+            return;
+          }
+          console.error("OneshotAPI failed, falling back to Kie AI", err);
+          provider = "kie";
+          const kieTaskId = await createWithKie();
+          if (!kieTaskId) {
+            await failAndRefund(supabase, {
+              userId,
+              generationId: larp.id,
+              failMessage: "Échec de création de la tâche",
+              source: "kie_create_failed",
+            });
+            res.status(502).json({ message: "Échec de création de la tâche" });
+            return;
+          }
+          externalTaskId = kieTaskId;
+        }
+      } else {
+        provider = "kie";
+        const kieTaskId = await createWithKie();
+        if (!kieTaskId) {
+          await failAndRefund(supabase, {
+            userId,
+            generationId: larp.id,
+            failMessage: "Échec de création de la tâche",
+            source: "kie_create_failed",
+          });
+          res.status(502).json({ message: "Échec de création de la tâche" });
+          return;
+        }
+        externalTaskId = kieTaskId;
+      }
+    } catch (providerErr) {
+      console.error("provider create failed", providerErr);
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Échec de création de la tâche",
+        source: "provider_create_exception",
+      });
+      res.status(502).json({ message: "Échec de création de la tâche" });
+      return;
+    }
+
+    await supabase
+      .from("generations")
+      .update({
+        provider,
+        provider_task_id: externalTaskId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", larp.id);
 
     res.status(201).json({
       id: larp.id,

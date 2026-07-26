@@ -16,16 +16,33 @@ export const IDENTITY_GUARD =
   "Change ONLY what the user requests while keeping the person locked. " +
   "User request:";
 
+/** Production system directives (mandatory). */
+export const SYSTEM_PRODUCTION_RULES =
+  "SYSTEM: Style photo smartphone réaliste. Séparer distinctement les personnages, aucune fusion de corps. Béton et acier photo-réalistes, pas de texture carton.";
+
 /**
- * Always applied — watches, cars, shoes, bags, keys, outfits, screens, pranks, etc.
+ * Nano Banana has no native negativePrompt field — exclusions go in the main prompt.
+ */
+export const NEGATIVE_PROMPT_EXCLUSIONS =
+  "hybrides, corps fusionnés, homme en robe, jambes supplémentaires, mains fantômes, doigts déformés, texte illisible, charabia, effet plastique, dessin 3D";
+
+export const NEGATIVE_PROMPT_CLAUSE =
+  `Negative prompt: ${NEGATIVE_PROMPT_EXCLUSIONS}. ` +
+  "Avoid hybrids, fused bodies, man in dress, extra legs, ghost hands, deformed fingers, unreadable text, gibberish, plastic look, 3D cartoon render.";
+
+/**
+ * Always applied — anatomy, crowd edits, products, text, materials, anti-AI look.
  */
 export const REALISM_QUALITY_GUARD =
-  "PHOTOREAL QUALITY (mandatory): ultra-sharp high-detail photo, clean lighting, no blur, no burnt highlights, no muddy compression. " +
-  "FACES MUST BE SHARP AND LARGE IN FRAME: prefer medium/close framing so eyes, skin and identity details are clearly readable when zoomed — avoid tiny distant faces. " +
-  "REAL PRODUCTS ONLY: every watch, car, shoe, bag, key, phone, outfit, or branded object must be a real existing model from the real world — never invent fake models or fantasy logos. " +
-  "If a brand is named (Rolex, Patek Philippe, Richard Mille, Audemars Piguet, Cartier, Omega, Ferrari, Lamborghini, Porsche, Mercedes, BMW, Louis Vuitton, Gucci, Nike, etc.), " +
-  "use a real recognizable product and spell every logo letter perfectly — no missing letters, no gibberish, no warped/melted text. " +
-  "Metal, glass, leather, fabric, and screen cracks must look physically real. Prank effects (broken screen, etc.) must stay believable and sharp.";
+  "PHOTOREAL QUALITY (mandatory): natural skin pores, real fabric weave, clean natural lighting, no burnt highlights, no muddy AI smear. " +
+  "FACES SHARP AND LARGE ENOUGH: eyes/skin readable when zoomed; avoid tiny distant faces when possible. " +
+  "ANATOMY LOCK: exactly two arms, two legs, two hands, five fingers per hand — no extra/ghost/floating hands, no fused limbs, no warped phones or melted objects. " +
+  "GENDER + OUTFIT COHERENCE: each person must have one coherent body and matching clothes. " +
+  "If adding women: insert COMPLETE separate women (own face, own body, own dress/heels) — NEVER put a dress, heels, or female legs on an existing man; never hybrid man-torso + dress. " +
+  "Workers keep workwear; glamorous women keep glamorous outfits; do not swap or merge genders/clothes. " +
+  "CROWDS: prefer fewer, fully correct people over many broken ones; each person physically separate with believable contact. " +
+  "TEXT & SIGNS: every letter perfectly readable — no gibberish, no warped/melted logos. " +
+  "REAL PRODUCTS ONLY: watches, cars, shoes, bags, keys, phones, outfits must be real-world models with authentic brands.";
 
 /** @deprecated alias — same as REALISM_QUALITY_GUARD */
 export const LUXURY_DETAIL_GUARD = REALISM_QUALITY_GUARD;
@@ -33,8 +50,11 @@ export const LUXURY_DETAIL_GUARD = REALISM_QUALITY_GUARD;
 /** OneShot allows up to 3000; leave margin for safety. */
 export const MAX_FINAL_PROMPT = 2900;
 
+const ADD_WOMEN_CLARIFIER =
+  " (Add them as fully separate complete women with their own bodies and outfits — do not dress any existing men in women's clothes.)";
+
 export function sanitizeUserPrompt(prompt: string): string {
-  return String(prompt || "")
+  let cleaned = String(prompt || "")
     .trim()
     .replace(/tanas?|92i/gi, "jolies filles")
     // Soften adult trigger words so Google Nano Banana is less likely to hard-block
@@ -42,6 +62,23 @@ export function sanitizeUserPrompt(prompt: string): string {
     .replace(/\bescortes?\b/gi, "femmes élégantes en tenues glamours")
     .replace(/\bescorts?\b/gi, "glamorous stylish women")
     .replace(/\bsexy\b/gi, "glamorous");
+
+  // When the user asks to add women into a male/group scene, spell out "add people"
+  // so the model does not morph men's clothes into dresses (common failure mode).
+  if (
+    /\b(ajoute|ajouter|ajout|add|ajoutez|mets|mettre|with|avec)\b[\w\s,']{0,40}\b(femmes?|filles?|women|girls|ladies)\b/i.test(
+      cleaned,
+    ) ||
+    /\b(femmes?|filles?|women|girls|ladies)\b[\w\s,']{0,40}\b(ajoute|ajouter|ajout|add|dans|sur|autour|around|beside|next)\b/i.test(
+      cleaned,
+    )
+  ) {
+    if (!/fully separate complete women/i.test(cleaned)) {
+      cleaned = `${cleaned}${ADD_WOMEN_CLARIFIER}`;
+    }
+  }
+
+  return cleaned;
 }
 
 /** @deprecated realism guard is now always on */
@@ -49,21 +86,34 @@ export function needsLuxuryDetailGuard(_prompt: string): boolean {
   return true;
 }
 
-function joinPromptParts(parts: Array<string | undefined>): string {
-  const combined = parts.filter(Boolean).join(" ");
-  if (combined.length <= MAX_FINAL_PROMPT) return combined;
-
-  const [guard, userPart, realism] = parts;
-  const fixedLen =
-    (guard ? guard.length + 1 : 0) + (realism ? realism.length + 1 : 0);
-  const budget = Math.max(120, MAX_FINAL_PROMPT - fixedLen);
-  const trimmedUser = String(userPart || "").slice(0, budget);
-  return [guard, trimmedUser, realism].filter(Boolean).join(" ");
+function productionSuffix(): string {
+  return [SYSTEM_PRODUCTION_RULES, REALISM_QUALITY_GUARD, NEGATIVE_PROMPT_CLAUSE]
+    .filter(Boolean)
+    .join(" ");
 }
 
+/**
+ * Build final provider prompt: identity lock + user request + system + realism + negatives.
+ */
 export function buildIdentityPreservingPrompt(userPrompt: string): string {
   const cleaned = sanitizeUserPrompt(userPrompt);
   if (!cleaned) return cleaned;
 
-  return joinPromptParts([IDENTITY_GUARD, cleaned, REALISM_QUALITY_GUARD]);
+  const prefix = IDENTITY_GUARD;
+  const suffix = productionSuffix();
+  const budget = Math.max(120, MAX_FINAL_PROMPT - prefix.length - suffix.length - 2);
+  const userPart = cleaned.slice(0, budget);
+  return `${prefix} ${userPart} ${suffix}`;
+}
+
+/** Append production system + negative rules onto an already-built template prompt. */
+export function appendProductionPromptRules(prompt: string): string {
+  const base = String(prompt || "").trim();
+  if (!base) return base;
+  const suffix = productionSuffix();
+  if (base.includes("Negative prompt:")) return base.slice(0, MAX_FINAL_PROMPT);
+  const combined = `${base} ${suffix}`;
+  return combined.length <= MAX_FINAL_PROMPT
+    ? combined
+    : combined.slice(0, MAX_FINAL_PROMPT);
 }
