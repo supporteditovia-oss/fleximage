@@ -16,6 +16,27 @@ const {
   toDbStatus,
 } = require("../generation");
 
+/** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
+function toUserFailMessage(value, fallback = "Échec de la génération") {
+  if (value == null || value === "") return fallback;
+  if (typeof value === "string") {
+    return value === "[object Object]" ? fallback : value;
+  }
+  if (typeof value === "object") {
+    if (typeof value.message === "string" && value.message) return value.message;
+    if (typeof value.error === "string" && value.error) return value.error;
+    if (typeof value.msg === "string" && value.msg) return value.msg;
+    try {
+      const s = JSON.stringify(value);
+      if (s && s !== "{}" && s !== "null") return s.slice(0, 280);
+    } catch {
+      /* ignore */
+    }
+  }
+  const s = String(value);
+  return s === "[object Object]" ? fallback : s;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -152,8 +173,6 @@ module.exports = async function handler(req, res) {
 
       const isCustomApiFailed =
         customStatus.status === "failed" || customStatus.status === "fail";
-      const isPolicyViolation =
-        isCustomApiFailed && isGoogleAiPromptFlagged(customStatus);
 
       if (
         customStatus.status === "completed" ||
@@ -162,19 +181,18 @@ module.exports = async function handler(req, res) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
       } else if (isCustomApiFailed || isTimeout) {
-        if (isPolicyViolation) {
+        // Including Google policy flags: try Kie fallback instead of hard-blocking the user.
+        if (!isKieConfigured()) {
           apiStatus = "fail";
-          apiFailMsg = "Prompt refusé par la politique de sécurité.";
+          apiFailMsg = toUserFailMessage(
+            customStatus && customStatus.error,
+            isTimeout
+              ? "Timeout Oneshot (pas de fallback Kie configuré)"
+              : isGoogleAiPromptFlagged(customStatus)
+                ? "Prompt refusé par le fournisseur (configure Kie pour un fallback)."
+                : "Échec Oneshot (pas de fallback Kie configuré)",
+          );
         } else {
-          if (!isKieConfigured()) {
-            apiStatus = "fail";
-            apiFailMsg =
-              customStatus && customStatus.error
-                ? String(customStatus.error)
-                : isTimeout
-                  ? "Timeout Oneshot (pas de fallback Kie configuré)"
-                  : "Échec Oneshot (pas de fallback Kie configuré)";
-          } else {
           // Atomic claim so concurrent polls don't each create a Kie task
           // then race to mark the generation failed.
           const oneshotTaskId = larp.provider_task_id;
@@ -261,7 +279,6 @@ module.exports = async function handler(req, res) {
                 : "erreur"
             })`;
           }
-          }
         }
       }
     } else {
@@ -338,7 +355,7 @@ module.exports = async function handler(req, res) {
           status: toDbStatus(apiStatus),
           output_assets: resultUrls,
           watermarked_assets: [],
-          fail_message: apiFailMsg || null,
+          fail_message: toUserFailMessage(apiFailMsg, null) || null,
           cost_time: apiCostTime == null ? null : Number(apiCostTime),
           updated_at: new Date().toISOString(),
           completed_at: new Date().toISOString(),

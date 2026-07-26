@@ -173,7 +173,12 @@ export function GenerationProgress({
       toast({
         variant: "destructive",
         title: t("progress.generationFailed"),
-        description: data.failMessage || t("progress.generationFailedDefault"),
+        description:
+          typeof data.failMessage === "string" &&
+          data.failMessage &&
+          data.failMessage !== "[object Object]"
+            ? data.failMessage
+            : t("progress.generationFailedDefault"),
       });
       onReset();
       navigate("/generate");

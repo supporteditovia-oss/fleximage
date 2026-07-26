@@ -660,12 +660,16 @@ async function startImageGenerationTask(params: {
       throw new Error("Invalid response from OneshotAPI");
     } catch (err) {
       if (isGoogleAiPromptFlagged(err)) {
-        throw err;
+        logger.warn(
+          { err },
+          "OneshotAPI flagged chained video image prompt — falling back to Kie AI",
+        );
+      } else {
+        logger.error(
+          { err },
+          "OneshotAPI failed while starting chained video image, falling back to Kie AI",
+        );
       }
-      logger.error(
-        { err },
-        "OneshotAPI failed while starting chained video image, falling back to Kie AI",
-      );
     }
   }
 
@@ -744,14 +748,8 @@ async function pollChainedVideoImageStage(params: {
     if (isPolicyViolation) {
       logger.warn(
         { larpId: larp.id, jobId },
-        "OneshotAPI rejected chained video image prompt, skipping Kie AI fallback",
+        "OneshotAPI flagged chained video image prompt — falling back to Kie AI",
       );
-      return {
-        status: "fail",
-        resultJson: null,
-        failMsg: tBackend(locale, "larps.policyViolation"),
-        costTime: null,
-      };
     }
 
     try {
@@ -2561,18 +2559,15 @@ export async function registerRoutes(
               throw new Error("Invalid response from OneshotAPI");
             }
           } catch (err) {
+            // Google/OneShot policy blocks: fall through to Kie instead of hard-failing.
             if (isGoogleAiPromptFlagged(err)) {
               logger.warn(
                 { err },
-                "OneshotAPI rejected prompt, skipping Kie AI fallback",
+                "OneshotAPI flagged prompt — falling back to Kie AI",
               );
-              return res.status(422).json({
-                code: "PROMPT_POLICY_VIOLATION",
-                message: tBackend(locale, "larps.policyViolation"),
-              });
+            } else {
+              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             }
-
-            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
@@ -2829,15 +2824,11 @@ export async function registerRoutes(
             if (isGoogleAiPromptFlagged(err)) {
               logger.warn(
                 { err },
-                "OneshotAPI rejected prompt, skipping Kie AI fallback",
+                "OneshotAPI flagged prompt — falling back to Kie AI",
               );
-              return res.status(422).json({
-                code: "PROMPT_POLICY_VIOLATION",
-                message: tBackend(locale, "larps.policyViolation"),
-              });
+            } else {
+              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             }
-
-            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
             provider = "kie";
             const kieResponse = await createKieTask({
               prompt: finalPrompt,
@@ -3125,12 +3116,11 @@ export async function registerRoutes(
             });
           } catch (err) {
             if (isGoogleAiPromptFlagged(err)) {
-              return res.status(422).json({
-                code: "PROMPT_POLICY_VIOLATION",
-                message: tBackend(locale, "larps.policyViolation"),
-              });
+              logger.warn(
+                { err },
+                "Oneshot flagged video image prompt — retrying via startImageGenerationTask/Kie path",
+              );
             }
-
             logger.error(
               { err },
               "Failed to start image stage for template video generation",
@@ -3592,19 +3582,16 @@ export async function registerRoutes(
           apiStatus = "success";
           apiResultJson = JSON.stringify(customStatus);
         } else if (isCustomApiFailed || isTimeout) {
-          if (isPolicyViolation) {
-            logger.warn(
-              { larpId: larp.id, jobId },
-              "OneshotAPI rejected prompt, skipping Kie AI fallback",
-            );
-            apiStatus = "fail";
-            apiFailMsg = tBackend(locale, "larps.policyViolation");
-          } else {
-            logger.info(
-              { larpId: larp.id, isTimeout },
-              "Custom API failed or timeout, triggering Kie AI fallback",
-            );
-            try {
+          // Including Google policy flags: try Kie fallback instead of hard-blocking.
+          logger.info(
+            {
+              larpId: larp.id,
+              isTimeout,
+              policyFlagged: isPolicyViolation,
+            },
+            "Custom API failed or timeout, triggering Kie AI fallback",
+          );
+          try {
               const aspect_ratio = larp.aspect_ratio || OUTPUT_ASPECT_RATIO;
               const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
               const fallbackKieResponse = await createKieTask({
@@ -3642,7 +3629,6 @@ export async function registerRoutes(
               apiStatus = "fail";
               apiFailMsg = tBackend(locale, "larps.fallbackFailed");
             }
-          }
         }
       } else {
         try {

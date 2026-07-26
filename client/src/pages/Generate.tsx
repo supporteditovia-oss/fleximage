@@ -288,13 +288,32 @@ export default function Generate() {
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
-  // ── Fresh visit: keep landing onboarding draft, else blank form ─
+  // ── Fresh visit: keep landing onboarding draft / valid lock, else blank form ─
   useEffect(() => {
     if (isReturningFromCheckout) return;
 
     const resume = getOnboardingResume();
     const paywallPreview = getPaywallImage();
+    const paywallExpiresAt = getPaywallExpiresAt();
+    const previewStillValid =
+      Boolean(paywallPreview) &&
+      Boolean(paywallExpiresAt) &&
+      !isPaywallExpired(paywallExpiresAt);
     const hasOnboardingDraft = Boolean(resume && paywallPreview);
+
+    // Explicit fresh start from expired preview CTA.
+    const wantsFresh =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("fresh") === "1";
+    if (wantsFresh) {
+      return;
+    }
+
+    // Valid locked preview still alive (user hit Back / remounted Generate) —
+    // do NOT wipe storage; the resume effect will send them to /image-prete.
+    if (previewStillValid && hasReachedFakePaywall()) {
+      return;
+    }
 
     if (hasOnboardingDraft && resume && paywallPreview) {
       console.log("[Generate] Preserving landing onboarding draft");
@@ -901,10 +920,15 @@ export default function Generate() {
         });
         return;
       }
-      let message = error.message;
+      let message =
+        typeof error?.message === "string" && error.message !== "[object Object]"
+          ? error.message
+          : t("generate.serverRetry");
       try {
         const parsed = JSON.parse(error.message);
-        message = parsed.message || error.message;
+        if (typeof parsed?.message === "string") {
+          message = parsed.message;
+        }
       } catch { }
       if (message.includes("<!DOCTYPE") || message.includes("<html")) {
         message = t("generate.serverRetry");

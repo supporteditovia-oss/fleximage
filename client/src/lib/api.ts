@@ -86,7 +86,22 @@ export async function authFetch(
     } else if (text) {
       try {
         const json = JSON.parse(text);
-        message = json.message || json.details || message;
+        message = typeof json.message === "string"
+          ? json.message
+          : typeof json.details === "string"
+            ? json.details
+            : typeof json.message === "object" && json.message?.message
+              ? String(json.message.message)
+              : message;
+        if (typeof message !== "string" || message === "[object Object]") {
+          try {
+            message = JSON.stringify(json.message || json.details || json).slice(0, 300);
+          } catch {
+            message = i18n.t("errors.generic.serverDefault", {
+              defaultValue: "Server error",
+            });
+          }
+        }
         code = json.code;
       } catch {
         const looksMissing =

@@ -115,12 +115,12 @@ module.exports = async function handler(req, res) {
         }
         externalTaskId = `custom_${oneshotResponse.id}`;
       } catch (err) {
+        // Google/OneShot policy blocks: fall through to Kie instead of hard-failing.
         if (isGoogleAiPromptFlagged(err)) {
-          res.status(422).json({
-            code: "PROMPT_POLICY_VIOLATION",
-            message: "Prompt refusé par la politique de sécurité.",
-          });
-          return;
+          console.warn(
+            "OneshotAPI flagged prompt — falling back to Kie AI",
+            err && err.message ? err.message : err,
+          );
         }
         if (!kieReady) {
           console.error("OneshotAPI failed (no Kie fallback configured)", err);

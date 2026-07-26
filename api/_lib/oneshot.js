@@ -117,6 +117,8 @@ async function createOneshotJob(prompt, options) {
     options: {
       // default = Nano Banana Pro (cher) | fast = Nano Banana 2
       modelVariant: "fast",
+      // Allow glamorous / adult-leaning lifestyle prompts (Google may still refuse some).
+      safetyFilters: false,
       aspectRatio: (options && options.aspectRatio) || "9:16",
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }

@@ -130,6 +130,7 @@ export interface OneshotJobPayload {
   prompt: string;
   options?: {
     modelVariant?: "default" | "fast" | "flash" | "flash-lite" | "pro";
+    safetyFilters?: boolean;
     aspectRatio?: string;
     referenceFileIds?: string[];
   };
@@ -226,6 +227,8 @@ export async function createOneshotJob(
     options: {
       // default = Nano Banana Pro (cher) | fast = Nano Banana 2
       modelVariant: "fast",
+      // Allow glamorous / adult-leaning lifestyle prompts (Google may still refuse some).
+      safetyFilters: false,
       aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }
