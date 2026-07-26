@@ -45,7 +45,14 @@ export function isGoogleAiPromptFlagged(input: unknown): boolean {
     normalized.includes(flaggedMessage) ||
     (normalized.includes("prompt") &&
       normalized.includes("flagg") &&
-      normalized.includes("google ai"))
+      normalized.includes("google ai")) ||
+    normalized.includes("safety policy") ||
+    normalized.includes("rejected by the model") ||
+    normalized.includes("could not complete the request") ||
+    normalized.includes("content policy") ||
+    (normalized.includes("violat") && normalized.includes("policy")) ||
+    normalized.includes("blocked by safety") ||
+    normalized.includes("unsafe")
   );
 }
 

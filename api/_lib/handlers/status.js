@@ -4,6 +4,8 @@ const {
   getAppSettings,
   isGoogleAiPromptFlagged,
   getOneshotJobStatus,
+  uploadImageUrlsToOneshot,
+  createOneshotJob,
 } = require("../oneshot");
 const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
 const { buildLiteralRetryPrompt } = require("../prompt-guard");
@@ -182,8 +184,16 @@ module.exports = async function handler(req, res) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
       } else if (isCustomApiFailed || isTimeout) {
-        // Including Google safety flags: never hard-stop — try Kie fallback when configured.
-        if (!isKieConfigured()) {
+        // Safety / soft provider failures: never hard-stop without a retry.
+        // Prefer Kie when configured; otherwise re-queue OneShot with a literal retry prompt.
+        const oneshotTaskId = larp.provider_task_id;
+        const meta =
+          larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+        const alreadySoftRetried = Boolean(meta.oneshot_soft_retry);
+        const policyFlagged = isGoogleAiPromptFlagged(customStatus);
+        const shouldSoftRetry = policyFlagged || isTimeout || isCustomApiFailed;
+
+        if (!isKieConfigured() && (!shouldSoftRetry || alreadySoftRetried)) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             customStatus && customStatus.error,
@@ -192,14 +202,11 @@ module.exports = async function handler(req, res) {
               : "Échec Oneshot (pas de fallback Kie configuré)",
           );
         } else {
-          // Atomic claim so concurrent polls don't each create a Kie task
-          // then race to mark the generation failed.
-          const oneshotTaskId = larp.provider_task_id;
           const claimMarker = `${oneshotTaskId},__claiming__`;
           const { data: claimedRows, error: claimErr } = await supabase
             .from("generations")
             .update({
-              provider: "fallback",
+              provider: isKieConfigured() ? "fallback" : "oneshot",
               provider_task_id: claimMarker,
               updated_at: new Date().toISOString(),
             })
@@ -212,7 +219,6 @@ module.exports = async function handler(req, res) {
           }
 
           if (!claimedRows || claimedRows.length === 0) {
-            // Another poll already claimed / moved to Kie.
             res.status(200).json({
               larpId: larp.id,
               status: "waiting",
@@ -226,31 +232,76 @@ module.exports = async function handler(req, res) {
             return;
           }
 
-          try {
-            const imageUrls = Array.isArray(larp.input_assets)
-              ? larp.input_assets
-              : [];
-            const policyFlagged = isGoogleAiPromptFlagged(customStatus);
-            const fallbackPrompt = policyFlagged
-              ? buildLiteralRetryPrompt(String(larp.final_prompt || ""))
-              : larp.final_prompt;
-            const fallbackKieResponse = await createKieTask({
-              prompt: fallbackPrompt,
-              aspect_ratio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
-              ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-            });
+          const imageUrls = Array.isArray(larp.input_assets)
+            ? larp.input_assets
+            : [];
+          const fallbackPrompt = buildLiteralRetryPrompt(
+            String(larp.final_prompt || ""),
+          );
 
-            if (
-              fallbackKieResponse.code === 200 &&
-              fallbackKieResponse.data?.taskId
-            ) {
-              const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
+          try {
+            if (isKieConfigured()) {
+              const fallbackKieResponse = await createKieTask({
+                prompt: fallbackPrompt,
+                aspect_ratio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+              });
+
+              if (
+                fallbackKieResponse.code === 200 &&
+                fallbackKieResponse.data?.taskId
+              ) {
+                const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
+                await supabase
+                  .from("generations")
+                  .update({
+                    provider: "fallback",
+                    provider_task_id: newKieTaskIdString,
+                    final_prompt: fallbackPrompt,
+                    metadata: { ...meta, oneshot_soft_retry: true },
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", larp.id);
+
+                res.status(200).json({
+                  larpId: larp.id,
+                  status: "waiting",
+                  resultUrls: [],
+                  failMessage: null,
+                  costTime: null,
+                  isSubscriber: false,
+                  requiresPaywall: false,
+                  resultType: "image",
+                });
+                return;
+              }
+
+              const kieMsg =
+                fallbackKieResponse && fallbackKieResponse.msg
+                  ? String(fallbackKieResponse.msg)
+                  : "réponse invalide";
+              apiStatus = "fail";
+              apiFailMsg = `Échec du fallback (${kieMsg})`;
+            } else {
+              // No Kie: one OneShot soft-retry with marketing/literal framing (fuel jokes, etc.).
+              const referenceFileIds =
+                imageUrls.length > 0
+                  ? await uploadImageUrlsToOneshot(imageUrls)
+                  : [];
+              const retryResponse = await createOneshotJob(fallbackPrompt, {
+                aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+                ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+              });
+              if (!retryResponse || !retryResponse.id) {
+                throw new Error("Invalid response from OneshotAPI retry");
+              }
               await supabase
                 .from("generations")
                 .update({
-                  provider: "fallback",
-                  provider_task_id: newKieTaskIdString,
-                  ...(policyFlagged ? { final_prompt: fallbackPrompt } : {}),
+                  provider: "oneshot",
+                  provider_task_id: `custom_${retryResponse.id}`,
+                  final_prompt: fallbackPrompt,
+                  metadata: { ...meta, oneshot_soft_retry: true },
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", larp.id);
@@ -267,15 +318,8 @@ module.exports = async function handler(req, res) {
               });
               return;
             }
-
-            const kieMsg =
-              fallbackKieResponse && fallbackKieResponse.msg
-                ? String(fallbackKieResponse.msg)
-                : "réponse invalide";
-            apiStatus = "fail";
-            apiFailMsg = `Échec du fallback (${kieMsg})`;
           } catch (fallbackErr) {
-            console.error("Kie fallback failed", fallbackErr);
+            console.error("provider fallback/retry failed", fallbackErr);
             apiStatus = "fail";
             apiFailMsg = `Échec du fallback (${
               fallbackErr && fallbackErr.message

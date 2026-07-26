@@ -26,16 +26,27 @@ function isGoogleAiPromptFlagged(input) {
   const text = String(
     input && input.message
       ? input.message
-      : typeof input === "string"
-        ? input
-        : JSON.stringify(input || ""),
+      : input && input.error
+        ? typeof input.error === "string"
+          ? input.error
+          : JSON.stringify(input.error)
+        : typeof input === "string"
+          ? input
+          : JSON.stringify(input || ""),
   )
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   return (
     (text.includes("prompt") && text.includes("flagg") && text.includes("google")) ||
-    text.includes("prompt flagge par google ai")
+    text.includes("prompt flagge par google ai") ||
+    text.includes("safety policy") ||
+    text.includes("rejected by the model") ||
+    text.includes("could not complete the request") ||
+    text.includes("content policy") ||
+    text.includes("violat") && text.includes("policy") ||
+    text.includes("blocked by safety") ||
+    text.includes("unsafe")
   );
 }
 
