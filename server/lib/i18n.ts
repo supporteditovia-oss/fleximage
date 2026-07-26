@@ -74,7 +74,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.fallbackFailed":
       "La generation a echoue apres la tentative de secours",
     "larps.policyViolation":
-      "Le contenu demandé n'est pas autorisé. Les images à caractère pornographique, de nudité ou explicite sont interdites sur LuxeFlexIA. Reformule ta demande. Aucun jeton n'est perdu.",
+      "Le contenu demandé n'est pas autorisé (protection des mineurs). Reformule ta demande. Aucun jeton n'est perdu.",
     "larps.referenceImageRequired":
       "Ajoute au moins une image de référence pour lancer la génération.",
     "rateLimit.tooManyRequests":
@@ -114,7 +114,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.pollingError": "Failed to check generation status",
     "larps.fallbackFailed": "Generation failed after fallback",
     "larps.policyViolation":
-      "The requested content is not allowed. Pornographic, nude, or explicit images are forbidden on LuxeFlexIA. Please rephrase your request. No credits are lost.",
+      "The requested content is not allowed (minors protection). Please rephrase your request. No credits are lost.",
     "larps.referenceImageRequired":
       "Add at least one reference image to start generation.",
     "rateLimit.tooManyRequests": "Too many requests. Please try again later.",
@@ -155,7 +155,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
     "larps.fallbackFailed":
       "La generacion fallo despues del modo de respaldo",
     "larps.policyViolation":
-      "El contenido solicitado no está permitido. Las imágenes pornográficas, de desnudez o explícitas están prohibidas en LuxeFlexIA. Reformula tu petición. No se pierden créditos.",
+      "El contenido solicitado no está permitido (protección de menores). Reformula tu petición. No se pierden créditos.",
     "larps.referenceImageRequired":
       "Agrega al menos una imagen de referencia para iniciar la generacion.",
     "rateLimit.tooManyRequests":
@@ -196,7 +196,7 @@ const backendMessages: Record<AppLocale, Record<BackendMessageKey, string>> = {
       "Der Generierungsstatus konnte nicht gepruft werden",
     "larps.fallbackFailed": "Die Generierung ist nach dem Fallback fehlgeschlagen",
     "larps.policyViolation":
-      "Der angeforderte Inhalt ist nicht erlaubt. Pornografische, nackte oder explizite Bilder sind auf LuxeFlexIA verboten. Formuliere deine Anfrage neu. Es gehen keine Credits verloren.",
+      "Der angeforderte Inhalt ist nicht erlaubt (Jugendschutz). Formuliere deine Anfrage neu. Es gehen keine Credits verloren.",
     "larps.referenceImageRequired":
       "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
     "rateLimit.tooManyRequests":

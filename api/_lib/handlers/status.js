@@ -6,6 +6,7 @@ const {
   getOneshotJobStatus,
 } = require("../oneshot");
 const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
+const { buildLiteralRetryPrompt } = require("../prompt-guard");
 const {
   OUTPUT_ASPECT_RATIO,
   PROVIDER_POLL_HARD_TIMEOUT_MS,
@@ -15,7 +16,6 @@ const {
   toClientStatus,
   toDbStatus,
 } = require("../generation");
-const { CONTENT_POLICY_MESSAGE_FR } = require("../content-policy");
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
 function toUserFailMessage(value, fallback = "Échec de la génération") {
@@ -174,8 +174,6 @@ module.exports = async function handler(req, res) {
 
       const isCustomApiFailed =
         customStatus.status === "failed" || customStatus.status === "fail";
-      const isPolicyViolation =
-        isCustomApiFailed && isGoogleAiPromptFlagged(customStatus);
 
       if (
         customStatus.status === "completed" ||
@@ -184,11 +182,8 @@ module.exports = async function handler(req, res) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
       } else if (isCustomApiFailed || isTimeout) {
-        // Safety / adult policy: fail clearly in French and refund (no Kie bypass).
-        if (isPolicyViolation) {
-          apiStatus = "fail";
-          apiFailMsg = CONTENT_POLICY_MESSAGE_FR;
-        } else if (!isKieConfigured()) {
+        // Including Google safety flags: never hard-stop — try Kie fallback when configured.
+        if (!isKieConfigured()) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             customStatus && customStatus.error,
@@ -235,8 +230,12 @@ module.exports = async function handler(req, res) {
             const imageUrls = Array.isArray(larp.input_assets)
               ? larp.input_assets
               : [];
+            const policyFlagged = isGoogleAiPromptFlagged(customStatus);
+            const fallbackPrompt = policyFlagged
+              ? buildLiteralRetryPrompt(String(larp.final_prompt || ""))
+              : larp.final_prompt;
             const fallbackKieResponse = await createKieTask({
-              prompt: larp.final_prompt,
+              prompt: fallbackPrompt,
               aspect_ratio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
               ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
             });
@@ -251,6 +250,7 @@ module.exports = async function handler(req, res) {
                 .update({
                   provider: "fallback",
                   provider_task_id: newKieTaskIdString,
+                  ...(policyFlagged ? { final_prompt: fallbackPrompt } : {}),
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", larp.id);

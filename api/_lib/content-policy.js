@@ -1,19 +1,21 @@
 /**
- * Adult / hardcore content policy for LuxeFlexIA.
- * Lifestyle "sexy/glamorous" flex is OK; nude/porn/hardcore is blocked.
+ * Content policy for LuxeFlexIA.
+ * Adult / hardcore / weapons / cash / drug *depiction* is ALLOWED.
+ * Only sexual content involving minors is blocked.
+ * Keep in sync with server/lib/content-policy.ts
  */
 
 const CONTENT_POLICY_CODE = "PROMPT_POLICY_VIOLATION";
 
 const CONTENT_POLICY_MESSAGE_FR =
-  "Le contenu demandé n'est pas autorisé. Les images à caractère pornographique, de nudité ou explicite sont interdites sur LuxeFlexIA. Reformule ta demande. Aucun jeton n'est perdu.";
+  "Le contenu demandé n'est pas autorisé (protection des mineurs). Reformule ta demande. Aucun jeton n'est perdu.";
 
 const CONTENT_POLICY_MESSAGE_FR_SHORT =
-  "Contenu non autorisé (nudité / explicite). Reformule ta demande — aucun jeton n'est perdu.";
+  "Contenu non autorisé (protection des mineurs). Aucun jeton n'est perdu.";
 
-/** Hard-block patterns (FR + EN). Keep glamorous "sexy" lifestyle outside this list. */
-const DISALLOWED_ADULT_RE =
-  /\b(nude|naked|nudee|nudit[eé]|nue\b|nus\b|a\s*poils?|topless|bottomless|sans\s*v[eê]tements?|d[eé]shabill[eé]e?s?|porn|porno|pornograph|xxx|nsfw|hardcore|hentai|onlyfans\s*nude|sexe\s*explicite|sex\s*explicit|fellatio|sodomie|p[eé]n[eé]tration|vagin|p[eé]nis|seins?\s*nus|nichons|bite\b|couilles|chattes?\b|cumshot|orgasm|masturb)/i;
+/** Only block sexual content involving minors. Everything else must generate. */
+const DISALLOWED_MINOR_SEXUAL_RE =
+  /\b((child|children|kid|kids|minor|minors|underage|under[\s-]?age|preteen|pre-teen|loli|shota|enfant|enfants|mineur|mineure|mineurs|ado\b|adolescent[es]?)[\w\s,.-]{0,40}(nude|naked|sex|sexual|porn|nudee|nudit|nue\b|pornograph|xxx|nsfw|viol|rape|pene|penis|vagin|seins|nipple)|((nude|naked|sex|sexual|porn|xxx|nsfw|nue\b)[\w\s,.-]{0,40}(child|children|kid|kids|minor|minors|underage|enfant|enfants|mineur|mineure|loli|shota)))/i;
 
 function normalizePolicyText(value) {
   return String(value || "")
@@ -22,10 +24,11 @@ function normalizePolicyText(value) {
     .toLowerCase();
 }
 
+/** @deprecated name kept for callers — now minors-only, not adult/hardcore. */
 function isDisallowedAdultPrompt(prompt) {
   const text = normalizePolicyText(prompt);
   if (!text) return false;
-  return DISALLOWED_ADULT_RE.test(text);
+  return DISALLOWED_MINOR_SEXUAL_RE.test(text);
 }
 
 function contentPolicyResponse() {
