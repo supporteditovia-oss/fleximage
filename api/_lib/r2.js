@@ -100,19 +100,19 @@ async function uploadInputImagesToR2(userId, images) {
 }
 
 async function downloadAndStoreImages(larpId, sourceUrls) {
+  const { enhanceGeneratedImageBuffer } = require("./enhance-image");
   const r2Urls = [];
   for (let i = 0; i < sourceUrls.length; i++) {
     const sourceUrl = sourceUrls[i];
     try {
       const response = await fetch(sourceUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get("content-type") || "image/jpeg";
-      const ext = contentType.includes("png")
-        ? ".png"
-        : contentType.includes("webp")
-          ? ".webp"
-          : ".jpg";
-      const buffer = Buffer.from(await response.arrayBuffer());
+      let contentType = response.headers.get("content-type") || "image/jpeg";
+      let buffer = Buffer.from(await response.arrayBuffer());
+      const enhanced = await enhanceGeneratedImageBuffer(buffer, contentType);
+      buffer = enhanced.buffer;
+      contentType = enhanced.contentType;
+      const ext = enhanced.extension;
       const key = `larps/${larpId}/${i}${ext}`;
       r2Urls.push(await uploadToR2(key, buffer, contentType));
     } catch (err) {

@@ -1,11 +1,12 @@
 import { uploadToR2 } from "./r2-client";
 import { logger } from "./logger";
 import { applyWatermark } from "./watermark";
+import { enhanceGeneratedImageBuffer } from "./enhance-image";
 
 /**
- * Download images from Kie.ai URLs and re-upload them to R2.
+ * Download images from provider URLs and re-upload them to R2.
  * Returns an array of R2 public URLs.
- * If an individual image fails, the original Kie.ai URL is kept as fallback.
+ * If an individual image fails, the original URL is kept as fallback.
  */
 export async function downloadAndStoreImages(
   larpId: string,
@@ -21,10 +22,13 @@ export async function downloadAndStoreImages(
         throw new Error(`Failed to download image: HTTP ${response.status}`);
       }
 
-      const contentType = response.headers.get("content-type") || "image/jpeg";
-      const extension = getExtensionFromContentType(contentType);
+      let contentType = response.headers.get("content-type") || "image/jpeg";
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      let buffer = Buffer.from(arrayBuffer);
+      const enhanced = await enhanceGeneratedImageBuffer(buffer, contentType);
+      buffer = enhanced.buffer;
+      contentType = enhanced.contentType;
+      const extension = enhanced.extension;
 
       const key = `larps/${larpId}/${i}${extension}`;
       const r2Url = await uploadToR2(key, buffer, contentType);
@@ -65,12 +69,15 @@ export async function downloadAndStoreImagesWithWatermark(
         throw new Error(`Failed to download image: HTTP ${response.status}`);
       }
 
-      const contentType = response.headers.get("content-type") || "image/jpeg";
-      const extension = getExtensionFromContentType(contentType);
+      let contentType = response.headers.get("content-type") || "image/jpeg";
       const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      let buffer = Buffer.from(arrayBuffer);
+      const enhanced = await enhanceGeneratedImageBuffer(buffer, contentType);
+      buffer = enhanced.buffer;
+      contentType = enhanced.contentType;
+      const extension = enhanced.extension;
 
-      // Store original
+      // Store original (enhanced)
       const originalKey = `larps/${larpId}/${i}${extension}`;
       const originalUrl = await uploadToR2(originalKey, buffer, contentType);
       originals.push(originalUrl);

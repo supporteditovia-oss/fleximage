@@ -21,6 +21,7 @@ const IDENTITY_GUARD =
  */
 const REALISM_QUALITY_GUARD =
   "PHOTOREAL QUALITY (mandatory): ultra-sharp high-detail photo, clean lighting, no blur, no burnt highlights, no muddy compression. " +
+  "FACES MUST BE SHARP AND LARGE IN FRAME: prefer medium/close framing so eyes, skin and identity details are clearly readable when zoomed — avoid tiny distant faces. " +
   "REAL PRODUCTS ONLY: every watch, car, shoe, bag, key, phone, outfit, or branded object must be a real existing model from the real world — never invent fake models or fantasy logos. " +
   "If a brand is named (Rolex, Patek Philippe, Richard Mille, Audemars Piguet, Cartier, Omega, Ferrari, Lamborghini, Porsche, Mercedes, BMW, Louis Vuitton, Gucci, Nike, etc.), " +
   "use a real recognizable product and spell every logo letter perfectly — no missing letters, no gibberish, no warped/melted text. " +

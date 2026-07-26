@@ -119,6 +119,8 @@ async function createOneshotJob(prompt, options) {
       modelVariant: "fast",
       // Allow glamorous / adult-leaning lifestyle prompts (Google may still refuse some).
       safetyFilters: false,
+      // Request max output; OneShot may still deliver ~1K today — we upscale on store.
+      imageSize: "4K",
       aspectRatio: (options && options.aspectRatio) || "9:16",
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }

@@ -131,6 +131,7 @@ export interface OneshotJobPayload {
   options?: {
     modelVariant?: "default" | "fast" | "flash" | "flash-lite" | "pro";
     safetyFilters?: boolean;
+    imageSize?: "0.5K" | "1K" | "2K" | "4K";
     aspectRatio?: string;
     referenceFileIds?: string[];
   };
@@ -229,6 +230,8 @@ export async function createOneshotJob(
       modelVariant: "fast",
       // Allow glamorous / adult-leaning lifestyle prompts (Google may still refuse some).
       safetyFilters: false,
+      // Request max output; OneShot may still deliver ~1K today — we upscale on store.
+      imageSize: "4K",
       aspectRatio: options?.aspectRatio ?? OUTPUT_ASPECT_RATIO,
       ...(options?.referenceFileIds && options.referenceFileIds.length > 0
         ? { referenceFileIds: options.referenceFileIds }
