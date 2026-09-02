@@ -28,7 +28,7 @@ function purgeExpiredPreview() {
 
 export default function ImagePrete() {
   const [location, setLocation] = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, isAdmin } = useAuth();
   const { t, i18n } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userPrompt, setUserPrompt] = useState<string | null>(null);
@@ -157,12 +157,19 @@ export default function ImagePrete() {
     }
   }, [profile?.id, expired, imageUrl]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    purgeExpiredPreview();
+    setLocation("/generate");
+  }, [isAdmin, setLocation]);
+
   useLayoutEffect(() => {
+    if (isAdmin) return;
     document.body.setAttribute("data-hide-app-chrome", "true");
     return () => {
       document.body.removeAttribute("data-hide-app-chrome");
     };
-  }, []);
+  }, [isAdmin]);
 
   const handleSignOut = async () => {
     if (signingOut) return;

@@ -67,6 +67,20 @@ export const resources = {
       account: {
         deleteAccount: "Supprimer mon compte",
       },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Plan de test",
+        planDescription:
+          "Choisis le plan simule pour tester l'app (mobile ou PC).",
+        planUpdatedTitle: "Plan mis a jour",
+        planLabels: {
+          admin: "Admin (acces illimite)",
+          free: "Gratuit",
+          discovery: "Decouverte",
+          essential: "Essentiel",
+          ultimate: "Ultimate",
+        },
+      },
       deleteDialog: {
         title: "Suppression définitive",
         description: "Cette action est irréversible",
@@ -437,6 +451,20 @@ export const resources = {
       account: {
         deleteAccount: "Delete my account",
       },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Test plan",
+        planDescription:
+          "Pick a simulated plan to test the app on mobile or desktop.",
+        planUpdatedTitle: "Plan updated",
+        planLabels: {
+          admin: "Admin (unlimited access)",
+          free: "Free",
+          discovery: "Discovery",
+          essential: "Essential",
+          ultimate: "Ultimate",
+        },
+      },
       deleteDialog: {
         title: "Permanent deletion",
         description: "This action is irreversible",
@@ -801,6 +829,20 @@ export const resources = {
       },
       account: {
         deleteAccount: "Eliminar mi cuenta",
+      },
+      admin: {
+        sectionTitle: "Administración",
+        planTitle: "Plan de prueba",
+        planDescription:
+          "Elige un plan simulado para probar la app en móvil o PC.",
+        planUpdatedTitle: "Plan actualizado",
+        planLabels: {
+          admin: "Admin (acceso ilimitado)",
+          free: "Gratis",
+          discovery: "Descubrimiento",
+          essential: "Esencial",
+          ultimate: "Ultimate",
+        },
       },
       deleteDialog: {
         title: "Eliminación definitiva",
@@ -1170,6 +1212,20 @@ export const resources = {
       },
       account: {
         deleteAccount: "Mein Konto löschen",
+      },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Testplan",
+        planDescription:
+          "Wähle einen simulierten Plan zum Testen auf Mobil oder PC.",
+        planUpdatedTitle: "Plan aktualisiert",
+        planLabels: {
+          admin: "Admin (unbegrenzter Zugang)",
+          free: "Kostenlos",
+          discovery: "Discovery",
+          essential: "Essential",
+          ultimate: "Ultimate",
+        },
       },
       deleteDialog: {
         title: "Endgültige Löschung",

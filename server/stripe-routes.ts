@@ -98,8 +98,29 @@ export function registerStripeRoutes(app: Express): void {
         profile.subscription_status || (profile.is_subscriber ? "active" : "inactive");
 
       if (isAdmin) {
-        planType = "admin";
-        subscriptionStatus = "admin";
+        const activeAdminSubscription =
+          subscription &&
+          (subscription.status === "active" || subscription.status === "trialing");
+
+        if (activeAdminSubscription) {
+          const activeSubscription = subscription as CurrentSubscriptionSnapshot;
+          const normalizedPlanType = normalizeStripePlanType(
+            activeSubscription.plan_type,
+          );
+          const planConfig = getStripePlanConfig(normalizedPlanType);
+          planType = planConfig.planType;
+          subscriptionStatus =
+            activeSubscription.status || subscriptionStatus;
+          creditsPerCycle = planConfig.creditsPerCycle;
+          billingInterval =
+            activeSubscription.billing_interval || planConfig.billingInterval;
+        } else if (profile.is_subscriber) {
+          planType = "unknown";
+          subscriptionStatus = profile.subscription_status || "active";
+        } else {
+          planType = "admin";
+          subscriptionStatus = "admin";
+        }
       } else if (subscription) {
         const normalizedPlanType = normalizeStripePlanType(subscription.plan_type);
         const planConfig = getStripePlanConfig(normalizedPlanType);

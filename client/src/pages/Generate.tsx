@@ -239,7 +239,7 @@ export default function Generate() {
 
   // ── Re-show saved paywall for non-subscribers ───────────────
   useEffect(() => {
-    if (profile?.is_subscriber) {
+    if (profile?.is_subscriber || profile?.role === "admin") {
       clearPaywalledResult();
       clearFakePaywallReached();
       return;
@@ -248,9 +248,12 @@ export default function Generate() {
     if (saved) {
       setSavedPaywall({ resultUrls: saved.resultUrls, larpId: saved.larpId });
     }
-  }, [profile?.is_subscriber]);
+  }, [profile?.is_subscriber, profile?.role]);
 
-  const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
+  const hasSavedPaywall =
+    !!savedPaywall &&
+    !profile?.is_subscriber &&
+    profile?.role !== "admin";
   const isPaywallOverlayActive = hasSavedPaywall;
   const isFullscreenOverlayActive =
     showFakeOnboardingLoader ||

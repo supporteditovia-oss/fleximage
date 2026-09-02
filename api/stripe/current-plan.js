@@ -89,8 +89,24 @@ module.exports = async function handler(req, res) {
       profile.subscription_status || (profile.is_subscriber ? "active" : "inactive");
 
     if (isAdmin) {
-      planType = "admin";
-      subscriptionStatus = "admin";
+      const activeAdminSubscription =
+        subscription &&
+        (subscription.status === "active" || subscription.status === "trialing");
+
+      if (activeAdminSubscription) {
+        const normalized = normalizePlan(subscription.plan_type);
+        planType = normalized;
+        creditsPerCycle =
+          subscription.credits_per_cycle ?? PLAN_CREDITS[normalized] ?? null;
+        billingInterval = subscription.billing_interval || "month";
+        subscriptionStatus = subscription.status || subscriptionStatus;
+      } else if (profile.is_subscriber) {
+        planType = "unknown";
+        subscriptionStatus = profile.subscription_status || "active";
+      } else {
+        planType = "admin";
+        subscriptionStatus = "admin";
+      }
     } else if (subscription) {
       const normalized = normalizePlan(subscription.plan_type);
       planType = normalized;
