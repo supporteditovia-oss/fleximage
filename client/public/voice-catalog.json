@@ -1,134 +1,231 @@
 {
+  "updatedAt": "2026-09-03",
+  "source": "fish.audio public voice library",
   "voices": [
     {
-      "id": "badbad",
-      "slug": "badbad",
-      "name": "BadBad",
-      "category": "Rap",
-      "description": "Rap nouvelle vague",
-      "previewUrl": "/voice-previews/badbad.mp3"
-    },
-    {
-      "id": "booba",
-      "slug": "booba",
-      "name": "Booba",
-      "category": "Rap",
-      "description": "Légende du rap FR",
-      "previewUrl": "/voice-previews/booba.mp3"
-    },
-    {
-      "id": "damso",
-      "slug": "damso",
-      "name": "Damso",
-      "category": "Rap",
-      "description": "Flow introspectif",
-      "previewUrl": "/voice-previews/damso.mp3"
-    },
-    {
-      "id": "gazo",
-      "slug": "gazo",
-      "name": "Gazo",
-      "category": "Rap",
-      "description": "Drill FR",
-      "previewUrl": "/voice-previews/gazo.mp3"
-    },
-    {
-      "id": "gims",
-      "slug": "gims",
-      "name": "Maître Gims",
-      "category": "Rap",
-      "description": "Pop urbaine",
-      "previewUrl": "/voice-previews/gims.mp3"
-    },
-    {
-      "id": "jul",
-      "slug": "jul",
-      "name": "Jul",
-      "category": "Rap",
-      "description": "Marseille — energie",
-      "previewUrl": "/voice-previews/jul.mp3"
-    },
-    {
-      "id": "kaaris",
-      "slug": "kaaris",
-      "name": "Kaaris",
-      "category": "Rap",
-      "description": "Trap hard",
-      "previewUrl": "/voice-previews/kaaris.mp3"
-    },
-    {
-      "id": "klm",
-      "slug": "klm",
-      "name": "KLM",
-      "category": "Rap",
-      "description": "Rap drill",
-      "previewUrl": "/voice-previews/klm.mp3"
-    },
-    {
       "id": "maes",
-      "slug": "maes",
       "name": "Maes",
       "category": "Rap",
       "description": "Rap FR — street",
-      "previewUrl": "/voice-previews/maes.mp3"
+      "previewUrl": "/voice-previews/maes.mp3",
+      "avatarUrl": "/voice-avatars/maes.jpg",
+      "fishReferenceId": "28fc2a488a62441fb1c22e6e3fe5a2ec"
+    },
+    {
+      "id": "gims",
+      "name": "Maître Gims",
+      "category": "Rap",
+      "description": "Pop urbaine",
+      "previewUrl": "/voice-previews/gims.mp3",
+      "avatarUrl": "/voice-avatars/gims.jpg",
+      "fishReferenceId": "d986afc13e7346ada353a747bce8a811"
+    },
+    {
+      "id": "damso",
+      "name": "Damso",
+      "category": "Rap",
+      "description": "Flow introspectif",
+      "previewUrl": "/voice-previews/damso.mp3",
+      "avatarUrl": "/voice-avatars/damso.jpg",
+      "fishReferenceId": "cd8c1c3eead843c2b6b855cace16f520"
     },
     {
       "id": "ninho",
-      "slug": "ninho",
       "name": "Ninho",
       "category": "Rap",
       "description": "Meltrap",
-      "previewUrl": "/voice-previews/ninho.mp3"
+      "previewUrl": "/voice-previews/ninho.mp3",
+      "avatarUrl": "/voice-avatars/ninho.jpg",
+      "fishReferenceId": "3cfa191ad09b4cfea8e4eebc4c31c923"
     },
     {
-      "id": "niska",
-      "slug": "niska",
-      "name": "Niska",
+      "id": "booba",
+      "name": "Booba",
       "category": "Rap",
-      "description": "Trap Paris",
-      "previewUrl": "/voice-previews/niska.mp3"
+      "description": "Légende du rap FR",
+      "previewUrl": "/voice-previews/booba.mp3",
+      "avatarUrl": "/voice-avatars/booba.jpg",
+      "fishReferenceId": "82ec8e836aaf47aaae8bfb52f3d744b2"
     },
     {
-      "id": "plk",
-      "slug": "plk",
-      "name": "PLK",
+      "id": "jul",
+      "name": "Jul",
       "category": "Rap",
-      "description": "Cloud rap",
-      "previewUrl": "/voice-previews/plk.mp3"
+      "description": "Marseille — énergie",
+      "previewUrl": "/voice-previews/jul.mp3",
+      "avatarUrl": "/voice-avatars/jul.jpg",
+      "fishReferenceId": "66754cdcb9554e62bdff1ab6446dc78d"
     },
     {
       "id": "sch",
-      "slug": "sch",
       "name": "SCH",
       "category": "Rap",
       "description": "Voix grave",
-      "previewUrl": "/voice-previews/sch.mp3"
+      "previewUrl": "/voice-previews/sch.mp3",
+      "avatarUrl": "/voice-avatars/sch.jpg",
+      "fishReferenceId": "d4b887e7013045bcba9bc9bb2fe2d3d5"
     },
     {
-      "id": "sdm",
-      "slug": "sdm",
-      "name": "SDM",
+      "id": "gazo",
+      "name": "Gazo",
       "category": "Rap",
-      "description": "Rap Parisien",
-      "previewUrl": "/voice-previews/sdm.mp3"
+      "description": "Drill FR",
+      "previewUrl": "/voice-previews/gazo.mp3",
+      "avatarUrl": "/voice-avatars/gazo.jpg",
+      "fishReferenceId": "0ff4b00e39e2429981b93bd7c6256d98"
     },
     {
-      "id": "tiakola",
-      "slug": "tiakola",
-      "name": "Tiakola",
+      "id": "niska",
+      "name": "Niska",
       "category": "Rap",
-      "description": "Afro trap",
-      "previewUrl": "/voice-previews/tiakola.mp3"
+      "description": "Trap Paris",
+      "previewUrl": "/voice-previews/niska.mp3",
+      "avatarUrl": "/voice-avatars/niska.jpg",
+      "fishReferenceId": "7f88f98abc7142e2a1353f63e6b9cb31"
+    },
+    {
+      "id": "plk",
+      "name": "PLK",
+      "category": "Rap",
+      "description": "Cloud rap",
+      "previewUrl": "/voice-previews/plk.mp3",
+      "avatarUrl": "/voice-avatars/plk.jpg",
+      "fishReferenceId": "c9188f639648467f8f1c513b0dbac9f7"
+    },
+    {
+      "id": "kaaris",
+      "name": "Kaaris",
+      "category": "Rap",
+      "description": "Trap hard",
+      "previewUrl": "/voice-previews/kaaris.mp3",
+      "avatarUrl": "/voice-avatars/kaaris.jpg",
+      "fishReferenceId": "30679093939d4335b780f6d45709de08"
     },
     {
       "id": "werenoi",
-      "slug": "werenoi",
       "name": "Werenoi",
       "category": "Rap",
       "description": "Rap FR montant",
-      "previewUrl": "/voice-previews/werenoi.mp3"
+      "previewUrl": "/voice-previews/werenoi.mp3",
+      "avatarUrl": "/voice-avatars/werenoi.jpg",
+      "fishReferenceId": "c569031ca13d447e90794eb076fc7f89"
+    },
+    {
+      "id": "sdm",
+      "name": "SDM",
+      "category": "Rap",
+      "description": "Rap parisien",
+      "previewUrl": "/voice-previews/sdm.mp3",
+      "avatarUrl": "/voice-avatars/sdm.jpg",
+      "fishReferenceId": "0a011b2e359e4b5580f0e46764795c3c"
+    },
+    {
+      "id": "tiakola",
+      "name": "Tiakola",
+      "category": "Rap",
+      "description": "Afro trap",
+      "previewUrl": "/voice-previews/tiakola.mp3",
+      "avatarUrl": "/voice-avatars/tiakola.jpg",
+      "fishReferenceId": "38aca316167d449288bab317c60cd70b"
+    },
+    {
+      "id": "orelsan",
+      "name": "Orelsan",
+      "category": "Rap",
+      "description": "Rap de Caen",
+      "previewUrl": "/voice-previews/orelsan.mp3",
+      "avatarUrl": "/voice-avatars/orelsan.jpg",
+      "fishReferenceId": "7797146234654eeb87ac433343232715"
+    },
+    {
+      "id": "freeze",
+      "name": "Freeze Corleone",
+      "category": "Rap",
+      "description": "Rap sombre",
+      "previewUrl": "/voice-previews/freeze.mp3",
+      "avatarUrl": "/voice-avatars/freeze.jpg",
+      "fishReferenceId": "6cc5eec5b51a45f2ac999534aa0fd9b6"
+    },
+    {
+      "id": "ziak",
+      "name": "Ziak",
+      "category": "Rap",
+      "description": "Drill masquée",
+      "previewUrl": "/voice-previews/ziak.mp3",
+      "avatarUrl": "/voice-avatars/ziak.jpg",
+      "fishReferenceId": "63d73ca475ce4df5bfb8f3dfcba4a960"
+    },
+    {
+      "id": "hamza",
+      "name": "Hamza",
+      "category": "Rap",
+      "description": "Sauce RnB",
+      "previewUrl": "/voice-previews/hamza.mp3",
+      "avatarUrl": "/voice-avatars/hamza.jpg",
+      "fishReferenceId": "7cd622684a6a45a5b1a572d235e26270"
+    },
+    {
+      "id": "kobalad",
+      "name": "Koba LaD",
+      "category": "Rap",
+      "description": "Trap 91",
+      "previewUrl": "/voice-previews/kobalad.mp3",
+      "avatarUrl": "/voice-avatars/kobalad.jpg",
+      "fishReferenceId": "13f73545905b437a8af016599b3daa8d"
+    },
+    {
+      "id": "soolking",
+      "name": "Soolking",
+      "category": "Rap",
+      "description": "Rap algérien",
+      "previewUrl": "/voice-previews/soolking.mp3",
+      "avatarUrl": "/voice-avatars/soolking.jpg",
+      "fishReferenceId": "90a9ed41dbe241cc9dcd4de41e3e3249"
+    },
+    {
+      "id": "lacrim",
+      "name": "Lacrim",
+      "category": "Rap",
+      "description": "Rap street",
+      "previewUrl": "/voice-previews/lacrim.mp3",
+      "avatarUrl": "/voice-avatars/lacrim.jpg",
+      "fishReferenceId": "ea0d1bb7afa545f88b811ef0a742bf43"
+    },
+    {
+      "id": "vald",
+      "name": "Vald",
+      "category": "Rap",
+      "description": "Rap décalé",
+      "previewUrl": "/voice-previews/vald.mp3",
+      "avatarUrl": "/voice-avatars/vald.jpg",
+      "fishReferenceId": "833380bd47a242cc9025025689ae93e5"
+    },
+    {
+      "id": "kalash",
+      "name": "Kalash",
+      "category": "Rap",
+      "description": "Dancehall",
+      "previewUrl": "/voice-previews/kalash.mp3",
+      "avatarUrl": "/voice-avatars/kalash.jpg",
+      "fishReferenceId": "954b7c4d7561410b9b0f5338d340ed16"
+    },
+    {
+      "id": "naps",
+      "name": "Naps",
+      "category": "Rap",
+      "description": "Marseille chill",
+      "previewUrl": "/voice-previews/naps.mp3",
+      "avatarUrl": "/voice-avatars/naps.jpg",
+      "fishReferenceId": "6475b33a9bd9402a963eaa9411223037"
+    },
+    {
+      "id": "rohff",
+      "name": "Rohff",
+      "category": "Rap",
+      "description": "Vétéran du rap",
+      "previewUrl": "/voice-previews/rohff.mp3",
+      "avatarUrl": "/voice-avatars/rohff.jpg",
+      "fishReferenceId": "bbb97a4040c645c6b0e6fa95a5a4679a"
     }
-  ],
-  "updatedAt": "2026-09-03",
-  "previewEngine": "edge-tts-male-fr"
+  ]
 }

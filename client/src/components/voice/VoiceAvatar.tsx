@@ -18,19 +18,18 @@ function gradientFor(id: string): string {
   return GRADIENTS[hash % GRADIENTS.length];
 }
 
-/**
- * Circular voice avatar. Tries /voice-avatars/<id>.jpg and falls back to
- * initials on a gradient, so real photos can be dropped in later.
- */
+/** Circular voice avatar, falling back to initials when the image is missing. */
 export function VoiceAvatar({
   id,
   name,
+  imageUrl,
   active = false,
   size = 88,
   className,
 }: {
   id: string;
   name: string;
+  imageUrl?: string;
   active?: boolean;
   size?: number;
   className?: string;
@@ -53,7 +52,7 @@ export function VoiceAvatar({
         <span className="voice-avatar__initials">{initials}</span>
       ) : (
         <img
-          src={`/voice-avatars/${id}.jpg`}
+          src={imageUrl ?? `/voice-avatars/${id}.jpg`}
           alt=""
           className="voice-avatar__img"
           loading="lazy"

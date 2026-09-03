@@ -129,6 +129,7 @@ export default function Catalogue() {
                   <VoiceAvatar
                     id={entry.id}
                     name={entry.name}
+                    imageUrl={entry.avatarUrl}
                     active={isSelected}
                   />
                 </button>
