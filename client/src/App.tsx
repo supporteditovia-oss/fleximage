@@ -3,6 +3,7 @@ import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -48,18 +49,61 @@ import { setRobotsMeta } from "@/lib/robots-meta";
 // OAuth callback — consumes ?code= (PKCE) or hash tokens, then goes to /generate
 function AuthCallback() {
   const { user, isLoading } = useAuth();
+  const { toast } = useToast();
   const [bootstrapping, setBootstrapping] = React.useState(true);
+  const [oauthFailed, setOauthFailed] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
       const search = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(
+        window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : window.location.hash,
+      );
+      const oauthError =
+        search.get("error") ||
+        search.get("error_code") ||
+        hashParams.get("error") ||
+        hashParams.get("error_code");
+      const oauthDescription =
+        search.get("error_description") ||
+        hashParams.get("error_description") ||
+        "";
+
+      if (oauthError) {
+        if (!cancelled) {
+          setOauthFailed(true);
+          toast({
+            variant: "destructive",
+            title: "Connexion Google impossible",
+            description:
+              oauthDescription.replace(/\+/g, " ") ||
+              "Le retour OAuth a échoué. Réessaie.",
+          });
+          window.history.replaceState({}, "", AUTH_CONFIG.LOGIN_PATH);
+          setBootstrapping(false);
+        }
+        return;
+      }
+
       const code = search.get("code");
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error && import.meta.env.DEV) {
-          console.warn("[auth] exchangeCodeForSession:", error.message);
+        if (error) {
+          if (!cancelled) {
+            setOauthFailed(true);
+            toast({
+              variant: "destructive",
+              title: "Connexion Google impossible",
+              description: error.message,
+            });
+          }
+          if (import.meta.env.DEV) {
+            console.warn("[auth] exchangeCodeForSession:", error.message);
+          }
         }
         window.history.replaceState({}, "", "/app");
       }
@@ -72,7 +116,7 @@ function AuthCallback() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toast]);
 
   if (isLoading || bootstrapping) {
     return (
@@ -83,7 +127,13 @@ function AuthCallback() {
   }
 
   return (
-    <Redirect to={user ? AUTH_CONFIG.REDIRECT_PATH : AUTH_CONFIG.LOGIN_PATH} />
+    <Redirect
+      to={
+        user && !oauthFailed
+          ? AUTH_CONFIG.REDIRECT_PATH
+          : AUTH_CONFIG.LOGIN_PATH
+      }
+    />
   );
 }
 

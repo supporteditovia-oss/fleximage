@@ -38,6 +38,20 @@ export function getAuthRedirectTo(
       }
       return `${DEFAULT_SITE_ORIGIN}${normalizedPath}`;
     }
+
+    // Cloud preview / unknown hosts are not in Supabase Redirect URLs —
+    // fall back to production (or localhost in DEV) to avoid Google error pages.
+    const allowlisted =
+      origin === "https://www.luxeflexia.com" ||
+      origin === "https://luxeflexia.com" ||
+      origin.endsWith(".luxeflexia.com");
+    if (!allowlisted) {
+      if (import.meta.env.DEV) {
+        return `http://localhost:5000${normalizedPath}`;
+      }
+      return `${DEFAULT_SITE_ORIGIN}${normalizedPath}`;
+    }
+
     return `${origin}${normalizedPath}`;
   }
 

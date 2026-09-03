@@ -197,21 +197,35 @@ export default function AuthPage() {
     }
 
     try {
+      const { isSupabaseConfigured } = await import("@/lib/supabase");
+      if (!isSupabaseConfigured) {
+        throw new Error(
+          "Configuration Supabase manquante. Vérifie VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.",
+        );
+      }
+
       const redirectTo = getAuthRedirectTo("/app");
       if (import.meta.env.DEV) {
         console.info("[auth] Google OAuth redirectTo:", redirectTo);
       }
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo,
+          skipBrowserRedirect: false,
           queryParams: {
             hl: signupLocale,
+            prompt: "select_account",
           },
         },
       });
       if (error) throw error;
+      if (!data?.url) {
+        throw new Error(
+          "Impossible de démarrer Google OAuth. Réessaie dans un instant.",
+        );
+      }
       if (!isLogin) {
         const { trackSnapSignUpGoogle } = await import("@/lib/snap-pixel");
         trackSnapSignUpGoogle();
