@@ -10,13 +10,14 @@ import {
   type SelectedVoice,
   type StudioMode,
 } from "@/lib/voice/selected-voice";
+import { StudioModeSwitch } from "@/components/voice/StudioModeSwitch";
 import { useToast } from "@/hooks/use-toast";
 import "@/pages/voice-studio.css";
 
 type StudioTab = "voix" | "generer";
 
 export default function CreateStudio() {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const { toast } = useToast();
   const [mode, setMode] = useState<StudioMode>("voice");
   const [tab, setTab] = useState<StudioTab>("voix");
@@ -53,13 +54,6 @@ export default function CreateStudio() {
     if (!selected || selected.kind !== "catalog") return null;
     return getVoiceCatalogEntry(selected.id) ?? null;
   }, [selected]);
-
-  const switchMode = (next: StudioMode) => {
-    stopVoicePreview();
-    setPreviewPlaying(false);
-    setStudioMode(next);
-    setLocation(next === "image" ? "/generate" : "/create?mode=voice");
-  };
 
   const togglePreview = () => {
     if (!catalogEntry) return;
@@ -107,26 +101,7 @@ export default function CreateStudio() {
   return (
     <div className="voice-studio-page">
       <div className="voice-studio-page__inner voice-studio-page__inner--wide">
-        <div className="mode-switch" role="tablist" aria-label="Mode du studio">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "image"}
-            className={mode === "image" ? "is-active" : ""}
-            onClick={() => switchMode("image")}
-          >
-            Image IA
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "voice"}
-            className={mode === "voice" ? "is-active" : ""}
-            onClick={() => switchMode("voice")}
-          >
-            Voix IA
-          </button>
-        </div>
+        <StudioModeSwitch mode={mode} />
 
         <section className="vs-voice-hero" aria-label="Voix active">
           <span className="vs-voice-hero__dot" aria-hidden />

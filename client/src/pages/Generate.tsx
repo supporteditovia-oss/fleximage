@@ -16,6 +16,8 @@ import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
+import { StudioModeSwitch } from "@/components/voice/StudioModeSwitch";
+import { setStudioMode } from "@/lib/voice/selected-voice";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
@@ -235,6 +237,11 @@ export default function Generate() {
           onVerified(false);
         });
     }
+  }, []);
+
+  // Keep the dock in Image IA mode (Historique, not Catalogue).
+  useEffect(() => {
+    setStudioMode("image");
   }, []);
 
   // ── Re-show saved paywall for non-subscribers ───────────────
@@ -1251,6 +1258,10 @@ export default function Generate() {
   // ── Main form ───────────────────────────────────────────────
   return (
     <div className="space-y-8">
+      <div className="flex justify-center pt-2">
+        <StudioModeSwitch mode="image" />
+      </div>
+
       {/* Image upload zone + prompt */}
       <div
         ref={topRef}
