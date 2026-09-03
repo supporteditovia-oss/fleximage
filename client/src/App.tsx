@@ -31,7 +31,7 @@ import Confidentialite from "@/pages/Confidentialite";
 import DebugGenerate from "@/pages/DebugGenerate";
 import SeoNicheLanding from "@/pages/SeoNicheLanding";
 import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
-import Bibliotheque from "@/pages/Bibliotheque";
+import Catalogue from "@/pages/Catalogue";
 import CreateStudio from "@/pages/CreateStudio";
 import { supabase } from "@/lib/supabase";
 
@@ -170,7 +170,10 @@ function ProtectedAppRoutes() {
         <Switch>
           <Route path="/generate" component={Generate} />
           <Route path="/create" component={CreateStudio} />
-          <Route path="/bibliotheque" component={Bibliotheque} />
+          <Route path="/catalogue" component={Catalogue} />
+          <Route path="/bibliotheque">
+            <Redirect to="/catalogue" />
+          </Route>
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />
@@ -203,7 +206,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/welcome": "Bienvenue — LuxeFlexIA",
   "/generate": "meta:titles.generate",
   "/create": "Voix IA — LuxeFlexIA",
-  "/bibliotheque": "Bibliothèque voix — LuxeFlexIA",
+  "/catalogue": "Catalogue voix — LuxeFlexIA",
   "/image-prete": "Ton image est prête — LuxeFlexIA",
   "/resultat": "Ton résultat — LuxeFlexIA",
   "/historique": "Historique — LuxeFlexIA",
@@ -227,6 +230,7 @@ const PROTECTED_PATHS = new Set([
   "/welcome",
   "/generate",
   "/create",
+  "/catalogue",
   "/bibliotheque",
   "/image-prete",
   "/debug-generate",

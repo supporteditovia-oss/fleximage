@@ -1,8 +1,10 @@
 import type { VoiceCatalogEntry } from "./voice-catalog";
 
+export type StudioMode = "image" | "voice";
+
 export type SelectedVoice =
-  | { kind: "catalog"; id: string; name: string }
-  | { kind: "cloned"; id: string; name: string };
+  | { kind: "catalog"; id: string; name: string; category: string }
+  | { kind: "cloned"; id: string; name: string; category: string };
 
 const SELECTED_KEY = "luxeflexia:selected-voice-v2";
 const MODE_KEY = "luxeflexia:studio-mode";
@@ -19,7 +21,7 @@ export function getSelectedVoice(): SelectedVoice | null {
       typeof parsed.id === "string" &&
       typeof parsed.name === "string"
     ) {
-      return parsed;
+      return { ...parsed, category: parsed.category ?? "Rap" };
     }
   } catch {
     /* ignore */
@@ -44,11 +46,16 @@ export function setSelectedVoice(voice: SelectedVoice | null): void {
 }
 
 export function selectCatalogVoice(entry: VoiceCatalogEntry): void {
-  setSelectedVoice({ kind: "catalog", id: entry.id, name: entry.name });
+  setSelectedVoice({
+    kind: "catalog",
+    id: entry.id,
+    name: entry.name,
+    category: entry.category,
+  });
   setStudioMode("voice");
 }
 
-export function setStudioMode(mode: "image" | "voice"): void {
+export function setStudioMode(mode: StudioMode): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(MODE_KEY, mode);
@@ -60,10 +67,12 @@ export function setStudioMode(mode: "image" | "voice"): void {
   }
 }
 
-export function getStudioMode(): "image" | "voice" {
+export function getStudioMode(): StudioMode {
   if (typeof window === "undefined") return "image";
   try {
-    return window.localStorage.getItem(MODE_KEY) === "voice" ? "voice" : "image";
+    return window.localStorage.getItem(MODE_KEY) === "voice"
+      ? "voice"
+      : "image";
   } catch {
     return "image";
   }

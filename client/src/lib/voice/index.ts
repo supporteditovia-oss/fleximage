@@ -17,4 +17,5 @@ export {
   setStudioMode,
   getStudioMode,
   type SelectedVoice,
+  type StudioMode,
 } from "./selected-voice";

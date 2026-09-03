@@ -7,6 +7,7 @@ import {
   Settings as SettingsIcon,
   Plus,
   History,
+  Library,
   FileText,
   ScrollText,
   Clapperboard,
@@ -23,12 +24,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useStudioMode } from "@/hooks/use-studio-mode";
 
 export function BottomDock() {
   const [location] = useLocation();
   const pathname = location.split("?")[0] || location;
   const { user, profile, isAdmin, signOut } = useAuth();
   const { t } = useTranslation();
+  const studioMode = useStudioMode();
+  // Voix IA replaces Historique with Catalogue; Historique stays for Image IA.
+  const showCatalogue = studioMode === "voice" || pathname === "/catalogue";
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
 
@@ -154,25 +159,46 @@ export function BottomDock() {
     )}>
       <nav className="w-full md:max-w-[360px] border border-[var(--lx-gold)]/30 bg-[var(--lx-surface-2)]/92 backdrop-blur-xl shadow-[0_8px_32px_rgba(18,16,14,0.12)] dock-nav">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
-          {/* Historique */}
-          <Link href="/historique" className={dockItemClass(isActive("/historique") || isActive("/history"))}>
-            <div className={dockIconClass(isActive("/historique") || isActive("/history"))}>
-              <History className="h-6 w-6 md:h-5 md:w-5" />
-            </div>
-            <span>{t("layout.dock.history")}</span>
-          </Link>
+          {/* Catalogue (Voix IA) ou Historique (Image IA) */}
+          {showCatalogue ? (
+            <Link
+              href="/catalogue"
+              className={dockItemClass(isActive("/catalogue"))}
+            >
+              <div className={dockIconClass(isActive("/catalogue"))}>
+                <Library className="h-6 w-6 md:h-5 md:w-5" />
+              </div>
+              <span>Catalogue</span>
+            </Link>
+          ) : (
+            <Link
+              href="/historique"
+              className={dockItemClass(
+                isActive("/historique") || isActive("/history"),
+              )}
+            >
+              <div
+                className={dockIconClass(
+                  isActive("/historique") || isActive("/history"),
+                )}
+              >
+                <History className="h-6 w-6 md:h-5 md:w-5" />
+              </div>
+              <span>{t("layout.dock.history")}</span>
+            </Link>
+          )}
 
           {/* Créer - center */}
           <Link
-            href="/create"
+            href={showCatalogue ? "/create?mode=voice" : "/generate"}
             className={dockItemClass(
-              isActive("/create") || isActive("/generate") || isActive("/bibliotheque"),
+              isActive("/create") || isActive("/generate"),
             )}
             onClick={handleCreateClick}
           >
             <div
               className={dockIconClass(
-                isActive("/create") || isActive("/generate") || isActive("/bibliotheque"),
+                isActive("/create") || isActive("/generate"),
               )}
             >
               <Plus className="h-6 w-6 md:h-5 md:w-5" />
@@ -206,20 +232,6 @@ export function BottomDock() {
               sideOffset={12}
               className="p-1.5 rounded-lg min-w-[200px] bg-[var(--lx-surface-2)]/95 backdrop-blur-xl border border-[var(--lx-gold)]/30 shadow-[0_8px_32px_rgba(18,16,14,0.12)]"
             >
-              <DropdownMenuItem
-                asChild
-                className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
-              >
-                <Link
-                  href="/bibliotheque"
-                  className="flex w-full items-center gap-3"
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
-                    <History className="h-4 w-4" />
-                  </div>
-                  <span className="font-medium">Bibliothèque voix</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem
                 asChild
                 className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
