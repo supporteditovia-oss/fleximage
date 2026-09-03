@@ -25,7 +25,10 @@ export default function Catalogue() {
 
   useEffect(() => {
     setStudioMode("voice");
-    return () => stopVoicePreview();
+    return () => {
+      stopVoicePreview();
+      setPlayingId(null);
+    };
   }, []);
 
   const categories = useMemo(() => {
@@ -57,8 +60,11 @@ export default function Catalogue() {
       setPlayingId(null);
       return;
     }
+    // Starting a voice always stops the previous one (single shared player).
     setPlayingId(entry.id);
-    playVoicePreview(entry.id, entry.previewUrl, () => setPlayingId(null));
+    playVoicePreview(entry.id, entry.previewUrl, () =>
+      setPlayingId((current) => (current === entry.id ? null : current)),
+    );
   };
 
   const useVoice = (entry: VoiceCatalogEntry) => {

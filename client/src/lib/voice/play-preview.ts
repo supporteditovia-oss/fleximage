@@ -1,18 +1,45 @@
 /**
- * Play a catalog / clone preview from a real audio URL.
- * Never uses window.speechSynthesis (that caused the female robot voice).
+ * Single shared player for catalog / clone previews.
+ *
+ * One <audio> element for the whole app: starting a preview always stops the
+ * previous one, so two voices can never talk over each other. Never uses
+ * window.speechSynthesis (that was the robotic female voice).
  */
 
-let activeAudio: HTMLAudioElement | null = null;
+let audio: HTMLAudioElement | null = null;
 let activeId: string | null = null;
+let activeToken = 0;
+let onEndedCurrent: (() => void) | null = null;
+
+function ensureAudio(): HTMLAudioElement {
+  if (!audio) {
+    audio = new Audio();
+    audio.preload = "auto";
+    audio.addEventListener("ended", handleStop);
+    audio.addEventListener("error", handleStop);
+  }
+  return audio;
+}
+
+function handleStop() {
+  const callback = onEndedCurrent;
+  activeId = null;
+  onEndedCurrent = null;
+  callback?.();
+}
 
 export function stopVoicePreview(): void {
-  if (activeAudio) {
-    activeAudio.pause();
-    activeAudio.src = "";
-    activeAudio = null;
-  }
+  activeToken += 1;
   activeId = null;
+  onEndedCurrent = null;
+  if (audio) {
+    audio.pause();
+    try {
+      audio.currentTime = 0;
+    } catch {
+      /* not seekable yet */
+    }
+  }
 }
 
 export function playVoicePreview(
@@ -20,26 +47,23 @@ export function playVoicePreview(
   url: string,
   onEnded?: () => void,
 ): () => void {
+  // Kill whatever is playing before starting the new voice.
   stopVoicePreview();
-  const audio = new Audio(url);
-  audio.preload = "auto";
-  activeAudio = audio;
+
+  const player = ensureAudio();
+  const token = ++activeToken;
   activeId = id;
+  onEndedCurrent = onEnded ?? null;
 
-  const finish = () => {
-    if (activeId === id) {
-      activeAudio = null;
-      activeId = null;
-    }
-    onEnded?.();
-  };
-
-  audio.addEventListener("ended", finish);
-  audio.addEventListener("error", finish);
-  void audio.play().catch(() => finish());
+  player.src = url;
+  player.currentTime = 0;
+  void player.play().catch(() => {
+    // Autoplay blocked or bad file: only clear if still the current request.
+    if (token === activeToken) handleStop();
+  });
 
   return () => {
-    if (activeId === id) stopVoicePreview();
+    if (token === activeToken) stopVoicePreview();
   };
 }
 
