@@ -31,6 +31,8 @@ import Confidentialite from "@/pages/Confidentialite";
 import DebugGenerate from "@/pages/DebugGenerate";
 import SeoNicheLanding from "@/pages/SeoNicheLanding";
 import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
+import Bibliotheque from "@/pages/Bibliotheque";
+import CreateStudio from "@/pages/CreateStudio";
 import { supabase } from "@/lib/supabase";
 
 import { Loader2 } from "lucide-react";
@@ -167,6 +169,8 @@ function ProtectedAppRoutes() {
       <ErrorBoundary>
         <Switch>
           <Route path="/generate" component={Generate} />
+          <Route path="/create" component={CreateStudio} />
+          <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />
@@ -198,6 +202,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/register": "meta:titles.register",
   "/welcome": "Bienvenue — LuxeFlexIA",
   "/generate": "meta:titles.generate",
+  "/create": "Voix IA — LuxeFlexIA",
+  "/bibliotheque": "Bibliothèque voix — LuxeFlexIA",
   "/image-prete": "Ton image est prête — LuxeFlexIA",
   "/resultat": "Ton résultat — LuxeFlexIA",
   "/historique": "Historique — LuxeFlexIA",
@@ -220,6 +226,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 const PROTECTED_PATHS = new Set([
   "/welcome",
   "/generate",
+  "/create",
+  "/bibliotheque",
   "/image-prete",
   "/debug-generate",
   "/resultat",

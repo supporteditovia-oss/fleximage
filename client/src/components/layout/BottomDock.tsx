@@ -125,7 +125,7 @@ export function BottomDock() {
 
   const isActive = (path: string) => pathname === path;
   const handleCreateClick = () => {
-    if (pathname !== "/generate") return;
+    if (pathname !== "/create" && pathname !== "/generate") return;
     window.dispatchEvent(new Event("larpking:create-new-larp"));
   };
 
@@ -164,11 +164,17 @@ export function BottomDock() {
 
           {/* Créer - center */}
           <Link
-            href="/generate"
-            className={dockItemClass(isActive("/generate"))}
+            href="/create"
+            className={dockItemClass(
+              isActive("/create") || isActive("/generate") || isActive("/bibliotheque"),
+            )}
             onClick={handleCreateClick}
           >
-            <div className={dockIconClass(isActive("/generate"))}>
+            <div
+              className={dockIconClass(
+                isActive("/create") || isActive("/generate") || isActive("/bibliotheque"),
+              )}
+            >
               <Plus className="h-6 w-6 md:h-5 md:w-5" />
             </div>
             <span>{t("layout.dock.create")}</span>
@@ -200,6 +206,20 @@ export function BottomDock() {
               sideOffset={12}
               className="p-1.5 rounded-lg min-w-[200px] bg-[var(--lx-surface-2)]/95 backdrop-blur-xl border border-[var(--lx-gold)]/30 shadow-[0_8px_32px_rgba(18,16,14,0.12)]"
             >
+              <DropdownMenuItem
+                asChild
+                className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
+              >
+                <Link
+                  href="/bibliotheque"
+                  className="flex w-full items-center gap-3"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
+                    <History className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Bibliothèque voix</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 asChild
                 className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
