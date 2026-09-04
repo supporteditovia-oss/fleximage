@@ -23,7 +23,20 @@ function fileExt(file: File): string {
   return m?.[1]?.toLowerCase() ?? ".mp4";
 }
 
-/** Extrait une tranche audio lossless (WAV 48 kHz 24-bit) via FFmpeg. */
+/**
+ * Nettoyage avant clonage : un extrait bruité (Discord, rue, musique de fond)
+ * apprend le bruit au modèle en même temps que la voix, et le clone sonne faux.
+ * Dosage volontairement léger — assez pour retirer le souffle, pas assez pour
+ * toucher au timbre, qui est justement ce que le clone doit reproduire.
+ */
+const CLEANUP_FILTERS = [
+  "highpass=f=70", // grondement, plosives, bruit de manipulation
+  "afftdn=nr=10:nf=-28", // souffle de fond, léger pour ne pas rendre métallique
+  "dynaudnorm=f=200:g=11", // égalise chuchotements et cris
+  "alimiter=limit=0.97", // évite la saturation des passages criés
+].join(",");
+
+/** Extrait une tranche audio lossless (WAV 44,1 kHz mono) via FFmpeg. */
 export async function extractAudioSliceFfmpeg(
   file: File,
   startSec: number,
@@ -47,6 +60,8 @@ export async function extractAudioSliceFfmpeg(
       "-t",
       String(Math.max(0.1, durationSec)),
       "-vn",
+      "-af",
+      CLEANUP_FILTERS,
       "-acodec",
       "pcm_s16le",
       "-ar",

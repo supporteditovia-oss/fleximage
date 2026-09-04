@@ -24,6 +24,7 @@ const {
   contentPolicyResponse,
 } = require("../content-policy");
 const { resolveRequestLocale, copy } = require("../locale-copy");
+const { resolveTemplateGeneration } = require("../template-refs");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -127,22 +128,32 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Free-prompt path (Generate page): upload user images to R2.
-    // Template-driven generations remain on the Express server when available.
-    if (templateId && images.length === 0) {
-      res.status(422).json({
-        code: "REFERENCE_IMAGE_REQUIRED",
-        message: copy(
-          uiLocale,
-          "Une image de référence est requise.",
-          "A reference image is required.",
-        ),
-      });
-      return;
-    }
-
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
-    const imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
+
+    // Modèle prêt à l'emploi : la scène vient de la référence du modèle, la
+    // photo de l'utilisateur ne sert qu'à y placer son visage.
+    let templateReferenceId = null;
+    let effectivePrompt = prompt;
+    let imageUrls;
+
+    if (templateId) {
+      const resolved = await resolveTemplateGeneration(supabase, templateId, {
+        hasUserPhoto: uploadedUrls.length > 0,
+      });
+
+      if (!resolved.ok) {
+        res.status(422).json({ code: resolved.code, message: resolved.message });
+        return;
+      }
+
+      templateReferenceId = resolved.referenceId;
+      effectivePrompt = resolved.prompt;
+      // La photo de l'utilisateur d'abord : le modèle traite la première
+      // référence comme le sujet à conserver.
+      imageUrls = [...uploadedUrls, resolved.referenceUrl];
+    } else {
+      imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
+    }
 
     if (imageUrls.length === 0) {
       res.status(422).json({
@@ -156,11 +167,13 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const finalPrompt = buildIdentityPreservingPrompt(prompt, {
+    const finalPrompt = buildIdentityPreservingPrompt(effectivePrompt, {
       referenceImageCount: imageUrls.length,
     });
-    const oneshotModelVariant = needsProModelVariant(prompt) ? "default" : "fast";
-    const estimatedSeconds = estimateGenerationSeconds(prompt, {
+    const oneshotModelVariant = needsProModelVariant(effectivePrompt)
+      ? "default"
+      : "fast";
+    const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
       modelVariant: oneshotModelVariant,
     });
@@ -199,6 +212,9 @@ module.exports = async function handler(req, res) {
         metadata: {
           oneshot_model_variant: oneshotModelVariant,
           estimated_seconds: estimatedSeconds,
+          ...(templateReferenceId
+            ? { selected_template_reference_image_id: templateReferenceId }
+            : {}),
         },
       })
       .select()

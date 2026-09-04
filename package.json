@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "bun run kill-port && NODE_ENV=development bun run server/index.ts",
+    "save": "node script/save.mjs",
     "kill-port": "bun run script/kill-port.ts",
     "build": "bun run script/build.ts",
     "vercel-build": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs && npx vite build",

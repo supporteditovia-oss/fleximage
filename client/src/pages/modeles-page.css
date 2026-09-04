@@ -1,0 +1,303 @@
+/* Fil vertical plein écran de modèles, façon réseau social. */
+
+.tpl-feed {
+  position: fixed;
+  inset: 0;
+  background: #08070a;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tpl-slide {
+  position: relative;
+  height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tpl-slide__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Le texte doit rester lisible quelle que soit la photo derrière. */
+.tpl-slide__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 7, 10, 0.55) 0%,
+    rgba(8, 7, 10, 0) 22%,
+    rgba(8, 7, 10, 0) 42%,
+    rgba(8, 7, 10, 0.82) 78%,
+    rgba(8, 7, 10, 0.96) 100%
+  );
+}
+
+.tpl-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: max(0.85rem, env(safe-area-inset-top)) 1rem 0.85rem;
+}
+
+.tpl-round-button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(20, 18, 24, 0.6);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tpl-credits {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  background: rgba(20, 18, 24, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 0.45rem 0.8rem;
+  color: #f6e7bd;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tpl-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tpl-slide__title {
+  margin: 0;
+  font-family: var(--lx-display, Georgia, serif);
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.tpl-badges {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tpl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Bande d'aperçus des autres modèles. */
+.tpl-strip {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding: 0.15rem 0.1rem;
+  scrollbar-width: none;
+}
+
+.tpl-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.tpl-strip__item {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.tpl-strip__item.is-active {
+  border-color: var(--lx-gold, #c9a227);
+  transform: scale(1.08);
+}
+
+.tpl-strip__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tpl-cta {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #7c4dff 0%, #5b2ee5 100%);
+  box-shadow: 0 8px 26px rgba(91, 46, 229, 0.4);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.tpl-cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tpl-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.tpl-empty {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  background: #08070a;
+}
+
+/* ── Entrée vers les modèles depuis le studio Image IA ─────── */
+
+.tpl-strip-entry {
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.85rem 0.9rem 0.95rem;
+  backdrop-filter: blur(8px);
+}
+
+.tpl-strip-entry__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tpl-strip-entry__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--lx-display, Georgia, serif);
+  font-size: 1.02rem;
+  color: var(--lx-ink, #171713);
+}
+
+.tpl-strip-entry__all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--lx-bronze, #8b6914);
+}
+
+.tpl-strip-entry__sub {
+  margin: 0.2rem 0 0.65rem;
+  font-size: 0.76rem;
+  color: var(--lx-muted, #7a7268);
+}
+
+.tpl-strip-entry__rail {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: none;
+}
+
+.tpl-strip-entry__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.tpl-strip-entry__card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 84px;
+  aspect-ratio: 9 / 16;
+  border: 0;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(18, 16, 14, 0.08);
+}
+
+.tpl-strip-entry__card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tpl-strip-entry__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem 0.35rem 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+  line-height: 1.15;
+  background: linear-gradient(
+    to top,
+    rgba(8, 7, 10, 0.9),
+    rgba(8, 7, 10, 0)
+  );
+}
