@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { Loader2, Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
+import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
@@ -1385,6 +1386,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             />
           ) : (
             <>
+              <TemplateStrip />
+
               <ImageUploadGrid
                 images={images}
                 onImageSelect={handleImageSelect}

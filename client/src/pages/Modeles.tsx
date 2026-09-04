@@ -70,6 +70,24 @@ export default function Modeles() {
     slideRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Ouvert depuis une vignette du studio : démarrer sur ce modèle.
+  const jumpedRef = useRef(false);
+  useEffect(() => {
+    if (jumpedRef.current || list.length === 0) return;
+    const wanted = new URLSearchParams(window.location.search).get("t");
+    if (!wanted) return;
+    const index = list.findIndex((t) => t.id === wanted || t.slug === wanted);
+    if (index <= 0) {
+      jumpedRef.current = true;
+      return;
+    }
+    jumpedRef.current = true;
+    requestAnimationFrame(() => {
+      slideRefs.current[index]?.scrollIntoView({ behavior: "auto" });
+      setActiveIndex(index);
+    });
+  }, [list]);
+
   const askForPhoto = (template: FeedTemplate) => {
     setPendingTemplate(template);
     fileRef.current?.click();

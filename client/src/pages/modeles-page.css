@@ -203,3 +203,101 @@
   color: rgba(255, 255, 255, 0.8);
   background: #08070a;
 }
+
+/* ── Entrée vers les modèles depuis le studio Image IA ─────── */
+
+.tpl-strip-entry {
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.85rem 0.9rem 0.95rem;
+  backdrop-filter: blur(8px);
+}
+
+.tpl-strip-entry__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tpl-strip-entry__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--lx-display, Georgia, serif);
+  font-size: 1.02rem;
+  color: var(--lx-ink, #171713);
+}
+
+.tpl-strip-entry__all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--lx-bronze, #8b6914);
+}
+
+.tpl-strip-entry__sub {
+  margin: 0.2rem 0 0.65rem;
+  font-size: 0.76rem;
+  color: var(--lx-muted, #7a7268);
+}
+
+.tpl-strip-entry__rail {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: none;
+}
+
+.tpl-strip-entry__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.tpl-strip-entry__card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 84px;
+  aspect-ratio: 9 / 16;
+  border: 0;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(18, 16, 14, 0.08);
+}
+
+.tpl-strip-entry__card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tpl-strip-entry__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem 0.35rem 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+  line-height: 1.15;
+  background: linear-gradient(
+    to top,
+    rgba(8, 7, 10, 0.9),
+    rgba(8, 7, 10, 0)
+  );
+}
