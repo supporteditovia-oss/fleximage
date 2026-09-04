@@ -29,12 +29,14 @@ export function VoiceAvatar({
 }: {
   id: string;
   name: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   active?: boolean;
   size?: number;
   className?: string;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
+  // Explicit null means no free portrait exists: show initials, skip the request.
+  const showInitials = imageUrl === null || imageFailed;
 
   const initials = name
     .split(/\s+/)
@@ -48,11 +50,11 @@ export function VoiceAvatar({
       className={cn("voice-avatar", active && "is-active", className)}
       style={{ width: size, height: size, background: gradientFor(id) }}
     >
-      {imageFailed ? (
+      {showInitials ? (
         <span className="voice-avatar__initials">{initials}</span>
       ) : (
         <img
-          src={imageUrl ?? `/voice-avatars/${id}.jpg`}
+          src={imageUrl || `/voice-avatars/${id}.jpg`}
           alt=""
           className="voice-avatar__img"
           loading="lazy"

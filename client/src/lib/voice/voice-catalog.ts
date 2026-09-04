@@ -8,8 +8,8 @@ export type VoiceCatalogEntry = {
   description: string;
   /** Real Fish Audio sample used for the catalog preview. */
   previewUrl: string;
-  /** Round avatar shipped with the app. */
-  avatarUrl: string;
+  /** Round avatar shipped with the app; null falls back to initials. */
+  avatarUrl: string | null;
   /** Fish Audio public model id, used as reference_id when generating. */
   fishReferenceId: string;
 };
@@ -23,7 +23,7 @@ export const VOICE_CATALOG: VoiceCatalogEntry[] = [
     category: "Rap",
     description: "Rap FR — street",
     previewUrl: "/voice-previews/maes.mp3",
-    avatarUrl: "/voice-avatars/maes.jpg",
+    avatarUrl: null,
     fishReferenceId: "28fc2a488a62441fb1c22e6e3fe5a2ec",
   },
   {
@@ -253,7 +253,7 @@ export const VOICE_CATALOG: VoiceCatalogEntry[] = [
     category: "Rap",
     description: "Marseille chill",
     previewUrl: "/voice-previews/naps.mp3",
-    avatarUrl: "/voice-avatars/naps.jpg",
+    avatarUrl: null,
     fishReferenceId: "6475b33a9bd9402a963eaa9411223037",
   },
   {
