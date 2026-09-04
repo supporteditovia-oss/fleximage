@@ -8,6 +8,7 @@ import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
   speakCatalogSample,
+  stopCatalogSample,
   type VoiceCategory,
 } from "@/lib/v2-mock-voice";
 import {
@@ -133,7 +134,7 @@ function VoiceCatalogLibrary() {
   useEffect(() => {
     return () => {
       stopSpeakRef.current?.();
-      window.speechSynthesis?.cancel();
+      stopCatalogSample();
     };
   }, []);
 
@@ -176,7 +177,7 @@ function VoiceCatalogLibrary() {
   const useVoice = (id: string) => {
     selectVoice(id, false);
     stopSpeakRef.current?.();
-    window.speechSynthesis?.cancel();
+    stopCatalogSample();
     navigate("/create");
   };
 
