@@ -19,6 +19,7 @@ import AdminFunnel from "@/pages/AdminFunnel";
 import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
+import Modeles from "@/pages/Modeles";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
 import Historique from "@/pages/Historique";
@@ -210,6 +211,7 @@ function ProtectedAppRoutes() {
       <ErrorBoundary>
         <Switch>
           <Route path="/create" component={Create} />
+          <Route path="/modeles" component={Modeles} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
           <Route path="/image-prete" component={ImagePrete} />
@@ -244,6 +246,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/welcome": "meta:titles.welcome",
   "/generate": "meta:titles.generate",
   "/create": "Studio — LuxeFlexIA",
+  "/modeles": "Modèles — LuxeFlexIA",
   "/image-prete": "meta:titles.imageReady",
   "/resultat": "meta:titles.result",
   "/historique": "meta:titles.history",
@@ -268,6 +271,7 @@ const PROTECTED_PATHS = new Set([
   "/welcome",
   "/generate",
   "/create",
+  "/modeles",
   "/image-prete",
   "/debug-generate",
   "/resultat",

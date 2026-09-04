@@ -63,7 +63,11 @@ git(["add", "-A"]);
 if (!git(["status", "--porcelain"], { quiet: true })) {
   console.log("Rien de nouveau à sauvegarder.");
 } else {
-  const custom = process.argv.slice(2).join(" ").trim();
+  const custom = process.argv
+    .slice(2)
+    .filter((arg) => arg !== "--")
+    .join(" ")
+    .trim();
   const stamp = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
   git(["commit", "-m", custom || `Sauvegarde du ${stamp}`]);
   console.log("Modifications enregistrées.");
