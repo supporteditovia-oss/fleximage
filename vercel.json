@@ -8,9 +8,18 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(self), geolocation=(), payment=()"
@@ -28,8 +37,14 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
       ]
     }
   ],
@@ -43,6 +58,14 @@
       "destination": "/api/admin-router?__adminPath=$1"
     },
     {
+      "source": "/api/templates",
+      "destination": "/api/larps-router?__larpsPath=templates"
+    },
+    {
+      "source": "/api/templates/(.*)",
+      "destination": "/api/larps-router?__larpsPath=templates/$1"
+    },
+    {
       "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
@@ -53,11 +76,35 @@
       "destination": "/luxeflexia-logo.png",
       "permanent": true
     },
-    { "source": "/.env", "destination": "/404", "permanent": false },
-    { "source": "/.env.local", "destination": "/404", "permanent": false },
-    { "source": "/.git/(.*)", "destination": "/404", "permanent": false },
-    { "source": "/server/(.*)", "destination": "/404", "permanent": false },
-    { "source": "/package.json", "destination": "/404", "permanent": false },
-    { "source": "/.cursor/(.*)", "destination": "/404", "permanent": false }
+    {
+      "source": "/.env",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/.env.local",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/.git/(.*)",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/server/(.*)",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/package.json",
+      "destination": "/404",
+      "permanent": false
+    },
+    {
+      "source": "/.cursor/(.*)",
+      "destination": "/404",
+      "permanent": false
+    }
   ]
 }

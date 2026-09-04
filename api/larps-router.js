@@ -9,6 +9,7 @@ const voiceGenerate = require("./_lib/handlers/voice-generate");
 const voiceHistory = require("./_lib/handlers/voice-history");
 const voiceDelete = require("./_lib/handlers/voice-delete");
 const voiceDownload = require("./_lib/handlers/voice-download");
+const templatesHandler = require("./_lib/handlers/templates");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__larpsPath;
@@ -37,6 +38,12 @@ module.exports = async function handler(req, res) {
   }
 
   const parts = pathParts(req);
+
+  // Réécrit depuis /api/templates : le plan Hobby plafonne à 12 fonctions
+  // serverless, donc on passe par ce routeur plutôt que d'en créer une de plus.
+  if (parts[0] === "templates") {
+    return templatesHandler(req, res);
+  }
 
   if (parts[0] === "generate-direct") {
     return generateDirect(req, res);
