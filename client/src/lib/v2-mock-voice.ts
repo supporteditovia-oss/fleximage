@@ -25,6 +25,10 @@ export type MockVoiceProfile = {
   sampleText?: string;
   pitch?: number;
   rate?: number;
+  /** Extrait MP3 reel de la voix (Fish Audio). */
+  sampleUrl?: string;
+  /** Modele Fish Audio a reutiliser pour generer avec cette voix. */
+  fishReferenceId?: string;
 };
 
 export type MockVoiceGeneration = {
@@ -96,6 +100,31 @@ function catalogPhoto(slug: string): string {
 }
 
 /** Catalogue voix — noms publics + photo locale (script/fetch-voice-catalog-photos.mjs). */
+
+/** Modeles publics Fish Audio : vraie voix de l'artiste. */
+const CATALOG_FISH_IDS: Partial<Record<string, string>> = {
+  maes: "28fc2a488a62441fb1c22e6e3fe5a2ec",
+  gims: "d986afc13e7346ada353a747bce8a811",
+  damso: "cd8c1c3eead843c2b6b855cace16f520",
+  ninho: "3cfa191ad09b4cfea8e4eebc4c31c923",
+  booba: "82ec8e836aaf47aaae8bfb52f3d744b2",
+  jul: "66754cdcb9554e62bdff1ab6446dc78d",
+  sch: "d4b887e7013045bcba9bc9bb2fe2d3d5",
+  gazo: "0ff4b00e39e2429981b93bd7c6256d98",
+  niska: "7f88f98abc7142e2a1353f63e6b9cb31",
+  plk: "c9188f639648467f8f1c513b0dbac9f7",
+  kaaris: "30679093939d4335b780f6d45709de08",
+  werenoi: "c569031ca13d447e90794eb076fc7f89",
+  sdm: "0a011b2e359e4b5580f0e46764795c3c",
+  tiakola: "38aca316167d449288bab317c60cd70b",
+};
+
+/** Extrait officiel du modele, servi en local. */
+function catalogSampleUrl(slug: string): string | undefined {
+  return CATALOG_FISH_IDS[slug]
+    ? `/assets/voice-catalog/samples/${slug}.mp3`
+    : undefined;
+}
 const CATALOG_SEEDS: Seed[] = [
   // Rap
   { slug: "maes", name: "Maes", category: "Rap", description: "Rap FR — street", pitch: 0.78, rate: 0.95 },
@@ -114,52 +143,6 @@ const CATALOG_SEEDS: Seed[] = [
   { slug: "werenoi", name: "Werenoi", category: "Rap", description: "Rap FR montant", pitch: 0.75, rate: 1.02 },
   { slug: "sdm", name: "SDM", category: "Rap", description: "Rap Parisien", pitch: 0.73, rate: 1.0 },
   { slug: "tiakola", name: "Tiakola", category: "Rap", description: "Afro trap", pitch: 0.81, rate: 1.04 },
-  // Actrice
-  { slug: "marion", name: "Marion Cotillard", category: "Actrice", description: "Cinéma FR", pitch: 1.12, rate: 0.94 },
-  { slug: "lea", name: "Léa Seydoux", category: "Actrice", description: "Élégante", pitch: 1.14, rate: 0.92 },
-  { slug: "adele", name: "Adèle Exarchopoulos", category: "Actrice", description: "Naturelle", pitch: 1.1, rate: 0.96 },
-  { slug: "audrey", name: "Audrey Tautou", category: "Actrice", description: "Douceur parisienne", pitch: 1.18, rate: 0.95 },
-  { slug: "eva", name: "Eva Green", category: "Actrice", description: "Glamour sombre", pitch: 1.08, rate: 0.9 },
-  { slug: "sophie", name: "Sophie Marceau", category: "Actrice", description: "Icône française", pitch: 1.16, rate: 0.93 },
-  { slug: "juliette", name: "Juliette Binoche", category: "Actrice", description: "Voix posée", pitch: 1.1, rate: 0.88 },
-  { slug: "camille", name: "Camille Cottin", category: "Actrice", description: "Comédie premium", pitch: 1.2, rate: 1.0 },
-  { slug: "isabelle", name: "Isabelle Huppert", category: "Actrice", description: "Intensité", pitch: 1.06, rate: 0.9 },
-  { slug: "virginie", name: "Virginie Efira", category: "Actrice", description: "Chaleureuse", pitch: 1.15, rate: 0.97 },
-  // Cinéma
-  { slug: "omar", name: "Omar Sy", category: "Cinéma", description: "Charisme", pitch: 0.9, rate: 0.95 },
-  { slug: "vincent", name: "Vincent Cassel", category: "Cinéma", description: "Intense", pitch: 0.86, rate: 0.88 },
-  { slug: "jean", name: "Jean Dujardin", category: "Cinéma", description: "Charme retro", pitch: 0.92, rate: 0.96 },
-  { slug: "gilles", name: "Gilles Lellouche", category: "Cinéma", description: "Voix grave", pitch: 0.84, rate: 0.9 },
-  { slug: "louis", name: "Louis Garrel", category: "Cinéma", description: "Jeune auteur", pitch: 0.94, rate: 0.98 },
-  { slug: "francois", name: "François Cluzet", category: "Cinéma", description: "Narration", pitch: 0.88, rate: 0.9 },
-  { slug: "reda", name: "Reda Kateb", category: "Cinéma", description: "Profondeur", pitch: 0.87, rate: 0.92 },
-  { slug: "gerard", name: "Gérard Depardieu", category: "Cinéma", description: "Légende", pitch: 0.78, rate: 0.86 },
-  // Musique
-  { slug: "drake", name: "Drake", category: "Rap", description: "Hip-hop global", pitch: 0.85, rate: 0.98 },
-  { slug: "travis", name: "Travis Scott", category: "Rap", description: "Trap US", pitch: 0.82, rate: 1.06 },
-  { slug: "aya", name: "Aya Nakamura", category: "Musique", description: "Pop afro", pitch: 1.12, rate: 1.02 },
-  { slug: "dadju", name: "Dadju", category: "Musique", description: "RnB FR", pitch: 0.9, rate: 1.0 },
-  { slug: "central", name: "Central Cee", category: "Rap", description: "UK drill", pitch: 0.88, rate: 1.08 },
-  { slug: "rihanna", name: "Rihanna", category: "Musique", description: "Pop icon", pitch: 1.1, rate: 0.96 },
-  // Sport
-  { slug: "mbappe", name: "Kylian Mbappé", category: "Sport", description: "Football", pitch: 0.95, rate: 1.05 },
-  { slug: "ronaldo", name: "Cristiano Ronaldo", category: "Sport", description: "Football", pitch: 0.93, rate: 1.0 },
-  { slug: "messi", name: "Lionel Messi", category: "Sport", description: "Football", pitch: 0.94, rate: 0.94 },
-  // Influenceur
-  { slug: "squeezie", name: "Squeezie", category: "Influenceur", description: "YouTube FR", pitch: 1.05, rate: 1.1 },
-  { slug: "tibo", name: "Tibo InShape", category: "Influenceur", description: "Fitness FR", pitch: 0.96, rate: 1.06 },
-  { slug: "lena", name: "Léna Situations", category: "Influenceur", description: "Lifestyle", pitch: 1.18, rate: 1.02 },
-  { slug: "kim", name: "Kim Kardashian", category: "Influenceur", description: "Lifestyle US", pitch: 1.14, rate: 0.98 },
-  // Médias
-  { slug: "hanouna", name: "Cyril Hanouna", category: "Médias", description: "Talk-show TV", pitch: 1.0, rate: 1.08 },
-  { slug: "nagui", name: "Nagui", category: "Médias", description: "Radio TV", pitch: 0.98, rate: 0.96 },
-  { slug: "barthes", name: "Yann Barthès", category: "Médias", description: "Late night", pitch: 0.94, rate: 0.94 },
-  { slug: "combal", name: "Camille Combal", category: "Médias", description: "Animateur TV", pitch: 0.96, rate: 1.0 },
-  { slug: "salame", name: "Léa Salamé", category: "Médias", description: "Journaliste", pitch: 1.08, rate: 0.92 },
-  { slug: "fogiel", name: "Marc-Olivier Fogiel", category: "Médias", description: "People TV", pitch: 1.02, rate: 1.0 },
-  // Politique & Business
-  { slug: "macron", name: "Emmanuel Macron", category: "Politique", description: "Président", pitch: 0.92, rate: 0.9 },
-  { slug: "musk", name: "Elon Musk", category: "Business", description: "Tech & entreprise", pitch: 0.88, rate: 0.92 },
 ];
 
 function initialsFrom(name: string): string {
@@ -184,20 +167,14 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = CATALOG_SEEDS.map(
     sampleText: CATALOG_SAMPLE_LINE,
     pitch: seed.pitch,
     rate: seed.rate,
+    sampleUrl: catalogSampleUrl(seed.slug),
+    fishReferenceId: CATALOG_FISH_IDS[seed.slug],
   }),
 );
 
 export const VOICE_CATALOG_FILTERS: Array<"Tous" | VoiceCategory> = [
   "Tous",
   "Rap",
-  "Musique",
-  "Actrice",
-  "Cinéma",
-  "Sport",
-  "Politique",
-  "Business",
-  "Médias",
-  "Influenceur",
 ];
 
 export const MOCK_VOICE_PROFILES: MockVoiceProfile[] = [
@@ -262,13 +239,68 @@ export function mockWaveformBars(seed: number, count = 48): number[] {
 }
 
 /**
+ * Lecteur unique partagé par tout le catalogue : démarrer une voix coupe
+ * toujours la précédente, sinon deux extraits se superposent.
+ */
+let catalogAudio: HTMLAudioElement | null = null;
+let catalogToken = 0;
+let catalogOnEnd: (() => void) | null = null;
+
+function finishCatalogAudio() {
+  const callback = catalogOnEnd;
+  catalogOnEnd = null;
+  callback?.();
+}
+
+export function stopCatalogSample(): void {
+  catalogToken += 1;
+  catalogOnEnd = null;
+  if (catalogAudio) {
+    catalogAudio.pause();
+    try {
+      catalogAudio.currentTime = 0;
+    } catch {
+      /* pas encore prêt */
+    }
+  }
+  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+}
+
+function playCatalogAudio(url: string, onEnd?: () => void): () => void {
+  stopCatalogSample();
+
+  if (!catalogAudio) {
+    catalogAudio = new Audio();
+    catalogAudio.preload = "auto";
+    catalogAudio.addEventListener("ended", finishCatalogAudio);
+    catalogAudio.addEventListener("error", finishCatalogAudio);
+  }
+
+  const token = ++catalogToken;
+  catalogOnEnd = onEnd ?? null;
+  catalogAudio.src = url;
+  catalogAudio.currentTime = 0;
+  void catalogAudio.play().catch(() => {
+    if (token === catalogToken) finishCatalogAudio();
+  });
+
+  return () => {
+    if (token === catalogToken) stopCatalogSample();
+  };
+}
+
+/**
  * Aperçu catalogue UNIQUEMENT.
- * Force toujours la phrase fixe — ignore tout texte custom passé par erreur.
+ * Joue l'extrait officiel Fish Audio de l'artiste. La synthèse du navigateur
+ * ne sert plus que de secours pour une voix sans extrait.
  */
 export function speakCatalogSample(
-  profile: Pick<MockVoiceProfile, "name" | "pitch" | "rate">,
+  profile: Pick<MockVoiceProfile, "name" | "pitch" | "rate" | "sampleUrl">,
   onEnd?: () => void,
 ): () => void {
+  if (profile.sampleUrl) {
+    return playCatalogAudio(profile.sampleUrl, onEnd);
+  }
   return speakRaw(
     {
       text: CATALOG_SAMPLE_LINE,
