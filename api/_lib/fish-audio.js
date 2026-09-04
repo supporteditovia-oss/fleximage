@@ -12,12 +12,28 @@ function cleanEnv(value) {
   return text.replace(/^\uFEFF/, "").replace(/[\r\n\u200B-\u200D\uFEFF]/g, "");
 }
 
+// The key may already exist in the project under an older name.
+const FISH_KEY_ENV_NAMES = [
+  "FISH_AUDIO_API_KEY",
+  "FISH_API_KEY",
+  "FISHAUDIO_API_KEY",
+  "VITE_FISH_AUDIO_API_KEY",
+];
+
+function readFishApiKey() {
+  for (const name of FISH_KEY_ENV_NAMES) {
+    const value = cleanEnv(process.env[name]);
+    if (value) return value;
+  }
+  return "";
+}
+
 function getFishApiKey() {
-  const key = cleanEnv(process.env.FISH_AUDIO_API_KEY);
+  const key = readFishApiKey();
   if (!key) {
     throw Object.assign(
       new Error(
-        "FISH_AUDIO_API_KEY manquante. Ajoute-la dans les variables d'environnement pour activer la génération vocale.",
+        `Clé Fish Audio manquante. Ajoute ${FISH_KEY_ENV_NAMES[0]} dans les variables d'environnement pour activer la génération vocale.`,
       ),
       { status: 503, code: "missing_fish_api_key" },
     );
@@ -26,7 +42,7 @@ function getFishApiKey() {
 }
 
 function hasFishApiKey() {
-  return Boolean(cleanEnv(process.env.FISH_AUDIO_API_KEY));
+  return Boolean(readFishApiKey());
 }
 
 /** data URL (audio/*) -> { buffer, contentType, extension } */
