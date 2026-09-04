@@ -4,6 +4,7 @@ const statusHandler = require("./_lib/handlers/status");
 const downloadHandler = require("./_lib/handlers/download");
 const historyHandler = require("./_lib/handlers/history");
 const deleteHandler = require("./_lib/handlers/delete");
+const voiceHandler = require("./_lib/handlers/voice");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__larpsPath;
@@ -32,6 +33,10 @@ module.exports = async function handler(req, res) {
   }
 
   const parts = pathParts(req);
+
+  if (parts[0] === "voice") {
+    return voiceHandler(req, res, parts[1]);
+  }
 
   if (parts[0] === "generate-direct") {
     return generateDirect(req, res);

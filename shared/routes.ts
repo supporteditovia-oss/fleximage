@@ -158,6 +158,24 @@ export const api = {
       method: "GET" as const,
       path: "/api/larps/can-generate",
     },
+    voice: {
+      clone: {
+        method: "POST" as const,
+        path: "/api/larps/voice/clone",
+      },
+      generate: {
+        method: "POST" as const,
+        path: "/api/larps/voice/generate",
+      },
+      history: {
+        method: "GET" as const,
+        path: "/api/larps/voice/history",
+      },
+      delete: {
+        method: "POST" as const,
+        path: "/api/larps/voice/delete",
+      },
+    },
   },
   faceCaptures: {
     latest: {

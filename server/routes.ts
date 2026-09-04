@@ -3362,6 +3362,47 @@ export async function registerRoutes(
     },
   );
 
+  // =============================================
+  // VOIX IA (Fish Audio)
+  // Registered before /api/larps/:taskId so "voice" is not read as an id.
+  // =============================================
+
+  const voiceRoute =
+    (
+      action: "handleClone" | "handleGenerate" | "handleHistory" | "handleDelete",
+    ) =>
+    async (req: any, res: any) => {
+      try {
+        const authReq = req as AuthenticatedRequest;
+        const voice: any = await import("../../api/_lib/voice.js");
+        const supabaseAdmin = getSupabaseAdmin();
+        const payload =
+          action === "handleHistory" ? req.query.limit : req.body;
+        const result = await (voice as any)[action](
+          supabaseAdmin,
+          authReq.userId,
+          payload,
+        );
+        res.json(result);
+      } catch (error: any) {
+        const status = Number(error?.status) || 500;
+        logger.error({ err: error }, `voice ${action} failed`);
+        res.status(status >= 400 && status < 600 ? status : 500).json({
+          message: error?.message || "Erreur serveur",
+          code: error?.code,
+        });
+      }
+    };
+
+  app.post(api.larps.voice.clone.path, requireAuth, voiceRoute("handleClone"));
+  app.post(
+    api.larps.voice.generate.path,
+    requireAuth,
+    voiceRoute("handleGenerate"),
+  );
+  app.get(api.larps.voice.history.path, requireAuth, voiceRoute("handleHistory"));
+  app.post(api.larps.voice.delete.path, requireAuth, voiceRoute("handleDelete"));
+
   // GET /api/larps/can-generate
   app.get(api.larps.canGenerate.path, requireAuth, async (req, res) => {
     try {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Loader2, Pause, Play, Share2, Upload, X } from "lucide-react";
+import { Loader2, Pause, Play, Trash2, Upload, X } from "lucide-react";
 import { getVoiceCatalogEntry } from "@/lib/voice/voice-catalog";
 import { playVoicePreview, stopVoicePreview } from "@/lib/voice/play-preview";
 import {
@@ -10,11 +10,33 @@ import {
   type SelectedVoice,
   type StudioMode,
 } from "@/lib/voice/selected-voice";
+import {
+  cloneVoice,
+  deleteVoiceGenerations,
+  fetchVoiceHistory,
+  fileToDataUrl,
+  generateVoice,
+  type VoiceGeneration,
+} from "@/lib/voice/voice-api";
 import { StudioModeSwitch } from "@/components/voice/StudioModeSwitch";
 import { useToast } from "@/hooks/use-toast";
 import "@/pages/voice-studio.css";
 
 type StudioTab = "voix" | "generer";
+
+/** Local link between a saved clone and its Fish Audio model. */
+const CLONE_KEY = "luxeflexia:voice-clone-ids";
+
+function rememberClone(id: string, fishReferenceId: string) {
+  try {
+    const raw = window.localStorage.getItem(CLONE_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    map[id] = fishReferenceId;
+    window.localStorage.setItem(CLONE_KEY, JSON.stringify(map));
+  } catch {
+    /* private mode */
+  }
+}
 
 export default function CreateStudio() {
   const [location] = useLocation();
@@ -24,7 +46,11 @@ export default function CreateStudio() {
   const [selected, setSelected] = useState<SelectedVoice | null>(null);
   const [script, setScript] = useState("");
   const [previewPlaying, setPreviewPlaying] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<VoiceGeneration | null>(null);
+  const [history, setHistory] = useState<VoiceGeneration[]>([]);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,10 +76,35 @@ export default function CreateStudio() {
     };
   }, []);
 
+  const loadHistory = async () => {
+    try {
+      const { items } = await fetchVoiceHistory(20);
+      setHistory(items);
+    } catch {
+      /* history is best-effort */
+    }
+  };
+
+  useEffect(() => {
+    void loadHistory();
+  }, []);
+
   const catalogEntry = useMemo(() => {
     if (!selected || selected.kind !== "catalog") return null;
     return getVoiceCatalogEntry(selected.id) ?? null;
   }, [selected]);
+
+  const play = (id: string, url: string) => {
+    if (playingId === id) {
+      stopVoicePreview();
+      setPlayingId(null);
+      return;
+    }
+    setPlayingId(id);
+    playVoicePreview(id, url, () =>
+      setPlayingId((current) => (current === id ? null : current)),
+    );
+  };
 
   const togglePreview = () => {
     if (!catalogEntry) return;
@@ -75,24 +126,82 @@ export default function CreateStudio() {
     setSelected(null);
   };
 
-  const onImportAudio = (file: File | null) => {
+  const onImportAudio = async (file: File | null) => {
     if (!file) return;
-    setBusy(true);
+    setCloning(true);
     try {
+      const audioDataUrl = await fileToDataUrl(file);
+      const name = file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "Ma voix";
+      const { clone, fishReferenceId } = await cloneVoice({
+        name,
+        audioDataUrl,
+        sourceType: "import",
+        sourceLabel: file.name,
+      });
+      rememberClone(clone.id, fishReferenceId);
       setSelectedVoice({
         kind: "cloned",
-        id: `clone-${Date.now()}`,
-        name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "Ma voix",
+        id: clone.id,
+        name: clone.name,
         category: "Ma voix",
       });
       setSelected(getSelectedVoice());
       toast({
-        title: "Extrait importé",
-        description:
-          "Le clonage Fish Audio s’active dès que la clé serveur est configurée.",
+        title: "Voix clonée",
+        description: `${clone.name} est prête. Écris ton texte puis génère.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Clonage impossible",
+        description: error?.message || "Réessaie avec un extrait plus court.",
       });
     } finally {
-      setBusy(false);
+      setCloning(false);
+    }
+  };
+
+  const onGenerate = async () => {
+    if (!selected || script.trim().length < 2) return;
+    setGenerating(true);
+    stopVoicePreview();
+    setPreviewPlaying(false);
+    try {
+      const payload =
+        selected.kind === "cloned"
+          ? { voiceCloneId: selected.id }
+          : { fishReferenceId: catalogEntry?.fishReferenceId ?? null };
+      const { generation } = await generateVoice({
+        text: script.trim(),
+        voiceName: selected.name,
+        ...payload,
+      });
+      setResult(generation);
+      setTab("generer");
+      void loadHistory();
+      play(generation.id, generation.audio_url);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Génération impossible",
+        description: error?.message || "Réessaie dans un instant.",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    try {
+      await deleteVoiceGenerations([id]);
+      setHistory((items) => items.filter((item) => item.id !== id));
+      if (result?.id === id) setResult(null);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Suppression impossible",
+        description: error?.message || "Réessaie.",
+      });
     }
   };
 
@@ -203,9 +312,14 @@ export default function CreateStudio() {
                   type="button"
                   className="vs-icon-button"
                   onClick={() => fileRef.current?.click()}
-                  aria-label="Importer un extrait"
+                  disabled={cloning}
+                  aria-label="Importer un extrait pour cloner une voix"
                 >
-                  <Upload className="h-4 w-4" />
+                  {cloning ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
                 </button>
                 <input
                   ref={fileRef}
@@ -213,24 +327,17 @@ export default function CreateStudio() {
                   accept="audio/*,video/*"
                   hidden
                   onChange={(event) =>
-                    onImportAudio(event.target.files?.[0] ?? null)
+                    void onImportAudio(event.target.files?.[0] ?? null)
                   }
                 />
                 <button
                   type="button"
                   className="vs-primary-button"
-                  disabled={!canGenerate || busy}
-                  onClick={() => {
-                    setTab("generer");
-                    toast({
-                      title: "Génération vocale",
-                      description:
-                        "Le rendu Fish Audio se branche dès que la clé serveur est présente.",
-                    });
-                  }}
+                  disabled={!canGenerate || generating || cloning}
+                  onClick={() => void onGenerate()}
                 >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  {generating ? (
+                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
                   ) : (
                     "Générer la voix"
                   )}
@@ -239,35 +346,75 @@ export default function CreateStudio() {
             </>
           ) : (
             <div className="vs-result">
-              <p className="vs-help">
-                Tes rendus apparaîtront ici. Le rendu audio nécessite la clé
-                Fish Audio côté serveur.
-              </p>
-              <div className="vs-actions">
-                <button
-                  type="button"
-                  className="vs-icon-button"
-                  disabled
-                  aria-label="Écouter le rendu"
-                >
-                  <Play className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="vs-icon-button"
-                  disabled
-                  aria-label="Partager"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="vs-primary-button"
-                  onClick={() => setTab("voix")}
-                >
-                  Modifier le texte
-                </button>
-              </div>
+              {result ? (
+                <>
+                  <p className="vs-label">Dernier rendu</p>
+                  <div className="vs-input vs-input--locked">{result.text}</div>
+                  <div className="vs-actions">
+                    <button
+                      type="button"
+                      className="vs-icon-button"
+                      onClick={() => play(result.id, result.audio_url)}
+                      aria-label="Écouter le rendu"
+                    >
+                      {playingId === result.id ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
+                    </button>
+                    <a
+                      className="vs-primary-button"
+                      href={result.audio_url}
+                      download
+                      style={{ textAlign: "center", textDecoration: "none" }}
+                    >
+                      Télécharger le MP3
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <p className="vs-help">
+                  Aucun rendu pour l’instant. Écris un texte dans l’onglet Voix
+                  puis lance la génération.
+                </p>
+              )}
+
+              {history.length > 0 && (
+                <>
+                  <p className="vs-label">Historique</p>
+                  <ul className="vs-history-list">
+                    {history.map((item) => (
+                      <li key={item.id} className="vs-history-item">
+                        <button
+                          type="button"
+                          className="vs-icon-button"
+                          onClick={() => play(item.id, item.audio_url)}
+                          aria-label={`Écouter ${item.voice_name ?? "le rendu"}`}
+                        >
+                          {playingId === item.id ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </button>
+                        <span className="vs-history-copy">
+                          <strong>{item.voice_name ?? "Voix"}</strong>
+                          <span>{item.text.slice(0, 60)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="vs-icon-button"
+                          onClick={() => void onDelete(item.id)}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           )}
         </section>
