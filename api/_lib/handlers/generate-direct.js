@@ -16,15 +16,34 @@ const {
   deductGenerationCredits,
   refundGenerationCreditsIfCharged,
   recordGeneration,
+  translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildLiteralRetryPrompt } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
 } = require("../content-policy");
+const { resolveRequestLocale, copy } = require("../locale-copy");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
+}
+
+/** Official Shopify shopping-bag award shape (public static asset). */
+function resolveShopifyTrophyRefUrl() {
+  const base =
+    process.env.PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    process.env.VITE_SITE_URL ||
+    "https://www.luxeflexia.com";
+  return `${String(base).replace(/\/$/, "")}/assets/shopify-trophy-ref.jpg`;
+}
+
+function withShopifyTrophyReference(prompt, imageUrls) {
+  if (!isShopifyTrophyPrompt(prompt)) return imageUrls;
+  const trophyUrl = resolveShopifyTrophyRefUrl();
+  if (imageUrls.includes(trophyUrl)) return imageUrls;
+  return [...imageUrls, trophyUrl];
 }
 
 async function failAndRefund(supabase, { userId, generationId, failMessage, source }) {
@@ -60,6 +79,7 @@ module.exports = async function handler(req, res) {
   try {
     const { supabase, userId } = await requireUser(req);
     const body = readBody(req);
+    const uiLocale = resolveRequestLocale(req, body);
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const images = Array.isArray(body.images) ? body.images : [];
     const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
@@ -69,20 +89,28 @@ module.exports = async function handler(req, res) {
         : null;
 
     if (!prompt || prompt.length > 2000) {
-      res.status(400).json({ message: "Prompt invalide (1-2000 caractères)" });
+      res.status(400).json({
+        message: copy(
+          uiLocale,
+          "Prompt invalide (1-2000 caractères)",
+          "Invalid prompt (1-2000 characters)",
+        ),
+      });
       return;
     }
 
     // 1) Only minors sexual content is blocked — adult/hardcore/weapons/cash must generate.
     if (isDisallowedAdultPrompt(prompt)) {
-      res.status(422).json(contentPolicyResponse());
+      res.status(422).json(contentPolicyResponse(uiLocale));
       return;
     }
 
     // 2) Credit check — before AI.
     const limitResult = await checkGenerationLimits(supabase, userId);
     if (!limitResult.allowed) {
-      res.status(403).json({ message: limitResult.reason });
+      res.status(403).json({
+        message: translateLimitReason(limitResult.reason, uiLocale),
+      });
       return;
     }
     const creditCost = getBillableCreditCost(limitResult);
@@ -90,7 +118,11 @@ module.exports = async function handler(req, res) {
     if (!templateId && images.length === 0) {
       res.status(422).json({
         code: "REFERENCE_IMAGE_REQUIRED",
-        message: "Une image de référence est requise.",
+        message: copy(
+          uiLocale,
+          "Une image de référence est requise.",
+          "A reference image is required.",
+        ),
       });
       return;
     }
@@ -100,21 +132,38 @@ module.exports = async function handler(req, res) {
     if (templateId && images.length === 0) {
       res.status(422).json({
         code: "REFERENCE_IMAGE_REQUIRED",
-        message: "Une image de référence est requise.",
+        message: copy(
+          uiLocale,
+          "Une image de référence est requise.",
+          "A reference image is required.",
+        ),
       });
       return;
     }
 
-    const finalPrompt = buildIdentityPreservingPrompt(prompt);
-    const imageUrls = await uploadInputImagesToR2(userId, images);
+    const uploadedUrls = await uploadInputImagesToR2(userId, images);
+    const imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
 
     if (imageUrls.length === 0) {
       res.status(422).json({
         code: "REFERENCE_IMAGE_REQUIRED",
-        message: "Une image de référence est requise.",
+        message: copy(
+          uiLocale,
+          "Une image de référence est requise.",
+          "A reference image is required.",
+        ),
       });
       return;
     }
+
+    const finalPrompt = buildIdentityPreservingPrompt(prompt, {
+      referenceImageCount: imageUrls.length,
+    });
+    const oneshotModelVariant = needsProModelVariant(prompt) ? "default" : "fast";
+    const estimatedSeconds = estimateGenerationSeconds(prompt, {
+      referenceImageCount: imageUrls.length,
+      modelVariant: oneshotModelVariant,
+    });
 
     const oneshotConfig = getOneshotApiConfig();
     const appSettings = await getAppSettings(supabase);
@@ -139,7 +188,7 @@ module.exports = async function handler(req, res) {
         user_id: userId,
         template_id: templateId,
         generation_type: "image",
-        prompt: finalPrompt,
+        prompt: prompt,
         final_prompt: finalPrompt,
         provider: "oneshot",
         provider_task_id: pendingTaskId,
@@ -147,7 +196,10 @@ module.exports = async function handler(req, res) {
         aspect_ratio: aspectRatio,
         input_assets: imageUrls,
         credit_cost: creditCost,
-        metadata: {},
+        metadata: {
+          oneshot_model_variant: oneshotModelVariant,
+          estimated_seconds: estimatedSeconds,
+        },
       })
       .select()
       .single();
@@ -201,6 +253,7 @@ module.exports = async function handler(req, res) {
           const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
           const oneshotResponse = await createOneshotJob(finalPrompt, {
             aspectRatio,
+            modelVariant: oneshotModelVariant,
             ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
           });
           if (!oneshotResponse || !oneshotResponse.id) {
@@ -215,10 +268,13 @@ module.exports = async function handler(req, res) {
               err && err.message ? err.message : err,
             );
             try {
-              const retryPrompt = buildLiteralRetryPrompt(finalPrompt);
+              const retryPrompt = isFacialHairPrompt(finalPrompt)
+                ? buildFacialHairHardRetryPrompt(finalPrompt)
+                : buildLiteralRetryPrompt(finalPrompt);
               const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
               const retryResponse = await createOneshotJob(retryPrompt, {
                 aspectRatio,
+                modelVariant: oneshotModelVariant,
                 ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
               });
               if (retryResponse && retryResponse.id) {
@@ -226,6 +282,10 @@ module.exports = async function handler(req, res) {
                   .from("generations")
                   .update({
                     final_prompt: retryPrompt,
+                    metadata: {
+                      oneshot_soft_retry: true,
+                      oneshot_soft_retry_count: 1,
+                    },
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", larp.id);
@@ -346,6 +406,7 @@ module.exports = async function handler(req, res) {
       taskId: externalTaskId,
       status: "waiting",
       isSubscriber: limitResult.isSubscriber,
+      estimatedSeconds,
     });
   } catch (error) {
     console.error("generate-direct error", error);

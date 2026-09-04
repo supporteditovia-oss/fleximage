@@ -4,6 +4,7 @@ import {
   getLegalContent,
   type LegalDocumentKey,
 } from "@/lib/legal-content";
+import { toUiLocale, resolvePreferredLocale } from "@shared/locales";
 import { setRobotsMeta } from "@/lib/robots-meta";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
@@ -14,7 +15,9 @@ interface LegalPageLayoutProps {
 
 export default function LegalPageLayout({ pageKey }: LegalPageLayoutProps) {
   const { i18n } = useTranslation();
-  const content = getLegalContent(i18n.resolvedLanguage);
+  const content = getLegalContent(
+    toUiLocale(resolvePreferredLocale(i18n.resolvedLanguage, "fr")),
+  );
   const doc = content.docs[pageKey];
 
   useEffect(() => {
@@ -30,10 +33,12 @@ export default function LegalPageLayout({ pageKey }: LegalPageLayoutProps) {
   return (
     <div className="min-h-screen bg-background py-20 px-4">
       <div className="max-w-3xl mx-auto space-y-8">
-        <Link href="/" className="text-primary hover:underline">
-          {"<- "}
-          {content.backHome}
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="text-primary hover:underline">
+            {"<- "}
+            {content.backHome}
+          </Link>
+        </div>
         <h1 className="text-4xl font-display font-bold">{doc.title}</h1>
 
         <Card>

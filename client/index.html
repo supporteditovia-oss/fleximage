@@ -24,7 +24,65 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="LuxeFlexIA — créateur de photos lifestyle par IA" />
     <meta property="og:locale" content="fr_FR" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:site_name" content="LuxeFlexIA" />
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(location.search);
+          var q = (params.get("lang") || params.get("locale") || "").toLowerCase();
+          var stored = localStorage.getItem("app_locale");
+          var lang = "fr";
+          if (q.indexOf("en") === 0) lang = "en";
+          else if (q.indexOf("fr") === 0) lang = "fr";
+          else if (stored === "en" || stored === "fr") lang = stored;
+          else {
+            var nav = String(navigator.language || "").toLowerCase();
+            if (nav.indexOf("fr") === 0) lang = "fr";
+            else if (nav.indexOf("en") === 0) lang = "en";
+            else {
+              var tz = "";
+              try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
+              if (tz.indexOf("America/") === 0) lang = "en";
+            }
+          }
+          document.documentElement.lang = lang;
+          try { localStorage.setItem("app_locale", lang); } catch (e) {}
+          window.$crisp = window.$crisp || [];
+          window.$crisp.push(["set", "session:locale", lang]);
+          window.$crisp.push(["set", "user:language", lang]);
+          var seoFr = document.getElementById("seo-fallback");
+          var seoEn = document.getElementById("seo-fallback-en");
+          if (seoFr && seoEn) {
+            seoFr.hidden = lang === "en";
+            seoEn.hidden = lang !== "en";
+          }
+          if (lang !== "en") return;
+          var title = "LuxeFlexIA — Create hyper-realistic lifestyle photos with AI";
+          var desc = "Turn a simple photo into a stunning, realistic luxury visual with AI.";
+          var ogImage = "https://www.luxeflexia.com/assets/og-image-en.png?v=20260820";
+          document.title = title;
+          var d = document.querySelector('meta[name="description"]');
+          if (d) d.setAttribute("content", desc);
+          var ogt = document.querySelector('meta[property="og:title"]');
+          if (ogt) ogt.setAttribute("content", title);
+          var ogd = document.querySelector('meta[property="og:description"]');
+          if (ogd) ogd.setAttribute("content", desc);
+          var ogl = document.querySelector('meta[property="og:locale"]');
+          if (ogl) ogl.setAttribute("content", "en_US");
+          var ogi = document.querySelector('meta[property="og:image"]');
+          if (ogi) ogi.setAttribute("content", ogImage);
+          var ogia = document.querySelector('meta[property="og:image:alt"]');
+          if (ogia) ogia.setAttribute("content", "LuxeFlexIA — hyper-realistic AI lifestyle photos");
+          var twt = document.querySelector('meta[name="twitter:title"]');
+          if (twt) twt.setAttribute("content", title);
+          var twd = document.querySelector('meta[name="twitter:description"]');
+          if (twd) twd.setAttribute("content", desc);
+          var twi = document.querySelector('meta[name="twitter:image"]');
+          if (twi) twi.setAttribute("content", ogImage);
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -57,10 +115,10 @@
         border: 0;
       }
     </style>
-    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://www.luxeflexia.com/#website","name":"LuxeFlexIA","alternateName":["Luxeflexia","Luxe Flex IA","LuxeFlexia","luxeflexia.com","www.luxeflexia.com"],"url":"https://www.luxeflexia.com/","inLanguage":"fr-FR","description":"LuxeFlexIA (aussi écrit Luxeflexia) génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Site officiel : luxeflexia.com.","publisher":{"@id":"https://www.luxeflexia.com/#organization"}},{"@type":"Organization","@id":"https://www.luxeflexia.com/#organization","name":"LuxeFlexIA","legalName":"LuxeFlexIA","alternateName":["Luxeflexia","Luxe Flex IA","LuxeFlexia","luxeflexia.com","www.luxeflexia.com"],"url":"https://www.luxeflexia.com/","logo":{"@type":"ImageObject","url":"https://www.luxeflexia.com/assets/og-image.png?v=20260725"},"description":"LuxeFlexIA (aussi écrit Luxeflexia) génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Site officiel : luxeflexia.com.","foundingDate":"2026","brand":{"@type":"Brand","name":"LuxeFlexIA","alternateName":["Luxeflexia","Luxe Flex IA","LuxeFlexia","luxeflexia.com","www.luxeflexia.com"]}},{"@type":"SoftwareApplication","@id":"https://www.luxeflexia.com/#app","name":"LuxeFlexIA","alternateName":["Luxeflexia","Luxe Flex IA","LuxeFlexia","luxeflexia.com","www.luxeflexia.com"],"applicationCategory":"MultimediaApplication","operatingSystem":"Web","url":"https://www.luxeflexia.com/","image":"https://www.luxeflexia.com/assets/og-image.png?v=20260725","description":"LuxeFlexIA (aussi écrit Luxeflexia) génère des photos de vous hyper-réalistes dans des décors de luxe grâce à l'intelligence artificielle. Site officiel : luxeflexia.com.","offers":[{"@type":"Offer","name":"Abonnement LuxeFlexIA Discovery","price":"8.90","priceCurrency":"EUR"},{"@type":"Offer","name":"Abonnement LuxeFlexIA Essential","price":"19.90","priceCurrency":"EUR"},{"@type":"Offer","name":"Abonnement LuxeFlexIA Ultimate","price":"39.90","priceCurrency":"EUR"}]}]}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://www.luxeflexia.com/#website","name":"LuxeFlexIA","alternateName":["Luxeflexia","Luxe Flex IA","luxeflexia.com"],"url":"https://www.luxeflexia.com/","inLanguage":["fr-FR","en-US"],"description":"LuxeFlexIA generates hyper-realistic lifestyle photos with AI.","publisher":{"@id":"https://www.luxeflexia.com/#organization"}},{"@type":"Organization","@id":"https://www.luxeflexia.com/#organization","name":"LuxeFlexIA","url":"https://www.luxeflexia.com/","logo":{"@type":"ImageObject","url":"https://www.luxeflexia.com/assets/og-image.png?v=20260725"}},{"@type":"SoftwareApplication","@id":"https://www.luxeflexia.com/#app","name":"LuxeFlexIA","applicationCategory":"MultimediaApplication","operatingSystem":"Web","url":"https://www.luxeflexia.com/","offers":[{"@type":"Offer","name":"LuxeFlexIA Discovery","price":"8.90","priceCurrency":"EUR"},{"@type":"Offer","name":"LuxeFlexIA Essential","price":"19.90","priceCurrency":"EUR"},{"@type":"Offer","name":"LuxeFlexIA Ultimate","price":"39.90","priceCurrency":"EUR"},{"@type":"Offer","name":"LuxeFlexIA Discovery US","price":"9.99","priceCurrency":"USD"},{"@type":"Offer","name":"LuxeFlexIA Essential US","price":"19.99","priceCurrency":"USD"},{"@type":"Offer","name":"LuxeFlexIA Ultimate US","price":"39.99","priceCurrency":"USD"}]}]}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <!-- Snap Pixel (ID via VITE_SNAP_PIXEL_ID — leave empty until configured) -->
     <script>
       (function () {
@@ -173,6 +231,41 @@
         </p>
         <p><a href="/register">Commencer sur LuxeFlexIA</a></p>
       </section>
+    </main>
+    <main id="seo-fallback-en" hidden aria-hidden="true">
+      <h1>LuxeFlexIA — Create hyper-realistic lifestyle photos with AI</h1>
+      <p>
+        LuxeFlexIA (luxeflexia.com) creates believable lifestyle images in seconds:
+        upload a photo, describe a luxury scene — travel, restaurant, supercar, VIP night out —
+        and generate a share-ready visual.
+      </p>
+      <section aria-labelledby="seo-use-cases-en">
+        <h2 id="seo-use-cases-en">What you can create</h2>
+        <ul>
+          <li>Realistic travel, hotel, restaurant, or VIP event scenes.</li>
+          <li>AI lifestyle photos with cars, boutiques, dashboards, or premium backdrops.</li>
+          <li>Content for fun, social storytelling, and sharing with friends.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="seo-plans-en">
+        <h2 id="seo-plans-en">Plans and credits</h2>
+        <p>
+          Choose a monthly plan that fits how often you create. Unlock HD downloads,
+          full history, and more credits as you go.
+        </p>
+      </section>
+      <section aria-labelledby="seo-faq-en">
+        <h2 id="seo-faq-en">FAQ</h2>
+        <dl>
+          <dt>Can I cancel anytime?</dt>
+          <dd>Yes — cancel from your account with no lock-in.</dd>
+          <dt>What is the refund policy?</dt>
+          <dd>Contact support within 14 days if you subscribed by mistake and haven't used credits.</dd>
+          <dt>Are photos realistic?</dt>
+          <dd>Yes — the AI is tuned for photorealistic lifestyle results.</dd>
+        </dl>
+      </section>
+      <p><a href="/register?lang=en">Get started on LuxeFlexIA</a></p>
     </main>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

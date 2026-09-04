@@ -176,7 +176,7 @@ export default function ImagePrete() {
 
   const goCreateNewImage = () => {
     purgeExpiredPreview();
-    setLocation("/generate?fresh=1");
+    setLocation(`/generate?fresh=1&lang=${i18n.resolvedLanguage === "en" ? "en" : "fr"}`);
   };
 
   return (
@@ -224,17 +224,16 @@ export default function ImagePrete() {
           <>
             <header className="w-full text-center">
               <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-                Ton image a été supprimée
+                {t("paywall.previewExpiredTitle")}
               </h1>
               <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
-                Le délai est écoulé. Relance une création pour générer un nouvel
-                aperçu.
+                {t("paywall.previewExpiredHint")}
               </p>
             </header>
 
             <div className="flex aspect-[9/16] w-full max-w-[280px] items-center justify-center rounded-2xl border border-dashed border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/80 px-6 text-center">
               <p className="text-sm font-medium text-[var(--lx-muted)]">
-                Image indisponible
+                {t("paywall.previewUnavailable")}
               </p>
             </div>
 
@@ -243,19 +242,19 @@ export default function ImagePrete() {
               onClick={goCreateNewImage}
               className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
             >
-              Créer une nouvelle image
+              {t("paywall.previewCreateNew")}
             </button>
           </>
         ) : (
           <>
             <header className="w-full text-center">
               <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-                Ton image est prête
+                {t("paywall.previewReadyTitle")}
               </h1>
               <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
                 {userPrompt
-                  ? "On a préparé ton rendu à partir de ta demande. Débloque-le en HD avant qu’il disparaisse."
-                  : "Débloque ton rendu en HD avant la fin du délai — sinon l’image est effacée."}
+                  ? t("paywall.previewReadyHintPrompt")
+                  : t("paywall.previewReadyHint")}
               </p>
             </header>
 
@@ -267,7 +266,7 @@ export default function ImagePrete() {
               }`}
               role="timer"
               aria-live="polite"
-              aria-label={`Ton image sera supprimée dans ${countdownLabel}`}
+              aria-label={t("paywall.previewDeleteIn", { time: countdownLabel })}
             >
               <Clock3
                 className={`h-4 w-4 shrink-0 ${
@@ -276,11 +275,8 @@ export default function ImagePrete() {
                 strokeWidth={2}
                 aria-hidden
               />
-              <span className="min-w-0">
-                Ton image sera supprimée dans{" "}
-                <span className="tabular-nums tracking-wide">
-                  {countdownLabel}
-                </span>
+              <span className="min-w-0 tabular-nums tracking-wide">
+                {t("paywall.previewDeleteIn", { time: countdownLabel })}
               </span>
             </div>
 
@@ -296,7 +292,7 @@ export default function ImagePrete() {
               onClick={() => setPaywallOpen(true)}
               className="lx-btn-gold inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-full px-8 text-sm font-semibold"
             >
-              Débloquer mon image
+              {t("paywall.unlockCtaImage")}
             </button>
 
             <LuxePaywallModal

@@ -15,10 +15,10 @@ async function getAppSettings(supabase) {
     const map = new Map((data || []).map((row) => [row.key, row.value]));
     return {
       forceKieAi: map.get("force_kie_ai") === "true",
-      fallbackTimeoutMs: Number(map.get("fallback_timeout_ms")) || 105000,
+      fallbackTimeoutMs: Number(map.get("fallback_timeout_ms")) || 90000,
     };
   } catch {
-    return { forceKieAi: false, fallbackTimeoutMs: 105000 };
+    return { forceKieAi: false, fallbackTimeoutMs: 90000 };
   }
 }
 
@@ -122,12 +122,21 @@ async function createOneshotJob(prompt, options) {
     throw new Error("Missing ONESHOT_API_URL or ONESHOT_API_KEY");
   }
 
+  // OneShot nano-banana accepts ONLY "default" | "fast".
+  // default = Nano Banana Pro, fast = Nano Banana 2.
+  // Literal "pro" is rejected with 422 — map it to default.
+  let modelVariant = (options && options.modelVariant) || "fast";
+  if (modelVariant === "pro") modelVariant = "default";
+  if (modelVariant !== "default" && modelVariant !== "fast") {
+    modelVariant = "fast";
+  }
+
   const payload = {
     model: "nano-banana",
-    prompt,
+    // OneShot returns 422 validation_error if prompt > 3000 chars.
+    prompt: String(prompt || "").slice(0, 3000),
     options: {
-      // default = Nano Banana Pro (cher) | fast = Nano Banana 2
-      modelVariant: "fast",
+      modelVariant,
       // Allow glamorous / adult-leaning lifestyle prompts (Google may still refuse some).
       safetyFilters: false,
       // Request max output; OneShot may still deliver ~1K today — we upscale on store.
@@ -138,6 +147,16 @@ async function createOneshotJob(prompt, options) {
         : {}),
     },
   };
+
+  console.log(
+    "[oneshot] createJob",
+    JSON.stringify({
+      modelVariant: payload.options.modelVariant,
+      aspectRatio: payload.options.aspectRatio,
+      promptLen: payload.prompt.length,
+      refs: (payload.options.referenceFileIds || []).length,
+    }),
+  );
 
   const response = await fetch(`${config.url}/v1/jobs`, {
     method: "POST",
@@ -156,7 +175,11 @@ async function createOneshotJob(prompt, options) {
     throw error;
   }
 
-  return response.json();
+  const json = await response.json();
+  if (json && typeof json === "object") {
+    json._requestedModelVariant = modelVariant;
+  }
+  return json;
 }
 
 async function getOneshotJobStatus(jobId) {

@@ -1,23 +1,20 @@
 import ScrollReveal from "@/components/marketing/ScrollReveal";
+import { useTranslation } from "react-i18next";
 
-/**
- * Images CDN lifestyle (même pool que le Hero) — URLs webp vérifiées.
- * Pas de dépendance API pour éviter les cartes vides.
- */
 const SHOWCASE_ITEMS = [
   {
     id: "watch",
-    label: "Montre de luxe au poignet",
+    labelKey: "landing.showcase.watch",
     src: "https://media.larpking.com/landing/marquee/webp/99e8d81e-4195-4490-a85a-e47eebd20184.webp",
   },
   {
     id: "car",
-    label: "Voiture de sport",
+    labelKey: "landing.showcase.car",
     src: "https://media.larpking.com/landing/marquee/webp/f234da62-79af-4695-94c2-26875d9067bb.webp",
   },
   {
     id: "villa",
-    label: "Villa premium",
+    labelKey: "landing.showcase.villa",
     src: "https://media.larpking.com/landing/marquee/webp/bb04deea-c7b1-46f0-a816-d3e8be84fec8.webp",
   },
 ] as const;
@@ -51,6 +48,8 @@ function ShowcaseCard({
 }
 
 export default function ShowcaseSection() {
+  const { t } = useTranslation();
+
   return (
     <section
       id="showcase"
@@ -59,7 +58,7 @@ export default function ShowcaseSection() {
       <div className="mx-auto max-w-6xl">
         <ScrollReveal>
           <h2 className="lx-display text-center text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-            Comme un pro
+            {t("landing.showcase.title")}
           </h2>
         </ScrollReveal>
 
@@ -71,7 +70,7 @@ export default function ShowcaseSection() {
             <ShowcaseCard
               key={item.id}
               src={item.src}
-              label={item.label}
+              label={t(item.labelKey)}
               delayClassName={`lx-reveal-delay-${index + 1}`}
             />
           ))}

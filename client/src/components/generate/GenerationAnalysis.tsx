@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-const ANALYSIS_STEPS = [
-  "Analyse de ton image...",
-  "Demande comprise...",
-  "Modification en cours...",
-  "Finalisation du rendu...",
+const STEP_KEYS = [
+  "progress.stepAnalyze",
+  "progress.stepUnderstood",
+  "progress.stepEditing",
+  "progress.stepFinishing",
 ] as const;
 
 const STEP_DURATION_MS = 1750;
-const TOTAL_DURATION_MS = ANALYSIS_STEPS.length * STEP_DURATION_MS;
+const TOTAL_DURATION_MS = STEP_KEYS.length * STEP_DURATION_MS;
 
 interface GenerationAnalysisProps {
   onComplete: () => void;
 }
 
 export function GenerationAnalysis({ onComplete }: GenerationAnalysisProps) {
+  const { t } = useTranslation();
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -29,7 +31,7 @@ export function GenerationAnalysis({ onComplete }: GenerationAnalysisProps) {
       setProgress(nextProgress);
       setStepIndex(
         Math.min(
-          ANALYSIS_STEPS.length - 1,
+          STEP_KEYS.length - 1,
           Math.floor(elapsed / STEP_DURATION_MS),
         ),
       );
@@ -62,7 +64,7 @@ export function GenerationAnalysis({ onComplete }: GenerationAnalysisProps) {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--lx-gold)]" />
           </span>
           <p className="min-w-0 flex-1 text-sm font-semibold tracking-tight text-[var(--lx-ink)]">
-            {ANALYSIS_STEPS[stepIndex]}
+            {t(STEP_KEYS[stepIndex])}
             <span className="ml-0.5 inline-block w-6 text-left text-[var(--lx-gold)]">
               <span className="lx-analysis-dots" aria-hidden="true">
                 ...

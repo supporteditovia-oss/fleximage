@@ -4,28 +4,29 @@ import { ArrowRight } from "lucide-react";
 import LandingHeader from "@/components/marketing/LandingHeader";
 import Footer from "@/components/marketing/Footer";
 import { setDocumentMeta } from "@/lib/document-meta";
+import { useTranslation } from "react-i18next";
 import {
   getSeoNichePath,
   SEO_DIRECTORY_PATH,
-  SEO_NICHE_CATEGORIES,
-  SEO_NICHES,
+  getSeoNicheCategories,
+  getSeoNiches,
   getSeoNichesByCategory,
 } from "@shared/seo-niches";
 import "@/pages/landing.css";
 
-const DIRECTORY_TITLE =
-  "Tous nos générateurs IA (Dimash Lux, Watch Lux, Pranks) — LuxeFlexIA";
-const DIRECTORY_DESCRIPTION =
-  "Annuaire LuxeFlexIA : génération image IA, Dimash Lux, Watch Lux, restaurant, pranks TikTok, voiture de luxe et flex lifestyle.";
-
 export default function TousLesGenerateurs() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage;
+  const categories = getSeoNicheCategories(locale);
+  const niches = getSeoNiches(locale);
+
   React.useEffect(() => {
     setDocumentMeta({
-      title: DIRECTORY_TITLE,
-      description: DIRECTORY_DESCRIPTION,
+      title: `${t("landing.seo.directoryTitle")} — LuxeFlexIA`,
+      description: t("landing.seo.directoryIntro", { count: niches.length }),
       canonicalPath: SEO_DIRECTORY_PATH,
     });
-  }, []);
+  }, [t, i18n.language, niches.length]);
 
   return (
     <div className="luxeflexia-landing relative min-h-screen overflow-x-hidden">
@@ -34,20 +35,19 @@ export default function TousLesGenerateurs() {
       <main className="mx-auto max-w-5xl px-4 pb-20 pt-10 md:pt-14">
         <header className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--lx-bronze)]">
-            Annuaire LuxeFlexIA
+            {t("landing.seo.directoryKicker")}
           </p>
           <h1 className="lx-display mt-3 text-balance text-3xl font-semibold text-[var(--lx-ink)] md:text-5xl">
-            Tous nos générateurs (Dimash, Watch Lux, Pranks, Luxe)
+            {t("landing.seo.directoryTitle")}
           </h1>
           <p className="mt-4 text-base font-medium text-[var(--lx-muted)] md:text-lg">
-            {SEO_NICHES.length} scénarios prêts à générer : choisissez une niche
-            et créez une photo hyper-réaliste avec LuxeFlexIA.
+            {t("landing.seo.directoryIntro", { count: niches.length })}
           </p>
         </header>
 
         <div className="mt-12 space-y-12">
-          {SEO_NICHE_CATEGORIES.map((category) => {
-            const niches = getSeoNichesByCategory(category.id);
+          {categories.map((category) => {
+            const categoryNiches = getSeoNichesByCategory(category.id, locale);
             return (
               <section key={category.id} aria-labelledby={`cat-${category.id}`}>
                 <h2
@@ -60,17 +60,17 @@ export default function TousLesGenerateurs() {
                   {category.description}
                 </p>
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {niches.map((niche) => (
+                  {categoryNiches.map((niche) => (
                     <li key={niche.slug}>
                       <Link
-                        href={getSeoNichePath(niche.slug)}
+                        href={getSeoNichePath(niche.slug, locale)}
                         className="group flex min-h-[4.5rem] flex-col justify-center gap-1 rounded-2xl border border-black/8 bg-white/75 px-4 py-3 transition-colors hover:border-[var(--lx-gold)]/45"
                       >
                         <span className="text-sm font-semibold text-[var(--lx-ink)]">
                           {niche.h1}
                         </span>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--lx-bronze)]">
-                          Ouvrir
+                          {t("landing.seo.open")}
                           <ArrowRight
                             className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
                             aria-hidden
@@ -90,7 +90,7 @@ export default function TousLesGenerateurs() {
             href="/register"
             className="lx-btn-gold inline-flex min-h-12 items-center gap-2 rounded-full px-6 text-sm font-semibold"
           >
-            Créer mon compte LuxeFlexIA
+            {t("landing.seo.createPhoto")}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>

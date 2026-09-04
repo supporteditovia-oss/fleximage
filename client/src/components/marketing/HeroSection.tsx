@@ -12,6 +12,7 @@ import {
 import {
   getLarpChipsForLocale,
   getLarpIdeasForLocale,
+  getRandomPromptPoolForLocale,
 } from "@/lib/larp-data";
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
@@ -55,6 +56,10 @@ export default function HeroSection() {
     () => getLarpChipsForLocale(i18n.resolvedLanguage),
     [i18n.resolvedLanguage],
   );
+  const randomPromptPool = React.useMemo(
+    () => getRandomPromptPoolForLocale(i18n.resolvedLanguage),
+    [i18n.resolvedLanguage],
+  );
   const typewriterRef = useTypewriterPlaceholder(
     prompt,
     isMobile ? (Object.freeze([]) as unknown as string[]) : larpIdeas,
@@ -65,6 +70,9 @@ export default function HeroSection() {
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
   const [taskId, setTaskId] = React.useState<string | null>(null);
+  const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
+    number | null
+  >(null);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -75,8 +83,12 @@ export default function HeroSection() {
     });
 
   const shuffleIdea = () => {
-    const random = larpChips[Math.floor(Math.random() * larpChips.length)];
-    setPrompt(random.example);
+    const pool =
+      randomPromptPool.length > 0
+        ? randomPromptPool
+        : larpChips.map((c) => c.example);
+    const random = pool[Math.floor(Math.random() * pool.length)];
+    if (random) setPrompt(random);
   };
 
   const handleImageSelect = (index: number, file: File) => {
@@ -164,6 +176,12 @@ export default function HeroSection() {
           images: base64Images,
         };
         const result = await generateDirect.mutateAsync(payload);
+        setGenerationEstimateSeconds(
+          typeof result.estimatedSeconds === "number" &&
+            Number.isFinite(result.estimatedSeconds)
+            ? result.estimatedSeconds
+            : null,
+        );
         setTaskId(result.taskId);
         refetchEligibility();
       } catch (error: any) {
@@ -178,11 +196,8 @@ export default function HeroSection() {
         if (error.code === "PROMPT_POLICY_VIOLATION") {
           toast({
             variant: "destructive",
-            title: "Contenu non autorisé",
-            description:
-              typeof error.message === "string" && error.message
-                ? error.message
-                : "Le contenu demandé n'est pas autorisé. Aucun jeton n'est perdu.",
+            title: t("progress.policyFail"),
+            description: t("progress.policyFailHint"),
           });
           return;
         }
@@ -253,6 +268,7 @@ export default function HeroSection() {
 
   const handleReset = () => {
     setTaskId(null);
+    setGenerationEstimateSeconds(null);
     setPrompt("");
     setImages([null]);
   };
@@ -275,10 +291,10 @@ export default function HeroSection() {
           className="lx-hero-copy flex flex-col items-center text-center px-2"
         >
           <h1 className="lx-display mx-auto max-w-[20rem] text-balance text-[1.85rem] font-semibold leading-[1.12] text-[var(--lx-ink)] md:max-w-4xl md:text-5xl lg:text-6xl">
-            LuxeFlexIA — Crée un lifestyle hyper réaliste
+            {t("hero.homeTitle")}
           </h1>
           <p className="lx-hero-subtitle mt-3 max-w-xl text-sm font-medium leading-snug text-[var(--lx-muted)] md:mt-4 md:text-lg">
-            Transforme une simple photo en visuel bluffant, réaliste et premium
+            {t("hero.homeSubtitle")}
           </p>
         </motion.div>
 
@@ -410,7 +426,7 @@ export default function HeroSection() {
         href="#showcase"
         className="lx-discover absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-1 text-[var(--lx-ink)]/70"
       >
-        <span className="text-xs font-medium tracking-wide">Découvrir</span>
+        <span className="text-xs font-medium tracking-wide">{t("hero.discover")}</span>
         <ChevronDown className="h-5 w-5" aria-hidden />
       </a>
 
@@ -420,6 +436,8 @@ export default function HeroSection() {
           inputImageUrl={images[0]?.url}
           onReset={handleReset}
           resultType="image"
+          referenceImageCount={Math.max(1, images.filter(Boolean).length)}
+          initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
         />,
         document.body
       )}

@@ -1,8 +1,13 @@
 /**
- * OneShot currently delivers ~768px-wide images. Upscale once on store so
- * downloads are sharper on phones (does not invent missing facial detail).
+ * Optional light polish on store. Heavy upscale was blocking the status
+ * endpoint past Vercel's maxDuration (60s) → UI stuck on "finalisation".
+ * Default: no-op (deliver ASAP). Set ENABLE_IMAGE_UPSCALE=1 to re-enable.
  */
 async function enhanceGeneratedImageBuffer(buffer, contentType) {
+  if (process.env.ENABLE_IMAGE_UPSCALE !== "1") {
+    return { buffer, contentType, extension: extensionFor(contentType) };
+  }
+
   try {
     const sharp = require("sharp");
     const image = sharp(buffer, { failOn: "none" });
@@ -13,15 +18,13 @@ async function enhanceGeneratedImageBuffer(buffer, contentType) {
       return { buffer, contentType, extension: extensionFor(contentType) };
     }
 
-    // Already high-res (e.g. future OneShot 2K/4K or Kie 4K) — keep as-is.
     const longEdge = Math.max(width, height);
-    if (longEdge >= 2400) {
+    if (longEdge >= 1600) {
       return { buffer, contentType, extension: extensionFor(contentType) };
     }
 
-    // Target ~2.5K on the long edge (≈ 3× for 768→2304) for usable face detail.
-    const targetLong = 2560;
-    const scale = Math.min(4, Math.max(2, targetLong / longEdge));
+    const targetLong = 1600;
+    const scale = Math.min(2.5, Math.max(1.5, targetLong / longEdge));
     const nextWidth = Math.round(width * scale);
     const nextHeight = Math.round(height * scale);
 
@@ -30,11 +33,10 @@ async function enhanceGeneratedImageBuffer(buffer, contentType) {
         kernel: sharp.kernel.lanczos3,
         fit: "fill",
       })
-      .sharpen({ sigma: 0.6, m1: 0.8, m2: 0.4 })
-      .png({ compressionLevel: 6, adaptiveFiltering: true })
+      .jpeg({ quality: 88, mozjpeg: true })
       .toBuffer();
 
-    return { buffer: out, contentType: "image/png", extension: ".png" };
+    return { buffer: out, contentType: "image/jpeg", extension: ".jpg" };
   } catch (err) {
     console.warn("enhanceGeneratedImageBuffer skipped", err && err.message);
     return { buffer, contentType, extension: extensionFor(contentType) };

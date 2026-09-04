@@ -1,18 +1,19 @@
 import { Gem } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
+import { localeHref } from "@/lib/locale-href";
 
-const FOOTER_LINKS = [
-  {
-    href: "/tous-les-generateurs",
-    label: "Tous nos générateurs (Dimash, Watch Lux, Pranks)",
-  },
-  { href: "/mentions-legales", label: "Mentions légales" },
-  { href: "/cgu", label: "CGU" },
-  { href: "/cgv", label: "CGV" },
-  { href: "/confidentialite", label: "Confidentialité" },
+const FOOTER_HREFS = [
+  { href: "/tous-les-generateurs", labelKey: "footer.generators" },
+  { href: "/mentions-legales", labelKey: "footer.legal" },
+  { href: "/cgu", labelKey: "footer.cgu" },
+  { href: "/cgv", labelKey: "footer.cgv" },
+  { href: "/confidentialite", labelKey: "footer.privacy" },
 ] as const;
 
 export default function Footer() {
+  const { t, i18n } = useTranslation();
+
   return (
     <footer className="border-t border-black/8 bg-[var(--lx-surface)] py-10">
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-5 px-4 text-center">
@@ -27,17 +28,17 @@ export default function Footer() {
 
         <nav
           className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-[var(--lx-muted)]"
-          aria-label="Liens du site"
+          aria-label={t("landing.footer.navAria")}
         >
-          {FOOTER_LINKS.map((link, index) => (
+          {FOOTER_HREFS.map((link, index) => (
             <span key={link.href} className="inline-flex items-center gap-5">
               <a
-                href={link.href}
+                href={localeHref(link.href, i18n.resolvedLanguage)}
                 className="min-h-12 inline-flex items-center transition-colors hover:text-[var(--lx-ink)]"
               >
-                {link.label}
+                {t(link.labelKey)}
               </a>
-              {index < FOOTER_LINKS.length - 1 && (
+              {index < FOOTER_HREFS.length - 1 && (
                 <span className="hidden text-black/20 sm:inline" aria-hidden>
                   |
                 </span>
@@ -47,7 +48,7 @@ export default function Footer() {
         </nav>
 
         <p className="text-sm text-[var(--lx-muted)]">
-          © 2026 LuxeFlexIA. Tous droits réservés.
+          {t("footer.copyright", { year: 2026 })}
         </p>
       </div>
     </footer>

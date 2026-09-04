@@ -99,7 +99,7 @@ export function canaryLandingAvifUrl() {
   return LANDING_MARQUEE_IMAGES[0]?.avif_url;
 }
 
-export function preloadLandingMarqueeImages(count = 4) {
+export function preloadLandingMarqueeImages(count = 12) {
   if (typeof document === "undefined") return;
 
   LANDING_MARQUEE_IMAGES.slice(0, count).forEach((image, index) => {

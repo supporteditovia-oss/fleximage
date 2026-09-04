@@ -1,6 +1,7 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 const { reconcilePaidCheckoutSession } = require("../_lib/stripe-billing");
+const { resolveRequestLocale, copy } = require("../_lib/locale-copy");
 
 function readBody(req) {
   if (!req.body) return {};
@@ -24,13 +25,20 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const body = readBody(req);
+  const uiLocale = resolveRequestLocale(req, body);
+
   try {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!secretKey || !supabaseUrl || !serviceRoleKey) {
       res.status(500).json({
-        message: "Configuration Stripe/Supabase manquante sur Vercel.",
+        message: copy(
+          uiLocale,
+          "Configuration Stripe/Supabase manquante sur Vercel.",
+          "Stripe/Supabase configuration missing on the server.",
+        ),
         code: "missing_server_env",
       });
       return;
@@ -51,7 +59,6 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const body = readBody(req);
     const sessionId = body.session_id;
     let reconcile = null;
 
@@ -80,7 +87,11 @@ module.exports = async function handler(req, res) {
       } catch (reconcileErr) {
         console.error("verify-session reconcile error", reconcileErr);
         res.status(500).json({
-          message: "Activation abonnement échouée",
+          message: copy(
+            uiLocale,
+            "Activation abonnement échouée",
+            "Subscription activation failed",
+          ),
           code: "reconcile_failed",
         });
         return;
@@ -97,12 +108,20 @@ module.exports = async function handler(req, res) {
       status: (profile && profile.subscription_status) || "pending_webhook",
       active: !!(profile && profile.is_subscriber),
       credits: (profile && profile.credits) || 0,
+      packGranted: !!(reconcile && reconcile.ok && reconcile.kind === "credit_pack"),
       reconcile: reconcile
-        ? { ok: reconcile.ok, reason: reconcile.reason || null }
+        ? {
+            ok: reconcile.ok,
+            reason: reconcile.reason || null,
+            kind: reconcile.kind || null,
+            credits: reconcile.credits || null,
+          }
         : null,
     });
   } catch (error) {
     console.error("verify-session error", error);
-    res.status(500).json({ message: "Erreur serveur" });
+    res.status(500).json({
+      message: copy(uiLocale, "Erreur serveur", "Server error"),
+    });
   }
 };

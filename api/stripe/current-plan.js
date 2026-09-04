@@ -1,18 +1,11 @@
 const { createClient } = require("@supabase/supabase-js");
-
-const PLAN_CREDITS = {
-  discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
-};
-
-function normalizePlan(plan) {
-  if (plan === "ultimate") return "ultimate";
-  if (plan === "essential" || plan === "monthly" || plan === "video") {
-    return "essential";
-  }
-  return "discovery";
-}
+const {
+  PLAN_CREDITS,
+  normalizePlan,
+  getUpgradeOffers,
+  listConfiguredPacks,
+  resolveBillingCurrency,
+} = require("../_lib/billing-offers");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -51,6 +44,11 @@ module.exports = async function handler(req, res) {
     }
 
     const userId = authData.user.id;
+    const billingCurrency = resolveBillingCurrency({
+      locale: req.query?.locale || req.query?.lang,
+      currency: req.query?.currency,
+      market: req.query?.market,
+    });
 
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -86,7 +84,8 @@ module.exports = async function handler(req, res) {
     let creditsPerCycle = null;
     let billingInterval = null;
     let subscriptionStatus =
-      profile.subscription_status || (profile.is_subscriber ? "active" : "inactive");
+      profile.subscription_status ||
+      (profile.is_subscriber ? "active" : "inactive");
 
     if (isAdmin) {
       planType = "admin";
@@ -102,16 +101,51 @@ module.exports = async function handler(req, res) {
       planType = "unknown";
     }
 
+    const credits = profile.credits ?? 0;
+    const upgradeOffersRaw =
+      isSubscriber && !isAdmin
+        ? getUpgradeOffers(planType, billingCurrency)
+        : [];
+    const upgradeOffers = upgradeOffersRaw.map((o) => ({
+      plan: o.plan,
+      headline: o.headline,
+      pitch: o.pitch,
+      cta: o.cta,
+      priceLabel: o.priceLabel,
+      creditsLabel: o.creditsLabel,
+      recommended: Boolean(o.recommended),
+    }));
+
+    // Packs are only for existing subscribers (0-credit upsell). Never expose
+    // them to first-time / non-subscriber clients — they only see subscriptions.
+    const showPacks = isSubscriber && !isAdmin;
+    const packs = showPacks
+      ? listConfiguredPacks(billingCurrency).map((p) => ({
+          id: p.id,
+          label: p.label,
+          credits: p.credits,
+          priceLabel: p.priceLabel,
+          images: p.images,
+          available: Boolean(process.env[p.envKey]),
+        }))
+      : [];
+
     res.status(200).json({
       planType,
-      credits: profile.credits ?? 0,
+      credits,
       isSubscriber,
       subscriptionStatus,
       creditsPerCycle,
       billingInterval,
+      billingCurrency,
       currentPeriodEnd: subscription?.current_period_end ?? null,
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
       canManageSubscription: Boolean(profile.stripe_customer_id),
+      outOfCredits: !isAdmin && credits < 10,
+      // Primary offer kept for older clients
+      upgradeOffer: upgradeOffers[0] || null,
+      upgradeOffers,
+      creditPacks: packs,
     });
   } catch (err) {
     console.error("current-plan error", err);

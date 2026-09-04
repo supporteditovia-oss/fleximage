@@ -4,6 +4,11 @@ const statusHandler = require("./_lib/handlers/status");
 const downloadHandler = require("./_lib/handlers/download");
 const historyHandler = require("./_lib/handlers/history");
 const deleteHandler = require("./_lib/handlers/delete");
+const voiceClone = require("./_lib/handlers/voice-clone");
+const voiceGenerate = require("./_lib/handlers/voice-generate");
+const voiceHistory = require("./_lib/handlers/voice-history");
+const voiceDelete = require("./_lib/handlers/voice-delete");
+const voiceDownload = require("./_lib/handlers/voice-download");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__larpsPath;
@@ -43,6 +48,26 @@ module.exports = async function handler(req, res) {
 
   if (parts[0] === "history") {
     return historyHandler(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "clone") {
+    return voiceClone(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "generate") {
+    return voiceGenerate(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "history") {
+    return voiceHistory(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "delete") {
+    return voiceDelete(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "download") {
+    return voiceDownload(req, res);
   }
 
   if (parts.length === 2 && parts[1] === "status") {
@@ -85,5 +110,5 @@ module.exports.config = {
       sizeLimit: "10mb",
     },
   },
-  maxDuration: 60,
+  maxDuration: 120,
 };

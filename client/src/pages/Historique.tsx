@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Download, Loader2, Share2, Sparkles, Trash2, X } from "lucide-react";
+import { Download, Check, Loader2, Share2, Sparkles, Trash2, X } from "lucide-react";
 import { createPortal, flushSync } from "react-dom";
-import { useDeleteLarp, useLarpHistory } from "@/hooks/use-larps";
+import { useDeleteLarp, useDeleteLarps, useLarpHistory } from "@/hooks/use-larps";
 import { authFetch } from "@/lib/api";
 import {
   assertMediaBlob,
@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoHistoryCardPreview } from "@/components/larp/VideoHistoryCardPreview";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 import { pickVideoPosterUrl } from "@/lib/video-poster";
+import { useTranslation } from "react-i18next";
+import { useStudioPath } from "@/hooks/use-studio-path";
 
 function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   if (!assets) return [];
@@ -35,9 +37,9 @@ function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   }
 }
 
-function formatCreatedAt(iso: string): string {
+function formatCreatedAt(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -56,9 +58,27 @@ const PLATFORM_LABEL: Record<SharePlatform, string> = {
 
 export default function Historique() {
   const [, setLocation] = useLocation();
+  const studioPath = useStudioPath();
   const { toast } = useToast();
-  const { data: larps, isLoading, isError, refetch, isFetching } = useLarpHistory();
+  const { t, i18n } = useTranslation();
+  const {
+    data: larps,
+    isPending,
+    isError,
+    refetch,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useLarpHistory();
   const deleteLarp = useDeleteLarp();
+  const deleteLarps = useDeleteLarps();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [loadingAllForSelect, setLoadingAllForSelect] = useState(false);
+  const [pendingSelectAll, setPendingSelectAll] = useState(false);
   const [selected, setSelected] = useState<{
     url: string;
     larpId: string;
@@ -128,6 +148,57 @@ export default function Historique() {
     [larps],
   );
 
+  const allVisibleSelected =
+    successLarps.length > 0 &&
+    successLarps.every((larp) => selectedIds.has(larp.id));
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    setSelectedIds((prev) => {
+      const valid = new Set(successLarps.map((larp) => larp.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [selectionMode, successLarps]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries.some((entry) => entry.isIntersecting) &&
+          !isFetchingNextPage
+        ) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, successLarps.length]);
+
+  // Keep fetching while the visible grid is sparse (failed gens take page slots).
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || isPending) return;
+    if (successLarps.length >= 12) return;
+    void fetchNextPage();
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    successLarps.length,
+  ]);
+
   async function handleDownload(
     larpId: string,
     imageIndex: number,
@@ -161,11 +232,11 @@ export default function Historique() {
         fallbackUrl: options?.url,
       });
       if (outcome === "aborted") return;
-      toast({ title: "Image téléchargée !" });
+      toast({ title: t("history.imageDownloaded") });
     } catch {
       toast({
-        title: "Téléchargement impossible",
-        description: "Réessaie, ou appuie longuement sur l’image pour l’enregistrer.",
+        title: t("history.downloadError"),
+        description: t("history.downloadFailedHint"),
         variant: "destructive",
       });
     } finally {
@@ -203,9 +274,8 @@ export default function Historique() {
 
       if (outcome === "shared" && platform === "snapchat") {
         toast({
-          title: "Presque !",
-          description:
-            "Dans la liste, appuie sur Snapchat — ta photo s’ouvre déjà en Snap.",
+          title: t("history.shareAlmostTitle"),
+          description: t("history.shareAlmostSnap"),
         });
         return;
       }
@@ -213,38 +283,44 @@ export default function Historique() {
       if (outcome === "shared" || outcome === "opened-app") return;
 
       toast({
-        title: "Image enregistrée",
+        title: t("history.savedTitle"),
         description:
           platform === "snapchat"
-            ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
-            : `Ouvre ${PLATFORM_LABEL[platform]} et envoie-la depuis ta galerie.`,
+            ? t("history.savedSnapHint")
+            : t("history.savedOtherHint", {
+                platform: PLATFORM_LABEL[platform],
+              }),
       });
     } catch {
       cleanupShareUiLocks();
       toast({
-        title: "Partage impossible",
-        description: "Télécharge l’image puis ouvre l’appli pour l’envoyer.",
+        title: t("history.shareFailed"),
+        description: t("history.shareFailedHint"),
         variant: "destructive",
       });
     }
   }
 
   async function handleDelete(larpId: string) {
-    const confirmed = window.confirm(
-      "Supprimer cette image de ton historique ? Cette action est définitive.",
-    );
+    const confirmed = window.confirm(t("history.confirmDelete"));
     if (!confirmed) return;
 
     setDeletingId(larpId);
     try {
       await deleteLarp.mutateAsync(larpId);
       if (selected?.larpId === larpId) setSelected(null);
+      setSelectedIds((prev) => {
+        if (!prev.has(larpId)) return prev;
+        const next = new Set(prev);
+        next.delete(larpId);
+        return next;
+      });
       const last = getLastGeneration();
       if (last?.larpId === larpId) clearLastGeneration();
-      toast({ title: "Image supprimée" });
+      toast({ title: t("history.deletedToast") });
     } catch {
       toast({
-        title: "Suppression impossible",
+        title: t("history.deleteFailed"),
         variant: "destructive",
       });
     } finally {
@@ -252,7 +328,94 @@ export default function Historique() {
     }
   }
 
-  if (isLoading) {
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setLoadingAllForSelect(false);
+    setPendingSelectAll(false);
+  }
+
+  function toggleSelectedId(larpId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(larpId)) next.delete(larpId);
+      else next.add(larpId);
+      return next;
+    });
+  }
+
+  async function handleSelectAll() {
+    setPendingSelectAll(true);
+    setLoadingAllForSelect(true);
+    try {
+      for (let i = 0; i < 100; i += 1) {
+        const result = await fetchNextPage();
+        if (!result.hasNextPage) break;
+      }
+    } finally {
+      setLoadingAllForSelect(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!pendingSelectAll || loadingAllForSelect || isFetchingNextPage) return;
+    if (hasNextPage) return;
+    setSelectedIds(new Set(successLarps.map((larp) => larp.id)));
+    setPendingSelectAll(false);
+  }, [
+    pendingSelectAll,
+    loadingAllForSelect,
+    isFetchingNextPage,
+    hasNextPage,
+    successLarps,
+  ]);
+
+  function handleDeselectAll() {
+    setSelectedIds(new Set());
+    setPendingSelectAll(false);
+  }
+
+  async function handleDeleteSelected() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(
+      t("history.confirmDeleteSelected", { count: ids.length }),
+    );
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+    try {
+      const result = await deleteLarps.mutateAsync(ids);
+      if (selected && ids.includes(selected.larpId)) setSelected(null);
+      const last = getLastGeneration();
+      if (last?.larpId && ids.includes(last.larpId)) clearLastGeneration();
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      toast({
+        title: t("history.deletedSelectedToast", {
+          count: result.deleted,
+        }),
+      });
+      // Only surface an error when nothing was deleted.
+      // Partial failures after a real delete used to show a false "impossible".
+      if (result.deleted === 0 && result.failed > 0) {
+        toast({
+          title: t("history.deleteFailed"),
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: t("history.deleteFailed"),
+        variant: "destructive",
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  if (isPending) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--lx-gold)]" />
@@ -265,10 +428,10 @@ export default function Historique() {
       <div className="mx-auto flex max-w-lg flex-col items-center gap-6 py-20 text-center">
         <Sparkles className="h-10 w-10 text-[var(--lx-gold)]" strokeWidth={1.5} />
         <h1 className="lx-display text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl">
-          Impossible de charger l&apos;historique
+          {t("history.loadError")}
         </h1>
         <p className="text-sm text-[var(--lx-muted)]">
-          Réessaie dans un instant.
+          {t("history.loadErrorHint")}
         </p>
         <button
           type="button"
@@ -276,29 +439,35 @@ export default function Historique() {
           className="lx-btn-gold inline-flex h-12 items-center justify-center rounded-full px-6 text-sm"
           disabled={isFetching}
         >
-          {isFetching ? "Chargement…" : "Réessayer"}
+          {isFetching ? t("history.loading") : t("history.retry")}
         </button>
       </div>
     );
   }
 
   if (!successLarps.length) {
+    if (hasNextPage || isFetchingNextPage) {
+      return (
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--lx-gold)]" />
+        </div>
+      );
+    }
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-6 py-20 text-center">
         <Sparkles className="h-10 w-10 text-[var(--lx-gold)]" strokeWidth={1.5} />
         <h1 className="lx-display text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl">
-          Aucune création pour le moment
+          {t("history.emptyTitle")}
         </h1>
         <p className="text-sm text-[var(--lx-muted)]">
-          Tes images générées apparaîtront ici, de la plus récente à la plus
-          ancienne.
+          {t("history.emptyDescription")}
         </p>
         <button
           type="button"
-          onClick={() => setLocation("/generate")}
+          onClick={() => setLocation(studioPath)}
           className="lx-btn-gold inline-flex h-12 items-center justify-center rounded-full px-6 text-sm"
         >
-          Créer ma première image
+          {t("history.emptyCta")}
         </button>
       </div>
     );
@@ -308,10 +477,73 @@ export default function Historique() {
     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white shadow-md backdrop-blur-sm transition hover:bg-black/85 active:scale-95 disabled:opacity-60";
 
   return (
-    <div className="space-y-8 py-6">
-      <h1 className="lx-display text-center text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl">
-        Historique
-      </h1>
+    <div className="space-y-6 py-6 pb-28">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-1">
+        <h1 className="lx-display text-center text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl">
+          {t("history.pageTitle")}
+        </h1>
+
+        {!selectionMode ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectionMode(true);
+              setSelected(null);
+            }}
+            className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--lx-gold)]/40 bg-[var(--lx-surface-2)] px-5 text-sm font-semibold text-[var(--lx-ink)] transition hover:bg-white"
+          >
+            {t("history.select")}
+          </button>
+        ) : (
+          <div className="flex w-full flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                void (allVisibleSelected
+                  ? handleDeselectAll()
+                  : handleSelectAll())
+              }
+              disabled={loadingAllForSelect || bulkDeleting}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--lx-gold)]/40 bg-[var(--lx-surface-2)] px-4 text-sm font-semibold text-[var(--lx-ink)] transition hover:bg-white disabled:opacity-60"
+            >
+              {loadingAllForSelect ? (
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--lx-gold)]" />
+              ) : null}
+              {allVisibleSelected
+                ? t("history.deselectAll")
+                : t("history.selectAll")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteSelected()}
+              disabled={selectedIds.size === 0 || bulkDeleting}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/50 bg-red-500/10 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-500/15 disabled:opacity-50"
+            >
+              {bulkDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              {t("history.deleteSelected")}
+              {selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={exitSelectionMode}
+              disabled={bulkDeleting}
+              className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-[var(--lx-muted)] transition hover:text-[var(--lx-ink)] disabled:opacity-60"
+            >
+              {t("history.cancelSelect")}
+            </button>
+          </div>
+        )}
+
+        {selectionMode && selectedIds.size > 0 ? (
+          <p className="text-center text-xs font-medium text-[var(--lx-muted)]">
+            {t("history.selectedCount", { count: selectedIds.size })}
+          </p>
+        ) : null}
+      </div>
 
       <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
         {successLarps.map((larp) => {
@@ -325,19 +557,28 @@ export default function Historique() {
           const posterUrl = pickVideoPosterUrl(inputUrls);
           const busyDownload = downloadingId === larp.id;
           const busyDelete = deletingId === larp.id;
+          const isChecked = selectedIds.has(larp.id);
 
           return (
             <div
               key={larp.id}
-              className="group/hist relative aspect-[9/16] cursor-pointer overflow-hidden rounded-lg border border-[var(--lx-gold)]/40 bg-[var(--lx-ink-soft)]"
-              onClick={() =>
+              className={`group/hist relative aspect-[9/16] cursor-pointer overflow-hidden rounded-lg border bg-[var(--lx-ink-soft)] ${
+                selectionMode && isChecked
+                  ? "border-[var(--lx-gold)] ring-2 ring-[var(--lx-gold)]/70"
+                  : "border-[var(--lx-gold)]/40"
+              }`}
+              onClick={() => {
+                if (selectionMode) {
+                  toggleSelectedId(larp.id);
+                  return;
+                }
                 setSelected({
                   url: urls[0],
                   larpId: larp.id,
                   resultType,
                   posterUrl,
-                })
-              }
+                });
+              }}
             >
               {resultType === "video" ? (
                 <VideoHistoryCardPreview
@@ -347,80 +588,112 @@ export default function Historique() {
               ) : (
                 <img
                   src={urls[0]}
-                  alt="Création"
+                  alt={t("history.createdAlt")}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/hist:scale-[1.03]"
                   loading="lazy"
                 />
               )}
 
+              {selectionMode ? (
+                <div className="absolute left-2 top-2 z-30">
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-md ${
+                      isChecked
+                        ? "border-[var(--lx-gold)] bg-[var(--lx-gold)] text-[var(--lx-ink)]"
+                        : "border-white/80 bg-black/45 text-transparent"
+                    }`}
+                    aria-hidden
+                  >
+                    <Check className="h-4 w-4" strokeWidth={3} />
+                  </span>
+                </div>
+              ) : null}
+
               {/* Date — always visible */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-3 pb-3 pt-14">
                 <p className="text-xs font-medium text-white/90">
-                  {formatCreatedAt(larp.createdAt)}
+                  {formatCreatedAt(larp.createdAt, i18n.resolvedLanguage || "fr")}
                 </p>
               </div>
 
-              {/*
-                Action bar: Share + Download + Delete.
-                Visible on hover (desktop) and always on touch (no hover).
-                Named group/hist avoids parent `.group` conflicts.
-              */}
-              <div
-                className="absolute inset-x-0 top-0 z-30 flex items-start justify-end gap-1.5 bg-gradient-to-b from-black/55 to-transparent p-2 opacity-100 transition-opacity duration-200 max-md:opacity-100 md:opacity-0 md:group-hover/hist:opacity-100 md:group-focus-within/hist:opacity-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  title="Partager"
-                  aria-label="Partager"
-                  onClick={() =>
-                    setShareTarget({
-                      larpId: larp.id,
-                      url: urls[0],
-                      resultType,
-                    })
-                  }
-                  className={actionBtnClass}
+              {!selectionMode ? (
+                <div
+                  className="absolute inset-x-0 top-0 z-30 flex items-start justify-end gap-1.5 bg-gradient-to-b from-black/55 to-transparent p-2 opacity-100 transition-opacity duration-200 max-md:opacity-100 md:opacity-0 md:group-hover/hist:opacity-100 md:group-focus-within/hist:opacity-100"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Share2 className="h-4 w-4 text-[var(--lx-gold-soft)]" />
-                </button>
-                <button
-                  type="button"
-                  title="Télécharger"
-                  aria-label="Télécharger"
-                  disabled={busyDownload}
-                  onClick={() =>
-                    void handleDownload(larp.id, 0, {
-                      resultType,
-                      url: urls[0],
-                    })
-                  }
-                  className={actionBtnClass}
-                >
-                  {busyDownload ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--lx-gold-soft)]" />
-                  ) : (
-                    <Download className="h-4 w-4 text-[var(--lx-gold-soft)]" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  title="Supprimer"
-                  aria-label="Supprimer"
-                  disabled={busyDelete || deleteLarp.isPending}
-                  onClick={() => void handleDelete(larp.id)}
-                  className={`${actionBtnClass} border-red-400/60`}
-                >
-                  {busyDelete ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-red-300" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 text-red-300" />
-                  )}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    title={t("history.share")}
+                    aria-label={t("history.share")}
+                    onClick={() =>
+                      setShareTarget({
+                        larpId: larp.id,
+                        url: urls[0],
+                        resultType,
+                      })
+                    }
+                    className={actionBtnClass}
+                  >
+                    <Share2 className="h-4 w-4 text-[var(--lx-gold-soft)]" />
+                  </button>
+                  <button
+                    type="button"
+                    title={t("history.download")}
+                    aria-label={t("history.download")}
+                    disabled={busyDownload}
+                    onClick={() =>
+                      void handleDownload(larp.id, 0, {
+                        resultType,
+                        url: urls[0],
+                      })
+                    }
+                    className={actionBtnClass}
+                  >
+                    {busyDownload ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--lx-gold-soft)]" />
+                    ) : (
+                      <Download className="h-4 w-4 text-[var(--lx-gold-soft)]" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    title={t("common.actions.delete")}
+                    aria-label={t("common.actions.delete")}
+                    disabled={busyDelete || deleteLarp.isPending}
+                    onClick={() => void handleDelete(larp.id)}
+                    className={`${actionBtnClass} border-red-400/60`}
+                  >
+                    {busyDelete ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-red-300" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 text-red-300" />
+                    )}
+                  </button>
+                </div>
+              ) : null}
             </div>
           );
         })}
+      </div>
+
+      <div ref={loadMoreRef} className="flex min-h-10 flex-col items-center gap-3 py-4">
+        {hasNextPage ? (
+          <button
+            type="button"
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--lx-gold)]/40 bg-[var(--lx-surface-2)] px-5 text-sm font-medium text-[var(--lx-ink)] transition hover:bg-white disabled:opacity-60"
+          >
+            {isFetchingNextPage ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--lx-gold)]" />
+                {t("history.loading")}
+              </>
+            ) : (
+              t("history.loadMore")
+            )}
+          </button>
+        ) : null}
       </div>
 
       {selected &&
@@ -440,7 +713,7 @@ export default function Historique() {
                 ) : (
                   <img
                     src={selected.url}
-                    alt="Création"
+                    alt={t("history.createdAlt")}
                     className="absolute inset-0 h-full w-full object-contain"
                   />
                 )}
@@ -453,7 +726,7 @@ export default function Historique() {
                 </button>
                 <button
                   type="button"
-                  title="Supprimer"
+                  title={t("common.actions.delete")}
                   disabled={deletingId === selected.larpId}
                   onClick={() => void handleDelete(selected.larpId)}
                   className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-red-400/50 bg-black/55 text-red-400 disabled:opacity-60"
@@ -477,7 +750,7 @@ export default function Historique() {
                     className="flex h-11 items-center gap-2 rounded-full border border-white/25 bg-black/55 px-4 text-sm font-medium text-white backdrop-blur-sm"
                   >
                     <Share2 className="h-4 w-4" />
-                    Partager
+                    {t("history.share")}
                   </button>
                   <button
                     type="button"
@@ -495,7 +768,7 @@ export default function Historique() {
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
-                    Télécharger
+                    {t("history.download")}
                   </button>
                 </div>
               </div>
@@ -506,6 +779,8 @@ export default function Historique() {
 
       <ShareSheet
         open={Boolean(shareTarget)}
+        title={t("history.shareTitle")}
+        description={t("result.shareSnapHint")}
         onClose={() => {
           setShareTarget(null);
           cleanupShareUiLocks();

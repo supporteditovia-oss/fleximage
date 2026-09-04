@@ -12,6 +12,7 @@ import { DEFAULT_SITE_ORIGIN } from "@shared/site-seo";
  * Required Redirect URLs (add in Supabase Dashboard):
  *   http://localhost:5000/**
  *   http://127.0.0.1:5000/**
+ *   https://www.luxeflexia.com/reset-password
  *   https://www.luxeflexia.com/**
  *   https://luxeflexia.com/**
  *   (remove obsolete https://*.replit.dev/** if present)

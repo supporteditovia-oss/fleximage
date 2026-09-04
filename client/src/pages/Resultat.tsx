@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Download, Loader2, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
-import { currentPlanQueryKey } from "@/hooks/use-billing";
+import { currentPlanQueryRoot } from "@/hooks/use-billing";
 import { useAuth } from "@/hooks/use-auth";
 import {
   clearPaywalledResult,
@@ -16,6 +16,8 @@ import {
   saveMediaBlob,
 } from "@/lib/download-media";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { useStudioPath } from "@/hooks/use-studio-path";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 import "./postpay-pages.css";
 
@@ -105,7 +107,9 @@ async function verifyCheckoutSession(sessionId: string): Promise<boolean> {
 
 export default function Resultat() {
   const [location, setLocation] = useLocation();
+  const studioPath = useStudioPath();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -119,8 +123,8 @@ export default function Resultat() {
   const firstName = useMemo(() => firstNameFromProfile(profile), [profile]);
 
   const redirectToPaywall = useCallback(() => {
-    setLocation("/generate");
-  }, [setLocation]);
+    setLocation(studioPath);
+  }, [setLocation, studioPath]);
 
   const fetchResult = useCallback(
     async (larpId?: string | null) => {
@@ -207,20 +211,18 @@ export default function Resultat() {
             });
           }
           await queryClient.invalidateQueries({ queryKey: ["profile"] });
-          await queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
+          await queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
           window.history.replaceState({}, "", "/resultat");
           if (!cancelled) setActivating(false);
           if (verifyAuthFailed) {
             toast({
-              title: "Paiement reçu",
-              description:
-                "Reconnecte-toi pour activer ton abonnement sur cet appareil (surtout après TikTok → Safari).",
+              title: t("welcome.paymentReceived"),
+              description: t("welcome.reconnectDevice"),
             });
           } else if (!active) {
             toast({
-              title: "Paiement reçu",
-              description:
-                "Ton abonnement s'active. Tu peux déjà créer une image — rafraîchis si les crédits mettent une seconde à apparaître.",
+              title: t("welcome.paymentReceived"),
+              description: t("welcome.paymentReceivedHint"),
             });
           }
         } else if (peekCheckoutWelcomeFlag()) {
@@ -235,8 +237,8 @@ export default function Resultat() {
           toast({
             title:
               status === 401 || status === 403
-                ? "Reconnecte-toi pour voir ton résultat"
-                : "Impossible de charger ton résultat",
+                ? t("welcome.reconnect")
+                : t("welcome.loadFailed"),
             variant: "destructive",
           });
         }
@@ -269,10 +271,10 @@ export default function Resultat() {
         fallbackUrl: result.resultUrls[0],
       });
       if (outcome === "aborted") return;
-      toast({ title: "Image téléchargée !" });
+      toast({ title: t("result.imageDownloaded") });
     } catch {
       toast({
-        title: "Téléchargement impossible",
+        title: t("history.downloadError"),
         variant: "destructive",
       });
     } finally {
@@ -286,8 +288,8 @@ export default function Resultat() {
         <Loader2 className="h-8 w-8 animate-spin text-[var(--lx-gold)]" />
         <p className="lx-welcome__loading">
           {activating
-            ? "Activation de ton abonnement…"
-            : "Préparation de ton espace…"}
+            ? t("layout.activatingSubscription")
+            : t("layout.preparingSpace")}
         </p>
       </div>
     );
@@ -304,22 +306,20 @@ export default function Resultat() {
             <Sparkles className="lx-welcome__spark" strokeWidth={1.25} />
           </div>
 
-          <p className="lx-welcome__eyebrow">Bienvenue chez LuxeFlexIA</p>
+          <p className="lx-welcome__eyebrow">{t("welcome.eyebrow")}</p>
 
           <h1 className="lx-welcome__title">
             {firstName ? (
               <>
-                Félicitations, <span className="lx-welcome__name">{firstName}</span>
+                {t("welcome.congratulations")},{" "}
+                <span className="lx-welcome__name">{firstName}</span>
               </>
             ) : (
-              "Félicitations"
+              t("welcome.congratulations")
             )}
           </h1>
 
-          <p className="lx-welcome__lede">
-            Ton abonnement est confirmé. Tes crédits sont prêts — il ne reste plus
-            qu&apos;à créer ta première image.
-          </p>
+          <p className="lx-welcome__lede">{t("welcome.lede")}</p>
 
           <div className="lx-welcome__divider" aria-hidden />
 
@@ -327,11 +327,11 @@ export default function Resultat() {
             type="button"
             onClick={() => {
               consumeCheckoutWelcomeFlag();
-              setLocation("/generate");
+              setLocation(studioPath);
             }}
             className="lx-postpay__btn-gold lx-welcome__cta inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg px-6 text-sm"
           >
-            Créer une image
+            {t("welcome.cta")}
           </button>
 
           <button
@@ -342,7 +342,7 @@ export default function Resultat() {
             }}
             className="lx-welcome__link"
           >
-            Voir mon abonnement
+            {t("welcome.viewPlan")}
           </button>
         </div>
       </div>
@@ -354,17 +354,17 @@ export default function Resultat() {
       <div className="lx-postpay lx-welcome mx-auto flex max-w-lg flex-col items-center gap-6 py-16 text-center">
         <Sparkles className="h-10 w-10 text-[var(--lx-gold)]" strokeWidth={1.5} />
         <h1 className="lx-welcome__title lx-welcome__title--sm">
-          Aucun résultat pour le moment
+          {t("welcome.emptyTitle")}
         </h1>
         <p className="lx-welcome__lede">
-          Crée une image pour la retrouver ici, prête à télécharger.
+          {t("welcome.emptyLede")}
         </p>
         <button
           type="button"
-          onClick={() => setLocation("/generate")}
+          onClick={() => setLocation(studioPath)}
           className="lx-postpay__btn-gold inline-flex h-12 items-center justify-center rounded-lg px-6 text-sm"
         >
-          Créer une image
+          {t("welcome.cta")}
         </button>
       </div>
     );
@@ -376,11 +376,11 @@ export default function Resultat() {
     <div className="lx-postpay mx-auto flex w-full max-w-xl flex-col items-center gap-6 py-4 md:py-8">
       {checkoutWelcome ? (
         <div className="lx-welcome__inline">
-          <p className="lx-welcome__eyebrow">Abonnement activé</p>
+          <p className="lx-welcome__eyebrow">{t("welcome.subscriptionActive")}</p>
           <h1 className="lx-welcome__title lx-welcome__title--sm">
             {firstName
-              ? `Bravo ${firstName}, ton image est prête`
-              : "Ton image est prête"}
+              ? t("welcome.imageReadyName", { name: firstName })
+              : t("welcome.imageReady")}
           </h1>
         </div>
       ) : (
@@ -388,7 +388,7 @@ export default function Resultat() {
           className="text-center text-2xl font-semibold text-[var(--lx-ink)] md:text-3xl"
           style={{ fontFamily: "var(--lx-display)" }}
         >
-          Ton image est prête
+          {t("welcome.imageReady")}
         </h1>
       )}
 
@@ -399,7 +399,7 @@ export default function Resultat() {
           ) : (
             <img
               src={mediaUrl}
-              alt="Image générée"
+              alt={t("welcome.generatedAlt")}
               className="absolute inset-0 h-full w-full object-contain"
             />
           )}
@@ -418,14 +418,14 @@ export default function Resultat() {
           ) : (
             <Download className="h-4 w-4" />
           )}
-          Télécharger l&apos;image
+          {t("result.downloadImage")}
         </button>
         <button
           type="button"
-          onClick={() => setLocation("/generate")}
+          onClick={() => setLocation(studioPath)}
           className="lx-postpay__btn-outline inline-flex h-12 flex-1 items-center justify-center rounded-lg px-4 text-sm"
         >
-          Créer une autre image
+          {t("welcome.createAnother")}
         </button>
       </div>
     </div>

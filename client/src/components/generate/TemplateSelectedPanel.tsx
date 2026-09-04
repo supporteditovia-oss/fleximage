@@ -1,4 +1,4 @@
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Gem } from "lucide-react";
 import { icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TemplateIllustrationMedia } from "@/components/templates/TemplateIllustrationMedia";
@@ -12,6 +12,7 @@ interface TemplateSelectedPanelProps {
   onDeselect: () => void;
   onGenerate: () => void;
   isGenerating: boolean;
+  creditCost?: number;
 }
 
 export function TemplateSelectedPanel({
@@ -20,6 +21,7 @@ export function TemplateSelectedPanel({
   onDeselect,
   onGenerate,
   isGenerating,
+  creditCost,
 }: TemplateSelectedPanelProps) {
   const { t, i18n } = useTranslation();
   const templateName = getLocalizedTemplateName(template, i18n.language);
@@ -97,6 +99,21 @@ export function TemplateSelectedPanel({
           t("templateSelected.generate")
         )}
       </Button>
+      {typeof creditCost === "number" && creditCost > 0 && (
+        <div
+          className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--lx-gold)]/40 bg-[var(--lx-gold)]/10 px-3 py-1.5 text-center"
+          role="note"
+        >
+          <Gem
+            className="h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="text-xs font-bold tracking-wide text-[#5c4a12] sm:text-[13px]">
+            {t("promptInput.creditCostHint", { count: creditCost })}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

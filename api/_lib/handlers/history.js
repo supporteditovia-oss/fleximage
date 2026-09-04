@@ -1,6 +1,9 @@
 const { requireUser, sendError } = require("../user-auth");
 const { toAssetList, toClientStatus } = require("../generation");
 
+const DEFAULT_LIMIT = 40;
+const MAX_LIMIT = 100;
+
 function toLarpDto(row) {
   const template = row.templates;
   const category =
@@ -35,6 +38,12 @@ function toLarpDto(row) {
   };
 }
 
+function parsePositiveInt(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.trunc(n);
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -49,18 +58,38 @@ module.exports = async function handler(req, res) {
   try {
     const { supabase, userId } = await requireUser(req);
 
+    const limit = Math.min(
+      Math.max(parsePositiveInt(req.query?.limit, DEFAULT_LIMIT), 1),
+      MAX_LIMIT,
+    );
+    const offset = Math.max(parsePositiveInt(req.query?.offset, 0), 0);
+
     // Keep the select aligned with real columns: templates / categories
     // do not have name_en in this project schema.
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("generations")
-      .select("*, templates(name, template_categories(slug, name))")
+      .select("*, templates(name, template_categories(slug, name))", {
+        count: "exact",
+      })
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
 
-    res.status(200).json((data ?? []).map(toLarpDto));
+    const items = (data ?? []).map(toLarpDto);
+    const total = typeof count === "number" ? count : offset + items.length;
+    const nextOffset = offset + items.length;
+    const hasMore = nextOffset < total;
+
+    res.status(200).json({
+      items,
+      hasMore,
+      nextOffset,
+      total,
+      limit,
+      offset,
+    });
   } catch (error) {
     console.error("larps history error", error);
     sendError(res, error);

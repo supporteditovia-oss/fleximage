@@ -10,8 +10,14 @@ const CONTENT_POLICY_CODE = "PROMPT_POLICY_VIOLATION";
 const CONTENT_POLICY_MESSAGE_FR =
   "Le contenu demandé n'est pas autorisé (protection des mineurs). Reformule ta demande. Aucun jeton n'est perdu.";
 
+const CONTENT_POLICY_MESSAGE_EN =
+  "This request isn't allowed (minor protection). Rephrase your prompt. No credits were used.";
+
 const CONTENT_POLICY_MESSAGE_FR_SHORT =
   "Contenu non autorisé (protection des mineurs). Aucun jeton n'est perdu.";
+
+const CONTENT_POLICY_MESSAGE_EN_SHORT =
+  "Content not allowed (minor protection). No credits were used.";
 
 /** Only block sexual content involving minors. Everything else must generate. */
 const DISALLOWED_MINOR_SEXUAL_RE =
@@ -31,10 +37,15 @@ function isDisallowedAdultPrompt(prompt) {
   return DISALLOWED_MINOR_SEXUAL_RE.test(text);
 }
 
-function contentPolicyResponse() {
+function contentPolicyResponse(locale = "fr") {
+  const { copy } = require("./locale-copy");
   return {
     code: CONTENT_POLICY_CODE,
-    message: CONTENT_POLICY_MESSAGE_FR,
+    message: copy(
+      locale,
+      CONTENT_POLICY_MESSAGE_FR,
+      CONTENT_POLICY_MESSAGE_EN,
+    ),
   };
 }
 

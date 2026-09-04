@@ -10,6 +10,13 @@
   --lx-muted: #5c564e;
   --lx-display: "Playfair Display", Georgia, serif;
   --lx-sans: "Plus Jakarta Sans", "DM Sans", sans-serif;
+  --lx-app-header-h: calc(4.25rem + env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --lx-app-header-h: calc(4.5rem + env(safe-area-inset-top, 0px));
+  }
 }
 
 .lx-display {

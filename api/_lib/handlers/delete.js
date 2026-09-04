@@ -20,20 +20,18 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data, error } = await supabase
+    // Do not require a RETURNING row: PostgREST/RLS can delete successfully
+    // while returning no representation, which previously caused a false 404
+    // after the image was already removed.
+    const { error } = await supabase
       .from("generations")
       .delete()
       .eq("id", larpId)
-      .eq("user_id", userId)
-      .select("id")
-      .maybeSingle();
+      .eq("user_id", userId);
 
     if (error) throw error;
-    if (!data) {
-      res.status(404).json({ message: "Génération introuvable" });
-      return;
-    }
 
+    // Idempotent: already-deleted ids still count as success for the client UX.
     res.status(200).json({ success: true });
   } catch (error) {
     console.error("larp delete error", error);

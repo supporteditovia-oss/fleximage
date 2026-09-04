@@ -1,7 +1,10 @@
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import ScrollReveal from "@/components/marketing/ScrollReveal";
 
 export default function CtaSection() {
+  const { t } = useTranslation();
+
   return (
     <section
       id="entreprise"
@@ -22,14 +25,14 @@ export default function CtaSection() {
 
       <ScrollReveal className="relative mx-auto max-w-2xl text-center">
         <h2 className="lx-display text-3xl font-semibold text-white md:text-4xl">
-          Prêt à transformer ta réalité ?
+          {t("cta.title")}
         </h2>
         <div className="mt-8 flex justify-center">
           <Link
             href="/register"
             className="lx-btn-gold inline-flex min-h-12 items-center justify-center rounded-full px-10 text-base font-semibold"
           >
-            Créer un compte
+            {t("cta.button")}
           </Link>
         </div>
       </ScrollReveal>

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { studioHomePath } from "@/lib/v2-experience";
 
 interface Props {
   children: React.ReactNode;
@@ -78,13 +79,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   private handleHome = () => {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
-    // Soft navigate within the SPA so auth session is preserved.
-    const target =
-      typeof window !== "undefined" &&
-      window.location.pathname.startsWith("/admin")
-        ? "/admin/users"
-        : "/generate";
-    window.location.assign(target);
+    window.location.assign(studioHomePath());
   };
 
   render() {

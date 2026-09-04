@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Loader2, Lock, X } from "lucide-react";
+import { billingLocaleParam } from "@shared/billing";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -13,38 +14,7 @@ import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
 import type { PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { useToast } from "@/hooks/use-toast";
-
-type PlanCard = {
-  id: PaywallPlan;
-  euros: string;
-  cents: string;
-  bonusKey?: string;
-  featureKeys: string[];
-  popular?: boolean;
-};
-
-const PLAN_CARDS: PlanCard[] = [
-  {
-    id: "discovery",
-    euros: "8",
-    cents: "90",
-    featureKeys: ["photo", "realistic", "hd", "history", "support"],
-  },
-  {
-    id: "essential",
-    euros: "19",
-    cents: "90",
-    popular: true,
-    bonusKey: "essentialBonus",
-    featureKeys: ["photo", "marketRealism", "details", "prioritySupport"],
-  },
-  {
-    id: "ultimate",
-    euros: "39",
-    cents: "90",
-    featureKeys: ["photo", "indistinguishable", "ulDetails", "immersion", "vipSupport"],
-  },
-];
+import { usePaywallPlanCards } from "@/lib/paywall-plans";
 
 const COMMON_FEATURE_KEYS = ["instantCredits", "monthlyRenewal"] as const;
 
@@ -63,8 +33,9 @@ export function LuxePaywallModal({
   prompt = null,
   defaultPlan = "essential",
 }: LuxePaywallModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
+  const planCards = usePaywallPlanCards();
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -77,10 +48,8 @@ export function LuxePaywallModal({
     }
   }, [open, defaultPlan]);
 
-  const selectedPlanCard = useMemo(
-    () => PLAN_CARDS.find((plan) => plan.id === selectedPlan) ?? PLAN_CARDS[0],
-    [selectedPlan],
-  );
+  const selectedPlanCard =
+    planCards.find((plan) => plan.id === selectedPlan) ?? planCards[0];
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -92,12 +61,10 @@ export function LuxePaywallModal({
         toast({
           variant: "destructive",
           title: t("common.messages.error"),
-          description: t("paywall.checkoutAuthRequired", {
-            defaultValue: "Reconnecte-toi pour finaliser le paiement.",
-          }),
+          description: t("paywall.checkoutAuthRequired"),
         });
         const returnTo = `${window.location.pathname}${window.location.search || ""}`;
-        window.location.href = `/auth?redirect=${encodeURIComponent(returnTo)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(returnTo)}`;
         return;
       }
 
@@ -111,6 +78,7 @@ export function LuxePaywallModal({
         body: JSON.stringify({
           plan: selectedPlan,
           funnel_session_id: getFunnelSessionId(),
+          locale: billingLocaleParam(i18n.language),
         }),
       });
       const { url } = await res.json();
@@ -133,12 +101,8 @@ export function LuxePaywallModal({
           const portalUrl = await createPortalSession("/settings");
           if (portalUrl) {
             toast({
-              title: t("paywall.alreadySubscribedTitle", {
-                defaultValue: "Abonnement déjà actif",
-              }),
-              description: t("paywall.alreadySubscribedPortal", {
-                defaultValue: "On t’ouvre la gestion Stripe…",
-              }),
+              title: t("paywall.alreadySubscribedTitle"),
+              description: t("paywall.alreadySubscribedPortal"),
             });
             window.location.assign(portalUrl);
             return;
@@ -183,17 +147,17 @@ export function LuxePaywallModal({
             type="button"
             onClick={() => onOpenChange(false)}
             className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-[var(--lx-muted)] transition-colors hover:bg-black/5 hover:text-[var(--lx-ink)]"
-            aria-label="Fermer"
+            aria-label={t("paywall.closeAria")}
           >
             <X className="h-4 w-4" strokeWidth={2.25} />
           </button>
 
           <div className="relative z-10">
             <DialogTitle className="lx-display pr-8 text-center text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-[1.7rem]">
-              Débloque ton image en HD
+              {t("paywall.modalTitle")}
             </DialogTitle>
             <DialogDescription className="mx-auto mt-1.5 max-w-xs text-center text-sm font-medium text-[var(--lx-muted)]">
-              Choisis ton plan pour révéler le rendu final.
+              {t("paywall.modalSubtitle")}
             </DialogDescription>
 
             {imageUrl ? (
@@ -206,7 +170,7 @@ export function LuxePaywallModal({
             ) : null}
 
             <div className="mt-4 grid grid-cols-3 gap-2">
-              {PLAN_CARDS.map((plan) => {
+              {planCards.map((plan) => {
                 const selected = selectedPlan === plan.id;
                 return (
                   <button
@@ -229,10 +193,14 @@ export function LuxePaywallModal({
                     </span>
                     <span className="mt-1 flex items-baseline gap-0.5">
                       <span className="text-lg font-bold tracking-tight text-[var(--lx-ink)]">
-                        {plan.euros}
+                        {plan.price.prefix
+                          ? `${plan.price.prefix}${plan.price.major}`
+                          : plan.price.major}
                       </span>
                       <span className="text-xs font-semibold text-[var(--lx-muted)]">
-                        ,{plan.cents}€
+                        {plan.price.prefix
+                          ? `.${plan.price.minor}`
+                          : `,${plan.price.minor}${plan.price.showCurrencyCode ? "€" : ""}`}
                       </span>
                     </span>
                     <span className="mt-1.5 text-[10px] font-semibold leading-tight text-[var(--lx-muted)]">

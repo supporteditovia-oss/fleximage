@@ -14,8 +14,10 @@ import {
   DEFAULT_LOCALE,
   resolvePreferredLocale,
   SIGNUP_LOCALE_STORAGE_KEY,
+  toUiLocale,
 } from "@shared/locales";
 import { BrandMark } from "@/components/BrandMark";
+import { AUTH_CONFIG } from "@/config/auth";
 import "./landing.css";
 
 type PasswordRule = {
@@ -23,6 +25,25 @@ type PasswordRule = {
   labelKey: string;
   test: (password: string) => boolean;
 };
+
+function getSafePostAuthRedirect(): string {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    if (
+      redirect &&
+      redirect.startsWith("/") &&
+      !redirect.startsWith("//") &&
+      !redirect.startsWith("/login") &&
+      !redirect.startsWith("/register")
+    ) {
+      return redirect;
+    }
+  } catch {
+    /* ignore */
+  }
+  return AUTH_CONFIG.REDIRECT_PATH;
+}
 
 const PASSWORD_RULES: PasswordRule[] = [
   {
@@ -53,6 +74,8 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
 
@@ -62,11 +85,13 @@ export default function AuthPage() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const getSignupLocale = () =>
-    resolvePreferredLocale(
-      window.localStorage.getItem(APP_LOCALE_STORAGE_KEY) ??
-        i18n.resolvedLanguage ??
+    toUiLocale(
+      resolvePreferredLocale(
+        window.localStorage.getItem(APP_LOCALE_STORAGE_KEY) ??
+          i18n.resolvedLanguage ??
+          DEFAULT_LOCALE,
         DEFAULT_LOCALE,
-      DEFAULT_LOCALE,
+      ),
     );
 
   const getPasswordStrength = (pass: string) => {
@@ -148,6 +173,7 @@ export default function AuthPage() {
           title: t("auth.signInSuccessTitle"),
           description: t("auth.signInSuccessDescription"),
         });
+        setLocation(getSafePostAuthRedirect());
       } else {
         const signupLocale = getSignupLocale();
         window.localStorage.setItem(SIGNUP_LOCALE_STORAGE_KEY, signupLocale);
@@ -156,7 +182,7 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: getAuthRedirectTo("/app"),
+            emailRedirectTo: getAuthRedirectTo(`/app?lang=${signupLocale}`),
             data: {
               has_accepted_terms: true,
               preferred_locale: signupLocale,
@@ -188,6 +214,40 @@ export default function AuthPage() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValidEmail(email)) {
+      toast({
+        variant: "destructive",
+        title: t("auth.invalidEmailTitle"),
+        description: t("auth.invalidEmailDescription"),
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: getAuthRedirectTo("/reset-password"),
+      });
+      if (error) throw error;
+      setForgotSent(true);
+      toast({
+        title: t("auth.forgotSentTitle"),
+        description: t("auth.forgotSentDescription"),
+      });
+    } catch (error: unknown) {
+      const translated = translateSupabaseError(error);
+      toast({
+        variant: "destructive",
+        title: translated.title,
+        description: translated.description,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleAuth = async () => {
     setIsLoading(true);
 
@@ -197,7 +257,9 @@ export default function AuthPage() {
     }
 
     try {
-      const redirectTo = getAuthRedirectTo("/app");
+      const redirectTo = getAuthRedirectTo(
+        `${getSafePostAuthRedirect()}?lang=${signupLocale}`,
+      );
       if (import.meta.env.DEV) {
         console.info("[auth] Google OAuth redirectTo:", redirectTo);
       }
@@ -246,8 +308,8 @@ export default function AuthPage() {
 
       <Link
         href="/"
-        className="relative z-10 mb-8 inline-flex items-center gap-2 transition-opacity hover:opacity-80"
-        aria-label="LuxeFlexIA — accueil"
+        className="relative z-10 mb-4 inline-flex items-center gap-2 transition-opacity hover:opacity-80"
+        aria-label={t("landing.header.homeAria")}
       >
         <Gem
           className="h-6 w-6 shrink-0 text-[var(--lx-gold)]"
@@ -256,19 +318,83 @@ export default function AuthPage() {
         />
         <BrandMark className="text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-3xl" />
       </Link>
-
       <div className="relative z-10 w-full max-w-md">
         <div className="lx-auth-card rounded-2xl border border-[var(--lx-gold)]/45 bg-[var(--lx-surface-2)]/95 p-8 shadow-[0_20px_50px_rgba(18,16,14,0.1)] backdrop-blur-sm md:p-10">
           <div className="mb-8 text-center">
             <h1 className="lx-display text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-3xl">
-              {isLogin ? t("auth.welcomeBack") : t("auth.createAccount")}
+              {forgotMode
+                ? t("auth.forgotTitle")
+                : isLogin
+                  ? t("auth.welcomeBack")
+                  : t("auth.createAccount")}
             </h1>
             <p className="mt-2 text-sm font-medium text-[var(--lx-muted)]">
-              {isLogin ? t("auth.subtitleLogin") : t("auth.subtitleRegister")}
+              {forgotMode
+                ? t("auth.forgotSubtitle")
+                : isLogin
+                  ? t("auth.subtitleLogin")
+                  : t("auth.subtitleRegister")}
             </p>
           </div>
 
           <div className="space-y-4">
+            {forgotMode ? (
+              forgotSent ? (
+                <div className="space-y-4 text-center">
+                  <p className="text-sm leading-relaxed text-[var(--lx-ink)]">
+                    {t("auth.forgotSentDescription")}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-[var(--lx-bronze)] underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setForgotMode(false);
+                      setForgotSent(false);
+                    }}
+                  >
+                    {t("auth.forgotBack")}
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="forgot-email"
+                      className="text-xs font-semibold uppercase tracking-wide text-[var(--lx-muted)]"
+                    >
+                      {t("auth.fields.email")}
+                    </Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder={t("auth.emailPlaceholder")}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="h-11 rounded-lg border-[var(--lx-ink)]/12 bg-white text-[var(--lx-ink)] placeholder:text-[var(--lx-muted)]/60 focus-visible:ring-[var(--lx-gold)]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="lx-btn-gold flex h-11 w-full items-center justify-center rounded-full text-sm font-semibold disabled:opacity-60"
+                    disabled={isLoading}
+                  >
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {t("auth.forgotSubmit")}
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-sm text-[var(--lx-muted)] hover:text-[var(--lx-ink)]"
+                    onClick={() => setForgotMode(false)}
+                  >
+                    {t("auth.forgotBack")}
+                  </button>
+                </form>
+              )
+            ) : (
+              <>
             <button
               type="button"
               className="lx-btn-gold flex h-11 w-full items-center justify-center rounded-full text-sm font-semibold active:scale-[0.97]"
@@ -341,6 +467,21 @@ export default function AuthPage() {
                     )}
                   </button>
                 </div>
+
+                {isLogin ? (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-[var(--lx-bronze)] underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setForgotMode(true);
+                        setForgotSent(false);
+                      }}
+                    >
+                      {t("auth.forgotPassword")}
+                    </button>
+                  </div>
+                ) : null}
 
                 {showPasswordHints && (
                   <div className="mt-2 space-y-2.5">
@@ -415,9 +556,12 @@ export default function AuthPage() {
                 {isLogin ? t("auth.submit.login") : t("auth.submit.register")}
               </button>
             </form>
+              </>
+            )}
           </div>
 
           <div className="mt-8 text-center">
+            {forgotMode ? null : (
             <button
               type="button"
               onClick={() => setLocation(isLogin ? "/register" : "/login")}
@@ -427,6 +571,7 @@ export default function AuthPage() {
                 ? t("auth.toggle.noAccount")
                 : t("auth.toggle.hasAccount")}
             </button>
+            )}
           </div>
         </div>
       </div>

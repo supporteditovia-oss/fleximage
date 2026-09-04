@@ -13,7 +13,7 @@ export function useTypewriterPlaceholder(
   ideas: string[],
   fallbackPlaceholder: string,
 ) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const ideaIndexRef = useRef(0);
 
   useEffect(() => {

@@ -11,7 +11,7 @@ const container = document.getElementById("root");
 if (!container) throw new Error("Failed to find the root element");
 
 document.getElementById("seo-fallback")?.remove();
-preloadLandingMarqueeImages();
+preloadLandingMarqueeImages(12);
 initFunnelAttribution();
 
 window.addEventListener("error", (event) => {

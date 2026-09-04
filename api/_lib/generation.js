@@ -1,6 +1,31 @@
 const IMAGE_CREDIT_COST = 10;
 const OUTPUT_ASPECT_RATIO = "9:16";
-const PROVIDER_POLL_HARD_TIMEOUT_MS = 15 * 60 * 1000;
+/** Base wall-clock budget before hard-fail. Vision-QA retries get extra time (see status.js). */
+const PROVIDER_POLL_HARD_TIMEOUT_MS = 3.5 * 60 * 1000;
+/** Extra budget per vision-QA corrective job so retries aren't killed mid-flight. */
+const PROVIDER_POLL_QA_RETRY_EXTRA_MS = 100_000;
+
+
+const LIMIT_REASON_COPY = {
+  "Profil introuvable": {
+    fr: "Profil introuvable",
+    en: "Profile not found",
+  },
+  "Plus assez de jetons sur ton abonnement.": {
+    fr: "Plus assez de jetons sur ton abonnement.",
+    en: "Not enough credits on your subscription.",
+  },
+  "Plus assez de jetons pour générer.": {
+    fr: "Plus assez de jetons pour générer.",
+    en: "Not enough credits to generate.",
+  },
+};
+
+function translateLimitReason(reason, locale = "fr") {
+  const entry = LIMIT_REASON_COPY[reason];
+  if (!entry) return reason;
+  return locale === "en" ? entry.en : entry.fr;
+}
 
 async function checkGenerationLimits(supabase, userId) {
   const { data: profile } = await supabase
@@ -121,20 +146,50 @@ function extractImageUrls(parsed) {
     if (urls.length > 0) return urls;
     const fromObjects = parsed
       .filter((item) => typeof item === "object" && item !== null)
-      .map((item) => item.url || item.image_url || item.imageUrl || item.src)
+      .map(
+        (item) =>
+          item.url ||
+          item.image_url ||
+          item.imageUrl ||
+          item.src ||
+          item.uri ||
+          item.downloadUrl ||
+          item.download_url,
+      )
       .filter((u) => typeof u === "string" && u.startsWith("http"));
     if (fromObjects.length > 0) return fromObjects;
   }
 
   if (typeof parsed === "object" && parsed !== null) {
-    for (const key of ["resultUrls", "images", "urls", "output", "data", "results", "result"]) {
+    for (const key of [
+      "resultUrls",
+      "images",
+      "urls",
+      "output",
+      "outputs",
+      "files",
+      "assets",
+      "data",
+      "results",
+      "result",
+    ]) {
       const value = parsed[key];
       if (Array.isArray(value) || (value && typeof value === "object")) {
         const extracted = extractImageUrls(value);
         if (extracted.length > 0) return extracted;
       }
     }
-    for (const key of ["url", "image_url", "imageUrl", "src", "image", "output"]) {
+    for (const key of [
+      "url",
+      "image_url",
+      "imageUrl",
+      "src",
+      "image",
+      "output",
+      "uri",
+      "downloadUrl",
+      "download_url",
+    ]) {
       const value = parsed[key];
       if (typeof value === "string" && value.startsWith("http")) return [value];
     }
@@ -150,9 +205,68 @@ function extractImageUrls(parsed) {
   return [];
 }
 
+/** Normalize provider job status strings. */
+function normalizeProviderStatus(status) {
+  return String(status || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isProviderSuccessStatus(status) {
+  const s = normalizeProviderStatus(status);
+  return (
+    s === "completed" ||
+    s === "complete" ||
+    s === "success" ||
+    s === "succeeded" ||
+    s === "done" ||
+    s === "finished"
+  );
+}
+
+function isProviderFailStatus(status) {
+  const s = normalizeProviderStatus(status);
+  return (
+    s === "failed" ||
+    s === "fail" ||
+    s === "error" ||
+    s === "cancelled" ||
+    s === "canceled" ||
+    s === "expired"
+  );
+}
+
+async function withTimeout(promise, ms, onTimeoutValue) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), ms);
+      }),
+    ]);
+  } catch {
+    return onTimeoutValue;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function toAssetList(value) {
-  if (Array.isArray(value)) return value.filter((u) => typeof u === "string");
-  return [];
+  if (Array.isArray(value)) {
+    return value.filter((u) => typeof u === "string");
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((u) => typeof u === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function toClientStatus(status) {
@@ -171,8 +285,11 @@ module.exports = {
   IMAGE_CREDIT_COST,
   OUTPUT_ASPECT_RATIO,
   PROVIDER_POLL_HARD_TIMEOUT_MS,
+  PROVIDER_POLL_QA_RETRY_EXTRA_MS,
+  translateLimitReason,
   checkGenerationLimits,
   getBillableCreditCost,
+  applyCreditDelta,
   deductGenerationCredits,
   refundGenerationCreditsIfCharged,
   recordGeneration,
@@ -180,4 +297,8 @@ module.exports = {
   toAssetList,
   toClientStatus,
   toDbStatus,
+  normalizeProviderStatus,
+  isProviderSuccessStatus,
+  isProviderFailStatus,
+  withTimeout,
 };

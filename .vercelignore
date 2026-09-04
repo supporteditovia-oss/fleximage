@@ -3,6 +3,7 @@
 server
 script/*
 !script/generate-seo-static.mjs
+!script/build-seo-niches-en.mjs
 !script/inject-brand-seo.mjs
 dist/index.js
 .env
