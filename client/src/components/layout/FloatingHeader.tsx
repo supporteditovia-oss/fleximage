@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,32 +13,39 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
-import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan, type CurrentPlanType } from "@/hooks/use-billing";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
 import { createPortalSession } from "@/lib/stripe";
+import { ZeroCreditsModal } from "@/components/generate/ZeroCreditsModal";
 import { formatCredits, formatShortDate } from "@/lib/format-locale";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarClock, CreditCard, Crown, Gem, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
-
+import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
+import {
+  createPathForUser,
+  readStudioMode,
+  writeStudioMode,
+  type StudioMode,
+} from "@/lib/v2-experience";
+import { useV2Access } from "@/hooks/use-v2-access";
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
 }
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
   const [location] = useLocation();
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isAdmin, isLoading } = useAuth();
+  const { v2Enabled } = useV2Access();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
-  const [hidden, setHidden] = React.useState(false);
   const [creditsOpen, setCreditsOpen] = React.useState(false);
   const [creditsPaywallOpen, setCreditsPaywallOpen] = React.useState(false);
+  const [zeroCreditsOpen, setZeroCreditsOpen] = React.useState(false);
   const [portalLoading, setPortalLoading] = React.useState(false);
-  const lastScrollY = React.useRef(0);
+  const [studioMode, setStudioMode] = React.useState<StudioMode>(() => readStudioMode());
+  const [chromeHidden, setChromeHidden] = React.useState(false);
   const {
     data: plan,
     isFetching: isPlanFetching,
@@ -45,36 +53,46 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   } = useCurrentPlan({ enabled: variant === "app" && !!user });
 
   React.useEffect(() => {
-    if (!isMobile) return;
-    const onScroll = () => {
-      const currentY = window.scrollY;
-      if (currentY > lastScrollY.current && currentY > 60) {
-        setHidden(true);
-      } else if (currentY < lastScrollY.current) {
-        setHidden(false);
-      }
-      lastScrollY.current = currentY;
+    const syncMode = () => setStudioMode(readStudioMode());
+    syncMode();
+    window.addEventListener("luxeflexia:studio-mode", syncMode);
+    window.addEventListener("storage", syncMode);
+    return () => {
+      window.removeEventListener("luxeflexia:studio-mode", syncMode);
+      window.removeEventListener("storage", syncMode);
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [isMobile]);
+  }, []);
 
-  // Hide header when virtual keyboard opens on mobile
   React.useEffect(() => {
-    if (!isMobile || !window.visualViewport) return;
-
-    const vv = window.visualViewport;
-    const onResize = () => {
-      const keyboardOpen = vv.height < window.innerHeight * 0.75;
-      setHidden(keyboardOpen);
+    const syncChrome = () => {
+      setChromeHidden(
+        document.body.hasAttribute("data-fullscreen-overlay") ||
+          document.body.hasAttribute("data-larp-result-mode") ||
+          document.body.hasAttribute("data-paywall-overlay"),
+      );
     };
-
-    vv.addEventListener("resize", onResize);
-    return () => vv.removeEventListener("resize", onResize);
-  }, [isMobile]);
+    syncChrome();
+    const observer = new MutationObserver(syncChrome);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: [
+        "data-fullscreen-overlay",
+        "data-larp-result-mode",
+        "data-paywall-overlay",
+      ],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const pathname = location.split("?")[0] || location;
-  const logoHref = variant === "app" ? "/generate" : "/";
+  const isCreateStudio = variant === "app" && pathname === "/create";
+
+  const handleStudioModeChange = (next: StudioMode) => {
+    if (chromeHidden) return;
+    writeStudioMode(next);
+  };
+  const v2Ready = !isLoading && v2Enabled;
+  const logoHref = variant === "app" ? createPathForUser(v2Ready) : "/";
   const displayedCredits = plan?.credits ?? profile?.credits ?? 0;
   const creditsLabel = React.useMemo(
     () => formatCredits(displayedCredits, i18n.resolvedLanguage),
@@ -84,9 +102,11 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     typeof plan?.credits === "number" || typeof profile?.credits === "number";
   const isCreditBalanceEmpty = hasKnownCreditBalance && displayedCredits <= 0;
   const hasActiveSubscription = Boolean(
-    plan?.isSubscriber || profile?.is_subscriber || profile?.role === "admin",
+    plan?.isSubscriber || profile?.is_subscriber,
   );
-  const shouldOpenPaywallFromCredits = Boolean(user && !hasActiveSubscription);
+  const shouldOpenPaywallFromCredits = Boolean(
+    user && !hasActiveSubscription && !isAdmin,
+  );
   const rawPlanType = plan?.planType ?? "free";
   const planType = (
     ["free", "admin", "unknown", "discovery", "essential", "ultimate"].includes(
@@ -128,13 +148,24 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
       return;
     }
 
+    if (open && hasActiveSubscription && !isAdmin && isCreditBalanceEmpty) {
+      setCreditsOpen(false);
+      setZeroCreditsOpen(true);
+      return;
+    }
+
     setCreditsOpen(open);
   };
 
   const handleManageSubscription = async () => {
     setPortalLoading(true);
     try {
-      const returnPath = window.location.pathname === "/generate" ? "/generate" : "/settings";
+      const studioPath = createPathForUser(v2Enabled);
+      const path = window.location.pathname;
+      const returnPath =
+        path === studioPath || path === "/generate" || path === "/create"
+          ? studioPath
+          : "/settings";
       const url = await createPortalSession(returnPath);
       if (url) {
         window.location.href = url;
@@ -154,17 +185,9 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     return null;
   }
 
-  return (
-    <div className={`floating-header fixed top-6 left-0 right-0 z-50 px-5 md:px-8 pointer-events-none transition-all duration-300 ${
-      hidden ? "-translate-y-24 opacity-0" : "translate-y-0 opacity-100"
-    }`}>
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="relative flex min-h-10 w-full items-center justify-end gap-2 sm:gap-3 md:min-h-11"
-      >
-        {/* Logo — centered */}
+  const headerNode = (
+    <div className="floating-header pointer-events-none">
+      <header className="relative flex min-h-10 w-full items-center justify-end gap-2 sm:gap-3 md:min-h-11">
         <Link
           href={logoHref}
           className="pointer-events-auto absolute left-1/2 top-1/2 z-10 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center hover:opacity-80 transition-opacity"
@@ -200,7 +223,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`floating-header-credits pointer-events-auto relative z-20 flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
+                className={`floating-header-credits pointer-events-auto relative z-20 ml-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
@@ -304,10 +327,15 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
               />
             </DialogContent>
           </Dialog>
+          <ZeroCreditsModal
+            open={zeroCreditsOpen}
+            onOpenChange={setZeroCreditsOpen}
+            plan={plan}
+          />
           </>
         ) : !isLoading && (
           <div
-            className={`flex shrink-0 items-center justify-end gap-2 sm:gap-3 pointer-events-auto ${
+            className={`ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-3 pointer-events-auto ${
               user ? "hidden md:flex" : ""
             }`}
           >
@@ -340,7 +368,20 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             )}
           </div>
         )}
-      </motion.header>
+      </header>
+
+      {isCreateStudio && !chromeHidden ? (
+        <div className="floating-header__modes pointer-events-auto flex justify-center pt-2">
+          <StudioModeSwitch
+            mode={studioMode}
+            onChange={handleStudioModeChange}
+            size="compact"
+          />
+        </div>
+      ) : null}
     </div>
   );
+
+  if (typeof document === "undefined") return headerNode;
+  return createPortal(headerNode, document.body);
 }

@@ -3,21 +3,13 @@ import { useProfile } from "@/hooks/use-supabase";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
-import { setAppLanguage } from "@/i18n";
+import { LanguageSwitch } from "@/components/layout/LanguageSwitch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProfileSchema } from "@shared/schema";
-import { SUPPORTED_LOCALES, type AppLocale } from "@shared/locales";
 import {
   Form,
   FormControl,
@@ -96,33 +88,25 @@ export default function Settings() {
     resolver: zodResolver(
       insertProfileSchema.pick({
         full_name: true,
-        preferred_locale: true,
       }),
     ),
     defaultValues: {
       full_name: profile?.full_name || "",
-      preferred_locale: profile?.preferred_locale || "fr",
     },
   });
 
   useEffect(() => {
     form.reset({
       full_name: profile?.full_name || "",
-      preferred_locale: profile?.preferred_locale || "fr",
     });
-  }, [form, profile?.full_name, profile?.preferred_locale]);
+  }, [form, profile?.full_name]);
 
-  const onSubmit = async (data: {
-    full_name: string | null;
-    preferred_locale: AppLocale;
-  }) => {
+  const onSubmit = async (data: { full_name: string | null }) => {
     if (!user) return;
     try {
       await updateOwnProfile({
         full_name: data.full_name,
-        preferred_locale: data.preferred_locale,
       });
-      setAppLanguage(data.preferred_locale);
       toast({
         title: t("settings.profile.updatedTitle"),
         description: t("settings.profile.updatedDescription"),
@@ -148,7 +132,7 @@ export default function Settings() {
       return;
     }
 
-    if (deleteConfirmText !== "SUPPRIMER") {
+    if (deleteConfirmText !== t("settings.deleteDialog.confirmWord")) {
       toast({
         variant: "destructive",
         title: t("common.messages.validationIncorrect"),
@@ -251,7 +235,10 @@ export default function Settings() {
         {!profile?.is_subscriber && (
           <Button
             onClick={handleDeleteAccount}
-            disabled={deleteConfirmText !== "SUPPRIMER" || isDeleting}
+            disabled={
+              deleteConfirmText !== t("settings.deleteDialog.confirmWord") ||
+              isDeleting
+            }
             className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full border-0"
           >
             {isDeleting && (
@@ -318,68 +305,15 @@ export default function Settings() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="preferred_locale"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 px-4 py-3.5 space-y-0">
-                    <Languages className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) =>
-                            field.onChange(value as AppLocale)
-                          }
-                        >
-                          <SelectTrigger className="h-10 w-full rounded-xl border border-border/50 bg-background/50 px-3 text-sm font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-primary/40 focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 data-[state=open]:border-primary/50 data-[state=open]:bg-background/70">
-                            <SelectValue
-                              placeholder={t("settings.language.currentLabel")}
-                            />
-                          </SelectTrigger>
-                          <SelectContent
-                            align="start"
-                            className="rounded-xl border border-border/60 bg-popover/95 p-1.5 backdrop-blur-xl shadow-2xl shadow-black/40"
-                          >
-                            {SUPPORTED_LOCALES.map((locale) => (
-                              <SelectItem
-                                key={locale}
-                                value={locale}
-                                className="rounded-lg py-2 pl-9 pr-3 text-sm font-medium focus:bg-primary/10 focus:text-foreground data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary"
-                              >
-                                <span className="flex w-full items-center justify-between gap-3">
-                                  <span>
-                                    {t(`settings.language.options.${locale}`)}
-                                  </span>
-                                  <span className="text-[10px] uppercase text-muted-foreground/70">
-                                    {locale}
-                                  </span>
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage className="mt-0.5 text-xs" />
-                    </div>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant="ghost"
-                      disabled={
-                        form.formState.isSubmitting || !form.formState.isDirty
-                      }
-                      className="text-xs text-foreground hover:text-foreground font-semibold shrink-0 h-auto py-1 px-2"
-                    >
-                      {form.formState.isSubmitting ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        t("common.actions.save")
-                      )}
-                    </Button>
-                  </FormItem>
-                )}
-              />
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <Languages className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {t("settings.language.currentLabel")}
+                  </p>
+                </div>
+                <LanguageSwitch compact className="shrink-0" />
+              </div>
             </form>
           </Form>
 

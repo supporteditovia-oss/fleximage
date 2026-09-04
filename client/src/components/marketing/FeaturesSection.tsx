@@ -1,29 +1,29 @@
 import { ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ScrollReveal from "@/components/marketing/ScrollReveal";
 import { BrandMark } from "@/components/BrandMark";
 
 const FEATURES = [
   {
     icon: ShieldCheck,
-    title: "Sécurité privée",
-    description:
-      "Vos données et vos créations restent 100% privées et sécurisées",
+    titleKey: "landing.features.privacyTitle",
+    bodyKey: "landing.features.privacyBody",
   },
   {
     icon: Zap,
-    title: "Génération IA super rapide",
-    description:
-      "Des résultats ultra-rapides pour donner vie à tes idées sans attendre",
+    titleKey: "landing.features.speedTitle",
+    bodyKey: "landing.features.speedBody",
   },
   {
     icon: Sparkles,
-    title: "Qualité pro",
-    description:
-      "Des rendus haute définition dignes des plus grandes exigences",
+    titleKey: "landing.features.qualityTitle",
+    bodyKey: "landing.features.qualityBody",
   },
 ] as const;
 
 export default function FeaturesSection() {
+  const { t } = useTranslation();
+
   return (
     <section
       id="fonctionnalites"
@@ -32,7 +32,8 @@ export default function FeaturesSection() {
       <div className="mx-auto max-w-6xl">
         <ScrollReveal>
           <h2 className="lx-display text-center text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
-            Pourquoi <BrandMark className="whitespace-nowrap text-[inherit] font-semibold tracking-tight" />
+            {t("landing.features.titlePrefix")}{" "}
+            <BrandMark className="whitespace-nowrap text-[inherit] font-semibold tracking-tight" />
           </h2>
         </ScrollReveal>
 
@@ -41,7 +42,7 @@ export default function FeaturesSection() {
             const Icon = feature.icon;
             return (
               <ScrollReveal
-                key={feature.title}
+                key={feature.titleKey}
                 delayClassName={`lx-reveal-delay-${index + 1}`}
               >
                 <div className="flex h-full flex-col items-start gap-4 rounded-xl border border-black/5 bg-[var(--lx-surface-2)] p-6 md:p-7">
@@ -49,10 +50,10 @@ export default function FeaturesSection() {
                     <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
                   </div>
                   <h3 className="text-lg font-semibold text-[var(--lx-ink)]">
-                    {feature.title}
+                    {t(feature.titleKey)}
                   </h3>
                   <p className="text-sm leading-relaxed text-[var(--lx-muted)] md:text-base">
-                    {feature.description}
+                    {t(feature.bodyKey)}
                   </p>
                 </div>
               </ScrollReveal>

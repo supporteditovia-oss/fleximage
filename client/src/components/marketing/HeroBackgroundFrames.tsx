@@ -39,14 +39,18 @@ function repeatList<T>(items: T[], times: number): T[] {
 function MarqueeCard({
   image,
   sizeClass,
+  priority,
 }: {
   image: LandingMarqueeImage;
   sizeClass: string;
+  priority?: boolean;
 }) {
+  const [loaded, setLoaded] = React.useState(false);
+
   return (
     <div
       className={cn(
-        "lx-pov-card relative aspect-[9/16] shrink-0 overflow-hidden rounded-[12px] border border-black/5 bg-white/30",
+        "lx-pov-card relative aspect-[9/16] shrink-0 overflow-hidden rounded-[12px] border border-black/5 bg-[#ebe6df]",
         sizeClass,
       )}
       style={{
@@ -54,12 +58,6 @@ function MarqueeCard({
           "0 10px 28px rgba(18, 16, 14, 0.12), 0 2px 8px rgba(18, 16, 14, 0.06)",
       }}
     >
-      <img
-        src={image.placeholder_url}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
-      />
       <picture className="absolute inset-0 block h-full w-full">
         {image.webp_url ? (
           <source
@@ -77,9 +75,14 @@ function MarqueeCard({
         <img
           src={image.webp_url ?? image.avif_url}
           alt=""
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
+          {...(priority ? { fetchpriority: "high" as const } : {})}
+          onLoad={() => setLoaded(true)}
+          className={cn(
+            "h-full w-full object-cover transition-opacity duration-200",
+            loaded ? "opacity-100" : "opacity-0",
+          )}
         />
       </picture>
     </div>
@@ -126,6 +129,7 @@ function MarqueeRow({
               key={`${direction}-${image.id}-${index}`}
               image={image}
               sizeClass={CARD_SIZES[baseIndex % CARD_SIZES.length]}
+              priority={index < images.length}
             />
           );
         })}

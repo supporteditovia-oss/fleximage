@@ -38,6 +38,52 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SESSION_TIMEOUT_MS = 4000;
+const PROFILE_TIMEOUT_MS = 3500;
+
+function fallbackProfile(user: User): Profile {
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    full_name: null,
+    preferred_locale: DEFAULT_LOCALE,
+    role: "user",
+    is_subscriber: false,
+    has_accepted_terms: false,
+    credits: 0,
+    generation_count: 0,
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+  };
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(fallback);
+      }
+    }, ms);
+    promise
+      .then((value) => {
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(value);
+        }
+      })
+      .catch(() => {
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(fallback);
+        }
+      });
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -45,31 +91,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    let cancelled = false;
+
+    void withTimeout(
+      supabase.auth.getSession().then(({ data: { session: s } }) => s),
+      SESSION_TIMEOUT_MS,
+      null,
+    ).then((s) => {
+      if (cancelled) return;
+      setSession(s);
+      setUser(s?.user ?? null);
       setIsLoadingSession(false);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session: Session | null) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event: AuthChangeEvent, nextSession: Session | null) => {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
         setIsLoadingSession(false);
 
+        if (event === "PASSWORD_RECOVERY") {
+          sessionStorage.setItem("luxeflexia:password_recovery", "1");
+          if (!window.location.pathname.startsWith("/reset-password")) {
+            window.location.replace("/reset-password");
+            return;
+          }
+        }
+
         if (event === "SIGNED_OUT") {
+          sessionStorage.removeItem("luxeflexia:password_recovery");
           queryClient.clear();
           window.location.href = AUTH_CONFIG.LOGIN_PATH;
         }
 
-        if (session?.user) {
-          // Update last active timestamp
-          supabase
+        if (nextSession?.user) {
+          void supabase
             .from("profiles")
             .update({ last_active_at: new Date().toISOString() })
-            .eq("id", session.user.id)
+            .eq("id", nextSession.user.id)
             .then(({ error }) => {
               if (error) console.error("Error updating last active:", error);
             });
@@ -77,7 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const { data: profile, isLoading: isLoadingProfile } =
@@ -86,38 +150,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryFn: async () => {
         if (!user) return null;
 
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const result = await withTimeout(
+          supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single()
+            .then(({ data, error }) => {
+              if (error) {
+                console.warn(
+                  "Profile not found in database, might be still creating...",
+                  error,
+                );
+                return fallbackProfile(user);
+              }
+              return data as Profile;
+            }),
+          PROFILE_TIMEOUT_MS,
+          fallbackProfile(user),
+        );
 
-        if (error) {
-          console.warn(
-            "Profile not found in database, might be still creating...",
-            error,
-          );
-          // On ne retourne pas une erreur bloquante tout de suite, on laisse une chance au trigger
-          return {
-            id: user.id,
-            email: user.email ?? null,
-            full_name: null,
-            preferred_locale: DEFAULT_LOCALE,
-            role: "user",
-            is_subscriber: false,
-            has_accepted_terms: false,
-            credits: 0,
-            generation_count: 0,
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-          } as Profile;
-        }
-
-        console.log("Profile fetched:", data); // Debug log
-        return data as Profile;
+        return result;
       },
       enabled: !!user,
-      staleTime: 0, // Ensure we get fresh data
+      staleTime: 60_000,
+      retry: false,
+      refetchOnWindowFocus: false,
     });
 
   const signOut = async () => {
@@ -131,12 +189,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resolvedProfile = profile ?? (user ? fallbackProfile(user) : null);
+  const isAdmin = resolvedProfile?.role === "admin";
+
+  // Session only blocks the shell. Profile has a hard timeout + fallback
+  // so reconnect never spins forever waiting on Supabase.
   const value = {
     session,
     user,
-    profile: profile ?? null,
-    isLoading: isLoadingSession || (!!user && isLoadingProfile),
-    isAdmin: profile?.role === "admin",
+    profile: resolvedProfile,
+    isLoading: isLoadingSession || (!!user && isLoadingProfile && !profile),
+    isAdmin,
     signOut,
   };
 

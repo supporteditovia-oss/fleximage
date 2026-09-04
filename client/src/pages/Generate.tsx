@@ -17,10 +17,11 @@ import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { TemplateSelectedPanel } from "@/components/generate/TemplateSelectedPanel";
 import { UnlockedLarpView } from "@/components/generate/UnlockedLarpView";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
+import { ZeroCreditsModal } from "@/components/generate/ZeroCreditsModal";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
-import { currentPlanQueryKey } from "@/hooks/use-billing";
+import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import "./generate-page.css";
 import {
@@ -57,6 +58,7 @@ import { OUTPUT_ASPECT_RATIO, type GenerationAspectRatio } from "@shared/schema"
 import { templateSupportsGenerationMode } from "@/lib/template-utils";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { scrollAppToTop } from "@/lib/app-scroll";
 import { BrandMark } from "@/components/BrandMark";
 
 const IMAGE_CREDIT_COST = 10;
@@ -64,7 +66,12 @@ const VIDEO_CREDIT_COST = 25;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
 type GenerationMode = "image" | "video";
 
-export default function Generate() {
+type GenerateProps = {
+  /** Route used for history.replaceState cleanup — defaults to legacy /generate. */
+  basePath?: string;
+};
+
+export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [isReturningFromCheckout] = useState(() => {
@@ -83,6 +90,9 @@ export default function Generate() {
 
   // ── Generation state ────────────────────────────────────────
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [generationEstimateSeconds, setGenerationEstimateSeconds] = useState<
+    number | null
+  >(null);
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
@@ -93,6 +103,7 @@ export default function Generate() {
   const [showFakeOnboardingLoader, setShowFakeOnboardingLoader] = useState(false);
   const [fakeLoaderImageUrl, setFakeLoaderImageUrl] = useState<string | null>(null);
   const [showLuxePaywall, setShowLuxePaywall] = useState(false);
+  const [showZeroCreditsModal, setShowZeroCreditsModal] = useState(false);
   const [fakePaywallReason, setFakePaywallReason] =
     useState<FakePaywallReason>("onboarding");
   const [paywallDefaultPlan, setPaywallDefaultPlan] = useState<PaywallPlan>("essential");
@@ -121,16 +132,19 @@ export default function Generate() {
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
   const { profile, user, isLoading: isAuthLoading } = useAuth();
+  const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
+  const zeroCreditsDismissedRef = useRef(false);
 
-  // Fond LuxeFlexIA uniquement sur /generate
+  // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
+    if (basePath === "/create") return;
     document.documentElement.classList.add("luxeflexia-generate-page");
     return () => {
       document.documentElement.classList.remove("luxeflexia-generate-page");
     };
-  }, []);
+  }, [basePath]);
 
   // After preview expiry → "Créer une nouvelle image" lands with ?fresh=1
   useEffect(() => {
@@ -144,97 +158,132 @@ export default function Generate() {
     setImages([null]);
     setPrompt("");
     setSelectedTemplate(null);
-    window.history.replaceState({}, "", "/generate");
-  }, []);
+    window.history.replaceState({}, "", basePath);
+  }, [basePath]);
 
-  // ── Stripe checkout return ──────────────────────────────────
+  // ── Stripe checkout return (subscription or credit pack) ────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") === "success") {
-      const checkoutSessionId = params.get("session_id");
-      const paywalled = getPaywalledResult();
-      window.history.replaceState({}, "", "/generate");
+    const checkoutKind = params.get("checkout");
+    const isSubSuccess = checkoutKind === "success";
+    const isPackSuccess = checkoutKind === "pack_success";
+    if (!isSubSuccess && !isPackSuccess) return;
+
+    const checkoutSessionId = params.get("session_id");
+    const paywalled = isSubSuccess ? getPaywalledResult() : null;
+    window.history.replaceState({}, "", basePath);
+    if (isSubSuccess) {
       clearPaywalledResult();
       setSavedPaywall(null);
       clearFakePaywallReached();
       clearPaywallImage();
       clearPaywallPrompt();
       clearPaywallExpiry();
+    }
+    if (isPackSuccess) {
+      setPendingLoading(true);
+    }
+    zeroCreditsDismissedRef.current = false;
+    setShowZeroCreditsModal(false);
 
-      const waitForWebhookActivation = async () => {
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          const res = await authFetch("/api/stripe/verify-session", {
-            method: "POST",
-            body: checkoutSessionId
-              ? JSON.stringify({ session_id: checkoutSessionId })
-              : undefined,
+    const waitForWebhookActivation = async () => {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const res = await authFetch("/api/stripe/verify-session", {
+          method: "POST",
+          body: checkoutSessionId
+            ? JSON.stringify({ session_id: checkoutSessionId })
+            : undefined,
+        });
+        const data = await res.json();
+        console.log("[Checkout] verify-session result:", data);
+        if (isPackSuccess) {
+          // Pack: credits granted (webhook or reconcile). Don't require new sub.
+          if (
+            data.packGranted ||
+            data.reconcile?.ok ||
+            (typeof data.credits === "number" && data.credits > 0)
+          ) {
+            return { ok: true, credits: data.credits as number };
+          }
+        } else if (data.active) {
+          return { ok: true, credits: data.credits as number };
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      }
+      return { ok: false, credits: 0 };
+    };
+
+    const onVerified = async (result: { ok: boolean; credits: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
+      await refetchEligibility();
+
+      if (!result.ok) {
+        setPendingLoading(false);
+        if (isPackSuccess) {
+          toast({
+            title: t("generate.packPaidTitle"),
+            description: t("generate.packPaidHint"),
           });
-          const data = await res.json();
-          console.log("[Checkout] verify-session result:", data);
-          if (data.active) return true;
-          await new Promise((resolve) => window.setTimeout(resolve, 1000));
         }
-        return false;
-      };
+        return;
+      }
 
-      const onVerified = async (isActive: boolean) => {
-        queryClient.invalidateQueries({ queryKey: ["profile"] });
-        queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
-        await refetchEligibility();
+      if (isPackSuccess) {
+        toast({
+          title: t("generate.packActivated"),
+          description:
+            typeof result.credits === "number" && result.credits > 0
+              ? t("generate.packCreditsNow", { count: result.credits })
+              : t("generate.packCreditsAdded"),
+        });
+        setPendingLoading(false);
+        return;
+      }
 
-        if (!isActive) {
-          setPendingLoading(false);
-          return;
-        }
-
-        if (paywalled) {
-          setUnlockingLarp(true);
-          authFetch(
-            `/api/larps/${encodeURIComponent(paywalled.taskId)}/status`,
-          )
-            .then((r) => r.json())
-            .then((statusData) => {
-              if (
-                statusData.status === "success" &&
-                statusData.resultUrls?.length
-              ) {
-                setUnlockedLarp({
-                  resultUrls: statusData.resultUrls,
-                  larpId: statusData.larpId,
-                  resultType:
-                    statusData.resultType === "video" ? "video" : generationMode,
-                });
-              } else {
-                toast({
-                  title: t("settings.subscription.title"),
-                  description: t("settings.subscription.manage"),
-                });
-              }
-            })
-            .catch(() => {
+      if (paywalled) {
+        setUnlockingLarp(true);
+        authFetch(
+          `/api/larps/${encodeURIComponent(paywalled.taskId)}/status`,
+        )
+          .then((r) => r.json())
+          .then((statusData) => {
+            if (
+              statusData.status === "success" &&
+              statusData.resultUrls?.length
+            ) {
+              setUnlockedLarp({
+                resultUrls: statusData.resultUrls,
+                larpId: statusData.larpId,
+                resultType:
+                  statusData.resultType === "video" ? "video" : generationMode,
+              });
+            } else {
               toast({
                 title: t("settings.subscription.title"),
                 description: t("settings.subscription.manage"),
               });
-            })
-            .finally(() => setUnlockingLarp(false));
-        } else {
-          // No paywalled result: trigger real generation from pending LARP
-          // The pending LARP data was already restored into React state by the
-          // restore effect but autoGenerateReady was NOT set (we skipped it for
-          // checkout returns). Now that credits are verified, trigger generation.
-          console.log("[Checkout] Credits verified, triggering auto-generate");
-          setAutoGenerateReady(true);
-        }
-      };
+            }
+          })
+          .catch(() => {
+            toast({
+              title: t("settings.subscription.title"),
+              description: t("settings.subscription.manage"),
+            });
+          })
+          .finally(() => setUnlockingLarp(false));
+      } else {
+        console.log("[Checkout] Credits verified, triggering auto-generate");
+        setAutoGenerateReady(true);
+      }
+    };
 
-      waitForWebhookActivation()
-        .then((isActive) => onVerified(isActive))
-        .catch((err) => {
-          console.error("[Checkout] verify-session error:", err);
-          onVerified(false);
-        });
-    }
+    waitForWebhookActivation()
+      .then((result) => onVerified(result))
+      .catch((err) => {
+        console.error("[Checkout] verify-session error:", err);
+        onVerified({ ok: false, credits: 0 });
+      });
   }, []);
 
   // ── Re-show saved paywall for non-subscribers ───────────────
@@ -606,7 +655,7 @@ export default function Generate() {
       return [null];
     });
     setGenerationMode("image");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollAppToTop("smooth");
   };
 
   const deselectTemplate = () => {
@@ -636,15 +685,24 @@ export default function Generate() {
     }) => {
       void context;
       setPendingLoading(false);
-      setShowLuxePaywall(true);
-      setPaywallDefaultPlan("essential");
+      const isAdmin = profile?.role === "admin";
+      const subscriber = Boolean(profile?.is_subscriber) && !isAdmin;
+      // Packs + upgrade only for existing subscribers at 0 credits.
+      // First-time / non-subscribers → classic subscription paywall only.
+      if (subscriber) {
+        zeroCreditsDismissedRef.current = false;
+        setShowZeroCreditsModal(true);
+      } else if (!isAdmin) {
+        setShowLuxePaywall(true);
+        setPaywallDefaultPlan("essential");
+      }
       setFakePaywallReason("insufficientCredits");
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
         trackFunnelStep("preview", { source: "insufficient_credits" });
         trackFunnelStep("paywall", { source: "insufficient_credits" });
       });
     },
-    [],
+    [profile?.is_subscriber, profile?.role],
   );
 
   const finishFakeOnboardingLoader = useCallback(() => {
@@ -849,13 +907,16 @@ export default function Generate() {
             credits: Math.max(0, (old.credits ?? 0) - debit),
           };
         });
-        queryClient.setQueryData(currentPlanQueryKey, (old: any) => {
-          if (!old || typeof old.credits !== "number") return old;
-          return {
-            ...old,
-            credits: Math.max(0, old.credits - debit),
-          };
-        });
+        queryClient.setQueriesData(
+          { queryKey: currentPlanQueryRoot },
+          (old: { credits?: number } | undefined) => {
+            if (!old || typeof old.credits !== "number") return old;
+            return {
+              ...old,
+              credits: Math.max(0, old.credits - debit),
+            };
+          },
+        );
       }
 
       // ── Video mode ───────────────────────────────────────────
@@ -876,6 +937,7 @@ export default function Generate() {
           use_face_asset: false,
         });
         setPaywallDefaultPlan("essential");
+        setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
@@ -901,6 +963,12 @@ export default function Generate() {
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
       });
+      setGenerationEstimateSeconds(
+        typeof result.estimatedSeconds === "number" &&
+          Number.isFinite(result.estimatedSeconds)
+          ? result.estimatedSeconds
+          : null,
+      );
       setTaskId(result.taskId);
       setPendingLoading(false);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
@@ -911,7 +979,7 @@ export default function Generate() {
       setPendingLoading(false);
       // Restore balances from server if generation failed after optimistic debit.
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
-      void queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
+      void queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
       if (error.code === "REFERENCE_IMAGE_REQUIRED") {
         toast({
           variant: "destructive",
@@ -923,11 +991,8 @@ export default function Generate() {
       if (error.code === "PROMPT_POLICY_VIOLATION") {
         toast({
           variant: "destructive",
-          title: "Contenu non autorisé",
-          description:
-            typeof error.message === "string" && error.message
-              ? error.message
-              : "Le contenu demandé n'est pas autorisé. Aucun jeton n'est perdu.",
+          title: t("progress.policyFail"),
+          description: t("progress.policyFailHint"),
         });
         return;
       }
@@ -987,11 +1052,14 @@ export default function Generate() {
 
   const handleReset = useCallback(() => {
     setTaskId(null);
+    setGenerationEstimateSeconds(null);
     setGenerationResultVisible(false);
     setPendingLoading(false);
     setAutoGenerateReady(false);
     setIsStartingGeneration(false);
     setShowLuxePaywall(false);
+    // Back on Créer after viewing a result — allow the 0-credit modal to appear.
+    zeroCreditsDismissedRef.current = false;
     clearLastGeneration();
     clearPendingLarp();
     setPrompt("");
@@ -1030,6 +1098,49 @@ export default function Generate() {
       window.removeEventListener("larpking:create-new-larp", handleCreateNewLarp);
     };
   }, [handleReset]);
+
+  // Abonné à 0 crédit : le modal s'affiche tout seul sur Créer.
+  // Jamais pendant un loader / un résultat — seulement une fois de retour au formulaire.
+  useEffect(() => {
+    if (isAuthLoading || !user || !profile) return;
+    if (profile.role === "admin") return;
+
+    const credits = currentPlan?.credits ?? profile.credits ?? 0;
+    const isSubscriber = Boolean(
+      currentPlan?.isSubscriber ?? profile.is_subscriber,
+    );
+    if (!isSubscriber) return;
+
+    if (credits >= IMAGE_CREDIT_COST) {
+      zeroCreditsDismissedRef.current = false;
+      setShowZeroCreditsModal(false);
+      return;
+    }
+
+    const viewingResultOrBusy =
+      Boolean(taskId) ||
+      pendingLoading ||
+      isStartingGeneration ||
+      showFakeOnboardingLoader ||
+      Boolean(unlockedLarp) ||
+      unlockingLarp;
+    if (viewingResultOrBusy) return;
+    if (zeroCreditsDismissedRef.current) return;
+
+    setShowZeroCreditsModal(true);
+  }, [
+    currentPlan?.credits,
+    currentPlan?.isSubscriber,
+    isAuthLoading,
+    isStartingGeneration,
+    pendingLoading,
+    profile,
+    showFakeOnboardingLoader,
+    taskId,
+    unlockedLarp,
+    unlockingLarp,
+    user,
+  ]);
 
   // ── Auto-generate when pending LARP data has been restored ──
   // We need `profile` to be loaded to decide fake vs real generation,
@@ -1130,6 +1241,11 @@ export default function Generate() {
       onReset={handleReset}
       onResultVisible={() => setGenerationResultVisible(true)}
       resultType={generationMode}
+      referenceImageCount={Math.max(
+        1,
+        images.filter((img) => img !== null).length,
+      )}
+      initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
     />
   ) : null;
 
@@ -1257,7 +1373,7 @@ export default function Generate() {
         className="relative flex flex-col items-center justify-start gap-3 min-h-0 pt-2 pb-4 md:min-h-[calc(100vh-12rem)] md:justify-center md:pt-4"
       >
         {/* Images + input group */}
-        <div className="relative flex flex-col items-center gap-3 md:gap-4 w-full">
+        <div className="relative flex w-full min-w-0 flex-col items-center gap-3 md:gap-4">
           {selectedTemplate ? (
             <TemplateSelectedPanel
               template={selectedTemplate}
@@ -1298,6 +1414,14 @@ export default function Generate() {
         imageUrl={luxePreviewImageUrl}
         prompt={luxePreviewPrompt}
         defaultPlan={paywallDefaultPlan}
+      />
+      <ZeroCreditsModal
+        open={showZeroCreditsModal}
+        onOpenChange={(open) => {
+          if (!open) zeroCreditsDismissedRef.current = true;
+          setShowZeroCreditsModal(open);
+        }}
+        plan={currentPlan}
       />
     </div>
   );

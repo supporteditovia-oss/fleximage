@@ -10,11 +10,13 @@ import {
   Trash2,
   Unlock,
 } from "lucide-react";
+import { billingLocaleParam } from "@shared/billing";
 import { authFetch } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
 import { useToast } from "@/hooks/use-toast";
+import { usePaywallPlanCards } from "@/lib/paywall-plans";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,36 +36,6 @@ import {
 
 export type PaywallPlan = "discovery" | "essential" | "ultimate";
 export type PaywallGenerationMode = "image" | "video";
-
-type PlanCard = {
-  id: PaywallPlan;
-  euros: string;
-  cents: string;
-  bonusKey?: string;
-  featureKeys: string[];
-};
-
-const planCards: PlanCard[] = [
-  {
-    id: "discovery",
-    euros: "8",
-    cents: "90",
-    featureKeys: ["photo", "realistic", "hd", "history", "support"],
-  },
-  {
-    id: "essential",
-    euros: "19",
-    cents: "90",
-    bonusKey: "essentialBonus",
-    featureKeys: ["photo", "marketRealism", "details", "prioritySupport"],
-  },
-  {
-    id: "ultimate",
-    euros: "39",
-    cents: "90",
-    featureKeys: ["photo", "indistinguishable", "ulDetails", "immersion", "vipSupport"],
-  },
-];
 
 const commonPlanFeatureKeys = ["instantCredits", "monthlyRenewal"];
 
@@ -90,7 +62,8 @@ export function PaywallOverlay({
   const [isChoosingPlan, setIsChoosingPlan] = useState(initialChoosingPlan);
   const [selectedPlan, setSelectedPlan] = useState<PaywallPlan>(defaultPlan);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const planCards = usePaywallPlanCards();
   const { user, signOut } = useAuth();
   const { deleteProfile, isDeleting } = useProfile();
   const { toast } = useToast();
@@ -116,12 +89,10 @@ export function PaywallOverlay({
         toast({
           variant: "destructive",
           title: t("common.messages.error"),
-          description: t("paywall.checkoutAuthRequired", {
-            defaultValue: "Reconnecte-toi pour finaliser le paiement.",
-          }),
+          description: t("paywall.checkoutAuthRequired"),
         });
         const returnTo = `${window.location.pathname}${window.location.search || ""}`;
-        window.location.href = `/auth?redirect=${encodeURIComponent(returnTo)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(returnTo)}`;
         return;
       }
 
@@ -137,6 +108,7 @@ export function PaywallOverlay({
         body: JSON.stringify({
           plan: selectedPlan,
           funnel_session_id: getFunnelSessionId(),
+          locale: billingLocaleParam(i18n.language),
         }),
       });
       const { url } = await res.json();
@@ -158,12 +130,8 @@ export function PaywallOverlay({
           const portalUrl = await createPortalSession("/settings");
           if (portalUrl) {
             toast({
-              title: t("paywall.alreadySubscribedTitle", {
-                defaultValue: "Abonnement déjà actif",
-              }),
-              description: t("paywall.alreadySubscribedPortal", {
-                defaultValue: "On t’ouvre la gestion Stripe…",
-              }),
+              title: t("paywall.alreadySubscribedTitle"),
+              description: t("paywall.alreadySubscribedPortal"),
             });
             window.location.assign(portalUrl);
             return;
@@ -401,14 +369,20 @@ export function PaywallOverlay({
 
                         <div className="mt-3 flex items-end gap-0.5 md:mt-4 md:gap-1">
                           <span className="lx-display text-[2rem] font-semibold leading-[0.85] text-[var(--lx-ink)] md:text-5xl">
-                            {plan.euros}
+                            {plan.price.prefix
+                              ? `${plan.price.prefix}${plan.price.major}`
+                              : plan.price.major}
                           </span>
                           <span className="pb-0.5 text-[12px] font-bold leading-none text-[var(--lx-bronze)] md:pb-1.5 md:text-lg">
-                            {plan.cents}
+                            {plan.price.prefix
+                              ? `.${plan.price.minor}`
+                              : plan.price.minor}
                           </span>
-                          <span className="pb-0.5 text-[9px] font-bold leading-none text-[var(--lx-muted)] md:pb-1.5 md:text-sm">
-                            {t("paywall.currency")}
-                          </span>
+                          {plan.price.showCurrencyCode ? (
+                            <span className="pb-0.5 text-[9px] font-bold leading-none text-[var(--lx-muted)] md:pb-1.5 md:text-sm">
+                              {t("paywall.currency")}
+                            </span>
+                          ) : null}
                           <span className="hidden pb-1.5 text-sm font-semibold leading-none text-[var(--lx-muted)] md:inline">
                             {t("paywall.perMonthShort")}
                           </span>

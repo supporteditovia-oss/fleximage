@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 
 function cleanEnv(value) {
   if (value == null) return "";
@@ -81,6 +81,49 @@ async function uploadToR2(key, body, contentType) {
   return `${config.publicUrl.replace(/\/$/, "")}/${key}`;
 }
 
+async function deleteFromR2(key) {
+  if (!key) return;
+  const config = getR2Config();
+  const client = getS3Client();
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+    }),
+  );
+}
+
+async function listR2Objects(prefix, maxKeys = 300) {
+  const config = getR2Config();
+  const client = getS3Client();
+  const objects = [];
+  let token;
+
+  while (objects.length < maxKeys) {
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: config.bucketName,
+        Prefix: prefix,
+        ContinuationToken: token,
+        MaxKeys: Math.min(1000, maxKeys - objects.length),
+      }),
+    );
+
+    for (const entry of response.Contents || []) {
+      if (!entry.Key) continue;
+      objects.push({
+        key: entry.Key,
+        lastModified: entry.LastModified || null,
+      });
+    }
+
+    if (!response.IsTruncated || !response.NextContinuationToken) break;
+    token = response.NextContinuationToken;
+  }
+
+  return objects;
+}
+
 async function uploadInputImagesToR2(userId, images) {
   if (!images || images.length === 0) return [];
 
@@ -105,7 +148,14 @@ async function downloadAndStoreImages(larpId, sourceUrls) {
   for (let i = 0; i < sourceUrls.length; i++) {
     const sourceUrl = sourceUrls[i];
     try {
-      const response = await fetch(sourceUrl);
+      const controller = new AbortController();
+      const fetchTimer = setTimeout(() => controller.abort(), 15_000);
+      let response;
+      try {
+        response = await fetch(sourceUrl, { signal: controller.signal });
+      } finally {
+        clearTimeout(fetchTimer);
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       let contentType = response.headers.get("content-type") || "image/jpeg";
       let buffer = Buffer.from(await response.arrayBuffer());
@@ -125,6 +175,8 @@ async function downloadAndStoreImages(larpId, sourceUrls) {
 
 module.exports = {
   uploadToR2,
+  deleteFromR2,
+  listR2Objects,
   uploadInputImagesToR2,
   downloadAndStoreImages,
   getR2Config,

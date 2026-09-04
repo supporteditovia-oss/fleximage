@@ -1,21 +1,119 @@
 /* Styles scoped to /generate only (via html.luxeflexia-generate-page)
    Match Auth login/register cream backdrop exactly. */
-html.luxeflexia-generate-page,
-html.luxeflexia-generate-page body {
-  background: linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%) !important;
-  background-attachment: fixed !important;
-  background-image: none !important;
+html.luxeflexia-generate-page {
+  --lx-page-bg: #f5f0e8;
+  background: var(--lx-page-bg) !important;
+  overflow-x: hidden !important;
+}
+
+html.luxeflexia-generate-page::before {
+  display: none;
 }
 
 html.luxeflexia-generate-page body {
-  background-image: linear-gradient(
-    160deg,
-    #ffffff 0%,
-    #f5f0e8 48%,
-    #ebe6df 100%
-  ) !important;
+  background: var(--lx-page-bg) !important;
+  overflow-x: hidden !important;
 }
 
 html.luxeflexia-generate-page .luxeflexia-app {
-  background: transparent !important;
+  background: var(--lx-page-bg) !important;
+}
+
+html.luxeflexia-generate-page .luxeflexia-app main,
+html.luxeflexia-generate-page .luxeflexia-app main > div {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/*
+ * Mobile: iPhone-like row — single card centered; multi-slot starts at left for swipe.
+ * Desktop (768px+): always center 1–3 cards in the viewport.
+ */
+html.luxeflexia-generate-page .lx-upload-wrap {
+  /* Léger rapprochement vers le prompt, sans chevaucher le bloc blanc / bouton envoyer */
+  margin-bottom: -0.35rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+html.luxeflexia-generate-page .lx-upload-scroller {
+  --lx-upload-slot-h: min(48vh, 400px);
+  --lx-upload-slot-w: calc(var(--lx-upload-slot-h) * 9 / 16);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 0.25rem;
+}
+
+html.luxeflexia-generate-page .lx-upload-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+html.luxeflexia-generate-page .lx-upload-row {
+  display: flex;
+  width: max-content;
+  max-width: none;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-inline: auto;
+}
+
+/* Mobile only: multi-slot row starts at left for horizontal swipe */
+@media (max-width: 767px) {
+  html.luxeflexia-generate-page
+    .lx-upload-scroller[data-multi="true"]
+    .lx-upload-row {
+    margin-inline: 0;
+    padding-inline: 0.125rem;
+  }
+}
+
+html.luxeflexia-generate-page .lx-upload-slot {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--lx-upload-slot-h);
+  width: auto;
+  aspect-ratio: 9 / 16;
+}
+
+@media (min-width: 768px) {
+  html.luxeflexia-generate-page .lx-upload-wrap {
+    margin-bottom: -0.5rem;
+  }
+
+  html.luxeflexia-generate-page .lx-upload-scroller {
+    --lx-upload-slot-h: min(54vh, 480px);
+    display: flex;
+    justify-content: center;
+    overflow-x: visible;
+  }
+
+  html.luxeflexia-generate-page .lx-upload-row {
+    gap: 0.75rem;
+    margin-inline: 0;
+  }
+}
+
+/* Prompt composer — multi-line, readable on phone + desktop */
+html.luxeflexia-generate-page .lx-prompt-field {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 162, 39, 0.35) transparent;
+}
+
+html.luxeflexia-generate-page .lx-prompt-field::-webkit-scrollbar {
+  width: 4px;
+}
+
+html.luxeflexia-generate-page .lx-prompt-field::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.35);
 }

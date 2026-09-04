@@ -5,11 +5,37 @@ import {
   APP_LOCALE_STORAGE_KEY,
   DEFAULT_LOCALE,
   type AppLocale,
+  SIGNUP_LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
+  detectVisitorUiLocale,
+  toUiLocale,
+  normalizeLocale,
   resolvePreferredLocale,
 } from "@shared/locales";
 import { resources as baseResources } from "./resources";
 import { extraResources } from "./resources-extra";
+
+export const LOCALE_CHOSEN_KEY = "luxeflexia:locale_chosen";
+
+export function readLocaleFromSearch(
+  search = typeof window === "undefined" ? "" : window.location.search,
+): AppLocale | null {
+  const params = new URLSearchParams(search);
+  return normalizeLocale(params.get("lang") || params.get("locale"));
+}
+
+export function persistExplicitLocale(
+  locale: AppLocale,
+  options?: { trackSignupLocale?: boolean },
+) {
+  if (typeof window === "undefined") return;
+  const ui = toUiLocale(locale);
+  window.localStorage.setItem(LOCALE_CHOSEN_KEY, "1");
+  window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, ui);
+  if (options?.trackSignupLocale !== false) {
+    window.localStorage.setItem(SIGNUP_LOCALE_STORAGE_KEY, ui);
+  }
+}
 
 const resources = SUPPORTED_LOCALES.reduce((acc, locale) => {
   const key = locale as AppLocale;
@@ -39,12 +65,33 @@ const getInitialLocale = () => {
     return DEFAULT_LOCALE;
   }
 
-  // Prefer an explicit user choice; otherwise always French for this product.
+  const fromQuery = readLocaleFromSearch();
+  if (fromQuery) {
+    persistExplicitLocale(fromQuery);
+    return toUiLocale(fromQuery);
+  }
+
   const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
   if (stored) {
-    return resolvePreferredLocale(stored, DEFAULT_LOCALE);
+    return toUiLocale(resolvePreferredLocale(stored, DEFAULT_LOCALE));
   }
-  return DEFAULT_LOCALE;
+
+  const detected = detectVisitorUiLocale();
+  persistExplicitLocale(detected);
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.get("lang") && !url.searchParams.get("locale")) {
+      url.searchParams.set("lang", detected);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+    }
+  } catch {
+    /* ignore */
+  }
+  return detected;
 };
 
 const initialLocale = getInitialLocale();
@@ -83,9 +130,11 @@ if (!i18n.isInitialized) {
         "legalCommon",
         "notFound",
         "billing",
+        "landing",
+        "zeroCredits",
+        "welcome",
       ],
       detection: {
-        // Do not auto-switch to English from the phone browser language.
         order: ["localStorage"],
         lookupLocalStorage: APP_LOCALE_STORAGE_KEY,
         caches: ["localStorage"],
@@ -101,39 +150,45 @@ if (typeof document !== "undefined") {
   document.documentElement.lang = i18n.resolvedLanguage ?? initialLocale;
 }
 
-// One-time fix: older builds cached English from the phone browser.
-// Prefer French unless the user explicitly chose another language in Settings.
-const LOCALE_CHOSEN_KEY = "luxeflexia:locale_chosen";
-if (typeof window !== "undefined") {
-  const chosen = window.localStorage.getItem(LOCALE_CHOSEN_KEY);
-  const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
-  if (!chosen && stored === "en") {
-    window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, DEFAULT_LOCALE);
-    void i18n.changeLanguage(DEFAULT_LOCALE);
-  }
-}
-
 i18n.on("languageChanged", (lng) => {
-  const normalized = resolvePreferredLocale(lng, DEFAULT_LOCALE);
+  const normalized = toUiLocale(resolvePreferredLocale(lng, DEFAULT_LOCALE));
 
   if (typeof document !== "undefined") {
     document.documentElement.lang = normalized;
+    const ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale instanceof HTMLMetaElement) {
+      ogLocale.content = normalized === "en" ? "en_US" : "fr_FR";
+    }
   }
 
   if (typeof window !== "undefined") {
     window.localStorage.setItem(APP_LOCALE_STORAGE_KEY, normalized);
+    const crisp = window.$crisp;
+    if (Array.isArray(crisp)) {
+      crisp.push(["set", "user:language", normalized]);
+    }
   }
 });
 
-export function setAppLanguage(locale: string) {
-  const normalized = resolvePreferredLocale(locale, DEFAULT_LOCALE);
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem("luxeflexia:locale_chosen", "1");
-  }
+export function setAppLanguage(
+  locale: string,
+  options?: { trackSignupLocale?: boolean },
+) {
+  const normalized = toUiLocale(resolvePreferredLocale(locale, DEFAULT_LOCALE));
+  persistExplicitLocale(normalized, options);
 
   if (i18n.resolvedLanguage !== normalized) {
     void i18n.changeLanguage(normalized);
+  } else if (typeof document !== "undefined") {
+    document.documentElement.lang = normalized;
+  }
+}
+
+export function applyLocaleFromSearch(search?: string) {
+  if (typeof window === "undefined") return;
+  const fromQuery = readLocaleFromSearch(search ?? window.location.search);
+  if (fromQuery) {
+    setAppLanguage(fromQuery);
   }
 }
 

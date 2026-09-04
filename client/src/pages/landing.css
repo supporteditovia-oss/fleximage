@@ -185,19 +185,32 @@
 
 /* —— Mobile only (< 768px): iPhone XR / 14 Pro Max, etc. —— */
 @media (max-width: 767.98px) {
-  /* 1. Logo header centré, hamburger à droite */
+  /* Flags à gauche, nom lisible, hamburger à droite — pas de superposition. */
   .luxeflexia-landing .lx-header-inner {
     position: relative;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .luxeflexia-landing .lx-header-nav {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    z-index: 2;
+    flex-shrink: 0;
   }
 
   .luxeflexia-landing .lx-brand {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
     z-index: 1;
-    max-width: calc(100% - 7.5rem);
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    justify-content: flex-start;
   }
 
   .luxeflexia-landing .lx-brand .lx-display,
@@ -206,7 +219,8 @@
   }
 
   .luxeflexia-landing .lx-header-actions {
-    margin-left: auto;
+    margin-left: 0;
+    flex-shrink: 0;
     z-index: 2;
   }
 

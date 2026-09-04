@@ -8,15 +8,20 @@ const {
   createOneshotJob,
 } = require("../oneshot");
 const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
-const { buildLiteralRetryPrompt } = require("../prompt-guard");
+const { buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, buildVisionQaRetryPrompt } = require("../prompt-guard");
+const { maybeRetryAfterVisionQa } = require("../vision-qa");
 const {
   OUTPUT_ASPECT_RATIO,
   PROVIDER_POLL_HARD_TIMEOUT_MS,
+  PROVIDER_POLL_QA_RETRY_EXTRA_MS,
   refundGenerationCreditsIfCharged,
   extractImageUrls,
   toAssetList,
   toClientStatus,
   toDbStatus,
+  isProviderSuccessStatus,
+  isProviderFailStatus,
+  withTimeout,
 } = require("../generation");
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
@@ -38,6 +43,26 @@ function toUserFailMessage(value, fallback = "Échec de la génération") {
   }
   const s = String(value);
   return s === "[object Object]" ? fallback : s;
+}
+
+function statusTimingFields(larp) {
+  const meta =
+    larp && larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+  const estimatedRaw = meta.estimated_seconds;
+  const estimatedSeconds =
+    estimatedRaw != null && Number.isFinite(Number(estimatedRaw))
+      ? Number(estimatedRaw)
+      : null;
+  const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
+  let remainingSeconds = null;
+  if (estimatedSeconds != null && larp && larp.created_at) {
+    const elapsed = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(larp.created_at).getTime()) / 1000),
+    );
+    remainingSeconds = Math.max(0, estimatedSeconds - elapsed);
+  }
+  return { estimatedSeconds, qaRetryCount, remainingSeconds };
 }
 
 module.exports = async function handler(req, res) {
@@ -64,11 +89,14 @@ module.exports = async function handler(req, res) {
       .select("*")
       .ilike("provider_task_id", `%${taskId}%`)
       .eq("user_id", userId)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     const taskIdSegments = (larp?.provider_task_id || "")
       .split(",")
-      .map((segment) => segment.trim());
+      .map((segment) => segment.trim())
+      .filter(Boolean);
 
     if (fetchErr || !larp || !taskIdSegments.includes(taskId)) {
       res.status(404).json({ message: "Tâche introuvable" });
@@ -104,6 +132,7 @@ module.exports = async function handler(req, res) {
 
       res.status(200).json({
         larpId: larp.id,
+        ...statusTimingFields(larp),
         status: toClientStatus(larp.status),
         resultUrls: resolvedUrls,
         watermarkedUrls: watermarkedList,
@@ -116,13 +145,50 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const activeTaskId = (larp.provider_task_id || "").split(",").pop();
-    if (activeTaskId === "__claiming__") {
+    const taskParts = (larp.provider_task_id || "").split(",");
+    const activeTaskId = taskParts[taskParts.length - 1] || "";
+    const ageInMs = Date.now() - new Date(larp.created_at).getTime();
+
+    // Soft-retry / vision-QA claim can get stuck forever if the process dies mid-claim.
+    if (activeTaskId === "__claiming__" || activeTaskId === "__vision_qa_claim__") {
+      if (ageInMs < 90_000) {
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "waiting",
+          resultUrls: [],
+          failMessage: null,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType: "image",
+        });
+        return;
+      }
+      // Claim stuck → hard fail + refund below.
+      await supabase
+        .from("generations")
+        .update({
+          status: "failed",
+          fail_message:
+            "Génération bloquée (retry). Réessaie — jetons remboursés.",
+          updated_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
+      await refundGenerationCreditsIfCharged(supabase, {
+        userId,
+        generationId: larp.id,
+        source: "stuck_claim",
+        failMessage: "stuck claiming",
+      }).catch((err) => console.error("refund failed", err));
       res.status(200).json({
         larpId: larp.id,
-        status: "waiting",
+        ...statusTimingFields(larp),
+        status: "fail",
         resultUrls: [],
-        failMessage: null,
+        failMessage:
+          "Génération bloquée (retry). Réessaie — jetons remboursés.",
         costTime: null,
         isSubscriber: false,
         requiresPaywall: false,
@@ -139,7 +205,6 @@ module.exports = async function handler(req, res) {
     if (isCustomApi) {
       const jobId = activeTaskId.replace("custom_", "");
       const currentSettings = await getAppSettings(supabase);
-      const ageInMs = Date.now() - new Date(larp.created_at).getTime();
       const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
 
       let customStatus;
@@ -162,6 +227,7 @@ module.exports = async function handler(req, res) {
           // Transient network/5xx — keep waiting (mirrors Kie poll path).
           res.status(200).json({
             larpId: larp.id,
+            ...statusTimingFields(larp),
             status: "waiting",
             resultUrls: [],
             failMessage: null,
@@ -174,32 +240,34 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      const isCustomApiFailed =
-        customStatus.status === "failed" || customStatus.status === "fail";
+      const isCustomApiFailed = isProviderFailStatus(customStatus.status);
 
-      if (
-        customStatus.status === "completed" ||
-        customStatus.status === "success"
-      ) {
+      if (isProviderSuccessStatus(customStatus.status)) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
-      } else if (isCustomApiFailed || isTimeout) {
-        // Safety / soft provider failures: never hard-stop without a retry.
-        // Prefer Kie when configured; otherwise re-queue OneShot with a literal retry prompt.
+      } else if (isCustomApiFailed) {
+        // Only retry on real failures/safety — do NOT abandon a still-running job
+        // on soft timeout (that made swaps feel endless by restarting mid-flight).
         const oneshotTaskId = larp.provider_task_id;
         const meta =
           larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
-        const alreadySoftRetried = Boolean(meta.oneshot_soft_retry);
+        const softRetryCount = Number(
+          meta.oneshot_soft_retry_count || (meta.oneshot_soft_retry ? 1 : 0),
+        );
+        const facialHairRetry = isFacialHairPrompt(
+          String(larp.final_prompt || larp.prompt || ""),
+        );
+        // Facial-hair comedy edits often need a 2nd neutralized retry after safety flags.
+        const maxSoftRetries = facialHairRetry ? 2 : 1;
+        const alreadySoftRetried = softRetryCount >= maxSoftRetries;
         const policyFlagged = isGoogleAiPromptFlagged(customStatus);
-        const shouldSoftRetry = policyFlagged || isTimeout || isCustomApiFailed;
+        const shouldSoftRetry = policyFlagged || isCustomApiFailed;
 
         if (!isKieConfigured() && (!shouldSoftRetry || alreadySoftRetried)) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             customStatus && customStatus.error,
-            isTimeout
-              ? "Timeout Oneshot (pas de fallback Kie configuré)"
-              : "Échec Oneshot (pas de fallback Kie configuré)",
+            "Échec Oneshot (pas de fallback Kie configuré)",
           );
         } else {
           const claimMarker = `${oneshotTaskId},__claiming__`;
@@ -221,6 +289,7 @@ module.exports = async function handler(req, res) {
           if (!claimedRows || claimedRows.length === 0) {
             res.status(200).json({
               larpId: larp.id,
+              ...statusTimingFields(larp),
               status: "waiting",
               resultUrls: [],
               failMessage: null,
@@ -235,9 +304,13 @@ module.exports = async function handler(req, res) {
           const imageUrls = Array.isArray(larp.input_assets)
             ? larp.input_assets
             : [];
-          const fallbackPrompt = buildLiteralRetryPrompt(
-            String(larp.final_prompt || ""),
-          );
+          const nextRetryCount = softRetryCount + 1;
+          const fallbackPrompt =
+            facialHairRetry && nextRetryCount >= 2
+              ? buildFacialHairHardRetryPrompt(
+                  String(larp.final_prompt || ""),
+                )
+              : buildLiteralRetryPrompt(String(larp.final_prompt || ""));
 
           try {
             if (isKieConfigured()) {
@@ -258,13 +331,18 @@ module.exports = async function handler(req, res) {
                     provider: "fallback",
                     provider_task_id: newKieTaskIdString,
                     final_prompt: fallbackPrompt,
-                    metadata: { ...meta, oneshot_soft_retry: true },
+                    metadata: {
+                      ...meta,
+                      oneshot_soft_retry: true,
+                      oneshot_soft_retry_count: nextRetryCount,
+                    },
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", larp.id);
 
                 res.status(200).json({
                   larpId: larp.id,
+                  ...statusTimingFields(larp),
                   status: "waiting",
                   resultUrls: [],
                   failMessage: null,
@@ -290,6 +368,15 @@ module.exports = async function handler(req, res) {
                   : [];
               const retryResponse = await createOneshotJob(fallbackPrompt, {
                 aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+                modelVariant:
+                  isAddAnimalPrompt(String(larp.prompt || "")) ||
+                  isMotorcycleReplacePrompt(String(larp.prompt || "")) ||
+                  isMotorcycleRidePrompt(String(larp.prompt || "")) ||
+                  isFictionalVehiclePrompt(String(larp.prompt || "")) ||
+                  /ANIMAL PHOTOREAL|PHOTOREAL SELFIE EDIT|Add a real BABY|Add a real full-grown|MOTORCYCLE\/SCOOTER FULL BODY|TMAX LOCK|BIKE SWAP LOCK|FICTIONAL VEHICLE/i.test(
+                    String(larp.final_prompt || ""),
+                  )
+                    ? "default" : "fast",
                 ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
               });
               if (!retryResponse || !retryResponse.id) {
@@ -299,15 +386,22 @@ module.exports = async function handler(req, res) {
                 .from("generations")
                 .update({
                   provider: "oneshot",
-                  provider_task_id: `custom_${retryResponse.id}`,
+                  // Keep the original task id in the chain so the client (still
+                  // polling the first id) can find this row after soft-retry.
+                  provider_task_id: `${oneshotTaskId},custom_${retryResponse.id}`,
                   final_prompt: fallbackPrompt,
-                  metadata: { ...meta, oneshot_soft_retry: true },
+                  metadata: {
+                    ...meta,
+                    oneshot_soft_retry: true,
+                    oneshot_soft_retry_count: nextRetryCount,
+                  },
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", larp.id);
 
               res.status(200).json({
                 larpId: larp.id,
+                ...statusTimingFields(larp),
                 status: "waiting",
                 resultUrls: [],
                 failMessage: null,
@@ -315,6 +409,7 @@ module.exports = async function handler(req, res) {
                 isSubscriber: false,
                 requiresPaywall: false,
                 resultType: "image",
+                activeTaskId: `custom_${retryResponse.id}`,
               });
               return;
             }
@@ -346,6 +441,7 @@ module.exports = async function handler(req, res) {
         ) {
           res.status(200).json({
             larpId: larp.id,
+            ...statusTimingFields(larp),
             status: "waiting",
             resultUrls: [],
             failMessage: null,
@@ -358,6 +454,36 @@ module.exports = async function handler(req, res) {
         }
         apiStatus = "fail";
         apiFailMsg = "Erreur de polling";
+      }
+    }
+
+    const pollMeta =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    const qaRetryCount = Number(pollMeta.vision_qa_retry_count || 0);
+    const softRetryCount = Number(
+      pollMeta.oneshot_soft_retry_count || (pollMeta.oneshot_soft_retry ? 1 : 0),
+    );
+    const effectiveHardTimeout =
+      PROVIDER_POLL_HARD_TIMEOUT_MS +
+      (qaRetryCount + softRetryCount) * PROVIDER_POLL_QA_RETRY_EXTRA_MS;
+
+    if (apiStatus === "waiting" && ageInMs > effectiveHardTimeout) {
+      // Prefer delivering the last vision-QA attempt over a blank timeout fail.
+      const rejected = Array.isArray(pollMeta.vision_qa_rejected_assets)
+        ? pollMeta.vision_qa_rejected_assets.filter(Boolean)
+        : [];
+      if (rejected.length > 0) {
+        console.warn(
+          "[status] hard timeout with prior QA assets — delivering last attempt",
+          { larpId: larp.id, qaRetryCount, ageInMs },
+        );
+        apiStatus = "success";
+        apiResultJson = JSON.stringify({ resultUrls: rejected });
+        apiFailMsg = null;
+      } else {
+        apiStatus = "fail";
+        apiFailMsg =
+          "Génération trop longue (timeout). Réessaie — jetons remboursés.";
       }
     }
 
@@ -376,7 +502,16 @@ module.exports = async function handler(req, res) {
 
         if (resultUrls.length > 0) {
           try {
-            resultUrls = await downloadAndStoreImages(larp.id, resultUrls);
+            // Never block the status response past ~25s — Vercel maxDuration is 60s.
+            // On timeout, keep provider URLs so the user still gets the image.
+            const stored = await withTimeout(
+              downloadAndStoreImages(larp.id, resultUrls),
+              4_000,
+              null,
+            );
+            if (Array.isArray(stored) && stored.length > 0) {
+              resultUrls = stored;
+            }
           } catch (err) {
             console.error("Failed to store images to R2", err);
           }
@@ -385,6 +520,59 @@ module.exports = async function handler(req, res) {
         if (resultUrls.length === 0) {
           apiStatus = "fail";
           apiFailMsg = "Aucune image dans le résultat";
+        } else if (larp.generation_type !== "video") {
+          // Vision QA: critical defects (esp. door-open red) → up to 3 corrective retries.
+          const meta =
+            larp.metadata && typeof larp.metadata === "object"
+              ? larp.metadata
+              : {};
+          const qaModelVariant =
+            meta.oneshot_model_variant ||
+            (needsProModelVariant(String(larp.prompt || "")) ? "default" : "fast");
+          const qaDecision = await withTimeout(
+            maybeRetryAfterVisionQa({
+              supabase,
+              larp,
+              resultUrls,
+              uploadImageUrlsToOneshot,
+              createOneshotJob,
+              buildVisionQaRetryPrompt,
+              aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+              modelVariant: qaModelVariant,
+            }),
+            18_000,
+            { action: "accept", qa: { skipped: true, reason: "timeout" } },
+          );
+
+          if (qaDecision && qaDecision.action === "busy") {
+            res.status(200).json({
+              larpId: larp.id,
+              ...statusTimingFields(larp),
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType: "image",
+            });
+            return;
+          }
+
+          if (qaDecision && qaDecision.action === "retry") {
+            res.status(200).json({
+              larpId: larp.id,
+              ...statusTimingFields(larp),
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType: "image",
+            });
+            return;
+          }
         }
       }
 
@@ -421,6 +609,7 @@ module.exports = async function handler(req, res) {
 
       res.status(200).json({
         larpId: larp.id,
+        ...statusTimingFields(larp),
         status: apiStatus,
         resultUrls,
         watermarkedUrls: [],
@@ -435,6 +624,7 @@ module.exports = async function handler(req, res) {
 
     res.status(200).json({
       larpId: larp.id,
+      ...statusTimingFields(larp),
       status: "waiting",
       resultUrls: [],
       failMessage: null,

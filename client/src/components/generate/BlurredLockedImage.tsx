@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { formatPaywallPromptPreview } from "@/lib/paywall-prompt";
 
 interface BlurredLockedImageProps {
@@ -17,6 +18,7 @@ export function BlurredLockedImage({
   size = "page",
   prompt = null,
 }: BlurredLockedImageProps) {
+  const { t } = useTranslation();
   const isPage = size === "page";
   const lockBox = isPage ? "h-16 w-16" : "h-10 w-10";
   const lockIcon = isPage ? "h-7 w-7" : "h-4 w-4";
@@ -32,7 +34,7 @@ export function BlurredLockedImage({
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt="Aperçu de ton image verrouillée"
+            alt={t("paywall.lockedImageAlt")}
             className={`h-full w-full scale-125 object-cover ${
               isPage ? "blur-[28px]" : "blur-[12px]"
             }`}

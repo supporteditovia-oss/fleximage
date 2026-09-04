@@ -56,9 +56,10 @@ export function setDocumentMeta(options: {
     const href = `https://www.luxeflexia.com${canonicalPath}`;
     let link = document.querySelector('link[rel="canonical"]');
     if (!(link instanceof HTMLLinkElement)) {
-      link = document.createElement("link");
-      link.setAttribute("rel", "canonical");
-      document.head.appendChild(link);
+      const created = document.createElement("link");
+      created.setAttribute("rel", "canonical");
+      document.head.appendChild(created);
+      link = created;
     }
     link.href = href;
 

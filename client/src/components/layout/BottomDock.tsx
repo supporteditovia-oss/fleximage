@@ -12,6 +12,7 @@ import {
   Clapperboard,
   GitBranch,
   Gauge,
+  Library,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,14 +23,22 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { useV2Access } from "@/hooks/use-v2-access";
+import { getAppScrollEl, getAppScrollTop } from "@/lib/app-scroll";
+import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 
 export function BottomDock() {
   const [location] = useLocation();
   const pathname = location.split("?")[0] || location;
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, isLoading, signOut } = useAuth();
+  const { v2Enabled } = useV2Access();
   const { t } = useTranslation();
   const [hidden, setHidden] = useState(false);
+  const [studioMode, setStudioMode] = useState<StudioMode>(() =>
+    readStudioMode(),
+  );
   const lastScrollY = useRef(0);
 
   const adminNavItems = [
@@ -43,8 +52,21 @@ export function BottomDock() {
   ];
 
   useEffect(() => {
+    const syncMode = () => setStudioMode(readStudioMode());
+    syncMode();
+    window.addEventListener("storage", syncMode);
+    window.addEventListener("focus", syncMode);
+    window.addEventListener("luxeflexia:studio-mode", syncMode);
+    return () => {
+      window.removeEventListener("storage", syncMode);
+      window.removeEventListener("focus", syncMode);
+      window.removeEventListener("luxeflexia:studio-mode", syncMode);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
     let maxHeight = window.innerHeight;
-    let lastY = window.scrollY;
+    let lastY = getAppScrollTop();
     const thresh = 10;
 
     const handleResizeOrScroll = () => {
@@ -57,7 +79,7 @@ export function BottomDock() {
       const vv = window.visualViewport;
       if (!vv) return;
 
-      const currentY = window.scrollY;
+      const currentY = getAppScrollTop();
       const currentH = vv.height;
       if (currentH > maxHeight) maxHeight = currentH;
 
@@ -103,9 +125,11 @@ export function BottomDock() {
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", handleResizeOrScroll);
       window.visualViewport.addEventListener("scroll", handleResizeOrScroll);
-      // Run once on mount
       handleResizeOrScroll();
     }
+
+    const scrollEl = getAppScrollEl();
+    scrollEl?.addEventListener("scroll", handleResizeOrScroll, { passive: true });
 
     const observer = new MutationObserver(syncResultMode);
     observer.observe(document.body, {
@@ -119,13 +143,24 @@ export function BottomDock() {
         window.visualViewport.removeEventListener("resize", handleResizeOrScroll);
         window.visualViewport.removeEventListener("scroll", handleResizeOrScroll);
       }
+      scrollEl?.removeEventListener("scroll", handleResizeOrScroll);
       observer.disconnect();
     };
   }, []);
 
   const isActive = (path: string) => pathname === path;
+  const v2Ready = !isLoading && v2Enabled;
+  const createPath = v2Ready ? "/create" : "/generate";
+  const libraryPath = v2Ready ? "/bibliotheque" : "/historique";
+  const libraryLabel = !v2Ready
+    ? t("layout.dock.history")
+    : studioMode === "voice"
+      ? "Catalogue"
+      : "Bibliothèque";
+  const LibraryIcon = v2Ready && studioMode === "voice" ? Library : History;
+
   const handleCreateClick = () => {
-    if (pathname !== "/generate") return;
+    if (pathname !== createPath) return;
     window.dispatchEvent(new Event("larpking:create-new-larp"));
   };
 
@@ -147,28 +182,31 @@ export function BottomDock() {
         : "group-hover:bg-[var(--lx-ink)]/5",
     );
 
-  return (
-    <div className={cn(
+  return createPortal(
+    <div
+      className={cn(
       "bottom-dock fixed bottom-0 left-0 w-full z-50 flex justify-center px-[5%] md:px-0 pb-[env(safe-area-inset-bottom)] transition-transform duration-300",
       hidden ? "translate-y-full md:translate-y-0" : "translate-y-0"
-    )}>
+    )}
+      style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 50 }}
+    >
       <nav className="w-full md:max-w-[360px] border border-[var(--lx-gold)]/30 bg-[var(--lx-surface-2)]/92 backdrop-blur-xl shadow-[0_8px_32px_rgba(18,16,14,0.12)] dock-nav">
         <div className="flex items-center justify-evenly px-4 py-2 md:px-3 md:py-2">
           {/* Historique */}
-          <Link href="/historique" className={dockItemClass(isActive("/historique") || isActive("/history"))}>
-            <div className={dockIconClass(isActive("/historique") || isActive("/history"))}>
-              <History className="h-6 w-6 md:h-5 md:w-5" />
+          <Link href={libraryPath} className={dockItemClass(isActive(libraryPath) || isActive("/historique") || isActive("/history"))}>
+            <div className={dockIconClass(isActive(libraryPath) || isActive("/historique") || isActive("/history"))}>
+              <LibraryIcon className="h-6 w-6 md:h-5 md:w-5" />
             </div>
-            <span>{t("layout.dock.history")}</span>
+            <span>{libraryLabel}</span>
           </Link>
 
           {/* Créer - center */}
           <Link
-            href="/generate"
-            className={dockItemClass(isActive("/generate"))}
+            href={createPath}
+            className={dockItemClass(isActive(createPath) || isActive("/generate"))}
             onClick={handleCreateClick}
           >
-            <div className={dockIconClass(isActive("/generate"))}>
+            <div className={dockIconClass(isActive(createPath) || isActive("/generate"))}>
               <Plus className="h-6 w-6 md:h-5 md:w-5" />
             </div>
             <span>{t("layout.dock.create")}</span>
@@ -267,6 +305,7 @@ export function BottomDock() {
           </DropdownMenu>
         </div>
       </nav>
-    </div>
+    </div>,
+    document.body,
   );
 }

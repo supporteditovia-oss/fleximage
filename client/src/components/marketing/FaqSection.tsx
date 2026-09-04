@@ -1,75 +1,38 @@
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ScrollReveal from "@/components/marketing/ScrollReveal";
 
-export const LANDING_FAQS = [
-  {
-    question: "Qu'est-ce que LuxeFlexIA ?",
-    answer:
-      "LuxeFlexIA est une plateforme qui utilise l'intelligence artificielle pour transformer tes photos et te mettre en scène dans des univers de luxe (voitures de sport, villas, jets privés, tables VIP) en quelques secondes, sans montage photo ni compétence technique.",
-  },
-  {
-    question: "Comment fonctionne la génération d'image par IA ?",
-    answer:
-      "Tu uploades simplement une photo de toi, tu décris la scène que tu veux (ou tu choisis un modèle prédéfini), et notre IA génère une image réaliste te plaçant dans ce décor de luxe en quelques instants.",
-  },
-  {
-    question: "Est-ce que mes photos sont en sécurité ?",
-    answer:
-      "Oui, toutes les photos uploadées sont traitées de manière sécurisée et ne sont jamais partagées ni utilisées pour entraîner d'autres modèles sans ton consentement.",
-  },
-  {
-    question: "Combien de temps faut-il pour générer une image ?",
-    answer:
-      "La génération prend généralement entre quelques secondes et une minute, selon la complexité de la demande et l'affluence sur la plateforme.",
-  },
-  {
-    question: "Quelle est la différence entre le plan gratuit et le plan payant ?",
-    answer:
-      "Le plan gratuit permet de découvrir l'interface, tandis que les crédits ou l'abonnement payant débloquent la génération en haute résolution, le téléchargement illimité et l'accès à l'historique complet de tes créations.",
-  },
-  {
-    question: "Puis-je utiliser mes images générées sur les réseaux sociaux ?",
-    answer:
-      "Oui, une fois générées et téléchargées, tes images t'appartiennent et tu peux les publier librement sur Instagram, TikTok, Snapchat ou tout autre réseau social.",
-  },
-  {
-    question: "Ai-je besoin de compétences en photographie ou en retouche photo ?",
-    answer:
-      "Non, aucune compétence n'est requise : l'intelligence artificielle s'occupe de tout le travail technique, tu n'as qu'à choisir ta photo et décrire le résultat souhaité.",
-  },
-  {
-    question: "Quels types de décors de luxe sont disponibles ?",
-    answer:
-      "Voitures de sport, villas avec piscine, jets privés, yachts, restaurants VIP, et de nombreux autres univers premium, avec de nouveaux décors ajoutés régulièrement.",
-  },
-  {
-    question: "Puis-je annuler mon abonnement à tout moment ?",
-    answer:
-      "Oui, tu peux annuler ton abonnement directement depuis ton espace compte, sans engagement ni frais cachés.",
-  },
-  {
-    question: "Les images générées sont-elles vraiment réalistes ?",
-    answer:
-      "Oui, notre IA est spécialement optimisée pour produire des rendus photoréalistes qui respectent les proportions, l'éclairage et les détails du visage pour un résultat crédible et professionnel.",
-  },
-] as const;
-
-const FAQ_JSON_LD = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: LANDING_FAQS.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: faq.answer,
-    },
-  })),
-};
+const FAQ_INDEXES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 
 export default function FaqSection() {
+  const { t, i18n } = useTranslation();
   const [openIndex, setOpenIndex] = React.useState<number | null>(0);
+
+  const faqs = React.useMemo(
+    () =>
+      FAQ_INDEXES.map((index) => ({
+        question: t(`landing.faq.q${index}`),
+        answer: t(`landing.faq.a${index}`),
+      })),
+    [t, i18n.resolvedLanguage],
+  );
+
+  const faqJsonLd = React.useMemo(
+    () => ({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    }),
+    [faqs],
+  );
 
   return (
     <section
@@ -79,7 +42,7 @@ export default function FaqSection() {
     >
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       <div className="mx-auto max-w-2xl">
@@ -88,22 +51,22 @@ export default function FaqSection() {
             id="faq-heading"
             className="lx-display text-center text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl"
           >
-            Questions fréquentes
+            {t("landing.faq.title")}
           </h2>
           <p className="mx-auto mt-3 max-w-md text-center text-sm text-[var(--lx-muted)] md:text-base">
-            Tout ce que tu dois savoir sur LuxeFlexIA
+            {t("landing.faq.subtitle")}
           </p>
         </ScrollReveal>
 
         <div className="mt-10 space-y-3" role="list">
-          {LANDING_FAQS.map((faq, index) => {
+          {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             const panelId = `faq-panel-${index}`;
             const buttonId = `faq-button-${index}`;
 
             return (
               <ScrollReveal
-                key={faq.question}
+                key={`${i18n.resolvedLanguage}-${faq.question}`}
                 delayClassName={`lx-reveal-delay-${Math.min(index + 1, 3)}`}
               >
                 <div
@@ -133,7 +96,6 @@ export default function FaqSection() {
                     />
                   </button>
 
-                  {/* Answer always in the DOM for crawlability (visually collapsed when closed) */}
                   <div
                     id={panelId}
                     role="region"

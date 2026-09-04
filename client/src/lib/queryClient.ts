@@ -5,7 +5,7 @@ async function throwIfResNotOk(res: Response) {
     // Session expired or unauthorized - clear cache and redirect
     if (typeof window !== "undefined") {
       queryClient.clear();
-      window.location.href = "/auth";
+      window.location.href = "/login";
     }
     return;
   }

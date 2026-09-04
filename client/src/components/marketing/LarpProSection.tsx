@@ -156,12 +156,6 @@ function LarpStackCard({
     >
       {item.image ? (
         <>
-          <img
-            src={item.image.placeholder_url}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-md"
-          />
           <picture className="absolute inset-0 block h-full w-full">
             {item.image.webp_url ? (
               <source

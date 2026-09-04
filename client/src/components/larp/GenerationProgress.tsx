@@ -11,6 +11,7 @@ import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { BrandMark } from "@/components/BrandMark";
+import { useStudioPath } from "@/hooks/use-studio-path";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -18,6 +19,10 @@ interface GenerationProgressProps {
   onReset: () => void;
   onResultVisible?: () => void;
   resultType?: "image" | "video";
+  /** Number of reference images — multi-ref swaps need a longer honest ETA. */
+  referenceImageCount?: number;
+  /** Server estimate returned at generate-direct start (before first poll). */
+  initialEstimatedSeconds?: number;
 }
 
 const LX_AUTH_BG =
@@ -29,9 +34,12 @@ export function GenerationProgress({
   onReset,
   onResultVisible,
   resultType = "image",
+  referenceImageCount = 1,
+  initialEstimatedSeconds,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const studioPath = useStudioPath();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data, isLoading, error, isError } = useLarpStatus(taskId);
@@ -83,7 +91,7 @@ export function GenerationProgress({
   // Wait for loader exit animation before showing result
   useEffect(() => {
     if (revealDone) {
-      const timer = setTimeout(() => setShowResult(true), 500);
+      const timer = setTimeout(() => setShowResult(true), 180);
       return () => clearTimeout(timer);
     }
   }, [revealDone]);
@@ -160,7 +168,7 @@ export function GenerationProgress({
         description: error?.message ?? t("progress.connectionError"),
       });
       onReset();
-      navigate("/generate");
+      navigate(studioPath);
       return;
     }
 
@@ -182,13 +190,13 @@ export function GenerationProgress({
         );
       toast({
         variant: "destructive",
-        title: isPolicyFail ? "Contenu non autorisé" : t("progress.generationFailed"),
+        title: isPolicyFail ? t("progress.policyFail") : t("progress.generationFailed"),
         description: failMessage,
       });
       // Credits may have been refunded server-side on policy/provider fail.
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
       onReset();
-      navigate("/generate");
+      navigate(studioPath);
     }
   }, [
     data?.status,
@@ -198,9 +206,33 @@ export function GenerationProgress({
     navigate,
     onReset,
     queryClient,
+    studioPath,
     t,
     toast,
   ]);
+
+  const estimatedSeconds =
+    resultType === "video"
+      ? 150
+      : (() => {
+          const polled =
+            data?.estimatedSeconds != null && Number.isFinite(data.estimatedSeconds)
+              ? data.estimatedSeconds
+              : null;
+          const fallback =
+            initialEstimatedSeconds != null &&
+            Number.isFinite(initialEstimatedSeconds)
+              ? initialEstimatedSeconds
+              : referenceImageCount >= 2
+                ? 62
+                : 50;
+          return polled ?? fallback;
+        })();
+
+  const serverRemainingSeconds =
+    data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)
+      ? data.remainingSeconds
+      : null;
 
   const isGenerating =
     loaderStatus === "connecting" ||
@@ -225,6 +257,8 @@ export function GenerationProgress({
         {showLoader && (
           <GenerationLoader
             status={loaderStatus}
+            estimatedSeconds={estimatedSeconds}
+            serverRemainingSeconds={serverRemainingSeconds}
             inputImageUrl={inputImageUrl}
             resultUrls={data?.resultUrls}
             onRevealComplete={() => setRevealDone(true)}

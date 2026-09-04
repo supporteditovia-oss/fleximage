@@ -4,6 +4,8 @@ const PLAN_CREDITS = {
   ultimate: 2500,
 };
 
+const { getPackById } = require("./billing-offers");
+
 const PLAN_MRR_CENTS = {
   discovery: 890,
   essential: 1990,
@@ -73,6 +75,12 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
   ) {
     return { ok: false, reason: "unpaid" };
   }
+
+  // One-shot credit packs
+  if (session.mode === "payment") {
+    return reconcilePaidPackSession(supabase, session, source);
+  }
+
   if (session.mode === "subscription" && session.status !== "complete") {
     return { ok: false, reason: "incomplete" };
   }
@@ -181,6 +189,59 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
   };
 }
 
+/**
+ * Grant one-shot credit pack after Checkout mode=payment.
+ * Idempotent via ledger key stripe:pack:{sessionId}.
+ */
+async function reconcilePaidPackSession(supabase, session, source) {
+  if (session.status !== "complete" && session.payment_status !== "paid") {
+    return { ok: false, reason: "incomplete" };
+  }
+
+  const userId = session.metadata && session.metadata.user_id;
+  const packId = session.metadata && session.metadata.pack_id;
+  const pack = getPackById(String(packId || ""));
+  // Always grant the canonical pack amount (50 / 120 / 250) — never trust
+  // metadata alone, and never grant more or less than defined in billing-offers.
+  const credits = pack ? pack.credits : Number(session.metadata && session.metadata.credits) || 0;
+  if (!userId || !packId || !pack || credits <= 0) {
+    return { ok: false, reason: "missing_pack_meta" };
+  }
+
+  const customerId = asStripeId(session.customer);
+  if (customerId) {
+    await supabase
+      .from("profiles")
+      .update({
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+  }
+
+  await applyCreditDelta(supabase, {
+    userId,
+    delta: credits,
+    reason: "system_adjustment",
+    idempotencyKey: `stripe:pack:${session.id}`,
+    metadata: {
+      source,
+      purchase_type: "credit_pack",
+      pack_id: packId,
+      credits,
+      checkout_session_id: session.id,
+    },
+  });
+
+  return {
+    ok: true,
+    userId,
+    packId,
+    credits,
+    kind: "credit_pack",
+  };
+}
+
 module.exports = {
   PLAN_CREDITS,
   normalizePlan,
@@ -189,4 +250,5 @@ module.exports = {
   grantSubscriptionCredits,
   clearUserCreditLots,
   reconcilePaidCheckoutSession,
+  reconcilePaidPackSession,
 };

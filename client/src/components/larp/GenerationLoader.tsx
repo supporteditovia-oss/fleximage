@@ -7,21 +7,18 @@ import "./generation-loader.css";
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
+  /** Server-side ETA (seconds) — synced on every poll. */
+  estimatedSeconds?: number;
+  /** Remaining seconds computed server-side from created_at + estimate. */
+  serverRemainingSeconds?: number | null;
   inputImageUrl?: string;
   resultUrls?: string[];
   onRevealComplete?: () => void;
 }
 
-const PROGRESS_MESSAGES = [
-  "Analyse de ton image...",
-  "Demande comprise...",
-  "Modification en cours...",
-  "Finalisation du rendu...",
-] as const;
-
-const COUNTDOWN_SECONDS = 8;
+const DEFAULT_ESTIMATE_SECONDS = 50;
 const MESSAGE_INTERVAL_MS = 1800;
-const EXIT_FADE_MS = 500;
+const EXIT_FADE_MS = 350;
 
 const PARTICLES = [
   { left: "12%", size: 2, dur: "14s", delay: "0s", drift: "12px" },
@@ -33,19 +30,40 @@ const PARTICLES = [
 
 export function GenerationLoader({
   status,
+  estimatedSeconds = DEFAULT_ESTIMATE_SECONDS,
+  serverRemainingSeconds = null,
   inputImageUrl,
   resultUrls: _resultUrls,
   onRevealComplete,
 }: GenerationLoaderProps) {
   const { t } = useTranslation();
+  const progressMessages = useMemo(
+    () => [
+      t("progress.stepAnalyze"),
+      t("progress.stepUnderstood"),
+      t("progress.stepEditing"),
+      t("progress.stepFinishing"),
+    ],
+    [t],
+  );
   const [phase, setPhase] = useState<"dissolve" | "blur" | "logo" | "result">(
     "dissolve",
   );
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
-  const [remaining, setRemaining] = useState(COUNTDOWN_SECONDS);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const revealFired = useRef(false);
+  const startedAt = useRef(Date.now());
+  const [estimate, setEstimate] = useState(
+    Math.max(25, Math.round(estimatedSeconds)),
+  );
+
+  useEffect(() => {
+    setEstimate((prev) =>
+      Math.max(prev, Math.max(25, Math.round(estimatedSeconds))),
+    );
+  }, [estimatedSeconds]);
 
   useEffect(() => {
     if (phase !== "dissolve") return;
@@ -61,12 +79,9 @@ export function GenerationLoader({
 
   useEffect(() => {
     if (status !== "success" || phase === "result") return;
-    const delay = phase === "logo" ? 400 : phase === "blur" ? 300 : 400;
-    const timer = setTimeout(() => setPhase("result"), delay);
-    return () => clearTimeout(timer);
+    setPhase("result");
   }, [status, phase]);
 
-  // Fin : démarre le fondu et notifie le parent (crossfade), puis laisse le parent démonter
   useEffect(() => {
     if (phase !== "result" || revealFired.current) return;
     revealFired.current = true;
@@ -75,21 +90,34 @@ export function GenerationLoader({
   }, [phase, onRevealComplete]);
 
   useEffect(() => {
-    const startedAt = Date.now();
     const id = setInterval(() => {
-      const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
-      setRemaining(Math.max(0, COUNTDOWN_SECONDS - elapsedSec));
+      setElapsedSec(Math.floor((Date.now() - startedAt.current) / 1000));
     }, 200);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % PROGRESS_MESSAGES.length);
+      setMessageIndex((prev) => (prev + 1) % progressMessages.length);
       setMessageKey((k) => k + 1);
     }, MESSAGE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [progressMessages.length]);
+
+  const localRemaining = Math.max(0, estimate - elapsedSec);
+  const polledRemaining =
+    serverRemainingSeconds != null && Number.isFinite(serverRemainingSeconds)
+      ? Math.max(0, Math.round(serverRemainingSeconds))
+      : null;
+
+  let remaining =
+    status === "success"
+      ? 0
+      : polledRemaining != null
+        ? polledRemaining
+        : localRemaining;
+
+  const finishing = status !== "success" && remaining === 0;
 
   const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
   const showContent = !isExiting;
@@ -105,13 +133,9 @@ export function GenerationLoader({
         ease: "easeInOut",
       }}
     >
-      {/* Fond sombre sobre */}
       <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
-
-      {/* Un seul halo doré subtil */}
       <div className="lx-gen-loader__halo" aria-hidden />
 
-      {/* Poussière dorée très discrète */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {particles.map((p, i) => (
           <span
@@ -131,7 +155,6 @@ export function GenerationLoader({
         ))}
       </div>
 
-      {/* Image floutée en fond */}
       {inputImageUrl && (
         <motion.div
           className="absolute inset-0 flex items-center justify-center"
@@ -157,7 +180,6 @@ export function GenerationLoader({
         </motion.div>
       )}
 
-      {/* Contenu centré (logo, spinner, timer, messages) */}
       <div className="absolute inset-0 z-10 flex w-full items-center justify-center px-4">
         <AnimatePresence>
           {showContent && (
@@ -194,23 +216,30 @@ export function GenerationLoader({
                 <div className="lx-gen-loader__ring" aria-hidden />
               </div>
 
-              <p
-                className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
-                style={{ fontFamily: "var(--lx-display)" }}
-                aria-live="polite"
-              >
-                <span>{remaining}</span>
-                <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
-                  sec
-                </span>
-              </p>
+              <div className="flex flex-col items-center gap-1.5">
+                <p
+                  className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
+                  style={{ fontFamily: "var(--lx-display)" }}
+                  aria-live="polite"
+                >
+                  <span>{remaining}</span>
+                  <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
+                    {t("progress.seconds")}
+                  </span>
+                </p>
+                {finishing && (
+                  <p className="m-0 text-center text-xs font-medium text-[#f5e6b8]/70">
+                    {t("progress.stepFinishing")}
+                  </p>
+                )}
+              </div>
 
               <div className="relative flex h-7 w-full items-center justify-center">
                 <span
                   key={messageKey}
                   className="lx-gen-loader__msg block w-full text-center text-sm font-medium text-[#f5e6b8]/85 md:text-base"
                 >
-                  {PROGRESS_MESSAGES[messageIndex]}
+                  {progressMessages[messageIndex]}
                 </span>
               </div>
             </motion.div>

@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, useMemo, type CSSProperties } from "react"
 import { motion } from "framer-motion";
 import { Gem } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { useTranslation } from "react-i18next";
 import "./fake-onboarding-loader.css";
 
-const MESSAGES = [
-  "Analyse de ton image...",
-  "Préparation du rendu HD...",
-  "Affinage des détails...",
-  "Finalisation...",
+const MESSAGE_KEYS = [
+  "welcome.loaderAnalyze",
+  "welcome.loaderRender",
+  "welcome.loaderDetails",
+  "welcome.loaderFinish",
 ] as const;
 
 const PARTICLES = [
@@ -33,6 +34,7 @@ export function FakeOnboardingLoader({
   durationMs = DEFAULT_DURATION_MS,
   onComplete,
 }: FakeOnboardingLoaderProps) {
+  const { t } = useTranslation();
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -57,7 +59,7 @@ export function FakeOnboardingLoader({
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
+      setMessageIndex((prev) => (prev + 1) % MESSAGE_KEYS.length);
       setMessageKey((k) => k + 1);
     }, MESSAGE_INTERVAL_MS);
     return () => window.clearInterval(id);
@@ -143,7 +145,7 @@ export function FakeOnboardingLoader({
               key={messageKey}
               className="lx-fake-loader__msg block w-full text-center text-sm font-medium text-[#f5e6b8]/90 md:text-base"
             >
-              {MESSAGES[messageIndex]}
+              {t(MESSAGE_KEYS[messageIndex])}
             </span>
           </div>
         </div>

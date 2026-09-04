@@ -221,9 +221,8 @@ export function LarpResult({
 
       if (outcome === "shared" && platform === "snapchat") {
         toast({
-          title: "Presque !",
-          description:
-            "Dans la liste, appuie sur Snapchat — ta photo s’ouvre déjà en Snap.",
+          title: t("result.shareAlmostTitle"),
+          description: t("result.shareAlmostSnap"),
         });
         return;
       }
@@ -232,11 +231,11 @@ export function LarpResult({
 
       if (outcome === "saved-guide") {
         toast({
-          title: "Image enregistrée",
+          title: t("result.savedTitle"),
           description:
             platform === "snapchat"
-              ? "Ouvre Snapchat → Nouveau Snap → Galerie, puis choisis la photo LuxeFlexIA."
-              : `Ouvre ${names[platform]} et envoie-la depuis ta galerie.`,
+              ? t("result.savedSnapHint")
+              : t("result.savedOtherHint", { platform: names[platform] }),
         });
       }
     } catch {
@@ -321,7 +320,7 @@ export function LarpResult({
       <ShareSheet
         open={Boolean(shareDialog)}
         title={t("result.shareTitle")}
-        description="Snapchat : ta photo part avec le Snap."
+        description={t("result.shareSnapHint")}
         onClose={() => {
           setShareDialog(null);
           cleanupShareUiLocks();

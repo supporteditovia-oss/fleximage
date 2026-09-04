@@ -290,43 +290,6 @@ ${urls}
 `;
 }
 
-for (const niche of niches) {
-  const related = niches
-    .filter(
-      (item) =>
-        item.categoryId === niche.categoryId && item.slug !== niche.slug,
-    )
-    .slice(0, 6)
-    .map((item) => ({
-      href: nichePath(item.slug),
-      label: item.h1,
-    }));
-
-  writeFile(
-    path.join(PUBLIC_DIR, "generateur", niche.slug, "index.html"),
-    nicheHtml({
-      title: niche.metaTitle,
-      description: niche.metaDescription,
-      canonicalPath: nichePath(niche.slug),
-      h1: niche.h1,
-      subtitle: niche.heroSubtitle,
-      intro: niche.intro,
-      bullets: niche.bullets,
-      promptIdeas: niche.promptIdeas,
-      faqs: niche.faqs,
-      searchPhrases: niche.searchPhrases,
-      relatedLinks: related,
-      jsonLd: nicheJsonLd(niche),
-    }),
-  );
-}
-
-writeFile(
-  path.join(PUBLIC_DIR, "tous-les-generateurs", "index.html"),
-  directoryHtml(),
-);
 writeFile(path.join(PUBLIC_DIR, "sitemap.xml"), buildSitemap());
 
-console.log(
-  `SEO static pages generated: ${niches.length} niches + directory + sitemap`,
-);
+console.log(`SEO sitemap generated (${niches.length} niche URLs, SPA serves page content)`);

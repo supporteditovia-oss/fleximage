@@ -17,7 +17,8 @@ const RETRYABLE_SUBSCRIPTION_STATUSES = new Set([
  * Prevent double subscriptions: expire abandoned open Checkout Sessions,
  * cancel stuck incomplete subs, then reject if a real blocking sub remains.
  */
-async function assertCustomerCanStartCheckout(stripe, customerId) {
+async function assertCustomerCanStartCheckout(stripe, customerId, locale = "fr") {
+  const { copy } = require("./locale-copy");
   if (!customerId) return { ok: true };
 
   const openSessions = await stripe.checkout.sessions.list({
@@ -66,7 +67,11 @@ async function assertCustomerCanStartCheckout(stripe, customerId) {
     return {
       ok: false,
       code: "already_subscribed",
-      message: "Tu as déjà un abonnement actif.",
+      message: copy(
+        locale,
+        "Tu as déjà un abonnement actif.",
+        "You already have an active subscription.",
+      ),
       subscriptionId: blocking.id,
       status: blocking.status,
     };
