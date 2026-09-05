@@ -60,6 +60,26 @@
     "categoryName": "Luxe"
   },
   {
+    "id": "builtin-lamborghini-urus",
+    "slug": "lamborghini-urus",
+    "name": "Lamborghini Urus",
+    "description": "Streetwear devant un Urus à la station-service.",
+    "imagePath": "/models/modele-lamborghini-urus.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la casquette rouge, la veste bomber noire, le pantalon camouflage, les chaussons, le téléphone en main, la station-service, les jantes noires, les étriers de frein jaunes, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "category": "supercars",
+    "categoryName": "Supercars"
+  },
+  {
+    "id": "builtin-yacht-deck",
+    "slug": "yacht-deck",
+    "name": "Yacht deck luxe",
+    "description": "Détente sur le pont d'un yacht en mer.",
+    "imagePath": "/models/modele-yacht-deck.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le banc du pont du yacht, la tenue noire, les pieds nus, le pont en teck, les garde-corps inox, la mer turquoise, le ciel bleu, les îles au loin, la lumière solaire et le cadrage vertical de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration lumineuse parfaite, sans texte ni logo.",
+    "category": "travel-tourism",
+    "categoryName": "Voyage"
+  },
+  {
     "id": "builtin-quad-dubai-canam",
     "slug": "quad-dubai-canam",
     "name": "Can-Am Outlander Dubaï",
