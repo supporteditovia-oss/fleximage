@@ -157,8 +157,13 @@ module.exports = async function handler(req, res) {
       templateReferenceId = resolved.referenceId;
       effectivePrompt = resolved.prompt;
       // La photo de l'utilisateur d'abord : le modèle traite la première
-      // référence comme le sujet à conserver.
-      imageUrls = [...uploadedUrls, resolved.referenceUrl];
+      // référence comme le sujet à conserver. Références extra (ex. véhicule)
+      // avant la scène finale.
+      imageUrls = [
+        ...uploadedUrls,
+        ...(resolved.extraReferenceUrls || []),
+        resolved.referenceUrl,
+      ];
     } else {
       imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
     }

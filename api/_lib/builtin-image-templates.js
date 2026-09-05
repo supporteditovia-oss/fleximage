@@ -40,7 +40,7 @@ function listBuiltinTemplatesForApi() {
     generationType: "image",
     category: item.category,
     categoryName: item.categoryName,
-    referenceImageCount: 1,
+    referenceImageCount: item.vehicleReferencePath ? 2 : 1,
     requiresUserPhoto: true,
     isBuiltin: true,
   }));
@@ -82,6 +82,9 @@ function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
     ok: true,
     prompt,
     referenceUrl: resolveReferenceUrl(template.imagePath),
+    extraReferenceUrls: (template.extraReferencePaths || [])
+      .concat(template.vehicleReferencePath ? [template.vehicleReferencePath] : [])
+      .map((path) => resolveReferenceUrl(path)),
     referenceId: template.id,
     templateName: template.name,
     isBuiltin: true,
