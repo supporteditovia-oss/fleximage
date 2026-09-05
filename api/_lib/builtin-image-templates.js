@@ -52,7 +52,11 @@ function listBuiltinTemplatesForApi() {
     generationType: "image",
     category: item.category,
     categoryName: item.categoryName,
-    referenceImageCount: item.vehicleReferencePath ? 2 : 1,
+    referenceImageCount: item.readyImagePath
+      ? 1
+      : item.vehicleReferencePath
+        ? 2
+        : 1,
     requiresUserPhoto:
       item.requiresUserPhoto !== false &&
       resolveGenerationMode(item) !== "vehicle-swap",
