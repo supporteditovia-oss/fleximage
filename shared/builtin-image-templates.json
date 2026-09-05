@@ -63,10 +63,9 @@
     "id": "builtin-quad-dubai-canam",
     "slug": "quad-dubai-canam",
     "name": "Can-Am Outlander Dubaï",
-    "description": "Streetwear de nuit sur quad Can-Am Outlander 1000R XT-P à Dubaï.",
+    "description": "Streetwear de nuit sur Can-Am Outlander 1000R XT-P à Dubaï.",
     "imagePath": "/models/modele-quad-dubai.webp",
-    "vehicleReferencePath": "/models/ref-canam-outlander-1000r.webp",
-    "prompt": "Tu reçois trois images dans cet ordre : (1) la personne à conserver, (2) le quad Can-Am Outlander 1000R XT-P exact à reproduire, (3) la scène de référence. Remplace uniquement la personne de la scène par la personne de la première image en conservant fidèlement son visage, son identité, sa carnation et sa coiffure. Remplace le quad/ATV de la scène par le Can-Am Outlander 1000R XT-P de la deuxième image : carrosserie noire mate, accents jaune néon sur le pare-buffle avant, jantes et ressorts, inscription OUTLANDER, modèle deux places utilitaire — respecte impérativement la TAILLE RÉELLE imposante de ce quad (véhicule large et haut, beaucoup plus grand qu'un petit quad sportif, proportions adulte crédibles, roues larges, assise haute, envergure réaliste). Garde la nuit à Dubaï, Burj Khalifa, palmiers, lampadaires, pose assise sur le quad, ambiance et cadrage vertical 9:16 de la scène. Photographie ultra-réaliste, perspective et ombres cohérentes, véhicule bien ancré au sol, sans texte ni watermark.",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son visage, son identité, sa carnation et sa coiffure. Garde exactement le Can-Am Outlander 1000R XT-P noir et jaune néon (grand quad utilitaire deux places, taille réelle imposante), la pose assise sur le quad, la tenue streetwear, la nuit à Dubaï, Burj Khalifa, palmiers, lampadaires, le cadrage vertical 9:16 et l'éclairage de la seconde image. Ne change pas le quad ni le décor. Photographie ultra-réaliste, proportions naturelles, sans texte ni watermark.",
     "category": "supercars",
     "categoryName": "Quads"
   }
