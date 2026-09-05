@@ -65,7 +65,7 @@
     "name": "Can-Am Outlander Dubaï",
     "description": "Streetwear de nuit sur Can-Am Outlander 1000R XT-P à Dubaï.",
     "imagePath": "/models/modele-quad-dubai.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son visage, son identité, sa carnation et sa coiffure. Garde exactement le Can-Am Outlander 1000R XT-P noir et jaune néon (grand quad utilitaire deux places, taille réelle imposante), la pose assise sur le quad, la tenue streetwear, la nuit à Dubaï, Burj Khalifa, palmiers, lampadaires, le cadrage vertical 9:16 et l'éclairage de la seconde image. Ne change pas le quad ni le décor. Photographie ultra-réaliste, proportions naturelles, sans texte ni watermark.",
+    "prompt": "Remplace UNIQUEMENT la personne de la seconde image par la personne de la première image. Conserve fidèlement son visage, son identité, sa carnation et sa coiffure. Ne modifie PAS le quad ni le décor. Le quad doit rester exactement le Can-Am Outlander 1000R XT-P de la scène : carrosserie noire mate, pare-buffle avant jaune néon, ressorts jaunes, jantes avec liseré jaune, rétroviseurs à supports/carter jaunes, grand quad utilitaire deux places, panneaux latéraux noirs SANS AUCUN TEXTE. Interdit absolu : Sportsman, Polaris, Touring, 570, ou tout autre branding véhicule. Garde la pose assise, la tenue streetwear, la nuit à Dubaï, Burj Khalifa, palmiers, sac orange, cadrage 9:16 et l'éclairage. Photo ultra-réaliste, sans watermark.",
     "category": "supercars",
     "categoryName": "Quads"
   }
