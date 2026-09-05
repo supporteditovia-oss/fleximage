@@ -151,12 +151,13 @@ export function BottomDock() {
   const isActive = (path: string) => pathname === path;
   const v2Ready = !isLoading && v2Enabled;
   const createPath = v2Ready ? "/create" : "/generate";
-  const libraryPath = v2Ready ? "/bibliotheque" : "/historique";
+  const libraryPath =
+    v2Ready && studioMode === "voice" ? "/bibliotheque" : "/historique";
   const libraryLabel = !v2Ready
     ? t("layout.dock.history")
     : studioMode === "voice"
       ? "Catalogue"
-      : "Bibliothèque";
+      : t("layout.dock.history");
   const LibraryIcon = v2Ready && studioMode === "voice" ? Library : History;
 
   const handleCreateClick = () => {
