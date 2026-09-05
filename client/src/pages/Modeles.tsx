@@ -204,71 +204,73 @@ export default function Modeles() {
               slideRefs.current[index] = el;
             }}
           >
-            <img
-              className="tpl-slide__media"
-              src={template.previewUrl ?? ""}
-              alt={template.name}
-              loading={index <= 1 ? "eager" : "lazy"}
-            />
-            <div className="tpl-slide__scrim" />
+            <div className="tpl-slide__frame">
+              <img
+                className="tpl-slide__media"
+                src={template.previewUrl ?? ""}
+                alt={template.name}
+                loading={index <= 1 ? "eager" : "lazy"}
+              />
+              <div className="tpl-slide__scrim" />
 
-            <div className="tpl-bottom">
-              <h2 className="tpl-slide__title">{template.name}</h2>
+              <div className="tpl-bottom">
+                <h2 className="tpl-slide__title">{template.name}</h2>
 
-              <div className="tpl-badges">
-                <span className="tpl-badge">
+                <div className="tpl-badges">
+                  <span className="tpl-badge">
+                    {isVehicleSwapTemplate(template)
+                      ? "Préparer le quad"
+                      : template.requiresUserPhoto
+                        ? "1 photo"
+                        : "photo optionnelle"}
+                  </span>
+                  <span className="tpl-badge">
+                    <Gem className="h-3 w-3" aria-hidden />
+                    {IMAGE_CREDIT_COST} crédits
+                  </span>
+                  {template.categoryName ? (
+                    <span className="tpl-badge">{template.categoryName}</span>
+                  ) : null}
+                </div>
+
+                <div className="tpl-strip">
+                  {list.map((other, otherIndex) => (
+                    <button
+                      key={other.id}
+                      type="button"
+                      className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
+                      onClick={() => scrollToIndex(otherIndex)}
+                      aria-label={other.name}
+                    >
+                      <img src={other.previewUrl ?? ""} alt="" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="tpl-cta"
+                  disabled={busy}
+                  onClick={() => onPrimaryAction(template)}
+                >
+                  {busy ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : isVehicleSwapTemplate(template) ? (
+                    <>Remplacer le quad (Can-Am)</>
+                  ) : (
+                    <>
+                      <ImagePlus className="h-5 w-5" aria-hidden />
+                      Générer l’image
+                    </>
+                  )}
+                </button>
+
+                <p className="tpl-hint">
                   {isVehicleSwapTemplate(template)
-                    ? "Préparer le quad"
-                    : template.requiresUserPhoto
-                      ? "1 photo"
-                      : "photo optionnelle"}
-                </span>
-                <span className="tpl-badge">
-                  <Gem className="h-3 w-3" aria-hidden />
-                  {IMAGE_CREDIT_COST} crédits
-                </span>
-                {template.categoryName ? (
-                  <span className="tpl-badge">{template.categoryName}</span>
-                ) : null}
+                    ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
+                    : "Ta photo remplace la personne, le décor reste identique."}
+                </p>
               </div>
-
-              <div className="tpl-strip">
-                {list.map((other, otherIndex) => (
-                  <button
-                    key={other.id}
-                    type="button"
-                    className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
-                    onClick={() => scrollToIndex(otherIndex)}
-                    aria-label={other.name}
-                  >
-                    <img src={other.previewUrl ?? ""} alt="" loading="lazy" />
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                className="tpl-cta"
-                disabled={busy}
-                onClick={() => onPrimaryAction(template)}
-              >
-                {busy ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : isVehicleSwapTemplate(template) ? (
-                  <>Remplacer le quad (Can-Am)</>
-                ) : (
-                  <>
-                    <ImagePlus className="h-5 w-5" aria-hidden />
-                    Générer l’image
-                  </>
-                )}
-              </button>
-
-              <p className="tpl-hint">
-                {isVehicleSwapTemplate(template)
-                  ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
-                  : "Ta photo remplace la personne, le décor reste identique."}
-              </p>
             </div>
           </section>
         ))}
