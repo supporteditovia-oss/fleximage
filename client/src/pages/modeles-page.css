@@ -420,7 +420,7 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop {
   );
 }
 
-/* ── Scène luxe desktop (fond dynamique) ───────────────────── */
+/* ── Scène luxe desktop (fond dynamique animé) ─────────────── */
 
 .tpl-scene {
   display: none;
@@ -433,67 +433,204 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  background: linear-gradient(145deg, #2a2218 0%, #1a1520 45%, #12101a 100%);
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__ambient {
   position: absolute;
-  inset: -12%;
-  width: 124%;
-  height: 124%;
+  inset: -15%;
+  width: 130%;
+  height: 130%;
   object-fit: cover;
-  filter: blur(72px) saturate(1.35) brightness(0.42);
-  transform: scale(1.08);
-  animation: tpl-ambient-in 0.85s ease-out both;
+  filter: blur(56px) saturate(1.55) brightness(0.72);
+  transform: scale(1.12);
+  animation: tpl-ambient-drift 22s ease-in-out infinite alternate;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__ambient--echo {
+  opacity: 0.45;
+  filter: blur(90px) saturate(1.8) brightness(0.85) hue-rotate(-8deg);
+  animation:
+    tpl-ambient-drift 28s ease-in-out infinite alternate-reverse,
+    tpl-ambient-in 1s ease-out both;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__veil {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 90% 70% at 50% 38%, rgba(18, 14, 10, 0.25) 0%, rgba(12, 10, 16, 0.82) 62%, rgba(8, 7, 12, 0.94) 100%),
-    linear-gradient(165deg, rgba(26, 20, 14, 0.72) 0%, rgba(14, 12, 20, 0.88) 48%, rgba(10, 9, 14, 0.95) 100%);
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(201, 162, 39, 0.14) 0%, transparent 58%),
+    radial-gradient(ellipse 90% 70% at 50% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 45%),
+    linear-gradient(180deg, rgba(30, 24, 18, 0.35) 0%, rgba(14, 12, 20, 0.55) 55%, rgba(10, 9, 16, 0.72) 100%);
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__spotlight {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(680px, 95vw);
+  height: min(920px, 115vh);
+  transform: translate(-50%, -52%);
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 236, 180, 0.16) 0%,
+    rgba(201, 162, 39, 0.08) 35%,
+    transparent 68%
+  );
+  animation: tpl-spotlight-pulse 6s ease-in-out infinite alternate;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160vmax;
+  height: 160vmax;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(232, 197, 71, 0.07) 14deg,
+    transparent 28deg,
+    transparent 72deg,
+    rgba(201, 162, 39, 0.05) 88deg,
+    transparent 102deg,
+    transparent 156deg,
+    rgba(124, 77, 255, 0.04) 172deg,
+    transparent 188deg,
+    transparent 240deg,
+    rgba(232, 197, 71, 0.06) 256deg,
+    transparent 272deg,
+    transparent 360deg
+  );
+  animation: tpl-rays-spin 48s linear infinite;
+  opacity: 0.85;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__shimmer {
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgba(255, 248, 220, 0.07) 50%,
+    transparent 58%
+  );
+  animation: tpl-shimmer-sweep 7s ease-in-out infinite;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__glow {
   position: absolute;
   border-radius: 999px;
-  filter: blur(80px);
-  opacity: 0.55;
-  animation: tpl-glow-float 12s ease-in-out infinite alternate;
+  filter: blur(70px);
+  animation: tpl-glow-float 10s ease-in-out infinite alternate;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__glow--gold {
-  width: min(42vw, 520px);
-  height: min(42vw, 520px);
-  top: 8%;
-  left: 12%;
-  background: radial-gradient(circle, rgba(201, 162, 39, 0.38) 0%, transparent 70%);
+  width: min(48vw, 580px);
+  height: min(48vw, 580px);
+  top: 6%;
+  left: 8%;
+  background: radial-gradient(circle, rgba(232, 197, 71, 0.45) 0%, transparent 68%);
+  opacity: 0.75;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__glow--violet {
-  width: min(36vw, 440px);
-  height: min(36vw, 440px);
-  right: 10%;
-  bottom: 12%;
-  background: radial-gradient(circle, rgba(124, 77, 255, 0.22) 0%, transparent 72%);
-  animation-delay: -4s;
+  width: min(40vw, 480px);
+  height: min(40vw, 480px);
+  right: 6%;
+  bottom: 10%;
+  background: radial-gradient(circle, rgba(124, 77, 255, 0.28) 0%, transparent 70%);
+  opacity: 0.65;
+  animation-delay: -3s;
 }
 
-html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__grain {
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__glow--warm {
+  width: min(55vw, 640px);
+  height: min(30vw, 360px);
+  bottom: -5%;
+  left: 50%;
+  margin-left: min(-27.5vw, -320px);
+  background: radial-gradient(circle, rgba(255, 180, 80, 0.2) 0%, transparent 72%);
+  opacity: 0.55;
+  animation: tpl-glow-warm 10s ease-in-out infinite alternate;
+  animation-delay: -6s;
+  filter: blur(90px);
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__particles {
   position: absolute;
   inset: 0;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  overflow: hidden;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__particle {
+  --left: calc((var(--p) * 17 + 7) * 1%);
+  --size: calc(2px + (var(--p) % 5) * 1.2px);
+  --duration: calc(9s + (var(--p) % 7) * 1.4s);
+  --delay: calc(var(--p) * -0.55s);
+
+  position: absolute;
+  left: var(--left);
+  bottom: -5%;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff8dc 0%, #e8c547 55%, transparent 100%);
+  box-shadow: 0 0 10px rgba(232, 197, 71, 0.65);
+  opacity: 0;
+  animation: tpl-particle-rise var(--duration) var(--delay) linear infinite;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__lines {
+  position: absolute;
+  inset: 0;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__line {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(201, 162, 39, 0.45) 20%,
+    rgba(232, 197, 71, 0.65) 50%,
+    rgba(201, 162, 39, 0.45) 80%,
+    transparent 100%
+  );
+  opacity: 0.5;
+  animation: tpl-line-shimmer 4s ease-in-out infinite alternate;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__line--left {
+  left: calc(50% - min(520px, calc((100svh - 18rem) * 9 / 16), 92vw) / 2 - 48px);
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__line--right {
+  right: calc(50% - min(520px, calc((100svh - 18rem) * 9 / 16), 92vw) / 2 - 48px);
+  animation-delay: -2s;
 }
 
 @keyframes tpl-ambient-in {
   from {
     opacity: 0;
-    transform: scale(1.14);
+    transform: scale(1.2);
   }
   to {
     opacity: 1;
-    transform: scale(1.08);
+    transform: scale(1.12);
+  }
+}
+
+@keyframes tpl-ambient-drift {
+  from {
+    transform: scale(1.12) translate(0, 0);
+  }
+  to {
+    transform: scale(1.22) translate(-2.5%, -1.5%);
   }
 }
 
@@ -502,7 +639,99 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__grain {
     transform: translate(0, 0) scale(1);
   }
   to {
-    transform: translate(18px, -14px) scale(1.06);
+    transform: translate(24px, -18px) scale(1.1);
+  }
+}
+
+@keyframes tpl-glow-warm {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(16px, -12px) scale(1.08);
+  }
+}
+
+@keyframes tpl-rays-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes tpl-shimmer-sweep {
+  0%,
+  100% {
+    transform: translateX(-35%) rotate(8deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(35%) rotate(8deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes tpl-spotlight-pulse {
+  from {
+    opacity: 0.65;
+    transform: translate(-50%, -52%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -52%) scale(1.04);
+  }
+}
+
+@keyframes tpl-particle-rise {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.4);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-108vh) translateX(calc((var(--p) - 11) * 8px)) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes tpl-line-shimmer {
+  from {
+    opacity: 0.25;
+    filter: brightness(0.9);
+  }
+  to {
+    opacity: 0.75;
+    filter: brightness(1.25);
+  }
+}
+
+@keyframes tpl-card-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__ambient,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__ambient--echo,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__rays,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__shimmer,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__glow,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__particle,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__spotlight,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-scene__line,
+  html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__frame {
+    animation: none !important;
   }
 }
 
@@ -528,13 +757,14 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__frame {
   flex-direction: column;
   border-radius: 1.35rem;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(24, 20, 18, 0.92) 0%, rgba(14, 12, 18, 0.96) 100%);
-  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: linear-gradient(180deg, rgba(32, 26, 22, 0.88) 0%, rgba(18, 14, 22, 0.94) 100%);
+  border: 1px solid rgba(201, 162, 39, 0.32);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 0 0 1px rgba(201, 162, 39, 0.08),
-    0 0 80px rgba(201, 162, 39, 0.12),
-    0 28px 90px rgba(0, 0, 0, 0.45);
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 100px rgba(201, 162, 39, 0.18),
+    0 0 160px rgba(232, 197, 71, 0.08),
+    0 28px 90px rgba(0, 0, 0, 0.35);
+  animation: tpl-card-float 8s ease-in-out infinite alternate;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__frame-glow {

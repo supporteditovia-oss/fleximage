@@ -9,6 +9,7 @@ import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { useToast } from "@/hooks/use-toast";
+import { ModelesScene } from "@/components/modeles/ModelesScene";
 import "@/pages/modeles-page.css";
 
 const IMAGE_CREDIT_COST = 10;
@@ -209,18 +210,7 @@ export default function Modeles() {
 
       {/* Fond luxe desktop : photo active floutée + lueurs dorées. */}
       {active?.previewUrl ? (
-        <div className="tpl-scene" aria-hidden>
-          <img
-            key={active.id}
-            className="tpl-scene__ambient"
-            src={active.previewUrl}
-            alt=""
-          />
-          <div className="tpl-scene__veil" />
-          <div className="tpl-scene__glow tpl-scene__glow--gold" />
-          <div className="tpl-scene__glow tpl-scene__glow--violet" />
-          <div className="tpl-scene__grain" />
-        </div>
+        <ModelesScene key={active.id} previewUrl={active.previewUrl} />
       ) : null}
 
       <div className="tpl-feed" ref={feedRef}>
