@@ -58,5 +58,16 @@
     "prompt": "Place la personne de la première image à la place de la personne de la seconde image en conservant précisément son visage et son identité. Garde la pose debout, le costume noir, le toit moderne, la skyline nocturne de Dubaï, l'éclairage luxe et le cadrage vertical de la seconde image. Photographie éditoriale photoréaliste, proportions naturelles, sans logo et sans texte.",
     "category": "luxury-lifestyle",
     "categoryName": "Luxe"
+  },
+  {
+    "id": "builtin-quad-dubai-canam",
+    "slug": "quad-dubai-canam",
+    "name": "Can-Am Outlander Dubaï",
+    "description": "Streetwear de nuit sur quad Can-Am Outlander 1000R XT-P à Dubaï.",
+    "imagePath": "/models/modele-quad-dubai.webp",
+    "vehicleReferencePath": "/models/ref-canam-outlander-1000r.webp",
+    "prompt": "Tu reçois trois images dans cet ordre : (1) la personne à conserver, (2) le quad Can-Am Outlander 1000R XT-P exact à reproduire, (3) la scène de référence. Remplace uniquement la personne de la scène par la personne de la première image en conservant fidèlement son visage, son identité, sa carnation et sa coiffure. Remplace le quad/ATV de la scène par le Can-Am Outlander 1000R XT-P de la deuxième image : carrosserie noire mate, accents jaune néon sur le pare-buffle avant, jantes et ressorts, inscription OUTLANDER, modèle deux places utilitaire — respecte impérativement la TAILLE RÉELLE imposante de ce quad (véhicule large et haut, beaucoup plus grand qu'un petit quad sportif, proportions adulte crédibles, roues larges, assise haute, envergure réaliste). Garde la nuit à Dubaï, Burj Khalifa, palmiers, lampadaires, pose assise sur le quad, ambiance et cadrage vertical 9:16 de la scène. Photographie ultra-réaliste, perspective et ombres cohérentes, véhicule bien ancré au sol, sans texte ni watermark.",
+    "category": "supercars",
+    "categoryName": "Quads"
   }
 ]

@@ -10,6 +10,7 @@ type BuiltinCatalogEntry = {
   prompt: string;
   category: string;
   categoryName: string;
+  vehicleReferencePath?: string;
 };
 
 const entries = catalog as BuiltinCatalogEntry[];
@@ -27,7 +28,7 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => ({
   generationType: "image",
   category: item.category,
   categoryName: item.categoryName,
-  referenceImageCount: 1,
+  referenceImageCount: item.vehicleReferencePath ? 2 : 1,
   requiresUserPhoto: true,
   generationPrompt: item.prompt,
   isBuiltin: true,
