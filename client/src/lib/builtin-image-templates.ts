@@ -44,7 +44,7 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
     generationType: "image",
     category: item.category,
     categoryName: item.categoryName,
-    referenceImageCount: item.vehicleReferencePath ? 2 : 1,
+    referenceImageCount: item.readyImagePath ? 1 : item.vehicleReferencePath ? 2 : 1,
     requiresUserPhoto: mode === "face-swap",
     generationMode: mode,
     generationPrompt:
