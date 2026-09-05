@@ -26,6 +26,16 @@ function getBuiltinTemplate(templateId) {
   return catalog.find((item) => item.id === templateId) || null;
 }
 
+function resolveGenerationMode(template) {
+  if (template.readyImagePath) return "face-swap";
+  if (template.generationMode === "vehicle-swap") return "vehicle-swap";
+  if (template.generationMode === "face-swap") return "face-swap";
+  if (template.vehicleReferencePath && template.requiresUserPhoto === false) {
+    return "vehicle-swap";
+  }
+  return "face-swap";
+}
+
 /** Modèles visibles côté API publique `/api/templates`. */
 function listBuiltinTemplatesForApi() {
   return catalog.map((item) => ({
@@ -33,7 +43,9 @@ function listBuiltinTemplatesForApi() {
     slug: item.slug,
     name: item.name,
     description: item.description,
-    previewUrl: resolveReferenceUrl(item.imagePath),
+    previewUrl: resolveReferenceUrl(
+      item.readyImagePath || item.imagePath,
+    ),
     icon: null,
     keywords: [],
     isFeatured: true,
@@ -41,15 +53,20 @@ function listBuiltinTemplatesForApi() {
     category: item.category,
     categoryName: item.categoryName,
     referenceImageCount: item.vehicleReferencePath ? 2 : 1,
-    requiresUserPhoto: true,
+    requiresUserPhoto:
+      item.requiresUserPhoto !== false &&
+      resolveGenerationMode(item) !== "vehicle-swap",
+    generationMode: resolveGenerationMode(item),
     isBuiltin: true,
   }));
 }
 
 /**
  * Résout une génération depuis un modèle intégré au site.
- * Ces modèles ne passent pas par Supabase : ils fonctionnent même si l'admin
- * n'a encore rien configuré.
+ *
+ * Deux modes :
+ * - vehicle-swap : remplace le quad dans la scène (sans photo utilisateur)
+ * - face-swap : remplace la personne (photo utilisateur requise)
  */
 function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
   const template = getBuiltinTemplate(templateId);
@@ -61,6 +78,40 @@ function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
     };
   }
 
+  const mode = resolveGenerationMode(template);
+
+  if (mode === "vehicle-swap") {
+    if (!template.vehicleReferencePath) {
+      return {
+        ok: false,
+        code: "TEMPLATE_NOT_READY",
+        message: "Ce modèle n'est pas encore configuré.",
+      };
+    }
+
+    const prompt = String(
+      template.vehicleSwapPrompt || template.prompt || "",
+    ).trim();
+    if (!prompt) {
+      return {
+        ok: false,
+        code: "TEMPLATE_NOT_READY",
+        message: "Ce modèle n'est pas encore configuré.",
+      };
+    }
+
+    return {
+      ok: true,
+      prompt,
+      referenceUrl: resolveReferenceUrl(template.imagePath),
+      extraReferenceUrls: [resolveReferenceUrl(template.vehicleReferencePath)],
+      referenceId: template.id,
+      templateName: template.name,
+      isBuiltin: true,
+      generationMode: "vehicle-swap",
+    };
+  }
+
   if (!hasUserPhoto) {
     return {
       ok: false,
@@ -69,7 +120,9 @@ function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
     };
   }
 
-  const prompt = String(template.prompt || "").trim();
+  const prompt = String(
+    template.faceSwapPrompt || template.prompt || "",
+  ).trim();
   if (!prompt) {
     return {
       ok: false,
@@ -78,16 +131,17 @@ function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
     };
   }
 
+  const scenePath = template.readyImagePath || template.imagePath;
+
   return {
     ok: true,
     prompt,
-    referenceUrl: resolveReferenceUrl(template.imagePath),
-    extraReferenceUrls: (template.extraReferencePaths || [])
-      .concat(template.vehicleReferencePath ? [template.vehicleReferencePath] : [])
-      .map((path) => resolveReferenceUrl(path)),
+    referenceUrl: resolveReferenceUrl(scenePath),
+    extraReferenceUrls: [],
     referenceId: template.id,
     templateName: template.name,
     isBuiltin: true,
+    generationMode: "face-swap",
   };
 }
 
@@ -97,4 +151,5 @@ module.exports = {
   listBuiltinTemplatesForApi,
   resolveBuiltinTemplateGeneration,
   resolveReferenceUrl,
+  resolveGenerationMode,
 };

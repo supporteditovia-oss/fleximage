@@ -7,7 +7,7 @@ import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { getBuiltinGenerationPrompt } from "@/lib/builtin-image-templates";
+import { getBuiltinGenerationPrompt, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { useToast } from "@/hooks/use-toast";
 import "@/pages/modeles-page.css";
 
@@ -104,19 +104,16 @@ export default function Modeles() {
     fileRef.current?.click();
   };
 
-  const onPhotoPicked = async (file: File | null) => {
-    const template = pendingTemplate;
-    setPendingTemplate(null);
-    if (!file || !template) return;
-
+  const runGeneration = async (
+    template: FeedTemplate,
+    userImages: string[] = [],
+  ) => {
     setBusy(true);
     try {
-      const compressed = await compressImageForGeneration(file);
-      const base64 = await fileToBase64(compressed);
       const result = await generateDirect.mutateAsync({
         prompt: getBuiltinGenerationPrompt(template),
         template_id: template.id,
-        images: [base64],
+        images: userImages,
         use_face_asset: false,
       });
       setTaskId(result.taskId);
@@ -130,6 +127,24 @@ export default function Modeles() {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
     }
+  };
+
+  const onPrimaryAction = (template: FeedTemplate) => {
+    if (isVehicleSwapTemplate(template)) {
+      void runGeneration(template, []);
+      return;
+    }
+    askForPhoto(template);
+  };
+
+  const onPhotoPicked = async (file: File | null) => {
+    const template = pendingTemplate;
+    setPendingTemplate(null);
+    if (!file || !template) return;
+
+    const compressed = await compressImageForGeneration(file);
+    const base64 = await fileToBase64(compressed);
+    await runGeneration(template, [base64]);
   };
 
   if (taskId) {
@@ -202,7 +217,11 @@ export default function Modeles() {
 
               <div className="tpl-badges">
                 <span className="tpl-badge">
-                  {template.requiresUserPhoto ? "1 photo" : "photo optionnelle"}
+                  {isVehicleSwapTemplate(template)
+                    ? "Préparer le quad"
+                    : template.requiresUserPhoto
+                      ? "1 photo"
+                      : "photo optionnelle"}
                 </span>
                 <span className="tpl-badge">
                   <Gem className="h-3 w-3" aria-hidden />
@@ -231,10 +250,12 @@ export default function Modeles() {
                 type="button"
                 className="tpl-cta"
                 disabled={busy}
-                onClick={() => askForPhoto(template)}
+                onClick={() => onPrimaryAction(template)}
               >
                 {busy ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
+                ) : isVehicleSwapTemplate(template) ? (
+                  <>Remplacer le quad (Can-Am)</>
                 ) : (
                   <>
                     <ImagePlus className="h-5 w-5" aria-hidden />
@@ -244,7 +265,9 @@ export default function Modeles() {
               </button>
 
               <p className="tpl-hint">
-                Ta photo remplace la personne, le décor reste identique.
+                {isVehicleSwapTemplate(template)
+                  ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
+                  : "Ta photo remplace la personne, le décor reste identique."}
               </p>
             </div>
           </section>

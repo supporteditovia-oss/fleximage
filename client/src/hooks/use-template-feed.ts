@@ -19,6 +19,8 @@ export type FeedTemplate = {
   requiresUserPhoto: boolean;
   /** Prompt serveur pour les modèles intégrés au site. */
   generationPrompt?: string;
+  /** vehicle-swap = remplace le quad ; face-swap = remplace la personne. */
+  generationMode?: "vehicle-swap" | "face-swap";
   isBuiltin?: boolean;
 };
 
