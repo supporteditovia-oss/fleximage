@@ -25,6 +25,10 @@ const {
 } = require("../content-policy");
 const { resolveRequestLocale, copy } = require("../locale-copy");
 const { resolveTemplateGeneration } = require("../template-refs");
+const {
+  isBuiltinTemplateId,
+  resolveBuiltinTemplateGeneration,
+} = require("../builtin-image-templates");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -137,9 +141,13 @@ module.exports = async function handler(req, res) {
     let imageUrls;
 
     if (templateId) {
-      const resolved = await resolveTemplateGeneration(supabase, templateId, {
-        hasUserPhoto: uploadedUrls.length > 0,
-      });
+      const resolved = isBuiltinTemplateId(templateId)
+        ? resolveBuiltinTemplateGeneration(templateId, {
+            hasUserPhoto: uploadedUrls.length > 0,
+          })
+        : await resolveTemplateGeneration(supabase, templateId, {
+            hasUserPhoto: uploadedUrls.length > 0,
+          });
 
       if (!resolved.ok) {
         res.status(422).json({ code: resolved.code, message: resolved.message });
@@ -195,11 +203,14 @@ module.exports = async function handler(req, res) {
 
     // 3) Reserve generation row + debit credits BEFORE calling the AI.
     const pendingTaskId = `pending_${randomUUID()}`;
+    const generationTemplateId = isBuiltinTemplateId(templateId)
+      ? null
+      : templateId;
     const { data: larp, error: insertErr } = await supabase
       .from("generations")
       .insert({
         user_id: userId,
-        template_id: templateId,
+        template_id: generationTemplateId,
         generation_type: "image",
         prompt: prompt,
         final_prompt: finalPrompt,
@@ -213,7 +224,11 @@ module.exports = async function handler(req, res) {
           oneshot_model_variant: oneshotModelVariant,
           estimated_seconds: estimatedSeconds,
           ...(templateReferenceId
-            ? { selected_template_reference_image_id: templateReferenceId }
+            ? {
+                ...(isBuiltinTemplateId(templateId)
+                  ? { builtin_template_id: templateReferenceId }
+                  : { selected_template_reference_image_id: templateReferenceId }),
+              }
             : {}),
         },
       })

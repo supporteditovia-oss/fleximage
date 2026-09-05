@@ -1,0 +1,62 @@
+[
+  {
+    "id": "builtin-parking-streetwear",
+    "slug": "parking-streetwear",
+    "name": "Streetwear parking",
+    "description": "Look sombre devant une voiture de luxe.",
+    "imagePath": "/models/modele-parking-streetwear.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement le visage, la coiffure, la carnation et l'identité de la première personne. Garde exactement la pose avec les deux doigts devant les yeux, la tenue streetwear noire, le parking souterrain, la voiture noire, le cadrage vertical et l'éclairage cinématographique de la seconde image. Résultat photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "builtin-suv-paris",
+    "slug": "suv-paris",
+    "name": "SUV à Paris",
+    "description": "Portrait luxe de nuit dans une rue parisienne.",
+    "imagePath": "/models/modele-suv-paris.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image en conservant parfaitement son identité et son visage. Garde la pose, le costume noir, le SUV noir, la rue parisienne nocturne, la lumière dorée et le cadrage vertical de la seconde image. Photographie éditoriale ultra-réaliste, peau naturelle, proportions cohérentes, aucune marque et aucun texte.",
+    "category": "luxury-lifestyle",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "builtin-jet-prive",
+    "slug": "jet-prive",
+    "name": "Jet privé",
+    "description": "Ambiance premium au coucher du soleil.",
+    "imagePath": "/models/modele-jet-prive.webp",
+    "prompt": "Place la personne de la première image à la place de la personne présente dans la seconde image. Préserve exactement son identité, ses traits du visage, sa coiffure et sa carnation. Conserve le siège, la pose assise, la tenue crème, l'intérieur du jet privé, les hublots, la lumière chaude et la composition verticale de la seconde image. Rendu photo haut de gamme réaliste, sans texte ni logo.",
+    "category": "travel-tourism",
+    "categoryName": "Voyage"
+  },
+  {
+    "id": "builtin-yacht-monaco",
+    "slug": "yacht-monaco",
+    "name": "Yacht à Monaco",
+    "description": "Luxe au bord de la Méditerranée.",
+    "imagePath": "/models/modele-yacht-monaco.webp",
+    "prompt": "Remplace la personne de la seconde image par la personne de la première image tout en préservant fidèlement son visage et son identité. Conserve la pose, la chemise blanche élégante, le yacht moderne, la mer, la skyline de Monaco, la lumière de fin de journée et le cadrage vertical. Photographie de luxe photoréaliste, anatomie naturelle, intégration lumineuse parfaite, sans texte.",
+    "category": "travel-tourism",
+    "categoryName": "Voyage"
+  },
+  {
+    "id": "builtin-studio-musique",
+    "slug": "studio-musique",
+    "name": "Studio musique",
+    "description": "Portrait d’artiste dans un studio premium.",
+    "imagePath": "/models/modele-studio-musique.webp",
+    "prompt": "Remplace uniquement l'artiste de la seconde image par la personne de la première image. Préserve son identité, ses traits, sa coiffure et sa carnation. Garde la pose, la veste noire, le casque autour du cou, le studio musical sombre, les panneaux acoustiques, les lumières rouges et le cadrage vertical de la seconde image. Rendu cinématographique ultra-réaliste, sans marque ni texte.",
+    "category": "business-hustle",
+    "categoryName": "Musique"
+  },
+  {
+    "id": "builtin-rooftop-dubai",
+    "slug": "rooftop-dubai",
+    "name": "Rooftop Dubaï",
+    "description": "Silhouette élégante devant la skyline.",
+    "imagePath": "/models/modele-rooftop-dubai.webp",
+    "prompt": "Place la personne de la première image à la place de la personne de la seconde image en conservant précisément son visage et son identité. Garde la pose debout, le costume noir, le toit moderne, la skyline nocturne de Dubaï, l'éclairage luxe et le cadrage vertical de la seconde image. Photographie éditoriale photoréaliste, proportions naturelles, sans logo et sans texte.",
+    "category": "luxury-lifestyle",
+    "categoryName": "Luxe"
+  }
+]

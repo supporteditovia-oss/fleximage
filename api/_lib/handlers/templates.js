@@ -1,4 +1,5 @@
-const { requireUser, sendError } = require("../user-auth");
+const { requireUser } = require("../user-auth");
+const { listBuiltinTemplatesForApi } = require("../builtin-image-templates");
 
 /**
  * Liste des modèles proposés à l'utilisateur.
@@ -34,7 +35,7 @@ module.exports = async function templatesHandler(req, res) {
 
     const ids = (templates || []).map((t) => t.id);
     if (ids.length === 0) {
-      res.status(200).json({ templates: [] });
+      res.status(200).json({ templates: listBuiltinTemplatesForApi() });
       return;
     }
 
@@ -50,7 +51,11 @@ module.exports = async function templatesHandler(req, res) {
           .eq("is_active", true),
       ]);
 
-    if (refsError) throw refsError;
+    if (refsError) {
+      console.warn("templates refs unavailable, using built-in catalog only", refsError);
+      res.status(200).json({ templates: listBuiltinTemplatesForApi() });
+      return;
+    }
 
     const counts = new Map();
     const faceOptional = new Map();
@@ -88,9 +93,9 @@ module.exports = async function templatesHandler(req, res) {
         };
       });
 
-    res.status(200).json({ templates: payload });
+    res.status(200).json({ templates: [...listBuiltinTemplatesForApi(), ...payload] });
   } catch (error) {
     console.error("templates list error", error);
-    sendError(res, error);
+    res.status(200).json({ templates: listBuiltinTemplatesForApi() });
   }
 };
