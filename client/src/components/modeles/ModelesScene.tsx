@@ -1,5 +1,5 @@
 /** Fond luxe fixe pour /modeles desktop — ne change jamais entre les modèles. */
-export function ModelesScene() {
+export function ModelesScene({ pulseKey = 0 }: { pulseKey?: number }) {
   return (
     <div className="tpl-scene" aria-hidden>
       <div className="tpl-scene__base" />
@@ -8,6 +8,9 @@ export function ModelesScene() {
       <div className="tpl-scene__shimmer" />
       <div className="tpl-scene__glow tpl-scene__glow--gold" />
       <div className="tpl-scene__glow tpl-scene__glow--champagne" />
+      {pulseKey > 0 ? (
+        <div key={pulseKey} className="tpl-scene__burst" />
+      ) : null}
       <div className="tpl-scene__lines">
         <span className="tpl-scene__line tpl-scene__line--left" />
         <span className="tpl-scene__line tpl-scene__line--right" />

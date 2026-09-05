@@ -13,7 +13,9 @@ import { ModelesScene } from "@/components/modeles/ModelesScene";
 import "@/pages/modeles-page.css";
 
 const IMAGE_CREDIT_COST = 10;
-const DESKTOP_WHEEL_COOLDOWN_MS = 420;
+const DESKTOP_WHEEL_COOLDOWN_MS = 520;
+
+type SlideDirection = "next" | "prev" | "none";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,6 +31,7 @@ function TemplateSlideContent({
   activeIndex,
   list,
   busy,
+  enterDirection = "none",
   onPrimaryAction,
   onScrollToIndex,
 }: {
@@ -36,11 +39,19 @@ function TemplateSlideContent({
   activeIndex: number;
   list: FeedTemplate[];
   busy: boolean;
+  enterDirection?: SlideDirection;
   onPrimaryAction: (template: FeedTemplate) => void;
   onScrollToIndex: (index: number) => void;
 }) {
+  const luxeClass =
+    enterDirection === "none"
+      ? ""
+      : ` tpl-slide__frame--${enterDirection}`;
+
   return (
-    <div className="tpl-slide__frame">
+    <div className={`tpl-slide__frame${luxeClass}`}>
+      <div className="tpl-slide__lux-flash" aria-hidden />
+      <div className="tpl-slide__lux-ring" aria-hidden />
       <div className="tpl-slide__frame-glow" aria-hidden />
       <div className="tpl-slide__photo">
         <img
@@ -52,10 +63,10 @@ function TemplateSlideContent({
         <div className="tpl-slide__scrim" aria-hidden />
       </div>
 
-      <div className="tpl-bottom">
-        <h2 className="tpl-slide__title">{template.name}</h2>
+      <div className="tpl-bottom tpl-bottom--lux">
+        <h2 className="tpl-slide__title tpl-slide__title--lux">{template.name}</h2>
 
-        <div className="tpl-badges">
+        <div className="tpl-badges tpl-badges--lux">
           <span className="tpl-badge">
             {isVehicleSwapTemplate(template)
               ? "Préparer le quad"
@@ -72,7 +83,7 @@ function TemplateSlideContent({
           ) : null}
         </div>
 
-        <div className="tpl-strip">
+        <div className="tpl-strip tpl-strip--lux">
           {list.map((other, otherIndex) => (
             <button
               key={other.id}
@@ -88,7 +99,7 @@ function TemplateSlideContent({
 
         <button
           type="button"
-          className="tpl-cta"
+          className="tpl-cta tpl-cta--lux"
           disabled={busy}
           onClick={() => onPrimaryAction(template)}
         >
@@ -127,7 +138,10 @@ export default function Modeles() {
   const fileRef = useRef<HTMLInputElement>(null);
   const wheelLockRef = useRef(false);
   const wheelTimerRef = useRef<number | null>(null);
+  const prevIndexRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [enterDirection, setEnterDirection] = useState<SlideDirection>("none");
+  const [scenePulse, setScenePulse] = useState(0);
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
@@ -172,6 +186,27 @@ export default function Modeles() {
       img.src = template.previewUrl;
     });
   }, [list]);
+
+  const goToIndex = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= list.length) return;
+      setActiveIndex((prev) => {
+        if (index === prev) return prev;
+        return index;
+      });
+    },
+    [list.length],
+  );
+
+  // Direction + pulse luxe à chaque changement de modèle (desktop).
+  useEffect(() => {
+    if (!isDesktopLayout) return;
+    const prev = prevIndexRef.current;
+    if (activeIndex === prev) return;
+    setEnterDirection(activeIndex > prev ? "next" : "prev");
+    setScenePulse((n) => n + 1);
+    prevIndexRef.current = activeIndex;
+  }, [activeIndex, isDesktopLayout]);
 
   // Mobile : scroll snap + intersection observer.
   useEffect(() => {
@@ -351,7 +386,7 @@ export default function Modeles() {
         </span>
       </div>
 
-      {isDesktopLayout ? <ModelesScene /> : null}
+      {isDesktopLayout ? <ModelesScene pulseKey={scenePulse} /> : null}
 
       <div
         className={`tpl-feed${isDesktopLayout ? " tpl-feed--desktop" : ""}`}
@@ -365,6 +400,7 @@ export default function Modeles() {
               activeIndex={activeIndex}
               list={list}
               busy={busy}
+              enterDirection={enterDirection}
               onPrimaryAction={onPrimaryAction}
               onScrollToIndex={scrollToIndex}
             />
