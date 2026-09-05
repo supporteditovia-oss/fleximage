@@ -21,12 +21,17 @@
   overflow: hidden;
 }
 
-/* Cadre plein écran sur mobile, colonne 9:16 centrée sur desktop. */
 .tpl-slide__frame {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+/* Zone photo plein écran sur mobile (overlay UI par-dessus). */
+.tpl-slide__photo {
+  position: absolute;
+  inset: 0;
 }
 
 .tpl-slide__media {
@@ -42,6 +47,7 @@
 .tpl-slide__scrim {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background: linear-gradient(
     to bottom,
     rgba(8, 7, 10, 0.55) 0%,
@@ -106,18 +112,26 @@
 }
 
 html.luxeflexia-modeles-page .tpl-bottom {
-  /* Marge de sécurité si la barre du bas réapparaît brièvement (clavier, etc.) */
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 }
 
 html.luxeflexia-modeles-page .tpl-feed {
-  /* Évite le rebond iOS qui « révèle » le bouton sous la barre du bas */
   overscroll-behavior-y: none;
 }
 
 html.luxeflexia-modeles-page .tpl-topbar {
   position: fixed;
   z-index: 5;
+}
+
+/* Retire le padding AppLayout qui décale le plein écran. */
+html.luxeflexia-modeles-page .luxeflexia-app-scroll {
+  padding: 0 !important;
+}
+
+html.luxeflexia-modeles-page .luxeflexia-app-scroll > div {
+  max-width: none !important;
+  margin: 0 !important;
 }
 
 .tpl-slide__title {
@@ -149,7 +163,6 @@ html.luxeflexia-modeles-page .tpl-topbar {
   color: #fff;
 }
 
-/* Bande d'aperçus des autres modèles. */
 .tpl-strip {
   display: flex;
   gap: 0.55rem;
@@ -397,24 +410,71 @@ html.luxeflexia-modeles-page .tpl-topbar {
   object-fit: cover;
 }
 
+/* ── Desktop : carte centrée, photo entière, UI en dessous ─── */
+
 @media (min-width: 768px) {
   html.luxeflexia-modeles-page {
-    --tpl-frame-width: min(420px, calc(100svh * 9 / 16), 100vw);
+    /* Largeur photo = hauteur dispo moins panneau actions, ratio 9:16. */
+    --tpl-frame-width: min(
+      520px,
+      calc((100svh - 18rem) * 9 / 16),
+      92vw
+    );
+  }
+
+  .tpl-slide {
+    padding: calc(3.25rem + env(safe-area-inset-top)) 1rem 1rem;
   }
 
   .tpl-slide__frame {
     width: var(--tpl-frame-width);
-    height: 100svh;
-    border-radius: 1.15rem;
+    height: auto;
+    max-height: calc(100svh - 4.5rem);
+    display: flex;
+    flex-direction: column;
+    border-radius: 1.25rem;
+    overflow: hidden;
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.07),
-      0 28px 70px rgba(0, 0, 0, 0.55);
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 32px 80px rgba(0, 0, 0, 0.6);
+  }
+
+  .tpl-slide__photo {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    flex: 0 0 auto;
+    background: #050508;
   }
 
   .tpl-slide__media {
-    /* Dans un cadre 9:16, l’image portrait s’affiche en entier. */
-    object-fit: cover;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     object-position: center center;
+  }
+
+  .tpl-slide__scrim {
+    display: none;
+  }
+
+  .tpl-bottom {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    flex: 0 0 auto;
+    background: linear-gradient(180deg, #14121a 0%, #0a090e 100%);
+    padding: 0.95rem 1rem 1.1rem;
+    gap: 0.55rem;
+  }
+
+  .tpl-slide__title {
+    font-size: 1.35rem;
+    text-shadow: none;
   }
 
   .tpl-topbar {
@@ -422,6 +482,8 @@ html.luxeflexia-modeles-page .tpl-topbar {
     right: auto;
     transform: translateX(-50%);
     width: var(--tpl-frame-width);
+    max-width: calc(100vw - 2rem);
+    padding-top: max(0.75rem, env(safe-area-inset-top));
   }
 
   .tpl-strip-compact {

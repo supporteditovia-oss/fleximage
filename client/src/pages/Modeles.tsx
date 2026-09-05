@@ -205,13 +205,15 @@ export default function Modeles() {
             }}
           >
             <div className="tpl-slide__frame">
-              <img
-                className="tpl-slide__media"
-                src={template.previewUrl ?? ""}
-                alt={template.name}
-                loading={index <= 1 ? "eager" : "lazy"}
-              />
-              <div className="tpl-slide__scrim" />
+              <div className="tpl-slide__photo">
+                <img
+                  className="tpl-slide__media"
+                  src={template.previewUrl ?? ""}
+                  alt={template.name}
+                  loading={index <= 1 ? "eager" : "lazy"}
+                />
+                <div className="tpl-slide__scrim" aria-hidden />
+              </div>
 
               <div className="tpl-bottom">
                 <h2 className="tpl-slide__title">{template.name}</h2>
