@@ -65,7 +65,7 @@
     "name": "Lamborghini Urus",
     "description": "Streetwear devant un Urus à la station-service.",
     "imagePath": "/models/modele-lamborghini-urus.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la casquette rouge, la veste bomber noire, le pantalon camouflage, les chaussons, le téléphone en main, la station-service, les jantes noires, les étriers de frein jaunes, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la veste bomber noire, le pantalon camouflage, les chaussettes blanches, les chaussons vert foncé, le téléphone en main, la station-service sous la marquise, les jantes noires, les étriers de frein jaunes Lamborghini, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
     "category": "supercars",
     "categoryName": "Supercars"
   },
@@ -76,6 +76,16 @@
     "description": "Détente sur le pont d'un yacht en mer.",
     "imagePath": "/models/modele-yacht-deck.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le banc du pont du yacht, la tenue noire, les pieds nus, le pont en teck, les garde-corps inox, la mer turquoise, le ciel bleu, les îles au loin, la lumière solaire et le cadrage vertical de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration lumineuse parfaite, sans texte ni logo.",
+    "category": "travel-tourism",
+    "categoryName": "Voyage"
+  },
+  {
+    "id": "builtin-yacht-lamborghini",
+    "slug": "yacht-lamborghini",
+    "name": "Yacht Lamborghini",
+    "description": "Short LV sur yacht Lamborghini, mer turquoise.",
+    "imagePath": "/models/modele-yacht-lamborghini.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure et sa carnation. Garde exactement la pose assise torse nu sur le banc blanc du yacht Lamborghini, le short de bain Louis Vuitton marron monogramme, les lunettes de soleil, les sièges blancs capitonnés avec logo Lamborghini, la fibre de carbone, le pont en teck, la mer turquoise et le ciel bleu, le cadrage vertical et la lumière solaire de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
     "category": "travel-tourism",
     "categoryName": "Voyage"
   },
