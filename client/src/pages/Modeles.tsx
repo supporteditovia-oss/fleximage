@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -63,19 +64,25 @@ function TemplateSlideContent({
           decoding="async"
         />
         <div className="tpl-slide__scrim" aria-hidden />
-        <button
-          type="button"
-          className="tpl-preview-btn"
-          onClick={() => onOpenPreview(template)}
-          aria-label={`Aperçu — ${template.name}`}
-        >
-          <Expand className="h-4 w-4" aria-hidden />
-          <span>Aperçu</span>
-        </button>
       </div>
 
       <div className="tpl-bottom tpl-bottom--lux">
         <h2 className="tpl-slide__title tpl-slide__title--lux">{template.name}</h2>
+
+        <div className="tpl-preview-row">
+          <button
+            type="button"
+            className="tpl-preview-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenPreview(template);
+            }}
+            aria-label={`Aperçu — ${template.name}`}
+          >
+            <Expand className="h-4 w-4" aria-hidden />
+            <span>Aperçu</span>
+          </button>
+        </div>
 
         <div className="tpl-badges tpl-badges--lux">
           <span className="tpl-badge">
@@ -144,18 +151,20 @@ function TemplatePreviewLightbox({
   onClose: () => void;
 }) {
   useEffect(() => {
+    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       className="tpl-preview-overlay"
       role="dialog"
@@ -166,7 +175,10 @@ function TemplatePreviewLightbox({
       <button
         type="button"
         className="tpl-preview-overlay__close"
-        onClick={onClose}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
         aria-label="Fermer l’aperçu"
       >
         <X className="h-5 w-5" />
@@ -185,7 +197,8 @@ function TemplatePreviewLightbox({
           {template.name}
         </figcaption>
       </figure>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -58,41 +58,40 @@
   );
 }
 
-/* Bouton aperçu plein écran sur la photo du modèle. */
+/* Bouton aperçu — sous le titre, hors zone topbar/crédits. */
+.tpl-preview-row {
+  display: flex;
+  justify-content: center;
+}
+
 .tpl-preview-btn {
-  position: absolute;
-  top: max(0.75rem, env(safe-area-inset-top));
-  right: 0.85rem;
-  z-index: 5;
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid rgba(201, 162, 39, 0.35);
+  border: 1px solid rgba(201, 162, 39, 0.45);
   border-radius: 999px;
-  padding: 0.42rem 0.75rem;
-  background: rgba(12, 10, 14, 0.62);
+  padding: 0.42rem 0.85rem;
+  background: rgba(12, 10, 14, 0.72);
   backdrop-filter: blur(12px);
   color: #f6e7bd;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  touch-action: manipulation;
 }
 
 .tpl-preview-btn:active {
   transform: scale(0.97);
 }
 
-html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-preview-btn {
-  top: 0.65rem;
-  right: 0.65rem;
-}
-
 /* Lightbox aperçu — photo seule, sans UI. */
 .tpl-preview-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
