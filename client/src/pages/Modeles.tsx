@@ -207,6 +207,22 @@ export default function Modeles() {
         </span>
       </div>
 
+      {/* Fond luxe desktop : photo active floutée + lueurs dorées. */}
+      {active?.previewUrl ? (
+        <div className="tpl-scene" aria-hidden>
+          <img
+            key={active.id}
+            className="tpl-scene__ambient"
+            src={active.previewUrl}
+            alt=""
+          />
+          <div className="tpl-scene__veil" />
+          <div className="tpl-scene__glow tpl-scene__glow--gold" />
+          <div className="tpl-scene__glow tpl-scene__glow--violet" />
+          <div className="tpl-scene__grain" />
+        </div>
+      ) : null}
+
       <div className="tpl-feed" ref={feedRef}>
         {list.map((template, index) => (
           <section
@@ -218,6 +234,7 @@ export default function Modeles() {
             }}
           >
             <div className="tpl-slide__frame">
+              <div className="tpl-slide__frame-glow" aria-hidden />
               <div className="tpl-slide__photo">
                 <img
                   className="tpl-slide__media"
