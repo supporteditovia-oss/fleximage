@@ -4,14 +4,52 @@ import { useTemplateFeed } from "@/hooks/use-template-feed";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
 import "@/pages/modeles-page.css";
 
+type TemplateStripProps = {
+  /** compact = une ligne discrète sous le formulaire ; full = carte avec vignettes */
+  variant?: "compact" | "full";
+};
+
 /**
  * Entrée permanente vers les modèles depuis le studio Image IA.
- * Toujours visible : on ne dépend plus d'une config admin pour l'afficher.
  */
-export function TemplateStrip() {
+export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
   const { data: templates } = useTemplateFeed();
   const list = templates?.length ? templates : BUILTIN_FEED_TEMPLATES;
+
+  if (variant === "compact") {
+    return (
+      <section
+        className="tpl-strip-compact"
+        aria-label="Modèles prêts à l'emploi"
+      >
+        <button
+          type="button"
+          className="tpl-strip-compact__main"
+          onClick={() => navigate("/modeles")}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="tpl-strip-compact__label">Modèles prêts</span>
+          <span className="tpl-strip-compact__count">{list.length} scènes</span>
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+        </button>
+
+        <div className="tpl-strip-compact__rail" aria-hidden>
+          {list.slice(0, 5).map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="tpl-strip-compact__thumb"
+              onClick={() => navigate(`/modeles?t=${template.id}`)}
+              aria-label={template.name}
+            >
+              <img src={template.previewUrl ?? ""} alt="" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="tpl-strip-entry" aria-label="Modèles prêts à l'emploi">

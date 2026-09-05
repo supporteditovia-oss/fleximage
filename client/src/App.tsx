@@ -35,6 +35,7 @@ import DebugGenerate from "@/pages/DebugGenerate";
 import SeoNicheLanding from "@/pages/SeoNicheLanding";
 import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
 import ZeroCreditsPreview from "@/pages/ZeroCreditsPreview";
+import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { supabase } from "@/lib/supabase";
 import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
@@ -160,8 +161,24 @@ function GenerateRoute() {
 
 function HistoriqueRoute() {
   const { v2Enabled, isLoading } = useV2GateWithTimeout();
+  const [studioMode, setStudioMode] = React.useState<StudioMode>(() =>
+    readStudioMode(),
+  );
+
+  React.useEffect(() => {
+    const sync = () => setStudioMode(readStudioMode());
+    sync();
+    window.addEventListener("storage", sync);
+    window.addEventListener("luxeflexia:studio-mode", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("luxeflexia:studio-mode", sync);
+    };
+  }, []);
+
   if (isLoading) return <AuthResolveShell />;
-  if (v2Enabled) {
+  // Voix IA : l'onglet mène au catalogue des voix, pas à l'historique images.
+  if (v2Enabled && studioMode === "voice") {
     return <Redirect to="/bibliotheque" />;
   }
   return <Historique />;

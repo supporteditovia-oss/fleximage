@@ -343,6 +343,10 @@ export default function Bibliotheque() {
 
   const isVoice = studioMode === "voice";
 
+  if (!isVoice) {
+    return <Redirect to="/historique" />;
+  }
+
   return (
     <div className="bibliotheque-v2">
       <header className="bibliotheque-v2__header">

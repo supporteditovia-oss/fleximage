@@ -1386,8 +1386,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             />
           ) : (
             <>
-              <TemplateStrip />
-
               <ImageUploadGrid
                 images={images}
                 onImageSelect={handleImageSelect}
@@ -1406,6 +1404,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 aspectRatio={aspectRatio}
                 onAspectRatioChange={setAspectRatio}
               />
+
+              <TemplateStrip variant="compact" />
             </>
           )}
         </div>
