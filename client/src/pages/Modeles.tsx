@@ -44,6 +44,16 @@ export default function Modeles() {
   const list = templates ?? [];
   const active = list[activeIndex];
 
+  // Plein écran façon TikTok : on cache header + dock pour ne pas recouvrir le CTA.
+  useEffect(() => {
+    document.documentElement.classList.add("luxeflexia-modeles-page");
+    document.body.setAttribute("data-hide-app-chrome", "true");
+    return () => {
+      document.documentElement.classList.remove("luxeflexia-modeles-page");
+      document.body.removeAttribute("data-hide-app-chrome");
+    };
+  }, []);
+
   // Suivre le modèle affiché pendant que l'utilisateur fait défiler.
   useEffect(() => {
     const root = feedRef.current;
