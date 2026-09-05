@@ -1,19 +1,17 @@
 import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
+import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
 import "@/pages/modeles-page.css";
 
 /**
- * Point d'entrée vers les modèles depuis le studio Image IA.
- * Une bande horizontale d'aperçus : on voit tout de suite qu'il existe des
- * scènes prêtes à l'emploi, et n'importe quelle vignette ouvre le fil plein
- * écran directement sur le bon modèle.
+ * Entrée permanente vers les modèles depuis le studio Image IA.
+ * Toujours visible : on ne dépend plus d'une config admin pour l'afficher.
  */
 export function TemplateStrip() {
   const [, navigate] = useLocation();
-  const { data: templates, isLoading } = useTemplateFeed();
-
-  if (isLoading || !templates || templates.length === 0) return null;
+  const { data: templates } = useTemplateFeed();
+  const list = templates?.length ? templates : BUILTIN_FEED_TEMPLATES;
 
   return (
     <section className="tpl-strip-entry" aria-label="Modèles prêts à l'emploi">
@@ -37,7 +35,7 @@ export function TemplateStrip() {
       </p>
 
       <div className="tpl-strip-entry__rail">
-        {templates.slice(0, 12).map((template) => (
+        {list.slice(0, 12).map((template) => (
           <button
             key={template.id}
             type="button"

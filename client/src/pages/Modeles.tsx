@@ -7,6 +7,7 @@ import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
+import { getBuiltinGenerationPrompt } from "@/lib/builtin-image-templates";
 import { useToast } from "@/hooks/use-toast";
 import "@/pages/modeles-page.css";
 
@@ -103,7 +104,7 @@ export default function Modeles() {
       const compressed = await compressImageForGeneration(file);
       const base64 = await fileToBase64(compressed);
       const result = await generateDirect.mutateAsync({
-        prompt: template.name,
+        prompt: getBuiltinGenerationPrompt(template),
         template_id: template.id,
         images: [base64],
         use_face_asset: false,
@@ -143,7 +144,7 @@ export default function Modeles() {
   if (list.length === 0) {
     return (
       <div className="tpl-empty">
-        <p>Aucun modèle disponible pour l’instant.</p>
+        <p>Chargement des modèles…</p>
         <button className="tpl-cta" onClick={() => navigate("/create")}>
           Revenir au studio
         </button>
