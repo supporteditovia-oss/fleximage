@@ -48,9 +48,22 @@ export default function Modeles() {
   useEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
     document.body.setAttribute("data-hide-app-chrome", "true");
+
+    const syncDesktopLayout = () => {
+      const desktop = window.matchMedia("(min-width: 768px)").matches;
+      document.documentElement.classList.toggle(
+        "luxeflexia-modeles-desktop",
+        desktop,
+      );
+    };
+    syncDesktopLayout();
+    window.addEventListener("resize", syncDesktopLayout);
+
     return () => {
       document.documentElement.classList.remove("luxeflexia-modeles-page");
+      document.documentElement.classList.remove("luxeflexia-modeles-desktop");
       document.body.removeAttribute("data-hide-app-chrome");
+      window.removeEventListener("resize", syncDesktopLayout);
     };
   }, []);
 
