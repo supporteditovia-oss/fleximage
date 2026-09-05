@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, Gem, ImagePlus, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,6 +13,7 @@ import { ModelesScene } from "@/components/modeles/ModelesScene";
 import "@/pages/modeles-page.css";
 
 const IMAGE_CREDIT_COST = 10;
+const DESKTOP_WHEEL_COOLDOWN_MS = 420;
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -21,6 +22,96 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+function TemplateSlideContent({
+  template,
+  activeIndex,
+  list,
+  busy,
+  onPrimaryAction,
+  onScrollToIndex,
+}: {
+  template: FeedTemplate;
+  activeIndex: number;
+  list: FeedTemplate[];
+  busy: boolean;
+  onPrimaryAction: (template: FeedTemplate) => void;
+  onScrollToIndex: (index: number) => void;
+}) {
+  return (
+    <div className="tpl-slide__frame">
+      <div className="tpl-slide__frame-glow" aria-hidden />
+      <div className="tpl-slide__photo">
+        <img
+          className="tpl-slide__media"
+          src={template.previewUrl ?? ""}
+          alt={template.name}
+          decoding="async"
+        />
+        <div className="tpl-slide__scrim" aria-hidden />
+      </div>
+
+      <div className="tpl-bottom">
+        <h2 className="tpl-slide__title">{template.name}</h2>
+
+        <div className="tpl-badges">
+          <span className="tpl-badge">
+            {isVehicleSwapTemplate(template)
+              ? "Préparer le quad"
+              : template.requiresUserPhoto
+                ? "1 photo"
+                : "photo optionnelle"}
+          </span>
+          <span className="tpl-badge">
+            <Gem className="h-3 w-3" aria-hidden />
+            {IMAGE_CREDIT_COST} crédits
+          </span>
+          {template.categoryName ? (
+            <span className="tpl-badge">{template.categoryName}</span>
+          ) : null}
+        </div>
+
+        <div className="tpl-strip">
+          {list.map((other, otherIndex) => (
+            <button
+              key={other.id}
+              type="button"
+              className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
+              onClick={() => onScrollToIndex(otherIndex)}
+              aria-label={other.name}
+            >
+              <img src={other.previewUrl ?? ""} alt="" loading="lazy" decoding="async" />
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="tpl-cta"
+          disabled={busy}
+          onClick={() => onPrimaryAction(template)}
+        >
+          {busy ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isVehicleSwapTemplate(template) ? (
+            <>Remplacer le quad (Can-Am)</>
+          ) : (
+            <>
+              <ImagePlus className="h-5 w-5" aria-hidden />
+              Générer l’image
+            </>
+          )}
+        </button>
+
+        <p className="tpl-hint">
+          {isVehicleSwapTemplate(template)
+            ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
+            : "Ta photo remplace la personne, le décor reste identique."}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function Modeles() {
@@ -34,7 +125,10 @@ export default function Modeles() {
   const feedRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const wheelLockRef = useRef(false);
+  const wheelTimerRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
   );
@@ -45,13 +139,13 @@ export default function Modeles() {
   const list = templates ?? [];
   const active = list[activeIndex];
 
-  // Plein écran façon TikTok : on cache header + dock pour ne pas recouvrir le CTA.
   useEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
     document.body.setAttribute("data-hide-app-chrome", "true");
 
     const syncDesktopLayout = () => {
       const desktop = window.matchMedia("(min-width: 768px)").matches;
+      setIsDesktopLayout(desktop);
       document.documentElement.classList.toggle(
         "luxeflexia-modeles-desktop",
         desktop,
@@ -65,11 +159,23 @@ export default function Modeles() {
       document.documentElement.classList.remove("luxeflexia-modeles-desktop");
       document.body.removeAttribute("data-hide-app-chrome");
       window.removeEventListener("resize", syncDesktopLayout);
+      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
     };
   }, []);
 
-  // Suivre le modèle affiché pendant que l'utilisateur fait défiler.
+  // Précharger toutes les vignettes pour un scroll / changement instantané.
   useEffect(() => {
+    list.forEach((template) => {
+      if (!template.previewUrl) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.src = template.previewUrl;
+    });
+  }, [list]);
+
+  // Mobile : scroll snap + intersection observer.
+  useEffect(() => {
+    if (isDesktopLayout) return;
     const root = feedRef.current;
     if (!root || list.length === 0) return;
 
@@ -82,20 +188,55 @@ export default function Modeles() {
         const index = Number(
           (visible.target as HTMLElement).dataset.index ?? "0",
         );
-        setActiveIndex(index);
+        setActiveIndex((prev) => (prev === index ? prev : index));
       },
       { root, threshold: 0.6 },
     );
 
     slideRefs.current.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
-  }, [list.length]);
+  }, [isDesktopLayout, list.length]);
 
-  const scrollToIndex = (index: number) => {
-    slideRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Desktop : molette = carrousel fluide sans scroll lourd.
+  useEffect(() => {
+    if (!isDesktopLayout) return;
+    const root = feedRef.current;
+    if (!root || list.length === 0) return;
 
-  // Ouvert depuis une vignette du studio : démarrer sur ce modèle.
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (wheelLockRef.current) return;
+      if (Math.abs(event.deltaY) < 28) return;
+
+      const direction = event.deltaY > 0 ? 1 : -1;
+      setActiveIndex((prev) => {
+        const next = prev + direction;
+        if (next < 0 || next >= list.length) return prev;
+        return next;
+      });
+
+      wheelLockRef.current = true;
+      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
+      wheelTimerRef.current = window.setTimeout(() => {
+        wheelLockRef.current = false;
+      }, DESKTOP_WHEEL_COOLDOWN_MS);
+    };
+
+    root.addEventListener("wheel", onWheel, { passive: false });
+    return () => root.removeEventListener("wheel", onWheel);
+  }, [isDesktopLayout, list.length]);
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      if (isDesktopLayout) {
+        setActiveIndex(index);
+        return;
+      }
+      slideRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
+    },
+    [isDesktopLayout],
+  );
+
   const jumpedRef = useRef(false);
   useEffect(() => {
     if (jumpedRef.current || list.length === 0) return;
@@ -107,11 +248,13 @@ export default function Modeles() {
       return;
     }
     jumpedRef.current = true;
-    requestAnimationFrame(() => {
-      slideRefs.current[index]?.scrollIntoView({ behavior: "auto" });
-      setActiveIndex(index);
-    });
-  }, [list]);
+    setActiveIndex(index);
+    if (!isDesktopLayout) {
+      requestAnimationFrame(() => {
+        slideRefs.current[index]?.scrollIntoView({ behavior: "auto" });
+      });
+    }
+  }, [isDesktopLayout, list]);
 
   const askForPhoto = (template: FeedTemplate) => {
     setPendingTemplate(template);
@@ -208,94 +351,45 @@ export default function Modeles() {
         </span>
       </div>
 
-      {/* Fond luxe desktop : photo active floutée + lueurs dorées. */}
-      {active?.previewUrl ? (
-        <ModelesScene key={active.id} previewUrl={active.previewUrl} />
-      ) : null}
+      {isDesktopLayout ? <ModelesScene /> : null}
 
-      <div className="tpl-feed" ref={feedRef}>
-        {list.map((template, index) => (
-          <section
-            key={template.id}
-            className="tpl-slide"
-            data-index={index}
-            ref={(el) => {
-              slideRefs.current[index] = el;
-            }}
-          >
-            <div className="tpl-slide__frame">
-              <div className="tpl-slide__frame-glow" aria-hidden />
-              <div className="tpl-slide__photo">
-                <img
-                  className="tpl-slide__media"
-                  src={template.previewUrl ?? ""}
-                  alt={template.name}
-                  loading={index <= 1 ? "eager" : "lazy"}
-                />
-                <div className="tpl-slide__scrim" aria-hidden />
-              </div>
-
-              <div className="tpl-bottom">
-                <h2 className="tpl-slide__title">{template.name}</h2>
-
-                <div className="tpl-badges">
-                  <span className="tpl-badge">
-                    {isVehicleSwapTemplate(template)
-                      ? "Préparer le quad"
-                      : template.requiresUserPhoto
-                        ? "1 photo"
-                        : "photo optionnelle"}
-                  </span>
-                  <span className="tpl-badge">
-                    <Gem className="h-3 w-3" aria-hidden />
-                    {IMAGE_CREDIT_COST} crédits
-                  </span>
-                  {template.categoryName ? (
-                    <span className="tpl-badge">{template.categoryName}</span>
-                  ) : null}
-                </div>
-
-                <div className="tpl-strip">
-                  {list.map((other, otherIndex) => (
-                    <button
-                      key={other.id}
-                      type="button"
-                      className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
-                      onClick={() => scrollToIndex(otherIndex)}
-                      aria-label={other.name}
-                    >
-                      <img src={other.previewUrl ?? ""} alt="" loading="lazy" />
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  className="tpl-cta"
-                  disabled={busy}
-                  onClick={() => onPrimaryAction(template)}
-                >
-                  {busy ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : isVehicleSwapTemplate(template) ? (
-                    <>Remplacer le quad (Can-Am)</>
-                  ) : (
-                    <>
-                      <ImagePlus className="h-5 w-5" aria-hidden />
-                      Générer l’image
-                    </>
-                  )}
-                </button>
-
-                <p className="tpl-hint">
-                  {isVehicleSwapTemplate(template)
-                    ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
-                    : "Ta photo remplace la personne, le décor reste identique."}
-                </p>
-              </div>
-            </div>
+      <div
+        className={`tpl-feed${isDesktopLayout ? " tpl-feed--desktop" : ""}`}
+        ref={feedRef}
+      >
+        {isDesktopLayout && active ? (
+          <section className="tpl-slide tpl-slide--desktop" data-index={activeIndex}>
+            <TemplateSlideContent
+              key={active.id}
+              template={active}
+              activeIndex={activeIndex}
+              list={list}
+              busy={busy}
+              onPrimaryAction={onPrimaryAction}
+              onScrollToIndex={scrollToIndex}
+            />
           </section>
-        ))}
+        ) : (
+          list.map((template, index) => (
+            <section
+              key={template.id}
+              className="tpl-slide"
+              data-index={index}
+              ref={(el) => {
+                slideRefs.current[index] = el;
+              }}
+            >
+              <TemplateSlideContent
+                template={template}
+                activeIndex={activeIndex}
+                list={list}
+                busy={busy}
+                onPrimaryAction={onPrimaryAction}
+                onScrollToIndex={scrollToIndex}
+              />
+            </section>
+          ))
+        )}
       </div>
 
       <input
