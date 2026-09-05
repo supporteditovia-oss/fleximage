@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Gem, ImagePlus, Loader2 } from "lucide-react";
+import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
@@ -34,6 +34,7 @@ function TemplateSlideContent({
   enterDirection = "none",
   onPrimaryAction,
   onScrollToIndex,
+  onOpenPreview,
 }: {
   template: FeedTemplate;
   activeIndex: number;
@@ -42,6 +43,7 @@ function TemplateSlideContent({
   enterDirection?: SlideDirection;
   onPrimaryAction: (template: FeedTemplate) => void;
   onScrollToIndex: (index: number) => void;
+  onOpenPreview: (template: FeedTemplate) => void;
 }) {
   const luxeClass =
     enterDirection === "none"
@@ -61,6 +63,15 @@ function TemplateSlideContent({
           decoding="async"
         />
         <div className="tpl-slide__scrim" aria-hidden />
+        <button
+          type="button"
+          className="tpl-preview-btn"
+          onClick={() => onOpenPreview(template)}
+          aria-label={`Aperçu — ${template.name}`}
+        >
+          <Expand className="h-4 w-4" aria-hidden />
+          <span>Aperçu</span>
+        </button>
       </div>
 
       <div className="tpl-bottom tpl-bottom--lux">
@@ -125,6 +136,59 @@ function TemplateSlideContent({
   );
 }
 
+function TemplatePreviewLightbox({
+  template,
+  onClose,
+}: {
+  template: FeedTemplate;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    document.body.setAttribute("data-fullscreen-overlay", "true");
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.removeAttribute("data-fullscreen-overlay");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="tpl-preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Aperçu — ${template.name}`}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        className="tpl-preview-overlay__close"
+        onClick={onClose}
+        aria-label="Fermer l’aperçu"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <figure
+        className="tpl-preview-overlay__figure"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <img
+          className="tpl-preview-overlay__img"
+          src={template.previewUrl ?? ""}
+          alt={template.name}
+          decoding="async"
+        />
+        <figcaption className="tpl-preview-overlay__caption">
+          {template.name}
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
 export default function Modeles() {
   const [, navigate] = useLocation();
   const { profile } = useAuth();
@@ -148,6 +212,9 @@ export default function Modeles() {
   );
   const [taskId, setTaskId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
+    null,
+  );
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
   const list = templates ?? [];
@@ -234,7 +301,7 @@ export default function Modeles() {
 
   // Desktop : molette = carrousel fluide sans scroll lourd.
   useEffect(() => {
-    if (!isDesktopLayout) return;
+    if (!isDesktopLayout || previewTemplate) return;
     const root = feedRef.current;
     if (!root || list.length === 0) return;
 
@@ -259,7 +326,7 @@ export default function Modeles() {
 
     root.addEventListener("wheel", onWheel, { passive: false });
     return () => root.removeEventListener("wheel", onWheel);
-  }, [isDesktopLayout, list.length]);
+  }, [isDesktopLayout, list.length, previewTemplate]);
 
   const scrollToIndex = useCallback(
     (index: number) => {
@@ -403,6 +470,7 @@ export default function Modeles() {
               enterDirection={enterDirection}
               onPrimaryAction={onPrimaryAction}
               onScrollToIndex={scrollToIndex}
+              onOpenPreview={setPreviewTemplate}
             />
           </section>
         ) : (
@@ -422,6 +490,7 @@ export default function Modeles() {
                 busy={busy}
                 onPrimaryAction={onPrimaryAction}
                 onScrollToIndex={scrollToIndex}
+                onOpenPreview={setPreviewTemplate}
               />
             </section>
           ))
@@ -435,6 +504,13 @@ export default function Modeles() {
         hidden
         onChange={(event) => void onPhotoPicked(event.target.files?.[0] ?? null)}
       />
+
+      {previewTemplate ? (
+        <TemplatePreviewLightbox
+          template={previewTemplate}
+          onClose={() => setPreviewTemplate(null)}
+        />
+      ) : null}
 
       {active ? <span className="sr-only">{active.name}</span> : null}
     </>

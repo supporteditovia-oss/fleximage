@@ -58,6 +58,127 @@
   );
 }
 
+/* Bouton aperçu plein écran sur la photo du modèle. */
+.tpl-preview-btn {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: 0.85rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  background: rgba(12, 10, 14, 0.62);
+  backdrop-filter: blur(12px);
+  color: #f6e7bd;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.tpl-preview-btn:active {
+  transform: scale(0.97);
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-preview-btn {
+  top: 0.65rem;
+  right: 0.65rem;
+}
+
+/* Lightbox aperçu — photo seule, sans UI. */
+.tpl-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  background: rgba(6, 5, 8, 0.94);
+  backdrop-filter: blur(14px);
+  animation: tpl-preview-fade-in 0.22s ease-out both;
+}
+
+.tpl-preview-overlay__close {
+  position: absolute;
+  top: max(0.85rem, env(safe-area-inset-top));
+  right: max(0.85rem, env(safe-area-inset-right));
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(18, 16, 20, 0.75);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tpl-preview-overlay__figure {
+  margin: 0;
+  width: min(100%, 520px);
+  max-height: calc(100svh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  animation: tpl-preview-zoom-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tpl-preview-overlay__img {
+  width: 100%;
+  max-height: calc(100svh - 5rem);
+  object-fit: contain;
+  object-position: center center;
+  border-radius: 0.85rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.tpl-preview-overlay__caption {
+  margin: 0;
+  font-family: var(--lx-display, Georgia, serif);
+  font-size: 0.95rem;
+  color: rgba(246, 231, 189, 0.75);
+  text-align: center;
+}
+
+@keyframes tpl-preview-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tpl-preview-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tpl-preview-overlay,
+  .tpl-preview-overlay__figure {
+    animation: none !important;
+  }
+}
+
 .tpl-topbar {
   position: absolute;
   top: 0;
