@@ -120,18 +120,6 @@ module.exports = async function handler(req, res) {
     }
     const creditCost = getBillableCreditCost(limitResult);
 
-    if (!templateId && images.length === 0) {
-      res.status(422).json({
-        code: "REFERENCE_IMAGE_REQUIRED",
-        message: copy(
-          uiLocale,
-          "Une image de référence est requise.",
-          "A reference image is required.",
-        ),
-      });
-      return;
-    }
-
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
 
     // Modèle prêt à l'emploi : la scène vient de la référence du modèle, la
@@ -139,9 +127,10 @@ module.exports = async function handler(req, res) {
     let templateReferenceId = null;
     let effectivePrompt = prompt;
     let imageUrls;
+    let resolvedTemplate = null;
 
     if (templateId) {
-      const resolved = isBuiltinTemplateId(templateId)
+      resolvedTemplate = isBuiltinTemplateId(templateId)
         ? resolveBuiltinTemplateGeneration(templateId, {
             hasUserPhoto: uploadedUrls.length > 0,
           })
@@ -149,22 +138,33 @@ module.exports = async function handler(req, res) {
             hasUserPhoto: uploadedUrls.length > 0,
           });
 
-      if (!resolved.ok) {
-        res.status(422).json({ code: resolved.code, message: resolved.message });
+      if (!resolvedTemplate.ok) {
+        res.status(422).json({
+          code: resolvedTemplate.code,
+          message: resolvedTemplate.message,
+        });
         return;
       }
 
-      templateReferenceId = resolved.referenceId;
-      effectivePrompt = resolved.prompt;
-      // La photo de l'utilisateur d'abord : le modèle traite la première
-      // référence comme le sujet à conserver. Références extra (ex. véhicule)
-      // avant la scène finale.
+      templateReferenceId = resolvedTemplate.referenceId;
+      effectivePrompt = resolvedTemplate.prompt;
       imageUrls = [
         ...uploadedUrls,
-        ...(resolved.extraReferenceUrls || []),
-        resolved.referenceUrl,
+        ...(resolvedTemplate.extraReferenceUrls || []),
+        resolvedTemplate.referenceUrl,
       ];
     } else {
+      if (images.length === 0) {
+        res.status(422).json({
+          code: "REFERENCE_IMAGE_REQUIRED",
+          message: copy(
+            uiLocale,
+            "Une image de référence est requise.",
+            "A reference image is required.",
+          ),
+        });
+        return;
+      }
       imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
     }
 

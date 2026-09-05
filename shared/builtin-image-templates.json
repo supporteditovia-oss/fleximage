@@ -63,9 +63,14 @@
     "id": "builtin-quad-dubai-canam",
     "slug": "quad-dubai-canam",
     "name": "Can-Am Outlander Dubaï",
-    "description": "Streetwear de nuit sur Can-Am Outlander 1000R XT-P à Dubaï.",
-    "imagePath": "/models/modele-quad-dubai.webp",
-    "prompt": "Remplace UNIQUEMENT la personne de la seconde image par la personne de la première image. Conserve fidèlement son visage, son identité, sa carnation et sa coiffure. Ne modifie PAS le quad ni le décor. Le quad doit rester exactement le Can-Am Outlander 1000R XT-P de la scène : carrosserie noire mate, pare-buffle avant jaune néon, ressorts jaunes, jantes avec liseré jaune, rétroviseurs à supports/carter jaunes, grand quad utilitaire deux places, panneaux latéraux noirs SANS AUCUN TEXTE. Interdit absolu : Sportsman, Polaris, Touring, 570, ou tout autre branding véhicule. Garde la pose assise, la tenue streetwear, la nuit à Dubaï, Burj Khalifa, palmiers, sac orange, cadrage 9:16 et l'éclairage. Photo ultra-réaliste, sans watermark.",
+    "description": "Scène Dubaï originale — l'IA remplace le quad Polaris par le Can-Am Outlander 1000R XT-P.",
+    "imagePath": "/models/modele-quad-dubai-original.webp",
+    "vehicleReferencePath": "/models/ref-canam-outlander.webp",
+    "generationMode": "vehicle-swap",
+    "requiresUserPhoto": false,
+    "vehicleSwapPrompt": "Tu reçois deux images dans cet ordre : (1) le Can-Am Outlander 1000R XT-P à reproduire fidèlement, (2) la scène de référence avec une personne sur un quad. Remplace UNIQUEMENT le quad/ATV de la scène par ce Can-Am Outlander 1000R XT-P : carrosserie noire mate, pare-buffle avant jaune néon, ressorts de suspension jaunes, jantes avec liseré jaune, rétroviseurs et carters jaunes, modèle utilitaire deux places LARGE et HAUT (taille réelle adulte, envergure imposante). SUPPRIME et NE RECOPIE JAMAIS les textes Sportsman, Polaris, Touring, 570 ou tout branding concurrent — panneaux latéraux noirs propres sans logo. Ne modifie PAS la personne, sa pose, ses vêtements, le sac, Dubaï, Burj Khalifa, palmiers, lampadaires, cadrage vertical 9:16 ni l'éclairage nocturne. Photographie ultra-réaliste, perspective et ombres cohérentes.",
+    "faceSwapPrompt": "Remplace UNIQUEMENT la personne de la seconde image par la personne de la première image. Conserve son visage et son identité. Ne change pas le quad Can-Am Outlander noir et jaune ni le décor Dubaï. Sans texte Sportsman ni Polaris.",
+    "prompt": "Remplace UNIQUEMENT le quad/ATV de la scène par le Can-Am Outlander 1000R XT-P de référence.",
     "category": "supercars",
     "categoryName": "Quads"
   }
