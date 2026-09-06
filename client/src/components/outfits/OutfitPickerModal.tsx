@@ -20,16 +20,25 @@ export function OutfitPickerModal({
   onSelect,
 }: OutfitPickerModalProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pendingOutfit, setPendingOutfit] = useState<BuiltinOutfit | null>(null);
 
   useEffect(() => {
     if (!open) {
       setSelectedId(null);
+      setPendingOutfit(null);
       return;
     }
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (pendingOutfit) {
+          setPendingOutfit(null);
+          setSelectedId(null);
+          return;
+        }
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -37,11 +46,23 @@ export function OutfitPickerModal({
       document.body.removeAttribute("data-fullscreen-overlay");
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, pendingOutfit]);
 
   const handlePick = (outfit: BuiltinOutfit) => {
     setSelectedId(outfit.id);
-    onSelect(outfit);
+    setPendingOutfit(outfit);
+  };
+
+  const cancelConfirmation = () => {
+    setPendingOutfit(null);
+    setSelectedId(null);
+  };
+
+  const confirmSelection = () => {
+    if (!pendingOutfit) return;
+    onSelect(pendingOutfit);
+    setPendingOutfit(null);
+    setSelectedId(null);
   };
 
   const onCardKeyDown = (
@@ -62,7 +83,7 @@ export function OutfitPickerModal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onClick={onClose}
+      onClick={pendingOutfit ? undefined : onClose}
     >
       <div
         className="outfit-catalog-panel"
@@ -117,6 +138,50 @@ export function OutfitPickerModal({
             })}
           </div>
         </div>
+
+        {pendingOutfit ? (
+          <div
+            className="outfit-confirm-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmer la tenue"
+            onClick={cancelConfirmation}
+          >
+            <div
+              className="outfit-confirm-panel"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="outfit-confirm-preview">
+                <img
+                  src={pendingOutfit.imagePath}
+                  alt={pendingOutfit.name}
+                  decoding="async"
+                />
+              </div>
+              <h3 className="outfit-confirm-title">Tu veux cette tenue ?</h3>
+              <p className="outfit-confirm-name">{pendingOutfit.name}</p>
+              <p className="outfit-confirm-hint">
+                Cette tenue sera utilisée comme image 2 pour la génération.
+              </p>
+              <div className="outfit-question-actions">
+                <button
+                  type="button"
+                  className="outfit-question-no"
+                  onClick={cancelConfirmation}
+                >
+                  Non, retour
+                </button>
+                <button
+                  type="button"
+                  className="outfit-question-yes"
+                  onClick={confirmSelection}
+                >
+                  Oui, valider
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>,
     document.body,
