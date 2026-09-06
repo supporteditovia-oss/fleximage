@@ -15,7 +15,7 @@ import { ModelesScene } from "@/components/modeles/ModelesScene";
 import { OutfitChangeQuestion } from "@/components/outfits/OutfitChangeQuestion";
 import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
-import { BUILTIN_OUTFITS, type BuiltinOutfit } from "@/lib/builtin-outfit-templates";
+import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
   getCategoryBySlug,
   isOutfitCategory,
@@ -28,10 +28,7 @@ import {
 } from "@/lib/modeles-categories";
 import { ModelesCatalogBrowse } from "@/components/modeles/ModelesCatalogBrowse";
 import { ModelesCategoryHeader } from "@/components/modeles/ModelesCategoryHeader";
-import {
-  ModelesCatalogGrid,
-  type CatalogGridItem,
-} from "@/components/modeles/ModelesCatalogGrid";
+import { ModelesCatalogGrid } from "@/components/modeles/ModelesCatalogGrid";
 import "@/pages/modeles-page.css";
 import "@/components/modeles/modeles-catalog.css";
 
@@ -280,67 +277,6 @@ function TemplatePreviewLightbox({
   );
 }
 
-function OutfitPreviewLightbox({
-  outfit,
-  onClose,
-}: {
-  outfit: BuiltinOutfit;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
-    document.body.setAttribute("data-fullscreen-overlay", "true");
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.documentElement.removeAttribute("data-fullscreen-overlay");
-      document.body.removeAttribute("data-fullscreen-overlay");
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      className="tpl-preview-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Tenue — ${outfit.name}`}
-      onClick={onClose}
-    >
-      <button
-        type="button"
-        className="tpl-preview-overlay__close"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClose();
-        }}
-        aria-label="Fermer l’aperçu"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      <figure
-        className="tpl-preview-overlay__figure"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <img
-          className="tpl-preview-overlay__img"
-          src={outfit.imagePath}
-          alt={outfit.name}
-          decoding="async"
-        />
-        <figcaption className="tpl-preview-overlay__caption">{outfit.name}</figcaption>
-        <p className="mcatalog-outfit-preview__note">
-          Tenue exclusive LuxeFlexIA — choisis un modèle puis « Oui, choisir une tenue »
-          pour l’utiliser lors de ta génération.
-        </p>
-      </figure>
-    </div>,
-    document.body,
-  );
-}
-
 export default function Modeles() {
   const [location, navigate] = useLocation();
   const { profile } = useAuth();
@@ -370,7 +306,6 @@ export default function Modeles() {
   const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
-  const [previewOutfit, setPreviewOutfit] = useState<BuiltinOutfit | null>(null);
 
   const route = useMemo(() => parseModelesPath(location), [location]);
   const viewMode = route.view;
@@ -412,12 +347,17 @@ export default function Modeles() {
 
   const active = viewMode === "detail" ? detailTemplate : null;
 
-  const catalogItems = useMemo((): CatalogGridItem[] => {
-    if (isOutfitCategory(activeCategory)) {
-      return BUILTIN_OUTFITS.map((outfit) => ({ kind: "outfit", outfit }));
+  const catalogItems = useMemo(
+    () => categoryScenes,
+    [categoryScenes],
+  );
+
+  // Rediriger l'ancienne catégorie outfits vers le catalogue.
+  useEffect(() => {
+    if (/^\/modeles\/c\/outfits\/?$/.test(location.split("?")[0] || "")) {
+      navigate(MODELES_CATALOG_PATH, { replace: true });
     }
-    return categoryScenes.map((template) => ({ kind: "scene", template }));
-  }, [activeCategory, categoryScenes]);
+  }, [location, navigate]);
 
   // Anciennes URLs ?cat= / ?t= → catalogue ou catégorie (jamais fiche directe).
   useEffect(() => {
@@ -426,7 +366,7 @@ export default function Modeles() {
     const legacyTemplate = params.get("t");
     if (!legacyCat && !legacyTemplate) return;
 
-    if (legacyCat && getCategoryBySlug(legacyCat)) {
+    if (legacyCat && getCategoryBySlug(legacyCat) && !isOutfitCategory(legacyCat)) {
       navigate(modelesCategoryPath(legacyCat as ModelesCategorySlug), {
         replace: true,
       });
@@ -730,11 +670,11 @@ export default function Modeles() {
         <div className="mcatalog-scroll">
           {viewMode === "home" ? (
             <header className="mcatalog-header">
-              <p className="mcatalog-header__eyebrow">Modèles exclusifs LuxeFlexIA</p>
-              <h1 className="mcatalog-header__title">Catalogue premium</h1>
+              <div className="mcatalog-header__ornament" aria-hidden />
+              <p className="mcatalog-header__eyebrow">Collection exclusive</p>
+              <h1 className="mcatalog-header__title">Modèles prêts</h1>
               <p className="mcatalog-header__subtitle">
-                Fais défiler les catégories, swipe à gauche ou à droite, puis
-                choisis ta scène. 100 % généré par LuxeFlexIA.
+                Parcours les univers, choisis ta scène et mets-toi en image.
               </p>
             </header>
           ) : (
@@ -747,13 +687,6 @@ export default function Modeles() {
           <div className="mcatalog-body">{body}</div>
         </div>
       </div>
-
-      {previewOutfit ? (
-        <OutfitPreviewLightbox
-          outfit={previewOutfit}
-          onClose={() => setPreviewOutfit(null)}
-        />
-      ) : null}
     </>
   );
 
@@ -761,9 +694,7 @@ export default function Modeles() {
     return catalogShell(
       <ModelesCatalogBrowse
         templates={list}
-        outfits={BUILTIN_OUTFITS}
         onSelectScene={openSceneDetail}
-        onSelectOutfit={setPreviewOutfit}
         onViewAllCategory={openCategory}
       />,
     );
@@ -779,7 +710,6 @@ export default function Modeles() {
           items={catalogItems}
           category={activeCategory}
           onSelectScene={openSceneDetail}
-          onSelectOutfit={setPreviewOutfit}
         />
       </>,
     );
@@ -789,9 +719,7 @@ export default function Modeles() {
     return catalogShell(
       <ModelesCatalogBrowse
         templates={list}
-        outfits={BUILTIN_OUTFITS}
         onSelectScene={openSceneDetail}
-        onSelectOutfit={setPreviewOutfit}
         onViewAllCategory={openCategory}
       />,
     );

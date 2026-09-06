@@ -59,16 +59,12 @@ export const MODELES_CATEGORIES = [
     coverImagePath: "/models/modele-quad-dubai-ready.webp",
     order: 7,
   },
-  {
-    slug: "outfits",
-    emoji: "👔",
-    label: "Outfits",
-    description: "Tenues exclusives LuxeFlexIA pour personnaliser tes modèles.",
-    coverImagePath: "/outfits/outfit-lv-vest-goyard.jpg",
-    order: 8,
-    isOutfitCatalog: true,
-  },
 ] as const;
+
+/** Catégories visibles dans le catalogue (scènes uniquement, pas les tenues). */
+export function getCatalogCategories() {
+  return MODELES_CATEGORIES;
+}
 
 export type ModelesCategorySlug = (typeof MODELES_CATEGORIES)[number]["slug"];
 
@@ -83,13 +79,13 @@ const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
   supercars: "supercars",
   moto: "moto",
   yacht: "yacht",
-  outfits: "outfits",
+  outfits: "lifestyle",
   adrenaline: "supercars",
   dubai: "lifestyle",
   "tokyo-istanbul": "voyages",
   "travel-tourism": "voyages",
   streetwear: "lifestyle",
-  luxury: "outfits",
+  luxury: "lifestyle",
   "luxury-lifestyle": "lifestyle",
 };
 
@@ -109,7 +105,8 @@ export function getCategoryLabel(slug: ModelesCategorySlug): string {
   return cat ? `${cat.emoji} ${cat.label}` : slug;
 }
 
-export function isOutfitCategory(slug: ModelesCategorySlug): boolean {
+/** Ancienne catégorie outfits — rediriger vers le catalogue. */
+export function isOutfitCategory(slug: string): boolean {
   return slug === "outfits";
 }
 
@@ -138,6 +135,9 @@ export function parseModelesPath(pathname: string): {
   const categoryMatch = path.match(/^\/modeles\/c\/([^/]+)$/);
   if (categoryMatch) {
     const slug = decodeURIComponent(categoryMatch[1]);
+    if (isOutfitCategory(slug)) {
+      return { view: "home", categorySlug: null, templateSlug: null };
+    }
     if (getCategoryBySlug(slug)) {
       return {
         view: "category",
