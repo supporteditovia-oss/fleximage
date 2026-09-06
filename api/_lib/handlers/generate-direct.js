@@ -199,9 +199,7 @@ module.exports = async function handler(req, res) {
       isBuiltinFaceSwap && uploadedUrls.length >= 2;
 
     const finalPrompt = isBuiltinFaceSwapWithOutfit
-      ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
-          "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
-        )
+      ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(effectivePrompt)
       : isBuiltinFaceSwap
         ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
         : buildIdentityPreservingPrompt(effectivePrompt, {

@@ -113,31 +113,72 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
  * Modèles prêts + outfit catalogue : image 1 = user, image 2 = tenue, image 3 = scène.
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
-  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory). " +
-  "Three reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
+  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory — FULL IDENTITY + OUTFIT SWAP). " +
+  "Three reference images: (1) user photo = ONLY identity source (face, eyes, nose, lips, beard, hair, skin tone, ethnicity, body build); " +
   "(2) outfit/clothes reference = wear THIS exact outfit on the replaced person; " +
-  "(3) ready model photo = SCENE LOCK — output must look like image 3 with a different person in different clothes. " +
-  "Replace ONLY the human in image 3 with the person from image 1. " +
-  "Dress them in the EXACT clothes, shoes, bags, and accessories from image 2 — worn naturally on the body, NOT pasted flat. " +
+  "(3) ready model photo = SCENE + POSE LOCK ONLY — background, decor, lighting, camera, furniture, vehicles, sea, sky. " +
+  "CRITICAL IDENTITY RULE: the human visible in image 3 must be COMPLETELY REMOVED and REPLACED by the person from image 1. " +
+  "The output face MUST be recognizable as image 1 — NOT image 3. Never keep the template model's face, hair, beard, or skin. " +
+  "Dress image-1 person in the EXACT clothes, shoes, bags, and accessories from image 2 — worn naturally on the body, NOT pasted flat. " +
   "Do NOT keep the original outfit from image 3 — image 2 outfit wins. " +
   "Keep image 3's exact pose, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
   "SKIN TONE LOCK (critical): apply image 1's exact skin tone to ALL visible skin on the replaced person — face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet if bare. " +
   "One consistent natural carnation everywhere — never mix face vs legs. " +
   "BODY BUILD LOCK (critical): copy image 1's real body type — slim stays slim, never copy template muscles or bulk. " +
-  "GLASSES RULE: keep photo-1 glasses unless image 2 clearly shows glasses to copy. " +
-  "HAIR RULE: keep photo-1 hairstyle unless image 2 is a worn look with visible hair to copy. " +
-  "FORBIDDEN: keeping image 3 clothes; face-only paste; outfit collage; new decor; cutout halo. " +
+  "GLASSES RULE: keep image-1 glasses unless image 2 clearly shows glasses to copy. " +
+  "HAIR RULE: keep image-1 hairstyle unless image 2 is a worn look with visible hair to copy. " +
+  "FORBIDDEN: keeping image 3 person/face/identity; outfit-only edit on the template model; keeping image 3 clothes; face-only paste; outfit collage; new decor; cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
+
+/** Pose/scène depuis image 3 uniquement — jamais l'identité du modèle. */
+const BUILTIN_POSE_SCENE_LOCK =
+  " POSE/SCENE LOCK: copy ONLY pose, seating, limb placement, camera angle, and environment from image 3. " +
+  "Never copy image 3 face, hair, beard, skin color, or body identity — those MUST come from image 1.";
+
+/** Tenue catalogue — éviter collage flat-lay sur le corps. */
+const BUILTIN_OUTFIT_FLATLAY_GUARD =
+  " OUTFIT WEAR LOCK: garments from image 2 must be WORN on image-1 body with natural folds and shadows — " +
+  "never a flat product cutout pasted over the template person. If image 2 shows a model, copy ONLY the clothes, NOT that model's face.";
+
+/**
+ * Réécrit un prompt modèle prêt (2 refs) pour le flux 3 images outfit.
+ * Image 1 = user, image 2 = tenue, image 3 = scène (ex-modèle « seconde image »).
+ */
+function adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt) {
+  let text = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  if (!text) {
+    return (
+      "Remplace entièrement la personne de l'image 3 par la personne de l'image 1 (visage, barbe, cheveux, peau, morphologie). " +
+      "Habille cette personne avec la tenue exacte de l'image 2. " +
+      "Garde uniquement la pose, le décor et l'éclairage de l'image 3."
+    );
+  }
+
+  text = text
+    .replace(/\b(?:la\s+)?seconde\s+image\b/gi, "__SCENE_IMAGE__")
+    .replace(/\b(?:la\s+)?première\s+image\b/gi, "l'image 1")
+    .replace(/\b(?:la\s+)?premiere\s+image\b/gi, "l'image 1")
+    .replace(/__SCENE_IMAGE__/g, "l'image 3");
+
+  text = text.replace(
+    /,\s*[^,.]*\b(?:tenue|veste|pantalon|short|doudoune|tracksuit|bomber|robe|jean|chaussures|baskets|sneakers|lunettes de soleil|sac bandoulière|sac LV|crossbody)[^,.]*/gi,
+    "",
+  );
+
+  return (
+    `${text} ` +
+    "Tenue = image 2 uniquement (pas celle du modèle image 3). " +
+    "Personne = image 1 uniquement (pas le modèle image 3)."
+  ).trim();
+}
 
 /** Prompt final modèle prêt + tenue catalogue (3 images). */
 function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
-  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
-  const userPart =
-    cleaned ||
-    "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
+  const userPart = adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt);
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
-    OUTFIT_FROM_REF_GUARD,
+    BUILTIN_POSE_SCENE_LOCK,
+    BUILTIN_OUTFIT_FLATLAY_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
