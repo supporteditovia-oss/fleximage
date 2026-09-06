@@ -295,5 +295,122 @@
     "imagePath": "/outfits/outfit-goyard-hermes-grey.jpg",
     "category": "luxury",
     "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-laabreno-navy-set",
+    "slug": "laabreno-navy-set",
+    "name": "Set navy Laabreno",
+    "description": "Gilet navy, tee crème, pantalon navy, sneakers navy, pochette.",
+    "imagePath": "/outfits/outfit-laabreno-navy-set.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-burgundy-cream-loafers",
+    "slug": "burgundy-cream-loafers",
+    "name": "Bordeaux crème mocassins",
+    "description": "Tee bordeaux, pantalon crème, mocassins suede cognac, sac blanc.",
+    "imagePath": "/outfits/outfit-burgundy-cream-loafers.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-stone-island-lv-collage",
+    "slug": "stone-island-lv-collage",
+    "name": "Stone Island + LV",
+    "description": "Sweat Stone Island blanc, jean noir déchiré, sneakers LV monogramme, casquette.",
+    "imagePath": "/outfits/outfit-stone-island-lv-collage.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-moncler-stone-white",
+    "slug": "moncler-stone-white",
+    "name": "Moncler blanc Stone Island",
+    "description": "Gilet Moncler blanc, pull Stone Island noir, jean Polo blanc, mocassins LV.",
+    "imagePath": "/outfits/outfit-moncler-stone-white.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-polo-shorts-dior",
+    "slug": "lv-polo-shorts-dior",
+    "name": "LV polo + shorts Dior",
+    "description": "Polo LV patchwork bleu, short LV monogramme, sneakers Dior.",
+    "imagePath": "/outfits/outfit-lv-polo-shorts-dior.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-gallery-dept-dior",
+    "slug": "gallery-dept-dior",
+    "name": "Gallery Dept + Dior",
+    "description": "Tee Gallery Dept, short gris fleur, sneakers Dior, accessoires.",
+    "imagePath": "/outfits/outfit-gallery-dept-dior.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-essentials-balenciaga",
+    "slug": "essentials-balenciaga",
+    "name": "Essentials + Balenciaga",
+    "description": "Hoodie vert fleurs, short Fear of God, Track Balenciaga LED, casquette Amiri.",
+    "imagePath": "/outfits/outfit-essentials-balenciaga.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-lv-mint-floral-on",
+    "slug": "lv-mint-floral-on",
+    "name": "LV mint floral On",
+    "description": "Coupe-vent LV dégradé mint floral, jean gris déchiré, sneakers On, sac Papillon.",
+    "imagePath": "/outfits/outfit-lv-mint-floral-on.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-ice-blue-hermes",
+    "slug": "lv-ice-blue-hermes",
+    "name": "LV ice blue Hermès",
+    "description": "Doudoune LV bleu glace hybrid, jean gris, sneakers Hermès, sac sling LV.",
+    "imagePath": "/outfits/outfit-lv-ice-blue-hermes.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-chanel-red-white",
+    "slug": "chanel-red-white",
+    "name": "Chanel rouge blanc",
+    "description": "Veste Chanel rouge/blanc logo, jean gris déchiré, sneakers CC rouges, sac camo.",
+    "imagePath": "/outfits/outfit-chanel-red-white.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-chanel-orange-lv",
+    "slug": "chanel-orange-lv",
+    "name": "Chanel orange LV",
+    "description": "Veste Chanel orange, jean Dsquared2 gris, sneakers LV orange, sac noir.",
+    "imagePath": "/outfits/outfit-chanel-orange-lv.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-lv-cloud-sky-loewe",
+    "slug": "lv-cloud-sky-loewe",
+    "name": "LV nuages ciel Loewe",
+    "description": "Coupe-vent LV nuages bleu ciel, jean Dsquared2, sneakers Loewe On, sac graffiti LV.",
+    "imagePath": "/outfits/outfit-lv-cloud-sky-loewe.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-dove-grey-goyard",
+    "slug": "lv-dove-grey-goyard",
+    "name": "LV colombe gris Goyard",
+    "description": "Coupe-vent LV dégradé gris colombe, jean gris, sneakers Hermès, sac Goyard.",
+    "imagePath": "/outfits/outfit-lv-dove-grey-goyard.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
   }
 ]
