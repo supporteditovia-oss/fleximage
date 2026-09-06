@@ -84,5 +84,20 @@
     "prompt": "Remplace uniquement la personne, garde pose, sac, écharpe et quad identiques.",
     "category": "moto",
     "categoryName": "Moto"
+  },
+  {
+    "id": "builtin-paris-eiffel-nuit",
+    "slug": "paris-eiffel-nuit",
+    "name": "Paris Tour Eiffel nuit",
+    "description": "Manteau noir premium, quai parisien et Tour Eiffel illuminée.",
+    "imagePath": "/models/modele-paris-eiffel-avant.webp",
+    "readyImagePath": "/models/modele-paris-eiffel-apres.webp",
+    "demoAfterPath": "/models/modele-paris-eiffel-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure, sa carnation et sa morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose appuyée contre la balustrade en pierre, les mains dans les poches du manteau noir long, le col roulé noir, le pantalon noir, les chaussures noires vernies, la montre au poignet, la Tour Eiffel illuminée en arrière-plan, la Seine, les réverbères, le quai parisien de nuit, le cadrage vertical 9:16 et l'éclairage doré de la seconde image. Photographie lifestyle luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde la scène parisienne et la Tour Eiffel identiques.",
+    "category": "lifestyle",
+    "categoryName": "Lifestyle"
   }
 ]

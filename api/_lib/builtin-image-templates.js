@@ -50,7 +50,7 @@ function listBuiltinTemplatesForApi() {
       name: item.name,
       description: item.description,
       previewUrl: resolveReferenceUrl(
-        item.readyImagePath || item.imagePath,
+        item.demoAfterPath || item.readyImagePath || item.imagePath,
       ),
       demoBeforeUrl: resolveReferenceUrl(item.imagePath),
       demoAfterUrl: demoAfterPath ? resolveReferenceUrl(demoAfterPath) : null,

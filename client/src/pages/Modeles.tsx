@@ -8,7 +8,7 @@ import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { getBuiltinGenerationPrompt, getTemplateComparePair, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
+import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
 import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
@@ -81,30 +81,20 @@ function TemplateSlideContent({
       : ` tpl-slide__frame--${enterDirection}`;
 
   const comparePair = getTemplateComparePair(template);
+  const displayUrl = getTemplateDisplayUrl(template);
 
   return (
     <div className={`tpl-slide__frame${luxeClass}`}>
       <div className="tpl-slide__lux-flash" aria-hidden />
       <div className="tpl-slide__lux-ring" aria-hidden />
       <div className="tpl-slide__frame-glow" aria-hidden />
-      <div
-        className={`tpl-slide__photo${comparePair ? " tpl-slide__photo--compare" : ""}`}
-      >
-        {comparePair ? (
-          <BeforeAfterSlider
-            pair={comparePair}
-            autoPlayLoop
-            className="tpl-slide__compare"
-            label={`Avant et après — ${template.name}`}
-          />
-        ) : (
-          <img
-            className="tpl-slide__media"
-            src={template.previewUrl ?? ""}
-            alt={template.name}
-            decoding="async"
-          />
-        )}
+      <div className="tpl-slide__photo">
+        <img
+          className="tpl-slide__media"
+          src={displayUrl}
+          alt={template.name}
+          decoding="async"
+        />
         <div className="tpl-slide__scrim" aria-hidden />
       </div>
 
@@ -257,7 +247,7 @@ function TemplatePreviewLightbox({
         ) : (
           <img
             className="tpl-preview-overlay__img"
-            src={template.previewUrl ?? ""}
+            src={getTemplateDisplayUrl(template)}
             alt={template.name}
             decoding="async"
           />
@@ -401,10 +391,11 @@ export default function Modeles() {
   // Précharger toutes les vignettes pour un scroll / changement instantané.
   useEffect(() => {
     list.forEach((template) => {
-      if (!template.previewUrl) return;
+      const src = getTemplateDisplayUrl(template);
+      if (!src) return;
       const img = new Image();
       img.decoding = "async";
-      img.src = template.previewUrl;
+      img.src = src;
     });
   }, [list]);
 

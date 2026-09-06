@@ -39,6 +39,10 @@ function resolveDemoAfterPath(item: BuiltinCatalogEntry): string | null {
   return null;
 }
 
+function resolvePreviewPath(item: BuiltinCatalogEntry): string {
+  return item.demoAfterPath || item.readyImagePath || item.imagePath;
+}
+
 /** Modèles livrés avec l'app : visibles même si l'admin n'a rien configuré. */
 export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
   const mode = resolveMode(item);
@@ -48,7 +52,7 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
     slug: item.slug,
     name: item.name,
     description: item.description,
-    previewUrl: item.readyImagePath || item.imagePath,
+    previewUrl: resolvePreviewPath(item),
     demoBeforeUrl: item.imagePath,
     demoAfterUrl: demoAfterPath,
     icon: null,
@@ -67,6 +71,10 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
     isBuiltin: true,
   };
 });
+
+export function getTemplateDisplayUrl(template: FeedTemplate): string {
+  return template.demoAfterUrl ?? template.previewUrl ?? "";
+}
 
 export function hasTemplateBeforeAfterDemo(template: FeedTemplate): boolean {
   return Boolean(template.demoBeforeUrl && template.demoAfterUrl);
