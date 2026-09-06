@@ -1,6 +1,7 @@
-/* Comparaison avant / après — slider draggable + poignée centrale. */
+/* Comparaison avant / après — pixel-perfect, masque clip-path uniquement. */
 
 .lx-compare {
+  --lx-compare-pos: 50%;
   position: relative;
   width: 100%;
   aspect-ratio: 9 / 16;
@@ -11,57 +12,40 @@
   user-select: none;
   cursor: ew-resize;
   background: #0a090c;
+  contain: layout style paint;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.06),
     0 24px 80px rgba(0, 0, 0, 0.55);
 }
 
-.lx-compare__layer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.lx-compare__layer--after {
-  z-index: 0;
-}
-
 .lx-compare__img {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   display: block;
-  height: 100%;
   width: 100%;
-  max-width: none;
+  height: 100%;
   object-fit: cover;
   object-position: center center;
   pointer-events: none;
 }
 
-.lx-compare__before {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  height: 100%;
-  overflow: hidden;
-  pointer-events: none;
+.lx-compare__img--after {
+  z-index: 0;
 }
 
-.lx-compare__before .lx-compare__img--before {
-  max-width: none;
-  height: 100%;
+.lx-compare__img--before {
+  z-index: 1;
+  clip-path: inset(0 calc(100% - var(--lx-compare-pos)) 0 0);
 }
 
 .lx-compare__bar {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: var(--lx-compare-pos);
   z-index: 2;
   width: 2px;
-  transform: translateX(-50%);
+  margin-left: -1px;
   background: linear-gradient(
     180deg,
     rgba(201, 162, 39, 0.15) 0%,
