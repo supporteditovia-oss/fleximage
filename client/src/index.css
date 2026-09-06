@@ -43,6 +43,17 @@ body[data-hide-app-chrome] .bottom-dock {
   pointer-events: none !important;
 }
 
+html.luxeflexia-modeles-page .crisp-client,
+html.luxeflexia-modeles-page #crisp-chatbox,
+html.luxeflexia-modeles-page .cc-1m2mf,
+body[data-hide-app-chrome] .crisp-client,
+body[data-hide-app-chrome] #crisp-chatbox {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 html[data-larp-result-mode],
 body[data-larp-result-mode] {
   overflow: hidden !important;

@@ -71,7 +71,6 @@ function TemplateSlideContent({
             pair={comparePair}
             autoPlayLoop
             showLabels
-            hint="Glisse pour comparer"
             className="tpl-slide__compare"
             label={`Avant et après — ${template.name}`}
           />
@@ -165,9 +164,11 @@ function TemplateSlideContent({
         </button>
 
         <p className="tpl-hint">
-          {isVehicleSwapTemplate(template)
-            ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
-            : "Ta photo remplace la personne — même peau et même morphologie que toi, décor identique."}
+          {comparePair
+            ? "Glisse pour comparer · ta photo remplace la personne — même peau, même morphologie, décor identique."
+            : isVehicleSwapTemplate(template)
+              ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
+              : "Ta photo remplace la personne — même peau et même morphologie que toi, décor identique."}
         </p>
       </div>
     </div>
@@ -226,7 +227,6 @@ function TemplatePreviewLightbox({
             pair={comparePair}
             autoPlayLoop
             showLabels
-            hint="Glisse pour comparer"
             className="tpl-preview-overlay__compare"
             label={`Avant et après — ${template.name}`}
           />
@@ -292,6 +292,7 @@ export default function Modeles() {
   useEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
     document.body.setAttribute("data-hide-app-chrome", "true");
+    window.$crisp?.push(["do", "chat:hide"]);
 
     const syncDesktopLayout = () => {
       const desktop = window.matchMedia("(min-width: 768px)").matches;
@@ -308,6 +309,7 @@ export default function Modeles() {
       document.documentElement.classList.remove("luxeflexia-modeles-page");
       document.documentElement.classList.remove("luxeflexia-modeles-desktop");
       document.body.removeAttribute("data-hide-app-chrome");
+      window.$crisp?.push(["do", "chat:show"]);
       window.removeEventListener("resize", syncDesktopLayout);
       if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
     };

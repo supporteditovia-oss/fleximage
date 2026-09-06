@@ -60,14 +60,11 @@
 }
 
 .tpl-slide__photo--compare .tpl-slide__scrim {
-  background: linear-gradient(
-    to bottom,
-    rgba(8, 7, 10, 0.35) 0%,
-    rgba(8, 7, 10, 0) 18%,
-    rgba(8, 7, 10, 0) 40%,
-    rgba(8, 7, 10, 0.88) 78%,
-    rgba(8, 7, 10, 0.96) 100%
-  );
+  display: none;
+}
+
+.tpl-slide__compare .lx-compare__img--after {
+  filter: brightness(1.1) contrast(1.02) saturate(1.03);
 }
 
 .tpl-slide__media {
@@ -252,15 +249,16 @@
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  border: 0;
+  border: 1px solid rgba(201, 162, 39, 0.35);
   border-radius: 999px;
-  background: rgba(20, 18, 24, 0.6);
-  backdrop-filter: blur(10px);
-  color: #fff;
+  background: rgba(12, 10, 14, 0.72);
+  backdrop-filter: blur(12px);
+  color: #f6e7bd;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .tpl-credits {
@@ -268,12 +266,16 @@
   align-items: center;
   gap: 0.35rem;
   border-radius: 999px;
-  background: rgba(20, 18, 24, 0.6);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  background: rgba(12, 10, 14, 0.72);
+  backdrop-filter: blur(12px);
   padding: 0.45rem 0.8rem;
+  min-height: 38px;
+  box-sizing: border-box;
   color: #f6e7bd;
   font-size: 0.82rem;
   font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .tpl-bottom {
@@ -401,8 +403,13 @@ html.luxeflexia-modeles-page .luxeflexia-app-scroll > div {
   margin: 0;
   text-align: center;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.62);
-  padding-bottom: 0.15rem;
+  line-height: 1.45;
+  color: #f3e4b8;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(8, 7, 10, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .tpl-empty {
@@ -1102,7 +1109,12 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__media {
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img {
-  object-fit: contain !important;
+  object-fit: cover !important;
+  object-position: center center;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__hint {
+  bottom: 0.85rem;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__scrim {
