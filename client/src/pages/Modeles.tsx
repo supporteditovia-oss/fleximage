@@ -159,7 +159,7 @@ function TemplateSlideContent({
           ) : (
             <>
               <ImagePlus className="h-5 w-5" aria-hidden />
-              Générer l’image
+              Générer la photo
             </>
           )}
         </button>
