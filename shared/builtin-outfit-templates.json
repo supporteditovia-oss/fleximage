@@ -1,65 +1,56 @@
 [
   {
-    "id": "outfit-lv-tracksuit",
-    "slug": "lv-tracksuit",
-    "name": "LV tracksuit gris",
-    "description": "Veste Louis Vuitton + jean déchiré + sneakers.",
-    "imagePath": "/models/modele-urus-dubai-sunset.webp",
+    "id": "outfit-stone-island-orange",
+    "slug": "stone-island-orange",
+    "name": "Stone Island orange",
+    "description": "Veste orange Stone Island, jean gris déchiré, sneakers LV orange.",
+    "imagePath": "/outfits/outfit-stone-island-orange.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-lv-vest-goyard",
+    "slug": "lv-vest-goyard",
+    "name": "Doudoune bleue + Goyard",
+    "description": "Gilet puffer bleu, col roulé noir, jean noir, sneakers Chanel, sac Goyard.",
+    "imagePath": "/outfits/outfit-lv-vest-goyard.jpg",
     "category": "luxury",
     "categoryName": "Luxe"
   },
   {
-    "id": "outfit-bomber-camo",
-    "slug": "bomber-camo",
-    "name": "Bomber + camo",
-    "description": "Veste bomber noire et pantalon camouflage.",
-    "imagePath": "/models/modele-lamborghini-urus.webp",
+    "id": "outfit-lv-puffer-chanel",
+    "slug": "lv-puffer-chanel",
+    "name": "LV puffer bleu & blanc",
+    "description": "Doudoune LV bicolore, jean gris déchiré, sneakers Chanel, sac LV.",
+    "imagePath": "/outfits/outfit-lv-puffer-chanel.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-cloud-windbreaker",
+    "slug": "lv-cloud-windbreaker",
+    "name": "LV windbreaker nuages",
+    "description": "Coupe-vent LV blanc/bleu avec nuages, jean gris, sneakers On, sac LV.",
+    "imagePath": "/outfits/outfit-lv-cloud-windbreaker.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-parajumpers-gucci",
+    "slug": "parajumpers-gucci",
+    "name": "Parajumpers + Gucci",
+    "description": "Gilet Parajumpers gris, jean noir, sneakers On, sac Gucci monogramme.",
+    "imagePath": "/outfits/outfit-parajumpers-gucci.jpg",
     "category": "streetwear",
     "categoryName": "Streetwear"
   },
   {
-    "id": "outfit-yacht-black",
-    "slug": "yacht-black",
-    "name": "Tenue yacht noire",
-    "description": "Look sobre noir sur pont de yacht.",
-    "imagePath": "/models/modele-yacht-deck.webp",
-    "category": "travel",
-    "categoryName": "Voyage"
-  },
-  {
-    "id": "outfit-lv-swim",
-    "slug": "lv-swim",
-    "name": "Short LV yacht",
-    "description": "Short de bain Louis Vuitton monogramme.",
-    "imagePath": "/models/modele-yacht-lamborghini.webp",
-    "category": "travel",
-    "categoryName": "Voyage"
-  },
-  {
-    "id": "outfit-scooter-street",
-    "slug": "scooter-street",
-    "name": "Streetwear scooter",
-    "description": "Doudoune noire, pantalon gris, sac damier.",
-    "imagePath": "/models/modele-scooter-urban.webp",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
-  },
-  {
-    "id": "outfit-ua-tracksuit",
-    "slug": "ua-tracksuit",
-    "name": "Tracksuit Under Armour",
-    "description": "Survêtement gris + bonnet noir.",
-    "imagePath": "/models/modele-urus-esso-nuit.webp",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
-  },
-  {
-    "id": "outfit-business-class",
-    "slug": "business-class",
-    "name": "Business class",
-    "description": "Veste matelassée noire, look cabine premium.",
-    "imagePath": "/models/modele-avion-business.webp",
-    "category": "travel",
-    "categoryName": "Voyage"
+    "id": "outfit-lv-turquoise-street",
+    "slug": "lv-turquoise-street",
+    "name": "LV turquoise street",
+    "description": "Veste LV turquoise/mint, jean déchiré gris, sneakers On, sac LV monogramme.",
+    "imagePath": "/outfits/outfit-lv-turquoise-street.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
   }
 ]
