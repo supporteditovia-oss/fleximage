@@ -1989,7 +1989,7 @@ function needsProModelVariant(prompt) {
 /** Honest client countdown — provider pass + typical vision QA / one corrective regen. */
 function estimateGenerationSeconds(prompt, options = {}) {
   const refs = Math.max(0, Number(options.referenceImageCount) || 0);
-  const pro = needsProModelVariant(prompt);
+  const pro = options.modelVariant === "default";
   let providerSec = pro ? 50 : 34;
   if (refs >= 2) providerSec += 8;
   if (refs >= 3) providerSec += 6;

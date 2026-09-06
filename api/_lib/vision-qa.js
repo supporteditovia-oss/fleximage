@@ -502,7 +502,7 @@ async function maybeRetryAfterVisionQa({
       imageUrls.length > 0 ? await uploadImageUrlsToOneshot(imageUrls) : [];
     const oneshotResponse = await createOneshotJob(retryPrompt, {
       aspectRatio: aspectRatio || "9:16",
-      modelVariant: modelVariant || "default",
+      modelVariant: modelVariant || "fast",
       ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
     });
     if (!oneshotResponse || !oneshotResponse.id) {
@@ -519,7 +519,7 @@ async function maybeRetryAfterVisionQa({
         ? resultUrls.slice(0, 4)
         : [],
       oneshot_model_variant:
-        modelVariant || meta.oneshot_model_variant || "default",
+        modelVariant || meta.oneshot_model_variant || "fast",
       estimated_seconds:
         Number.isFinite(prevEstimate) && prevEstimate > 0
           ? prevEstimate + 55

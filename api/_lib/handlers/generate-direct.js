@@ -18,7 +18,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -207,10 +207,7 @@ module.exports = async function handler(req, res) {
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
           });
-    const oneshotModelVariant =
-      isBuiltinFaceSwap || needsProModelVariant(effectivePrompt)
-        ? "default"
-        : "fast";
+    const oneshotModelVariant = "fast";
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
       modelVariant: oneshotModelVariant,

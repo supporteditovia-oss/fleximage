@@ -124,12 +124,8 @@ async function createOneshotJob(prompt, options) {
 
   // OneShot nano-banana accepts ONLY "default" | "fast".
   // default = Nano Banana Pro, fast = Nano Banana 2.
-  // Literal "pro" is rejected with 422 — map it to default.
-  let modelVariant = (options && options.modelVariant) || "fast";
-  if (modelVariant === "pro") modelVariant = "default";
-  if (modelVariant !== "default" && modelVariant !== "fast") {
-    modelVariant = "fast";
-  }
+  // LuxeFlexIA always uses Nano Banana 2 (fast).
+  const modelVariant = "fast";
 
   const payload = {
     model: "nano-banana",
