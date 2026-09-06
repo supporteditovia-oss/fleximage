@@ -97,6 +97,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
     "Replace the model person with the user while keeping the scene identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    BUILTIN_POSE_SCENE_LOCK,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
@@ -129,6 +130,56 @@ const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
   "FORBIDDEN: keeping image 3 clothes; face-only paste; outfit collage; new decor; cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
 
+/** Image 2 = flat-lay outfit — jamais la pose ; pose + scène = image 3. */
+const BUILTIN_OUTFIT_FLATLAY_GUARD =
+  "FLAT-LAY OUTFIT RULE (critical): image 2 is a flat-lay / catalogue clothes photo — use ONLY the garments (top, bottom, shoes, bag). " +
+  "NEVER copy the flat-lay layout, standing mannequin pose, or product-packshot framing from image 2. " +
+  "Wear those clothes naturally ON the body already in image 3's EXACT pose — same seated angle, leg hang, arm position, phone grip, head tilt. " +
+  "POSE SOURCE = image 3 ONLY. IDENTITY SOURCE = image 1 ONLY. CLOTHES SOURCE = image 2 ONLY.";
+
+/** Verrou pose/scène pour modèles prêts — remplacement personne uniquement. */
+const BUILTIN_POSE_SCENE_LOCK =
+  "POSE + SCENE LOCK (critical — reject if violated): output must be image 3 with a different person — same pixel composition. " +
+  "Copy image 3's EXACT skeleton pose: same seat position, same torso lean, same leg placement (inside/outside car door), same arm angles, same hand holding phone/props, same head direction and chin angle, same foot placement on ground or pedals. " +
+  "FORBIDDEN: reposing into driver seat if model sits on door edge; standing if model sits; different phone hand; legs inside if model has legs outside; any pose from image 1 (user selfie). " +
+  "Keep image 3's Lamborghini/car, gas station, canopy, wheels, brake calipers, lighting, crop, and every background pixel unchanged.";
+
+/**
+ * Adapte un prompt modèle prêt (flux 2 images) pour le flux outfit (3 images).
+ * Image 1 = user, image 2 = tenue, image 3 = scène.
+ */
+function adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt) {
+  let adapted = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  adapted = adapted
+    .replace(/\bseconde\s+image\b/gi, "troisième image")
+    .replace(/\bde\s+la\s+2(?:e|ème|eme)?\s+image\b/gi, "de la troisième image")
+    .replace(/\bsur\s+la\s+seconde\s+photo\b/gi, "sur la troisième photo")
+    .replace(/\bimage\s+2\b/gi, "image 3")
+    .replace(/\bphoto\s+2\b/gi, "photo 3");
+  // Retire les consignes « garder la tenue du modèle » — l'outfit vient de l'image 2.
+  adapted = adapted
+    .replace(
+      /,\s*la\s+veste[^.]*?(?=,\s*la\s+station|,\s*les\s+jantes|,\s*le\s+cadrage|,\s*l['']éclairage|,\s*photographie)/gi,
+      "",
+    )
+    .replace(
+      /,\s*le\s+pantalon[^.]*?(?=,\s*les\s+chaussettes|,\s*les\s+chaussons|,\s*les\s+baskets|,\s*le\s+cadrage)/gi,
+      "",
+    )
+    .replace(
+      /,\s*le\s+short[^.]*?(?=,\s*les\s+lunettes|,\s*les\s+sièges|,\s*le\s+cadrage)/gi,
+      "",
+    )
+    .replace(
+      /,\s*la\s+doudoune[^.]*?(?=,\s*le\s+pantalon|,\s*le\s+cadrage)/gi,
+      "",
+    );
+  const lead =
+    "Trois images : (1) personne utilisateur, (2) tenue flat-lay à porter, (3) scène du modèle prêt. " +
+    "Remplace UNIQUEMENT la personne de l'image 3 par celle de l'image 1, habillée avec la tenue EXACTE de l'image 2. ";
+  return (lead + adapted).trim();
+}
+
 /** Prompt final modèle prêt + tenue catalogue (3 images). */
 function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
@@ -137,7 +188,8 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
     "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
-    OUTFIT_FROM_REF_GUARD,
+    BUILTIN_OUTFIT_FLATLAY_GUARD,
+    BUILTIN_POSE_SCENE_LOCK,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
@@ -3984,6 +4036,7 @@ module.exports = {
   buildIdentityPreservingPrompt,
   buildBuiltinTemplateFaceSwapPrompt,
   buildBuiltinTemplateFaceSwapWithOutfitPrompt,
+  adaptBuiltinTemplatePromptForOutfitFlow,
   expandImageEditUserRequest,
   isCameraViewpointChangePrompt,
   buildStairClosedSlabPrompt,
