@@ -53,10 +53,14 @@
   max-height: none;
   border-radius: 0;
   aspect-ratio: auto;
+  contain: strict;
 }
 
-.tpl-slide__compare .lx-compare__img {
+.tpl-slide__compare .lx-compare__img,
+.tpl-slide__compare .lx-compare__img--before,
+.tpl-slide__compare .lx-compare__img--after {
   object-fit: cover;
+  object-position: center center;
 }
 
 .tpl-slide__photo--compare .tpl-slide__scrim {
@@ -1108,9 +1112,15 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__media {
   object-position: center center;
 }
 
-html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img {
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare {
+  contain: strict;
+}
+
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img,
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img--before,
+html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img--after {
   object-fit: cover !important;
-  object-position: center center;
+  object-position: center center !important;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__hint {

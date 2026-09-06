@@ -42,19 +42,29 @@ export function BeforeAfterSlider({
 }: BeforeAfterSliderProps) {
   const labelId = useId();
   const frameRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
-  const [position, setPosition] = useState(autoPlay || autoPlayLoop ? 18 : 50);
+  const positionRef = useRef(autoPlay || autoPlayLoop ? 18 : 50);
+  const [ariaPosition, setAriaPosition] = useState(
+    Math.round(autoPlay || autoPlayLoop ? 18 : 50),
+  );
   const [userLocked, setUserLocked] = useState(false);
-  const [frameWidth, setFrameWidth] = useState(0);
+
+  const applyPosition = (value: number) => {
+    const pct = clampPosition(value);
+    positionRef.current = pct;
+    const frame = frameRef.current;
+    const bar = barRef.current;
+    if (frame) {
+      frame.style.setProperty("--lx-compare-pos", `${pct}%`);
+    }
+    if (bar) {
+      bar.style.left = `${pct}%`;
+    }
+  };
 
   useEffect(() => {
-    const frame = frameRef.current;
-    if (!frame) return;
-    const sync = () => setFrameWidth(frame.getBoundingClientRect().width);
-    sync();
-    const observer = new ResizeObserver(sync);
-    observer.observe(frame);
-    return () => observer.disconnect();
+    applyPosition(positionRef.current);
   }, [pair.id]);
 
   const updateFromClientX = (clientX: number) => {
@@ -62,7 +72,7 @@ export function BeforeAfterSlider({
     if (!frame) return;
     const rect = frame.getBoundingClientRect();
     if (rect.width <= 0) return;
-    setPosition(clampPosition(((clientX - rect.left) / rect.width) * 100));
+    applyPosition(((clientX - rect.left) / rect.width) * 100);
   };
 
   useEffect(() => {
@@ -77,7 +87,7 @@ export function BeforeAfterSlider({
     const tick = (now: number) => {
       const t = Math.min(1, (now - started) / duration);
       const eased = 1 - (1 - t) ** 3;
-      setPosition(from + (to - from) * eased);
+      applyPosition(from + (to - from) * eased);
       if (t < 1) raf = requestAnimationFrame(tick);
     };
 
@@ -99,7 +109,7 @@ export function BeforeAfterSlider({
       const half = cycleMs / 2;
       const phase = elapsed <= half ? elapsed / half : 1 - (elapsed - half) / half;
       const eased = phase < 0.5 ? 2 * phase * phase : 1 - (-2 * phase + 2) ** 2 / 2;
-      setPosition(from + (to - from) * eased);
+      applyPosition(from + (to - from) * eased);
       raf = requestAnimationFrame(tick);
     };
 
@@ -113,7 +123,9 @@ export function BeforeAfterSlider({
       updateFromClientX(event.clientX);
     };
     const onUp = () => {
+      if (!draggingRef.current) return;
       draggingRef.current = false;
+      setAriaPosition(Math.round(positionRef.current));
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -137,7 +149,7 @@ export function BeforeAfterSlider({
         aria-labelledby={labelId}
         aria-valuemin={8}
         aria-valuemax={92}
-        aria-valuenow={Math.round(position)}
+        aria-valuenow={ariaPosition}
         tabIndex={0}
         onPointerDown={(event) => {
           event.preventDefault();
@@ -149,35 +161,33 @@ export function BeforeAfterSlider({
           if (event.key === "ArrowLeft") {
             event.preventDefault();
             setUserLocked(true);
-            setPosition((value) => clampPosition(value - 4));
+            applyPosition(positionRef.current - 4);
+            setAriaPosition(Math.round(positionRef.current));
           }
           if (event.key === "ArrowRight") {
             event.preventDefault();
             setUserLocked(true);
-            setPosition((value) => clampPosition(value + 4));
+            applyPosition(positionRef.current + 4);
+            setAriaPosition(Math.round(positionRef.current));
           }
         }}
       >
-        <div className="lx-compare__layer lx-compare__layer--after" aria-hidden>
-          <img
-            src={pair.afterSrc}
-            alt={pair.afterAlt}
-            className="lx-compare__img lx-compare__img--after"
-            draggable={false}
-            sizes={sizes}
-            fetchPriority={priority ? "high" : "auto"}
-          />
-        </div>
-        <div className="lx-compare__before" style={{ width: `${position}%` }}>
-          <img
-            src={pair.beforeSrc}
-            alt={pair.beforeAlt}
-            className="lx-compare__img lx-compare__img--before"
-            draggable={false}
-            sizes={sizes}
-            style={frameWidth ? { width: `${frameWidth}px` } : undefined}
-          />
-        </div>
+        <img
+          src={pair.afterSrc}
+          alt={pair.afterAlt}
+          className="lx-compare__img lx-compare__img--after"
+          draggable={false}
+          sizes={sizes}
+          fetchPriority={priority ? "high" : "auto"}
+        />
+        <img
+          src={pair.beforeSrc}
+          alt={pair.beforeAlt}
+          className="lx-compare__img lx-compare__img--before"
+          draggable={false}
+          sizes={sizes}
+          fetchPriority={priority ? "high" : "auto"}
+        />
         {showLabels ? (
           <div className="lx-compare__labels" aria-hidden>
             <span className="lx-compare__label">Avant</span>
@@ -189,8 +199,8 @@ export function BeforeAfterSlider({
             {hint}
           </span>
         ) : null}
-        <div className="lx-compare__bar" style={{ left: `${position}%` }}>
-          <span className="lx-compare__handle" aria-hidden>
+        <div ref={barRef} className="lx-compare__bar" aria-hidden>
+          <span className="lx-compare__handle">
             <span />
             <span />
           </span>
