@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
@@ -19,10 +19,12 @@ import { BUILTIN_OUTFITS, type BuiltinOutfit } from "@/lib/builtin-outfit-templa
 import {
   getCategoryBySlug,
   isOutfitCategory,
+  MODELES_CATEGORIES,
   normalizeSceneCategory,
   type ModelesCategorySlug,
 } from "@/lib/modeles-categories";
-import { ModelesCategoryBar } from "@/components/modeles/ModelesCategoryBar";
+import { ModelesCategoryHome } from "@/components/modeles/ModelesCategoryHome";
+import { ModelesCategoryHeader } from "@/components/modeles/ModelesCategoryHeader";
 import {
   ModelesCatalogGrid,
   type CatalogGridItem,
@@ -34,7 +36,7 @@ const IMAGE_CREDIT_COST = 10;
 const DESKTOP_WHEEL_COOLDOWN_MS = 520;
 
 type SlideDirection = "next" | "prev" | "none";
-type ViewMode = "catalog" | "detail";
+type ViewMode = "home" | "category" | "detail";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -45,13 +47,21 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-function readCategoryFromUrl(): ModelesCategorySlug {
+function readInitialCatalogState(): {
+  viewMode: ViewMode;
+  category: ModelesCategorySlug;
+} {
   const cat = new URLSearchParams(window.location.search).get("cat");
-  if (cat && getCategoryBySlug(cat)) return cat as ModelesCategorySlug;
-  return "lifestyle";
+  if (cat && getCategoryBySlug(cat)) {
+    return { viewMode: "category", category: cat as ModelesCategorySlug };
+  }
+  return { viewMode: "home", category: "lifestyle" };
 }
 
-function syncCatalogUrl(params: { cat?: ModelesCategorySlug; t?: string | null }) {
+function syncCatalogUrl(params: {
+  cat?: ModelesCategorySlug | null;
+  t?: string | null;
+}) {
   const url = new URL(window.location.href);
   if (params.cat) url.searchParams.set("cat", params.cat);
   else url.searchParams.delete("cat");
@@ -384,12 +394,10 @@ export default function Modeles() {
   const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const wanted = new URLSearchParams(window.location.search).get("t");
-    return wanted ? "detail" : "catalog";
-  });
+  const initialCatalog = readInitialCatalogState();
+  const [viewMode, setViewMode] = useState<ViewMode>(initialCatalog.viewMode);
   const [activeCategory, setActiveCategory] = useState<ModelesCategorySlug>(
-    readCategoryFromUrl,
+    initialCatalog.category,
   );
   const [previewOutfit, setPreviewOutfit] = useState<BuiltinOutfit | null>(null);
 
@@ -406,6 +414,26 @@ export default function Modeles() {
     }
     return counts;
   }, [list]);
+
+  const categoryCovers = useMemo(() => {
+    const firstCover: Partial<Record<ModelesCategorySlug, string>> = {};
+    for (const template of list) {
+      const slug = normalizeSceneCategory(template.category);
+      if (!firstCover[slug]) {
+        firstCover[slug] =
+          template.demoAfterUrl ?? template.previewUrl ?? undefined;
+      }
+    }
+    if (BUILTIN_OUTFITS[0] && !firstCover.outfits) {
+      firstCover.outfits = BUILTIN_OUTFITS[0].imagePath;
+    }
+    return MODELES_CATEGORIES.map((category) => ({
+      slug: category.slug,
+      count: categoryCounts[category.slug] ?? 0,
+      coverUrl:
+        firstCover[category.slug] ?? category.coverImagePath ?? "",
+    }));
+  }, [list, categoryCounts]);
 
   const categoryScenes = useMemo(
     () => filterScenesByCategory(list, activeCategory),
@@ -552,45 +580,19 @@ export default function Modeles() {
     [isDesktopLayout],
   );
 
-  const jumpedRef = useRef(false);
-  useEffect(() => {
-    if (jumpedRef.current || list.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
-    const wanted = params.get("t");
-    const cat = params.get("cat");
-    if (cat && getCategoryBySlug(cat)) {
-      setActiveCategory(cat as ModelesCategorySlug);
-    }
-    if (!wanted) {
-      jumpedRef.current = true;
-      return;
-    }
-    const pool = cat && !isOutfitCategory(cat as ModelesCategorySlug)
-      ? filterScenesByCategory(list, cat as ModelesCategorySlug)
-      : list;
-    const index = pool.findIndex((t) => t.id === wanted || t.slug === wanted);
-    if (index >= 0) {
-      setViewMode("detail");
-      setActiveIndex(index);
-      if (!isDesktopLayout) {
-        requestAnimationFrame(() => {
-          slideRefs.current[index]?.scrollIntoView({ behavior: "auto" });
-        });
-      }
-    }
-    jumpedRef.current = true;
-  }, [isDesktopLayout, list]);
+  const openHome = useCallback(() => {
+    setViewMode("home");
+    syncCatalogUrl({ cat: null, t: null });
+  }, []);
 
-  useEffect(() => {
-    if (viewMode !== "detail" || !active) return;
-    syncCatalogUrl({
-      cat: normalizeSceneCategory(active.category),
-      t: active.slug || active.id,
-    });
-  }, [viewMode, active]);
+  const openCategory = useCallback((slug: ModelesCategorySlug) => {
+    setActiveCategory(slug);
+    setViewMode("category");
+    syncCatalogUrl({ cat: slug, t: null });
+  }, []);
 
-  const openCatalog = useCallback(() => {
-    setViewMode("catalog");
+  const backFromDetail = useCallback(() => {
+    setViewMode("category");
     syncCatalogUrl({ cat: activeCategory, t: null });
   }, [activeCategory]);
 
@@ -607,10 +609,13 @@ export default function Modeles() {
     [list],
   );
 
-  const onCategoryChange = useCallback((slug: ModelesCategorySlug) => {
-    setActiveCategory(slug);
-    syncCatalogUrl({ cat: slug, t: null });
-  }, []);
+  useEffect(() => {
+    if (viewMode !== "detail" || !active) return;
+    syncCatalogUrl({
+      cat: normalizeSceneCategory(active.category),
+      t: active.slug || active.id,
+    });
+  }, [viewMode, active]);
 
   const askForPhoto = (template: FeedTemplate) => {
     setPendingTemplate(template);
@@ -725,65 +730,89 @@ export default function Modeles() {
   }
 
   const activeCategoryMeta = getCategoryBySlug(activeCategory);
+  const categoryItemCount = catalogItems.length;
 
-  if (viewMode === "catalog" || !active) {
-    return (
-      <>
-        <div className="mcatalog-page">
-          <div className="tpl-topbar">
-            <button
-              type="button"
-              className="tpl-round-button"
-              onClick={() => navigate("/create")}
-              aria-label="Retour"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <span className="tpl-credits">
-              <Gem className="h-3.5 w-3.5" aria-hidden />
-              {credits}
-            </span>
-          </div>
+  const catalogShell = (body: ReactNode) => (
+    <>
+      <div className="mcatalog-page">
+        <div className="tpl-topbar">
+          <button
+            type="button"
+            className="tpl-round-button"
+            onClick={() =>
+              viewMode === "home" ? navigate("/create") : openHome()
+            }
+            aria-label={viewMode === "home" ? "Retour au studio" : "Retour au catalogue"}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <span className="tpl-credits">
+            <Gem className="h-3.5 w-3.5" aria-hidden />
+            {credits}
+          </span>
+        </div>
 
-          <div className="mcatalog-scroll">
+        <div className="mcatalog-scroll">
+          {viewMode === "home" ? (
             <header className="mcatalog-header">
               <p className="mcatalog-header__eyebrow">Modèles exclusifs LuxeFlexIA</p>
               <h1 className="mcatalog-header__title">Catalogue premium</h1>
               <p className="mcatalog-header__subtitle">
-                Galerie 100 % générée par LuxeFlexIA — aucune image Pinterest, Google
-                ou externe. Choisis une catégorie, puis un modèle pour te mettre en scène.
+                Choisis une catégorie, puis un modèle pour te mettre en scène.
+                100 % généré par LuxeFlexIA — aucune image externe.
               </p>
             </header>
-
-            <div className="mcatalog-categories-wrap">
-              <ModelesCategoryBar
-                active={activeCategory}
-                counts={categoryCounts}
-                onChange={onCategoryChange}
-              />
-            </div>
-
-            <div className="mcatalog-body">
-              {activeCategoryMeta ? (
-                <p className="sr-only">{activeCategoryMeta.description}</p>
-              ) : null}
-              <ModelesCatalogGrid
-                items={catalogItems}
-                category={activeCategory}
-                onSelectScene={openSceneDetail}
-                onSelectOutfit={setPreviewOutfit}
-              />
-            </div>
-          </div>
+          ) : (
+            <ModelesCategoryHeader
+              category={activeCategory}
+              count={categoryItemCount}
+              onBack={openHome}
+            />
+          )}
+          <div className="mcatalog-body">{body}</div>
         </div>
+      </div>
 
-        {previewOutfit ? (
-          <OutfitPreviewLightbox
-            outfit={previewOutfit}
-            onClose={() => setPreviewOutfit(null)}
-          />
+      {previewOutfit ? (
+        <OutfitPreviewLightbox
+          outfit={previewOutfit}
+          onClose={() => setPreviewOutfit(null)}
+        />
+      ) : null}
+    </>
+  );
+
+  if (viewMode === "home") {
+    return catalogShell(
+      <ModelesCategoryHome
+        covers={categoryCovers}
+        onSelectCategory={openCategory}
+      />,
+    );
+  }
+
+  if (viewMode === "category") {
+    return catalogShell(
+      <>
+        {activeCategoryMeta ? (
+          <p className="sr-only">{activeCategoryMeta.description}</p>
         ) : null}
-      </>
+        <ModelesCatalogGrid
+          items={catalogItems}
+          category={activeCategory}
+          onSelectScene={openSceneDetail}
+          onSelectOutfit={setPreviewOutfit}
+        />
+      </>,
+    );
+  }
+
+  if (!active) {
+    return catalogShell(
+      <ModelesCategoryHome
+        covers={categoryCovers}
+        onSelectCategory={openCategory}
+      />,
     );
   }
 
@@ -793,8 +822,8 @@ export default function Modeles() {
         <button
           type="button"
           className="tpl-round-button"
-          onClick={openCatalog}
-          aria-label="Retour au catalogue"
+          onClick={backFromDetail}
+          aria-label="Retour à la catégorie"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
