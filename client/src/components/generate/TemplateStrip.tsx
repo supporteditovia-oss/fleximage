@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import { normalizeSceneCategory } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
 type TemplateStripProps = {
@@ -40,7 +41,10 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
               key={template.id}
               type="button"
               className="tpl-strip-compact__thumb"
-              onClick={() => navigate(`/modeles?t=${template.id}`)}
+              onClick={() => {
+                const cat = normalizeSceneCategory(template.category);
+                navigate(`/modeles?cat=${cat}&t=${template.id}`);
+              }}
               aria-label={template.name}
             >
               <img src={template.previewUrl ?? ""} alt="" loading="lazy" />
@@ -78,7 +82,10 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
             key={template.id}
             type="button"
             className="tpl-strip-entry__card"
-            onClick={() => navigate(`/modeles?t=${template.id}`)}
+            onClick={() => {
+              const cat = normalizeSceneCategory(template.category);
+              navigate(`/modeles?cat=${cat}&t=${template.id}`);
+            }}
             aria-label={template.name}
           >
             <img src={template.previewUrl ?? ""} alt="" loading="lazy" />

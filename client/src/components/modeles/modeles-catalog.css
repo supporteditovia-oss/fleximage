@@ -1,0 +1,346 @@
+/* ── Galerie premium catalogue modèles LuxeFlexIA ──
+   2 cols mobile · 4 cols desktop · cartes 4:5 · scroll vertical · lazy load */
+
+.mcatalog-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0a0908;
+  color: #f5f0e6;
+  overflow: hidden;
+}
+
+.mcatalog-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.mcatalog-header {
+  flex: 0 0 auto;
+  padding: calc(3.75rem + env(safe-area-inset-top, 0px)) 1rem 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .mcatalog-header {
+    padding: calc(4.25rem + env(safe-area-inset-top, 0px)) 1.5rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+.mcatalog-header__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(201, 162, 39, 0.88);
+}
+
+.mcatalog-header__title {
+  margin: 0;
+  font-family: var(--lx-display, "Outfit", sans-serif);
+  font-size: clamp(1.35rem, 4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: #faf6ee;
+}
+
+.mcatalog-header__subtitle {
+  margin: 0.45rem 0 0;
+  max-width: 36rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(245, 240, 230, 0.58);
+}
+
+.mcatalog-categories-wrap {
+  flex: 0 0 auto;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+@media (min-width: 768px) {
+  .mcatalog-categories-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.mcatalog-categories {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0 1rem 0.15rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mcatalog-categories::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mcatalog-categories {
+    padding: 0 0 0.15rem;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+.mcatalog-categories__chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.15rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(201, 162, 39, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(245, 240, 230, 0.72);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.mcatalog-categories__chip:hover {
+  border-color: rgba(201, 162, 39, 0.38);
+  color: #faf6ee;
+}
+
+.mcatalog-categories__chip.is-active {
+  border-color: rgba(201, 162, 39, 0.65);
+  background: linear-gradient(
+    135deg,
+    rgba(232, 197, 71, 0.18) 0%,
+    rgba(201, 162, 39, 0.12) 100%
+  );
+  color: #faf6ee;
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12);
+}
+
+.mcatalog-categories__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.16);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(232, 197, 71, 0.95);
+}
+
+.mcatalog-categories__chip.is-active .mcatalog-categories__count {
+  background: rgba(201, 162, 39, 0.28);
+}
+
+.mcatalog-body {
+  padding: 0.85rem 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .mcatalog-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 1rem 1.5rem 2rem;
+  }
+}
+
+.mcatalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  align-content: start;
+  gap: 0.7rem;
+}
+
+@media (min-width: 768px) {
+  .mcatalog-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+}
+
+.mcatalog-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(201, 162, 39, 0.14);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease;
+}
+
+.mcatalog-card:hover {
+  border-color: rgba(201, 162, 39, 0.42);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  transform: translateY(-2px);
+}
+
+.mcatalog-card:focus-visible {
+  outline: 2px solid rgba(201, 162, 39, 0.75);
+  outline-offset: 2px;
+}
+
+.mcatalog-card__photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(165deg, #1a1814 0%, #12100e 100%);
+  overflow: hidden;
+}
+
+.mcatalog-card__photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+}
+
+.mcatalog-card__badge {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(10, 9, 8, 0.62);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(232, 197, 71, 0.92);
+}
+
+.mcatalog-card__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.5rem 0.55rem 0.6rem;
+  border-top: 1px solid rgba(201, 162, 39, 0.08);
+}
+
+.mcatalog-card__index {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(201, 162, 39, 0.75);
+}
+
+.mcatalog-card__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: rgba(245, 240, 230, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcatalog-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.mcatalog-empty p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: rgba(245, 240, 230, 0.72);
+}
+
+.mcatalog-empty__note {
+  margin-top: 0.65rem !important;
+  font-size: 0.78rem !important;
+  color: rgba(201, 162, 39, 0.65) !important;
+}
+
+/* Détail modèle — retour catalogue */
+.mcatalog-detail-back {
+  position: fixed;
+  top: calc(0.65rem + env(safe-area-inset-top, 0px));
+  left: 0.65rem;
+  z-index: 120;
+}
+
+@media (min-width: 768px) {
+  .mcatalog-detail-back {
+    left: 1rem;
+  }
+}
+
+.mcatalog-outfit-preview__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(245, 240, 230, 0.62);
+  text-align: center;
+}
+
+html.luxeflexia-modeles-page .mcatalog-page .tpl-topbar {
+  position: fixed;
+  z-index: 110;
+}
+
+html.luxeflexia-modeles-page .mcatalog-page .tpl-feed {
+  position: relative;
+  inset: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+html.luxeflexia-modeles-page .mcatalog-page .tpl-feed--desktop {
+  position: relative;
+}
+
+html.luxeflexia-modeles-page .mcatalog-detail .tpl-feed {
+  position: fixed;
+  inset: 0;
+}
+
+html.luxeflexia-modeles-page .mcatalog-detail .tpl-feed--desktop {
+  position: fixed;
+}

@@ -6,8 +6,8 @@
     "description": "Streetwear devant un Urus à la station-service.",
     "imagePath": "/models/modele-lamborghini-urus.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, coiffure et carnation identique PARTOUT sur le corps visible — visage, cou, mains, avant-bras et surtout les jambes visibles entre le pantalon camouflage et les chaussettes blanches (même teinte de peau que la photo utilisateur, jamais la peau du modèle d'origine). Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la veste bomber noire, le pantalon camouflage, les chaussettes blanches, les chaussons vert foncé, le téléphone en main, la station-service sous la marquise, les jantes noires, les étriers de frein jaunes Lamborghini, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "supercars",
-    "categoryName": "Supercars"
+    "category": "adrenaline",
+    "categoryName": "Adrénaline"
   },
   {
     "id": "builtin-yacht-deck",
@@ -16,8 +16,8 @@
     "description": "Détente sur le pont d'un yacht en mer.",
     "imagePath": "/models/modele-yacht-deck.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le banc du pont du yacht, la tenue noire, les pieds nus, le pont en teck, les garde-corps inox, la mer turquoise, le ciel bleu, les îles au loin, la lumière solaire et le cadrage vertical de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration lumineuse parfaite, sans texte ni logo.",
-    "category": "travel-tourism",
-    "categoryName": "Voyage"
+    "category": "voyages",
+    "categoryName": "Voyages"
   },
   {
     "id": "builtin-yacht-lamborghini",
@@ -27,8 +27,8 @@
     "imagePath": "/models/modele-yacht-lamborghini.webp",
     "demoAfterPath": "/models/demo-yacht-lamborghini-apres.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, coiffure, carnation et morphologie réelle (mince, normal, athlétique — comme sur la photo utilisateur, pas le corps musclé du modèle). Garde exactement la pose assise torse nu sur le banc blanc du yacht Lamborghini, le short de bain Louis Vuitton marron monogramme, les lunettes de soleil, les sièges blancs capitonnés avec logo Lamborghini, la fibre de carbone, le pont en teck, la mer turquoise et le ciel bleu, le cadrage vertical et la lumière solaire de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "travel-tourism",
-    "categoryName": "Voyage"
+    "category": "voyages",
+    "categoryName": "Voyages"
   },
   {
     "id": "builtin-avion-business",
@@ -38,8 +38,8 @@
     "imagePath": "/models/modele-avion-business.webp",
     "demoAfterPath": "/models/demo-avion-business-apres.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, barbe, coiffure, carnation et morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose assise dans le siège business class, la veste matelassée noire, le regard vers la tablette posée sur la table, le casque Bose sur le côté, le verre d'eau, l'intérieur cabine blanc et bleu marine, les hublots avec ciel bleu, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "travel-tourism",
-    "categoryName": "Voyage"
+    "category": "voyages",
+    "categoryName": "Voyages"
   },
   {
     "id": "builtin-scooter-urban",
@@ -48,8 +48,8 @@
     "description": "Streetwear sur maxi-scooter devant une boutique.",
     "imagePath": "/models/modele-scooter-urban.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le maxi-scooter noir, la doudoune noire brillante, le pantalon gris, les baskets, le sac bandoulière damier, le scooter avec pare-brise teinté rouge, la devanture boutique en briques, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie streetwear photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "lifestyle",
+    "categoryName": "Lifestyle"
   },
   {
     "id": "builtin-urus-dubai-sunset",
@@ -58,8 +58,8 @@
     "description": "LV tracksuit dans un Urus, skyline au coucher du soleil.",
     "imagePath": "/models/modele-urus-dubai-sunset.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure et sa carnation. Garde exactement la pose assise conducteur dans le Lamborghini Urus gris, la veste Louis Vuitton grise avec logo LV, le sac LV crossbody, le jean gris déchiré, les baskets On Running bleu clair, l'intérieur cuir cognac, la skyline de Dubaï et le Burj Al Arab au coucher du soleil, le cadrage vertical et la lumière dorée de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "supercars",
-    "categoryName": "Supercars"
+    "category": "lifestyle",
+    "categoryName": "Lifestyle"
   },
   {
     "id": "builtin-urus-esso-nuit",
@@ -68,8 +68,8 @@
     "description": "Tracksuit gris devant un Urus noir à la station Esso.",
     "imagePath": "/models/modele-urus-esso-nuit.webp",
     "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose appuyée contre le capot du Lamborghini Urus noir, le tracksuit gris Under Armour, le bonnet noir, les baskets noires, la station-service Esso de nuit, la pompe rouge et blanche, les jantes noires, le cadrage vertical et l'éclairage artificiel de la seconde image. Photographie streetwear luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "category": "supercars",
-    "categoryName": "Supercars"
+    "category": "lifestyle",
+    "categoryName": "Lifestyle"
   },
   {
     "id": "builtin-quad-dubai-canam",
@@ -82,7 +82,7 @@
     "requiresUserPhoto": true,
     "faceSwapPrompt": "Remplace TOUT LE CORPS de la personne de la seconde image par la personne de la première image — pas seulement la tête : tête, visage, cou, buste, bras, mains, jambes et silhouette entière. Conserve fidèlement son identité, son visage, sa carnation et sa coiffure. Garde EXACTEMENT la même pose assise sur le quad, la même inclinaison du corps, la main droite qui tient le sac Louis Vuitton orange avec les anses bleues, l'écharpe grise à motif posée sur l'épaule droite, le Can-Am Outlander noir et jaune OUTLANDER, Dubaï de nuit, Burj Khalifa, palmiers, lampadaires, cadrage vertical 9:16 et l'éclairage. Ne modifie pas le quad, le sac, l'écharpe, ni le décor. La personne de la première image porte les mêmes vêtements que sur la scène (hoodie gris Nike, short damier, cagoule/lunettes miroir) dans la même position. Photographie ultra-réaliste, proportions naturelles, sans watermark.",
     "prompt": "Remplace uniquement la personne, garde pose, sac, écharpe et quad identiques.",
-    "category": "supercars",
-    "categoryName": "Quads"
+    "category": "adrenaline",
+    "categoryName": "Adrénaline"
   }
 ]

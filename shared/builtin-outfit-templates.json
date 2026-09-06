@@ -5,8 +5,8 @@
     "name": "Stone Island orange",
     "description": "Veste orange Stone Island, jean gris déchiré, sneakers LV orange.",
     "imagePath": "/outfits/outfit-stone-island-orange.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-vest-goyard",
@@ -14,8 +14,8 @@
     "name": "Doudoune bleue + Goyard",
     "description": "Gilet puffer bleu, col roulé noir, jean noir, sneakers Chanel, sac Goyard.",
     "imagePath": "/outfits/outfit-lv-vest-goyard.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-puffer-chanel",
@@ -23,8 +23,8 @@
     "name": "LV puffer bleu & blanc",
     "description": "Doudoune LV bicolore, jean gris déchiré, sneakers Chanel, sac LV.",
     "imagePath": "/outfits/outfit-lv-puffer-chanel.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-cloud-windbreaker",
@@ -32,8 +32,8 @@
     "name": "LV windbreaker nuages",
     "description": "Coupe-vent LV blanc/bleu avec nuages, jean gris, sneakers On, sac LV.",
     "imagePath": "/outfits/outfit-lv-cloud-windbreaker.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-parajumpers-gucci",
@@ -41,8 +41,8 @@
     "name": "Parajumpers + Gucci",
     "description": "Gilet Parajumpers gris, jean noir, sneakers On, sac Gucci monogramme.",
     "imagePath": "/outfits/outfit-parajumpers-gucci.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-turquoise-street",
@@ -50,8 +50,8 @@
     "name": "LV turquoise street",
     "description": "Veste LV turquoise/mint, jean déchiré gris, sneakers On, sac LV monogramme.",
     "imagePath": "/outfits/outfit-lv-turquoise-street.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-dove-navy",
@@ -59,8 +59,8 @@
     "name": "LV colombe navy",
     "description": "Coupe-vent LV dégradé navy avec colombe, jean Dsquared2, sac barrel LV.",
     "imagePath": "/outfits/outfit-lv-dove-navy.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-chanel-hoodie-grey",
@@ -68,8 +68,8 @@
     "name": "Hoodie Chanel gris",
     "description": "Sweat Chanel gris logo, jean anthracite, sneakers CC, casquette.",
     "imagePath": "/outfits/outfit-chanel-hoodie-grey.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-offwhite-floral",
@@ -77,8 +77,8 @@
     "name": "LV x Off-White floral",
     "description": "Veste LV monogramme bleu avec roses et oiseaux, tee Off-White, sneakers Off-White.",
     "imagePath": "/outfits/outfit-lv-offwhite-floral.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-dior-purple-brand",
@@ -86,8 +86,8 @@
     "name": "Dior + Purple Brand",
     "description": "Sweat damier noir, jean Purple Brand, sac Dior Saddle, sneakers Hogan.",
     "imagePath": "/outfits/outfit-dior-purple-brand.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-gucci-snake",
@@ -95,8 +95,8 @@
     "name": "Gucci serpent bleu",
     "description": "Veste Gucci serpent et fleurs, jean gris, sneakers Chanel, sac LV.",
     "imagePath": "/outfits/outfit-gucci-snake.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-parrot-navy",
@@ -104,8 +104,8 @@
     "name": "LV perroquet navy",
     "description": "Coupe-vent LV navy avec perroquet et roses, jean Dsquared2, sneakers Loewe.",
     "imagePath": "/outfits/outfit-lv-parrot-navy.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-parrot-mint",
@@ -113,8 +113,8 @@
     "name": "LV perroquet mint",
     "description": "Veste LV grise perroquet roses mint, jean Dsquared2, sneakers On, sac LV.",
     "imagePath": "/outfits/outfit-lv-parrot-mint.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-chanel-grid-black",
@@ -122,8 +122,8 @@
     "name": "Chanel grid noir",
     "description": "Veste Chanel noir/blanc logo grid, jean gris Dsquared2, sneakers Chanel, sac Hermès.",
     "imagePath": "/outfits/outfit-chanel-grid-black.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-moncler-hermes",
@@ -131,8 +131,8 @@
     "name": "Moncler + Hermès",
     "description": "Gilet Moncler bleu, jean Dsquared2, sneakers Hermès navy, sac LV pixel.",
     "imagePath": "/outfits/outfit-moncler-hermes.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-parrot-sage",
@@ -140,8 +140,8 @@
     "name": "LV perroquet sage",
     "description": "Coupe-vent LV crème/sage perroquet, pantalon Dsquared2, sac LV sage, sneakers LV.",
     "imagePath": "/outfits/outfit-lv-parrot-sage.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-amiri-birds",
@@ -149,8 +149,8 @@
     "name": "LV oiseaux + Amiri",
     "description": "Tee LV oiseaux, jean Amiri déchiré, sneakers LV Skate, sac barrel gris.",
     "imagePath": "/outfits/outfit-lv-amiri-birds.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-hermes-cream-burgundy",
@@ -158,8 +158,8 @@
     "name": "Hermès crème bordeaux",
     "description": "Ensemble crème, sac crossbody bordeaux, sneakers Hermès H logo.",
     "imagePath": "/outfits/outfit-hermes-cream-burgundy.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-black-kelly",
@@ -167,8 +167,8 @@
     "name": "LV noir + Kelly",
     "description": "Pull LV damier noir, pantalon noir, sac Kelly cuir, casquette LV monogramme.",
     "imagePath": "/outfits/outfit-lv-black-kelly.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-hermes-beige-brown",
@@ -176,8 +176,8 @@
     "name": "Hermès beige marron",
     "description": "Veste et pantalon beige, sac Kelly marron, sneakers Hermès chocolat.",
     "imagePath": "/outfits/outfit-hermes-beige-brown.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-prada-marsenio-black",
@@ -185,8 +185,8 @@
     "name": "Prada Marsenio noir",
     "description": "Gilet Marsenio noir, pantalon noir, sac et sneakers Prada, montre sport.",
     "imagePath": "/outfits/outfit-prada-marsenio-black.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-prada-blue-grey",
@@ -194,8 +194,8 @@
     "name": "Prada bleu gris",
     "description": "Coupe-vent bleu Maracho, jean gris, sneakers bleu/blanc style Prada.",
     "imagePath": "/outfits/outfit-prada-blue-grey.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-dior-goyard-amiri",
@@ -203,8 +203,8 @@
     "name": "Dior + Goyard + Amiri",
     "description": "Tee Off-White, gilet Dior oblique, jean Amiri, sac Goyard, sneakers Dior B22.",
     "imagePath": "/outfits/outfit-dior-goyard-amiri.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-beige-tonal",
@@ -212,8 +212,8 @@
     "name": "LV beige tonal",
     "description": "Ensemble beige Marbenio, sac Papillon LV, sneakers LV sable.",
     "imagePath": "/outfits/outfit-lv-beige-tonal.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-comms-heart-black",
@@ -221,8 +221,8 @@
     "name": "Comme des Garçons cœur",
     "description": "Veste noire cœur rouge, jean bleu foncé, sneakers noir/blanc, casquette.",
     "imagePath": "/outfits/outfit-comms-heart-black.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-damier-kelly",
@@ -230,8 +230,8 @@
     "name": "LV damier + Kelly",
     "description": "Pull LV damier noir, jean Purple Brand, sneakers LV, sac Kelly, casquette LV.",
     "imagePath": "/outfits/outfit-lv-damier-kelly.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-moncler-cream-lv",
@@ -239,8 +239,8 @@
     "name": "Moncler crème LV",
     "description": "Coupe-vent Moncler crème, jean gris, sneakers LV navy.",
     "imagePath": "/outfits/outfit-moncler-cream-lv.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-stone-island-hermes",
@@ -248,8 +248,8 @@
     "name": "Stone Island + Hermès",
     "description": "Sweat Stone Island vert, jean Amiri gris, sneakers Chanel, sac Kelly Hermès.",
     "imagePath": "/outfits/outfit-stone-island-hermes.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-dior-patchwork-blue",
@@ -257,8 +257,8 @@
     "name": "Dior patchwork bleu",
     "description": "Doudoune bleu clair, jean patchwork, écharpe LV damier, sneakers Dior B22.",
     "imagePath": "/outfits/outfit-dior-patchwork-blue.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-moncler-amiri-winter",
@@ -266,8 +266,8 @@
     "name": "Moncler hiver Amiri",
     "description": "Doudoune Moncler crème, jean gris bande latérale, bonnet Chanel, sneakers Amiri.",
     "imagePath": "/outfits/outfit-moncler-amiri-winter.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-burberry-balenciaga",
@@ -275,8 +275,8 @@
     "name": "Burberry + Balenciaga",
     "description": "Hoodie Burberry tartan, jean Kenzo noir, sneakers Balenciaga, Chrome Hearts, Goyard.",
     "imagePath": "/outfits/outfit-burberry-balenciaga.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-navy-set",
@@ -284,8 +284,8 @@
     "name": "LV navy complet",
     "description": "Tee LV navy floral, pantalon noir, sneakers LV, sac monogramme blanc, casquette.",
     "imagePath": "/outfits/outfit-lv-navy-set.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-goyard-hermes-grey",
@@ -293,8 +293,8 @@
     "name": "Goyard + Hermès gris",
     "description": "Gilet gris, pantalon gris, sac Goyard chevron, sneakers Hermès H logo.",
     "imagePath": "/outfits/outfit-goyard-hermes-grey.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-laabreno-navy-set",
@@ -302,8 +302,8 @@
     "name": "Set navy Laabreno",
     "description": "Gilet navy, tee crème, pantalon navy, sneakers navy, pochette.",
     "imagePath": "/outfits/outfit-laabreno-navy-set.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-burgundy-cream-loafers",
@@ -311,8 +311,8 @@
     "name": "Bordeaux crème mocassins",
     "description": "Tee bordeaux, pantalon crème, mocassins suede cognac, sac blanc.",
     "imagePath": "/outfits/outfit-burgundy-cream-loafers.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-stone-island-lv-collage",
@@ -320,8 +320,8 @@
     "name": "Stone Island + LV",
     "description": "Sweat Stone Island blanc, jean noir déchiré, sneakers LV monogramme, casquette.",
     "imagePath": "/outfits/outfit-stone-island-lv-collage.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-moncler-stone-white",
@@ -329,8 +329,8 @@
     "name": "Moncler blanc Stone Island",
     "description": "Gilet Moncler blanc, pull Stone Island noir, jean Polo blanc, mocassins LV.",
     "imagePath": "/outfits/outfit-moncler-stone-white.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-polo-shorts-dior",
@@ -338,8 +338,8 @@
     "name": "LV polo + shorts Dior",
     "description": "Polo LV patchwork bleu, short LV monogramme, sneakers Dior.",
     "imagePath": "/outfits/outfit-lv-polo-shorts-dior.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-gallery-dept-dior",
@@ -347,8 +347,8 @@
     "name": "Gallery Dept + Dior",
     "description": "Tee Gallery Dept, short gris fleur, sneakers Dior, accessoires.",
     "imagePath": "/outfits/outfit-gallery-dept-dior.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-essentials-balenciaga",
@@ -356,8 +356,8 @@
     "name": "Essentials + Balenciaga",
     "description": "Hoodie vert fleurs, short Fear of God, Track Balenciaga LED, casquette Amiri.",
     "imagePath": "/outfits/outfit-essentials-balenciaga.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-mint-floral-on",
@@ -365,8 +365,8 @@
     "name": "LV mint floral On",
     "description": "Coupe-vent LV dégradé mint floral, jean gris déchiré, sneakers On, sac Papillon.",
     "imagePath": "/outfits/outfit-lv-mint-floral-on.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-ice-blue-hermes",
@@ -374,8 +374,8 @@
     "name": "LV ice blue Hermès",
     "description": "Doudoune LV bleu glace hybrid, jean gris, sneakers Hermès, sac sling LV.",
     "imagePath": "/outfits/outfit-lv-ice-blue-hermes.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-chanel-red-white",
@@ -383,8 +383,8 @@
     "name": "Chanel rouge blanc",
     "description": "Veste Chanel rouge/blanc logo, jean gris déchiré, sneakers CC rouges, sac camo.",
     "imagePath": "/outfits/outfit-chanel-red-white.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-chanel-orange-lv",
@@ -392,8 +392,8 @@
     "name": "Chanel orange LV",
     "description": "Veste Chanel orange, jean Dsquared2 gris, sneakers LV orange, sac noir.",
     "imagePath": "/outfits/outfit-chanel-orange-lv.jpg",
-    "category": "streetwear",
-    "categoryName": "Streetwear"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-cloud-sky-loewe",
@@ -401,8 +401,8 @@
     "name": "LV nuages ciel Loewe",
     "description": "Coupe-vent LV nuages bleu ciel, jean Dsquared2, sneakers Loewe On, sac graffiti LV.",
     "imagePath": "/outfits/outfit-lv-cloud-sky-loewe.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   },
   {
     "id": "outfit-lv-dove-grey-goyard",
@@ -410,7 +410,7 @@
     "name": "LV colombe gris Goyard",
     "description": "Coupe-vent LV dégradé gris colombe, jean gris, sneakers Hermès, sac Goyard.",
     "imagePath": "/outfits/outfit-lv-dove-grey-goyard.jpg",
-    "category": "luxury",
-    "categoryName": "Luxe"
+    "category": "outfits",
+    "categoryName": "Outfits"
   }
 ]
