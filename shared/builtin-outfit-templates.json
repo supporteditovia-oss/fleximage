@@ -214,5 +214,86 @@
     "imagePath": "/outfits/outfit-lv-beige-tonal.jpg",
     "category": "luxury",
     "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-comms-heart-black",
+    "slug": "comms-heart-black",
+    "name": "Comme des Garçons cœur",
+    "description": "Veste noire cœur rouge, jean bleu foncé, sneakers noir/blanc, casquette.",
+    "imagePath": "/outfits/outfit-comms-heart-black.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-lv-damier-kelly",
+    "slug": "lv-damier-kelly",
+    "name": "LV damier + Kelly",
+    "description": "Pull LV damier noir, jean Purple Brand, sneakers LV, sac Kelly, casquette LV.",
+    "imagePath": "/outfits/outfit-lv-damier-kelly.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-moncler-cream-lv",
+    "slug": "moncler-cream-lv",
+    "name": "Moncler crème LV",
+    "description": "Coupe-vent Moncler crème, jean gris, sneakers LV navy.",
+    "imagePath": "/outfits/outfit-moncler-cream-lv.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-stone-island-hermes",
+    "slug": "stone-island-hermes",
+    "name": "Stone Island + Hermès",
+    "description": "Sweat Stone Island vert, jean Amiri gris, sneakers Chanel, sac Kelly Hermès.",
+    "imagePath": "/outfits/outfit-stone-island-hermes.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-dior-patchwork-blue",
+    "slug": "dior-patchwork-blue",
+    "name": "Dior patchwork bleu",
+    "description": "Doudoune bleu clair, jean patchwork, écharpe LV damier, sneakers Dior B22.",
+    "imagePath": "/outfits/outfit-dior-patchwork-blue.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-moncler-amiri-winter",
+    "slug": "moncler-amiri-winter",
+    "name": "Moncler hiver Amiri",
+    "description": "Doudoune Moncler crème, jean gris bande latérale, bonnet Chanel, sneakers Amiri.",
+    "imagePath": "/outfits/outfit-moncler-amiri-winter.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-burberry-balenciaga",
+    "slug": "burberry-balenciaga",
+    "name": "Burberry + Balenciaga",
+    "description": "Hoodie Burberry tartan, jean Kenzo noir, sneakers Balenciaga, Chrome Hearts, Goyard.",
+    "imagePath": "/outfits/outfit-burberry-balenciaga.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-lv-navy-set",
+    "slug": "lv-navy-set",
+    "name": "LV navy complet",
+    "description": "Tee LV navy floral, pantalon noir, sneakers LV, sac monogramme blanc, casquette.",
+    "imagePath": "/outfits/outfit-lv-navy-set.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-goyard-hermes-grey",
+    "slug": "goyard-hermes-grey",
+    "name": "Goyard + Hermès gris",
+    "description": "Gilet gris, pantalon gris, sac Goyard chevron, sneakers Hermès H logo.",
+    "imagePath": "/outfits/outfit-goyard-hermes-grey.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
   }
 ]
