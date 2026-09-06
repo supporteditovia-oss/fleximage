@@ -73,7 +73,10 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "SKIN TONE LOCK (critical): apply image 1's exact skin tone, melanin level, and ethnicity to ALL visible skin on the replaced person — face, forehead, neck, ears, chest, torso, arms, hands, fingers, legs, feet if bare. " +
   "One consistent natural carnation everywhere — seamless face-to-neck-to-body transition, same undertone and tan depth as the user photo. " +
   "If the user is Black or dark-skinned, the entire visible body must be realistically dark-skinned; if light-skinned, entirely light-skinned — never mix. " +
-  "FORBIDDEN: face-only paste keeping the model's original body skin; mismatched face vs neck vs arms; white face on dark body or dark face on light body; plastic waxy skin. " +
+  "BODY BUILD LOCK (critical): copy image 1's real body type — slim, skinny, average, overweight, or athletic AS SEEN in the user photo. " +
+  "If the user is slim or not muscular, the result must stay slim with natural proportions — do NOT copy the template model's muscles, six-pack, bulk, or gym body. " +
+  "If the user is heavier, keep that build; if petite, stay petite. Pose comes from image 2 but body mass and silhouette must match image 1 realistically under the same clothes. " +
+  "FORBIDDEN: face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms; white face on dark body or dark face on light body; plastic waxy skin. " +
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 

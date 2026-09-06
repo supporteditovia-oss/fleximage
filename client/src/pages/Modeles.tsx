@@ -143,7 +143,7 @@ function TemplateSlideContent({
         <p className="tpl-hint">
           {isVehicleSwapTemplate(template)
             ? "Étape 1 : l’IA remplace le quad Polaris par le Can-Am. Quand le résultat est bon, on le mettra en modèle prêt."
-            : "Ta photo remplace la personne — même peau partout (visage, cou, corps visible), décor identique."}
+            : "Ta photo remplace la personne — même peau et même morphologie que toi, décor identique."}
         </p>
       </div>
     </div>
