@@ -61,6 +61,13 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { scrollAppToTop } from "@/lib/app-scroll";
 import { BrandMark } from "@/components/BrandMark";
+import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
+import {
+  replaceOutfitPrompt,
+  type BuiltinOutfit,
+} from "@/lib/builtin-outfit-templates";
+import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
+import "@/components/outfits/outfit-picker.css";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -118,6 +125,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     resultType: "image" | "video";
   } | null>(null);
   const [unlockingLarp, setUnlockingLarp] = useState(false);
+  const [showOutfitPicker, setShowOutfitPicker] = useState(false);
+  const [outfitPickerBusy, setOutfitPickerBusy] = useState(false);
 
   // ── Hooks ───────────────────────────────────────────────────
   const generateDirect = useGenerateDirectLarp();
@@ -645,6 +654,63 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       const next = prev.filter((_, i) => i !== index);
       return next.length === 0 ? [null] : next;
     });
+  };
+
+  const handleOutfitSelect = async (outfit: BuiltinOutfit) => {
+    if (!images[0]) {
+      toast({
+        variant: "destructive",
+        title: "Photo requise",
+        description: "Ajoute d’abord ta photo en image 1.",
+      });
+      return;
+    }
+
+    setOutfitPickerBusy(true);
+    try {
+      const file = await fetchCatalogImageAsFile(
+        outfit.imagePath,
+        `${outfit.slug}.webp`,
+      );
+      const url = URL.createObjectURL(file);
+      setImages((prev) => {
+        revokeSlotUrl(prev[1]);
+        const next: ({ url: string; file: File } | null)[] = [...prev];
+        while (next.length < 2) next.push(null);
+        next[1] = { url, file };
+        const allFilled = !next.some((slot) => slot === null);
+        if (allFilled && next.length < 3) {
+          next.push(null);
+        }
+        return next;
+      });
+      setPrompt((current) => replaceOutfitPrompt(current));
+      setShowOutfitPicker(false);
+      toast({
+        title: "Tenue ajoutée",
+        description: `${outfit.name} — le prompt a été mis à jour (image 2).`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Tenue introuvable",
+        description: error?.message || "Réessaie dans un instant.",
+      });
+    } finally {
+      setOutfitPickerBusy(false);
+    }
+  };
+
+  const openOutfitPicker = () => {
+    if (!images[0]) {
+      toast({
+        variant: "destructive",
+        title: "Photo requise",
+        description: "Ajoute d’abord ta photo en image 1.",
+      });
+      return;
+    }
+    setShowOutfitPicker(true);
   };
 
   const selectTemplate = (tpl: PromptTemplate) => {
@@ -1393,6 +1459,17 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 generationMode="image"
               />
 
+              <div className="flex w-full max-w-md justify-center md:max-w-xl">
+                <button
+                  type="button"
+                  className="lx-outfit-add-btn"
+                  onClick={openOutfitPicker}
+                  disabled={outfitPickerBusy || isSubmittingGeneration}
+                >
+                  {outfitPickerBusy ? "Chargement…" : "Ajouter un outfit"}
+                </button>
+              </div>
+
               <PromptInputBar
                 prompt={prompt}
                 onPromptChange={setPrompt}
@@ -1425,6 +1502,14 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           setShowZeroCreditsModal(open);
         }}
         plan={currentPlan}
+      />
+
+      <OutfitPickerModal
+        open={showOutfitPicker}
+        title="Catalogue tenues"
+        subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
+        onClose={() => setShowOutfitPicker(false)}
+        onSelect={(outfit) => void handleOutfitSelect(outfit)}
       />
     </div>
   );

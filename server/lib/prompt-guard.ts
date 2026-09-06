@@ -155,6 +155,24 @@ export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): stri
     : combined.slice(0, MAX_FINAL_PROMPT);
 }
 
+const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
+  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory). Three refs: (1) user identity; (2) outfit to wear; (3) scene lock. " +
+  "Replace human in image 3 with user from image 1, wearing EXACT outfit from image 2. Keep image 3 pose, decor, lighting unchanged. " +
+  "SKIN + BODY BUILD from image 1 on all visible skin. Do NOT keep image 3 clothes.";
+
+export function buildBuiltinTemplateFaceSwapWithOutfitPrompt(
+  templatePrompt: string,
+): string {
+  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  const userPart =
+    cleaned ||
+    "Replace the model person with the user, wearing outfit from image 2, scene from image 3 identical.";
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD} ${userPart} ${qualitySuffix()}`;
+  return combined.length <= MAX_FINAL_PROMPT
+    ? combined
+    : combined.slice(0, MAX_FINAL_PROMPT);
+}
+
 /**
  * Build final provider prompt.
  * Order: identity lock → strict literal → raw user request → production rules.

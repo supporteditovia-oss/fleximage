@@ -12,6 +12,10 @@ import { getBuiltinGenerationPrompt, getTemplateComparePair, hasTemplateBeforeAf
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
 import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
+import { OutfitChangeQuestion } from "@/components/outfits/OutfitChangeQuestion";
+import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
+import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
+import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import "@/pages/modeles-page.css";
 
 const IMAGE_CREDIT_COST = 10;
@@ -277,6 +281,9 @@ export default function Modeles() {
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
   );
+  const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
+  const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
+  const [showOutfitPicker, setShowOutfitPicker] = useState(false);
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
   const list = templates ?? [];
@@ -446,7 +453,38 @@ export default function Modeles() {
       });
     } finally {
       setBusy(false);
+      setPendingUserPhoto(null);
+      setShowOutfitQuestion(false);
+      setShowOutfitPicker(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const finishWithUserPhotoOnly = async () => {
+    const template = pendingTemplate;
+    const userPhoto = pendingUserPhoto;
+    setPendingTemplate(null);
+    setShowOutfitQuestion(false);
+    if (!template || !userPhoto) return;
+    await runGeneration(template, [userPhoto]);
+  };
+
+  const finishWithOutfit = async (outfit: BuiltinOutfit) => {
+    const template = pendingTemplate;
+    const userPhoto = pendingUserPhoto;
+    setPendingTemplate(null);
+    setShowOutfitPicker(false);
+    if (!template || !userPhoto) return;
+
+    try {
+      const outfitBase64 = await fetchCatalogImageAsBase64(outfit.imagePath);
+      await runGeneration(template, [userPhoto, outfitBase64]);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Tenue introuvable",
+        description: error?.message || "Réessaie dans un instant.",
+      });
     }
   };
 
@@ -460,12 +498,15 @@ export default function Modeles() {
 
   const onPhotoPicked = async (file: File | null) => {
     const template = pendingTemplate;
-    setPendingTemplate(null);
-    if (!file || !template) return;
+    if (!file || !template) {
+      setPendingTemplate(null);
+      return;
+    }
 
     const compressed = await compressImageForGeneration(file);
     const base64 = await fileToBase64(compressed);
-    await runGeneration(template, [base64]);
+    setPendingUserPhoto(base64);
+    setShowOutfitQuestion(true);
   };
 
   if (taskId) {
@@ -573,6 +614,26 @@ export default function Modeles() {
           onClose={() => setPreviewTemplate(null)}
         />
       ) : null}
+
+      <OutfitChangeQuestion
+        open={showOutfitQuestion}
+        onNo={() => void finishWithUserPhotoOnly()}
+        onYes={() => {
+          setShowOutfitQuestion(false);
+          setShowOutfitPicker(true);
+        }}
+      />
+
+      <OutfitPickerModal
+        open={showOutfitPicker}
+        title="Catalogue tenues"
+        subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        onClose={() => {
+          setShowOutfitPicker(false);
+          void finishWithUserPhotoOnly();
+        }}
+        onSelect={(outfit) => void finishWithOutfit(outfit)}
+      />
 
       {active ? <span className="sr-only">{active.name}</span> : null}
     </>

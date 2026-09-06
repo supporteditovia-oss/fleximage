@@ -1,0 +1,65 @@
+[
+  {
+    "id": "outfit-lv-tracksuit",
+    "slug": "lv-tracksuit",
+    "name": "LV tracksuit gris",
+    "description": "Veste Louis Vuitton + jean déchiré + sneakers.",
+    "imagePath": "/models/modele-urus-dubai-sunset.webp",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-bomber-camo",
+    "slug": "bomber-camo",
+    "name": "Bomber + camo",
+    "description": "Veste bomber noire et pantalon camouflage.",
+    "imagePath": "/models/modele-lamborghini-urus.webp",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-yacht-black",
+    "slug": "yacht-black",
+    "name": "Tenue yacht noire",
+    "description": "Look sobre noir sur pont de yacht.",
+    "imagePath": "/models/modele-yacht-deck.webp",
+    "category": "travel",
+    "categoryName": "Voyage"
+  },
+  {
+    "id": "outfit-lv-swim",
+    "slug": "lv-swim",
+    "name": "Short LV yacht",
+    "description": "Short de bain Louis Vuitton monogramme.",
+    "imagePath": "/models/modele-yacht-lamborghini.webp",
+    "category": "travel",
+    "categoryName": "Voyage"
+  },
+  {
+    "id": "outfit-scooter-street",
+    "slug": "scooter-street",
+    "name": "Streetwear scooter",
+    "description": "Doudoune noire, pantalon gris, sac damier.",
+    "imagePath": "/models/modele-scooter-urban.webp",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-ua-tracksuit",
+    "slug": "ua-tracksuit",
+    "name": "Tracksuit Under Armour",
+    "description": "Survêtement gris + bonnet noir.",
+    "imagePath": "/models/modele-urus-esso-nuit.webp",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-business-class",
+    "slug": "business-class",
+    "name": "Business class",
+    "description": "Veste matelassée noire, look cabine premium.",
+    "imagePath": "/models/modele-avion-business.webp",
+    "category": "travel",
+    "categoryName": "Voyage"
+  }
+]

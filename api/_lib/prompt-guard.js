@@ -109,6 +109,47 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
   return combined;
 }
 
+/**
+ * Modèles prêts + outfit catalogue : image 1 = user, image 2 = tenue, image 3 = scène.
+ */
+const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
+  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory). " +
+  "Three reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
+  "(2) outfit/clothes reference = wear THIS exact outfit on the replaced person; " +
+  "(3) ready model photo = SCENE LOCK — output must look like image 3 with a different person in different clothes. " +
+  "Replace ONLY the human in image 3 with the person from image 1. " +
+  "Dress them in the EXACT clothes, shoes, bags, and accessories from image 2 — worn naturally on the body, NOT pasted flat. " +
+  "Do NOT keep the original outfit from image 3 — image 2 outfit wins. " +
+  "Keep image 3's exact pose, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
+  "SKIN TONE LOCK (critical): apply image 1's exact skin tone to ALL visible skin on the replaced person — face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet if bare. " +
+  "One consistent natural carnation everywhere — never mix face vs legs. " +
+  "BODY BUILD LOCK (critical): copy image 1's real body type — slim stays slim, never copy template muscles or bulk. " +
+  "GLASSES RULE: keep photo-1 glasses unless image 2 clearly shows glasses to copy. " +
+  "HAIR RULE: keep photo-1 hairstyle unless image 2 is a worn look with visible hair to copy. " +
+  "FORBIDDEN: keeping image 3 clothes; face-only paste; outfit collage; new decor; cutout halo. " +
+  "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
+
+/** Prompt final modèle prêt + tenue catalogue (3 images). */
+function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
+  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  const userPart =
+    cleaned ||
+    "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
+  const parts = [
+    BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
+    OUTFIT_FROM_REF_GUARD,
+    BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
+    userPart,
+    REALISM_QUALITY_GUARD,
+    NEGATIVE_PROMPT_CLAUSE,
+  ];
+  let combined = parts.filter(Boolean).join(" ");
+  if (combined.length > MAX_FINAL_PROMPT) {
+    combined = combined.slice(0, MAX_FINAL_PROMPT);
+  }
+  return combined;
+}
+
 /** Additive clarifier when user says remplace / replace a person. */
 const FULL_BODY_REPLACE_CLARIFIER =
   " (FULL BODY REPLACE — critical: swap the WHOLE person including body and clothes. " +
@@ -3942,6 +3983,7 @@ function buildFacialHairHardRetryPrompt(finalPrompt) {
 module.exports = {
   buildIdentityPreservingPrompt,
   buildBuiltinTemplateFaceSwapPrompt,
+  buildBuiltinTemplateFaceSwapWithOutfitPrompt,
   expandImageEditUserRequest,
   isCameraViewpointChangePrompt,
   buildStairClosedSlabPrompt,

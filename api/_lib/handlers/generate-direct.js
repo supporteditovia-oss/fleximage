@@ -18,7 +18,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -148,12 +148,22 @@ module.exports = async function handler(req, res) {
 
       templateReferenceId = resolvedTemplate.referenceId;
       effectivePrompt = resolvedTemplate.prompt;
-      // Ordre images : (1) photo utilisateur, (2) scène du modèle prêt.
-      imageUrls = [
-        ...uploadedUrls,
-        ...(resolvedTemplate.extraReferenceUrls || []),
-        resolvedTemplate.referenceUrl,
-      ];
+      const hasOutfitRef =
+        resolvedTemplate.generationMode === "face-swap" &&
+        uploadedUrls.length >= 2;
+      // Ordre : sans outfit → (1) user, (2) scène ; avec outfit → (1) user, (2) tenue, (3) scène.
+      imageUrls = hasOutfitRef
+        ? [
+            uploadedUrls[0],
+            uploadedUrls[1],
+            ...(resolvedTemplate.extraReferenceUrls || []),
+            resolvedTemplate.referenceUrl,
+          ]
+        : [
+            ...uploadedUrls,
+            ...(resolvedTemplate.extraReferenceUrls || []),
+            resolvedTemplate.referenceUrl,
+          ];
     } else {
       if (images.length === 0) {
         res.status(422).json({
@@ -185,12 +195,18 @@ module.exports = async function handler(req, res) {
       resolvedTemplate?.ok &&
       resolvedTemplate.isBuiltin &&
       resolvedTemplate.generationMode === "face-swap";
+    const isBuiltinFaceSwapWithOutfit =
+      isBuiltinFaceSwap && uploadedUrls.length >= 2;
 
-    const finalPrompt = isBuiltinFaceSwap
-      ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
-      : buildIdentityPreservingPrompt(effectivePrompt, {
-          referenceImageCount: imageUrls.length,
-        });
+    const finalPrompt = isBuiltinFaceSwapWithOutfit
+      ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
+          "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
+        )
+      : isBuiltinFaceSwap
+        ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
+        : buildIdentityPreservingPrompt(effectivePrompt, {
+            referenceImageCount: imageUrls.length,
+          });
     const oneshotModelVariant =
       isBuiltinFaceSwap || needsProModelVariant(effectivePrompt)
         ? "default"
