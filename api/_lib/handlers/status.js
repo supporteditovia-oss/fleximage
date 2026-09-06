@@ -8,7 +8,7 @@ const {
   createOneshotJob,
 } = require("../oneshot");
 const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
-const { buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, buildVisionQaRetryPrompt } = require("../prompt-guard");
+const { buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, buildVisionQaRetryPrompt } = require("../prompt-guard");
 const { maybeRetryAfterVisionQa } = require("../vision-qa");
 const {
   OUTPUT_ASPECT_RATIO,
@@ -368,15 +368,7 @@ module.exports = async function handler(req, res) {
                   : [];
               const retryResponse = await createOneshotJob(fallbackPrompt, {
                 aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
-                modelVariant:
-                  isAddAnimalPrompt(String(larp.prompt || "")) ||
-                  isMotorcycleReplacePrompt(String(larp.prompt || "")) ||
-                  isMotorcycleRidePrompt(String(larp.prompt || "")) ||
-                  isFictionalVehiclePrompt(String(larp.prompt || "")) ||
-                  /ANIMAL PHOTOREAL|PHOTOREAL SELFIE EDIT|Add a real BABY|Add a real full-grown|MOTORCYCLE\/SCOOTER FULL BODY|TMAX LOCK|BIKE SWAP LOCK|FICTIONAL VEHICLE/i.test(
-                    String(larp.final_prompt || ""),
-                  )
-                    ? "default" : "fast",
+                modelVariant: "fast",
                 ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
               });
               if (!retryResponse || !retryResponse.id) {
@@ -526,9 +518,7 @@ module.exports = async function handler(req, res) {
             larp.metadata && typeof larp.metadata === "object"
               ? larp.metadata
               : {};
-          const qaModelVariant =
-            meta.oneshot_model_variant ||
-            (needsProModelVariant(String(larp.prompt || "")) ? "default" : "fast");
+          const qaModelVariant = meta.oneshot_model_variant || "fast";
           const qaDecision = await withTimeout(
             maybeRetryAfterVisionQa({
               supabase,
