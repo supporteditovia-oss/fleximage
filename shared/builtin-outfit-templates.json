@@ -52,5 +52,86 @@
     "imagePath": "/outfits/outfit-lv-turquoise-street.jpg",
     "category": "luxury",
     "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-dove-navy",
+    "slug": "lv-dove-navy",
+    "name": "LV colombe navy",
+    "description": "Coupe-vent LV dégradé navy avec colombe, jean Dsquared2, sac barrel LV.",
+    "imagePath": "/outfits/outfit-lv-dove-navy.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-chanel-hoodie-grey",
+    "slug": "chanel-hoodie-grey",
+    "name": "Hoodie Chanel gris",
+    "description": "Sweat Chanel gris logo, jean anthracite, sneakers CC, casquette.",
+    "imagePath": "/outfits/outfit-chanel-hoodie-grey.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-offwhite-floral",
+    "slug": "lv-offwhite-floral",
+    "name": "LV x Off-White floral",
+    "description": "Veste LV monogramme bleu avec roses et oiseaux, tee Off-White, sneakers Off-White.",
+    "imagePath": "/outfits/outfit-lv-offwhite-floral.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-dior-purple-brand",
+    "slug": "dior-purple-brand",
+    "name": "Dior + Purple Brand",
+    "description": "Sweat damier noir, jean Purple Brand, sac Dior Saddle, sneakers Hogan.",
+    "imagePath": "/outfits/outfit-dior-purple-brand.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-gucci-snake",
+    "slug": "gucci-snake",
+    "name": "Gucci serpent bleu",
+    "description": "Veste Gucci serpent et fleurs, jean gris, sneakers Chanel, sac LV.",
+    "imagePath": "/outfits/outfit-gucci-snake.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-parrot-navy",
+    "slug": "lv-parrot-navy",
+    "name": "LV perroquet navy",
+    "description": "Coupe-vent LV navy avec perroquet et roses, jean Dsquared2, sneakers Loewe.",
+    "imagePath": "/outfits/outfit-lv-parrot-navy.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-parrot-mint",
+    "slug": "lv-parrot-mint",
+    "name": "LV perroquet mint",
+    "description": "Veste LV grise perroquet roses mint, jean Dsquared2, sneakers On, sac LV.",
+    "imagePath": "/outfits/outfit-lv-parrot-mint.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-chanel-grid-black",
+    "slug": "chanel-grid-black",
+    "name": "Chanel grid noir",
+    "description": "Veste Chanel noir/blanc logo grid, jean gris Dsquared2, sneakers Chanel, sac Hermès.",
+    "imagePath": "/outfits/outfit-chanel-grid-black.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-moncler-hermes",
+    "slug": "moncler-hermes",
+    "name": "Moncler + Hermès",
+    "description": "Gilet Moncler bleu, jean Dsquared2, sneakers Hermès navy, sac LV pixel.",
+    "imagePath": "/outfits/outfit-moncler-hermes.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
   }
 ]
