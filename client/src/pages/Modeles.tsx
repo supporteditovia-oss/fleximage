@@ -460,6 +460,14 @@ export default function Modeles() {
     }
   };
 
+  const resetOutfitFlow = () => {
+    setPendingTemplate(null);
+    setPendingUserPhoto(null);
+    setShowOutfitQuestion(false);
+    setShowOutfitPicker(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   const finishWithUserPhotoOnly = async () => {
     const template = pendingTemplate;
     const userPhoto = pendingUserPhoto;
@@ -509,6 +517,13 @@ export default function Modeles() {
     setShowOutfitQuestion(true);
   };
 
+  const handleBack = () => {
+    if (showOutfitQuestion || showOutfitPicker) {
+      resetOutfitFlow();
+    }
+    navigate("/create");
+  };
+
   if (taskId) {
     return (
       <GenerationProgress
@@ -545,7 +560,7 @@ export default function Modeles() {
         <button
           type="button"
           className="tpl-round-button"
-          onClick={() => navigate("/create")}
+          onClick={handleBack}
           aria-label="Retour"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -622,6 +637,7 @@ export default function Modeles() {
           setShowOutfitQuestion(false);
           setShowOutfitPicker(true);
         }}
+        onCancel={resetOutfitFlow}
       />
 
       <OutfitPickerModal
@@ -630,7 +646,7 @@ export default function Modeles() {
         subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
         onClose={() => {
           setShowOutfitPicker(false);
-          void finishWithUserPhotoOnly();
+          setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
       />
