@@ -18,7 +18,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, adaptBuiltinTemplatePromptForOutfitFlow, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -200,7 +200,7 @@ module.exports = async function handler(req, res) {
 
     const finalPrompt = isBuiltinFaceSwapWithOutfit
       ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
-          "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
+          adaptBuiltinTemplatePromptForOutfitFlow(effectivePrompt),
         )
       : isBuiltinFaceSwap
         ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)

@@ -144,12 +144,34 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   " Recolor every exposed skin pixel to match image 1 — especially legs visible below shorts/pants and above socks.";
 
+const BUILTIN_POSE_SCENE_LOCK =
+  "POSE + SCENE LOCK (critical): copy the ready-model photo EXACT pose — seat, legs, arms, phone, head angle. " +
+  "FORBIDDEN: repose from user selfie; scene/car/background unchanged.";
+
+const BUILTIN_OUTFIT_FLATLAY_GUARD =
+  "FLAT-LAY OUTFIT (critical): image 2 = clothes reference only — pose from image 3, identity from image 1.";
+
+export function adaptBuiltinTemplatePromptForOutfitFlow(
+  templatePrompt: string,
+): string {
+  let adapted = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  adapted = adapted
+    .replace(/\bseconde\s+image\b/gi, "troisième image")
+    .replace(/\bde\s+la\s+2(?:e|ème|eme)?\s+image\b/gi, "de la troisième image")
+    .replace(/\bimage\s+2\b/gi, "image 3")
+    .replace(/\bphoto\s+2\b/gi, "photo 3");
+  const lead =
+    "Trois images : (1) utilisateur, (2) tenue flat-lay, (3) scène modèle. " +
+    "Remplace la personne de l'image 3 par l'image 1, tenue de l'image 2. ";
+  return (lead + adapted).trim();
+}
+
 export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_POSE_SCENE_LOCK}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
