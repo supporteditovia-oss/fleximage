@@ -149,24 +149,26 @@ function TemplateSlideContent({
           ) : null}
         </div>
 
-        <div className="tpl-strip tpl-strip--lux">
-          {list.map((other, otherIndex) => (
-            <button
-              key={other.id}
-              type="button"
-              className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
-              onClick={() => onScrollToIndex(otherIndex)}
-              aria-label={other.name}
-            >
-              <img
-                src={other.demoAfterUrl ?? other.previewUrl ?? ""}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-            </button>
-          ))}
-        </div>
+        {list.length > 1 ? (
+          <div className="tpl-strip tpl-strip--lux">
+            {list.map((other, otherIndex) => (
+              <button
+                key={other.id}
+                type="button"
+                className={`tpl-strip__item${otherIndex === activeIndex ? " is-active" : ""}`}
+                onClick={() => onScrollToIndex(otherIndex)}
+                aria-label={other.name}
+              >
+                <img
+                  src={other.demoAfterUrl ?? other.previewUrl ?? ""}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <button
           type="button"
@@ -334,16 +336,14 @@ export default function Modeles() {
     : activeCategory;
 
   const detailList = useMemo(() => {
-    if (viewMode !== "detail") return [];
-    const pool = filterScenesByCategory(list, detailCategory);
-    return pool.length > 0 ? pool : list;
-  }, [viewMode, detailCategory, list]);
+    if (viewMode !== "detail" || !detailTemplate) return [];
+    return [detailTemplate];
+  }, [viewMode, detailTemplate]);
 
   useEffect(() => {
     if (viewMode !== "detail" || !detailTemplate) return;
-    const index = detailList.findIndex((item) => item.id === detailTemplate.id);
-    if (index >= 0) setActiveIndex(index);
-  }, [viewMode, detailTemplate, detailList]);
+    setActiveIndex(0);
+  }, [viewMode, detailTemplate]);
 
   const active = viewMode === "detail" ? detailTemplate : null;
 
@@ -436,9 +436,9 @@ export default function Modeles() {
     prevIndexRef.current = activeIndex;
   }, [activeIndex, isDesktopLayout]);
 
-  // Mobile : scroll snap + intersection observer.
+  // Mobile : scroll snap — une seule scène, pas de carrousel catégorie.
   useEffect(() => {
-    if (isDesktopLayout || viewMode !== "detail") return;
+    if (isDesktopLayout || viewMode !== "detail" || detailList.length !== 1) return;
     const root = feedRef.current;
     if (!root || detailList.length === 0) return;
 
@@ -460,9 +460,10 @@ export default function Modeles() {
     return () => observer.disconnect();
   }, [isDesktopLayout, detailList.length, viewMode]);
 
-  // Desktop : molette = carrousel fluide sans scroll lourd.
+  // Desktop : molette — désactivé en fiche scène unique.
   useEffect(() => {
     if (!isDesktopLayout || previewTemplate || viewMode !== "detail") return;
+    if (detailList.length <= 1) return;
     const root = feedRef.current;
     if (!root || detailList.length === 0) return;
 
@@ -732,7 +733,7 @@ export default function Modeles() {
           type="button"
           className="tpl-round-button"
           onClick={backFromDetail}
-          aria-label="Retour à la catégorie"
+          aria-label={`Retour — ${getCategoryBySlug(detailCategory)?.label ?? "catégorie"}`}
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
