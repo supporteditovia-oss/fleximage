@@ -26,6 +26,8 @@ const CRITICAL_CODES = new Set([
   "duplicated_objects",
   "unrequested_feature",
   "identity_lost",
+  "skin_tone_mismatch",
+  "face_only_paste",
   "edit_not_applied",
   "pose_paste",
   "floating_person",
@@ -111,6 +113,10 @@ function isVehicleReplaceQaContext(userPrompt, finalPrompt) {
   );
 }
 
+function isBuiltinFaceSwapQaContext(userPrompt, finalPrompt) {
+  return /\bREADY-MODEL EDIT\b/i.test(`${userPrompt || ""} ${finalPrompt || ""}`);
+}
+
 function sanitizeQaForFictional(qa, userPrompt, finalPrompt) {
   if (!qa || !isFictionalVehicleQaContext(userPrompt, finalPrompt)) return qa;
   const drop = new Set([
@@ -148,11 +154,21 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     : "PRIORITY #1 — DOOR STATE (REAL cars only):\n" +
       "If physical doors look CLOSED → white top-down car silhouette on screens must show ALL doors closed (no red open-door). " +
       "Contradiction = CRITICAL door_state_contradiction.\n";
+  const builtinFaceSwap = isBuiltinFaceSwapQaContext(request, finalBrief);
+  const builtinNote = builtinFaceSwap
+    ? "READY-MODEL FACE/BODY SWAP (critical):\n" +
+      "- User photo replaced the template model person — identity must be the USER, not the template.\n" +
+      "- SKIN TONE UNIFORMITY (critical): face, neck, arms, hands, legs, feet must share ONE skin color.\n" +
+      "- Flag skin_tone_mismatch (critical) if face is dark but legs/hands are light, or reverse, or bronzed face with pale limbs.\n" +
+      "- Flag face_only_paste (critical) if only the face changed but template model body skin remains on limbs.\n" +
+      "- Flag identity_lost (critical) if the output still looks like the original template model.\n"
+    : "";
   return (
     "You are a strict photoreal image-edit QA inspector for a lifestyle photo AI product (Luxeflexia). " +
     "Inspect the RESULT image against the user request. Reply with JSON ONLY (no markdown).\n" +
     "Schema:\n" +
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
+    builtinNote +
     cartoonNote +
     doorBlock +
     "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +

@@ -136,20 +136,25 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "Two refs: (1) user identity ONLY; (2) scene + outfit lock ONLY. " +
   "REMOVE the human in image 2 and REPLACE with person from image 1 — output face MUST match image 1, NOT image 2. " +
   "Wear EXACT outfit from image 2 on image 1 body. Keep image 2 pose, decor, lighting. Do NOT keep image 2 identity. " +
-  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet) — one consistent carnation, seamless transitions. " +
+  "FULL BODY REPLACE: swap entire human — not face-only. Template limbs skin must be erased. " +
+  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs, ankles, feet) — one consistent carnation everywhere. " +
+  "If user is dark-skinned, entire body dark; if light-skinned, entire body light; if bronzed, entire body same tan — never mix face vs legs. " +
   "If user is light-skinned, legs and hands MUST be light too; if dark-skinned, entire body dark — never mix face vs legs. " +
   "BODY BUILD LOCK: image 1's real body type — never copy template muscles. " +
-  "FORBIDDEN: face-only paste; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
+  "FORBIDDEN: face-only paste; head-swap onto template body; skin_tone_mismatch; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
+
+const BUILTIN_FULL_BODY_REPLACE_GUARD =
+  " FULL BODY REPLACE (NOT face-only): entire human from image 1 — head, neck, torso, arms, hands, legs, feet. Zero template skin on limbs.";
 
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
-  " Recolor every exposed skin pixel to match image 1 — especially legs visible below shorts/pants and above socks.";
+  " UNIFORM SKIN: face = neck = arms = hands = legs = feet — one melanin/tan level from image 1. No template skin on legs/hands.";
 
 export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_FULL_BODY_REPLACE_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
@@ -191,7 +196,7 @@ export function buildBuiltinTemplateFaceSwapWithOutfitPrompt(
   templatePrompt: string,
 ): string {
   const userPart = adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt);
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD}${BUILTIN_POSE_SCENE_LOCK}${BUILTIN_OUTFIT_FLATLAY_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD}${BUILTIN_FULL_BODY_REPLACE_GUARD}${BUILTIN_POSE_SCENE_LOCK}${BUILTIN_OUTFIT_FLATLAY_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
