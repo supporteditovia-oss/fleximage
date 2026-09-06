@@ -28,6 +28,7 @@ export function OutfitPickerModal({
     }
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
+    window.$crisp?.push(["do", "chat:hide"]);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -35,6 +36,9 @@ export function OutfitPickerModal({
     return () => {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      if (!document.documentElement.classList.contains("luxeflexia-modeles-page")) {
+        window.$crisp?.push(["do", "chat:show"]);
+      }
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);

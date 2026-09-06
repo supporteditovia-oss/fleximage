@@ -68,7 +68,8 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
       setChromeHidden(
         document.body.hasAttribute("data-fullscreen-overlay") ||
           document.body.hasAttribute("data-larp-result-mode") ||
-          document.body.hasAttribute("data-paywall-overlay"),
+          document.body.hasAttribute("data-paywall-overlay") ||
+          document.body.hasAttribute("data-hide-app-chrome"),
       );
     };
     syncChrome();
@@ -79,6 +80,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         "data-fullscreen-overlay",
         "data-larp-result-mode",
         "data-paywall-overlay",
+        "data-hide-app-chrome",
       ],
     });
     return () => observer.disconnect();
@@ -182,6 +184,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   };
 
   if (location === "/admin/studio") {
+    return null;
+  }
+
+  if (typeof document !== "undefined" && document.body.hasAttribute("data-hide-app-chrome")) {
     return null;
   }
 

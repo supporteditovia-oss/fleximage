@@ -158,19 +158,21 @@ export function BeforeAfterSlider({
           }
         }}
       >
-        <img
-          src={pair.afterSrc}
-          alt={pair.afterAlt}
-          className="lx-compare__img lx-compare__img--after"
-          draggable={false}
-          sizes={sizes}
-          fetchPriority={priority ? "high" : "auto"}
-        />
+        <div className="lx-compare__layer lx-compare__layer--after" aria-hidden>
+          <img
+            src={pair.afterSrc}
+            alt={pair.afterAlt}
+            className="lx-compare__img lx-compare__img--after"
+            draggable={false}
+            sizes={sizes}
+            fetchPriority={priority ? "high" : "auto"}
+          />
+        </div>
         <div className="lx-compare__before" style={{ width: `${position}%` }}>
           <img
             src={pair.beforeSrc}
             alt={pair.beforeAlt}
-            className="lx-compare__img"
+            className="lx-compare__img lx-compare__img--before"
             draggable={false}
             sizes={sizes}
             style={frameWidth ? { width: `${frameWidth}px` } : undefined}
