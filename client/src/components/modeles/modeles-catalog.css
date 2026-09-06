@@ -756,10 +756,6 @@
   }
 }
 
-.mcatalog-outfit-preview__note {
-  display: none;
-}
-
 html.luxeflexia-modeles-page .mcatalog-page .tpl-topbar {
   position: fixed;
   z-index: 110;
