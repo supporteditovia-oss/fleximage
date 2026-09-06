@@ -157,5 +157,24 @@ export function parseModelesPath(pathname: string): {
 export const MODELES_CATALOG_PATH = "/modeles";
 export const modelesCategoryPath = (slug: ModelesCategorySlug) =>
   `/modeles/c/${slug}`;
-export const modelesDetailPath = (templateSlug: string) =>
-  `/modeles/m/${templateSlug}`;
+
+/** Identifiant stable pour l’URL fiche modèle (toujours l’id, jamais ambigu). */
+export function getTemplateRouteId(template: {
+  id: string;
+  slug?: string | null;
+}): string {
+  return template.id;
+}
+
+export function modelesDetailPath(template: { id: string; slug?: string | null }) {
+  return `/modeles/m/${encodeURIComponent(getTemplateRouteId(template))}`;
+}
+
+export function findTemplateByRouteKey(
+  templates: { id: string; slug?: string | null }[],
+  routeKey: string | null | undefined,
+): (typeof templates)[number] | undefined {
+  if (!routeKey) return undefined;
+  const key = decodeURIComponent(routeKey);
+  return templates.find((item) => item.id === key || item.slug === key);
+}

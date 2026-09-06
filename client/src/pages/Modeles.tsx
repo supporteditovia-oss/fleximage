@@ -17,6 +17,7 @@ import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
+  findTemplateByRouteKey,
   getCategoryBySlug,
   isOutfitCategory,
   MODELES_CATALOG_PATH,
@@ -33,7 +34,6 @@ import "@/pages/modeles-page.css";
 import "@/components/modeles/modeles-catalog.css";
 
 const IMAGE_CREDIT_COST = 10;
-const DESKTOP_WHEEL_COOLDOWN_MS = 520;
 
 type SlideDirection = "next" | "prev" | "none";
 
@@ -288,13 +288,7 @@ export default function Modeles() {
   const generateDirect = useGenerateDirectLarp();
 
   const feedRef = useRef<HTMLDivElement>(null);
-  const slideRefs = useRef<Array<HTMLElement | null>>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const wheelLockRef = useRef(false);
-  const wheelTimerRef = useRef<number | null>(null);
-  const prevIndexRef = useRef(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [enterDirection, setEnterDirection] = useState<SlideDirection>("none");
   const [scenePulse, setScenePulse] = useState(0);
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
@@ -322,30 +316,23 @@ export default function Modeles() {
   );
 
   const detailTemplate = useMemo(() => {
-    if (viewMode !== "detail" || !route.templateSlug) return null;
-    return (
-      list.find(
-        (item) =>
-          item.slug === route.templateSlug || item.id === route.templateSlug,
-      ) ?? null
-    );
+    if (viewMode !== "detail") return null;
+    return findTemplateByRouteKey(list, route.templateSlug) ?? null;
   }, [viewMode, route.templateSlug, list]);
 
   const detailCategory = detailTemplate
     ? normalizeSceneCategory(detailTemplate.category)
     : activeCategory;
 
-  const detailList = useMemo(() => {
-    if (viewMode !== "detail" || !detailTemplate) return [];
-    return [detailTemplate];
-  }, [viewMode, detailTemplate]);
-
-  useEffect(() => {
-    if (viewMode !== "detail" || !detailTemplate) return;
-    setActiveIndex(0);
-  }, [viewMode, detailTemplate]);
-
   const active = viewMode === "detail" ? detailTemplate : null;
+
+  // URL canonique = id du modèle (évite les collisions de slug côté API).
+  useEffect(() => {
+    if (viewMode !== "detail" || !detailTemplate || !route.templateSlug) return;
+    if (route.templateSlug !== detailTemplate.id) {
+      navigate(modelesDetailPath(detailTemplate), { replace: true });
+    }
+  }, [viewMode, detailTemplate, route.templateSlug, navigate]);
 
   const catalogItems = useMemo(
     () => categoryScenes,
@@ -372,8 +359,15 @@ export default function Modeles() {
       });
       return;
     }
+    if (legacyTemplate) {
+      const found = findTemplateByRouteKey(list, legacyTemplate);
+      if (found) {
+        navigate(modelesDetailPath(found), { replace: true });
+        return;
+      }
+    }
     navigate(MODELES_CATALOG_PATH, { replace: true });
-  }, [navigate]);
+  }, [navigate, list]);
 
   useLayoutEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
@@ -401,7 +395,6 @@ export default function Modeles() {
 
     return () => {
       window.removeEventListener("resize", syncDesktopLayout);
-      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
     };
   }, []);
 
@@ -415,101 +408,15 @@ export default function Modeles() {
     });
   }, [list]);
 
-  const goToIndex = useCallback(
-    (index: number) => {
-      if (index < 0 || index >= detailList.length) return;
-      setActiveIndex((prev) => {
-        if (index === prev) return prev;
-        return index;
-      });
-    },
-    [detailList.length],
-  );
-
-  // Direction + pulse luxe à chaque changement de modèle (desktop).
+  // Direction + pulse luxe (desktop, fiche scène unique).
   useEffect(() => {
-    if (!isDesktopLayout) return;
-    const prev = prevIndexRef.current;
-    if (activeIndex === prev) return;
-    setEnterDirection(activeIndex > prev ? "next" : "prev");
+    if (!isDesktopLayout || viewMode !== "detail" || !active) return;
     setScenePulse((n) => n + 1);
-    prevIndexRef.current = activeIndex;
-  }, [activeIndex, isDesktopLayout]);
+  }, [active?.id, isDesktopLayout, viewMode]);
 
-  // Mobile : scroll snap — une seule scène, pas de carrousel catégorie.
-  useEffect(() => {
-    if (isDesktopLayout || viewMode !== "detail" || detailList.length !== 1) return;
-    const root = feedRef.current;
-    if (!root || detailList.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!visible) return;
-        const index = Number(
-          (visible.target as HTMLElement).dataset.index ?? "0",
-        );
-        setActiveIndex((prev) => (prev === index ? prev : index));
-      },
-      { root, threshold: 0.6 },
-    );
-
-    slideRefs.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [isDesktopLayout, detailList.length, viewMode]);
-
-  // Desktop : molette — désactivé en fiche scène unique.
-  useEffect(() => {
-    if (!isDesktopLayout || previewTemplate || viewMode !== "detail") return;
-    if (detailList.length <= 1) return;
-    const root = feedRef.current;
-    if (!root || detailList.length === 0) return;
-
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      if (wheelLockRef.current) return;
-      if (Math.abs(event.deltaY) < 28) return;
-
-      const direction = event.deltaY > 0 ? 1 : -1;
-      setActiveIndex((prev) => {
-        const next = prev + direction;
-        if (next < 0 || next >= detailList.length) return prev;
-        const template = detailList[next];
-        if (template) {
-          navigate(modelesDetailPath(template.slug || template.id));
-        }
-        return next;
-      });
-
-      wheelLockRef.current = true;
-      if (wheelTimerRef.current) window.clearTimeout(wheelTimerRef.current);
-      wheelTimerRef.current = window.setTimeout(() => {
-        wheelLockRef.current = false;
-      }, DESKTOP_WHEEL_COOLDOWN_MS);
-    };
-
-    root.addEventListener("wheel", onWheel, { passive: false });
-    return () => root.removeEventListener("wheel", onWheel);
-  }, [isDesktopLayout, detailList, previewTemplate, viewMode, navigate]);
-
-  const scrollToIndex = useCallback(
-    (index: number) => {
-      if (viewMode === "detail") {
-        const template = detailList[index];
-        if (template) {
-          navigate(modelesDetailPath(template.slug || template.id));
-        }
-      }
-      if (isDesktopLayout) {
-        setActiveIndex(index);
-        return;
-      }
-      slideRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
-    },
-    [isDesktopLayout, viewMode, detailList, navigate],
-  );
+  const scrollToIndex = useCallback((_index: number) => {
+    /* Fiche scène unique — pas de carrousel catégorie. */
+  }, []);
 
   const openHome = useCallback(() => {
     navigate(MODELES_CATALOG_PATH);
@@ -528,7 +435,7 @@ export default function Modeles() {
 
   const openSceneDetail = useCallback(
     (template: FeedTemplate) => {
-      navigate(modelesDetailPath(template.slug || template.id));
+      navigate(modelesDetailPath(template));
     },
     [navigate],
   );
@@ -746,45 +653,27 @@ export default function Modeles() {
       {isDesktopLayout ? <ModelesScene pulseKey={scenePulse} /> : null}
 
       <div
-        className={`tpl-feed${isDesktopLayout ? " tpl-feed--desktop" : ""}`}
+        className={`tpl-feed tpl-feed--single-scene${isDesktopLayout ? " tpl-feed--desktop" : ""}`}
         ref={feedRef}
       >
-        {isDesktopLayout && active ? (
-          <section className="tpl-slide tpl-slide--desktop" data-index={activeIndex}>
+        {active ? (
+          <section
+            className={`tpl-slide tpl-slide--single${isDesktopLayout ? " tpl-slide--desktop" : ""}`}
+            data-index={0}
+          >
             <TemplateSlideContent
               key={active.id}
               template={active}
-              activeIndex={activeIndex}
-              list={detailList}
+              activeIndex={0}
+              list={[active]}
               busy={busy}
-              enterDirection={enterDirection}
+              enterDirection="none"
               onPrimaryAction={onPrimaryAction}
               onScrollToIndex={scrollToIndex}
               onOpenPreview={setPreviewTemplate}
             />
           </section>
-        ) : (
-          detailList.map((template, index) => (
-            <section
-              key={template.id}
-              className="tpl-slide"
-              data-index={index}
-              ref={(el) => {
-                slideRefs.current[index] = el;
-              }}
-            >
-              <TemplateSlideContent
-                template={template}
-                activeIndex={activeIndex}
-                list={detailList}
-                busy={busy}
-                onPrimaryAction={onPrimaryAction}
-                onScrollToIndex={scrollToIndex}
-                onOpenPreview={setPreviewTemplate}
-              />
-            </section>
-          ))
-        )}
+        ) : null}
       </div>
 
       <input

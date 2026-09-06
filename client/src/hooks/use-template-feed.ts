@@ -92,6 +92,8 @@ function mergeTemplateLists(remote: FeedTemplate[]): FeedTemplate[] {
       byId.set(template.id, {
         ...existing,
         ...template,
+        id: existing.id,
+        slug: existing.slug || template.slug,
         generationPrompt: existing.generationPrompt ?? template.generationPrompt,
         generationMode: existing.generationMode ?? template.generationMode,
         isBuiltin: existing.isBuiltin ?? template.isBuiltin,

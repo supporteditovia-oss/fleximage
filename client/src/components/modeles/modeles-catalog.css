@@ -778,6 +778,20 @@ html.luxeflexia-modeles-page .mcatalog-detail .tpl-feed {
   inset: 0;
 }
 
+/* Fiche scène unique — pas de carrousel vertical / swipe */
+.mcatalog-detail .tpl-feed--single-scene {
+  overflow: hidden;
+  overscroll-behavior: none;
+  scroll-snap-type: none;
+  touch-action: pan-x pinch-zoom;
+}
+
+.mcatalog-detail .tpl-slide--single {
+  height: 100svh;
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+}
+
 html.luxeflexia-modeles-page .mcatalog-detail .tpl-feed--desktop {
   position: fixed;
 }
