@@ -1,4 +1,4 @@
-import { useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { BUILTIN_OUTFITS, type BuiltinOutfit } from "@/lib/builtin-outfit-templates";
@@ -19,8 +19,13 @@ export function OutfitPickerModal({
   onClose,
   onSelect,
 }: OutfitPickerModalProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSelectedId(null);
+      return;
+    }
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
     const onKey = (event: KeyboardEvent) => {
@@ -34,13 +39,18 @@ export function OutfitPickerModal({
     };
   }, [open, onClose]);
 
+  const handlePick = (outfit: BuiltinOutfit) => {
+    setSelectedId(outfit.id);
+    onSelect(outfit);
+  };
+
   const onCardKeyDown = (
-    event: KeyboardEvent<HTMLDivElement>,
+    event: ReactKeyboardEvent<HTMLDivElement>,
     outfit: BuiltinOutfit,
   ) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onSelect(outfit);
+      handlePick(outfit);
     }
   };
 
@@ -75,32 +85,39 @@ export function OutfitPickerModal({
           </button>
         </header>
 
-        <ul className="outfit-picker-list">
-          {BUILTIN_OUTFITS.map((outfit) => (
-            <li key={outfit.id} className="outfit-picker-list__item">
-              <div
-                className="outfit-picker-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelect(outfit)}
-                onKeyDown={(event) => onCardKeyDown(event, outfit)}
-              >
-                <div className="outfit-picker-card__photo">
-                  <img
-                    src={outfit.imagePath}
-                    alt={outfit.name}
-                    loading="lazy"
-                    decoding="async"
-                  />
+        <div className="outfit-picker-scroll">
+          <div className="outfit-picker-grid" role="list">
+            {BUILTIN_OUTFITS.map((outfit, index) => {
+              const isSelected = selectedId === outfit.id;
+              return (
+                <div
+                  key={outfit.id}
+                  role="listitem"
+                  className={`outfit-picker-card${isSelected ? " is-selected" : ""}`}
+                  aria-pressed={isSelected}
+                  tabIndex={0}
+                  onClick={() => handlePick(outfit)}
+                  onKeyDown={(event) => onCardKeyDown(event, outfit)}
+                >
+                  <div className="outfit-picker-card__photo">
+                    <img
+                      src={outfit.imagePath}
+                      alt={outfit.name}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <p className="outfit-picker-card__label">
+                    <span className="outfit-picker-card__index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="outfit-picker-card__name">{outfit.name}</span>
+                  </p>
                 </div>
-                <div className="outfit-picker-card__meta">
-                  <p className="outfit-picker-card__name">{outfit.name}</p>
-                  <p className="outfit-picker-card__cat">{outfit.categoryName}</p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>,
     document.body,
