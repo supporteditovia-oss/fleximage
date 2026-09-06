@@ -66,12 +66,16 @@ const PERSON_SWAP_GUARD =
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
-  "Two reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity); " +
+  "Two reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
   "(2) ready model photo = SCENE LOCK — output must look like image 2 with a different person. " +
   "Replace ONLY the human in image 2 with the person from image 1. " +
   "Keep image 2's exact pose, outfit, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
-  "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, face-paste halo, plastic skin. " +
-  "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
+  "SKIN TONE LOCK (critical): apply image 1's exact skin tone, melanin level, and ethnicity to ALL visible skin on the replaced person — face, forehead, neck, ears, chest, torso, arms, hands, fingers, legs, feet if bare. " +
+  "One consistent natural carnation everywhere — seamless face-to-neck-to-body transition, same undertone and tan depth as the user photo. " +
+  "If the user is Black or dark-skinned, the entire visible body must be realistically dark-skinned; if light-skinned, entirely light-skinned — never mix. " +
+  "FORBIDDEN: face-only paste keeping the model's original body skin; mismatched face vs neck vs arms; white face on dark body or dark face on light body; plastic waxy skin. " +
+  "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
+  "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 
 /** Prompt final pour génération depuis un modèle prêt intégré (face-swap). */
 function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {

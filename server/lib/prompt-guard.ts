@@ -136,7 +136,8 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "Two reference images: (1) user photo = identity source; (2) ready model photo = SCENE LOCK. " +
   "Replace ONLY the human in image 2 with the person from image 1. " +
   "Keep image 2 pose, outfit, background, lighting, camera, and all non-human details unchanged. " +
-  "FORBIDDEN: new decor, relocated scene, different vehicle or yacht. Seamless photoreal blend.";
+  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs) — one consistent carnation, seamless transitions. " +
+  "FORBIDDEN: face-only paste with mismatched body skin; white face on dark body or reverse. Seamless photoreal blend.";
 
 export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());

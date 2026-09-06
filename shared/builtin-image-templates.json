@@ -25,7 +25,8 @@
     "name": "Yacht Lamborghini",
     "description": "Short LV sur yacht Lamborghini, mer turquoise.",
     "imagePath": "/models/modele-yacht-lamborghini.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure et sa carnation. Garde exactement la pose assise torse nu sur le banc blanc du yacht Lamborghini, le short de bain Louis Vuitton marron monogramme, les lunettes de soleil, les sièges blancs capitonnés avec logo Lamborghini, la fibre de carbone, le pont en teck, la mer turquoise et le ciel bleu, le cadrage vertical et la lumière solaire de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "demoAfterPath": "/models/demo-yacht-lamborghini-apres.webp",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure et sa carnation sur TOUTE la peau visible (visage, cou, torse, bras, mains, jambes). Garde exactement la pose assise torse nu sur le banc blanc du yacht Lamborghini, le short de bain Louis Vuitton marron monogramme, les lunettes de soleil, les sièges blancs capitonnés avec logo Lamborghini, la fibre de carbone, le pont en teck, la mer turquoise et le ciel bleu, le cadrage vertical et la lumière solaire de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
     "category": "travel-tourism",
     "categoryName": "Voyage"
   },
