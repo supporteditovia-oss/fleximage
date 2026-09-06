@@ -58,26 +58,26 @@ export function OutfitPickerModal({
 
   return createPortal(
     <div
-      className="outfit-picker-overlay"
+      className="outfit-catalog-overlay"
       role="dialog"
       aria-modal="true"
       aria-label={title}
       onClick={onClose}
     >
       <div
-        className="outfit-picker-panel"
+        className="outfit-catalog-panel"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="outfit-picker-header">
+        <header className="outfit-catalog-header">
           <div>
-            <h2 className="outfit-picker-title">{title}</h2>
+            <h2 className="outfit-catalog-title">{title}</h2>
             {subtitle ? (
-              <p className="outfit-picker-subtitle">{subtitle}</p>
+              <p className="outfit-catalog-subtitle">{subtitle}</p>
             ) : null}
           </div>
           <button
             type="button"
-            className="outfit-picker-close"
+            className="outfit-catalog-close"
             onClick={onClose}
             aria-label="Fermer"
           >
@@ -85,21 +85,20 @@ export function OutfitPickerModal({
           </button>
         </header>
 
-        <div className="outfit-picker-scroll">
-          <div className="outfit-picker-grid" role="list">
+        <div className="outfit-catalog-scroll">
+          <div className="outfit-catalog-gallery">
             {BUILTIN_OUTFITS.map((outfit, index) => {
               const isSelected = selectedId === outfit.id;
               return (
                 <div
                   key={outfit.id}
-                  role="listitem"
-                  className={`outfit-picker-card${isSelected ? " is-selected" : ""}`}
+                  className={`outfit-catalog-card${isSelected ? " is-selected" : ""}`}
                   aria-pressed={isSelected}
                   tabIndex={0}
                   onClick={() => handlePick(outfit)}
                   onKeyDown={(event) => onCardKeyDown(event, outfit)}
                 >
-                  <div className="outfit-picker-card__photo">
+                  <div className="outfit-catalog-card__frame">
                     <img
                       src={outfit.imagePath}
                       alt={outfit.name}
@@ -107,11 +106,11 @@ export function OutfitPickerModal({
                       decoding="async"
                     />
                   </div>
-                  <p className="outfit-picker-card__label">
-                    <span className="outfit-picker-card__index">
+                  <p className="outfit-catalog-card__label">
+                    <span className="outfit-catalog-card__index">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <span className="outfit-picker-card__name">{outfit.name}</span>
+                    <span className="outfit-catalog-card__name">{outfit.name}</span>
                   </p>
                 </div>
               );

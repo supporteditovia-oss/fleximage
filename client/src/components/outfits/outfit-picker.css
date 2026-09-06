@@ -1,6 +1,7 @@
-/* ── Catalogue tenues LuxeFlexIA — grille 2 cols mobile, 4 cols desktop ── */
+/* ── Catalogue tenues LuxeFlexIA — galerie 2 cols mobile / 4 cols desktop ── */
 
-.outfit-picker-overlay {
+.outfit-picker-overlay,
+.outfit-catalog-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -10,9 +11,20 @@
   padding: 0;
   background: rgba(12, 10, 8, 0.62);
   backdrop-filter: blur(6px);
+  box-sizing: border-box;
 }
 
-.outfit-picker-panel {
+.outfit-picker-overlay *,
+.outfit-picker-overlay *::before,
+.outfit-picker-overlay *::after,
+.outfit-catalog-overlay *,
+.outfit-catalog-overlay *::before,
+.outfit-catalog-overlay *::after {
+  box-sizing: border-box;
+}
+
+.outfit-picker-panel,
+.outfit-catalog-panel {
   width: 100%;
   max-width: 100%;
   height: min(94vh, 900px);
@@ -27,19 +39,22 @@
 }
 
 @media (min-width: 768px) {
-  .outfit-picker-overlay {
+  .outfit-picker-overlay,
+  .outfit-catalog-overlay {
     align-items: center;
     padding: 1.25rem;
   }
 
-  .outfit-picker-panel {
+  .outfit-picker-panel,
+  .outfit-catalog-panel {
     width: min(100%, 980px);
     border-radius: 1.25rem;
     height: min(90vh, 860px);
   }
 }
 
-.outfit-picker-header {
+.outfit-picker-header,
+.outfit-catalog-header {
   flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
@@ -49,7 +64,8 @@
   border-bottom: 1px solid rgba(201, 162, 39, 0.14);
 }
 
-.outfit-picker-title {
+.outfit-picker-title,
+.outfit-catalog-title {
   margin: 0;
   font-family: var(--lx-display, "Outfit", sans-serif);
   font-size: 1.05rem;
@@ -58,14 +74,16 @@
   letter-spacing: -0.02em;
 }
 
-.outfit-picker-subtitle {
+.outfit-picker-subtitle,
+.outfit-catalog-subtitle {
   margin: 0.3rem 0 0;
   font-size: 0.78rem;
   line-height: 1.35;
   color: rgba(26, 20, 8, 0.58);
 }
 
-.outfit-picker-close {
+.outfit-picker-close,
+.outfit-catalog-close {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -79,42 +97,60 @@
   cursor: pointer;
 }
 
-.outfit-picker-close:hover {
+.outfit-picker-close:hover,
+.outfit-catalog-close:hover {
   background: rgba(26, 20, 8, 0.1);
 }
 
-/* Zone scroll — jamais de flex column sur les cartes (évite l'écrasement Safari) */
-.outfit-picker-scroll {
-  flex: 1 1 auto;
+/*
+ * Scroll Safari-safe : jamais de flex-column sur la galerie elle-même.
+ * flex: 1 1 0 + min-height: 0 force la zone scrollable dans le panel flex.
+ */
+.outfit-picker-scroll,
+.outfit-catalog-scroll {
+  flex: 1 1 0;
   min-height: 0;
+  height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
-.outfit-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Galerie — toujours en grille, jamais en colonne flex (évite l'écrasement Safari) */
+.outfit-picker-grid,
+.outfit-catalog-gallery {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   grid-auto-rows: auto;
   align-content: start;
+  align-items: start;
   gap: 0.65rem;
+  width: 100%;
   padding: 0.75rem 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
-  .outfit-picker-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .outfit-picker-grid,
+  .outfit-catalog-gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 0.75rem;
     padding: 0.85rem 1rem calc(1.15rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
-/* Carte outfit */
-.outfit-picker-card {
-  display: flex;
-  flex-direction: column;
+.outfit-picker-card,
+.outfit-catalog-card {
+  display: block;
+  width: 100%;
   min-width: 0;
+  height: auto;
+  flex: none;
+  flex-shrink: 0;
+  align-self: start;
+  margin: 0;
+  padding: 0;
   border: 2px solid rgba(18, 16, 14, 0.08);
   border-radius: 0.85rem;
   background: #fff;
@@ -127,17 +163,20 @@
     transform 0.15s ease;
 }
 
-.outfit-picker-card:hover {
+.outfit-picker-card:hover,
+.outfit-catalog-card:hover {
   border-color: rgba(201, 162, 39, 0.45);
   box-shadow: 0 6px 18px rgba(18, 16, 14, 0.08);
 }
 
-.outfit-picker-card:focus-visible {
+.outfit-picker-card:focus-visible,
+.outfit-catalog-card:focus-visible {
   outline: 2px solid rgba(201, 162, 39, 0.7);
   outline-offset: 2px;
 }
 
-.outfit-picker-card.is-selected {
+.outfit-picker-card.is-selected,
+.outfit-catalog-card.is-selected {
   border-color: #c9a227;
   box-shadow:
     0 0 0 3px rgba(201, 162, 39, 0.22),
@@ -145,16 +184,22 @@
   transform: translateY(-1px);
 }
 
-/* Photo ratio 4:5 — image entière visible (contain) */
-.outfit-picker-card__photo {
+/* Ratio 4:5 via padding (plus fiable que aspect-ratio sur Safari mobile) */
+.outfit-picker-card__photo,
+.outfit-catalog-card__frame {
   position: relative;
+  display: block;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  height: 0;
+  padding-bottom: 125%;
+  flex: none;
+  flex-shrink: 0;
   background: linear-gradient(165deg, #f0ebe3 0%, #e5dfd4 100%);
   overflow: hidden;
 }
 
-.outfit-picker-overlay .outfit-picker-card__photo img {
+.outfit-picker-overlay .outfit-picker-card__photo img,
+.outfit-catalog-overlay .outfit-catalog-card__frame img {
   position: absolute;
   top: 0;
   left: 0;
@@ -167,7 +212,8 @@
   display: block;
 }
 
-.outfit-picker-card__label {
+.outfit-picker-card__label,
+.outfit-catalog-card__label {
   display: flex;
   align-items: baseline;
   gap: 0.35rem;
@@ -177,7 +223,8 @@
   min-height: 2rem;
 }
 
-.outfit-picker-card__index {
+.outfit-picker-card__index,
+.outfit-catalog-card__index {
   flex-shrink: 0;
   font-size: 0.62rem;
   font-weight: 700;
@@ -185,7 +232,8 @@
   color: rgba(201, 162, 39, 0.85);
 }
 
-.outfit-picker-card__name {
+.outfit-picker-card__name,
+.outfit-catalog-card__name {
   flex: 1;
   min-width: 0;
   font-size: 0.68rem;
@@ -197,7 +245,8 @@
   white-space: nowrap;
 }
 
-.outfit-picker-card.is-selected .outfit-picker-card__name {
+.outfit-picker-card.is-selected .outfit-picker-card__name,
+.outfit-catalog-card.is-selected .outfit-catalog-card__name {
   color: #1a1408;
 }
 
