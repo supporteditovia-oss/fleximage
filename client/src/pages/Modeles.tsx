@@ -20,14 +20,13 @@ import {
   getCategoryBySlug,
   isOutfitCategory,
   MODELES_CATALOG_PATH,
-  MODELES_CATEGORIES,
   modelesCategoryPath,
   modelesDetailPath,
   normalizeSceneCategory,
   parseModelesPath,
   type ModelesCategorySlug,
 } from "@/lib/modeles-categories";
-import { ModelesCategoryHome } from "@/components/modeles/ModelesCategoryHome";
+import { ModelesCatalogBrowse } from "@/components/modeles/ModelesCatalogBrowse";
 import { ModelesCategoryHeader } from "@/components/modeles/ModelesCategoryHeader";
 import {
   ModelesCatalogGrid,
@@ -379,37 +378,6 @@ export default function Modeles() {
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
   const list = templates ?? [];
-
-  const categoryCounts = useMemo(() => {
-    const counts: Partial<Record<ModelesCategorySlug, number>> = {
-      outfits: BUILTIN_OUTFITS.length,
-    };
-    for (const template of list) {
-      const slug = normalizeSceneCategory(template.category);
-      counts[slug] = (counts[slug] ?? 0) + 1;
-    }
-    return counts;
-  }, [list]);
-
-  const categoryCovers = useMemo(() => {
-    const firstCover: Partial<Record<ModelesCategorySlug, string>> = {};
-    for (const template of list) {
-      const slug = normalizeSceneCategory(template.category);
-      if (!firstCover[slug]) {
-        firstCover[slug] =
-          template.demoAfterUrl ?? template.previewUrl ?? undefined;
-      }
-    }
-    if (BUILTIN_OUTFITS[0] && !firstCover.outfits) {
-      firstCover.outfits = BUILTIN_OUTFITS[0].imagePath;
-    }
-    return MODELES_CATEGORIES.map((category) => ({
-      slug: category.slug,
-      count: categoryCounts[category.slug] ?? 0,
-      coverUrl:
-        firstCover[category.slug] ?? category.coverImagePath ?? "",
-    }));
-  }, [list, categoryCounts]);
 
   const categoryScenes = useMemo(
     () => filterScenesByCategory(list, activeCategory),
@@ -765,8 +733,8 @@ export default function Modeles() {
               <p className="mcatalog-header__eyebrow">Modèles exclusifs LuxeFlexIA</p>
               <h1 className="mcatalog-header__title">Catalogue premium</h1>
               <p className="mcatalog-header__subtitle">
-                Choisis une catégorie, puis un modèle pour te mettre en scène.
-                100 % généré par LuxeFlexIA — aucune image externe.
+                Fais défiler les catégories, swipe à gauche ou à droite, puis
+                choisis ta scène. 100 % généré par LuxeFlexIA.
               </p>
             </header>
           ) : (
@@ -791,9 +759,12 @@ export default function Modeles() {
 
   if (viewMode === "home") {
     return catalogShell(
-      <ModelesCategoryHome
-        covers={categoryCovers}
-        onSelectCategory={openCategory}
+      <ModelesCatalogBrowse
+        templates={list}
+        outfits={BUILTIN_OUTFITS}
+        onSelectScene={openSceneDetail}
+        onSelectOutfit={setPreviewOutfit}
+        onViewAllCategory={openCategory}
       />,
     );
   }
@@ -816,9 +787,12 @@ export default function Modeles() {
 
   if (!active) {
     return catalogShell(
-      <ModelesCategoryHome
-        covers={categoryCovers}
-        onSelectCategory={openCategory}
+      <ModelesCatalogBrowse
+        templates={list}
+        outfits={BUILTIN_OUTFITS}
+        onSelectScene={openSceneDetail}
+        onSelectOutfit={setPreviewOutfit}
+        onViewAllCategory={openCategory}
       />,
     );
   }
