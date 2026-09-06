@@ -1,0 +1,132 @@
+/* Comparaison avant / après — slider draggable + poignée centrale. */
+
+.lx-compare {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: calc(100svh - 8rem);
+  overflow: hidden;
+  border-radius: 0.85rem;
+  touch-action: none;
+  user-select: none;
+  cursor: ew-resize;
+  background: #0a090c;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.lx-compare__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  pointer-events: none;
+}
+
+.lx-compare__img--after {
+  position: relative;
+  z-index: 0;
+}
+
+.lx-compare__before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lx-compare__before .lx-compare__img {
+  max-width: none;
+  height: 100%;
+}
+
+.lx-compare__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    rgba(201, 162, 39, 0.15) 0%,
+    rgba(246, 231, 189, 0.95) 18%,
+    rgba(246, 231, 189, 0.95) 82%,
+    rgba(201, 162, 39, 0.15) 100%
+  );
+  box-shadow: 0 0 18px rgba(201, 162, 39, 0.35);
+  pointer-events: none;
+}
+
+.lx-compare__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(246, 231, 189, 0.55);
+  background: rgba(12, 10, 14, 0.82);
+  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+.lx-compare__handle span {
+  display: block;
+  width: 2px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(246, 231, 189, 0.85);
+}
+
+.lx-compare__labels {
+  position: absolute;
+  top: 0.65rem;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.65rem;
+  pointer-events: none;
+}
+
+.lx-compare__label {
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(8, 7, 10, 0.62);
+  backdrop-filter: blur(8px);
+  color: rgba(246, 231, 189, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.28);
+}
+
+.lx-compare__hint {
+  position: absolute;
+  bottom: 0.65rem;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 0.32rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(8, 7, 10, 0.55);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  pointer-events: none;
+}

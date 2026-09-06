@@ -1,12 +1,26 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { LandingComparePair } from "@/lib/landing-v2-pairs";
+import "./before-after-slider.css";
+
+export type CompareSources = {
+  id: string;
+  beforeSrc: string;
+  afterSrc: string;
+  beforeAlt: string;
+  afterAlt: string;
+};
 
 type BeforeAfterSliderProps = {
-  pair: LandingComparePair;
+  pair: LandingComparePair | CompareSources;
   className?: string;
+  /** Animation unique au chargement (landing). */
   autoPlay?: boolean;
+  /** Boucle avant ↔ après en continu (aperçu modèles). */
+  autoPlayLoop?: boolean;
   sizes?: string;
   priority?: boolean;
+  showLabels?: boolean;
+  hint?: string;
   /** Accessible name — captions stay off the visual by default. */
   label?: string;
 };
@@ -19,14 +33,17 @@ export function BeforeAfterSlider({
   pair,
   className,
   autoPlay = false,
+  autoPlayLoop = false,
   sizes,
   priority = false,
+  showLabels = false,
+  hint,
   label = "Comparer original et rendu IA",
 }: BeforeAfterSliderProps) {
   const labelId = useId();
   const frameRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
-  const [position, setPosition] = useState(autoPlay ? 18 : 50);
+  const [position, setPosition] = useState(autoPlay || autoPlayLoop ? 18 : 50);
   const [userLocked, setUserLocked] = useState(false);
   const [frameWidth, setFrameWidth] = useState(0);
 
@@ -49,7 +66,7 @@ export function BeforeAfterSlider({
   };
 
   useEffect(() => {
-    if (!autoPlay || userLocked) return;
+    if (!autoPlay || autoPlayLoop || userLocked) return;
 
     let raf = 0;
     const duration = 2800;
@@ -66,7 +83,29 @@ export function BeforeAfterSlider({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [autoPlay, pair.id, userLocked]);
+  }, [autoPlay, autoPlayLoop, pair.id, userLocked]);
+
+  useEffect(() => {
+    if (!autoPlayLoop || userLocked) return;
+
+    let raf = 0;
+    const cycleMs = 5200;
+    const from = 14;
+    const to = 86;
+    const started = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = (now - started) % cycleMs;
+      const half = cycleMs / 2;
+      const phase = elapsed <= half ? elapsed / half : 1 - (elapsed - half) / half;
+      const eased = phase < 0.5 ? 2 * phase * phase : 1 - (-2 * phase + 2) ** 2 / 2;
+      setPosition(from + (to - from) * eased);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [autoPlayLoop, pair.id, userLocked]);
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -137,6 +176,17 @@ export function BeforeAfterSlider({
             style={frameWidth ? { width: `${frameWidth}px` } : undefined}
           />
         </div>
+        {showLabels ? (
+          <div className="lx-compare__labels" aria-hidden>
+            <span className="lx-compare__label">Avant</span>
+            <span className="lx-compare__label">Après</span>
+          </div>
+        ) : null}
+        {hint ? (
+          <span className="lx-compare__hint" aria-hidden>
+            {hint}
+          </span>
+        ) : null}
         <div className="lx-compare__bar" style={{ left: `${position}%` }}>
           <span className="lx-compare__handle" aria-hidden>
             <span />

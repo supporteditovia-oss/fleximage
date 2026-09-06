@@ -132,6 +132,27 @@
   animation: tpl-preview-zoom-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.tpl-preview-overlay__figure--compare {
+  width: min(100%, 420px);
+}
+
+.tpl-preview-overlay__compare {
+  width: 100%;
+}
+
+.tpl-preview-overlay__compare .lx-compare {
+  max-height: calc(100svh - 9rem);
+}
+
+.tpl-preview-overlay__note {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: center;
+  color: rgba(246, 231, 189, 0.55);
+}
+
 .tpl-preview-overlay__img {
   width: 100%;
   max-height: calc(100svh - 5rem);

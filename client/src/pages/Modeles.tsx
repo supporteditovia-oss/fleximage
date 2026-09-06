@@ -8,7 +8,8 @@ import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { getBuiltinGenerationPrompt, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
+import { getBuiltinGenerationPrompt, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
+import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
 import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
 import "@/pages/modeles-page.css";
@@ -77,10 +78,16 @@ function TemplateSlideContent({
               event.stopPropagation();
               onOpenPreview(template);
             }}
-            aria-label={`Aperçu — ${template.name}`}
+            aria-label={
+              hasTemplateBeforeAfterDemo(template)
+                ? `Avant / Après — ${template.name}`
+                : `Aperçu — ${template.name}`
+            }
           >
             <Expand className="h-4 w-4" aria-hidden />
-            <span>Aperçu</span>
+            <span>
+              {hasTemplateBeforeAfterDemo(template) ? "Avant / Après" : "Aperçu"}
+            </span>
           </button>
         </div>
 
@@ -150,6 +157,10 @@ function TemplatePreviewLightbox({
   template: FeedTemplate;
   onClose: () => void;
 }) {
+  const hasCompare = hasTemplateBeforeAfterDemo(template);
+  const beforeSrc = template.demoBeforeUrl ?? template.previewUrl ?? "";
+  const afterSrc = template.demoAfterUrl ?? "";
+
   useEffect(() => {
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
@@ -184,18 +195,43 @@ function TemplatePreviewLightbox({
         <X className="h-5 w-5" />
       </button>
       <figure
-        className="tpl-preview-overlay__figure"
+        className={`tpl-preview-overlay__figure${hasCompare ? " tpl-preview-overlay__figure--compare" : ""}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <img
-          className="tpl-preview-overlay__img"
-          src={template.previewUrl ?? ""}
-          alt={template.name}
-          decoding="async"
-        />
+        {hasCompare ? (
+          <BeforeAfterSlider
+            pair={{
+              id: template.id,
+              beforeSrc,
+              afterSrc,
+              beforeAlt: `Modèle original — ${template.name}`,
+              afterAlt: `Exemple généré — ${template.name}`,
+            }}
+            autoPlayLoop
+            showLabels
+            hint="Glisse pour comparer"
+            className="tpl-preview-overlay__compare"
+            label={`Avant et après — ${template.name}`}
+          />
+        ) : (
+          <img
+            className="tpl-preview-overlay__img"
+            src={template.previewUrl ?? ""}
+            alt={template.name}
+            decoding="async"
+          />
+        )}
         <figcaption className="tpl-preview-overlay__caption">
-          {template.name}
+          {hasCompare
+            ? `${template.name} — le décor reste identique, seule la personne change`
+            : template.name}
         </figcaption>
+        {!hasCompare ? (
+          <p className="tpl-preview-overlay__note">
+            Ajoute ta photo pour te mettre à la place du modèle. Un exemple avant / après
+            sera bientôt disponible ici.
+          </p>
+        ) : null}
       </figure>
     </div>,
     document.body,

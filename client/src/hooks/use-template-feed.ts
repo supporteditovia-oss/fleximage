@@ -19,6 +19,10 @@ export type FeedTemplate = {
   requiresUserPhoto: boolean;
   /** Prompt serveur pour les modèles intégrés au site. */
   generationPrompt?: string;
+  /** URL modèle d'origine (avant) pour l'aperçu comparatif. */
+  demoBeforeUrl?: string | null;
+  /** URL exemple généré (après) pour l'aperçu comparatif. */
+  demoAfterUrl?: string | null;
   /** vehicle-swap = remplace le quad ; face-swap = remplace la personne. */
   generationMode?: "vehicle-swap" | "face-swap";
   isBuiltin?: boolean;
@@ -43,6 +47,17 @@ function normalize(raw: any): FeedTemplate | null {
     raw.requiresUserPhoto ??
     !(raw.has_face_optional_reference_image ?? false);
 
+  const demoBeforeUrl =
+    raw.demoBeforeUrl ??
+    raw.demo_before_url ??
+    raw.example_before_url ??
+    null;
+  const demoAfterUrl =
+    raw.demoAfterUrl ??
+    raw.demo_after_url ??
+    raw.example_after_url ??
+    null;
+
   return {
     id: raw.id,
     slug: raw.slug ?? raw.id,
@@ -61,6 +76,8 @@ function normalize(raw: any): FeedTemplate | null {
     categoryName: raw.categoryName ?? raw.category_name ?? null,
     referenceImageCount,
     requiresUserPhoto,
+    demoBeforeUrl,
+    demoAfterUrl,
   };
 }
 

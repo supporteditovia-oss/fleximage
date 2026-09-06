@@ -16,6 +16,8 @@ type BuiltinCatalogEntry = {
   vehicleSwapPrompt?: string;
   faceSwapPrompt?: string;
   readyImagePath?: string;
+  /** Exemple « après » généré (face-swap) pour l’aperçu comparatif. */
+  demoAfterPath?: string;
 };
 
 const entries = catalog as BuiltinCatalogEntry[];
@@ -29,15 +31,26 @@ function resolveMode(item: BuiltinCatalogEntry): "vehicle-swap" | "face-swap" {
   return "face-swap";
 }
 
+function resolveDemoAfterPath(item: BuiltinCatalogEntry): string | null {
+  if (item.demoAfterPath) return item.demoAfterPath;
+  if (item.readyImagePath && item.readyImagePath !== item.imagePath) {
+    return item.readyImagePath;
+  }
+  return null;
+}
+
 /** Modèles livrés avec l'app : visibles même si l'admin n'a rien configuré. */
 export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
   const mode = resolveMode(item);
+  const demoAfterPath = resolveDemoAfterPath(item);
   return {
     id: item.id,
     slug: item.slug,
     name: item.name,
     description: item.description,
     previewUrl: item.readyImagePath || item.imagePath,
+    demoBeforeUrl: item.imagePath,
+    demoAfterUrl: demoAfterPath,
     icon: null,
     keywords: [],
     isFeatured: true,
@@ -54,6 +67,10 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
     isBuiltin: true,
   };
 });
+
+export function hasTemplateBeforeAfterDemo(template: FeedTemplate): boolean {
+  return Boolean(template.demoBeforeUrl && template.demoAfterUrl);
+}
 
 export function getBuiltinGenerationPrompt(template: FeedTemplate): string {
   return template.generationPrompt?.trim() || template.name;

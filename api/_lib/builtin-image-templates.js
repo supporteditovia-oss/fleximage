@@ -38,31 +38,40 @@ function resolveGenerationMode(template) {
 
 /** Modèles visibles côté API publique `/api/templates`. */
 function listBuiltinTemplatesForApi() {
-  return catalog.map((item) => ({
-    id: item.id,
-    slug: item.slug,
-    name: item.name,
-    description: item.description,
-    previewUrl: resolveReferenceUrl(
-      item.readyImagePath || item.imagePath,
-    ),
-    icon: null,
-    keywords: [],
-    isFeatured: true,
-    generationType: "image",
-    category: item.category,
-    categoryName: item.categoryName,
-    referenceImageCount: item.readyImagePath
-      ? 1
-      : item.vehicleReferencePath
-        ? 2
-        : 1,
-    requiresUserPhoto:
-      item.requiresUserPhoto !== false &&
-      resolveGenerationMode(item) !== "vehicle-swap",
-    generationMode: resolveGenerationMode(item),
-    isBuiltin: true,
-  }));
+  return catalog.map((item) => {
+    const demoAfterPath =
+      item.demoAfterPath ||
+      (item.readyImagePath && item.readyImagePath !== item.imagePath
+        ? item.readyImagePath
+        : null);
+    return {
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      description: item.description,
+      previewUrl: resolveReferenceUrl(
+        item.readyImagePath || item.imagePath,
+      ),
+      demoBeforeUrl: resolveReferenceUrl(item.imagePath),
+      demoAfterUrl: demoAfterPath ? resolveReferenceUrl(demoAfterPath) : null,
+      icon: null,
+      keywords: [],
+      isFeatured: true,
+      generationType: "image",
+      category: item.category,
+      categoryName: item.categoryName,
+      referenceImageCount: item.readyImagePath
+        ? 1
+        : item.vehicleReferencePath
+          ? 2
+          : 1,
+      requiresUserPhoto:
+        item.requiresUserPhoto !== false &&
+        resolveGenerationMode(item) !== "vehicle-swap",
+      generationMode: resolveGenerationMode(item),
+      isBuiltin: true,
+    };
+  });
 }
 
 /**
