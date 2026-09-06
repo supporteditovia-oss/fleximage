@@ -72,6 +72,17 @@ export function hasTemplateBeforeAfterDemo(template: FeedTemplate): boolean {
   return Boolean(template.demoBeforeUrl && template.demoAfterUrl);
 }
 
+export function getTemplateComparePair(template: FeedTemplate) {
+  if (!hasTemplateBeforeAfterDemo(template)) return null;
+  return {
+    id: template.id,
+    beforeSrc: template.demoBeforeUrl!,
+    afterSrc: template.demoAfterUrl!,
+    beforeAlt: `Modèle original — ${template.name}`,
+    afterAlt: `Exemple généré — ${template.name}`,
+  };
+}
+
 export function getBuiltinGenerationPrompt(template: FeedTemplate): string {
   return template.generationPrompt?.trim() || template.name;
 }

@@ -8,7 +8,7 @@ import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { getBuiltinGenerationPrompt, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
+import { getBuiltinGenerationPrompt, getTemplateComparePair, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
 import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
@@ -52,18 +52,33 @@ function TemplateSlideContent({
       ? ""
       : ` tpl-slide__frame--${enterDirection}`;
 
+  const comparePair = getTemplateComparePair(template);
+
   return (
     <div className={`tpl-slide__frame${luxeClass}`}>
       <div className="tpl-slide__lux-flash" aria-hidden />
       <div className="tpl-slide__lux-ring" aria-hidden />
       <div className="tpl-slide__frame-glow" aria-hidden />
-      <div className="tpl-slide__photo">
-        <img
-          className="tpl-slide__media"
-          src={template.previewUrl ?? ""}
-          alt={template.name}
-          decoding="async"
-        />
+      <div
+        className={`tpl-slide__photo${comparePair ? " tpl-slide__photo--compare" : ""}`}
+      >
+        {comparePair ? (
+          <BeforeAfterSlider
+            pair={comparePair}
+            autoPlayLoop
+            showLabels
+            hint="Glisse pour comparer"
+            className="tpl-slide__compare"
+            label={`Avant et après — ${template.name}`}
+          />
+        ) : (
+          <img
+            className="tpl-slide__media"
+            src={template.previewUrl ?? ""}
+            alt={template.name}
+            decoding="async"
+          />
+        )}
         <div className="tpl-slide__scrim" aria-hidden />
       </div>
 
@@ -117,7 +132,12 @@ function TemplateSlideContent({
               onClick={() => onScrollToIndex(otherIndex)}
               aria-label={other.name}
             >
-              <img src={other.previewUrl ?? ""} alt="" loading="lazy" decoding="async" />
+              <img
+                src={other.demoAfterUrl ?? other.previewUrl ?? ""}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
             </button>
           ))}
         </div>
@@ -158,8 +178,7 @@ function TemplatePreviewLightbox({
   onClose: () => void;
 }) {
   const hasCompare = hasTemplateBeforeAfterDemo(template);
-  const beforeSrc = template.demoBeforeUrl ?? template.previewUrl ?? "";
-  const afterSrc = template.demoAfterUrl ?? "";
+  const comparePair = getTemplateComparePair(template);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
@@ -198,15 +217,9 @@ function TemplatePreviewLightbox({
         className={`tpl-preview-overlay__figure${hasCompare ? " tpl-preview-overlay__figure--compare" : ""}`}
         onClick={(event) => event.stopPropagation()}
       >
-        {hasCompare ? (
+        {hasCompare && comparePair ? (
           <BeforeAfterSlider
-            pair={{
-              id: template.id,
-              beforeSrc,
-              afterSrc,
-              beforeAlt: `Modèle original — ${template.name}`,
-              afterAlt: `Exemple généré — ${template.name}`,
-            }}
+            pair={comparePair}
             autoPlayLoop
             showLabels
             hint="Glisse pour comparer"

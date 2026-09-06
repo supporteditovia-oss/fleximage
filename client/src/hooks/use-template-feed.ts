@@ -87,7 +87,20 @@ function mergeTemplateLists(remote: FeedTemplate[]): FeedTemplate[] {
     byId.set(template.id, template);
   }
   for (const template of remote) {
-    byId.set(template.id, template);
+    const existing = byId.get(template.id);
+    if (existing) {
+      byId.set(template.id, {
+        ...existing,
+        ...template,
+        generationPrompt: existing.generationPrompt ?? template.generationPrompt,
+        generationMode: existing.generationMode ?? template.generationMode,
+        isBuiltin: existing.isBuiltin ?? template.isBuiltin,
+        demoBeforeUrl: template.demoBeforeUrl ?? existing.demoBeforeUrl,
+        demoAfterUrl: template.demoAfterUrl ?? existing.demoAfterUrl,
+      });
+    } else {
+      byId.set(template.id, template);
+    }
   }
   return Array.from(byId.values());
 }
