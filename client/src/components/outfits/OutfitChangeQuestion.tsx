@@ -30,15 +30,15 @@ export function OutfitChangeQuestion({
       <div className="outfit-question-panel">
         <h2>Changer de tenue ?</h2>
         <p>
-          Tu peux garder la tenue du modèle, ou choisir une autre dans le
-          catalogue.
+          Ta photo remplace le personnage du modèle. Tu peux garder sa tenue
+          d&apos;origine, ou en choisir une autre dans le catalogue.
         </p>
         <div className="outfit-question-actions">
           <button type="button" className="outfit-question-no" onClick={onNo}>
-            Non, garder
+            Non — garder la tenue du modèle
           </button>
           <button type="button" className="outfit-question-yes" onClick={onYes}>
-            Oui, choisir
+            Oui — choisir une tenue
           </button>
         </div>
       </div>

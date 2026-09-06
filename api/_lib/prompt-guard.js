@@ -66,9 +66,11 @@ const PERSON_SWAP_GUARD =
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
-  "Two reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
-  "(2) ready model photo = SCENE LOCK — output must look like image 2 with a different person. " +
-  "Replace ONLY the human in image 2 with the person from image 1. " +
+  "Two reference images: (1) user photo = ONLY identity source (face, eyes, nose, lips, beard, hair, skin tone, ethnicity, body build); " +
+  "(2) ready model photo = SCENE + OUTFIT LOCK ONLY — background, decor, lighting, camera, pose, and the EXACT clothes/shoes/accessories worn in image 2. " +
+  "CRITICAL IDENTITY RULE: the human visible in image 2 must be COMPLETELY REMOVED and REPLACED by the person from image 1. " +
+  "The output face MUST be recognizable as image 1 — NOT image 2. Never keep the template model's face, hair, beard, or skin. " +
+  "Replace ONLY the human in image 2 with the person from image 1 while wearing image 2's exact outfit on image 1's body. " +
   "Keep image 2's exact pose, outfit, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
   "SKIN TONE LOCK (critical): apply image 1's exact skin tone, melanin level, and ethnicity to ALL visible skin on the replaced person — face, forehead, neck, ears, chest, torso, arms, hands, fingers, legs, feet if bare. " +
   "One consistent natural carnation everywhere — seamless face-to-neck-to-body transition, same undertone and tan depth as the user photo. " +
@@ -76,7 +78,7 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "BODY BUILD LOCK (critical): copy image 1's real body type — slim, skinny, average, overweight, or athletic AS SEEN in the user photo. " +
   "If the user is slim or not muscular, the result must stay slim with natural proportions — do NOT copy the template model's muscles, six-pack, bulk, or gym body. " +
   "If the user is heavier, keep that build; if petite, stay petite. Pose comes from image 2 but body mass and silhouette must match image 1 realistically under the same clothes. " +
-  "FORBIDDEN: face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms vs legs; white face on dark body or dark face on light body; dark legs with light face; light legs with dark face; plastic waxy skin. " +
+  "FORBIDDEN: keeping image 2 person/face/identity; outfit-only edit on the template model; face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms vs legs; white face on dark body or dark face on light body; dark legs with light face; light legs with dark face; plastic waxy skin. " +
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 

@@ -133,9 +133,9 @@ function qualitySuffix(): string {
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
-  "Two reference images: (1) user photo = identity source; (2) ready model photo = SCENE LOCK. " +
-  "Replace ONLY the human in image 2 with the person from image 1. " +
-  "Keep image 2 pose, outfit, background, lighting, camera, and all non-human details unchanged. " +
+  "Two refs: (1) user identity ONLY; (2) scene + outfit lock ONLY. " +
+  "REMOVE the human in image 2 and REPLACE with person from image 1 — output face MUST match image 1, NOT image 2. " +
+  "Wear EXACT outfit from image 2 on image 1 body. Keep image 2 pose, decor, lighting. Do NOT keep image 2 identity. " +
   "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet) — one consistent carnation, seamless transitions. " +
   "If user is light-skinned, legs and hands MUST be light too; if dark-skinned, entire body dark — never mix face vs legs. " +
   "BODY BUILD LOCK: image 1's real body type — never copy template muscles. " +
