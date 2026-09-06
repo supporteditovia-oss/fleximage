@@ -5,7 +5,7 @@
     "name": "Lamborghini Urus",
     "description": "Streetwear devant un Urus à la station-service.",
     "imagePath": "/models/modele-lamborghini-urus.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la veste bomber noire, le pantalon camouflage, les chaussettes blanches, les chaussons vert foncé, le téléphone en main, la station-service sous la marquise, les jantes noires, les étriers de frein jaunes Lamborghini, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, coiffure et carnation identique PARTOUT sur le corps visible — visage, cou, mains, avant-bras et surtout les jambes visibles entre le pantalon camouflage et les chaussettes blanches (même teinte de peau que la photo utilisateur, jamais la peau du modèle d'origine). Garde exactement la pose assise dans la portière ouverte du Lamborghini Urus gris mat, la veste bomber noire, le pantalon camouflage, les chaussettes blanches, les chaussons vert foncé, le téléphone en main, la station-service sous la marquise, les jantes noires, les étriers de frein jaunes Lamborghini, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie ultra-réaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
     "category": "supercars",
     "categoryName": "Supercars"
   },

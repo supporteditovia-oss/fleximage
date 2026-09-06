@@ -191,9 +191,10 @@ module.exports = async function handler(req, res) {
       : buildIdentityPreservingPrompt(effectivePrompt, {
           referenceImageCount: imageUrls.length,
         });
-    const oneshotModelVariant = needsProModelVariant(effectivePrompt)
-      ? "default"
-      : "fast";
+    const oneshotModelVariant =
+      isBuiltinFaceSwap || needsProModelVariant(effectivePrompt)
+        ? "default"
+        : "fast";
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
       modelVariant: oneshotModelVariant,

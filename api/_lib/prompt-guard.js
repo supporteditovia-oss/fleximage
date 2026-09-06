@@ -76,9 +76,18 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "BODY BUILD LOCK (critical): copy image 1's real body type — slim, skinny, average, overweight, or athletic AS SEEN in the user photo. " +
   "If the user is slim or not muscular, the result must stay slim with natural proportions — do NOT copy the template model's muscles, six-pack, bulk, or gym body. " +
   "If the user is heavier, keep that build; if petite, stay petite. Pose comes from image 2 but body mass and silhouette must match image 1 realistically under the same clothes. " +
-  "FORBIDDEN: face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms; white face on dark body or dark face on light body; plastic waxy skin. " +
+  "FORBIDDEN: face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms vs legs; white face on dark body or dark face on light body; dark legs with light face; light legs with dark face; plastic waxy skin. " +
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
+
+/** Renfort explicite — jambes/mains visibles entre vêtements (Urus, yacht torse nu, etc.). */
+const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
+  "UNIFORM SKIN MANDATORY (reject if violated): recolor EVERY pixel of exposed skin on the replaced person to match image 1 — " +
+  "face, neck, ears, chest, stomach, arms, hands, fingers, knees, shins, ankles, legs between shorts/pants and socks, feet if bare. " +
+  "If image 1 is light/white skin, ALL visible skin including legs and hands MUST be light/white — ZERO dark patches left from the template model. " +
+  "If image 1 is dark/Black skin, ALL visible skin MUST be dark/Black — ZERO light patches left from the template model. " +
+  "Face skin tone MUST equal leg skin tone MUST equal arm skin tone — one single melanin level and undertone on the entire body. " +
+  "Check especially legs visible below rolled pants/shorts and above socks/shoes — never leave the template model's original leg skin color.";
 
 /** Prompt final pour génération depuis un modèle prêt intégré (face-swap). */
 function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
@@ -88,6 +97,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
     "Replace the model person with the user while keeping the scene identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
     NEGATIVE_PROMPT_CLAUSE,

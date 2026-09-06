@@ -136,16 +136,20 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "Two reference images: (1) user photo = identity source; (2) ready model photo = SCENE LOCK. " +
   "Replace ONLY the human in image 2 with the person from image 1. " +
   "Keep image 2 pose, outfit, background, lighting, camera, and all non-human details unchanged. " +
-  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs) — one consistent carnation, seamless transitions. " +
-  "BODY BUILD LOCK: image 1's real body type (slim, average, heavy, athletic) — never copy template muscles; skinny user stays skinny. " +
-  "FORBIDDEN: face-only paste with mismatched body skin or bodybuilder body on slim user. Seamless photoreal blend.";
+  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet) — one consistent carnation, seamless transitions. " +
+  "If user is light-skinned, legs and hands MUST be light too; if dark-skinned, entire body dark — never mix face vs legs. " +
+  "BODY BUILD LOCK: image 1's real body type — never copy template muscles. " +
+  "FORBIDDEN: face-only paste; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
+
+const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
+  " Recolor every exposed skin pixel to match image 1 — especially legs visible below shorts/pants and above socks.";
 
 export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
