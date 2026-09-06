@@ -66,9 +66,11 @@ const PERSON_SWAP_GUARD =
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
-  "Two reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
-  "(2) ready model photo = SCENE LOCK — output must look like image 2 with a different person. " +
-  "Replace ONLY the human in image 2 with the person from image 1. " +
+  "Two reference images: (1) user photo = ONLY identity source (face, eyes, nose, lips, beard, hair, skin tone, ethnicity, body build); " +
+  "(2) ready model photo = SCENE + OUTFIT LOCK ONLY — background, decor, lighting, camera, pose, and the EXACT clothes/shoes/accessories worn in image 2. " +
+  "CRITICAL IDENTITY RULE: the human visible in image 2 must be COMPLETELY REMOVED and REPLACED by the person from image 1. " +
+  "The output face MUST be recognizable as image 1 — NOT image 2. Never keep the template model's face, hair, beard, or skin. " +
+  "Replace ONLY the human in image 2 with the person from image 1 while wearing image 2's exact outfit on image 1's body. " +
   "Keep image 2's exact pose, outfit, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
   "SKIN TONE LOCK (critical): apply image 1's exact skin tone, melanin level, and ethnicity to ALL visible skin on the replaced person — face, forehead, neck, ears, chest, torso, arms, hands, fingers, legs, feet if bare. " +
   "One consistent natural carnation everywhere — seamless face-to-neck-to-body transition, same undertone and tan depth as the user photo. " +
@@ -76,18 +78,34 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "BODY BUILD LOCK (critical): copy image 1's real body type — slim, skinny, average, overweight, or athletic AS SEEN in the user photo. " +
   "If the user is slim or not muscular, the result must stay slim with natural proportions — do NOT copy the template model's muscles, six-pack, bulk, or gym body. " +
   "If the user is heavier, keep that build; if petite, stay petite. Pose comes from image 2 but body mass and silhouette must match image 1 realistically under the same clothes. " +
-  "FORBIDDEN: face-only paste keeping the model's original body skin or muscular physique; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms vs legs; white face on dark body or dark face on light body; dark legs with light face; light legs with dark face; plastic waxy skin. " +
+  "FORBIDDEN: keeping image 2 person/face/identity; outfit-only edit on the template model; face-only paste; head-swap onto template body; keeping template model arms/legs/hands skin color; turning a skinny user into a bodybuilder; mismatched face vs neck vs arms vs legs; white face on dark body or dark face on light body; dark legs with light face; light legs with dark face; bronzed face with pale legs or reverse; plastic waxy skin. " +
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
-  "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
+  "Seamless photoreal FULL-BODY identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
+
+/** Priorité #1 — corps entier + carnation uniforme (toujours en tête du prompt). */
+const BUILTIN_IDENTITY_PRIORITY_LOCK =
+  "PRIORITY #1 — FULL BODY + UNIFORM SKIN: replace ENTIRE person with image 1 — NOT face-only paste. " +
+  "ONE skin tone on ALL exposed skin: face=neck=arms=hands=legs=feet. " +
+  "Dark user→all dark; light user→all light; bronzed→all same tan. Zero template skin on limbs, especially legs below shorts and bare feet.";
 
 /** Renfort explicite — jambes/mains visibles entre vêtements (Urus, yacht torse nu, etc.). */
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
-  "UNIFORM SKIN MANDATORY (reject if violated): recolor EVERY pixel of exposed skin on the replaced person to match image 1 — " +
-  "face, neck, ears, chest, stomach, arms, hands, fingers, knees, shins, ankles, legs between shorts/pants and socks, feet if bare. " +
-  "If image 1 is light/white skin, ALL visible skin including legs and hands MUST be light/white — ZERO dark patches left from the template model. " +
-  "If image 1 is dark/Black skin, ALL visible skin MUST be dark/Black — ZERO light patches left from the template model. " +
-  "Face skin tone MUST equal leg skin tone MUST equal arm skin tone — one single melanin level and undertone on the entire body. " +
-  "Check especially legs visible below rolled pants/shorts and above socks/shoes — never leave the template model's original leg skin color.";
+  "UNIFORM SKIN (reject if violated): recolor EVERY exposed skin pixel to image 1 — legs between clothes and socks, bare feet, forearms, neck. " +
+  "Face tone MUST equal leg tone MUST equal hand tone. Never leave template model skin on any body part.";
+
+function assembleBuiltinPrompt(guardParts, userPart) {
+  const priority = [BUILTIN_IDENTITY_PRIORITY_LOCK, ...guardParts, BUILTIN_SKIN_UNIFORMITY_CLARIFIER]
+    .filter(Boolean)
+    .join(" ");
+  const suffix = `${REALISM_QUALITY_GUARD} ${NEGATIVE_PROMPT_CLAUSE}`.trim();
+  const budget = Math.max(40, MAX_FINAL_PROMPT - priority.length - suffix.length - 2);
+  const trimmedUser = String(userPart || "").trim().slice(0, budget);
+  let combined = [priority, trimmedUser, suffix].filter(Boolean).join(" ");
+  if (combined.length > MAX_FINAL_PROMPT) {
+    combined = combined.slice(0, MAX_FINAL_PROMPT);
+  }
+  return combined;
+}
 
 /** Prompt final pour génération depuis un modèle prêt intégré (face-swap). */
 function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
@@ -95,59 +113,83 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const parts = [
-    BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
-    BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
-    userPart,
-    REALISM_QUALITY_GUARD,
-    NEGATIVE_PROMPT_CLAUSE,
-  ];
-  let combined = parts.filter(Boolean).join(" ");
-  if (combined.length > MAX_FINAL_PROMPT) {
-    combined = combined.slice(0, MAX_FINAL_PROMPT);
-  }
-  return combined;
+  return assembleBuiltinPrompt([BUILTIN_TEMPLATE_FACE_SWAP_GUARD], userPart);
 }
 
 /**
  * Modèles prêts + outfit catalogue : image 1 = user, image 2 = tenue, image 3 = scène.
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
-  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory). " +
-  "Three reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity, body build); " +
+  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory — FULL IDENTITY + OUTFIT SWAP). " +
+  "Three reference images: (1) user photo = ONLY identity source (face, eyes, nose, lips, beard, hair, skin tone, ethnicity, body build); " +
   "(2) outfit/clothes reference = wear THIS exact outfit on the replaced person; " +
-  "(3) ready model photo = SCENE LOCK — output must look like image 3 with a different person in different clothes. " +
-  "Replace ONLY the human in image 3 with the person from image 1. " +
-  "Dress them in the EXACT clothes, shoes, bags, and accessories from image 2 — worn naturally on the body, NOT pasted flat. " +
+  "(3) ready model photo = SCENE + POSE LOCK ONLY — background, decor, lighting, camera, furniture, vehicles, sea, sky. " +
+  "CRITICAL IDENTITY RULE: the human visible in image 3 must be COMPLETELY REMOVED and REPLACED by the person from image 1. " +
+  "The output face MUST be recognizable as image 1 — NOT image 3. Never keep the template model's face, hair, beard, or skin. " +
+  "Dress image-1 person in the EXACT clothes, shoes, bags, and accessories from image 2 — worn naturally on the body, NOT pasted flat. " +
   "Do NOT keep the original outfit from image 3 — image 2 outfit wins. " +
   "Keep image 3's exact pose, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
   "SKIN TONE LOCK (critical): apply image 1's exact skin tone to ALL visible skin on the replaced person — face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet if bare. " +
   "One consistent natural carnation everywhere — never mix face vs legs. " +
   "BODY BUILD LOCK (critical): copy image 1's real body type — slim stays slim, never copy template muscles or bulk. " +
-  "GLASSES RULE: keep photo-1 glasses unless image 2 clearly shows glasses to copy. " +
-  "HAIR RULE: keep photo-1 hairstyle unless image 2 is a worn look with visible hair to copy. " +
-  "FORBIDDEN: keeping image 3 clothes; face-only paste; outfit collage; new decor; cutout halo. " +
-  "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
+  "GLASSES RULE: keep image-1 glasses unless image 2 clearly shows glasses to copy. " +
+  "HAIR RULE: keep image-1 hairstyle unless image 2 is a worn look with visible hair to copy. " +
+  "FORBIDDEN: keeping image 3 person/face/identity; outfit-only edit on the template model; keeping image 3 clothes; face-only paste; head-swap onto template body; keeping template model limbs skin color; outfit collage; new decor; cutout halo. " +
+  "Seamless photoreal FULL-BODY identity transfer with matched scene shadows. No text, no watermark.";
+
+/** Pose/scène depuis image 3 uniquement — jamais l'identité du modèle. */
+const BUILTIN_POSE_SCENE_LOCK =
+  " POSE/SCENE LOCK: copy ONLY pose, seating, limb placement, camera angle, and environment from image 3. " +
+  "Never copy image 3 face, hair, beard, skin color, or body identity — those MUST come from image 1.";
+
+/** Tenue catalogue — éviter collage flat-lay sur le corps. */
+const BUILTIN_OUTFIT_FLATLAY_GUARD =
+  " OUTFIT WEAR LOCK: garments from image 2 must be WORN on image-1 body with natural folds and shadows — " +
+  "never a flat product cutout pasted over the template person. If image 2 shows a model, copy ONLY the clothes, NOT that model's face.";
+
+/**
+ * Réécrit un prompt modèle prêt (2 refs) pour le flux 3 images outfit.
+ * Image 1 = user, image 2 = tenue, image 3 = scène (ex-modèle « seconde image »).
+ */
+function adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt) {
+  let text = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  if (!text) {
+    return (
+      "Remplace entièrement la personne de l'image 3 par la personne de l'image 1 (visage, barbe, cheveux, peau identique sur TOUT le corps — jambes, mains, cou inclus, morphologie). " +
+      "Habille cette personne avec la tenue exacte de l'image 2. " +
+      "Garde uniquement la pose, le décor et l'éclairage de l'image 3."
+    );
+  }
+
+  text = text
+    .replace(/\b(?:la\s+)?seconde\s+image\b/gi, "__SCENE_IMAGE__")
+    .replace(/\b(?:la\s+)?première\s+image\b/gi, "l'image 1")
+    .replace(/\b(?:la\s+)?premiere\s+image\b/gi, "l'image 1")
+    .replace(/__SCENE_IMAGE__/g, "l'image 3");
+
+  text = text.replace(
+    /,\s*[^,.]*\b(?:tenue|veste|pantalon|short|doudoune|tracksuit|bomber|robe|jean|chaussures|baskets|sneakers|lunettes de soleil|sac bandoulière|sac LV|crossbody)[^,.]*/gi,
+    "",
+  );
+
+  return (
+    `${text} ` +
+    "Tenue = image 2 uniquement (pas celle du modèle image 3). " +
+    "Personne = image 1 uniquement (pas le modèle image 3)."
+  ).trim();
+}
 
 /** Prompt final modèle prêt + tenue catalogue (3 images). */
 function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
-  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
-  const userPart =
-    cleaned ||
-    "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
-  const parts = [
-    BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
-    OUTFIT_FROM_REF_GUARD,
-    BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
+  const userPart = adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt);
+  return assembleBuiltinPrompt(
+    [
+      BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
+      BUILTIN_POSE_SCENE_LOCK,
+      BUILTIN_OUTFIT_FLATLAY_GUARD,
+    ],
     userPart,
-    REALISM_QUALITY_GUARD,
-    NEGATIVE_PROMPT_CLAUSE,
-  ];
-  let combined = parts.filter(Boolean).join(" ");
-  if (combined.length > MAX_FINAL_PROMPT) {
-    combined = combined.slice(0, MAX_FINAL_PROMPT);
-  }
-  return combined;
+  );
 }
 
 /** Additive clarifier when user says remplace / replace a person. */
@@ -3940,8 +3982,14 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
       ? "DOOR FIX (highest priority): physical doors are CLOSED → erase EVERY red open-door highlight on the white top-down car graphic on cluster AND MMI. " +
         "Show ALL doors closed on that white outline. Keep red ONLY if a door is visibly open in the photo. No contradictory door alerts. "
       : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
+  const builtinFaceSwap = /\bREADY-MODEL EDIT\b/i.test(base);
+  const skinFix = builtinFaceSwap
+    ? "SKIN FIX (highest priority): FULL BODY skin tone from image 1 — face, neck, arms, hands, legs, feet must ALL match image 1's exact melanin/tan. " +
+      "FORBIDDEN: face-only paste; dark face with light legs; light face with dark legs; template model skin left on limbs. Recolor every exposed skin pixel. "
+    : "";
   const prefix =
     "QA CORRECTION PASS (mandatory). Keep the SAME person identity. " +
+    skinFix +
     doorFix +
     `Fix ONLY these critical defects: ${fixList}. ` +
     "IDENTITY≠POSE: if relocating, invent a NEW natural pose — never paste the reference selfie/hand-on-cheek. " +

@@ -15,7 +15,7 @@
     "name": "Yacht deck luxe",
     "description": "Détente sur le pont d'un yacht en mer.",
     "imagePath": "/models/modele-yacht-deck.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le banc du pont du yacht, la tenue noire, les pieds nus, le pont en teck, les garde-corps inox, la mer turquoise, le ciel bleu, les îles au loin, la lumière solaire et le cadrage vertical de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration lumineuse parfaite, sans texte ni logo.",
+    "prompt": "Remplace entièrement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation identique PARTOUT sur le corps visible — visage, cou, mains, jambes, pieds nus (même teinte de peau que la photo utilisateur sur tout le corps, jamais la peau du modèle d'origine). Garde exactement la pose assise sur le banc du pont du yacht, la tenue noire, les pieds nus, le pont en teck, les garde-corps inox, la mer turquoise, le ciel bleu, les îles au loin, la lumière solaire et le cadrage vertical de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration lumineuse parfaite, sans texte ni logo.",
     "category": "travel-tourism",
     "categoryName": "Voyage"
   },

@@ -133,41 +133,70 @@ function qualitySuffix(): string {
  */
 const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
-  "Two reference images: (1) user photo = identity source; (2) ready model photo = SCENE LOCK. " +
-  "Replace ONLY the human in image 2 with the person from image 1. " +
-  "Keep image 2 pose, outfit, background, lighting, camera, and all non-human details unchanged. " +
-  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs between clothes and socks, ankles, feet) — one consistent carnation, seamless transitions. " +
+  "Two refs: (1) user identity ONLY; (2) scene + outfit lock ONLY. " +
+  "REMOVE the human in image 2 and REPLACE with person from image 1 — output face MUST match image 1, NOT image 2. " +
+  "Wear EXACT outfit from image 2 on image 1 body. Keep image 2 pose, decor, lighting. Do NOT keep image 2 identity. " +
+  "FULL BODY REPLACE: swap entire human — not face-only. Template limbs skin must be erased. " +
+  "SKIN TONE LOCK: image 1's exact skin tone on ALL visible skin (face, neck, chest, arms, hands, legs, ankles, feet) — one consistent carnation everywhere. " +
+  "If user is dark-skinned, entire body dark; if light-skinned, entire body light; if bronzed, entire body same tan — never mix face vs legs. " +
   "If user is light-skinned, legs and hands MUST be light too; if dark-skinned, entire body dark — never mix face vs legs. " +
   "BODY BUILD LOCK: image 1's real body type — never copy template muscles. " +
-  "FORBIDDEN: face-only paste; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
+  "FORBIDDEN: face-only paste; head-swap onto template body; skin_tone_mismatch; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
+
+const BUILTIN_FULL_BODY_REPLACE_GUARD =
+  " FULL BODY REPLACE (NOT face-only): entire human from image 1 — head, neck, torso, arms, hands, legs, feet. Zero template skin on limbs.";
 
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
-  " Recolor every exposed skin pixel to match image 1 — especially legs visible below shorts/pants and above socks.";
+  " UNIFORM SKIN: face = neck = arms = hands = legs = feet — one melanin/tan level from image 1. No template skin on legs/hands.";
 
 export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_FULL_BODY_REPLACE_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
 }
 
 const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
-  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory). Three refs: (1) user identity; (2) outfit to wear; (3) scene lock. " +
-  "Replace human in image 3 with user from image 1, wearing EXACT outfit from image 2. Keep image 3 pose, decor, lighting unchanged. " +
-  "SKIN + BODY BUILD from image 1 on all visible skin. Do NOT keep image 3 clothes.";
+  "READY-MODEL EDIT WITH CUSTOM OUTFIT (mandatory — FULL IDENTITY + OUTFIT SWAP). " +
+  "Three refs: (1) user identity ONLY; (2) outfit to wear; (3) scene + pose lock ONLY. " +
+  "REMOVE the human in image 3 and REPLACE with person from image 1 — output face MUST match image 1, NOT image 3. " +
+  "Wear EXACT outfit from image 2. Keep image 3 pose, decor, lighting. Do NOT keep image 3 clothes or identity.";
+
+const BUILTIN_POSE_SCENE_LOCK =
+  " POSE/SCENE LOCK: pose and environment from image 3 only — never image 3 face/hair/skin.";
+
+const BUILTIN_OUTFIT_FLATLAY_GUARD =
+  " OUTFIT WEAR LOCK: clothes from image 2 worn on image-1 body — if image 2 has a model, copy clothes only, not that face.";
+
+function adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt: string): string {
+  let text = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  if (!text) {
+    return (
+      "Remplace entièrement la personne de l'image 3 par la personne de l'image 1. " +
+      "Tenue = image 2. Décor/pose = image 3."
+    );
+  }
+  text = text
+    .replace(/\b(?:la\s+)?seconde\s+image\b/gi, "__SCENE__")
+    .replace(/\b(?:la\s+)?première\s+image\b/gi, "l'image 1")
+    .replace(/\b(?:la\s+)?premiere\s+image\b/gi, "l'image 1")
+    .replace(/__SCENE__/g, "l'image 3");
+  text = text.replace(
+    /,\s*[^,.]*\b(?:tenue|veste|pantalon|short|doudoune|tracksuit|bomber|robe|jean|chaussures|baskets|sneakers)[^,.]*/gi,
+    "",
+  );
+  return `${text} Tenue = image 2. Personne = image 1 (pas le modèle image 3).`.trim();
+}
 
 export function buildBuiltinTemplateFaceSwapWithOutfitPrompt(
   templatePrompt: string,
 ): string {
-  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
-  const userPart =
-    cleaned ||
-    "Replace the model person with the user, wearing outfit from image 2, scene from image 3 identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD} ${userPart} ${qualitySuffix()}`;
+  const userPart = adaptBuiltinTemplatePromptForOutfitFlow(templatePrompt);
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD}${BUILTIN_FULL_BODY_REPLACE_GUARD}${BUILTIN_POSE_SCENE_LOCK}${BUILTIN_OUTFIT_FLATLAY_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
