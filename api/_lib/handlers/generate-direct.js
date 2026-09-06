@@ -18,7 +18,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -148,6 +148,7 @@ module.exports = async function handler(req, res) {
 
       templateReferenceId = resolvedTemplate.referenceId;
       effectivePrompt = resolvedTemplate.prompt;
+      // Ordre images : (1) photo utilisateur, (2) scène du modèle prêt.
       imageUrls = [
         ...uploadedUrls,
         ...(resolvedTemplate.extraReferenceUrls || []),
@@ -180,9 +181,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const finalPrompt = buildIdentityPreservingPrompt(effectivePrompt, {
-      referenceImageCount: imageUrls.length,
-    });
+    const isBuiltinFaceSwap =
+      resolvedTemplate?.ok &&
+      resolvedTemplate.isBuiltin &&
+      resolvedTemplate.generationMode === "face-swap";
+
+    const finalPrompt = isBuiltinFaceSwap
+      ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
+      : buildIdentityPreservingPrompt(effectivePrompt, {
+          referenceImageCount: imageUrls.length,
+        });
     const oneshotModelVariant = needsProModelVariant(effectivePrompt)
       ? "default"
       : "fast";

@@ -60,6 +60,38 @@ const PERSON_SWAP_GUARD =
   "FORBIDDEN: only changing the face while keeping the original blouse/dress/jewelry/feminine body; forbidden burnt HDR face paste; forbidden plastic CGI. " +
   "SEAMLESS PHOTOREAL BLEND: match scene lighting (sunset warmth), real contact shadows, no cutout halo, same phone grain. Must look like one real unedited smartphone photo.";
 
+/**
+ * Modèles prêts (/modeles) : image 1 = photo utilisateur, image 2 = scène du modèle.
+ * Remplace UNIQUEMENT la personne — le décor, la pose et la tenue du modèle restent identiques.
+ */
+const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
+  "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
+  "Two reference images: (1) user photo = identity source (face, hair, skin tone, ethnicity); " +
+  "(2) ready model photo = SCENE LOCK — output must look like image 2 with a different person. " +
+  "Replace ONLY the human in image 2 with the person from image 1. " +
+  "Keep image 2's exact pose, outfit, body position, background, yacht/boat/car/interior/street, sea, sky, lighting, camera angle, framing, props, vehicles, and every non-human detail unchanged. " +
+  "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, face-paste halo, plastic skin. " +
+  "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
+
+/** Prompt final pour génération depuis un modèle prêt intégré (face-swap). */
+function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
+  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  const userPart =
+    cleaned ||
+    "Replace the model person with the user while keeping the scene identical.";
+  const parts = [
+    BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    userPart,
+    REALISM_QUALITY_GUARD,
+    NEGATIVE_PROMPT_CLAUSE,
+  ];
+  let combined = parts.filter(Boolean).join(" ");
+  if (combined.length > MAX_FINAL_PROMPT) {
+    combined = combined.slice(0, MAX_FINAL_PROMPT);
+  }
+  return combined;
+}
+
 /** Additive clarifier when user says remplace / replace a person. */
 const FULL_BODY_REPLACE_CLARIFIER =
   " (FULL BODY REPLACE — critical: swap the WHOLE person including body and clothes. " +
@@ -3892,6 +3924,7 @@ function buildFacialHairHardRetryPrompt(finalPrompt) {
 
 module.exports = {
   buildIdentityPreservingPrompt,
+  buildBuiltinTemplateFaceSwapPrompt,
   expandImageEditUserRequest,
   isCameraViewpointChangePrompt,
   buildStairClosedSlabPrompt,

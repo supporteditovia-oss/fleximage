@@ -128,6 +128,28 @@ function qualitySuffix(): string {
 }
 
 /**
+ * Modèles prêts (/modeles) — remplace uniquement la personne, décor verrouillé.
+ * Image 1 = utilisateur, image 2 = scène du modèle.
+ */
+const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
+  "READY-MODEL EDIT — REPLACE PERSON ONLY (mandatory). " +
+  "Two reference images: (1) user photo = identity source; (2) ready model photo = SCENE LOCK. " +
+  "Replace ONLY the human in image 2 with the person from image 1. " +
+  "Keep image 2 pose, outfit, background, lighting, camera, and all non-human details unchanged. " +
+  "FORBIDDEN: new decor, relocated scene, different vehicle or yacht. Seamless photoreal blend.";
+
+export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): string {
+  const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
+  const userPart =
+    cleaned ||
+    "Replace the model person with the user while keeping the scene identical.";
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD} ${userPart} ${qualitySuffix()}`;
+  return combined.length <= MAX_FINAL_PROMPT
+    ? combined
+    : combined.slice(0, MAX_FINAL_PROMPT);
+}
+
+/**
  * Build final provider prompt.
  * Order: identity lock → strict literal → raw user request → production rules.
  */
