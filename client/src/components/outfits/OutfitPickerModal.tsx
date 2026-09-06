@@ -73,12 +73,14 @@ export function OutfitPickerModal({
               className="outfit-picker-card"
               onClick={() => onSelect(outfit)}
             >
-              <img
-                src={outfit.imagePath}
-                alt={outfit.name}
-                loading="lazy"
-                decoding="async"
-              />
+              <span className="outfit-picker-card__frame">
+                <img
+                  src={outfit.imagePath}
+                  alt={outfit.name}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
               <span className="outfit-picker-card__meta">
                 <strong>{outfit.name}</strong>
                 <small>{outfit.categoryName}</small>
