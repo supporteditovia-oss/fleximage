@@ -547,11 +547,11 @@ const MOTORCYCLE_SCENE_CLARIFIER =
   "FORBIDDEN: keeping original rim/wheel colors, Zip/SP decals, small 50cc silhouette, hanging keys, burnt HDR plastic look, repositioning bike away from car.)";
 
 /**
- * OneShot 2 images : image 1 = identité + tenue, image 2 = décor + moto.
+ * OneShot 2 images — image 2 = décor + moto (ex. « sur la moto de l'image 2 »).
  * Interdit de relocaliser ou de copier la tenue du pilote image 2.
  */
-const MOTORCYCLE_DUAL_IMAGE_GUARD =
-  "MOTORCYCLE DUAL-IMAGE COMPOSITE (mandatory). " +
+const MOTORCYCLE_DUAL_IMAGE_SCENE2_GUARD =
+  "MOTORCYCLE DUAL-IMAGE COMPOSITE — SCENE FROM IMAGE 2 (mandatory). " +
   "Two reference images: (1) user photo = IDENTITY + OUTFIT source — face, hair, skin tone, ethnicity, body build, AND every garment/accessory worn in image 1 (cap/hat/bonnet/casquette, jacket, pants, shoes, jewelry, phone in hand). " +
   "(2) scene photo = ABSOLUTE SCENE LOCK — output MUST look like image 2's exact location and framing. " +
   "Keep image 2's exact street, buildings, signs, parked cars, sky, time of day, lighting, shadows, camera angle, crop, and the EXACT motorcycle/scooter (model, color, angle, position on pavement). " +
@@ -563,8 +563,31 @@ const MOTORCYCLE_DUAL_IMAGE_GUARD =
   "SKIN TONE LOCK: apply image 1's exact skin tone to all visible skin — face, neck, hands, legs. " +
   "FORBIDDEN: sideways lounge pose, floating rider, scene from image 1, outfit from image 2, removed cap, cutout halo, plastic CGI.";
 
-const MOTORCYCLE_DUAL_IMAGE_CLARIFIER =
-  " (DUAL IMAGE SCENE LOCK — critical: image 2 = exact location, street, buildings, signs, lighting, time of day, and motorcycle; image 1 = person identity + outfit including cap/hat; NEVER change place or remove cap.)";
+/**
+ * OneShot 2 images — image 1 = décor + personne, image 2 = moto seule (ex. ascenseur + moto).
+ * Interdit de déplacer vers le fond de la photo moto.
+ */
+const MOTORCYCLE_DUAL_IMAGE_SCENE1_GUARD =
+  "MOTORCYCLE DUAL-IMAGE COMPOSITE — SCENE FROM IMAGE 1 (mandatory). " +
+  "Two reference images: (1) user photo = ABSOLUTE SCENE LOCK + IDENTITY + OUTFIT — keep the EXACT environment from image 1 unchanged (elevator, room, hallway, mirror selfie, street corner, bar, garage interior — every wall, floor, ceiling, mirror, door, lighting, shadows, camera angle, crop, and background detail). " +
+  "(2) motorcycle reference = copy ONLY the motorcycle/scooter model, color, fairing, wheels, and design from image 2 — do NOT import image 2's background, street, sky, or outdoor location. " +
+  "Place that motorcycle realistically INSIDE image 1's scene at believable scale with real contact shadows on image 1's floor/ground. " +
+  "Seat the person from image 1 ON that motorcycle, still physically IN the same place as image 1 (e.g. inside the same elevator, same room, same selfie spot). " +
+  "OUTFIT LOCK (critical): keep image 1's EXACT outfit and accessories — cap/hat/bonnet/casquette, jacket, pants, shoes, glasses, phone in hand. " +
+  "Do NOT relocate to image 2's background or any outdoor location from the motorcycle photo. FORBIDDEN: new decor, different room, elevator→street swap, copying image 2 rider clothes, removing cap. " +
+  "SEATED REALISM: straddle the seat facing the front wheel; hips ON the seat; feet on floorboards or on image 1's floor/ground; natural fit for tight indoor spaces. " +
+  "SKIN TONE LOCK: apply image 1's exact skin tone to all visible skin. " +
+  "FORBIDDEN: moving to image 2 location, sideways pose, floating bike/rider, cutout halo, plastic CGI.";
+
+const MOTORCYCLE_DUAL_IMAGE_SCENE2_CLARIFIER =
+  " (DUAL IMAGE SCENE2 LOCK — critical: image 2 = exact location + motorcycle; image 1 = person identity + outfit including cap/hat; NEVER change place or remove cap.)";
+
+const MOTORCYCLE_DUAL_IMAGE_SCENE1_CLARIFIER =
+  " (DUAL IMAGE SCENE1 LOCK — critical: image 1 = exact place (elevator/room/selfie) + person + outfit; image 2 = motorcycle object ONLY — NEVER move to image 2 background.)";
+
+/** @deprecated alias */
+const MOTORCYCLE_DUAL_IMAGE_GUARD = MOTORCYCLE_DUAL_IMAGE_SCENE2_GUARD;
+const MOTORCYCLE_DUAL_IMAGE_CLARIFIER = MOTORCYCLE_DUAL_IMAGE_SCENE2_CLARIFIER;
 
 /** Model-specific geometry so TMAX ≠ Zip and YZ ≠ scooter. */
 function motorcycleModelHint(prompt) {
@@ -1643,11 +1666,32 @@ function isMotorcycleBikeMention(prompt) {
   );
 }
 
+/** User wants to keep image 1's scene/location (elevator, ma photo, même endroit…). */
+function referencesImageOneForScene(prompt) {
+  const text = normalizePromptText(prompt);
+  return (
+    /\b(image\s*1|photo\s*1|premiere\s*(?:photo|image)|1ere\s*(?:photo|image)|first\s+(?:picture|photo|image)|l['']?image\s*1)\b/.test(
+      text,
+    ) ||
+    /\b(dans|sur)\s+(?:ma\s+|mon\s+|cette\s+)?(?:photo|image)\b/.test(text) ||
+    /\b(garde|keep)\s+(?:mon|ma|the|my)\s*(?:endroit|decor|scene|lieu|place|location|background|photo)\b/.test(
+      text,
+    ) ||
+    /\b(meme|same)\s+(?:endroit|lieu|decor|scene|place|location|spot|background)\b/.test(
+      text,
+    ) ||
+    /\b(ascenseur|elevator|lift)\b/.test(text) ||
+    /\b(dans|in|inside)\s+(?:l['']?|the\s+)?(?:ascenseur|elevator|lift|room|salon|garage|couloir|hallway)\b/.test(
+      text,
+    )
+  );
+}
+
 /** User references image 2 / photo 2 / deuxième image for scene or bike. */
 function referencesImageTwoForScene(prompt) {
   const text = normalizePromptText(prompt);
   return (
-    /\b(image\s*2|photo\s*2|2e\s*(?:eme|ème)?\s*(?:photo|image)|deuxieme\s*(?:photo|image)|deuxième\s*(?:photo|image)|seconde\s+(?:photo|image)|second\s+(?:picture|photo|image)|l['']?image\s*(?:2|deux)|de\s+l['']?image\s*(?:2|deux)|de\s+la\s+(?:2e|2eme|deuxieme|seconde)\s+(?:photo|image)|(?:moto|scooter|bike)\s+de\s+l['']?image|(?:moto|scooter|bike)\s+from\s+(?:the\s+)?(?:second|2nd)\s+(?:image|photo|picture))\b/.test(
+    /\b(image\s*(?:2|deux|two)|photo\s*(?:2|deux|two)|2e\s*(?:eme|ème)?\s*(?:photo|image)|deuxieme\s*(?:photo|image)|seconde\s+(?:photo|image)|second\s+(?:picture|photo|image)|l['']?image\s*(?:2|deux|two)|de\s+l['']?image\s*(?:2|deux|two)|de\s+la\s+(?:2e|2eme|deuxieme|seconde)\s+(?:photo|image)|(?:moto|scooter|bike)\s+de\s+l['']?image\s*(?:2|deux|two)?|(?:moto|scooter|bike)\s+from\s+(?:the\s+)?(?:second|2nd)\s+(?:image|photo|picture))\b/.test(
       text,
     ) ||
     /\b(sur|on|with|avec|from|de)\s+(?:la\s+|l['']?)?(?:2e|2eme|deuxieme|seconde|second)\s+(?:photo|image|picture)\b/.test(
@@ -1657,25 +1701,40 @@ function referencesImageTwoForScene(prompt) {
 }
 
 /**
- * OneShot 2 refs : image 1 = personne, image 2 = scène + moto.
- * True when 2+ images and user wants to ride/sit on the bike from image 2.
+ * OneShot 2 refs moto : scene1 = décor image 1 + moto image 2 (défaut),
+ * scene2 = décor image 2 + identité image 1 (si « moto de l'image 2 »).
+ * @returns {'scene1'|'scene2'|null}
  */
-function isMotorcycleDualImagePrompt(prompt, referenceImageCount = 0) {
-  if (Math.max(0, Number(referenceImageCount) || 0) < 2) return false;
-  if (isMotorcycleReplacePrompt(prompt)) return false;
+function getMotorcycleDualImageMode(prompt, referenceImageCount = 0) {
+  if (Math.max(0, Number(referenceImageCount) || 0) < 2) return null;
+  if (isMotorcycleReplacePrompt(prompt)) return null;
   if (!isMotorcycleBikeMention(prompt) && !isMotorcycleSeatedUserPrompt(prompt)) {
-    return false;
+    return null;
   }
+  const wantsSitOrRide =
+    isMotorcycleSeatedUserPrompt(prompt) || isMotorcycleRidePrompt(prompt);
+  if (!wantsSitOrRide) return null;
   const text = normalizePromptText(prompt);
   const wantsUser =
     /\b(moi|me|je|myself|ma\s+photo|my\s+photo|mon\s+visage)\b/.test(text);
-  const wantsSitOrRide =
-    isMotorcycleSeatedUserPrompt(prompt) || isMotorcycleRidePrompt(prompt);
-  if (!wantsSitOrRide) return false;
-  if (referencesImageTwoForScene(prompt)) return true;
-  // 2 uploads + "assieds-moi sur la moto" → image 1 = person, image 2 = scene (convention OneShot).
-  if (wantsUser) return true;
-  return referencesImageTwoForScene(prompt);
+  if (!wantsUser && !referencesImageTwoForScene(prompt)) return null;
+
+  if (referencesImageOneForScene(prompt)) return "scene1";
+  if (referencesImageTwoForScene(prompt)) return "scene2";
+  // Défaut OneShot : image 1 = ma photo / mon lieu, image 2 = la moto à insérer.
+  return "scene1";
+}
+
+function isMotorcycleDualImagePrompt(prompt, referenceImageCount = 0) {
+  return getMotorcycleDualImageMode(prompt, referenceImageCount) !== null;
+}
+
+function isMotorcycleDualImageScene1Prompt(prompt, referenceImageCount = 0) {
+  return getMotorcycleDualImageMode(prompt, referenceImageCount) === "scene1";
+}
+
+function isMotorcycleDualImageScene2Prompt(prompt, referenceImageCount = 0) {
+  return getMotorcycleDualImageMode(prompt, referenceImageCount) === "scene2";
 }
 
 /** User wants to be seated ON a bike realistically (not a bike-only swap). */
@@ -2891,17 +2950,24 @@ function sanitizeUserPrompt(prompt, options = {}) {
       cleaned = `${cleaned}${genHint}`;
     }
   } else if (motorcycleRideRequest) {
-    const dualImage =
-      isMotorcycleDualImagePrompt(cleaned, referenceImageCount) ||
-      isMotorcycleDualImagePrompt(prompt, referenceImageCount);
+    const dualImageMode =
+      getMotorcycleDualImageMode(cleaned, referenceImageCount) ||
+      getMotorcycleDualImageMode(prompt, referenceImageCount);
     const seatedUser =
       isMotorcycleSeatedUserPrompt(cleaned) || isMotorcycleSeatedUserPrompt(prompt);
     if (seatedUser && !/SEATED REALISM LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_SEATED_CLARIFIER} ${cleaned}`;
     }
-    if (dualImage) {
-      if (!/DUAL IMAGE SCENE LOCK/i.test(cleaned)) {
-        cleaned = `${MOTORCYCLE_DUAL_IMAGE_CLARIFIER}${cleaned}`;
+    if (dualImageMode === "scene2") {
+      if (!/DUAL IMAGE SCENE2 LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_DUAL_IMAGE_SCENE2_CLARIFIER}${cleaned}`;
+      }
+      if (!/OUTFIT IDENTITY LOCK/i.test(cleaned)) {
+        cleaned = `${cleaned}${OUTFIT_IDENTITY_ACCESSORY_CLARIFIER}`;
+      }
+    } else if (dualImageMode === "scene1") {
+      if (!/DUAL IMAGE SCENE1 LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_DUAL_IMAGE_SCENE1_CLARIFIER}${cleaned}`;
       }
       if (!/OUTFIT IDENTITY LOCK/i.test(cleaned)) {
         cleaned = `${cleaned}${OUTFIT_IDENTITY_ACCESSORY_CLARIFIER}`;
@@ -2913,7 +2979,7 @@ function sanitizeUserPrompt(prompt, options = {}) {
         cleaned = `${wheelContact}${cleaned}`;
       }
     }
-    if (!dualImage) {
+    if (!dualImageMode) {
       // Bike identity + scale FIRST (2900-char budget) — prepend so they survive the cut.
       const bikeHint = motorcycleModelHint(cleaned) || motorcycleModelHint(prompt);
       if (bikeHint && !/TMAX LOCK:|YZ125 LOCK:|YZ LOCK:|MX LOCK:|SCOOTER MODEL LOCK:/i.test(cleaned)) {
@@ -2921,7 +2987,7 @@ function sanitizeUserPrompt(prompt, options = {}) {
       }
     }
     if (
-      !dualImage &&
+      !dualImageMode &&
       (isMotorcycleReplacePrompt(cleaned) ||
         isMotorcycleReplacePrompt(prompt))
     ) {
@@ -2935,7 +3001,7 @@ function sanitizeUserPrompt(prompt, options = {}) {
     if (!/RIDE LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_RIDE_CLARIFIER}`;
     }
-    if (!dualImage && !/BIKE SCENE LOCK:/i.test(cleaned)) {
+    if (!dualImageMode && !/BIKE SCENE LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_SCENE_CLARIFIER}`;
     }
   } else if (vehicleBehindRequest) {
@@ -3784,10 +3850,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
       : localObjectScene
         ? LOCAL_SCENE_EDIT_GUARD
         : IDENTITY_GUARD;
-  const motorcycleDualImageScene =
+  const motorcycleDualImageMode =
     motorcycleRideScene &&
-    (isMotorcycleDualImagePrompt(userPrompt, referenceImageCount) ||
-      isMotorcycleDualImagePrompt(cleaned, referenceImageCount));
+    (getMotorcycleDualImageMode(userPrompt, referenceImageCount) ||
+      getMotorcycleDualImageMode(cleaned, referenceImageCount));
   const sceneGuard = swap
     ? PERSON_SWAP_GUARD
     : facialHairOnly
@@ -3798,8 +3864,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           ? COCKPIT_INTERIOR_REPLACE_GUARD
           : exteriorTrafficScene
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
-            : motorcycleDualImageScene
-              ? MOTORCYCLE_DUAL_IMAGE_GUARD
+            : motorcycleDualImageMode === "scene2"
+              ? MOTORCYCLE_DUAL_IMAGE_SCENE2_GUARD
+              : motorcycleDualImageMode === "scene1"
+                ? MOTORCYCLE_DUAL_IMAGE_SCENE1_GUARD
               : motorcycleRideScene
               ? isMotorcycleSeatedUserPrompt(userPrompt) ||
                 isMotorcycleSeatedUserPrompt(cleaned)
@@ -3841,8 +3909,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           allowSceneChange: lifestyleScene || fullRewrite,
           allowCameraChange: cameraChange,
         });
-  const userBlock = motorcycleDualImageScene
+  const userBlock = motorcycleDualImageMode === "scene2"
     ? `Dual-image composite — image 1 = person identity + outfit (keep cap/hat); image 2 = exact scene + motorcycle (never change location). User request: ${cleaned}`
+    : motorcycleDualImageMode === "scene1"
+      ? `Dual-image composite — image 1 = exact scene + person + outfit (elevator/room/selfie unchanged); image 2 = motorcycle to insert only (never use image 2 background). User request: ${cleaned}`
     : weatherAtmosphereScene
     ? `Sky/atmosphere inpaint only — freeze ground and concrete exactly as uploaded. User request: ${cleaned}`
     : animalScene
@@ -4140,7 +4210,11 @@ module.exports = {
   isMotorcycleReplacePrompt,
   isMotorcycleSeatedUserPrompt,
   isMotorcycleDualImagePrompt,
+  isMotorcycleDualImageScene1Prompt,
+  isMotorcycleDualImageScene2Prompt,
+  getMotorcycleDualImageMode,
   referencesImageTwoForScene,
+  referencesImageOneForScene,
   isMotorcycleWheelOnVehiclePrompt,
   motorcycleWheelContactHint,
   isLocalObjectEditPrompt,
