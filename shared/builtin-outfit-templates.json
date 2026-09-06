@@ -133,5 +133,86 @@
     "imagePath": "/outfits/outfit-moncler-hermes.jpg",
     "category": "luxury",
     "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-parrot-sage",
+    "slug": "lv-parrot-sage",
+    "name": "LV perroquet sage",
+    "description": "Coupe-vent LV crème/sage perroquet, pantalon Dsquared2, sac LV sage, sneakers LV.",
+    "imagePath": "/outfits/outfit-lv-parrot-sage.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-amiri-birds",
+    "slug": "lv-amiri-birds",
+    "name": "LV oiseaux + Amiri",
+    "description": "Tee LV oiseaux, jean Amiri déchiré, sneakers LV Skate, sac barrel gris.",
+    "imagePath": "/outfits/outfit-lv-amiri-birds.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-hermes-cream-burgundy",
+    "slug": "hermes-cream-burgundy",
+    "name": "Hermès crème bordeaux",
+    "description": "Ensemble crème, sac crossbody bordeaux, sneakers Hermès H logo.",
+    "imagePath": "/outfits/outfit-hermes-cream-burgundy.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-black-kelly",
+    "slug": "lv-black-kelly",
+    "name": "LV noir + Kelly",
+    "description": "Pull LV damier noir, pantalon noir, sac Kelly cuir, casquette LV monogramme.",
+    "imagePath": "/outfits/outfit-lv-black-kelly.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-hermes-beige-brown",
+    "slug": "hermes-beige-brown",
+    "name": "Hermès beige marron",
+    "description": "Veste et pantalon beige, sac Kelly marron, sneakers Hermès chocolat.",
+    "imagePath": "/outfits/outfit-hermes-beige-brown.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-prada-marsenio-black",
+    "slug": "prada-marsenio-black",
+    "name": "Prada Marsenio noir",
+    "description": "Gilet Marsenio noir, pantalon noir, sac et sneakers Prada, montre sport.",
+    "imagePath": "/outfits/outfit-prada-marsenio-black.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-prada-blue-grey",
+    "slug": "prada-blue-grey",
+    "name": "Prada bleu gris",
+    "description": "Coupe-vent bleu Maracho, jean gris, sneakers bleu/blanc style Prada.",
+    "imagePath": "/outfits/outfit-prada-blue-grey.jpg",
+    "category": "streetwear",
+    "categoryName": "Streetwear"
+  },
+  {
+    "id": "outfit-dior-goyard-amiri",
+    "slug": "dior-goyard-amiri",
+    "name": "Dior + Goyard + Amiri",
+    "description": "Tee Off-White, gilet Dior oblique, jean Amiri, sac Goyard, sneakers Dior B22.",
+    "imagePath": "/outfits/outfit-dior-goyard-amiri.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
+  },
+  {
+    "id": "outfit-lv-beige-tonal",
+    "slug": "lv-beige-tonal",
+    "name": "LV beige tonal",
+    "description": "Ensemble beige Marbenio, sac Papillon LV, sneakers LV sable.",
+    "imagePath": "/outfits/outfit-lv-beige-tonal.jpg",
+    "category": "luxury",
+    "categoryName": "Luxe"
   }
 ]
