@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { BUILTIN_OUTFITS, type BuiltinOutfit } from "@/lib/builtin-outfit-templates";
@@ -34,6 +34,16 @@ export function OutfitPickerModal({
     };
   }, [open, onClose]);
 
+  const onCardKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    outfit: BuiltinOutfit,
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect(outfit);
+    }
+  };
+
   if (!open) return null;
 
   return createPortal(
@@ -65,29 +75,32 @@ export function OutfitPickerModal({
           </button>
         </header>
 
-        <div className="outfit-picker-grid">
+        <ul className="outfit-picker-list">
           {BUILTIN_OUTFITS.map((outfit) => (
-            <button
-              key={outfit.id}
-              type="button"
-              className="outfit-picker-card"
-              onClick={() => onSelect(outfit)}
-            >
-              <span className="outfit-picker-card__frame">
-                <img
-                  src={outfit.imagePath}
-                  alt={outfit.name}
-                  loading="lazy"
-                  decoding="async"
-                />
-              </span>
-              <span className="outfit-picker-card__meta">
-                <strong>{outfit.name}</strong>
-                <small>{outfit.categoryName}</small>
-              </span>
-            </button>
+            <li key={outfit.id} className="outfit-picker-list__item">
+              <div
+                className="outfit-picker-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelect(outfit)}
+                onKeyDown={(event) => onCardKeyDown(event, outfit)}
+              >
+                <div className="outfit-picker-card__photo">
+                  <img
+                    src={outfit.imagePath}
+                    alt={outfit.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <div className="outfit-picker-card__meta">
+                  <p className="outfit-picker-card__name">{outfit.name}</p>
+                  <p className="outfit-picker-card__cat">{outfit.categoryName}</p>
+                </div>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>,
     document.body,
