@@ -12,19 +12,19 @@ export const MODELES_CATEGORIES = [
     order: 1,
   },
   {
+    slug: "voyages",
+    emoji: "✈️",
+    label: "Voyage",
+    description: "Destinations du monde — Paris, Dubaï, jets, yacht et horizons premium.",
+    coverImagePath: "/models/modele-paris-eiffel-apres.webp",
+    order: 2,
+  },
+  {
     slug: "celebrites",
     emoji: "⭐",
     label: "Célébrités",
     description: "Scènes avec figures publiques — modèles exclusifs LuxeFlexIA.",
     coverImagePath: "/models/modele-lamborghini-urus.webp",
-    order: 2,
-  },
-  {
-    slug: "voyages",
-    emoji: "✈️",
-    label: "Voyages",
-    description: "Jets, destinations et horizons de luxe.",
-    coverImagePath: "/models/modele-avion-business.webp",
     order: 3,
   },
   {
@@ -75,13 +75,15 @@ const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
   lifestyle: "lifestyle",
   celebrites: "celebrites",
   voyages: "voyages",
+  voyage: "voyages",
   pranks: "pranks",
   supercars: "supercars",
   moto: "moto",
   yacht: "yacht",
   outfits: "lifestyle",
   adrenaline: "supercars",
-  dubai: "lifestyle",
+  dubai: "voyages",
+  paris: "voyages",
   "tokyo-istanbul": "voyages",
   "travel-tourism": "voyages",
   streetwear: "lifestyle",
@@ -138,10 +140,11 @@ export function parseModelesPath(pathname: string): {
     if (isOutfitCategory(slug)) {
       return { view: "home", categorySlug: null, templateSlug: null };
     }
-    if (getCategoryBySlug(slug)) {
+    const normalizedSlug = normalizeSceneCategory(slug);
+    if (getCategoryBySlug(normalizedSlug)) {
       return {
         view: "category",
-        categorySlug: slug as ModelesCategorySlug,
+        categorySlug: normalizedSlug,
         templateSlug: null,
       };
     }
