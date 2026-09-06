@@ -71,6 +71,10 @@
   filter: brightness(1.1) contrast(1.02) saturate(1.03);
 }
 
+html.luxeflexia-modeles-page .tpl-slide__compare .lx-compare__labels {
+  display: none !important;
+}
+
 .tpl-slide__media {
   position: absolute;
   inset: 0;

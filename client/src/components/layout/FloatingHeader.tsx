@@ -46,6 +46,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   const [portalLoading, setPortalLoading] = React.useState(false);
   const [studioMode, setStudioMode] = React.useState<StudioMode>(() => readStudioMode());
   const [chromeHidden, setChromeHidden] = React.useState(false);
+  const [hideAppChrome, setHideAppChrome] = React.useState(false);
   const {
     data: plan,
     isFetching: isPlanFetching,
@@ -65,6 +66,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
 
   React.useEffect(() => {
     const syncChrome = () => {
+      setHideAppChrome(document.body.hasAttribute("data-hide-app-chrome"));
       setChromeHidden(
         document.body.hasAttribute("data-fullscreen-overlay") ||
           document.body.hasAttribute("data-larp-result-mode") ||
@@ -87,6 +89,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   }, []);
 
   const pathname = location.split("?")[0] || location;
+  const isModelesPage = pathname === "/modeles";
   const isCreateStudio = variant === "app" && pathname === "/create";
 
   const handleStudioModeChange = (next: StudioMode) => {
@@ -183,11 +186,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     }
   };
 
-  if (location === "/admin/studio") {
-    return null;
-  }
-
-  if (typeof document !== "undefined" && document.body.hasAttribute("data-hide-app-chrome")) {
+  if (location === "/admin/studio" || hideAppChrome || isModelesPage) {
     return null;
   }
 
