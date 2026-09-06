@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
 type TemplateStripProps = {
@@ -26,7 +27,7 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
         <button
           type="button"
           className="tpl-strip-compact__main"
-          onClick={() => navigate("/modeles")}
+          onClick={() => navigate(MODELES_CATALOG_PATH)}
         >
           <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
           <span className="tpl-strip-compact__label">Modèles prêts</span>
@@ -40,7 +41,7 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
               key={template.id}
               type="button"
               className="tpl-strip-compact__thumb"
-              onClick={() => navigate("/modeles")}
+              onClick={() => navigate(MODELES_CATALOG_PATH)}
               aria-label={template.name}
             >
               <img src={template.previewUrl ?? ""} alt="" loading="lazy" />
@@ -56,7 +57,7 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
       <button
         type="button"
         className="tpl-strip-entry__head"
-        onClick={() => navigate("/modeles")}
+        onClick={() => navigate(MODELES_CATALOG_PATH)}
       >
         <span className="tpl-strip-entry__title">
           <Sparkles className="h-4 w-4" aria-hidden />
@@ -78,7 +79,7 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
             key={template.id}
             type="button"
             className="tpl-strip-entry__card"
-            onClick={() => navigate("/modeles")}
+            onClick={() => navigate(MODELES_CATALOG_PATH)}
             aria-label={template.name}
           >
             <img src={template.previewUrl ?? ""} alt="" loading="lazy" />

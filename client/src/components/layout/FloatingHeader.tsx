@@ -89,7 +89,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   }, []);
 
   const pathname = location.split("?")[0] || location;
-  const isModelesPage = pathname === "/modeles";
+  const isModelesPage = pathname === "/modeles" || pathname.startsWith("/modeles/");
   const isCreateStudio = variant === "app" && pathname === "/create";
 
   const handleStudioModeChange = (next: StudioMode) => {

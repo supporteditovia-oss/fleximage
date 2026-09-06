@@ -228,6 +228,8 @@ function ProtectedAppRoutes() {
       <ErrorBoundary>
         <Switch>
           <Route path="/create" component={Create} />
+          <Route path="/modeles/m/:templateSlug" component={Modeles} />
+          <Route path="/modeles/c/:categorySlug" component={Modeles} />
           <Route path="/modeles" component={Modeles} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
@@ -436,7 +438,7 @@ function Router() {
     );
   }, [pathname, t]);
 
-  if (PROTECTED_PATHS.has(pathname)) {
+  if (PROTECTED_PATHS.has(pathname) || pathname.startsWith("/modeles/")) {
     return <ProtectedAppRoutes />;
   }
 

@@ -19,8 +19,12 @@ import { BUILTIN_OUTFITS, type BuiltinOutfit } from "@/lib/builtin-outfit-templa
 import {
   getCategoryBySlug,
   isOutfitCategory,
+  MODELES_CATALOG_PATH,
   MODELES_CATEGORIES,
+  modelesCategoryPath,
+  modelesDetailPath,
   normalizeSceneCategory,
+  parseModelesPath,
   type ModelesCategorySlug,
 } from "@/lib/modeles-categories";
 import { ModelesCategoryHome } from "@/components/modeles/ModelesCategoryHome";
@@ -36,7 +40,6 @@ const IMAGE_CREDIT_COST = 10;
 const DESKTOP_WHEEL_COOLDOWN_MS = 520;
 
 type SlideDirection = "next" | "prev" | "none";
-type ViewMode = "home" | "category" | "detail";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -45,32 +48,6 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-}
-
-function readInitialCatalogState(): {
-  viewMode: ViewMode;
-  category: ModelesCategorySlug;
-} {
-  const cat = new URLSearchParams(window.location.search).get("cat");
-  if (cat && getCategoryBySlug(cat)) {
-    return { viewMode: "category", category: cat as ModelesCategorySlug };
-  }
-  return { viewMode: "home", category: "lifestyle" };
-}
-
-function syncCatalogUrl(params: {
-  cat?: ModelesCategorySlug | null;
-  t?: string | null;
-}) {
-  const url = new URL(window.location.href);
-  if (params.cat) url.searchParams.set("cat", params.cat);
-  else url.searchParams.delete("cat");
-  if (params.t) url.searchParams.set("t", params.t);
-  else url.searchParams.delete("t");
-  const next = `${url.pathname}${url.search}`;
-  if (`${window.location.pathname}${window.location.search}` !== next) {
-    window.history.replaceState(null, "", next);
-  }
 }
 
 function filterScenesByCategory(
@@ -366,7 +343,7 @@ function OutfitPreviewLightbox({
 }
 
 export default function Modeles() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { profile } = useAuth();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
@@ -394,12 +371,11 @@ export default function Modeles() {
   const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
-  const initialCatalog = readInitialCatalogState();
-  const [viewMode, setViewMode] = useState<ViewMode>(initialCatalog.viewMode);
-  const [activeCategory, setActiveCategory] = useState<ModelesCategorySlug>(
-    initialCatalog.category,
-  );
   const [previewOutfit, setPreviewOutfit] = useState<BuiltinOutfit | null>(null);
+
+  const route = useMemo(() => parseModelesPath(location), [location]);
+  const viewMode = route.view;
+  const activeCategory = route.categorySlug ?? "lifestyle";
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
   const list = templates ?? [];
@@ -440,6 +416,34 @@ export default function Modeles() {
     [list, activeCategory],
   );
 
+  const detailTemplate = useMemo(() => {
+    if (viewMode !== "detail" || !route.templateSlug) return null;
+    return (
+      list.find(
+        (item) =>
+          item.slug === route.templateSlug || item.id === route.templateSlug,
+      ) ?? null
+    );
+  }, [viewMode, route.templateSlug, list]);
+
+  const detailCategory = detailTemplate
+    ? normalizeSceneCategory(detailTemplate.category)
+    : activeCategory;
+
+  const detailList = useMemo(() => {
+    if (viewMode !== "detail") return [];
+    const pool = filterScenesByCategory(list, detailCategory);
+    return pool.length > 0 ? pool : list;
+  }, [viewMode, detailCategory, list]);
+
+  useEffect(() => {
+    if (viewMode !== "detail" || !detailTemplate) return;
+    const index = detailList.findIndex((item) => item.id === detailTemplate.id);
+    if (index >= 0) setActiveIndex(index);
+  }, [viewMode, detailTemplate, detailList]);
+
+  const active = viewMode === "detail" ? detailTemplate : null;
+
   const catalogItems = useMemo((): CatalogGridItem[] => {
     if (isOutfitCategory(activeCategory)) {
       return BUILTIN_OUTFITS.map((outfit) => ({ kind: "outfit", outfit }));
@@ -447,13 +451,21 @@ export default function Modeles() {
     return categoryScenes.map((template) => ({ kind: "scene", template }));
   }, [activeCategory, categoryScenes]);
 
-  const detailList = useMemo(() => {
-    if (viewMode !== "detail") return list;
-    if (isOutfitCategory(activeCategory)) return list;
-    return categoryScenes.length > 0 ? categoryScenes : list;
-  }, [viewMode, activeCategory, categoryScenes, list]);
+  // Anciennes URLs ?cat= / ?t= → catalogue ou catégorie (jamais fiche directe).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const legacyCat = params.get("cat");
+    const legacyTemplate = params.get("t");
+    if (!legacyCat && !legacyTemplate) return;
 
-  const active = detailList[activeIndex];
+    if (legacyCat && getCategoryBySlug(legacyCat)) {
+      navigate(modelesCategoryPath(legacyCat as ModelesCategorySlug), {
+        replace: true,
+      });
+      return;
+    }
+    navigate(MODELES_CATALOG_PATH, { replace: true });
+  }, [navigate]);
 
   useLayoutEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
@@ -555,6 +567,10 @@ export default function Modeles() {
       setActiveIndex((prev) => {
         const next = prev + direction;
         if (next < 0 || next >= detailList.length) return prev;
+        const template = detailList[next];
+        if (template) {
+          navigate(modelesDetailPath(template.slug || template.id));
+        }
         return next;
       });
 
@@ -567,55 +583,46 @@ export default function Modeles() {
 
     root.addEventListener("wheel", onWheel, { passive: false });
     return () => root.removeEventListener("wheel", onWheel);
-  }, [isDesktopLayout, detailList.length, previewTemplate, viewMode]);
+  }, [isDesktopLayout, detailList, previewTemplate, viewMode, navigate]);
 
   const scrollToIndex = useCallback(
     (index: number) => {
+      if (viewMode === "detail") {
+        const template = detailList[index];
+        if (template) {
+          navigate(modelesDetailPath(template.slug || template.id));
+        }
+      }
       if (isDesktopLayout) {
         setActiveIndex(index);
         return;
       }
       slideRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
     },
-    [isDesktopLayout],
+    [isDesktopLayout, viewMode, detailList, navigate],
   );
 
   const openHome = useCallback(() => {
-    setViewMode("home");
-    syncCatalogUrl({ cat: null, t: null });
-  }, []);
+    navigate(MODELES_CATALOG_PATH);
+  }, [navigate]);
 
-  const openCategory = useCallback((slug: ModelesCategorySlug) => {
-    setActiveCategory(slug);
-    setViewMode("category");
-    syncCatalogUrl({ cat: slug, t: null });
-  }, []);
+  const openCategory = useCallback(
+    (slug: ModelesCategorySlug) => {
+      navigate(modelesCategoryPath(slug));
+    },
+    [navigate],
+  );
 
   const backFromDetail = useCallback(() => {
-    setViewMode("category");
-    syncCatalogUrl({ cat: activeCategory, t: null });
-  }, [activeCategory]);
+    navigate(modelesCategoryPath(detailCategory));
+  }, [navigate, detailCategory]);
 
   const openSceneDetail = useCallback(
     (template: FeedTemplate) => {
-      const category = normalizeSceneCategory(template.category);
-      const pool = filterScenesByCategory(list, category);
-      const index = pool.findIndex((item) => item.id === template.id);
-      setActiveCategory(category);
-      setActiveIndex(index >= 0 ? index : 0);
-      setViewMode("detail");
-      syncCatalogUrl({ cat: category, t: template.slug || template.id });
+      navigate(modelesDetailPath(template.slug || template.id));
     },
-    [list],
+    [navigate],
   );
-
-  useEffect(() => {
-    if (viewMode !== "detail" || !active) return;
-    syncCatalogUrl({
-      cat: normalizeSceneCategory(active.category),
-      t: active.slug || active.id,
-    });
-  }, [viewMode, active]);
 
   const askForPhoto = (template: FeedTemplate) => {
     setPendingTemplate(template);

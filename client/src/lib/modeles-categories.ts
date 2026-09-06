@@ -36,29 +36,20 @@ export const MODELES_CATEGORIES = [
     order: 4,
   },
   {
-    slug: "moto",
-    emoji: "🏍️",
-    label: "Moto",
-    description: "Scooters, motos et deux-roues premium.",
-    coverImagePath: "/models/modele-scooter-urban.webp",
-    order: 5,
-  },
-  {
     slug: "yacht",
     emoji: "🛥️",
     label: "Yacht",
     description: "Ponts en teck, mer turquoise et yachting de luxe.",
     coverImagePath: "/models/modele-yacht-deck.webp",
-    order: 6,
+    order: 5,
   },
   {
-    slug: "outfits",
-    emoji: "👔",
-    label: "Outfits",
-    description: "Tenues exclusives LuxeFlexIA pour personnaliser tes modèles.",
-    coverImagePath: "/outfits/outfit-lv-vest-goyard.jpg",
-    order: 7,
-    isOutfitCatalog: true,
+    slug: "moto",
+    emoji: "🏍️",
+    label: "Moto",
+    description: "Scooters, motos, quads et deux-roues premium.",
+    coverImagePath: "/models/modele-scooter-urban.webp",
+    order: 6,
   },
   {
     slug: "pranks",
@@ -66,23 +57,16 @@ export const MODELES_CATEGORIES = [
     label: "Pranks",
     description: "Scènes prank et setups crédibles pour surprendre.",
     coverImagePath: "/models/modele-quad-dubai-ready.webp",
+    order: 7,
+  },
+  {
+    slug: "outfits",
+    emoji: "👔",
+    label: "Outfits",
+    description: "Tenues exclusives LuxeFlexIA pour personnaliser tes modèles.",
+    coverImagePath: "/outfits/outfit-lv-vest-goyard.jpg",
     order: 8,
-  },
-  {
-    slug: "dubai",
-    emoji: "🏙️",
-    label: "Dubaï",
-    description: "Skyline, Burj Khalifa et nuits dorées à Dubaï.",
-    coverImagePath: "/models/modele-urus-dubai-sunset.webp",
-    order: 9,
-  },
-  {
-    slug: "tokyo-istanbul",
-    emoji: "🌍",
-    label: "Tokyo / Istanbul",
-    description: "Scènes iconiques entre Orient et modernité.",
-    coverImagePath: "/models/modele-yacht-lamborghini.webp",
-    order: 10,
+    isOutfitCatalog: true,
   },
 ] as const;
 
@@ -96,13 +80,13 @@ const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
   celebrites: "celebrites",
   voyages: "voyages",
   pranks: "pranks",
-  adrenaline: "supercars",
   supercars: "supercars",
   moto: "moto",
   yacht: "yacht",
   outfits: "outfits",
-  dubai: "dubai",
-  "tokyo-istanbul": "tokyo-istanbul",
+  adrenaline: "supercars",
+  dubai: "lifestyle",
+  "tokyo-istanbul": "voyages",
   "travel-tourism": "voyages",
   streetwear: "lifestyle",
   luxury: "outfits",
@@ -133,3 +117,45 @@ export function formatSceneCount(count: number): string {
   if (count <= 0) return "Bientôt";
   return count === 1 ? "1 scène" : `${count} scènes`;
 }
+
+/** Parse le chemin /modeles, /modeles/c/:cat, /modeles/m/:slug */
+export function parseModelesPath(pathname: string): {
+  view: "home" | "category" | "detail";
+  categorySlug: ModelesCategorySlug | null;
+  templateSlug: string | null;
+} {
+  const path = pathname.replace(/\/+$/, "") || "/modeles";
+
+  const detailMatch = path.match(/^\/modeles\/m\/([^/]+)$/);
+  if (detailMatch) {
+    return {
+      view: "detail",
+      categorySlug: null,
+      templateSlug: decodeURIComponent(detailMatch[1]),
+    };
+  }
+
+  const categoryMatch = path.match(/^\/modeles\/c\/([^/]+)$/);
+  if (categoryMatch) {
+    const slug = decodeURIComponent(categoryMatch[1]);
+    if (getCategoryBySlug(slug)) {
+      return {
+        view: "category",
+        categorySlug: slug as ModelesCategorySlug,
+        templateSlug: null,
+      };
+    }
+  }
+
+  if (path === "/modeles") {
+    return { view: "home", categorySlug: null, templateSlug: null };
+  }
+
+  return { view: "home", categorySlug: null, templateSlug: null };
+}
+
+export const MODELES_CATALOG_PATH = "/modeles";
+export const modelesCategoryPath = (slug: ModelesCategorySlug) =>
+  `/modeles/c/${slug}`;
+export const modelesDetailPath = (templateSlug: string) =>
+  `/modeles/m/${templateSlug}`;
