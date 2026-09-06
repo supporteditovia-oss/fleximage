@@ -510,6 +510,22 @@ const MOTORCYCLE_RIDE_GUARD =
   "POSE LOCK: keep the SAME rider body angle, stoppie/wheelie/cabriole/endo lean, and handlebar reach from the upload (front wheel contact unchanged). Hips on the NEW seat, feet on NEW pegs/boards, BOTH hands on NEW handlebars. " +
   "PHOTOREAL: sharp mechanical metal/plastic, real tire tread, natural reflections, matched daylight — FORBIDDEN: burnt HDR, plastic CGI, hanging ignition keys as a fake tell, toy scale, AI smear, bike hovering off the car hood.";
 
+/** User asks to sit ON a bike/scooter (moi + assis) — forward straddle, not sideways paste. */
+const MOTORCYCLE_SEATED_REALISM_GUARD =
+  "MOTORCYCLE/SCOOTER REALISTIC SEATING (mandatory). " +
+  "Place the user ON the bike like a real parked rider — NOT sideways, NOT floating, NOT pasted across the seat. " +
+  "ORIENTATION LOCK: rider faces FORWARD — same direction as front wheel, windshield, and handlebars. " +
+  "FORBIDDEN: sitting sideways across the seat, backwards, perpendicular to the bike, or lying across the saddle. " +
+  "STRADDLE LOCK: hips and buttocks fully ON the seat cushion with realistic weight; thighs naturally gripping the seat. " +
+  "LEGS LOCK: feet on floorboards/footrests OR one foot on asphalt if the bike is on its side stand — knees bent naturally, never through fairings or floating in air. " +
+  "UPPER BODY: torso oriented toward the handlebars; slight natural lean OK; hands on grips unless the user asked for phone-in-hand while parked. " +
+  "SCALE LOCK: adult human on real maxi-scooter/motorcycle proportions (Honda X-ADV, TMAX, etc.) — not toy scale, no clipping through bodywork. " +
+  "IDENTITY LOCK: use the uploaded user's face, skin tone, and body build — seamless photoreal blend with scene lighting and contact shadows on seat and footboards. " +
+  "FORBIDDEN: sideways lounge pose, legs on wrong side of bike, standing on seat, hovering above seat, backwards rider, burnt CGI, cutout halo.";
+
+const MOTORCYCLE_SEATED_CLARIFIER =
+  " (SEATED REALISM LOCK — critical: straddle the seat facing the front wheel; hips ON the seat; feet on floorboards; real parked-rider pose — NEVER sideways across the bike.)";
+
 const MOTORCYCLE_RIDE_CLARIFIER =
   " (RIDE LOCK: real hands on grips, weight on seat, matched light — never toy CGI, never burnt plastic bike.)";
 
@@ -1597,10 +1613,30 @@ function isMotorcycleBikeMention(prompt) {
     return false;
   }
   return (
-    /\b(motocross|enduro|tmax|t\s*max|tmag|scooter|moto|motos|motorcycle|quad|atv|cross|dirt\s*bike|guidon|handlebar|nmax|xmax|forza|pcx|mt[- ]?\d+|r1\b|r6\b|yz\s*125|yz125|a55yz|a55\s*yz|\byz\b)\b/i.test(
+    /\b(motocross|enduro|tmax|t\s*max|tmag|scooter|moto|motos|motorcycle|quad|atv|cross|dirt\s*bike|guidon|handlebar|nmax|xmax|forza|pcx|mt[- ]?\d+|r1\b|r6\b|yz\s*125|yz125|a55yz|a55\s*yz|\byz\b|x[\s-]?adv|maxi[\s-]?scooter)\b/i.test(
       text,
-    ) || /\b(yamaha|ducati|ktm|s1000|gsxr|vespa|honda\s*moto|bmw\s*moto)\b/i.test(text)
+    ) ||
+    /\b(yamaha|ducati|ktm|s1000|gsxr|vespa|honda\s*(moto|scooter|adv|pcx|forza|sh)|bmw\s*(moto|scooter|g\s*310|c[\s-]?400))\b/i.test(
+      text,
+    )
   );
+}
+
+/** User wants to be seated ON a bike realistically (not a bike-only swap). */
+function isMotorcycleSeatedUserPrompt(prompt) {
+  if (isMotorcycleReplacePrompt(prompt)) return false;
+  if (!isMotorcycleBikeMention(prompt)) return false;
+  const text = normalizePromptText(prompt);
+  const wantsUser =
+    /\b(moi|me|je|myself|ma\s+photo|my\s+photo|mon\s+visage)\b/.test(text);
+  const wantsSit =
+    /\b(ass(?:is|ise|ied|ieds|e|oir|eoir|iede|iedes)|sit(?:ting|s)?|mets|mettre|put|place|asseyez|assieds|assied|asseoir|assoir)\b/.test(
+      text,
+    ) ||
+    /\b(sur|on)\s+(?:la\s+|le\s+|une?\s+|l[' ]?)?(?:moto|scooter|maxi|bike|guidon)\b/.test(
+      text,
+    );
+  return wantsUser && wantsSit;
 }
 
 /** Stoppie/endo/wheel on car hood — preserve tire contact on background vehicle. */
@@ -1668,9 +1704,10 @@ function isMotorcycleRidePrompt(prompt) {
   const text = normalizePromptText(prompt);
   if (!isMotorcycleBikeMention(prompt)) return false;
   if (/\b(derriere|behind|dans mon dos)\b/.test(text)) return false;
-  const rideIntent = /\b(moi|me|je|sur|on|ride|riding|ass(?:is|e)|sit|mets|mettre|put|place|conduire|guidon|cabriole|wheelie|wheelieing)\b/.test(
-    text,
-  );
+  const rideIntent =
+    /\b(moi|me|je|sur|on|ride|riding|ass(?:is|ise|ied|ieds|e|oir|eoir|iede|iedes)|sit(?:ting|s)?|mets|mettre|put|place|conduire|guidon|cabriole|wheelie|wheelieing|asseyez|assieds|assied|asseoir|assoir)\b/.test(
+      text,
+    );
   if (rideIntent) return true;
   return false;
 }
@@ -2797,6 +2834,11 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${cleaned}${genHint}`;
     }
   } else if (motorcycleRideRequest) {
+    const seatedUser =
+      isMotorcycleSeatedUserPrompt(cleaned) || isMotorcycleSeatedUserPrompt(prompt);
+    if (seatedUser && !/SEATED REALISM LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_SEATED_CLARIFIER} ${cleaned}`;
+    }
     const wheelContact =
       motorcycleWheelContactHint(cleaned) || motorcycleWheelContactHint(prompt);
     if (wheelContact && !/WHEEL CONTACT LOCK/i.test(cleaned)) {
@@ -3681,7 +3723,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           : exteriorTrafficScene
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
             : motorcycleRideScene
-              ? MOTORCYCLE_RIDE_GUARD
+              ? isMotorcycleSeatedUserPrompt(userPrompt) ||
+                isMotorcycleSeatedUserPrompt(cleaned)
+                ? MOTORCYCLE_SEATED_REALISM_GUARD
+                : MOTORCYCLE_RIDE_GUARD
             : vehicleReplaceScene
             ? VEHICLE_REPLACE_SCENE_GUARD
               : vehicleBehindScene
@@ -4013,6 +4058,7 @@ module.exports = {
   isVehicleReplacePrompt,
   isMotorcycleRidePrompt,
   isMotorcycleReplacePrompt,
+  isMotorcycleSeatedUserPrompt,
   isMotorcycleWheelOnVehiclePrompt,
   motorcycleWheelContactHint,
   isLocalObjectEditPrompt,

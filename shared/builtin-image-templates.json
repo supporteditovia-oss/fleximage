@@ -47,7 +47,7 @@
     "name": "Scooter urbain",
     "description": "Streetwear sur maxi-scooter devant une boutique.",
     "imagePath": "/models/modele-scooter-urban.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le maxi-scooter noir, la doudoune noire brillante, le pantalon gris, les baskets, le sac bandoulière damier, le scooter avec pare-brise teinté rouge, la devanture boutique en briques, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie streetwear photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa coiffure et sa carnation. Garde exactement la pose assise sur le maxi-scooter noir — assis en selle face à l'avant, hanches sur le siège, pieds sur les platines, torse vers le guidon — la doudoune noire brillante, le pantalon gris, les baskets, le sac bandoulière damier, le scooter avec pare-brise teinté rouge, la devanture boutique en briques, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie streetwear photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
     "category": "moto",
     "categoryName": "Moto"
   },
