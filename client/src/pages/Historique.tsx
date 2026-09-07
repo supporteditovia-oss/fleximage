@@ -26,16 +26,7 @@ import { pickVideoPosterUrl } from "@/lib/video-poster";
 import { useTranslation } from "react-i18next";
 import { useStudioPath } from "@/hooks/use-studio-path";
 
-function getAssetUrls(assets: string[] | string | null | undefined): string[] {
-  if (!assets) return [];
-  if (Array.isArray(assets)) return assets;
-  try {
-    const parsed = JSON.parse(assets);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+import { getAssetUrls, getHistoryMediaUrls, historyItemHasMedia } from "@/lib/history-assets";
 
 function formatCreatedAt(iso: string, locale: string): string {
   try {
@@ -136,26 +127,29 @@ export default function Historique() {
     };
   }, [shareTarget]);
 
-  const successLarps = useMemo(
-    () =>
-      larps?.filter((larp) => {
-        const urls = [
-          ...getAssetUrls(larp.outputAssets),
-          ...getAssetUrls(larp.watermarkedAssets),
-        ];
-        return larp.status === "success" && urls.length > 0;
-      }) ?? [],
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refetch();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refetch]);
+
+  const visibleLarps = useMemo(
+    () => larps?.filter((larp) => historyItemHasMedia(larp)) ?? [],
     [larps],
   );
 
   const allVisibleSelected =
-    successLarps.length > 0 &&
-    successLarps.every((larp) => selectedIds.has(larp.id));
+    visibleLarps.length > 0 &&
+    visibleLarps.every((larp) => selectedIds.has(larp.id));
 
   useEffect(() => {
     if (!selectionMode) return;
     setSelectedIds((prev) => {
-      const valid = new Set(successLarps.map((larp) => larp.id));
+      const valid = new Set(visibleLarps.map((larp) => larp.id));
       let changed = false;
       const next = new Set<string>();
       for (const id of prev) {
@@ -164,7 +158,7 @@ export default function Historique() {
       }
       return changed ? next : prev;
     });
-  }, [selectionMode, successLarps]);
+  }, [selectionMode, visibleLarps]);
 
   useEffect(() => {
     const node = loadMoreRef.current;
@@ -184,19 +178,19 @@ export default function Historique() {
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, successLarps.length]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, visibleLarps.length]);
 
   // Keep fetching while the visible grid is sparse (failed gens take page slots).
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage || isPending) return;
-    if (successLarps.length >= 12) return;
+    if (visibleLarps.length >= 12) return;
     void fetchNextPage();
   }, [
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isPending,
-    successLarps.length,
+    visibleLarps.length,
   ]);
 
   async function handleDownload(
@@ -360,14 +354,14 @@ export default function Historique() {
   useEffect(() => {
     if (!pendingSelectAll || loadingAllForSelect || isFetchingNextPage) return;
     if (hasNextPage) return;
-    setSelectedIds(new Set(successLarps.map((larp) => larp.id)));
+    setSelectedIds(new Set(visibleLarps.map((larp) => larp.id)));
     setPendingSelectAll(false);
   }, [
     pendingSelectAll,
     loadingAllForSelect,
     isFetchingNextPage,
     hasNextPage,
-    successLarps,
+    visibleLarps,
   ]);
 
   function handleDeselectAll() {
@@ -445,7 +439,7 @@ export default function Historique() {
     );
   }
 
-  if (!successLarps.length) {
+  if (!visibleLarps.length) {
     if (hasNextPage || isFetchingNextPage) {
       return (
         <div className="flex min-h-[60vh] items-center justify-center">
@@ -546,11 +540,9 @@ export default function Historique() {
       </div>
 
       <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
-        {successLarps.map((larp) => {
-          const urls = [
-            ...getAssetUrls(larp.outputAssets),
-            ...getAssetUrls(larp.watermarkedAssets),
-          ];
+        {visibleLarps.map((larp) => {
+          const urls = getHistoryMediaUrls(larp);
+          const previewUrl = urls[0] ?? null;
           const inputUrls = getAssetUrls(larp.inputAssets);
           const resultType =
             larp.generationType === "video" ? "video" : "image";
@@ -573,7 +565,7 @@ export default function Historique() {
                   return;
                 }
                 setSelected({
-                  url: urls[0],
+                  url: previewUrl ?? "",
                   larpId: larp.id,
                   resultType,
                   posterUrl,
@@ -585,13 +577,17 @@ export default function Historique() {
                   posterUrl={posterUrl}
                   className="transition-transform duration-500 group-hover/hist:scale-[1.03]"
                 />
-              ) : (
+              ) : previewUrl ? (
                 <img
-                  src={urls[0]}
+                  src={previewUrl}
                   alt={t("history.createdAlt")}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/hist:scale-[1.03]"
                   loading="lazy"
                 />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-[var(--lx-ink-soft)] px-3 text-center text-xs font-medium text-white/75">
+                  {t("history.syncPending", "Image en synchronisation…")}
+                </div>
               )}
 
               {selectionMode ? (
@@ -626,12 +622,14 @@ export default function Historique() {
                     title={t("history.share")}
                     aria-label={t("history.share")}
                     onClick={() =>
+                      previewUrl &&
                       setShareTarget({
                         larpId: larp.id,
-                        url: urls[0],
+                        url: previewUrl,
                         resultType,
                       })
                     }
+                    disabled={!previewUrl}
                     className={actionBtnClass}
                   >
                     <Share2 className="h-4 w-4 text-[var(--lx-gold-soft)]" />
@@ -640,11 +638,12 @@ export default function Historique() {
                     type="button"
                     title={t("history.download")}
                     aria-label={t("history.download")}
-                    disabled={busyDownload}
+                    disabled={busyDownload || !previewUrl}
                     onClick={() =>
+                      previewUrl &&
                       void handleDownload(larp.id, 0, {
                         resultType,
-                        url: urls[0],
+                        url: previewUrl,
                       })
                     }
                     className={actionBtnClass}

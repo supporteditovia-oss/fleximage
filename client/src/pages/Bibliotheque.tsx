@@ -19,57 +19,57 @@ import {
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useLarpHistory } from "@/hooks/use-larps";
+import {
+  getHistoryItemLabel,
+  getHistoryMediaUrls,
+  historyItemHasMedia,
+} from "@/lib/history-assets";
 import { cn } from "@/lib/utils";
 import "./bibliotheque-page.css";
 
 type CatalogFilter = (typeof VOICE_CATALOG_FILTERS)[number];
 
-function getAssetUrls(assets: string[] | string | null | undefined): string[] {
-  if (!assets) return [];
-  if (Array.isArray(assets)) return assets;
-  try {
-    const parsed = JSON.parse(assets);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function formatCreatedAt(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "numeric",
-      month: "short",
-    }).format(new Date(iso));
-  } catch {
-    return "";
-  }
-}
-
 function ImageLibrary() {
-  const { data: larps, isPending, isError } = useLarpHistory();
+  const {
+    data: larps,
+    isPending,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useLarpHistory();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const imageItems = useMemo(() => {
     const rows = larps ?? [];
     return rows
-      .filter((item) => item.status === "success")
+      .filter((item) => historyItemHasMedia(item))
       .map((item) => {
-        const urls = getAssetUrls(item.outputAssets);
-        if (urls.length === 0) return null;
+        const urls = getHistoryMediaUrls(item);
         return {
           id: item.id,
-          url: urls[0],
+          url: urls[0] ?? null,
           createdAt: item.createdAt,
-          label: item.template?.name ?? "Image IA",
+          label: getHistoryItemLabel(item),
         };
       })
-      .filter(Boolean) as Array<{
-      id: string;
-      url: string;
-      createdAt: string;
-      label: string;
-    }>;
+      .filter((item) => item.url || item.label);
   }, [larps]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, imageItems.length]);
 
   if (isPending) {
     return (
@@ -95,7 +95,13 @@ function ImageLibrary() {
     <div className="bibliotheque-v2__images">
       {imageItems.map((item) => (
         <article key={item.id} className="bibliotheque-v2__image-card">
-          <img src={item.url} alt={item.label} loading="lazy" />
+          {item.url ? (
+            <img src={item.url} alt={item.label} loading="lazy" />
+          ) : (
+            <div className="bibliotheque-v2__empty bibliotheque-v2__empty--inline">
+              Image en synchronisation…
+            </div>
+          )}
           <div className="bibliotheque-v2__meta">
             <p className="bibliotheque-v2__meta-title">{item.label}</p>
             <p className="bibliotheque-v2__meta-sub">
@@ -104,8 +110,20 @@ function ImageLibrary() {
           </div>
         </article>
       ))}
+      {hasNextPage ? <div ref={loadMoreRef} className="h-8 w-full" aria-hidden /> : null}
     </div>
   );
+}
+
+function formatCreatedAt(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("fr-FR", {
+      day: "numeric",
+      month: "short",
+    }).format(new Date(iso));
+  } catch {
+    return "";
+  }
 }
 
 function VoiceCatalogLibrary() {

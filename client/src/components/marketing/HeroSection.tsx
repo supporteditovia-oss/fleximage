@@ -17,6 +17,14 @@ import {
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
+import {
+  getInFlightGeneration,
+  persistInFlightFromApiResult,
+} from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
 import { savePaywallPrompt } from "@/lib/paywall-prompt";
@@ -25,8 +33,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
-import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { toGenerationImageFile } from "@/lib/video-frame";
@@ -69,10 +75,10 @@ export default function HeroSection() {
   const generateDirect = useGenerateDirectLarp();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
-  const [taskId, setTaskId] = React.useState<string | null>(null);
-  const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
-    number | null
-  >(null);
+  const generationLockRef = React.useRef(false);
+  const [taskId, setTaskId] = React.useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -135,6 +141,16 @@ export default function HeroSection() {
   };
 
   const handleSubmit = async () => {
+    if (
+      generationLockRef.current ||
+      generateDirect.isPending ||
+      taskId ||
+      getInFlightGeneration() ||
+      !tryAcquireGenerationSubmitLock()
+    ) {
+      return;
+    }
+
     const files = images.filter(
       (img): img is { url: string; file: File } => img !== null,
     );
@@ -165,6 +181,7 @@ export default function HeroSection() {
       }
 
       try {
+        generationLockRef.current = true;
         const base64Images = await Promise.all(
           files.map(async (img) =>
             fileToBase64(await toGenerationImageFile(img.file)),
@@ -176,15 +193,11 @@ export default function HeroSection() {
           images: base64Images,
         };
         const result = await generateDirect.mutateAsync(payload);
-        setGenerationEstimateSeconds(
-          typeof result.estimatedSeconds === "number" &&
-            Number.isFinite(result.estimatedSeconds)
-            ? result.estimatedSeconds
-            : null,
-        );
         setTaskId(result.taskId);
+        persistInFlightFromApiResult(result, "hero");
         refetchEligibility();
       } catch (error: any) {
+        generationLockRef.current = false;
         if (error.code === "REFERENCE_IMAGE_REQUIRED") {
           toast({
             variant: "destructive",
@@ -237,6 +250,8 @@ export default function HeroSection() {
           title: t("hero.emptyPromptTitle"),
           description: message,
         });
+      } finally {
+        releaseGenerationSubmitLock();
       }
     } else {
       const guestPrompt = prompt.trim() || t("hero.surprisePrompt");
@@ -264,13 +279,6 @@ export default function HeroSection() {
       }
       navigate("/register");
     }
-  };
-
-  const handleReset = () => {
-    setTaskId(null);
-    setGenerationEstimateSeconds(null);
-    setPrompt("");
-    setImages([null]);
   };
 
   const hasUploadedImages = images.some((img) => img !== null);
@@ -403,7 +411,7 @@ export default function HeroSection() {
               <button
                 className="shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all disabled:opacity-50"
                 onClick={handleSubmit}
-                disabled={!hasUploadedImages}
+                disabled={!hasUploadedImages || generateDirect.isPending || !!taskId}
                 title={t("hero.create")}
               >
                 <ArrowRight className="w-4 h-4" />
@@ -412,7 +420,7 @@ export default function HeroSection() {
                 size="sm"
                 className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
                 onClick={handleSubmit}
-                disabled={!hasUploadedImages}
+                disabled={!hasUploadedImages || generateDirect.isPending || !!taskId}
               >
                 {t("hero.create")}
               </Button>
@@ -429,18 +437,6 @@ export default function HeroSection() {
         <span className="text-xs font-medium tracking-wide">{t("hero.discover")}</span>
         <ChevronDown className="h-5 w-5" aria-hidden />
       </a>
-
-      {taskId && createPortal(
-        <GenerationProgress
-          taskId={taskId}
-          inputImageUrl={images[0]?.url}
-          onReset={handleReset}
-          resultType="image"
-          referenceImageCount={Math.max(1, images.filter(Boolean).length)}
-          initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
-        />,
-        document.body
-      )}
     </section>
   );
 }

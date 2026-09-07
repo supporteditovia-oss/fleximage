@@ -2567,51 +2567,26 @@ export async function registerRoutes(
             if (isGoogleAiPromptFlagged(err)) {
               logger.warn(
                 { err },
-                "OneshotAPI flagged prompt — retrying unrestricted then Kie",
+                "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
               );
-              try {
-                const retryPrompt = buildLiteralRetryPrompt(finalPrompt);
-                const retryResponse = await createOneshotJob(retryPrompt, {
-                  aspectRatio: OUTPUT_ASPECT_RATIO,
-                });
-                if (retryResponse && retryResponse.id) {
-                  finalPrompt = retryPrompt;
-                  externalTaskId = `custom_${retryResponse.id}`;
-                } else {
-                  throw err;
-                }
-              } catch (retryErr) {
-                logger.error({ err: retryErr }, "Oneshot retry failed, falling back to Kie AI");
-                provider = "kie";
-                const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-                const kieResponse = await createKieTask({
-                  prompt: kiePrompt,
-                  aspect_ratio: OUTPUT_ASPECT_RATIO,
-                });
-                if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                  logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                  return res
-                    .status(502)
-                    .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                }
-                finalPrompt = kiePrompt;
-                externalTaskId = kieResponse.data.taskId;
-              }
-            } else {
-              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
-              provider = "kie";
-              const kieResponse = await createKieTask({
-                prompt: finalPrompt,
-                aspect_ratio: OUTPUT_ASPECT_RATIO,
-              });
-              if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                return res
-                  .status(502)
-                  .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-              }
-              externalTaskId = kieResponse.data.taskId;
             }
+            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            provider = "kie";
+            const kiePrompt = isGoogleAiPromptFlagged(err)
+              ? buildLiteralRetryPrompt(finalPrompt)
+              : finalPrompt;
+            const kieResponse = await createKieTask({
+              prompt: kiePrompt,
+              aspect_ratio: OUTPUT_ASPECT_RATIO,
+            });
+            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+              return res
+                .status(502)
+                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+            }
+            finalPrompt = kiePrompt;
+            externalTaskId = kieResponse.data.taskId;
           }
         } else {
           provider = "kie";
@@ -2728,6 +2703,41 @@ export async function registerRoutes(
           limitResult,
           IMAGE_CREDIT_COST,
         );
+
+        const dedupSince = new Date(Date.now() - 90_000).toISOString();
+        const { data: inFlightGeneration } = await supabaseAdmin
+          .from("generations")
+          .select("id, provider_task_id, metadata, created_at, generation_type")
+          .eq("user_id", authReq.userId)
+          .eq("status", "processing")
+          .gte("created_at", dedupSince)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (inFlightGeneration) {
+          const parts = String(inFlightGeneration.provider_task_id || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const taskId = parts[parts.length - 1] || "";
+          const meta =
+            inFlightGeneration.metadata &&
+            typeof inFlightGeneration.metadata === "object"
+              ? inFlightGeneration.metadata
+              : {};
+          return res.status(200).json({
+            id: inFlightGeneration.id,
+            taskId,
+            status: "processing",
+            createdAt: inFlightGeneration.created_at,
+            estimatedSeconds:
+              meta.estimated_seconds != null &&
+              Number.isFinite(Number(meta.estimated_seconds))
+                ? Number(meta.estimated_seconds)
+                : null,
+            deduplicated: true,
+          });
+        }
 
         if (!template_id && (!images || images.length === 0)) {
           return res.status(422).json({
@@ -2928,72 +2938,40 @@ export async function registerRoutes(
               if (isGoogleAiPromptFlagged(err)) {
                 logger.warn(
                   { err },
-                  "OneshotAPI flagged prompt — retrying unrestricted then Kie",
+                  "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
                 );
-                try {
-                  const retryPrompt = buildLiteralRetryPrompt(finalPrompt);
-                  const referenceFileIds = imageUrls.length > 0
-                    ? await uploadImageUrlsToOneshot(imageUrls)
-                    : [];
-                  const retryResponse = await createOneshotJob(retryPrompt, {
-                    aspectRatio: aspect_ratio,
-                    ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-                  });
-                  if (retryResponse && retryResponse.id) {
-                    finalPrompt = retryPrompt;
-                    await supabaseAdmin
-                      .from("generations")
-                      .update({
-                        final_prompt: retryPrompt,
-                        updated_at: new Date().toISOString(),
-                      })
-                      .eq("id", larp.id);
-                    externalTaskId = `custom_${retryResponse.id}`;
-                  } else {
-                    throw err;
-                  }
-                } catch (retryErr) {
-                  logger.error({ err: retryErr }, "Oneshot retry failed, falling back to Kie AI");
-                  provider = "kie";
-                  const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-                  const kieResponse = await createKieTask({
-                    prompt: kiePrompt,
-                    aspect_ratio,
-                    ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-                  });
-                  if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                    logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                    await failAndRefund(
-                      tBackend(locale, "larps.taskCreateFailed"),
-                      "kie_create_failed",
-                    );
-                    return res
-                      .status(502)
-                      .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                  }
-                  finalPrompt = kiePrompt;
-                  externalTaskId = kieResponse.data.taskId;
-                }
-              } else {
-                logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
-                provider = "kie";
-                const kieResponse = await createKieTask({
-                  prompt: finalPrompt,
-                  aspect_ratio,
-                  ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-                });
-                if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                  logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                  await failAndRefund(
-                    tBackend(locale, "larps.taskCreateFailed"),
-                    "kie_create_failed",
-                  );
-                  return res
-                    .status(502)
-                    .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                }
-                externalTaskId = kieResponse.data.taskId;
               }
+              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+              provider = "kie";
+              const kiePrompt = isGoogleAiPromptFlagged(err)
+                ? buildLiteralRetryPrompt(finalPrompt)
+                : finalPrompt;
+              const kieResponse = await createKieTask({
+                prompt: kiePrompt,
+                aspect_ratio,
+                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+              });
+              if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+                logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+                await failAndRefund(
+                  tBackend(locale, "larps.taskCreateFailed"),
+                  "kie_create_failed",
+                );
+                return res
+                  .status(502)
+                  .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+              }
+              if (kiePrompt !== finalPrompt) {
+                finalPrompt = kiePrompt;
+                await supabaseAdmin
+                  .from("generations")
+                  .update({
+                    final_prompt: kiePrompt,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", larp.id);
+              }
+              externalTaskId = kieResponse.data.taskId;
             }
           } else {
             provider = "kie";
@@ -3104,6 +3082,41 @@ export async function registerRoutes(
           limitResult,
           VIDEO_CREDIT_COST,
         );
+
+        const dedupSinceVideo = new Date(Date.now() - 90_000).toISOString();
+        const { data: inFlightVideo } = await supabaseAdmin
+          .from("generations")
+          .select("id, provider_task_id, metadata, created_at")
+          .eq("user_id", authReq.userId)
+          .eq("status", "processing")
+          .gte("created_at", dedupSinceVideo)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (inFlightVideo) {
+          const parts = String(inFlightVideo.provider_task_id || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const taskId = parts[parts.length - 1] || "";
+          const meta =
+            inFlightVideo.metadata &&
+            typeof inFlightVideo.metadata === "object"
+              ? inFlightVideo.metadata
+              : {};
+          return res.status(200).json({
+            id: inFlightVideo.id,
+            taskId,
+            status: "processing",
+            createdAt: inFlightVideo.created_at,
+            estimatedSeconds:
+              meta.estimated_seconds != null &&
+              Number.isFinite(Number(meta.estimated_seconds))
+                ? Number(meta.estimated_seconds)
+                : null,
+            deduplicated: true,
+          });
+        }
 
         if (!template_id && (!images || images.length === 0)) {
           return res.status(422).json({
@@ -3717,10 +3730,52 @@ export async function registerRoutes(
           apiStatus = "success";
           apiResultJson = JSON.stringify(customStatus);
         } else if (isCustomApiFailed || isTimeout) {
+          const meta =
+            larp.metadata && typeof larp.metadata === "object"
+              ? larp.metadata
+              : {};
+          const softRetryCount = Number(
+            meta.oneshot_soft_retry_count || (meta.oneshot_soft_retry ? 1 : 0),
+          );
+          const alreadySoftRetried = softRetryCount >= 1;
+
+          if (alreadySoftRetried) {
+            apiStatus = "fail";
+            apiFailMsg = tBackend(locale, "larps.fallbackFailed");
+          } else {
           logger.info(
             { larpId: larp.id, isTimeout, policyFlagged: isPolicyViolation },
             "Custom API failed or timeout, triggering Kie AI fallback",
           );
+          const oneshotTaskId = larp.provider_task_id;
+          const claimMarker = `${oneshotTaskId},__claiming__`;
+          const { data: claimedRows, error: claimErr } = await supabaseAdmin
+            .from("generations")
+            .update({
+              provider: "fallback",
+              provider_task_id: claimMarker,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", larp.id)
+            .eq("provider", "oneshot")
+            .select("id");
+
+          if (claimErr) {
+            logger.error({ err: claimErr }, "fallback claim failed");
+          }
+
+          if (!claimedRows || claimedRows.length === 0) {
+            return res.json({
+              larpId: larp.id,
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+            });
+          }
+
           try {
               const aspect_ratio = larp.aspect_ratio || OUTPUT_ASPECT_RATIO;
               const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
@@ -3734,13 +3789,18 @@ export async function registerRoutes(
               });
              
               if (fallbackKieResponse.code === 200 && fallbackKieResponse.data?.taskId) {
-                const newKieTaskIdString = `${larp.provider_task_id},${fallbackKieResponse.data.taskId}`;
+                const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
                 await supabaseAdmin
                   .from("generations")
                   .update({
                     provider: "fallback",
                     provider_task_id: newKieTaskIdString,
                     ...(isPolicyViolation ? { final_prompt: fallbackPrompt } : {}),
+                    metadata: {
+                      ...meta,
+                      oneshot_soft_retry: true,
+                      oneshot_soft_retry_count: softRetryCount + 1,
+                    },
                     updated_at: new Date().toISOString(),
                   })
                   .eq("id", larp.id);
@@ -3763,6 +3823,7 @@ export async function registerRoutes(
               apiStatus = "fail";
               apiFailMsg = tBackend(locale, "larps.fallbackFailed");
             }
+          }
         }
       } else {
         try {
