@@ -22,6 +22,13 @@ import {
   clearInFlightGeneration,
 } from "@/lib/in-flight-generation";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
+import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
+import { SubjectAutoConfirmDialog } from "@/components/generate/SubjectAutoConfirmDialog";
+import type {
+  PoseStyle,
+  ResolvedSubjectType,
+  SubjectType,
+} from "@/lib/subject-pose-prompt";
 import {
   findTemplateByRouteKey,
   getCategoryBySlug,
@@ -71,6 +78,7 @@ function TemplateSlideContent({
   onPrimaryAction,
   onScrollToIndex,
   onOpenPreview,
+  subjectPoseSlot,
 }: {
   template: FeedTemplate;
   activeIndex: number;
@@ -80,6 +88,7 @@ function TemplateSlideContent({
   onPrimaryAction: (template: FeedTemplate) => void;
   onScrollToIndex: (index: number) => void;
   onOpenPreview: (template: FeedTemplate) => void;
+  subjectPoseSlot?: ReactNode;
 }) {
   const luxeClass =
     enterDirection === "none"
@@ -140,6 +149,10 @@ function TemplateSlideContent({
             </span>
           </button>
         </div>
+
+        {subjectPoseSlot ? (
+          <div className="tpl-subject-pose-slot">{subjectPoseSlot}</div>
+        ) : null}
 
         <button
           type="button"
@@ -321,6 +334,14 @@ export default function Modeles() {
   const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
+  const [subjectType, setSubjectType] = useState<SubjectType>("auto");
+  const [poseStyle, setPoseStyle] = useState<PoseStyle>("natural");
+  const [autoResolvedSubject, setAutoResolvedSubject] =
+    useState<ResolvedSubjectType | null>(null);
+  const [showAutoSubjectConfirm, setShowAutoSubjectConfirm] = useState(false);
+  const [pendingPhotoAfterConfirm, setPendingPhotoAfterConfirm] = useState<
+    string | null
+  >(null);
 
   const route = useMemo(() => parseModelesPath(location), [location]);
   const viewMode = route.view;
@@ -494,6 +515,11 @@ export default function Modeles() {
 
     const compressed = await compressImageForGeneration(file);
     const base64 = await fileToBase64(compressed);
+    if (subjectType === "auto" && !autoResolvedSubject) {
+      setPendingPhotoAfterConfirm(base64);
+      setShowAutoSubjectConfirm(true);
+      return;
+    }
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
@@ -511,6 +537,11 @@ export default function Modeles() {
         template_id: template.id,
         images: userImages,
         use_face_asset: false,
+        subject_type: subjectType,
+        pose_style: poseStyle,
+        ...(subjectType === "auto" && autoResolvedSubject
+          ? { subject_auto_resolved: autoResolvedSubject }
+          : {}),
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);
@@ -751,6 +782,19 @@ export default function Modeles() {
               onPrimaryAction={onPrimaryAction}
               onScrollToIndex={scrollToIndex}
               onOpenPreview={setPreviewTemplate}
+              subjectPoseSlot={
+                <SubjectPoseControls
+                  compact
+                  subject={subjectType}
+                  poseStyle={poseStyle}
+                  autoResolved={autoResolvedSubject}
+                  onSubjectChange={(value) => {
+                    setSubjectType(value);
+                    setAutoResolvedSubject(null);
+                  }}
+                  onPoseStyleChange={setPoseStyle}
+                />
+              }
             />
           </section>
         ) : null}
@@ -792,6 +836,25 @@ export default function Modeles() {
           setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
+      />
+
+      <SubjectAutoConfirmDialog
+        open={showAutoSubjectConfirm}
+        detectedLabel="confirmez le sujet avant de choisir la tenue"
+        onCancel={() => {
+          setShowAutoSubjectConfirm(false);
+          setPendingPhotoAfterConfirm(null);
+          if (fileRef.current) fileRef.current.value = "";
+        }}
+        onConfirm={(resolved) => {
+          setAutoResolvedSubject(resolved);
+          setShowAutoSubjectConfirm(false);
+          if (pendingPhotoAfterConfirm) {
+            setPendingUserPhoto(pendingPhotoAfterConfirm);
+            setPendingPhotoAfterConfirm(null);
+            setShowOutfitQuestion(true);
+          }
+        }}
       />
 
       {active ? <span className="sr-only">{active.name}</span> : null}

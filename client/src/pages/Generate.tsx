@@ -68,6 +68,13 @@ import {
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
+import { SubjectAutoConfirmDialog } from "@/components/generate/SubjectAutoConfirmDialog";
+import type {
+  PoseStyle,
+  ResolvedSubjectType,
+  SubjectType,
+} from "@/lib/subject-pose-prompt";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -127,6 +134,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const [unlockingLarp, setUnlockingLarp] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const [outfitPickerBusy, setOutfitPickerBusy] = useState(false);
+  const [subjectType, setSubjectType] = useState<SubjectType>("auto");
+  const [poseStyle, setPoseStyle] = useState<PoseStyle>("natural");
+  const [autoResolvedSubject, setAutoResolvedSubject] =
+    useState<ResolvedSubjectType | null>(null);
+  const [showAutoSubjectConfirm, setShowAutoSubjectConfirm] = useState(false);
 
   // ── Hooks ───────────────────────────────────────────────────
   const generateDirect = useGenerateDirectLarp();
@@ -857,6 +869,39 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       return;
     }
 
+    if (
+      generationMode === "image" &&
+      subjectType === "auto" &&
+      !autoResolvedSubject
+    ) {
+      setShowAutoSubjectConfirm(true);
+      return;
+    }
+
+    await executeGeneration();
+  };
+
+  const executeGeneration = async (
+    overrideAutoResolved?: ResolvedSubjectType | null,
+  ) => {
+    const selectedOrPendingTemplateId =
+      selectedTemplate?.id ?? pendingTemplateId ?? undefined;
+    const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
+
+    const activeTemplate =
+      selectedTemplate ??
+      (pendingTemplateId && templatesList
+        ? templatesList.find((t) => t.id === pendingTemplateId)
+        : undefined);
+
+    const files = images.filter(
+      (img): img is { url: string; file: File } => img !== null,
+    );
+    const filesForGeneration =
+      generationMode === "video" ? files.slice(0, 1) : files;
+
+    const resolvedAutoSubject = overrideAutoResolved ?? autoResolvedSubject;
+
     const serverPrompt = isTemplateGeneration
       ? selectedTemplate?.prompt_text?.trim() || " "
       : prompt.trim();
@@ -1030,6 +1075,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
+        subject_type: subjectType,
+        pose_style: poseStyle,
+        ...(subjectType === "auto" && resolvedAutoSubject
+          ? { subject_auto_resolved: resolvedAutoSubject }
+          : {}),
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1455,10 +1505,29 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             <>
               <ImageUploadGrid
                 images={images}
-                onImageSelect={handleImageSelect}
-                onRemoveSlot={removeSlot}
+                onImageSelect={(index, file) => {
+                  setAutoResolvedSubject(null);
+                  handleImageSelect(index, file);
+                }}
+                onRemoveSlot={(index) => {
+                  setAutoResolvedSubject(null);
+                  removeSlot(index);
+                }}
                 generationMode="image"
               />
+
+              {generationMode === "image" ? (
+                <SubjectPoseControls
+                  subject={subjectType}
+                  poseStyle={poseStyle}
+                  autoResolved={autoResolvedSubject}
+                  onSubjectChange={(value) => {
+                    setSubjectType(value);
+                    setAutoResolvedSubject(null);
+                  }}
+                  onPoseStyleChange={setPoseStyle}
+                />
+              ) : null}
 
               <div className="flex w-full max-w-md justify-center md:max-w-xl">
                 {adminPreview ? (
@@ -1516,6 +1585,17 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           onSelect={(outfit) => void handleOutfitSelect(outfit)}
         />
       ) : null}
+
+      <SubjectAutoConfirmDialog
+        open={showAutoSubjectConfirm}
+        detectedLabel="la détection depuis votre photo est incertaine"
+        onCancel={() => setShowAutoSubjectConfirm(false)}
+        onConfirm={(resolved) => {
+          setAutoResolvedSubject(resolved);
+          setShowAutoSubjectConfirm(false);
+          void executeGeneration(resolved);
+        }}
+      />
     </div>
   );
 }

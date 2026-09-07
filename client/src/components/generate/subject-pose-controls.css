@@ -1,0 +1,162 @@
+.subject-pose-controls {
+  width: 100%;
+  max-width: 36rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(18, 16, 14, 0.06);
+}
+
+.subject-pose-controls--compact {
+  max-width: none;
+  padding: 0.65rem 0.75rem;
+}
+
+.subject-pose-controls__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 480px) {
+  .subject-pose-controls__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.subject-pose-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.subject-pose-field__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(26, 20, 8, 0.58);
+}
+
+.subject-pose-required {
+  color: #c9a227;
+}
+
+.subject-pose-field__select {
+  min-height: 2.5rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(18, 16, 14, 0.12);
+  background: #fff;
+  padding: 0 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1a1408;
+}
+
+.subject-pose-controls__preview {
+  margin: 0.7rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #3d320c;
+}
+
+.subject-pose-controls__preview-label {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 12, 0.65);
+}
+
+.subject-auto-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(12, 10, 8, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.subject-auto-confirm-panel {
+  width: min(100%, 380px);
+  padding: 1.2rem 1rem 1rem;
+  border-radius: 1rem;
+  background: #f8f4ec;
+  border: 1px solid rgba(201, 162, 39, 0.24);
+  text-align: center;
+}
+
+.subject-auto-confirm-panel h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+  color: #1a1408;
+}
+
+.subject-auto-confirm-panel p {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(26, 20, 8, 0.65);
+}
+
+.subject-auto-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.subject-auto-confirm-btn {
+  min-height: 2.65rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e8c547 0%, #c9a227 45%, #8b6914 100%);
+  color: #1a1408;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.subject-auto-confirm-cancel {
+  margin-top: 0.55rem;
+  border: none;
+  background: transparent;
+  color: rgba(26, 20, 8, 0.55);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.modeles-subject-pose {
+  padding: 0 1rem 0.35rem;
+}
+
+.modeles-subject-pose .subject-pose-controls {
+  max-width: none;
+  background: rgba(12, 10, 14, 0.72);
+  border-color: rgba(201, 162, 39, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.modeles-subject-pose .subject-pose-field__label,
+.modeles-subject-pose .subject-pose-controls__preview-label {
+  color: rgba(246, 231, 189, 0.72);
+}
+
+.modeles-subject-pose .subject-pose-field__select {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.modeles-subject-pose .subject-pose-controls__preview {
+  background: rgba(201, 162, 39, 0.14);
+  border-color: rgba(201, 162, 39, 0.28);
+  color: #f6e7bd;
+}

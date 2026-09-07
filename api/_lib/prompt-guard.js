@@ -90,14 +90,16 @@ const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   "Check especially legs visible below rolled pants/shorts and above socks/shoes — never leave the template model's original leg skin color.";
 
 /** Prompt final pour génération depuis un modèle prêt intégré (face-swap). */
-function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
+function buildBuiltinTemplateFaceSwapPrompt(templatePrompt, options = {}) {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
+  const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
+    subjectPoseBlock,
     userPart,
     REALISM_QUALITY_GUARD,
     NEGATIVE_PROMPT_CLAUSE,
@@ -130,15 +132,17 @@ const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
   "Seamless photoreal identity transfer with matched scene shadows. No text, no watermark.";
 
 /** Prompt final modèle prêt + tenue catalogue (3 images). */
-function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
+function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt, options = {}) {
   const cleaned = sanitizeUserPrompt(String(templatePrompt || "").trim());
   const userPart =
     cleaned ||
     "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
+  const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
     OUTFIT_FROM_REF_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
+    subjectPoseBlock,
     userPart,
     REALISM_QUALITY_GUARD,
     NEGATIVE_PROMPT_CLAUSE,
@@ -3792,6 +3796,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
       ? ` ${SEAMLESS_BLEND_LOCK}`
       : "";
   const cameraOverride = cameraChange ? ` ${CAMERA_CHANGE_CLARIFIER}` : "";
+  const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
+  const subjectPoseInject = subjectPoseBlock ? ` ${subjectPoseBlock}` : "";
   const nonCarScenePrefix =
     lifestyleScene && isNonCarLifestylePrompt(userPrompt)
       ? `${NO_CAR_DEFAULT_CLARIFIER}${
@@ -3800,7 +3806,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           isSwimwearBeachOutfitPrompt(userPrompt) ? SWIMWEAR_OUTFIT_CLARIFIER : ""
         }`
       : "";
-  const core = `${nonCarScenePrefix}${sceneGuard}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
+  const core = `${nonCarScenePrefix}${sceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
   const suffix = qualitySuffix(
     swap ||

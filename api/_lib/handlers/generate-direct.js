@@ -20,6 +20,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
+const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
@@ -249,14 +250,26 @@ module.exports = async function handler(req, res) {
     const isBuiltinFaceSwapWithOutfit =
       isBuiltinFaceSwap && uploadedUrls.length >= 2;
 
+    const { subject, poseStyle, autoResolved } = parseSubjectPoseFromBody(body);
+    const subjectPoseBlock = buildSubjectPosePromptBlock({
+      subject,
+      poseStyle,
+      autoResolved,
+      faceSwapLockedPose: isBuiltinFaceSwap,
+    });
+
     const finalPrompt = isBuiltinFaceSwapWithOutfit
       ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
           "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
+          { subjectPoseBlock },
         )
       : isBuiltinFaceSwap
-        ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
+        ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt, {
+            subjectPoseBlock,
+          })
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
+            subjectPoseBlock,
           });
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {

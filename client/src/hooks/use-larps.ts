@@ -11,6 +11,11 @@ import {
   releaseGenerationSubmitLock,
   tryAcquireGenerationSubmitLock,
 } from "@/lib/generation-submit-lock";
+import type {
+  PoseStyle,
+  ResolvedSubjectType,
+  SubjectType,
+} from "@/lib/subject-pose-prompt";
 
 function toAssetUrls(value: unknown): string[] {
   if (!value) return [];
@@ -117,6 +122,9 @@ interface GenerateDirectInput {
   images?: string[];
   template_id?: string;
   use_face_asset?: boolean;
+  subject_type?: SubjectType;
+  pose_style?: PoseStyle;
+  subject_auto_resolved?: ResolvedSubjectType;
 }
 
 interface GenerateVideoInput {
