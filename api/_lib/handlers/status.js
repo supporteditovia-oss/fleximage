@@ -63,7 +63,7 @@ function statusTimingFields(larp) {
     );
     remainingSeconds = Math.max(0, estimatedSeconds - elapsed);
   }
-  return { estimatedSeconds, qaRetryCount, remainingSeconds };
+  return { estimatedSeconds, qaRetryCount, remainingSeconds, createdAt: larp.created_at || null };
 }
 
 module.exports = async function handler(req, res) {

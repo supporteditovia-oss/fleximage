@@ -3,14 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
+import { useGenerationCountdown } from "@/hooks/use-generation-countdown";
 import "./generation-loader.css";
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
-  /** Server-side ETA (seconds) — synced on every poll. */
+  /** Server-side ETA (seconds) — locked on first value. */
   estimatedSeconds?: number;
   /** Remaining seconds computed server-side from created_at + estimate. */
   serverRemainingSeconds?: number | null;
+  /** Horodatage serveur (ms) pour un chrono monotone. */
+  startedAtMs?: number | null;
+  /** Identifiant tâche — reset du chrono si changement. */
+  taskId?: string;
   inputImageUrl?: string;
   resultUrls?: string[];
   onRevealComplete?: () => void;
@@ -32,6 +37,8 @@ export function GenerationLoader({
   status,
   estimatedSeconds = DEFAULT_ESTIMATE_SECONDS,
   serverRemainingSeconds = null,
+  startedAtMs = null,
+  taskId = "loader",
   inputImageUrl,
   resultUrls: _resultUrls,
   onRevealComplete,
@@ -51,19 +58,24 @@ export function GenerationLoader({
   );
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
-  const [elapsedSec, setElapsedSec] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const revealFired = useRef(false);
-  const startedAt = useRef(Date.now());
-  const [estimate, setEstimate] = useState(
-    Math.max(25, Math.round(estimatedSeconds)),
-  );
+  const lockedEstimate = useRef(Math.max(25, Math.round(estimatedSeconds)));
 
   useEffect(() => {
-    setEstimate((prev) =>
-      Math.max(prev, Math.max(25, Math.round(estimatedSeconds))),
+    lockedEstimate.current = Math.max(
+      lockedEstimate.current,
+      Math.max(25, Math.round(estimatedSeconds)),
     );
   }, [estimatedSeconds]);
+
+  const remaining = useGenerationCountdown(
+    taskId,
+    startedAtMs,
+    lockedEstimate.current,
+    status === "success",
+    serverRemainingSeconds,
+  );
 
   useEffect(() => {
     if (phase !== "dissolve") return;
@@ -91,31 +103,11 @@ export function GenerationLoader({
 
   useEffect(() => {
     const id = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAt.current) / 1000));
-    }, 200);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % progressMessages.length);
       setMessageKey((k) => k + 1);
     }, MESSAGE_INTERVAL_MS);
     return () => clearInterval(id);
   }, [progressMessages.length]);
-
-  const localRemaining = Math.max(0, estimate - elapsedSec);
-  const polledRemaining =
-    serverRemainingSeconds != null && Number.isFinite(serverRemainingSeconds)
-      ? Math.max(0, Math.round(serverRemainingSeconds))
-      : null;
-
-  let remaining =
-    status === "success"
-      ? 0
-      : polledRemaining != null
-        ? polledRemaining
-        : localRemaining;
 
   const finishing = status !== "success" && remaining === 0;
 

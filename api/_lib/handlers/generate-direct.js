@@ -167,6 +167,12 @@ module.exports = async function handler(req, res) {
 
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
 
+    const inFlightAfterUpload = await findRecentInFlightGeneration(supabase, userId);
+    if (inFlightAfterUpload) {
+      res.status(200).json(buildDedupGenerateResponse(inFlightAfterUpload));
+      return;
+    }
+
     // Modèle prêt à l'emploi : la scène vient de la référence du modèle, la
     // photo de l'utilisateur ne sert qu'à y placer son visage.
     let templateReferenceId = null;
@@ -454,6 +460,7 @@ module.exports = async function handler(req, res) {
       status: "waiting",
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
+      createdAt: larp.created_at,
     });
   } catch (error) {
     console.error("generate-direct error", error);

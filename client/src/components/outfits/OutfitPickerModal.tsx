@@ -8,6 +8,8 @@ type OutfitPickerModalProps = {
   open: boolean;
   title?: string;
   subtitle?: string;
+  /** Demande « Es-tu sûr ? » avant onSelect (Modèles prêts). */
+  requireConfirmation?: boolean;
   /** false = évite onClose accidentel au clic tenue (modèles prêts). */
   closeOnOverlayClick?: boolean;
   onClose: () => void;
@@ -18,22 +20,32 @@ export function OutfitPickerModal({
   open,
   title = "Choisir une tenue",
   subtitle = "L’image 2 sera utilisée comme référence de vêtements.",
+  requireConfirmation = false,
   closeOnOverlayClick = true,
   onClose,
   onSelect,
 }: OutfitPickerModalProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmOutfit, setConfirmOutfit] = useState<BuiltinOutfit | null>(null);
 
   useEffect(() => {
     if (!open) {
       setSelectedId(null);
+      setConfirmOutfit(null);
       return;
     }
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
     window.$crisp?.push(["do", "chat:hide"]);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (confirmOutfit) {
+          setConfirmOutfit(null);
+          setSelectedId(null);
+          return;
+        }
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -44,11 +56,21 @@ export function OutfitPickerModal({
       }
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [confirmOutfit, open, onClose]);
 
   const handlePick = (outfit: BuiltinOutfit) => {
     setSelectedId(outfit.id);
+    if (requireConfirmation) {
+      setConfirmOutfit(outfit);
+      return;
+    }
     onSelect(outfit);
+  };
+
+  const handleConfirm = () => {
+    if (!confirmOutfit) return;
+    onSelect(confirmOutfit);
+    setConfirmOutfit(null);
   };
 
   const onCardKeyDown = (
@@ -125,6 +147,38 @@ export function OutfitPickerModal({
             })}
           </div>
         </div>
+
+        {confirmOutfit ? (
+          <div className="outfit-picker-confirm" role="alertdialog" aria-modal="true">
+            <div className="outfit-picker-confirm__panel">
+              <p className="outfit-picker-confirm__eyebrow">Confirmer la tenue</p>
+              <h3 className="outfit-picker-confirm__title">{confirmOutfit.name}</h3>
+              <p className="outfit-picker-confirm__text">
+                Es-tu sûr de choisir cette tenue ? La génération démarrera
+                uniquement après confirmation.
+              </p>
+              <div className="outfit-picker-confirm__actions">
+                <button
+                  type="button"
+                  className="outfit-picker-confirm__cancel"
+                  onClick={() => {
+                    setConfirmOutfit(null);
+                    setSelectedId(null);
+                  }}
+                >
+                  Non
+                </button>
+                <button
+                  type="button"
+                  className="outfit-picker-confirm__ok"
+                  onClick={handleConfirm}
+                >
+                  Oui, cette tenue
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>,
     document.body,

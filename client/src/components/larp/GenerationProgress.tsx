@@ -12,6 +12,13 @@ import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { BrandMark } from "@/components/BrandMark";
 import { useStudioPath } from "@/hooks/use-studio-path";
+import {
+  clearInFlightGeneration,
+  getInFlightGeneration,
+  mergeGenerationTimingLock,
+  parseApiCreatedAtMs,
+  type GenerationTimingLock,
+} from "@/lib/in-flight-generation";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -50,6 +57,8 @@ export function GenerationProgress({
   const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
+  const timingLockRef = useRef<GenerationTimingLock | null>(null);
+  const inflightSnapshot = getInFlightGeneration();
   const hasPersistedResult = useRef(false);
   // Grace window before a sustained, unrecoverable connection failure is
   // surfaced. Transient blips (5xx, network) during polling are ignored —
@@ -78,6 +87,7 @@ export function GenerationProgress({
     if (hasPersistedResult.current) return;
     if (data?.status !== "success" || !hasResultMedia || !data.larpId) return;
     hasPersistedResult.current = true;
+    clearInFlightGeneration();
     saveLastGeneration({
       taskId,
       larpId: data.larpId,
@@ -157,6 +167,7 @@ export function GenerationProgress({
     if (hasHandledFailure.current) return;
 
     if (fatalConnectionError) {
+      clearInFlightGeneration();
       hasHandledFailure.current = true;
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
@@ -173,6 +184,7 @@ export function GenerationProgress({
     }
 
     if (data?.status === "fail") {
+      clearInFlightGeneration();
       hasHandledFailure.current = true;
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
@@ -223,11 +235,28 @@ export function GenerationProgress({
             initialEstimatedSeconds != null &&
             Number.isFinite(initialEstimatedSeconds)
               ? initialEstimatedSeconds
-              : referenceImageCount >= 2
-                ? 62
-                : 50;
+              : inflightSnapshot?.taskId === taskId
+                ? inflightSnapshot.estimatedSeconds
+                : referenceImageCount >= 2
+                  ? 62
+                  : 50;
           return polled ?? fallback;
         })();
+
+  if (taskId) {
+    timingLockRef.current = mergeGenerationTimingLock(timingLockRef.current, {
+      estimate: estimatedSeconds,
+      startedAtMs:
+        parseApiCreatedAtMs(data?.createdAt) ??
+        (inflightSnapshot?.taskId === taskId
+          ? inflightSnapshot.startedAtMs
+          : null),
+    });
+  }
+
+  const lockedTiming = timingLockRef.current;
+  const displayEstimate = lockedTiming?.estimate ?? estimatedSeconds;
+  const startedAtMs = lockedTiming?.startedAtMs ?? null;
 
   const serverRemainingSeconds =
     data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)
@@ -256,9 +285,11 @@ export function GenerationProgress({
       <AnimatePresence>
         {showLoader && (
           <GenerationLoader
+            taskId={taskId}
             status={loaderStatus}
-            estimatedSeconds={estimatedSeconds}
+            estimatedSeconds={displayEstimate}
             serverRemainingSeconds={serverRemainingSeconds}
+            startedAtMs={startedAtMs}
             inputImageUrl={inputImageUrl}
             resultUrls={data?.resultUrls}
             onRevealComplete={() => setRevealDone(true)}

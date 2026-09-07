@@ -3,6 +3,14 @@ import { useMemo } from "react";
 import { authFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@shared/routes";
+import {
+  getInFlightGeneration,
+  persistInFlightFromApiResult,
+} from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 
 function toAssetUrls(value: unknown): string[] {
   if (!value) return [];
@@ -125,6 +133,8 @@ interface GenerateLarpResponse {
   taskId: string;
   status: string;
   estimatedSeconds?: number | null;
+  createdAt?: string | null;
+  deduplicated?: boolean;
 }
 
 interface LarpStatusResponse {
@@ -137,6 +147,7 @@ interface LarpStatusResponse {
   estimatedSeconds?: number | null;
   qaRetryCount?: number;
   remainingSeconds?: number | null;
+  createdAt?: string | null;
   isSubscriber?: boolean;
   requiresPaywall?: boolean;
   resultType?: "image" | "video";
@@ -196,11 +207,46 @@ export function useGenerateDirectLarp() {
   const queryClient = useQueryClient();
   return useMutation<GenerateLarpResponse, Error, GenerateDirectInput>({
     mutationFn: async (data) => {
-      const res = await authFetch("/api/larps/generate-direct", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      return res.json();
+      const inflight = getInFlightGeneration();
+      if (inflight?.taskId) {
+        return {
+          id: inflight.taskId,
+          taskId: inflight.taskId,
+          status: "processing",
+          estimatedSeconds: inflight.estimatedSeconds,
+          createdAt: new Date(inflight.startedAtMs).toISOString(),
+          deduplicated: true,
+        };
+      }
+
+      if (!tryAcquireGenerationSubmitLock()) {
+        const retryInflight = getInFlightGeneration();
+        if (retryInflight?.taskId) {
+          return {
+            id: retryInflight.taskId,
+            taskId: retryInflight.taskId,
+            status: "processing",
+            estimatedSeconds: retryInflight.estimatedSeconds,
+            createdAt: new Date(retryInflight.startedAtMs).toISOString(),
+            deduplicated: true,
+          };
+        }
+        throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
+      }
+
+      try {
+        const res = await authFetch("/api/larps/generate-direct", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+        const json = (await res.json()) as GenerateLarpResponse;
+        if (json?.taskId) {
+          persistInFlightFromApiResult(json, "generate", "image");
+        }
+        return json;
+      } finally {
+        releaseGenerationSubmitLock();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["larp-history"] });

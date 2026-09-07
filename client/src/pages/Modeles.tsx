@@ -16,6 +16,11 @@ import { ModelesScene } from "@/components/modeles/ModelesScene";
 import { OutfitChangeQuestion } from "@/components/outfits/OutfitChangeQuestion";
 import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
+import {
+  getInFlightGeneration,
+  persistInFlightFromApiResult,
+  clearInFlightGeneration,
+} from "@/lib/in-flight-generation";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
   findTemplateByRouteKey,
@@ -303,7 +308,12 @@ export default function Modeles() {
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
   );
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
+  const [generationEstimateSeconds, setGenerationEstimateSeconds] = useState<
+    number | null
+  >(() => getInFlightGeneration()?.estimatedSeconds ?? null);
   const [busy, setBusy] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
@@ -487,6 +497,8 @@ export default function Modeles() {
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
+
+  const runGeneration = async (
     template: FeedTemplate,
     userImages: string[] = [],
   ) => {
@@ -500,7 +512,16 @@ export default function Modeles() {
         images: userImages,
         use_face_asset: false,
       });
+      persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);
+      setGenerationEstimateSeconds(
+        typeof result.estimatedSeconds === "number" &&
+          Number.isFinite(result.estimatedSeconds)
+          ? result.estimatedSeconds
+          : userImages.length >= 2
+            ? 62
+            : 50,
+      );
     } catch (error: any) {
       generationLockRef.current = false;
       toast({
@@ -559,8 +580,6 @@ export default function Modeles() {
     }
   };
 
-  const runGeneration = async (
-
   if (!isAuthLoading && profile && !adminPreview) {
     return null;
   }
@@ -569,8 +588,16 @@ export default function Modeles() {
     return (
       <GenerationProgress
         taskId={taskId}
-        onReset={() => setTaskId(null)}
+        onReset={() => {
+          setTaskId(null);
+          setGenerationEstimateSeconds(null);
+          generationLockRef.current = false;
+          outfitResolvedRef.current = false;
+          clearInFlightGeneration();
+        }}
         resultType="image"
+        referenceImageCount={pendingUserPhoto ? 2 : 1}
+        initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
       />
     );
   }
@@ -748,9 +775,10 @@ export default function Modeles() {
         title="Catalogue tenues"
         subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
         closeOnOverlayClick={false}
+        requireConfirmation
         onClose={() => {
           setShowOutfitPicker(false);
-          void finishWithUserPhotoOnly();
+          setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
       />
