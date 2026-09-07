@@ -29,7 +29,7 @@ function normalizeHistoryStatus(status: unknown): "waiting" | "success" | "fail"
 }
 
 function normalizeHistoryItem(raw: Record<string, unknown>): LarpHistoryItem {
-  const templateRaw = raw.template;
+  const templateRaw = raw.template ?? raw.templates;
   const template =
     templateRaw && typeof templateRaw === "object"
       ? {
@@ -144,7 +144,7 @@ interface LarpStatusResponse {
   resultType?: "image" | "video";
 }
 
-interface LarpHistoryItem {
+export interface LarpHistoryItem {
   id: string;
   userId: string;
   templateId: string | null;
