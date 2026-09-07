@@ -293,6 +293,8 @@ export default function Modeles() {
     enabled: adminPreview,
   });
   const generateDirect = useGenerateDirectLarp();
+  const generationLockRef = useRef(false);
+  const outfitResolvedRef = useRef(false);
 
   const feedRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -459,64 +461,10 @@ export default function Modeles() {
   );
 
   const askForPhoto = (template: FeedTemplate) => {
+    outfitResolvedRef.current = false;
+    generationLockRef.current = false;
     setPendingTemplate(template);
     fileRef.current?.click();
-  };
-
-  const runGeneration = async (
-    template: FeedTemplate,
-    userImages: string[] = [],
-  ) => {
-    setBusy(true);
-    try {
-      const result = await generateDirect.mutateAsync({
-        prompt: getBuiltinGenerationPrompt(template),
-        template_id: template.id,
-        images: userImages,
-        use_face_asset: false,
-      });
-      setTaskId(result.taskId);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Génération impossible",
-        description: error?.message || "Réessaie dans un instant.",
-      });
-    } finally {
-      setBusy(false);
-      setPendingUserPhoto(null);
-      setShowOutfitQuestion(false);
-      setShowOutfitPicker(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const finishWithUserPhotoOnly = async () => {
-    const template = pendingTemplate;
-    const userPhoto = pendingUserPhoto;
-    setPendingTemplate(null);
-    setShowOutfitQuestion(false);
-    if (!template || !userPhoto) return;
-    await runGeneration(template, [userPhoto]);
-  };
-
-  const finishWithOutfit = async (outfit: BuiltinOutfit) => {
-    const template = pendingTemplate;
-    const userPhoto = pendingUserPhoto;
-    setPendingTemplate(null);
-    setShowOutfitPicker(false);
-    if (!template || !userPhoto) return;
-
-    try {
-      const outfitBase64 = await fetchCatalogImageAsBase64(outfit.imagePath);
-      await runGeneration(template, [userPhoto, outfitBase64]);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Tenue introuvable",
-        description: error?.message || "Réessaie dans un instant.",
-      });
-    }
   };
 
   const onPrimaryAction = (template: FeedTemplate) => {
@@ -539,6 +487,79 @@ export default function Modeles() {
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
+    template: FeedTemplate,
+    userImages: string[] = [],
+  ) => {
+    if (generationLockRef.current || busy) return;
+    generationLockRef.current = true;
+    setBusy(true);
+    try {
+      const result = await generateDirect.mutateAsync({
+        prompt: getBuiltinGenerationPrompt(template),
+        template_id: template.id,
+        images: userImages,
+        use_face_asset: false,
+      });
+      setTaskId(result.taskId);
+    } catch (error: any) {
+      generationLockRef.current = false;
+      toast({
+        variant: "destructive",
+        title: "Génération impossible",
+        description: error?.message || "Réessaie dans un instant.",
+      });
+    } finally {
+      setBusy(false);
+      setPendingUserPhoto(null);
+      setShowOutfitQuestion(false);
+      setShowOutfitPicker(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const finishWithUserPhotoOnly = async () => {
+    if (outfitResolvedRef.current || generationLockRef.current) return;
+    outfitResolvedRef.current = true;
+    const template = pendingTemplate;
+    const userPhoto = pendingUserPhoto;
+    setPendingTemplate(null);
+    setShowOutfitQuestion(false);
+    setShowOutfitPicker(false);
+    if (!template || !userPhoto) {
+      outfitResolvedRef.current = false;
+      return;
+    }
+    await runGeneration(template, [userPhoto]);
+  };
+
+  const finishWithOutfit = async (outfit: BuiltinOutfit) => {
+    if (outfitResolvedRef.current || generationLockRef.current) return;
+    outfitResolvedRef.current = true;
+    const template = pendingTemplate;
+    const userPhoto = pendingUserPhoto;
+    setPendingTemplate(null);
+    setShowOutfitQuestion(false);
+    setShowOutfitPicker(false);
+    if (!template || !userPhoto) {
+      outfitResolvedRef.current = false;
+      return;
+    }
+
+    try {
+      const outfitBase64 = await fetchCatalogImageAsBase64(outfit.imagePath);
+      await runGeneration(template, [userPhoto, outfitBase64]);
+    } catch (error: any) {
+      outfitResolvedRef.current = false;
+      generationLockRef.current = false;
+      toast({
+        variant: "destructive",
+        title: "Tenue introuvable",
+        description: error?.message || "Réessaie dans un instant.",
+      });
+    }
+  };
+
+  const runGeneration = async (
 
   if (!isAuthLoading && profile && !adminPreview) {
     return null;
@@ -726,6 +747,7 @@ export default function Modeles() {
         open={showOutfitPicker}
         title="Catalogue tenues"
         subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        closeOnOverlayClick={false}
         onClose={() => {
           setShowOutfitPicker(false);
           void finishWithUserPhotoOnly();

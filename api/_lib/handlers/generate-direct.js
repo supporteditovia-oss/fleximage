@@ -8,6 +8,7 @@ const {
   isGoogleAiPromptFlagged,
   uploadImageUrlsToOneshot,
   createOneshotJob,
+  ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
 const { createKieTask, isKieConfigured } = require("../kie");
 const {
@@ -30,6 +31,10 @@ const {
   isBuiltinTemplateId,
   resolveBuiltinTemplateGeneration,
 } = require("../builtin-image-templates");
+const {
+  findRecentInFlightGeneration,
+  buildDedupGenerateResponse,
+} = require("../generation-dedup");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -154,6 +159,12 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    const inFlight = await findRecentInFlightGeneration(supabase, userId);
+    if (inFlight) {
+      res.status(200).json(buildDedupGenerateResponse(inFlight));
+      return;
+    }
+
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
 
     // Modèle prêt à l'emploi : la scène vient de la référence du modèle, la
@@ -241,10 +252,7 @@ module.exports = async function handler(req, res) {
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
           });
-    const oneshotModelVariant =
-      isBuiltinFaceSwap || needsProModelVariant(effectivePrompt)
-        ? "default"
-        : "fast";
+    const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
       modelVariant: oneshotModelVariant,
@@ -356,85 +364,22 @@ module.exports = async function handler(req, res) {
           }
           externalTaskId = `custom_${oneshotResponse.id}`;
         } catch (err) {
-          // Provider safety bias: never hard-refuse adult/edgy prompts — retry then Kie.
+          // One OneShot job max — no 2nd createOneshotJob; Kie fallback or fail.
           if (isGoogleAiPromptFlagged(err)) {
             console.warn(
-              "OneshotAPI flagged prompt — retrying unrestricted then Kie",
+              "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
               err && err.message ? err.message : err,
             );
-            try {
-              const retryPrompt = isFacialHairPrompt(finalPrompt)
-                ? buildFacialHairHardRetryPrompt(finalPrompt)
-                : buildLiteralRetryPrompt(finalPrompt);
-              const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
-              const retryResponse = await createOneshotJob(retryPrompt, {
-                aspectRatio,
-                modelVariant: oneshotModelVariant,
-                ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-              });
-              if (retryResponse && retryResponse.id) {
-                await supabase
-                  .from("generations")
-                  .update({
-                    final_prompt: retryPrompt,
-                    metadata: {
-                      oneshot_soft_retry: true,
-                      oneshot_soft_retry_count: 1,
-                    },
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", larp.id);
-                externalTaskId = `custom_${retryResponse.id}`;
-              } else {
-                throw err;
-              }
-            } catch (retryErr) {
-              if (!kieReady) {
-                console.error(
-                  "Oneshot retry failed (no Kie fallback configured)",
-                  retryErr,
-                );
-                const failMessage =
-                  "Échec provider (filtre). Configure KIE_AI_API_KEY pour un fallback, ou reformule. Jetons remboursés.";
-                await failAndRefund(supabase, {
-                  userId,
-                  generationId: larp.id,
-                  failMessage,
-                  source: "oneshot_policy_retry_failed",
-                });
-                res.status(502).json({ message: failMessage });
-                return;
-              }
-              console.error("Oneshot flagged/retry failed, falling back to Kie AI", retryErr);
-              provider = "kie";
-              const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-              const kieTaskId = await createWithKie(kiePrompt);
-              if (!kieTaskId) {
-                await failAndRefund(supabase, {
-                  userId,
-                  generationId: larp.id,
-                  failMessage: "Échec de création de la tâche",
-                  source: "kie_create_failed",
-                });
-                res.status(502).json({ message: "Échec de création de la tâche" });
-                return;
-              }
-              await supabase
-                .from("generations")
-                .update({
-                  final_prompt: kiePrompt,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", larp.id);
-              externalTaskId = kieTaskId;
-            }
-          } else if (!kieReady) {
+          }
+          if (!kieReady) {
             console.error("OneshotAPI failed (no Kie fallback configured)", err);
             const detail =
               err && err.message
                 ? String(err.message).slice(0, 240)
                 : "erreur Oneshot";
-            const failMessage = `Échec de la génération Oneshot (${detail})`;
+            const failMessage = isGoogleAiPromptFlagged(err)
+              ? "Échec provider (filtre). Reformule ou configure KIE_AI_API_KEY. Jetons remboursés."
+              : `Échec de la génération Oneshot (${detail})`;
             await failAndRefund(supabase, {
               userId,
               generationId: larp.id,
@@ -443,22 +388,29 @@ module.exports = async function handler(req, res) {
             });
             res.status(502).json({ message: failMessage });
             return;
-          } else {
-            console.error("OneshotAPI failed, falling back to Kie AI", err);
-            provider = "kie";
-            const kieTaskId = await createWithKie();
-            if (!kieTaskId) {
-              await failAndRefund(supabase, {
-                userId,
-                generationId: larp.id,
-                failMessage: "Échec de création de la tâche",
-                source: "kie_create_failed",
-              });
-              res.status(502).json({ message: "Échec de création de la tâche" });
-              return;
-            }
-            externalTaskId = kieTaskId;
           }
+          console.error("OneshotAPI failed, falling back to Kie AI", err);
+          provider = "kie";
+          const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
+          const kieTaskId = await createWithKie(kiePrompt);
+          if (!kieTaskId) {
+            await failAndRefund(supabase, {
+              userId,
+              generationId: larp.id,
+              failMessage: "Échec de création de la tâche",
+              source: "kie_create_failed",
+            });
+            res.status(502).json({ message: "Échec de création de la tâche" });
+            return;
+          }
+          await supabase
+            .from("generations")
+            .update({
+              final_prompt: kiePrompt,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", larp.id);
+          externalTaskId = kieTaskId;
         }
       } else {
         provider = "kie";

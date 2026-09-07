@@ -8,6 +8,8 @@ type OutfitPickerModalProps = {
   open: boolean;
   title?: string;
   subtitle?: string;
+  /** false = évite onClose accidentel au clic tenue (modèles prêts). */
+  closeOnOverlayClick?: boolean;
   onClose: () => void;
   onSelect: (outfit: BuiltinOutfit) => void;
 };
@@ -16,6 +18,7 @@ export function OutfitPickerModal({
   open,
   title = "Choisir une tenue",
   subtitle = "L’image 2 sera utilisée comme référence de vêtements.",
+  closeOnOverlayClick = true,
   onClose,
   onSelect,
 }: OutfitPickerModalProps) {
@@ -66,7 +69,7 @@ export function OutfitPickerModal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onClick={onClose}
+      onClick={closeOnOverlayClick ? onClose : undefined}
     >
       <div
         className="outfit-picker-panel"
