@@ -88,13 +88,26 @@ function TemplateSlideContent({
       <div className="tpl-slide__lux-flash" aria-hidden />
       <div className="tpl-slide__lux-ring" aria-hidden />
       <div className="tpl-slide__frame-glow" aria-hidden />
-      <div className="tpl-slide__photo">
-        <img
-          className="tpl-slide__media"
-          src={displayUrl}
-          alt={template.name}
-          decoding="async"
-        />
+      <div
+        className={`tpl-slide__photo${comparePair ? " tpl-slide__photo--compare" : ""}`}
+      >
+        {comparePair ? (
+          <BeforeAfterSlider
+            pair={comparePair}
+            autoPlayLoop
+            showLabels
+            className="tpl-slide__compare"
+            label={`Avant et après — ${template.name}`}
+            hint="Glisse"
+          />
+        ) : (
+          <img
+            className="tpl-slide__media"
+            src={displayUrl}
+            alt={template.name}
+            decoding="async"
+          />
+        )}
         <div className="tpl-slide__scrim" aria-hidden />
       </div>
 
