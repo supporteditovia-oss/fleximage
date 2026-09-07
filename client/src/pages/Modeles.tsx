@@ -356,11 +356,14 @@ export default function Modeles() {
     const legacyTemplate = params.get("t");
     if (!legacyCat && !legacyTemplate) return;
 
-    if (legacyCat && getCategoryBySlug(legacyCat) && !isOutfitCategory(legacyCat)) {
-      navigate(modelesCategoryPath(legacyCat as ModelesCategorySlug), {
-        replace: true,
-      });
-      return;
+    if (legacyCat && !isOutfitCategory(legacyCat)) {
+      const normalizedLegacy = normalizeSceneCategory(legacyCat);
+      if (getCategoryBySlug(normalizedLegacy)) {
+        navigate(modelesCategoryPath(normalizedLegacy), {
+          replace: true,
+        });
+        return;
+      }
     }
     if (legacyTemplate) {
       const found = findTemplateByRouteKey(list, legacyTemplate);
