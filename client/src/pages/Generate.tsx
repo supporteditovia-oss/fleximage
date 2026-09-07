@@ -44,6 +44,11 @@ import {
   resetPaywallExpiry,
 } from "@/lib/paywall-expiry";
 import { clearLastGeneration } from "@/lib/last-generation";
+import {
+  clearInFlightGeneration,
+  getInFlightGeneration,
+  saveInFlightGeneration,
+} from "@/lib/in-flight-generation";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -97,10 +102,18 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   );
 
   // ── Generation state ────────────────────────────────────────
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(() => {
+    const inflight = getInFlightGeneration();
+    return inflight?.source === "generate" ? inflight.taskId : null;
+  });
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = useState<
     number | null
-  >(null);
+  >(() => {
+    const inflight = getInFlightGeneration();
+    return inflight?.source === "generate"
+      ? (inflight.estimatedSeconds ?? null)
+      : null;
+  });
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
@@ -146,6 +159,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
   const zeroCreditsDismissedRef = useRef(false);
+  const generationLockRef = useRef(false);
 
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
@@ -350,6 +364,13 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   // ── Fresh visit: keep landing onboarding draft / valid lock, else blank form ─
   useEffect(() => {
     if (isReturningFromCheckout) return;
+
+    const inflight = getInFlightGeneration();
+    if (inflight?.source === "generate" && inflight.taskId) {
+      setTaskId(inflight.taskId);
+      setGenerationEstimateSeconds(inflight.estimatedSeconds ?? null);
+      return;
+    }
 
     const resume = getOnboardingResume();
     const paywallPreview = getPaywallImage();
@@ -808,6 +829,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   const handleGenerate = async () => {
+    if (generationLockRef.current || isSubmittingGeneration || taskId) {
+      return;
+    }
+
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -958,6 +983,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     }
 
     try {
+      generationLockRef.current = true;
       setIsStartingGeneration(true);
       setPendingLoading(true);
       clearLastGeneration();
@@ -1006,6 +1032,15 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
+        saveInFlightGeneration({
+          taskId: result.taskId,
+          estimatedSeconds:
+            typeof result.estimatedSeconds === "number" &&
+            Number.isFinite(result.estimatedSeconds)
+              ? result.estimatedSeconds
+              : null,
+          source: "generate",
+        });
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
           trackFunnelStep("generate", { source: "video", taskId: result.taskId });
@@ -1037,12 +1072,22 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           : null,
       );
       setTaskId(result.taskId);
+      saveInFlightGeneration({
+        taskId: result.taskId,
+        estimatedSeconds:
+          typeof result.estimatedSeconds === "number" &&
+          Number.isFinite(result.estimatedSeconds)
+            ? result.estimatedSeconds
+            : null,
+        source: "generate",
+      });
       setPendingLoading(false);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
         trackFunnelStep("generate", { source: "image", taskId: result.taskId });
       });
       void refetchEligibility();
     } catch (error: any) {
+      generationLockRef.current = false;
       setPendingLoading(false);
       // Restore balances from server if generation failed after optimistic debit.
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -1118,6 +1163,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   };
 
   const handleReset = useCallback(() => {
+    generationLockRef.current = false;
+    clearInFlightGeneration();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
     setGenerationResultVisible(false);

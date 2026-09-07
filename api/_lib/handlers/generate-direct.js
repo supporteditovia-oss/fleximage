@@ -40,8 +40,7 @@ function extractClientTaskId(providerTaskId) {
     .map((segment) => segment.trim())
     .filter(Boolean);
   const last = parts[parts.length - 1] || "";
-  if (last.startsWith("custom_")) return last.slice("custom_".length);
-  if (last.startsWith("pending_")) return last;
+  // Keep full segment (e.g. custom_*) — status poll matches provider_task_id segments.
   return last;
 }
 

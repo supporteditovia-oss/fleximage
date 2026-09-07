@@ -2567,51 +2567,26 @@ export async function registerRoutes(
             if (isGoogleAiPromptFlagged(err)) {
               logger.warn(
                 { err },
-                "OneshotAPI flagged prompt — retrying unrestricted then Kie",
+                "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
               );
-              try {
-                const retryPrompt = buildLiteralRetryPrompt(finalPrompt);
-                const retryResponse = await createOneshotJob(retryPrompt, {
-                  aspectRatio: OUTPUT_ASPECT_RATIO,
-                });
-                if (retryResponse && retryResponse.id) {
-                  finalPrompt = retryPrompt;
-                  externalTaskId = `custom_${retryResponse.id}`;
-                } else {
-                  throw err;
-                }
-              } catch (retryErr) {
-                logger.error({ err: retryErr }, "Oneshot retry failed, falling back to Kie AI");
-                provider = "kie";
-                const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-                const kieResponse = await createKieTask({
-                  prompt: kiePrompt,
-                  aspect_ratio: OUTPUT_ASPECT_RATIO,
-                });
-                if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                  logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                  return res
-                    .status(502)
-                    .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                }
-                finalPrompt = kiePrompt;
-                externalTaskId = kieResponse.data.taskId;
-              }
-            } else {
-              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
-              provider = "kie";
-              const kieResponse = await createKieTask({
-                prompt: finalPrompt,
-                aspect_ratio: OUTPUT_ASPECT_RATIO,
-              });
-              if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                return res
-                  .status(502)
-                  .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-              }
-              externalTaskId = kieResponse.data.taskId;
             }
+            logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+            provider = "kie";
+            const kiePrompt = isGoogleAiPromptFlagged(err)
+              ? buildLiteralRetryPrompt(finalPrompt)
+              : finalPrompt;
+            const kieResponse = await createKieTask({
+              prompt: kiePrompt,
+              aspect_ratio: OUTPUT_ASPECT_RATIO,
+            });
+            if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+              logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+              return res
+                .status(502)
+                .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+            }
+            finalPrompt = kiePrompt;
+            externalTaskId = kieResponse.data.taskId;
           }
         } else {
           provider = "kie";
@@ -2928,72 +2903,40 @@ export async function registerRoutes(
               if (isGoogleAiPromptFlagged(err)) {
                 logger.warn(
                   { err },
-                  "OneshotAPI flagged prompt — retrying unrestricted then Kie",
+                  "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
                 );
-                try {
-                  const retryPrompt = buildLiteralRetryPrompt(finalPrompt);
-                  const referenceFileIds = imageUrls.length > 0
-                    ? await uploadImageUrlsToOneshot(imageUrls)
-                    : [];
-                  const retryResponse = await createOneshotJob(retryPrompt, {
-                    aspectRatio: aspect_ratio,
-                    ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-                  });
-                  if (retryResponse && retryResponse.id) {
-                    finalPrompt = retryPrompt;
-                    await supabaseAdmin
-                      .from("generations")
-                      .update({
-                        final_prompt: retryPrompt,
-                        updated_at: new Date().toISOString(),
-                      })
-                      .eq("id", larp.id);
-                    externalTaskId = `custom_${retryResponse.id}`;
-                  } else {
-                    throw err;
-                  }
-                } catch (retryErr) {
-                  logger.error({ err: retryErr }, "Oneshot retry failed, falling back to Kie AI");
-                  provider = "kie";
-                  const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-                  const kieResponse = await createKieTask({
-                    prompt: kiePrompt,
-                    aspect_ratio,
-                    ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-                  });
-                  if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                    logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                    await failAndRefund(
-                      tBackend(locale, "larps.taskCreateFailed"),
-                      "kie_create_failed",
-                    );
-                    return res
-                      .status(502)
-                      .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                  }
-                  finalPrompt = kiePrompt;
-                  externalTaskId = kieResponse.data.taskId;
-                }
-              } else {
-                logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
-                provider = "kie";
-                const kieResponse = await createKieTask({
-                  prompt: finalPrompt,
-                  aspect_ratio,
-                  ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-                });
-                if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-                  logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
-                  await failAndRefund(
-                    tBackend(locale, "larps.taskCreateFailed"),
-                    "kie_create_failed",
-                  );
-                  return res
-                    .status(502)
-                    .json({ message: tBackend(locale, "larps.taskCreateFailed") });
-                }
-                externalTaskId = kieResponse.data.taskId;
               }
+              logger.error({ err }, "OneshotAPI failed, falling back to Kie AI");
+              provider = "kie";
+              const kiePrompt = isGoogleAiPromptFlagged(err)
+                ? buildLiteralRetryPrompt(finalPrompt)
+                : finalPrompt;
+              const kieResponse = await createKieTask({
+                prompt: kiePrompt,
+                aspect_ratio,
+                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+              });
+              if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+                logger.error({ response: kieResponse }, "Kie.ai createTask unexpected response");
+                await failAndRefund(
+                  tBackend(locale, "larps.taskCreateFailed"),
+                  "kie_create_failed",
+                );
+                return res
+                  .status(502)
+                  .json({ message: tBackend(locale, "larps.taskCreateFailed") });
+              }
+              if (kiePrompt !== finalPrompt) {
+                finalPrompt = kiePrompt;
+                await supabaseAdmin
+                  .from("generations")
+                  .update({
+                    final_prompt: kiePrompt,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", larp.id);
+              }
+              externalTaskId = kieResponse.data.taskId;
             }
           } else {
             provider = "kie";

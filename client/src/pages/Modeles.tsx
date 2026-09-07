@@ -7,6 +7,11 @@ import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import {
+  clearInFlightGeneration,
+  getInFlightGeneration,
+  saveInFlightGeneration,
+} from "@/lib/in-flight-generation";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
@@ -292,12 +297,16 @@ export default function Modeles() {
 
   const feedRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const generationLockRef = useRef(false);
   const [scenePulse, setScenePulse] = useState(0);
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
   );
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(() => {
+    const inflight = getInFlightGeneration();
+    return inflight?.source === "modeles" ? inflight.taskId : null;
+  });
   const [busy, setBusy] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
@@ -456,6 +465,8 @@ export default function Modeles() {
     template: FeedTemplate,
     userImages: string[] = [],
   ) => {
+    if (generationLockRef.current || busy || taskId) return;
+    generationLockRef.current = true;
     setBusy(true);
     try {
       const result = await generateDirect.mutateAsync({
@@ -464,8 +475,10 @@ export default function Modeles() {
         images: userImages,
         use_face_asset: false,
       });
+      saveInFlightGeneration({ taskId: result.taskId, source: "modeles" });
       setTaskId(result.taskId);
     } catch (error: any) {
+      generationLockRef.current = false;
       toast({
         variant: "destructive",
         title: "Génération impossible",
@@ -533,7 +546,11 @@ export default function Modeles() {
     return (
       <GenerationProgress
         taskId={taskId}
-        onReset={() => setTaskId(null)}
+        onReset={() => {
+          generationLockRef.current = false;
+          clearInFlightGeneration();
+          setTaskId(null);
+        }}
         resultType="image"
       />
     );

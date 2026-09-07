@@ -10,6 +10,7 @@ import { LarpResult } from "./LarpResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
+import { clearInFlightGeneration } from "@/lib/in-flight-generation";
 import { BrandMark } from "@/components/BrandMark";
 import { useStudioPath } from "@/hooks/use-studio-path";
 
@@ -78,6 +79,7 @@ export function GenerationProgress({
     if (hasPersistedResult.current) return;
     if (data?.status !== "success" || !hasResultMedia || !data.larpId) return;
     hasPersistedResult.current = true;
+    clearInFlightGeneration();
     saveLastGeneration({
       taskId,
       larpId: data.larpId,
@@ -174,6 +176,7 @@ export function GenerationProgress({
 
     if (data?.status === "fail") {
       hasHandledFailure.current = true;
+      clearInFlightGeneration();
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       document.documentElement.removeAttribute("data-larp-result-mode");

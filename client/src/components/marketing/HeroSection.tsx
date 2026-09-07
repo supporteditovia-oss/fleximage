@@ -17,6 +17,11 @@ import {
 import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
+import {
+  clearInFlightGeneration,
+  getInFlightGeneration,
+  saveInFlightGeneration,
+} from "@/lib/in-flight-generation";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
 import { savePaywallPrompt } from "@/lib/paywall-prompt";
@@ -69,7 +74,11 @@ export default function HeroSection() {
   const generateDirect = useGenerateDirectLarp();
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
-  const [taskId, setTaskId] = React.useState<string | null>(null);
+  const generationLockRef = React.useRef(false);
+  const [taskId, setTaskId] = React.useState<string | null>(() => {
+    const inflight = getInFlightGeneration();
+    return inflight?.source === "hero" ? inflight.taskId : null;
+  });
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
     number | null
   >(null);
@@ -135,6 +144,10 @@ export default function HeroSection() {
   };
 
   const handleSubmit = async () => {
+    if (generationLockRef.current || generateDirect.isPending || taskId) {
+      return;
+    }
+
     const files = images.filter(
       (img): img is { url: string; file: File } => img !== null,
     );
@@ -165,6 +178,7 @@ export default function HeroSection() {
       }
 
       try {
+        generationLockRef.current = true;
         const base64Images = await Promise.all(
           files.map(async (img) =>
             fileToBase64(await toGenerationImageFile(img.file)),
@@ -183,8 +197,18 @@ export default function HeroSection() {
             : null,
         );
         setTaskId(result.taskId);
+        saveInFlightGeneration({
+          taskId: result.taskId,
+          estimatedSeconds:
+            typeof result.estimatedSeconds === "number" &&
+            Number.isFinite(result.estimatedSeconds)
+              ? result.estimatedSeconds
+              : null,
+          source: "hero",
+        });
         refetchEligibility();
       } catch (error: any) {
+        generationLockRef.current = false;
         if (error.code === "REFERENCE_IMAGE_REQUIRED") {
           toast({
             variant: "destructive",
@@ -267,6 +291,8 @@ export default function HeroSection() {
   };
 
   const handleReset = () => {
+    generationLockRef.current = false;
+    clearInFlightGeneration();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
     setPrompt("");
@@ -403,7 +429,7 @@ export default function HeroSection() {
               <button
                 className="shrink-0 w-8 h-8 rounded-lg flex md:hidden items-center justify-center text-primary-foreground bg-primary active:scale-95 transition-all disabled:opacity-50"
                 onClick={handleSubmit}
-                disabled={!hasUploadedImages}
+                disabled={!hasUploadedImages || generateDirect.isPending || !!taskId}
                 title={t("hero.create")}
               >
                 <ArrowRight className="w-4 h-4" />
@@ -412,7 +438,7 @@ export default function HeroSection() {
                 size="sm"
                 className="rounded-full h-9 px-5 shrink-0 text-xs font-semibold border-0 shadow-none active:scale-95 transition-transform hidden md:flex"
                 onClick={handleSubmit}
-                disabled={!hasUploadedImages}
+                disabled={!hasUploadedImages || generateDirect.isPending || !!taskId}
               >
                 {t("hero.create")}
               </Button>
