@@ -723,7 +723,7 @@ export default function Modeles() {
       <OutfitPickerModal
         open={showOutfitPicker}
         title="Catalogue tenues"
-        subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        subtitle="Hommes ou Femmes — Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
         onClose={() => {
           setShowOutfitPicker(false);
           void finishWithUserPhotoOnly();

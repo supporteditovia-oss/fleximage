@@ -24,6 +24,7 @@ function listBuiltinOutfitsForApi() {
     previewUrl: resolveReferenceUrl(item.imagePath),
     category: item.category,
     categoryName: item.categoryName,
+    gender: item.gender || "men",
   }));
 }
 
