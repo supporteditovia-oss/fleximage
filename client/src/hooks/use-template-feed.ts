@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import { useAuth } from "@/hooks/use-auth";
+import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
 /** Modèle tel que le voit l'utilisateur dans le fil plein écran. */
 export type FeedTemplate = {
@@ -81,10 +83,15 @@ function normalize(raw: any): FeedTemplate | null {
   };
 }
 
-function mergeTemplateLists(remote: FeedTemplate[]): FeedTemplate[] {
+function mergeTemplateLists(
+  remote: FeedTemplate[],
+  includeBuiltins: boolean,
+): FeedTemplate[] {
   const byId = new Map<string, FeedTemplate>();
-  for (const template of BUILTIN_FEED_TEMPLATES) {
-    byId.set(template.id, template);
+  if (includeBuiltins) {
+    for (const template of BUILTIN_FEED_TEMPLATES) {
+      byId.set(template.id, template);
+    }
   }
   for (const template of remote) {
     const existing = byId.get(template.id);
@@ -108,26 +115,30 @@ function mergeTemplateLists(remote: FeedTemplate[]): FeedTemplate[] {
 }
 
 export function useTemplateFeed(options: { enabled?: boolean } = {}) {
+  const { isAdmin } = useAuth();
+  const adminPreview = canAccessAdminPreviewFeatures(isAdmin);
+  const fallbackTemplates = adminPreview ? BUILTIN_FEED_TEMPLATES : [];
+
   return useQuery<FeedTemplate[]>({
-    queryKey: templateFeedQueryKey,
+    queryKey: [...templateFeedQueryKey, adminPreview],
     queryFn: async () => {
       try {
         const res = await authFetch("/api/templates");
-        if (!res.ok) return BUILTIN_FEED_TEMPLATES;
+        if (!res.ok) return fallbackTemplates;
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.templates ?? []);
         const remote = list
           .map(normalize)
           .filter((t: FeedTemplate | null): t is FeedTemplate => t !== null)
           .filter((t: FeedTemplate) => t.referenceImageCount > 0);
-        return mergeTemplateLists(remote);
+        return mergeTemplateLists(remote, adminPreview);
       } catch {
-        return BUILTIN_FEED_TEMPLATES;
+        return fallbackTemplates;
       }
     },
     enabled: options.enabled ?? true,
-    initialData: BUILTIN_FEED_TEMPLATES,
-    placeholderData: BUILTIN_FEED_TEMPLATES,
+    initialData: fallbackTemplates,
+    placeholderData: fallbackTemplates,
     staleTime: 5 * 60 * 1000,
   });
 }

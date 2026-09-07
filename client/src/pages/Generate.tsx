@@ -67,7 +67,7 @@ import {
   type BuiltinOutfit,
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
-import "@/components/outfits/outfit-picker.css";
+import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -141,7 +141,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const topRef = useRef<HTMLDivElement>(null);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
-  const { profile, user, isLoading: isAuthLoading } = useAuth();
+  const { profile, user, isLoading: isAuthLoading, isAdmin } = useAuth();
+  const adminPreview = canAccessAdminPreviewFeatures(isAdmin);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
@@ -1460,14 +1461,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
               />
 
               <div className="flex w-full max-w-md justify-center md:max-w-xl">
-                <button
-                  type="button"
-                  className="lx-outfit-add-btn"
-                  onClick={openOutfitPicker}
-                  disabled={outfitPickerBusy || isSubmittingGeneration}
-                >
-                  {outfitPickerBusy ? "Chargement…" : "Ajouter un outfit"}
-                </button>
+                {adminPreview ? (
+                  <button
+                    type="button"
+                    className="lx-outfit-add-btn"
+                    onClick={openOutfitPicker}
+                    disabled={outfitPickerBusy || isSubmittingGeneration}
+                  >
+                    {outfitPickerBusy ? "Chargement…" : "Ajouter un outfit"}
+                  </button>
+                ) : null}
               </div>
 
               <PromptInputBar
@@ -1482,7 +1485,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 onAspectRatioChange={setAspectRatio}
               />
 
-              <TemplateStrip variant="compact" />
+              {adminPreview ? <TemplateStrip variant="compact" /> : null}
             </>
           )}
         </div>
@@ -1504,13 +1507,15 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         plan={currentPlan}
       />
 
-      <OutfitPickerModal
-        open={showOutfitPicker}
-        title="Catalogue tenues"
-        subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
-        onClose={() => setShowOutfitPicker(false)}
-        onSelect={(outfit) => void handleOutfitSelect(outfit)}
-      />
+      {adminPreview ? (
+        <OutfitPickerModal
+          open={showOutfitPicker}
+          title="Catalogue tenues"
+          subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
+          onClose={() => setShowOutfitPicker(false)}
+          onSelect={(outfit) => void handleOutfitSelect(outfit)}
+        />
+      ) : null}
     </div>
   );
 }

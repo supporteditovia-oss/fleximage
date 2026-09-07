@@ -1,4 +1,5 @@
 const { requireUser } = require("../user-auth");
+const { isUserAdmin } = require("../admin-access");
 const { listBuiltinTemplatesForApi } = require("../builtin-image-templates");
 
 /**
@@ -20,7 +21,9 @@ module.exports = async function templatesHandler(req, res) {
   }
 
   try {
-    const { supabase } = await requireUser(req);
+    const { supabase, userId } = await requireUser(req);
+    const admin = await isUserAdmin(supabase, userId);
+    const builtinTemplates = admin ? listBuiltinTemplatesForApi() : [];
 
     const { data: templates, error } = await supabase
       .from("templates")
@@ -35,7 +38,7 @@ module.exports = async function templatesHandler(req, res) {
 
     const ids = (templates || []).map((t) => t.id);
     if (ids.length === 0) {
-      res.status(200).json({ templates: listBuiltinTemplatesForApi() });
+      res.status(200).json({ templates: builtinTemplates });
       return;
     }
 
@@ -53,7 +56,7 @@ module.exports = async function templatesHandler(req, res) {
 
     if (refsError) {
       console.warn("templates refs unavailable, using built-in catalog only", refsError);
-      res.status(200).json({ templates: listBuiltinTemplatesForApi() });
+      res.status(200).json({ templates: builtinTemplates });
       return;
     }
 
@@ -93,9 +96,9 @@ module.exports = async function templatesHandler(req, res) {
         };
       });
 
-    res.status(200).json({ templates: [...listBuiltinTemplatesForApi(), ...payload] });
+    res.status(200).json({ templates: [...builtinTemplates, ...payload] });
   } catch (error) {
     console.error("templates list error", error);
-    res.status(200).json({ templates: listBuiltinTemplatesForApi() });
+    res.status(200).json({ templates: [] });
   }
 };

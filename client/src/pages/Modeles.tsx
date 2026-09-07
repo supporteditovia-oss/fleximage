@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -284,10 +285,13 @@ function TemplatePreviewLightbox({
 
 export default function Modeles() {
   const [location, navigate] = useLocation();
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
+  const adminPreview = canAccessAdminPreviewFeatures(isAdmin);
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
-  const { data: templates, isLoading } = useTemplateFeed();
+  const { data: templates, isLoading } = useTemplateFeed({
+    enabled: adminPreview,
+  });
   const generateDirect = useGenerateDirectLarp();
 
   const feedRef = useRef<HTMLDivElement>(null);
@@ -341,6 +345,12 @@ export default function Modeles() {
     () => categoryScenes,
     [categoryScenes],
   );
+
+  useEffect(() => {
+    if (profile && !adminPreview) {
+      navigate("/create", { replace: true });
+    }
+  }, [profile, adminPreview, navigate]);
 
   // Rediriger l'ancienne catégorie outfits vers le catalogue.
   useEffect(() => {
@@ -528,6 +538,10 @@ export default function Modeles() {
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
+
+  if (profile && !adminPreview) {
+    return null;
+  }
 
   if (taskId) {
     return (

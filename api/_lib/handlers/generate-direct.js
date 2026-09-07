@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
+const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
   getOneshotApiConfig,
@@ -51,6 +52,13 @@ function withShopifyTrophyReference(prompt, imageUrls) {
   return [...imageUrls, trophyUrl];
 }
 
+/** Prompt injecté par le catalogue outfits (preview admin). */
+function isCatalogOutfitCatalogPrompt(promptText) {
+  return /^Remplace ma tenue par l['']image 2\.?\s*/i.test(
+    String(promptText || "").trim(),
+  );
+}
+
 async function failAndRefund(supabase, { userId, generationId, failMessage, source }) {
   await supabase
     .from("generations")
@@ -83,6 +91,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const { supabase, userId } = await requireUser(req);
+    const admin = await isUserAdmin(supabase, userId);
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
@@ -119,6 +128,31 @@ module.exports = async function handler(req, res) {
       return;
     }
     const creditCost = getBillableCreditCost(limitResult);
+
+    if (!admin) {
+      if (templateId && isBuiltinTemplateId(templateId)) {
+        res.status(403).json({
+          code: "ADMIN_PREVIEW_ONLY",
+          message: copy(
+            uiLocale,
+            "Les modèles prêts sont réservés aux administrateurs.",
+            "Ready-made models are admin-only preview features.",
+          ),
+        });
+        return;
+      }
+      if (isCatalogOutfitCatalogPrompt(prompt) && images.length >= 2) {
+        res.status(403).json({
+          code: "ADMIN_PREVIEW_ONLY",
+          message: copy(
+            uiLocale,
+            "Le catalogue outfits est réservé aux administrateurs.",
+            "The outfit catalog is an admin-only preview feature.",
+          ),
+        });
+        return;
+      }
+    }
 
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
 

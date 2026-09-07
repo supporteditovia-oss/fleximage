@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
-import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
@@ -11,12 +12,24 @@ type TemplateStripProps = {
 };
 
 /**
- * Entrée permanente vers les modèles depuis le studio Image IA.
+ * Entrée permanente vers les modèles depuis le studio Image IA (admin preview).
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
-  const { data: templates } = useTemplateFeed();
-  const list = templates?.length ? templates : BUILTIN_FEED_TEMPLATES;
+  const { isAdmin } = useAuth();
+  const { data: templates } = useTemplateFeed({
+    enabled: canAccessAdminPreviewFeatures(isAdmin),
+  });
+
+  if (!canAccessAdminPreviewFeatures(isAdmin)) {
+    return null;
+  }
+
+  const list = templates ?? [];
+
+  if (list.length === 0) {
+    return null;
+  }
 
   if (variant === "compact") {
     return (
