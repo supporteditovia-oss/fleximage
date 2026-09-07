@@ -724,6 +724,7 @@ export default function AdminStudio() {
 
   const uploadImage = useUploadMarketingImage();
   const generateMarketing = useGenerateMarketing();
+  const marketingGenLockRef = useRef(false);
   const activeVideo =
     studioState.videos.find((video) => video.id === studioState.activeVideoId) ??
     studioState.videos[0];
@@ -833,7 +834,10 @@ export default function AdminStudio() {
   );
 
   const handleGenerateA = async () => {
-    if (!refUrl || !promptA.trim()) return;
+    if (!refUrl || !promptA.trim() || marketingGenLockRef.current || b1.isGenerating) {
+      return;
+    }
+    marketingGenLockRef.current = true;
     const targetVideoId = activeVideo.id;
 
     updateVideoById(targetVideoId, (video) => ({
@@ -865,11 +869,16 @@ export default function AdminStudio() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      marketingGenLockRef.current = false;
     }
   };
 
   const handleGenerateB = async () => {
-    if (!b1.url || !promptB.trim()) return;
+    if (!b1.url || !promptB.trim() || marketingGenLockRef.current || c1.isGenerating) {
+      return;
+    }
+    marketingGenLockRef.current = true;
     const targetVideoId = activeVideo.id;
 
     updateVideoById(targetVideoId, (video) => ({
@@ -901,6 +910,8 @@ export default function AdminStudio() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      marketingGenLockRef.current = false;
     }
   };
 

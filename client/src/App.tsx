@@ -27,6 +27,7 @@ import Bibliotheque from "@/pages/Bibliotheque";
 import Resultat from "@/pages/Resultat";
 import Settings from "@/pages/Settings";
 import { SnapPixelProvider } from "@/components/analytics/SnapPixelProvider";
+import { InFlightGenerationHost } from "@/components/larp/InFlightGenerationHost";
 import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
@@ -488,6 +489,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <SnapPixelProvider />
+          <InFlightGenerationHost />
           <Router />
           <Toaster />
         </TooltipProvider>

@@ -4,15 +4,13 @@
  * If no key / VISION_QA_ENABLED=0 → skip (pass) so generations never block.
  */
 
-/** Original + 1 corrective regen max — extra passes rarely help and feel stuck. */
-const MAX_VISION_QA_RETRIES = 1;
-/** Fictional/cartoon cars: 1 retry max — more retries eat the poll budget and feel stuck. */
-const MAX_VISION_QA_RETRIES_FICTIONAL = 1;
-/** Lifestyle + named luxury car: 1 retry — wrong-brand cabins rarely fix on pass 2+. */
-const MAX_VISION_QA_RETRIES_LIFESTYLE = 1;
-/** Parked-car body swap: 1 retry — pass 2+ rarely fixes pose/background drift. */
-const MAX_VISION_QA_RETRIES_VEHICLE_REPLACE = 1;
+/** Original + 0 corrective regen — one OneShot job per user generation (cost control). */
+const MAX_VISION_QA_RETRIES = 0;
+const MAX_VISION_QA_RETRIES_FICTIONAL = 0;
+const MAX_VISION_QA_RETRIES_LIFESTYLE = 0;
+const MAX_VISION_QA_RETRIES_VEHICLE_REPLACE = 0;
 const VISION_QA_TIMEOUT_MS = 12_000;
+const { ONESHOT_MODEL_VARIANT } = require("./oneshot");
 
 const CRITICAL_CODES = new Set([
   "gibberish_text",
@@ -502,7 +500,7 @@ async function maybeRetryAfterVisionQa({
       imageUrls.length > 0 ? await uploadImageUrlsToOneshot(imageUrls) : [];
     const oneshotResponse = await createOneshotJob(retryPrompt, {
       aspectRatio: aspectRatio || "9:16",
-      modelVariant: modelVariant || "default",
+      modelVariant: ONESHOT_MODEL_VARIANT,
       ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
     });
     if (!oneshotResponse || !oneshotResponse.id) {
@@ -519,7 +517,7 @@ async function maybeRetryAfterVisionQa({
         ? resultUrls.slice(0, 4)
         : [],
       oneshot_model_variant:
-        modelVariant || meta.oneshot_model_variant || "default",
+        ONESHOT_MODEL_VARIANT,
       estimated_seconds:
         Number.isFinite(prevEstimate) && prevEstimate > 0
           ? prevEstimate + 55

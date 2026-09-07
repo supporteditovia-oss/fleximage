@@ -116,20 +116,30 @@ async function uploadImageUrlsToOneshot(imageUrls) {
   return ids.filter((id) => typeof id === "string");
 }
 
+/** Nano Banana 2 only — never Pro (`default` / `pro` are blocked). */
+const ONESHOT_MODEL_VARIANT = "fast";
+
+function resolveOneshotModelVariant(requested) {
+  const raw = String(requested || ONESHOT_MODEL_VARIANT).toLowerCase();
+  if (raw !== ONESHOT_MODEL_VARIANT) {
+    console.warn(
+      "[oneshot] Blocked modelVariant",
+      raw,
+      "→ forcing fast (Nano Banana 2 only; Pro forbidden)",
+    );
+  }
+  return ONESHOT_MODEL_VARIANT;
+}
+
 async function createOneshotJob(prompt, options) {
   const config = getOneshotApiConfig();
   if (!config.url || !config.key) {
     throw new Error("Missing ONESHOT_API_URL or ONESHOT_API_KEY");
   }
 
-  // OneShot nano-banana accepts ONLY "default" | "fast".
-  // default = Nano Banana Pro, fast = Nano Banana 2.
-  // Literal "pro" is rejected with 422 — map it to default.
-  let modelVariant = (options && options.modelVariant) || "fast";
-  if (modelVariant === "pro") modelVariant = "default";
-  if (modelVariant !== "default" && modelVariant !== "fast") {
-    modelVariant = "fast";
-  }
+  const modelVariant = resolveOneshotModelVariant(
+    options && options.modelVariant,
+  );
 
   const payload = {
     model: "nano-banana",
@@ -205,6 +215,8 @@ async function getOneshotJobStatus(jobId) {
 }
 
 module.exports = {
+  ONESHOT_MODEL_VARIANT,
+  resolveOneshotModelVariant,
   getOneshotApiConfig,
   getAppSettings,
   isGoogleAiPromptFlagged,
