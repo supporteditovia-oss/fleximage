@@ -3376,11 +3376,71 @@ function qualitySuffix(includeCelebrityGuard) {
 }
 
 /**
+ * Identité + scène (2+ refs) : l'image identité est la seule source de visage.
+ * Ordre canonique après réordonnancement API : (1) identité, (2) tenue?, (3) scène.
+ */
+const MULTI_IMAGE_IDENTITY_SCENE_GUARD =
+  "MULTI-REFERENCE IDENTITY+SCENE EDIT (mandatory). " +
+  "Identity must come exclusively from the identity reference. Ignore all faces visible in the scene reference. Do not blend identities. " +
+  "Reference order: image 1 = identity reference (ONLY source for face, skin tone, hair color/line, ethnicity, body build, natural asymmetries); " +
+  "image 2 = outfit reference if present (wear that exact outfit on the identity person); " +
+  "last image = scene reference (ONLY source for background, lighting, pose, camera angle, framing, composition — NEVER copy any face from it). " +
+  "Insert the identity person into the scene reference as a new real smartphone photo — same person, new shot, scene-appropriate pose. " +
+  "FORBIDDEN: using the scene reference face; face-swap paste; identity blending; beauty-filter smoothing; symmetry correction; plastic/waxy AI skin; cutout halo.";
+
+const NATURAL_FACE_PRESERVATION_GUARD =
+  "NATURAL FACE PRESERVATION (mandatory): do NOT beautify, symmetrize, or over-smooth the identity face. " +
+  "Preserve exact eyes, nose, lips, jawline, skin tone, hairline placement, and natural asymmetries. " +
+  "Real skin pores and micro-texture; correct hands; coherent scene lighting; smartphone photo realism — no plastic doll look.";
+
+const FACE_FIDELITY_GUARDS = {
+  standard:
+    "FACE FIDELITY (standard): keep recognizable likeness from the identity reference; natural skin and hair.",
+  elevated:
+    "FACE FIDELITY (elevated): strong identity match — same face structure, skin tone, hair, and expression tendencies as the identity reference.",
+  maximum:
+    "FACE FIDELITY (maximum): strict pixel-level identity lock from the identity reference — exact eyes, nose, lips, jaw, skin tone, hairline, natural asymmetries; zero beautification.",
+};
+
+function buildMultiImageIdentityScenePrompt(userPrompt, options = {}) {
+  const cleaned = sanitizeUserPrompt(String(userPrompt || "").trim());
+  if (!cleaned) return cleaned;
+
+  const fidelity =
+    FACE_FIDELITY_GUARDS[options.faceFidelity] ||
+    FACE_FIDELITY_GUARDS.maximum;
+  const hasOutfit = Boolean(options.hasOutfitRef);
+  const identityIdx = 1;
+  const sceneIdx = hasOutfit ? 3 : 2;
+  const outfitNote = hasOutfit
+    ? ` Wear the exact outfit from image 2 on the person from image ${identityIdx}. Scene lock from image ${sceneIdx}. `
+    : ` Scene lock from image ${sceneIdx}. `;
+
+  const parts = [
+    MULTI_IMAGE_IDENTITY_SCENE_GUARD,
+    fidelity,
+    NATURAL_FACE_PRESERVATION_GUARD,
+    outfitNote.trim(),
+    `User request: ${cleaned}`,
+    REALISM_QUALITY_GUARD,
+    NEGATIVE_PROMPT_CLAUSE,
+  ];
+  let combined = parts.filter(Boolean).join(" ");
+  if (combined.length > MAX_FINAL_PROMPT) {
+    combined = combined.slice(0, MAX_FINAL_PROMPT);
+  }
+  return combined;
+}
+
+/**
  * Build final provider prompt.
  * Priority: scene guard + celebrity cards + user request (never truncated first).
  * Drop optional suffix/literal if needed to stay under OneShot's 3000-char limit.
  */
 function buildIdentityPreservingPrompt(userPrompt, options = {}) {
+  if (options.multiImageIdentityScene) {
+    return buildMultiImageIdentityScenePrompt(userPrompt, options);
+  }
   const referenceImageCount = Math.max(0, Number(options.referenceImageCount) || 0);
   // Detect facial-hair intent on the RAW user text (before clarifiers add "replace", etc.).
   const rawFacialHair = isFacialHairPrompt(userPrompt);
@@ -3969,6 +4029,9 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
         .slice(0, 6)
     : [];
   const blob = list.join(" ").toLowerCase();
+  const identityFail =
+    /\b(identity_lost|identity_blend|scene_face_used)\b/.test(blob) ||
+    /\b(wrong face|blended face|mixed identity|scene reference face)\b/.test(blob);
   const doorFail =
     /\bdoor_state_contradiction\b/.test(blob) ||
     /\b(door.?open|open.?door|porte\s+ouverte|red\s+door|ajar)\b/.test(blob);
@@ -3985,8 +4048,13 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
       ? "DOOR FIX (highest priority): physical doors are CLOSED → erase EVERY red open-door highlight on the white top-down car graphic on cluster AND MMI. " +
         "Show ALL doors closed on that white outline. Keep red ONLY if a door is visibly open in the photo. No contradictory door alerts. "
       : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
+  const identityFix = identityFail
+    ? "IDENTITY FIX (highest priority): face MUST match ONLY the identity reference image 1 — NOT the scene reference face. " +
+      "No blended/averaged identity. Preserve natural asymmetry, pores, exact eyes/nose/lips/jaw. No beautification or plastic skin. "
+    : "";
   const prefix =
     "QA CORRECTION PASS (mandatory). Keep the SAME person identity. " +
+    identityFix +
     doorFix +
     `Fix ONLY these critical defects: ${fixList}. ` +
     "IDENTITY≠POSE: if relocating, invent a NEW natural pose — never paste the reference selfie/hand-on-cheek. " +
@@ -4027,6 +4095,10 @@ function buildFacialHairHardRetryPrompt(finalPrompt) {
 
 module.exports = {
   buildIdentityPreservingPrompt,
+  buildMultiImageIdentityScenePrompt,
+  MULTI_IMAGE_IDENTITY_SCENE_GUARD,
+  NATURAL_FACE_PRESERVATION_GUARD,
+  FACE_FIDELITY_GUARDS,
   buildBuiltinTemplateFaceSwapPrompt,
   buildBuiltinTemplateFaceSwapWithOutfitPrompt,
   expandImageEditUserRequest,

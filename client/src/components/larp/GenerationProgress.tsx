@@ -50,6 +50,7 @@ export function GenerationProgress({
   const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
+  const hasHandledIdentityWarning = useRef(false);
   const hasPersistedResult = useRef(false);
   // Grace window before a sustained, unrecoverable connection failure is
   // surfaced. Transient blips (5xx, network) during polling are ignored —
@@ -87,6 +88,16 @@ export function GenerationProgress({
     });
     void queryClient.invalidateQueries({ queryKey: ["larp-history"] });
   }, [data?.status, data?.larpId, data?.resultUrls, data?.resultType, hasResultMedia, resultType, taskId, queryClient]);
+
+  useEffect(() => {
+    if (hasHandledIdentityWarning.current) return;
+    if (data?.status !== "success" || !data.identityWarning) return;
+    hasHandledIdentityWarning.current = true;
+    toast({
+      title: t("progress.identityWarningTitle"),
+      description: t("progress.identityWarningHint"),
+    });
+  }, [data?.status, data?.identityWarning, t, toast]);
 
   // Wait for loader exit animation before showing result
   useEffect(() => {

@@ -107,6 +107,8 @@ interface GenerateDirectInput {
   prompt: string;
   aspect_ratio?: string;
   images?: string[];
+  image_roles?: string[];
+  face_fidelity?: string;
   template_id?: string;
   use_face_asset?: boolean;
 }
@@ -136,6 +138,7 @@ interface LarpStatusResponse {
   costTime: number | null;
   estimatedSeconds?: number | null;
   qaRetryCount?: number;
+  identityWarning?: boolean;
   remainingSeconds?: number | null;
   isSubscriber?: boolean;
   requiresPaywall?: boolean;

@@ -18,7 +18,25 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const {
+  reorderReferenceImagesByRole,
+  normalizeFaceFidelity,
+} = require("../image-reference-roles");
+const {
+  buildIdentityPreservingPrompt,
+  buildBuiltinTemplateFaceSwapPrompt,
+  buildBuiltinTemplateFaceSwapWithOutfitPrompt,
+  buildLiteralRetryPrompt,
+  buildFacialHairHardRetryPrompt,
+  isFacialHairPrompt,
+  isAddAnimalPrompt,
+  isShopifyTrophyPrompt,
+  isMotorcycleRidePrompt,
+  isMotorcycleReplacePrompt,
+  isFictionalVehiclePrompt,
+  needsProModelVariant,
+  estimateGenerationSeconds,
+} = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -87,6 +105,9 @@ module.exports = async function handler(req, res) {
     const uiLocale = resolveRequestLocale(req, body);
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const images = Array.isArray(body.images) ? body.images : [];
+    const imageRolesInput = Array.isArray(body.image_roles)
+      ? body.image_roles
+      : null;
     const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
     const templateId =
       typeof body.template_id === "string" && body.template_id.trim()
@@ -121,6 +142,27 @@ module.exports = async function handler(req, res) {
     const creditCost = getBillableCreditCost(limitResult);
 
     const uploadedUrls = await uploadInputImagesToR2(userId, images);
+
+    const reorderedFreeform =
+      !templateId && uploadedUrls.length > 0
+        ? reorderReferenceImagesByRole(uploadedUrls, imageRolesInput || [])
+        : null;
+    const freeformUrls = reorderedFreeform?.items ?? uploadedUrls;
+    const multiImageIdentityScene = Boolean(
+      reorderedFreeform?.multiImageIdentityScene,
+    );
+    const hasOutfitRef = Boolean(reorderedFreeform?.hasOutfitRef);
+    const faceFidelity = normalizeFaceFidelity(
+      body.face_fidelity,
+      multiImageIdentityScene ||
+        (freeformUrls.length === 1 && !templateId),
+    );
+    const identityReferenceUrl =
+      multiImageIdentityScene && reorderedFreeform?.identityIndex >= 0
+        ? freeformUrls[reorderedFreeform.identityIndex]
+        : freeformUrls.length === 1 && !templateId
+          ? freeformUrls[0]
+          : null;
 
     // Modèle prêt à l'emploi : la scène vient de la référence du modèle, la
     // photo de l'utilisateur ne sert qu'à y placer son visage.
@@ -176,7 +218,7 @@ module.exports = async function handler(req, res) {
         });
         return;
       }
-      imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
+      imageUrls = withShopifyTrophyReference(prompt, freeformUrls);
     }
 
     if (imageUrls.length === 0) {
@@ -206,6 +248,9 @@ module.exports = async function handler(req, res) {
         ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt)
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
+            multiImageIdentityScene,
+            hasOutfitRef,
+            faceFidelity,
           });
     const oneshotModelVariant =
       isBuiltinFaceSwap || needsProModelVariant(effectivePrompt)
@@ -253,6 +298,14 @@ module.exports = async function handler(req, res) {
         metadata: {
           oneshot_model_variant: oneshotModelVariant,
           estimated_seconds: estimatedSeconds,
+          ...(multiImageIdentityScene
+            ? {
+                multi_image_identity_scene: true,
+                face_fidelity: faceFidelity,
+                image_roles: reorderedFreeform?.roles ?? [],
+                identity_reference_url: identityReferenceUrl,
+              }
+            : {}),
           ...(templateReferenceId
             ? {
                 ...(isBuiltinTemplateId(templateId)

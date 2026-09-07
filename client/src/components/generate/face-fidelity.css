@@ -1,0 +1,97 @@
+.lx-face-fidelity {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.lx-face-fidelity__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.lx-face-fidelity__options {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.lx-face-fidelity__option {
+  flex: 1 1 auto;
+  min-width: 5.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.65);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.lx-face-fidelity__option.is-active {
+  border-color: rgba(180, 140, 60, 0.55);
+  background: rgba(180, 140, 60, 0.12);
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.lx-face-fidelity__option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lx-face-fidelity__hint {
+  margin: 0.625rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.lx-upload-role-badge {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 12;
+  max-width: calc(100% - 1rem);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  pointer-events: none;
+}
+
+.lx-upload-role-badge--identity {
+  background: rgba(120, 86, 20, 0.82);
+}
+
+.lx-upload-role-badge--scene {
+  background: rgba(30, 58, 95, 0.82);
+}
+
+.lx-upload-role-badge--outfit {
+  background: rgba(75, 45, 95, 0.82);
+}
+
+.lx-upload-role-empty {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 12;
+  max-width: calc(100% - 1rem);
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  pointer-events: none;
+}

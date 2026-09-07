@@ -230,6 +230,19 @@ export const extraResources = {
       photoLabel: "Photo {{label}}",
       imageAlt: "Image {{index}}",
       videoAlt: "Vidéo {{index}}",
+      faceFidelityLabel: "Fidélité du visage",
+      identityPhotoHint:
+        "Utilise une photo nette, de face ou trois-quarts, bien éclairée, sans filtre, pour une meilleure fidélité.",
+      faceFidelity: {
+        standard: "Standard",
+        elevated: "Élevée",
+        maximum: "Maximum",
+      },
+      roles: {
+        identity: "Référence identité",
+        scene: "Référence scène",
+        outfit: "Référence tenue",
+      },
     },
     progress: {
       preparing: "Préparation…",
@@ -250,6 +263,9 @@ export const extraResources = {
       stepUnderstood: "Demande comprise...",
       stepEditing: "Modification en cours...",
       stepFinishing: "Finalisation du rendu...",
+      identityWarningTitle: "Fidélité visage limitée",
+      identityWarningHint:
+        "Le visage généré semble peu fidèle à ta photo identité. Essaie une photo plus nette ou relance la génération.",
     },
     history: {
       pageTitle: "Historique",
@@ -761,6 +777,19 @@ export const extraResources = {
       photoLabel: "Photo {{label}}",
       imageAlt: "Image {{index}}",
       videoAlt: "Video {{index}}",
+      faceFidelityLabel: "Face fidelity",
+      identityPhotoHint:
+        "Use a sharp, front or three-quarter photo, well lit and without filters for best fidelity.",
+      faceFidelity: {
+        standard: "Standard",
+        elevated: "High",
+        maximum: "Maximum",
+      },
+      roles: {
+        identity: "Identity reference",
+        scene: "Scene reference",
+        outfit: "Outfit reference",
+      },
     },
     progress: {
       preparing: "Preparing…",
@@ -780,6 +809,9 @@ export const extraResources = {
       stepUnderstood: "Request understood...",
       stepEditing: "Editing in progress...",
       stepFinishing: "Finishing the render...",
+      identityWarningTitle: "Limited face fidelity",
+      identityWarningHint:
+        "The generated face may not match your identity photo well. Try a sharper photo or regenerate.",
     },
     history: {
       pageTitle: "History",
@@ -1240,6 +1272,19 @@ export const extraResources = {
       photoLabel: "Foto {{label}}",
       imageAlt: "Imagen {{index}}",
       videoAlt: "Video {{index}}",
+      faceFidelityLabel: "Fidelidad del rostro",
+      identityPhotoHint:
+        "Usa una foto nítida, de frente o tres cuartos, bien iluminada y sin filtros para mejor fidelidad.",
+      faceFidelity: {
+        standard: "Estándar",
+        elevated: "Alta",
+        maximum: "Máxima",
+      },
+      roles: {
+        identity: "Referencia identidad",
+        scene: "Referencia escena",
+        outfit: "Referencia outfit",
+      },
     },
     progress: {
       preparing: "Preparando…",
@@ -1258,6 +1303,9 @@ export const extraResources = {
       stepUnderstood: "Peticion comprendida...",
       stepEditing: "Edicion en curso...",
       stepFinishing: "Finalizando el render...",
+      identityWarningTitle: "Fidelidad facial limitada",
+      identityWarningHint:
+        "El rostro generado parece poco fiel a tu foto de identidad. Prueba una foto más nítida o regenera.",
     },
     history: {
       pageTitle: "Historial de LARPs",
@@ -1679,6 +1727,19 @@ export const extraResources = {
       photoLabel: "Foto {{label}}",
       imageAlt: "Bild {{index}}",
       videoAlt: "Video {{index}}",
+      faceFidelityLabel: "Gesichtstreue",
+      identityPhotoHint:
+        "Nutze ein scharfes Foto von vorne oder leicht seitlich, gut beleuchtet und ohne Filter für beste Treue.",
+      faceFidelity: {
+        standard: "Standard",
+        elevated: "Hoch",
+        maximum: "Maximum",
+      },
+      roles: {
+        identity: "Identitätsreferenz",
+        scene: "Szenenreferenz",
+        outfit: "Outfit-Referenz",
+      },
     },
     progress: {
       preparing: "Vorbereitung…",
@@ -1697,6 +1758,9 @@ export const extraResources = {
       stepUnderstood: "Anfrage verstanden...",
       stepEditing: "Bearbeitung laeuft...",
       stepFinishing: "Render wird fertiggestellt...",
+      identityWarningTitle: "Begrenzte Gesichtstreue",
+      identityWarningHint:
+        "Das generierte Gesicht wirkt wenig treu zu deinem Identitätsfoto. Probiere ein schärferes Foto oder generiere erneut.",
     },
     history: {
       pageTitle: "LARP-Verlauf",
