@@ -36,8 +36,12 @@
     "name": "Avion business class",
     "description": "Cabine premium, tablette et casque Bose.",
     "imagePath": "/models/modele-avion-business.webp",
+    "readyImagePath": "/models/demo-avion-business-apres.webp",
     "demoAfterPath": "/models/demo-avion-business-apres.webp",
-    "prompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, barbe, coiffure, carnation et morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose assise dans le siège business class, la veste matelassée noire, le regard vers la tablette posée sur la table, le casque Bose sur le côté, le verre d'eau, l'intérieur cabine blanc et bleu marine, les hublots avec ciel bleu, le cadrage vertical et l'éclairage naturel de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, barbe, coiffure, carnation et morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose assise dans le siège business class, la doudoune matelassée noire, le regard vers la tablette posée sur la table, le casque Bose sur le côté, le verre d'eau, l'intérieur cabine blanc et bleu marine, les hublots avec ciel bleu, le cadrage vertical 9:16 et l'éclairage naturel de la seconde image. Photographie de luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde la cabine business class identique.",
     "category": "jets",
     "categoryName": "Jets & Vol"
   },
