@@ -1,5 +1,6 @@
 const VALID_SUBJECTS = new Set(["auto", "woman", "man", "unspecified"]);
 const VALID_POSE_STYLES = new Set([
+  "auto",
   "natural",
   "elegant",
   "streetwear",
@@ -74,21 +75,30 @@ const POSE_STYLE_DESCRIPTORS = {
   editorial: "editorial fashion pose, still photoreal and respectful",
 };
 
+const { buildAnalysisPromptBlock } = require("./subject-analysis");
+
 function normalizeSubjectType(value) {
   const key = String(value || "auto").trim().toLowerCase();
   return VALID_SUBJECTS.has(key) ? key : "auto";
 }
 
 function normalizePoseStyle(value) {
-  const key = String(value || "natural").trim().toLowerCase();
-  return VALID_POSE_STYLES.has(key) ? key : "natural";
+  const key = String(value || "auto").trim().toLowerCase();
+  return VALID_POSE_STYLES.has(key) ? key : "auto";
 }
 
-function resolveSubjectForGeneration(subject, autoResolved) {
-  if (subject === "auto") {
-    return autoResolved && autoResolved !== "auto" ? autoResolved : "unspecified";
-  }
-  return subject;
+function parseSubjectPoseFromBody(body) {
+  const subject = normalizeSubjectType(body?.subject_type);
+  const poseStyle = normalizePoseStyle(body?.pose_style);
+  return { subject, poseStyle };
+}
+
+function isManualSubjectOverride(subject) {
+  return subject === "woman" || subject === "man" || subject === "unspecified";
+}
+
+function isManualPoseOverride(poseStyle) {
+  return poseStyle !== "auto";
 }
 
 function pickPoseHints(poseStyle, resolvedSubject) {
@@ -101,51 +111,50 @@ function pickPoseHints(poseStyle, resolvedSubject) {
 function buildSubjectPosePromptBlock(input = {}) {
   const subject = normalizeSubjectType(input.subject);
   const poseStyle = normalizePoseStyle(input.poseStyle);
-  const autoResolved = input.autoResolved || null;
-  const resolved = resolveSubjectForGeneration(subject, autoResolved);
+  const analysis = input.analysis || null;
   const parts = [];
 
-  if (subject === "auto" && !autoResolved) {
-    parts.push(
-      "SUBJECT AUTO: infer the subject's gender presentation from reference image 1. If unclear, keep a neutral respectful natural posture without stereotypes.",
-    );
-  } else if (resolved === "woman") {
-    parts.push(SUBJECT_GUARDS.woman);
-  } else if (resolved === "man") {
-    parts.push(SUBJECT_GUARDS.man);
+  if (analysis) {
+    parts.push(buildAnalysisPromptBlock(analysis));
   } else {
     parts.push(
-      "SUBJECT NEUTRAL: respect the person's natural presentation from reference image 1. Use believable lifestyle posture without forcing gendered stereotypes.",
+      buildAnalysisPromptBlock(
+        require("./subject-analysis").heuristicAnalysis(
+          input.userPrompt || "",
+          input.sceneContext || "",
+        ),
+      ),
     );
   }
 
-  const poseHints = pickPoseHints(poseStyle, resolved);
-  parts.push(
-    `POSE STYLE (${poseStyle}): ${POSE_STYLE_DESCRIPTORS[poseStyle]}. Prefer: ${poseHints.join("; ") || "natural believable posture"}.`,
-  );
+  if (isManualSubjectOverride(subject)) {
+    if (subject === "woman") {
+      parts.push(`MANUAL SUBJECT OVERRIDE: ${SUBJECT_GUARDS.woman}`);
+    } else if (subject === "man") {
+      parts.push(`MANUAL SUBJECT OVERRIDE: ${SUBJECT_GUARDS.man}`);
+    } else {
+      parts.push(
+        "MANUAL SUBJECT OVERRIDE: neutral presentation — no forced gendered stereotypes.",
+      );
+    }
+  }
+
+  if (isManualPoseOverride(poseStyle)) {
+    const resolved =
+      subject === "woman" ? "woman" : subject === "man" ? "man" : "any";
+    const poseHints = pickPoseHints(poseStyle, resolved);
+    parts.push(
+      `MANUAL POSE OVERRIDE (${poseStyle}): ${POSE_STYLE_DESCRIPTORS[poseStyle]}. Prefer: ${poseHints.join("; ")}.`,
+    );
+  }
 
   if (input.faceSwapLockedPose) {
     parts.push(
-      "POSE LOCK NOTE: keep the exact body position from the scene reference image, but adapt hand placement, shoulder relaxation and overall body language to match the selected subject and pose style naturally within that fixed position.",
-    );
-  } else {
-    parts.push(
-      "POSE PRIORITY: identity from reference image 1 first, then subject and pose style, then outfit and decor. Avoid caricature, exaggeration or stereotype.",
+      "POSE LOCK NOTE: keep the exact body position from the scene reference image, but adapt hand placement, shoulder relaxation and overall body language to match the analyzed or overridden subject naturally within that fixed position.",
     );
   }
 
-  return parts.join(" ");
-}
-
-function parseSubjectPoseFromBody(body) {
-  const subject = normalizeSubjectType(body?.subject_type);
-  const poseStyle = normalizePoseStyle(body?.pose_style);
-  const autoResolved =
-    body?.subject_auto_resolved &&
-    VALID_SUBJECTS.has(String(body.subject_auto_resolved))
-      ? String(body.subject_auto_resolved)
-      : null;
-  return { subject, poseStyle, autoResolved };
+  return parts.filter(Boolean).join(" ");
 }
 
 module.exports = {
@@ -153,5 +162,6 @@ module.exports = {
   normalizeSubjectType,
   normalizePoseStyle,
   parseSubjectPoseFromBody,
-  resolveSubjectForGeneration,
+  isManualSubjectOverride,
+  isManualPoseOverride,
 };

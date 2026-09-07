@@ -49,6 +49,11 @@ module.exports = async function handler(req, res) {
     return generateDirect(req, res);
   }
 
+  if (parts[0] === "analyze-subject") {
+    const analyzeSubject = require("./_lib/handlers/analyze-subject");
+    return analyzeSubject(req, res);
+  }
+
   if (parts[0] === "can-generate") {
     return canGenerate(req, res);
   }

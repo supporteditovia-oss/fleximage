@@ -21,6 +21,7 @@ const {
   translateLimitReason,
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
+const { analyzeSubjectContext } = require("../subject-analysis");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
@@ -250,11 +251,24 @@ module.exports = async function handler(req, res) {
     const isBuiltinFaceSwapWithOutfit =
       isBuiltinFaceSwap && uploadedUrls.length >= 2;
 
-    const { subject, poseStyle, autoResolved } = parseSubjectPoseFromBody(body);
+    const { subject, poseStyle } = parseSubjectPoseFromBody(body);
+
+    const referenceImageUrl = imageUrls[0];
+    const sceneContext = resolvedTemplate?.ok
+      ? String(resolvedTemplate.prompt || effectivePrompt || "")
+      : "";
+    const subjectAnalysis = await analyzeSubjectContext({
+      imageUrl: referenceImageUrl,
+      userPrompt: effectivePrompt,
+      sceneContext,
+    });
+
     const subjectPoseBlock = buildSubjectPosePromptBlock({
       subject,
       poseStyle,
-      autoResolved,
+      analysis: subjectAnalysis,
+      userPrompt: effectivePrompt,
+      sceneContext,
       faceSwapLockedPose: isBuiltinFaceSwap,
     });
 
@@ -314,6 +328,9 @@ module.exports = async function handler(req, res) {
         metadata: {
           oneshot_model_variant: oneshotModelVariant,
           estimated_seconds: estimatedSeconds,
+          subject_analysis: subjectAnalysis,
+          subject_type: subject,
+          pose_style: poseStyle,
           ...(templateReferenceId
             ? {
                 ...(isBuiltinTemplateId(templateId)

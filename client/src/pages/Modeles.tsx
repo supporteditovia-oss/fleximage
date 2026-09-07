@@ -23,12 +23,8 @@ import {
 } from "@/lib/in-flight-generation";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
-import { SubjectAutoConfirmDialog } from "@/components/generate/SubjectAutoConfirmDialog";
-import type {
-  PoseStyle,
-  ResolvedSubjectType,
-  SubjectType,
-} from "@/lib/subject-pose-prompt";
+import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
+import { useSubjectAnalysisPreview } from "@/hooks/use-subject-analysis-preview";
 import {
   findTemplateByRouteKey,
   getCategoryBySlug,
@@ -335,13 +331,7 @@ export default function Modeles() {
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const [subjectType, setSubjectType] = useState<SubjectType>("auto");
-  const [poseStyle, setPoseStyle] = useState<PoseStyle>("natural");
-  const [autoResolvedSubject, setAutoResolvedSubject] =
-    useState<ResolvedSubjectType | null>(null);
-  const [showAutoSubjectConfirm, setShowAutoSubjectConfirm] = useState(false);
-  const [pendingPhotoAfterConfirm, setPendingPhotoAfterConfirm] = useState<
-    string | null
-  >(null);
+  const [poseStyle, setPoseStyle] = useState<PoseStyle>("auto");
 
   const route = useMemo(() => parseModelesPath(location), [location]);
   const viewMode = route.view;
@@ -365,6 +355,14 @@ export default function Modeles() {
     : activeCategory;
 
   const active = viewMode === "detail" ? detailTemplate : null;
+
+  const { summaryFr: modelesAnalysisSummary, loading: modelesAnalysisLoading } =
+    useSubjectAnalysisPreview(
+      null,
+      active?.name ?? "",
+      active?.generationPrompt ?? active?.name ?? "",
+      viewMode === "detail" && Boolean(active),
+    );
 
   // URL canonique = id du modèle (évite les collisions de slug côté API).
   useEffect(() => {
@@ -515,11 +513,6 @@ export default function Modeles() {
 
     const compressed = await compressImageForGeneration(file);
     const base64 = await fileToBase64(compressed);
-    if (subjectType === "auto" && !autoResolvedSubject) {
-      setPendingPhotoAfterConfirm(base64);
-      setShowAutoSubjectConfirm(true);
-      return;
-    }
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
@@ -539,9 +532,6 @@ export default function Modeles() {
         use_face_asset: false,
         subject_type: subjectType,
         pose_style: poseStyle,
-        ...(subjectType === "auto" && autoResolvedSubject
-          ? { subject_auto_resolved: autoResolvedSubject }
-          : {}),
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);
@@ -787,11 +777,9 @@ export default function Modeles() {
                   compact
                   subject={subjectType}
                   poseStyle={poseStyle}
-                  autoResolved={autoResolvedSubject}
-                  onSubjectChange={(value) => {
-                    setSubjectType(value);
-                    setAutoResolvedSubject(null);
-                  }}
+                  analysisSummary={modelesAnalysisSummary}
+                  analysisLoading={modelesAnalysisLoading}
+                  onSubjectChange={setSubjectType}
                   onPoseStyleChange={setPoseStyle}
                 />
               }
@@ -836,25 +824,6 @@ export default function Modeles() {
           setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
-      />
-
-      <SubjectAutoConfirmDialog
-        open={showAutoSubjectConfirm}
-        detectedLabel="confirmez le sujet avant de choisir la tenue"
-        onCancel={() => {
-          setShowAutoSubjectConfirm(false);
-          setPendingPhotoAfterConfirm(null);
-          if (fileRef.current) fileRef.current.value = "";
-        }}
-        onConfirm={(resolved) => {
-          setAutoResolvedSubject(resolved);
-          setShowAutoSubjectConfirm(false);
-          if (pendingPhotoAfterConfirm) {
-            setPendingUserPhoto(pendingPhotoAfterConfirm);
-            setPendingPhotoAfterConfirm(null);
-            setShowOutfitQuestion(true);
-          }
-        }}
       />
 
       {active ? <span className="sr-only">{active.name}</span> : null}

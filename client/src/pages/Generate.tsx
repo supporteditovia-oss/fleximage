@@ -69,12 +69,8 @@ import {
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
-import { SubjectAutoConfirmDialog } from "@/components/generate/SubjectAutoConfirmDialog";
-import type {
-  PoseStyle,
-  ResolvedSubjectType,
-  SubjectType,
-} from "@/lib/subject-pose-prompt";
+import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
+import { useSubjectAnalysisPreview } from "@/hooks/use-subject-analysis-preview";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -135,10 +131,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const [outfitPickerBusy, setOutfitPickerBusy] = useState(false);
   const [subjectType, setSubjectType] = useState<SubjectType>("auto");
-  const [poseStyle, setPoseStyle] = useState<PoseStyle>("natural");
-  const [autoResolvedSubject, setAutoResolvedSubject] =
-    useState<ResolvedSubjectType | null>(null);
-  const [showAutoSubjectConfirm, setShowAutoSubjectConfirm] = useState(false);
+  const [poseStyle, setPoseStyle] = useState<PoseStyle>("auto");
 
   // ── Hooks ───────────────────────────────────────────────────
   const generateDirect = useGenerateDirectLarp();
@@ -155,6 +148,14 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     useGenerationEligibility();
   const { profile, user, isLoading: isAuthLoading, isAdmin } = useAuth();
   const adminPreview = useAdminPreviewFeatures();
+  const firstImageFile = images.find((img) => img !== null)?.file ?? null;
+  const { summaryFr: analysisSummary, loading: analysisLoading } =
+    useSubjectAnalysisPreview(
+      firstImageFile,
+      prompt,
+      "",
+      generationMode === "image" && !selectedTemplate,
+    );
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
@@ -869,21 +870,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       return;
     }
 
-    if (
-      generationMode === "image" &&
-      subjectType === "auto" &&
-      !autoResolvedSubject
-    ) {
-      setShowAutoSubjectConfirm(true);
-      return;
-    }
-
     await executeGeneration();
   };
 
-  const executeGeneration = async (
-    overrideAutoResolved?: ResolvedSubjectType | null,
-  ) => {
+  const executeGeneration = async () => {
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -899,8 +889,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     );
     const filesForGeneration =
       generationMode === "video" ? files.slice(0, 1) : files;
-
-    const resolvedAutoSubject = overrideAutoResolved ?? autoResolvedSubject;
 
     const serverPrompt = isTemplateGeneration
       ? selectedTemplate?.prompt_text?.trim() || " "
@@ -1077,9 +1065,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         use_face_asset: false,
         subject_type: subjectType,
         pose_style: poseStyle,
-        ...(subjectType === "auto" && resolvedAutoSubject
-          ? { subject_auto_resolved: resolvedAutoSubject }
-          : {}),
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1505,26 +1490,18 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             <>
               <ImageUploadGrid
                 images={images}
-                onImageSelect={(index, file) => {
-                  setAutoResolvedSubject(null);
-                  handleImageSelect(index, file);
-                }}
-                onRemoveSlot={(index) => {
-                  setAutoResolvedSubject(null);
-                  removeSlot(index);
-                }}
+                onImageSelect={handleImageSelect}
+                onRemoveSlot={removeSlot}
                 generationMode="image"
               />
 
-              {generationMode === "image" ? (
+              {generationMode === "image" && !selectedTemplate ? (
                 <SubjectPoseControls
                   subject={subjectType}
                   poseStyle={poseStyle}
-                  autoResolved={autoResolvedSubject}
-                  onSubjectChange={(value) => {
-                    setSubjectType(value);
-                    setAutoResolvedSubject(null);
-                  }}
+                  analysisSummary={analysisSummary}
+                  analysisLoading={analysisLoading}
+                  onSubjectChange={setSubjectType}
                   onPoseStyleChange={setPoseStyle}
                 />
               ) : null}
@@ -1585,17 +1562,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           onSelect={(outfit) => void handleOutfitSelect(outfit)}
         />
       ) : null}
-
-      <SubjectAutoConfirmDialog
-        open={showAutoSubjectConfirm}
-        detectedLabel="la détection depuis votre photo est incertaine"
-        onCancel={() => setShowAutoSubjectConfirm(false)}
-        onConfirm={(resolved) => {
-          setAutoResolvedSubject(resolved);
-          setShowAutoSubjectConfirm(false);
-          void executeGeneration(resolved);
-        }}
-      />
     </div>
   );
 }

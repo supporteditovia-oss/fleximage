@@ -13,16 +13,45 @@
   padding: 0.65rem 0.75rem;
 }
 
+.subject-pose-controls__preview {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #3d320c;
+}
+
+.subject-pose-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(26, 20, 8, 0.55);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.subject-pose-advanced-toggle svg {
+  transition: transform 0.15s ease;
+}
+
+.subject-pose-advanced-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
 .subject-pose-controls__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
-}
-
-@media (max-width: 480px) {
-  .subject-pose-controls__grid {
-    grid-template-columns: 1fr;
-  }
+  margin-top: 0.65rem;
 }
 
 .subject-pose-field {
@@ -40,7 +69,13 @@
 }
 
 .subject-pose-required {
-  color: #c9a227;
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .subject-pose-controls__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .subject-pose-field__select {
@@ -52,17 +87,6 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: #1a1408;
-}
-
-.subject-pose-controls__preview {
-  margin: 0.7rem 0 0;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.65rem;
-  background: rgba(201, 162, 39, 0.1);
-  border: 1px solid rgba(201, 162, 39, 0.22);
-  font-size: 0.82rem;
-  line-height: 1.4;
-  color: #3d320c;
 }
 
 .subject-pose-controls__preview-label {

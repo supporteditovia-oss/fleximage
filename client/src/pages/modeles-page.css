@@ -330,6 +330,10 @@ html.luxeflexia-modeles-page .tpl-slide__compare .lx-compare__labels {
   color: #f6e7bd;
 }
 
+.tpl-subject-pose-slot .subject-pose-advanced-toggle {
+  color: rgba(246, 231, 189, 0.72);
+}
+
 .tpl-cta {
   width: 100%;
   border: 0;
