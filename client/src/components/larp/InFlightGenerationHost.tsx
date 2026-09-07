@@ -46,7 +46,7 @@ export function InFlightGenerationHost() {
       initialEstimatedSeconds={inflight.estimatedSeconds}
       initialStartedAtMs={inflight.startedAtMs}
       onReset={handleReset}
-      resultType="image"
+      resultType={inflight.resultType ?? "image"}
     />,
     document.body,
   );

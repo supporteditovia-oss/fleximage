@@ -49,6 +49,10 @@ import {
   persistInFlightFromApiResult,
   GENERATION_IN_FLIGHT_EVENT,
 } from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
   markFakePaywallReached,
@@ -819,7 +823,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       generationLockRef.current ||
       isSubmittingGeneration ||
       taskId ||
-      getInFlightGeneration()
+      getInFlightGeneration() ||
+      !tryAcquireGenerationSubmitLock()
     ) {
       return;
     }
@@ -1023,7 +1028,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
-        persistInFlightFromApiResult(result, "generate");
+        persistInFlightFromApiResult(result, "generate", "video");
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
           trackFunnelStep("generate", { source: "video", taskId: result.taskId });
@@ -1133,12 +1138,14 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         description: message,
       });
     } finally {
+      releaseGenerationSubmitLock();
       setIsStartingGeneration(false);
     }
   };
 
   const handleReset = useCallback(() => {
     generationLockRef.current = false;
+    releaseGenerationSubmitLock();
     clearInFlightGeneration();
     setHasInFlightOverlay(false);
     setTaskId(null);

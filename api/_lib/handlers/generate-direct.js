@@ -30,34 +30,10 @@ const {
   isBuiltinTemplateId,
   resolveBuiltinTemplateGeneration,
 } = require("../builtin-image-templates");
-
-/** Block duplicate clicks — one in-flight image generation per user. */
-const GENERATION_DEDUP_WINDOW_MS = 90_000;
-
-function extractClientTaskId(providerTaskId) {
-  const parts = String(providerTaskId || "")
-    .split(",")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-  const last = parts[parts.length - 1] || "";
-  // Keep full segment (e.g. custom_*) — status poll matches provider_task_id segments.
-  return last;
-}
-
-async function findRecentInFlightGeneration(supabase, userId) {
-  const since = new Date(Date.now() - GENERATION_DEDUP_WINDOW_MS).toISOString();
-  const { data, error } = await supabase
-    .from("generations")
-    .select("id, provider_task_id, metadata, created_at")
-    .eq("user_id", userId)
-    .eq("generation_type", "image")
-    .eq("status", "processing")
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (error) throw error;
-  return data && data[0] ? data[0] : null;
-}
+const {
+  findRecentInFlightGeneration,
+  buildDedupGenerateResponse,
+} = require("../generation-dedup");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -151,23 +127,7 @@ module.exports = async function handler(req, res) {
 
     const inFlight = await findRecentInFlightGeneration(supabase, userId);
     if (inFlight) {
-      const existingTaskId = extractClientTaskId(inFlight.provider_task_id);
-      const meta =
-        inFlight.metadata && typeof inFlight.metadata === "object"
-          ? inFlight.metadata
-          : {};
-      res.status(200).json({
-        id: inFlight.id,
-        taskId: existingTaskId,
-        status: "processing",
-        createdAt: inFlight.created_at || null,
-        estimatedSeconds:
-          meta.estimated_seconds != null &&
-          Number.isFinite(Number(meta.estimated_seconds))
-            ? Number(meta.estimated_seconds)
-            : null,
-        deduplicated: true,
-      });
+      res.status(200).json(buildDedupGenerateResponse(inFlight));
       return;
     }
 

@@ -21,6 +21,10 @@ import {
   getInFlightGeneration,
   persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
 import { savePaywallPrompt } from "@/lib/paywall-prompt";
@@ -141,7 +145,8 @@ export default function HeroSection() {
       generationLockRef.current ||
       generateDirect.isPending ||
       taskId ||
-      getInFlightGeneration()
+      getInFlightGeneration() ||
+      !tryAcquireGenerationSubmitLock()
     ) {
       return;
     }
@@ -245,6 +250,8 @@ export default function HeroSection() {
           title: t("hero.emptyPromptTitle"),
           description: message,
         });
+      } finally {
+        releaseGenerationSubmitLock();
       }
     } else {
       const guestPrompt = prompt.trim() || t("hero.surprisePrompt");

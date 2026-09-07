@@ -12,6 +12,7 @@ export type InFlightGeneration = {
   /** Horodatage réel du début (created_at serveur en ms). */
   startedAtMs: number;
   source: InFlightGenerationSource;
+  resultType?: "image" | "video";
   savedAt: number;
 };
 
@@ -87,17 +88,21 @@ export function persistInFlightFromApiResult(
     createdAt?: string | null;
   },
   source: InFlightGenerationSource,
+  resultType: "image" | "video" = "image",
 ): void {
   const startedAtMs = parseApiCreatedAtMs(result.createdAt) ?? Date.now();
   const estimatedSeconds =
     typeof result.estimatedSeconds === "number" &&
     Number.isFinite(result.estimatedSeconds)
       ? result.estimatedSeconds
-      : 45;
+      : resultType === "video"
+        ? 150
+        : 45;
   saveInFlightGeneration({
     taskId: result.taskId,
     estimatedSeconds,
     startedAtMs,
     source,
+    resultType,
   });
 }

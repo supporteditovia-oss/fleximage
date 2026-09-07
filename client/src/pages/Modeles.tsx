@@ -10,6 +10,10 @@ import {
   getInFlightGeneration,
   persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
@@ -462,7 +466,13 @@ export default function Modeles() {
     template: FeedTemplate,
     userImages: string[] = [],
   ) => {
-    if (generationLockRef.current || busy || taskId || getInFlightGeneration()) {
+    if (
+      generationLockRef.current ||
+      busy ||
+      taskId ||
+      getInFlightGeneration() ||
+      !tryAcquireGenerationSubmitLock()
+    ) {
       return;
     }
     generationLockRef.current = true;
@@ -478,12 +488,14 @@ export default function Modeles() {
       setTaskId(result.taskId);
     } catch (error: any) {
       generationLockRef.current = false;
+      releaseGenerationSubmitLock();
       toast({
         variant: "destructive",
         title: "Génération impossible",
         description: error?.message || "Réessaie dans un instant.",
       });
     } finally {
+      releaseGenerationSubmitLock();
       setBusy(false);
       setPendingUserPhoto(null);
       setShowOutfitQuestion(false);
