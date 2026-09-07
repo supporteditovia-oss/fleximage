@@ -38,28 +38,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding:
+    calc(3.75rem + env(safe-area-inset-top, 0px))
+    0
+    calc(11.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .tpl-slide__compare {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: relative;
+  inset: auto;
+  width: min(100%, calc((100svh - 15rem) * 4 / 5));
+  max-width: 100%;
+  height: auto;
+  flex: 0 0 auto;
 }
 
 .tpl-slide__compare .lx-compare {
   width: 100%;
-  height: 100%;
-  max-height: none;
-  border-radius: 0;
-  aspect-ratio: auto;
+  height: auto;
+  max-height: calc(100svh - 15rem);
+  border-radius: 0.85rem;
+  aspect-ratio: 4 / 5;
   contain: strict;
 }
 
 .tpl-slide__compare .lx-compare__img,
 .tpl-slide__compare .lx-compare__img--before,
 .tpl-slide__compare .lx-compare__img--after {
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
 }
 
@@ -80,7 +86,7 @@ html.luxeflexia-modeles-page .tpl-slide__compare .lx-compare__labels {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
 }
 
@@ -183,6 +189,14 @@ html.luxeflexia-modeles-page .tpl-slide__compare .lx-compare__labels {
 
 .tpl-preview-overlay__compare .lx-compare {
   max-height: calc(100svh - 9rem);
+  aspect-ratio: 4 / 5;
+}
+
+.tpl-preview-overlay__compare .lx-compare__img,
+.tpl-preview-overlay__compare .lx-compare__img--before,
+.tpl-preview-overlay__compare .lx-compare__img--after {
+  object-fit: contain;
+  object-position: center center;
 }
 
 .tpl-preview-overlay__note {
@@ -1117,13 +1131,16 @@ html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__media {
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare {
+  width: min(100%, 420px);
+  margin-inline: auto;
+  aspect-ratio: 4 / 5;
   contain: strict;
 }
 
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img,
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img--before,
 html.luxeflexia-modeles-page.luxeflexia-modeles-desktop .tpl-slide__compare .lx-compare__img--after {
-  object-fit: cover !important;
+  object-fit: contain !important;
   object-position: center center !important;
 }
 
