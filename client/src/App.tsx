@@ -20,6 +20,7 @@ import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
 import Historique from "@/pages/Historique";
@@ -184,6 +185,18 @@ function HistoriqueRoute() {
   return <Historique />;
 }
 
+function AdminPreviewRoute({ component: Component }: { component: React.ComponentType }) {
+  const adminPreview = useAdminPreviewFeatures();
+  if (!adminPreview) {
+    return <Redirect to="/create" />;
+  }
+  return <Component />;
+}
+
+function ModelesAdminRoute() {
+  return <AdminPreviewRoute component={Modeles} />;
+}
+
 function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -228,9 +241,9 @@ function ProtectedAppRoutes() {
       <ErrorBoundary>
         <Switch>
           <Route path="/create" component={Create} />
-          <Route path="/modeles/m/:templateSlug" component={Modeles} />
-          <Route path="/modeles/c/:categorySlug" component={Modeles} />
-          <Route path="/modeles" component={Modeles} />
+          <Route path="/modeles/m/:templateSlug" component={ModelesAdminRoute} />
+          <Route path="/modeles/c/:categorySlug" component={ModelesAdminRoute} />
+          <Route path="/modeles" component={ModelesAdminRoute} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
           <Route path="/image-prete" component={ImagePrete} />

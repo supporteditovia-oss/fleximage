@@ -1,8 +1,7 @@
 import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
-import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
@@ -16,12 +15,12 @@ type TemplateStripProps = {
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
-  const { isAdmin } = useAuth();
+  const adminPreview = useAdminPreviewFeatures();
   const { data: templates } = useTemplateFeed({
-    enabled: canAccessAdminPreviewFeatures(isAdmin),
+    enabled: adminPreview,
   });
 
-  if (!canAccessAdminPreviewFeatures(isAdmin)) {
+  if (!adminPreview) {
     return null;
   }
 

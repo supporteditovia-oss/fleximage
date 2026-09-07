@@ -115,8 +115,12 @@ function mergeTemplateLists(
 }
 
 export function useTemplateFeed(options: { enabled?: boolean } = {}) {
-  const { isAdmin } = useAuth();
-  const adminPreview = canAccessAdminPreviewFeatures(isAdmin);
+  const { isAdmin, isLoading, profile, user } = useAuth();
+  const adminPreview = canAccessAdminPreviewFeatures({
+    isAdmin,
+    isAuthLoading: isLoading,
+    profileLoaded: Boolean(user && profile),
+  });
   const fallbackTemplates = adminPreview ? BUILTIN_FEED_TEMPLATES : [];
 
   return useQuery<FeedTemplate[]>({

@@ -67,7 +67,7 @@ import {
   type BuiltinOutfit,
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
-import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -142,7 +142,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
   const { profile, user, isLoading: isAuthLoading, isAdmin } = useAuth();
-  const adminPreview = canAccessAdminPreviewFeatures(isAdmin);
+  const adminPreview = useAdminPreviewFeatures();
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
