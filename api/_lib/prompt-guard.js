@@ -2012,22 +2012,15 @@ function vehicleForbiddenBrandHint(prompt) {
   );
 }
 
-/** Nano Banana Pro for complex vehicle identity / lifestyle relocations. */
-function needsProModelVariant(prompt) {
-  return (
-    isAddAnimalPrompt(prompt) ||
-    isMotorcycleReplacePrompt(prompt) ||
-    isMotorcycleRidePrompt(prompt) ||
-    isFictionalVehiclePrompt(prompt) ||
-    (isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt))
-  );
+/** @deprecated Nano Banana Pro is forbidden — always Nano Banana 2 (`fast`). */
+function needsProModelVariant(_prompt) {
+  return false;
 }
 
 /** Honest client countdown — provider pass + typical vision QA / one corrective regen. */
 function estimateGenerationSeconds(prompt, options = {}) {
   const refs = Math.max(0, Number(options.referenceImageCount) || 0);
-  const pro = needsProModelVariant(prompt);
-  let providerSec = pro ? 50 : 34;
+  let providerSec = 34;
   if (refs >= 2) providerSec += 8;
   if (refs >= 3) providerSec += 6;
   if (isVehicleReplacePrompt(prompt)) providerSec += 12;

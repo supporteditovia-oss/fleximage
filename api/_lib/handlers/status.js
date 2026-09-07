@@ -1,14 +1,16 @@
 const { requireUser, sendError } = require("../user-auth");
 const { downloadAndStoreImages } = require("../r2");
 const {
+  getOneshotApiConfig,
   getAppSettings,
   isGoogleAiPromptFlagged,
   getOneshotJobStatus,
   uploadImageUrlsToOneshot,
   createOneshotJob,
+  ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
 const { createKieTask, getKieTaskStatus, isKieConfigured } = require("../kie");
-const { buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, buildVisionQaRetryPrompt } = require("../prompt-guard");
+const { buildLiteralRetryPrompt, buildVisionQaRetryPrompt } = require("../prompt-guard");
 const { maybeRetryAfterVisionQa } = require("../vision-qa");
 const {
   OUTPUT_ASPECT_RATIO,
@@ -246,35 +248,29 @@ module.exports = async function handler(req, res) {
         apiStatus = "success";
         apiResultJson = JSON.stringify(customStatus);
       } else if (isCustomApiFailed) {
-        // Only retry on real failures/safety — do NOT abandon a still-running job
-        // on soft timeout (that made swaps feel endless by restarting mid-flight).
-        const oneshotTaskId = larp.provider_task_id;
         const meta =
           larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
         const softRetryCount = Number(
           meta.oneshot_soft_retry_count || (meta.oneshot_soft_retry ? 1 : 0),
         );
-        const facialHairRetry = isFacialHairPrompt(
-          String(larp.final_prompt || larp.prompt || ""),
-        );
-        // Facial-hair comedy edits often need a 2nd neutralized retry after safety flags.
-        const maxSoftRetries = facialHairRetry ? 2 : 1;
-        const alreadySoftRetried = softRetryCount >= maxSoftRetries;
-        const policyFlagged = isGoogleAiPromptFlagged(customStatus);
-        const shouldSoftRetry = policyFlagged || isCustomApiFailed;
+        const alreadySoftRetried = softRetryCount >= 1;
 
-        if (!isKieConfigured() && (!shouldSoftRetry || alreadySoftRetried)) {
+        // OneShot: never spawn a 2nd job on poll failure (duplicate spend).
+        if (!isKieConfigured() || alreadySoftRetried) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             customStatus && customStatus.error,
-            "Échec Oneshot (pas de fallback Kie configuré)",
+            isKieConfigured()
+              ? "Échec de la génération"
+              : "Échec Oneshot (pas de fallback Kie configuré)",
           );
         } else {
+          const oneshotTaskId = larp.provider_task_id;
           const claimMarker = `${oneshotTaskId},__claiming__`;
           const { data: claimedRows, error: claimErr } = await supabase
             .from("generations")
             .update({
-              provider: isKieConfigured() ? "fallback" : "oneshot",
+              provider: "fallback",
               provider_task_id: claimMarker,
               updated_at: new Date().toISOString(),
             })
@@ -304,96 +300,32 @@ module.exports = async function handler(req, res) {
           const imageUrls = Array.isArray(larp.input_assets)
             ? larp.input_assets
             : [];
-          const nextRetryCount = softRetryCount + 1;
-          const fallbackPrompt =
-            facialHairRetry && nextRetryCount >= 2
-              ? buildFacialHairHardRetryPrompt(
-                  String(larp.final_prompt || ""),
-                )
-              : buildLiteralRetryPrompt(String(larp.final_prompt || ""));
+          const fallbackPrompt = buildLiteralRetryPrompt(
+            String(larp.final_prompt || ""),
+          );
 
           try {
-            if (isKieConfigured()) {
-              const fallbackKieResponse = await createKieTask({
-                prompt: fallbackPrompt,
-                aspect_ratio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
-                ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
-              });
+            const fallbackKieResponse = await createKieTask({
+              prompt: fallbackPrompt,
+              aspect_ratio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+              ...(imageUrls.length > 0 ? { image_input: imageUrls } : {}),
+            });
 
-              if (
-                fallbackKieResponse.code === 200 &&
-                fallbackKieResponse.data?.taskId
-              ) {
-                const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
-                await supabase
-                  .from("generations")
-                  .update({
-                    provider: "fallback",
-                    provider_task_id: newKieTaskIdString,
-                    final_prompt: fallbackPrompt,
-                    metadata: {
-                      ...meta,
-                      oneshot_soft_retry: true,
-                      oneshot_soft_retry_count: nextRetryCount,
-                    },
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("id", larp.id);
-
-                res.status(200).json({
-                  larpId: larp.id,
-                  ...statusTimingFields(larp),
-                  status: "waiting",
-                  resultUrls: [],
-                  failMessage: null,
-                  costTime: null,
-                  isSubscriber: false,
-                  requiresPaywall: false,
-                  resultType: "image",
-                });
-                return;
-              }
-
-              const kieMsg =
-                fallbackKieResponse && fallbackKieResponse.msg
-                  ? String(fallbackKieResponse.msg)
-                  : "réponse invalide";
-              apiStatus = "fail";
-              apiFailMsg = `Échec du fallback (${kieMsg})`;
-            } else {
-              // No Kie: one OneShot soft-retry with marketing/literal framing (fuel jokes, etc.).
-              const referenceFileIds =
-                imageUrls.length > 0
-                  ? await uploadImageUrlsToOneshot(imageUrls)
-                  : [];
-              const retryResponse = await createOneshotJob(fallbackPrompt, {
-                aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
-                modelVariant:
-                  isAddAnimalPrompt(String(larp.prompt || "")) ||
-                  isMotorcycleReplacePrompt(String(larp.prompt || "")) ||
-                  isMotorcycleRidePrompt(String(larp.prompt || "")) ||
-                  isFictionalVehiclePrompt(String(larp.prompt || "")) ||
-                  /ANIMAL PHOTOREAL|PHOTOREAL SELFIE EDIT|Add a real BABY|Add a real full-grown|MOTORCYCLE\/SCOOTER FULL BODY|TMAX LOCK|BIKE SWAP LOCK|FICTIONAL VEHICLE/i.test(
-                    String(larp.final_prompt || ""),
-                  )
-                    ? "default" : "fast",
-                ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-              });
-              if (!retryResponse || !retryResponse.id) {
-                throw new Error("Invalid response from OneshotAPI retry");
-              }
+            if (
+              fallbackKieResponse.code === 200 &&
+              fallbackKieResponse.data?.taskId
+            ) {
+              const newKieTaskIdString = `${oneshotTaskId},${fallbackKieResponse.data.taskId}`;
               await supabase
                 .from("generations")
                 .update({
-                  provider: "oneshot",
-                  // Keep the original task id in the chain so the client (still
-                  // polling the first id) can find this row after soft-retry.
-                  provider_task_id: `${oneshotTaskId},custom_${retryResponse.id}`,
+                  provider: "fallback",
+                  provider_task_id: newKieTaskIdString,
                   final_prompt: fallbackPrompt,
                   metadata: {
                     ...meta,
                     oneshot_soft_retry: true,
-                    oneshot_soft_retry_count: nextRetryCount,
+                    oneshot_soft_retry_count: softRetryCount + 1,
                   },
                   updated_at: new Date().toISOString(),
                 })
@@ -409,12 +341,18 @@ module.exports = async function handler(req, res) {
                 isSubscriber: false,
                 requiresPaywall: false,
                 resultType: "image",
-                activeTaskId: `custom_${retryResponse.id}`,
               });
               return;
             }
+
+            apiStatus = "fail";
+            apiFailMsg = `Échec du fallback (${
+              fallbackKieResponse && fallbackKieResponse.msg
+                ? String(fallbackKieResponse.msg)
+                : "réponse invalide"
+            })`;
           } catch (fallbackErr) {
-            console.error("provider fallback/retry failed", fallbackErr);
+            console.error("provider fallback failed", fallbackErr);
             apiStatus = "fail";
             apiFailMsg = `Échec du fallback (${
               fallbackErr && fallbackErr.message
@@ -527,8 +465,7 @@ module.exports = async function handler(req, res) {
               ? larp.metadata
               : {};
           const qaModelVariant =
-            meta.oneshot_model_variant ||
-            (needsProModelVariant(String(larp.prompt || "")) ? "default" : "fast");
+            meta.oneshot_model_variant || ONESHOT_MODEL_VARIANT;
           const qaDecision = await withTimeout(
             maybeRetryAfterVisionQa({
               supabase,
