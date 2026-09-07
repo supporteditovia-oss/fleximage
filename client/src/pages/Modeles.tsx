@@ -538,6 +538,16 @@ export default function Modeles() {
     }
   };
 
+  const cancelOutfitFlow = useCallback(() => {
+    outfitResolvedRef.current = false;
+    generationLockRef.current = false;
+    setPendingTemplate(null);
+    setPendingUserPhoto(null);
+    setShowOutfitQuestion(false);
+    setShowOutfitPicker(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }, []);
+
   const finishWithUserPhotoOnly = async () => {
     if (outfitResolvedRef.current || generationLockRef.current) return;
     outfitResolvedRef.current = true;
@@ -763,6 +773,7 @@ export default function Modeles() {
 
       <OutfitChangeQuestion
         open={showOutfitQuestion}
+        onClose={cancelOutfitFlow}
         onNo={() => void finishWithUserPhotoOnly()}
         onYes={() => {
           setShowOutfitQuestion(false);

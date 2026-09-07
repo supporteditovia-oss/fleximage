@@ -46,9 +46,24 @@ export function OutfitPickerModal({
       return;
     }
     setGender(defaultGender);
+  }, [open, defaultGender]);
+
+  useEffect(() => {
+    if (!open) return;
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
     window.$crisp?.push(["do", "chat:hide"]);
+    return () => {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-fullscreen-overlay");
+      if (!document.documentElement.classList.contains("luxeflexia-modeles-page")) {
+        window.$crisp?.push(["do", "chat:show"]);
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (confirmOutfit) {
@@ -60,15 +75,8 @@ export function OutfitPickerModal({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.documentElement.removeAttribute("data-fullscreen-overlay");
-      document.body.removeAttribute("data-fullscreen-overlay");
-      if (!document.documentElement.classList.contains("luxeflexia-modeles-page")) {
-        window.$crisp?.push(["do", "chat:show"]);
-      }
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [confirmOutfit, defaultGender, open, onClose]);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, confirmOutfit, onClose]);
 
   useEffect(() => {
     setSelectedId(null);
