@@ -141,6 +141,11 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "BODY BUILD LOCK: image 1's real body type — never copy template muscles. " +
   "FORBIDDEN: face-only paste; mismatched face vs legs; dark legs with light face or reverse. Seamless photoreal blend.";
 
+const BUILTIN_SCENE_PIXEL_LOCK =
+  " PIXEL-PERFECT SCENE LOCK: identical camera, crop, horizon, perspective as image 2. " +
+  "Zero pan/tilt/zoom/reframe. Every non-human pixel unchanged — car interior, URUS sill text, dashboard, background landmarks at same position. " +
+  "Only the human identity changes.";
+
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   " Recolor every exposed skin pixel to match image 1 — especially legs visible below shorts/pants and above socks.";
 
@@ -149,7 +154,7 @@ export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): stri
   const userPart =
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SCENE_PIXEL_LOCK}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);
@@ -167,7 +172,7 @@ export function buildBuiltinTemplateFaceSwapWithOutfitPrompt(
   const userPart =
     cleaned ||
     "Replace the model person with the user, wearing outfit from image 2, scene from image 3 identical.";
-  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD} ${userPart} ${qualitySuffix()}`;
+  const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD}${BUILTIN_SCENE_PIXEL_LOCK} ${userPart} ${qualitySuffix()}`;
   return combined.length <= MAX_FINAL_PROMPT
     ? combined
     : combined.slice(0, MAX_FINAL_PROMPT);

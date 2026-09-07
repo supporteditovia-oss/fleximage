@@ -80,6 +80,15 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 
+/** Verrouillage caméra / décor pixel-par-pixel pour tous les modèles prêts. */
+const BUILTIN_SCENE_PIXEL_LOCK =
+  "PIXEL-PERFECT SCENE LOCK (critical — highest priority): treat image 2 as a frozen photograph. " +
+  "The output must use the IDENTICAL camera position, focal length, field of view, crop, aspect ratio 9:16, horizon line, and perspective as image 2. " +
+  "ZERO camera movement — forbidden: pan, tilt, zoom, dolly, reframe, wider/narrower shot, parallax shift, background drift, horizon creep, micro-shift of landmarks. " +
+  "Every non-human pixel must match image 2: sky gradient, clouds, buildings, sea, palm trees, road, bridge, railing, car exterior paint, window frame, A-pillar, roof line, dashboard, steering wheel angle and position, digital cluster, seat leather grain, door sill plates, floor mats, seatbelt, mirrors, and through-window background (Burj Al Arab position, Palm Jumeirah shape, sunset color). " +
+  "If engraved text or badges are visible in image 2 (e.g. URUS on door sill, brand on wheel, cluster UI), they MUST remain visible at the same pixel region, size, and angle — never crop them out. " +
+  "Only replace the human identity (face, hair, skin, body under the same clothes) — the photograph itself must NOT be re-shot, re-composed, or regenerated.";
+
 /** Renfort explicite — jambes/mains visibles entre vêtements (Urus, yacht torse nu, etc.). */
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   "UNIFORM SKIN MANDATORY (reject if violated): recolor EVERY pixel of exposed skin on the replaced person to match image 1 — " +
@@ -97,6 +106,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
     "Replace the model person with the user while keeping the scene identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    BUILTIN_SCENE_PIXEL_LOCK,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
@@ -137,6 +147,7 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
     "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
+    BUILTIN_SCENE_PIXEL_LOCK,
     OUTFIT_FROM_REF_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
