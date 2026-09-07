@@ -10,7 +10,10 @@ import { LarpResult } from "./LarpResult";
 import { GenerationLoader } from "./GenerationLoader";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
-import { clearInFlightGeneration } from "@/lib/in-flight-generation";
+import {
+  clearInFlightGeneration,
+  parseApiCreatedAtMs,
+} from "@/lib/in-flight-generation";
 import { BrandMark } from "@/components/BrandMark";
 import { useStudioPath } from "@/hooks/use-studio-path";
 
@@ -24,6 +27,8 @@ interface GenerationProgressProps {
   referenceImageCount?: number;
   /** Server estimate returned at generate-direct start (before first poll). */
   initialEstimatedSeconds?: number;
+  /** Début réel (created_at) — conservé en sessionStorage pour reprendre le poll. */
+  initialStartedAtMs?: number;
 }
 
 const LX_AUTH_BG =
@@ -37,6 +42,7 @@ export function GenerationProgress({
   resultType = "image",
   referenceImageCount = 1,
   initialEstimatedSeconds,
+  initialStartedAtMs,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -79,7 +85,6 @@ export function GenerationProgress({
     if (hasPersistedResult.current) return;
     if (data?.status !== "success" || !hasResultMedia || !data.larpId) return;
     hasPersistedResult.current = true;
-    clearInFlightGeneration();
     saveLastGeneration({
       taskId,
       larpId: data.larpId,
@@ -227,15 +232,16 @@ export function GenerationProgress({
             Number.isFinite(initialEstimatedSeconds)
               ? initialEstimatedSeconds
               : referenceImageCount >= 2
-                ? 62
-                : 50;
+                ? 52
+                : 45;
           return polled ?? fallback;
         })();
 
-  const serverRemainingSeconds =
-    data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)
-      ? data.remainingSeconds
-      : null;
+  const generationStartedAtMs =
+    parseApiCreatedAtMs(data?.createdAt) ??
+    (initialStartedAtMs != null && Number.isFinite(initialStartedAtMs)
+      ? initialStartedAtMs
+      : null);
 
   const isGenerating =
     loaderStatus === "connecting" ||
@@ -261,7 +267,7 @@ export function GenerationProgress({
           <GenerationLoader
             status={loaderStatus}
             estimatedSeconds={estimatedSeconds}
-            serverRemainingSeconds={serverRemainingSeconds}
+            generationStartedAtMs={generationStartedAtMs}
             inputImageUrl={inputImageUrl}
             resultUrls={data?.resultUrls}
             onRevealComplete={() => setRevealDone(true)}

@@ -160,6 +160,7 @@ module.exports = async function handler(req, res) {
         id: inFlight.id,
         taskId: existingTaskId,
         status: "processing",
+        createdAt: inFlight.created_at || null,
         estimatedSeconds:
           meta.estimated_seconds != null &&
           Number.isFinite(Number(meta.estimated_seconds))
@@ -463,6 +464,7 @@ module.exports = async function handler(req, res) {
       id: larp.id,
       taskId: externalTaskId,
       status: "waiting",
+      createdAt: larp.created_at || null,
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
     });

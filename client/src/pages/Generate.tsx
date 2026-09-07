@@ -10,7 +10,6 @@ import { createPortal } from "react-dom";
 import { Loader2, Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
-import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
@@ -47,7 +46,8 @@ import { clearLastGeneration } from "@/lib/last-generation";
 import {
   clearInFlightGeneration,
   getInFlightGeneration,
-  saveInFlightGeneration,
+  persistInFlightFromApiResult,
+  GENERATION_IN_FLIGHT_EVENT,
 } from "@/lib/in-flight-generation";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import {
@@ -102,18 +102,15 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   );
 
   // ── Generation state ────────────────────────────────────────
-  const [taskId, setTaskId] = useState<string | null>(() => {
-    const inflight = getInFlightGeneration();
-    return inflight?.source === "generate" ? inflight.taskId : null;
-  });
+  const [taskId, setTaskId] = useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = useState<
     number | null
-  >(() => {
-    const inflight = getInFlightGeneration();
-    return inflight?.source === "generate"
-      ? (inflight.estimatedSeconds ?? null)
-      : null;
-  });
+  >(() => getInFlightGeneration()?.estimatedSeconds ?? null);
+  const [hasInFlightOverlay, setHasInFlightOverlay] = useState(
+    () => !!getInFlightGeneration(),
+  );
   const [isStartingGeneration, setIsStartingGeneration] = useState(false);
   const [autoGenerateReady, setAutoGenerateReady] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(isReturningFromCheckout);
@@ -160,6 +157,19 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const { data: templatesList } = useTemplates();
   const zeroCreditsDismissedRef = useRef(false);
   const generationLockRef = useRef(false);
+
+  useEffect(() => {
+    const syncInflight = () => {
+      const inflight = getInFlightGeneration();
+      setHasInFlightOverlay(!!inflight);
+      setTaskId(inflight?.taskId ?? null);
+      setGenerationEstimateSeconds(inflight?.estimatedSeconds ?? null);
+    };
+    syncInflight();
+    window.addEventListener(GENERATION_IN_FLIGHT_EVENT, syncInflight);
+    return () =>
+      window.removeEventListener(GENERATION_IN_FLIGHT_EVENT, syncInflight);
+  }, []);
 
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
@@ -328,7 +338,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const isFullscreenOverlayActive =
     showFakeOnboardingLoader ||
     pendingLoading ||
-    (!!taskId && !generationResultVisible) ||
+    (!!taskId || hasInFlightOverlay) && !generationResultVisible) ||
     isPaywallOverlayActive ||
     unlockingLarp;
 
@@ -366,9 +376,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     if (isReturningFromCheckout) return;
 
     const inflight = getInFlightGeneration();
-    if (inflight?.source === "generate" && inflight.taskId) {
+    if (inflight?.taskId) {
       setTaskId(inflight.taskId);
       setGenerationEstimateSeconds(inflight.estimatedSeconds ?? null);
+      setHasInFlightOverlay(true);
       return;
     }
 
@@ -610,31 +621,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     setGenerationMode("image");
   }, [pendingTemplateId, selectedTemplate, templatesList]);
 
-  const loaderInputImageUrl = useMemo(() => {
-    if (images[0]?.url) return images[0].url;
-
-    const activeTemplate =
-      selectedTemplate ??
-      (pendingTemplateId && templatesList
-        ? templatesList.find((t) => t.id === pendingTemplateId)
-        : undefined);
-
-    if (activeTemplate) {
-      return (
-        activeTemplate.example_after_url ||
-        activeTemplate.example_before_url ||
-        undefined
-      );
-    }
-
-    return undefined;
-  }, [
-    images,
-    selectedTemplate,
-    pendingTemplateId,
-    templatesList,
-  ]);
-
   // ── Image & template handlers ───────────────────────────────
   // Object URLs leak memory if not revoked once the preview is gone.
   const revokeSlotUrl = useCallback(
@@ -829,7 +815,12 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   const handleGenerate = async () => {
-    if (generationLockRef.current || isSubmittingGeneration || taskId) {
+    if (
+      generationLockRef.current ||
+      isSubmittingGeneration ||
+      taskId ||
+      getInFlightGeneration()
+    ) {
       return;
     }
 
@@ -1032,15 +1023,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
-        saveInFlightGeneration({
-          taskId: result.taskId,
-          estimatedSeconds:
-            typeof result.estimatedSeconds === "number" &&
-            Number.isFinite(result.estimatedSeconds)
-              ? result.estimatedSeconds
-              : null,
-          source: "generate",
-        });
+        persistInFlightFromApiResult(result, "generate");
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
           trackFunnelStep("generate", { source: "video", taskId: result.taskId });
@@ -1072,15 +1055,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           : null,
       );
       setTaskId(result.taskId);
-      saveInFlightGeneration({
-        taskId: result.taskId,
-        estimatedSeconds:
-          typeof result.estimatedSeconds === "number" &&
-          Number.isFinite(result.estimatedSeconds)
-            ? result.estimatedSeconds
-            : null,
-        source: "generate",
-      });
+      persistInFlightFromApiResult(result, "generate");
       setPendingLoading(false);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
         trackFunnelStep("generate", { source: "image", taskId: result.taskId });
@@ -1165,6 +1140,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const handleReset = useCallback(() => {
     generationLockRef.current = false;
     clearInFlightGeneration();
+    setHasInFlightOverlay(false);
     setTaskId(null);
     setGenerationEstimateSeconds(null);
     setGenerationResultVisible(false);
@@ -1347,22 +1323,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   });
 
   // ── Portal overlays ─────────────────────────────────────────
-  const generationProgress = taskId ? (
-    <GenerationProgress
-      key={taskId}
-      taskId={taskId}
-      inputImageUrl={loaderInputImageUrl}
-      onReset={handleReset}
-      onResultVisible={() => setGenerationResultVisible(true)}
-      resultType={generationMode}
-      referenceImageCount={Math.max(
-        1,
-        images.filter((img) => img !== null).length,
-      )}
-      initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
-    />
-  ) : null;
-
   const portalOverlay = pendingLoading
     ? createPortal(
       <div
@@ -1411,16 +1371,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         inputImageUrl={fakeLoaderImageUrl}
         onComplete={finishFakeOnboardingLoader}
       />
-    );
-  }
-
-  // -- Generation in progress
-  if (taskId) {
-    return (
-      <>
-        {transitionBackdrop}
-        {generationProgress}
-      </>
     );
   }
 

@@ -3,20 +3,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
+import { useGenerationCountdown } from "@/hooks/use-generation-countdown";
 import "./generation-loader.css";
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
-  /** Server-side ETA (seconds) — synced on every poll. */
-  estimatedSeconds?: number;
-  /** Remaining seconds computed server-side from created_at + estimate. */
-  serverRemainingSeconds?: number | null;
+  /** Durée totale estimée (fixe, définie au lancement). */
+  estimatedSeconds: number;
+  /** Début réel côté serveur (created_at) en millisecondes. */
+  generationStartedAtMs?: number | null;
   inputImageUrl?: string;
   resultUrls?: string[];
   onRevealComplete?: () => void;
 }
 
-const DEFAULT_ESTIMATE_SECONDS = 50;
+const DEFAULT_ESTIMATE_SECONDS = 45;
 const MESSAGE_INTERVAL_MS = 1800;
 const EXIT_FADE_MS = 350;
 
@@ -31,7 +32,7 @@ const PARTICLES = [
 export function GenerationLoader({
   status,
   estimatedSeconds = DEFAULT_ESTIMATE_SECONDS,
-  serverRemainingSeconds = null,
+  generationStartedAtMs = null,
   inputImageUrl,
   resultUrls: _resultUrls,
   onRevealComplete,
@@ -51,19 +52,16 @@ export function GenerationLoader({
   );
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
-  const [elapsedSec, setElapsedSec] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const revealFired = useRef(false);
-  const startedAt = useRef(Date.now());
-  const [estimate, setEstimate] = useState(
-    Math.max(25, Math.round(estimatedSeconds)),
-  );
+  const particles = useMemo(() => PARTICLES, []);
 
-  useEffect(() => {
-    setEstimate((prev) =>
-      Math.max(prev, Math.max(25, Math.round(estimatedSeconds))),
-    );
-  }, [estimatedSeconds]);
+  const isComplete = status === "success";
+  const remaining = useGenerationCountdown(
+    generationStartedAtMs,
+    estimatedSeconds,
+    isComplete,
+  );
 
   useEffect(() => {
     if (phase !== "dissolve") return;
@@ -91,47 +89,22 @@ export function GenerationLoader({
 
   useEffect(() => {
     const id = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAt.current) / 1000));
-    }, 200);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % progressMessages.length);
       setMessageKey((k) => k + 1);
     }, MESSAGE_INTERVAL_MS);
     return () => clearInterval(id);
   }, [progressMessages.length]);
 
-  const localRemaining = Math.max(0, estimate - elapsedSec);
-  const polledRemaining =
-    serverRemainingSeconds != null && Number.isFinite(serverRemainingSeconds)
-      ? Math.max(0, Math.round(serverRemainingSeconds))
-      : null;
-
-  let remaining =
-    status === "success"
-      ? 0
-      : polledRemaining != null
-        ? polledRemaining
-        : localRemaining;
-
-  const finishing = status !== "success" && remaining === 0;
-
+  const finishing = !isComplete && remaining === 0;
   const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
   const showContent = !isExiting;
-  const particles = useMemo(() => PARTICLES, []);
 
   return (
     <motion.div
       className="lx-gen-loader fixed inset-0 z-[100] overflow-hidden"
       initial={{ opacity: 0 }}
-      animate={{ opacity: isExiting ? 0 : 1 }}
-      transition={{
-        duration: isExiting ? EXIT_FADE_MS / 1000 : 0.45,
-        ease: "easeInOut",
-      }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
     >
       <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
       <div className="lx-gen-loader__halo" aria-hidden />
@@ -159,7 +132,7 @@ export function GenerationLoader({
         <motion.div
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
-          animate={{ opacity: isExiting ? 0 : 1 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.45 }}
         >
           <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-lg shadow-xl md:h-[min(82svh,720px)]">

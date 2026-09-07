@@ -6,11 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
-import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import {
-  clearInFlightGeneration,
   getInFlightGeneration,
-  saveInFlightGeneration,
+  persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
@@ -303,10 +301,9 @@ export default function Modeles() {
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
   );
-  const [taskId, setTaskId] = useState<string | null>(() => {
-    const inflight = getInFlightGeneration();
-    return inflight?.source === "modeles" ? inflight.taskId : null;
-  });
+  const [taskId, setTaskId] = useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
   const [busy, setBusy] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
@@ -465,7 +462,9 @@ export default function Modeles() {
     template: FeedTemplate,
     userImages: string[] = [],
   ) => {
-    if (generationLockRef.current || busy || taskId) return;
+    if (generationLockRef.current || busy || taskId || getInFlightGeneration()) {
+      return;
+    }
     generationLockRef.current = true;
     setBusy(true);
     try {
@@ -475,7 +474,7 @@ export default function Modeles() {
         images: userImages,
         use_face_asset: false,
       });
-      saveInFlightGeneration({ taskId: result.taskId, source: "modeles" });
+      persistInFlightFromApiResult(result, "modeles");
       setTaskId(result.taskId);
     } catch (error: any) {
       generationLockRef.current = false;
@@ -541,20 +540,6 @@ export default function Modeles() {
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
-
-  if (taskId) {
-    return (
-      <GenerationProgress
-        taskId={taskId}
-        onReset={() => {
-          generationLockRef.current = false;
-          clearInFlightGeneration();
-          setTaskId(null);
-        }}
-        resultType="image"
-      />
-    );
-  }
 
   if (isLoading) {
     return (

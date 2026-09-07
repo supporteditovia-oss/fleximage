@@ -18,9 +18,8 @@ import HeroBackgroundFrames from "@/components/marketing/HeroBackgroundFrames";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
 import { savePendingLarp } from "@/lib/pending-larp";
 import {
-  clearInFlightGeneration,
   getInFlightGeneration,
-  saveInFlightGeneration,
+  persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
 import { savePaywallImage } from "@/lib/paywall-image";
 import { markOnboardingResume } from "@/lib/onboarding-resume";
@@ -30,8 +29,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
-import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { toGenerationImageFile } from "@/lib/video-frame";
@@ -75,13 +72,9 @@ export default function HeroSection() {
   const { data: eligibility, refetch: refetchEligibility } = useGenerationEligibility();
   const { toast } = useToast();
   const generationLockRef = React.useRef(false);
-  const [taskId, setTaskId] = React.useState<string | null>(() => {
-    const inflight = getInFlightGeneration();
-    return inflight?.source === "hero" ? inflight.taskId : null;
-  });
-  const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
-    number | null
-  >(null);
+  const [taskId, setTaskId] = React.useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -144,7 +137,12 @@ export default function HeroSection() {
   };
 
   const handleSubmit = async () => {
-    if (generationLockRef.current || generateDirect.isPending || taskId) {
+    if (
+      generationLockRef.current ||
+      generateDirect.isPending ||
+      taskId ||
+      getInFlightGeneration()
+    ) {
       return;
     }
 
@@ -190,22 +188,8 @@ export default function HeroSection() {
           images: base64Images,
         };
         const result = await generateDirect.mutateAsync(payload);
-        setGenerationEstimateSeconds(
-          typeof result.estimatedSeconds === "number" &&
-            Number.isFinite(result.estimatedSeconds)
-            ? result.estimatedSeconds
-            : null,
-        );
         setTaskId(result.taskId);
-        saveInFlightGeneration({
-          taskId: result.taskId,
-          estimatedSeconds:
-            typeof result.estimatedSeconds === "number" &&
-            Number.isFinite(result.estimatedSeconds)
-              ? result.estimatedSeconds
-              : null,
-          source: "hero",
-        });
+        persistInFlightFromApiResult(result, "hero");
         refetchEligibility();
       } catch (error: any) {
         generationLockRef.current = false;
@@ -288,15 +272,6 @@ export default function HeroSection() {
       }
       navigate("/register");
     }
-  };
-
-  const handleReset = () => {
-    generationLockRef.current = false;
-    clearInFlightGeneration();
-    setTaskId(null);
-    setGenerationEstimateSeconds(null);
-    setPrompt("");
-    setImages([null]);
   };
 
   const hasUploadedImages = images.some((img) => img !== null);
@@ -455,18 +430,6 @@ export default function HeroSection() {
         <span className="text-xs font-medium tracking-wide">{t("hero.discover")}</span>
         <ChevronDown className="h-5 w-5" aria-hidden />
       </a>
-
-      {taskId && createPortal(
-        <GenerationProgress
-          taskId={taskId}
-          inputImageUrl={images[0]?.url}
-          onReset={handleReset}
-          resultType="image"
-          referenceImageCount={Math.max(1, images.filter(Boolean).length)}
-          initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
-        />,
-        document.body
-      )}
     </section>
   );
 }
