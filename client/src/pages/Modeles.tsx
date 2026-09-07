@@ -488,7 +488,6 @@ export default function Modeles() {
       setTaskId(result.taskId);
     } catch (error: any) {
       generationLockRef.current = false;
-      releaseGenerationSubmitLock();
       toast({
         variant: "destructive",
         title: "Génération impossible",
