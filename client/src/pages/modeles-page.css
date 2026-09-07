@@ -308,32 +308,6 @@ html.luxeflexia-modeles-page .tpl-slide__compare .lx-compare__labels {
   );
 }
 
-.tpl-subject-pose-slot {
-  width: 100%;
-}
-
-.tpl-subject-pose-slot .subject-pose-controls {
-  max-width: none;
-  padding: 0.55rem 0.65rem;
-  background: rgba(12, 10, 14, 0.82);
-  border-color: rgba(201, 162, 39, 0.32);
-}
-
-.tpl-subject-pose-slot .subject-pose-field__label,
-.tpl-subject-pose-slot .subject-pose-controls__preview-label {
-  color: rgba(246, 231, 189, 0.72);
-}
-
-.tpl-subject-pose-slot .subject-pose-controls__preview {
-  background: rgba(201, 162, 39, 0.12);
-  border-color: rgba(201, 162, 39, 0.24);
-  color: #f6e7bd;
-}
-
-.tpl-subject-pose-slot .subject-pose-advanced-toggle {
-  color: rgba(246, 231, 189, 0.72);
-}
-
 .tpl-cta {
   width: 100%;
   border: 0;

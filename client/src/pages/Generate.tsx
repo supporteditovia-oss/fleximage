@@ -68,9 +68,6 @@ import {
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
-import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
-import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
-import { useSubjectAnalysisPreview } from "@/hooks/use-subject-analysis-preview";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -130,8 +127,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const [unlockingLarp, setUnlockingLarp] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const [outfitPickerBusy, setOutfitPickerBusy] = useState(false);
-  const [subjectType, setSubjectType] = useState<SubjectType>("auto");
-  const [poseStyle, setPoseStyle] = useState<PoseStyle>("auto");
 
   // ── Hooks ───────────────────────────────────────────────────
   const generateDirect = useGenerateDirectLarp();
@@ -148,14 +143,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     useGenerationEligibility();
   const { profile, user, isLoading: isAuthLoading, isAdmin } = useAuth();
   const adminPreview = useAdminPreviewFeatures();
-  const firstImageFile = images.find((img) => img !== null)?.file ?? null;
-  const { summaryFr: analysisSummary, loading: analysisLoading } =
-    useSubjectAnalysisPreview(
-      firstImageFile,
-      prompt,
-      "",
-      generationMode === "image" && !selectedTemplate,
-    );
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
@@ -1063,8 +1050,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
-        subject_type: subjectType,
-        pose_style: poseStyle,
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1494,17 +1479,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 onRemoveSlot={removeSlot}
                 generationMode="image"
               />
-
-              {generationMode === "image" && !selectedTemplate ? (
-                <SubjectPoseControls
-                  subject={subjectType}
-                  poseStyle={poseStyle}
-                  analysisSummary={analysisSummary}
-                  analysisLoading={analysisLoading}
-                  onSubjectChange={setSubjectType}
-                  onPoseStyleChange={setPoseStyle}
-                />
-              ) : null}
 
               <div className="flex w-full max-w-md justify-center md:max-w-xl">
                 {adminPreview ? (

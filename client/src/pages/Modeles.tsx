@@ -22,9 +22,6 @@ import {
   clearInFlightGeneration,
 } from "@/lib/in-flight-generation";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
-import { SubjectPoseControls } from "@/components/generate/SubjectPoseControls";
-import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
-import { useSubjectAnalysisPreview } from "@/hooks/use-subject-analysis-preview";
 import {
   findTemplateByRouteKey,
   getCategoryBySlug,
@@ -74,7 +71,6 @@ function TemplateSlideContent({
   onPrimaryAction,
   onScrollToIndex,
   onOpenPreview,
-  subjectPoseSlot,
 }: {
   template: FeedTemplate;
   activeIndex: number;
@@ -84,7 +80,6 @@ function TemplateSlideContent({
   onPrimaryAction: (template: FeedTemplate) => void;
   onScrollToIndex: (index: number) => void;
   onOpenPreview: (template: FeedTemplate) => void;
-  subjectPoseSlot?: ReactNode;
 }) {
   const luxeClass =
     enterDirection === "none"
@@ -145,10 +140,6 @@ function TemplateSlideContent({
             </span>
           </button>
         </div>
-
-        {subjectPoseSlot ? (
-          <div className="tpl-subject-pose-slot">{subjectPoseSlot}</div>
-        ) : null}
 
         <button
           type="button"
@@ -330,8 +321,6 @@ export default function Modeles() {
   const [pendingUserPhoto, setPendingUserPhoto] = useState<string | null>(null);
   const [showOutfitQuestion, setShowOutfitQuestion] = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
-  const [subjectType, setSubjectType] = useState<SubjectType>("auto");
-  const [poseStyle, setPoseStyle] = useState<PoseStyle>("auto");
 
   const route = useMemo(() => parseModelesPath(location), [location]);
   const viewMode = route.view;
@@ -355,14 +344,6 @@ export default function Modeles() {
     : activeCategory;
 
   const active = viewMode === "detail" ? detailTemplate : null;
-
-  const { summaryFr: modelesAnalysisSummary, loading: modelesAnalysisLoading } =
-    useSubjectAnalysisPreview(
-      null,
-      active?.name ?? "",
-      active?.generationPrompt ?? active?.name ?? "",
-      viewMode === "detail" && Boolean(active),
-    );
 
   // URL canonique = id du modèle (évite les collisions de slug côté API).
   useEffect(() => {
@@ -530,8 +511,6 @@ export default function Modeles() {
         template_id: template.id,
         images: userImages,
         use_face_asset: false,
-        subject_type: subjectType,
-        pose_style: poseStyle,
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);
@@ -772,17 +751,6 @@ export default function Modeles() {
               onPrimaryAction={onPrimaryAction}
               onScrollToIndex={scrollToIndex}
               onOpenPreview={setPreviewTemplate}
-              subjectPoseSlot={
-                <SubjectPoseControls
-                  compact
-                  subject={subjectType}
-                  poseStyle={poseStyle}
-                  analysisSummary={modelesAnalysisSummary}
-                  analysisLoading={modelesAnalysisLoading}
-                  onSubjectChange={setSubjectType}
-                  onPoseStyleChange={setPoseStyle}
-                />
-              }
             />
           </section>
         ) : null}
