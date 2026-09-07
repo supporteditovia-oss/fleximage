@@ -81,6 +81,37 @@ export function parseApiCreatedAtMs(createdAt: unknown): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+export type GenerationTimingLock = {
+  estimate: number;
+  startedAtMs: number;
+};
+
+/** Verrouille estimate (première valeur) + startedAt (plus tôt gagne) — jamais de remontée. */
+export function mergeGenerationTimingLock(
+  locked: GenerationTimingLock | null,
+  incoming: { estimate?: number | null; startedAtMs?: number | null },
+): GenerationTimingLock | null {
+  const est =
+    incoming.estimate != null && Number.isFinite(incoming.estimate)
+      ? Math.max(1, Math.round(incoming.estimate))
+      : null;
+  const start =
+    incoming.startedAtMs != null && Number.isFinite(incoming.startedAtMs)
+      ? incoming.startedAtMs
+      : null;
+
+  if (!locked) {
+    if (est == null) return null;
+    return { estimate: est, startedAtMs: start ?? Date.now() };
+  }
+
+  return {
+    estimate: locked.estimate,
+    startedAtMs:
+      start != null ? Math.min(locked.startedAtMs, start) : locked.startedAtMs,
+  };
+}
+
 export function persistInFlightFromApiResult(
   result: {
     taskId: string;
@@ -90,18 +121,29 @@ export function persistInFlightFromApiResult(
   source: InFlightGenerationSource,
   resultType: "image" | "video" = "image",
 ): void {
-  const startedAtMs = parseApiCreatedAtMs(result.createdAt) ?? Date.now();
-  const estimatedSeconds =
+  const existing = getInFlightGeneration();
+  const sameTask = existing?.taskId === result.taskId;
+  const startedAtFromApi = parseApiCreatedAtMs(result.createdAt);
+  const startedAtMs = startedAtFromApi ?? (sameTask ? existing!.startedAtMs : Date.now());
+  const mergedStartedAtMs =
+    sameTask && existing
+      ? Math.min(existing.startedAtMs, startedAtMs)
+      : startedAtMs;
+
+  const estimatedFromApi =
     typeof result.estimatedSeconds === "number" &&
     Number.isFinite(result.estimatedSeconds)
       ? result.estimatedSeconds
       : resultType === "video"
         ? 150
         : 45;
+  const estimatedSeconds =
+    sameTask && existing ? existing.estimatedSeconds : estimatedFromApi;
+
   saveInFlightGeneration({
     taskId: result.taskId,
     estimatedSeconds,
-    startedAtMs,
+    startedAtMs: mergedStartedAtMs,
     source,
     resultType,
   });

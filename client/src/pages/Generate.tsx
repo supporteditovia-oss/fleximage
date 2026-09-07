@@ -342,7 +342,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const isFullscreenOverlayActive =
     showFakeOnboardingLoader ||
     pendingLoading ||
-    (!!taskId || hasInFlightOverlay) && !generationResultVisible) ||
+    ((!!taskId || hasInFlightOverlay) && !generationResultVisible) ||
     isPaywallOverlayActive ||
     unlockingLarp;
 

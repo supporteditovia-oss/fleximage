@@ -7,11 +7,14 @@ import { useGenerationCountdown } from "@/hooks/use-generation-countdown";
 import "./generation-loader.css";
 
 interface GenerationLoaderProps {
+  taskId: string;
   status: "connecting" | "waiting" | "success";
-  /** Durée totale estimée (fixe, définie au lancement). */
+  /** Durée totale estimée (fixe, verrouillée au lancement). */
   estimatedSeconds: number;
   /** Début réel côté serveur (created_at) en millisecondes. */
   generationStartedAtMs?: number | null;
+  /** Temps restant calculé côté serveur (prioritaire). */
+  serverRemainingSeconds?: number | null;
   inputImageUrl?: string;
   resultUrls?: string[];
   onRevealComplete?: () => void;
@@ -30,9 +33,11 @@ const PARTICLES = [
 ] as const;
 
 export function GenerationLoader({
+  taskId,
   status,
   estimatedSeconds = DEFAULT_ESTIMATE_SECONDS,
   generationStartedAtMs = null,
+  serverRemainingSeconds = null,
   inputImageUrl,
   resultUrls: _resultUrls,
   onRevealComplete,
@@ -58,9 +63,11 @@ export function GenerationLoader({
 
   const isComplete = status === "success";
   const remaining = useGenerationCountdown(
+    taskId,
     generationStartedAtMs,
     estimatedSeconds,
     isComplete,
+    serverRemainingSeconds,
   );
 
   useEffect(() => {

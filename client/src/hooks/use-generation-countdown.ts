@@ -12,46 +12,30 @@ export function computeGenerationRemaining(
 }
 
 /**
- * Compte à rebours monotone basé sur l'horodatage réel de début (created_at).
- * Recalcule immédiatement au retour d'onglet (Snapchat, appel, etc.).
+ * Compte à rebours strictement monotone.
+ * Priorité : remainingSeconds serveur > calcul client (estimate + startedAt verrouillés).
  */
 export function useGenerationCountdown(
+  taskId: string,
   startedAtMs: number | null | undefined,
   estimatedSeconds: number,
   isComplete: boolean,
+  serverRemainingSeconds?: number | null,
 ): number {
   const estimate = Math.max(1, Math.round(estimatedSeconds));
+  const floorRef = useRef<number | null>(null);
+  const taskRef = useRef(taskId);
+  const [, setTick] = useState(0);
 
-  const [remaining, setRemaining] = useState(() => {
-    if (isComplete) return 0;
-    if (!startedAtMs) return estimate;
-    return computeGenerationRemaining(startedAtMs, estimate);
-  });
-
-  const lastStartedAtRef = useRef<number | null>(null);
+  if (taskRef.current !== taskId) {
+    taskRef.current = taskId;
+    floorRef.current = null;
+  }
 
   useEffect(() => {
-    if (isComplete) {
-      setRemaining(0);
-      return;
-    }
-    if (!startedAtMs) return;
+    if (isComplete) return;
 
-    // Si le début serveur arrive après le 1er rendu, resync sans jamais augmenter.
-    if (lastStartedAtRef.current !== startedAtMs) {
-      lastStartedAtRef.current = startedAtMs;
-      setRemaining((prev) => {
-        const computed = computeGenerationRemaining(startedAtMs, estimate);
-        return prev === 0 ? computed : Math.min(prev, computed);
-      });
-    }
-
-    const tick = () => {
-      const computed = computeGenerationRemaining(startedAtMs, estimate);
-      setRemaining((prev) => (prev === 0 ? computed : Math.min(prev, computed)));
-    };
-
-    tick();
+    const tick = () => setTick((n) => n + 1);
     const id = window.setInterval(tick, 250);
     const onVisibility = () => {
       if (document.visibilityState === "visible") tick();
@@ -61,7 +45,30 @@ export function useGenerationCountdown(
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [startedAtMs, estimate, isComplete]);
+  }, [isComplete, taskId]);
 
-  return isComplete ? 0 : remaining;
+  if (isComplete) {
+    floorRef.current = 0;
+    return 0;
+  }
+
+  let candidate: number;
+  if (
+    typeof serverRemainingSeconds === "number" &&
+    Number.isFinite(serverRemainingSeconds)
+  ) {
+    candidate = Math.max(0, Math.round(serverRemainingSeconds));
+  } else if (startedAtMs) {
+    candidate = computeGenerationRemaining(startedAtMs, estimate);
+  } else {
+    candidate = estimate;
+  }
+
+  if (floorRef.current === null) {
+    floorRef.current = candidate;
+  } else {
+    floorRef.current = Math.min(floorRef.current, candidate);
+  }
+
+  return floorRef.current;
 }

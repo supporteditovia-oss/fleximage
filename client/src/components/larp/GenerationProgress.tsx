@@ -12,7 +12,9 @@ import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import {
   clearInFlightGeneration,
+  mergeGenerationTimingLock,
   parseApiCreatedAtMs,
+  type GenerationTimingLock,
 } from "@/lib/in-flight-generation";
 import { BrandMark } from "@/components/BrandMark";
 import { useStudioPath } from "@/hooks/use-studio-path";
@@ -58,6 +60,12 @@ export function GenerationProgress({
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
   const hasPersistedResult = useRef(false);
+  const timingLockRef = useRef<GenerationTimingLock | null>(null);
+  const timingTaskRef = useRef(taskId);
+  if (timingTaskRef.current !== taskId) {
+    timingTaskRef.current = taskId;
+    timingLockRef.current = null;
+  }
   // Grace window before a sustained, unrecoverable connection failure is
   // surfaced. Transient blips (5xx, network) during polling are ignored —
   // the generation keeps running server-side.
@@ -219,29 +227,30 @@ export function GenerationProgress({
     toast,
   ]);
 
-  const estimatedSeconds =
+  const fallbackEstimate =
     resultType === "video"
       ? 150
-      : (() => {
-          const polled =
-            data?.estimatedSeconds != null && Number.isFinite(data.estimatedSeconds)
-              ? data.estimatedSeconds
-              : null;
-          const fallback =
-            initialEstimatedSeconds != null &&
-            Number.isFinite(initialEstimatedSeconds)
-              ? initialEstimatedSeconds
-              : referenceImageCount >= 2
-                ? 52
-                : 45;
-          return polled ?? fallback;
-        })();
+      : referenceImageCount >= 2
+        ? 52
+        : 45;
 
-  const generationStartedAtMs =
-    parseApiCreatedAtMs(data?.createdAt) ??
-    (initialStartedAtMs != null && Number.isFinite(initialStartedAtMs)
-      ? initialStartedAtMs
-      : null);
+  timingLockRef.current = mergeGenerationTimingLock(timingLockRef.current, {
+    estimate: initialEstimatedSeconds ?? fallbackEstimate,
+    startedAtMs: initialStartedAtMs ?? null,
+  });
+  timingLockRef.current = mergeGenerationTimingLock(timingLockRef.current, {
+    estimate: data?.estimatedSeconds ?? null,
+    startedAtMs: parseApiCreatedAtMs(data?.createdAt),
+  });
+
+  const lockedTiming = timingLockRef.current;
+  const lockedEstimate = lockedTiming?.estimate ?? fallbackEstimate;
+  const lockedStartedAtMs = lockedTiming?.startedAtMs ?? null;
+
+  const serverRemainingSeconds =
+    data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)
+      ? Math.max(0, Math.round(data.remainingSeconds))
+      : null;
 
   const isGenerating =
     loaderStatus === "connecting" ||
@@ -255,6 +264,30 @@ export function GenerationProgress({
     !fatalConnectionError &&
     data?.status !== "fail";
 
+  useEffect(() => {
+    if (!showLoader) return;
+
+    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
+    document.body.setAttribute("data-fullscreen-overlay", "true");
+    window.$crisp?.push(["do", "chat:hide"]);
+
+    return () => {
+      const keepOverlay =
+        document.body.hasAttribute("data-larp-result-mode") ||
+        document.body.hasAttribute("data-paywall-overlay");
+      if (!keepOverlay) {
+        document.documentElement.removeAttribute("data-fullscreen-overlay");
+        document.body.removeAttribute("data-fullscreen-overlay");
+      }
+      const keepCrispHidden =
+        document.body.hasAttribute("data-hide-app-chrome") ||
+        document.documentElement.classList.contains("luxeflexia-modeles-page");
+      if (!keepCrispHidden) {
+        window.$crisp?.push(["do", "chat:show"]);
+      }
+    };
+  }, [showLoader]);
+
   if (fatalConnectionError || data?.status === "fail") {
     return null;
   }
@@ -265,9 +298,11 @@ export function GenerationProgress({
       <AnimatePresence>
         {showLoader && (
           <GenerationLoader
+            taskId={taskId}
             status={loaderStatus}
-            estimatedSeconds={estimatedSeconds}
-            generationStartedAtMs={generationStartedAtMs}
+            estimatedSeconds={lockedEstimate}
+            generationStartedAtMs={lockedStartedAtMs}
+            serverRemainingSeconds={serverRemainingSeconds}
             inputImageUrl={inputImageUrl}
             resultUrls={data?.resultUrls}
             onRevealComplete={() => setRevealDone(true)}
