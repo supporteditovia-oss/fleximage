@@ -724,9 +724,11 @@ export default function Modeles() {
         open={showOutfitPicker}
         title="Catalogue tenues"
         subtitle="Hommes ou Femmes — Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        requireConfirmation
+        closeOnOverlayClick={false}
         onClose={() => {
           setShowOutfitPicker(false);
-          void finishWithUserPhotoOnly();
+          setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
       />

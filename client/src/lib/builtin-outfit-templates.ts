@@ -10,7 +10,7 @@ export type BuiltinOutfit = {
   imagePath: string;
   category: string;
   categoryName: string;
-  gender: OutfitGender;
+  gender?: OutfitGender;
 };
 
 export const BUILTIN_OUTFITS = catalog as BuiltinOutfit[];
@@ -20,8 +20,17 @@ export const OUTFIT_GENDER_LABELS: Record<OutfitGender, string> = {
   women: "Femmes",
 };
 
+export function resolveOutfitGender(
+  item: Pick<BuiltinOutfit, "gender" | "id">,
+): OutfitGender {
+  if (item.gender === "women" || item.gender === "men") return item.gender;
+  return item.id.startsWith("outfit-women-") ? "women" : "men";
+}
+
 export function getOutfitsByGender(gender: OutfitGender): BuiltinOutfit[] {
-  return BUILTIN_OUTFITS.filter((item) => item.gender === gender);
+  return BUILTIN_OUTFITS.filter(
+    (item) => resolveOutfitGender(item) === gender,
+  );
 }
 
 /** Texte inséré automatiquement quand l'utilisateur choisit un outfit (image 1 = personne). */

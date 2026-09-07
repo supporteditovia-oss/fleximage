@@ -1511,7 +1511,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       <OutfitPickerModal
         open={showOutfitPicker}
         title="Catalogue tenues"
-        subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
+        subtitle="Hommes ou Femmes — Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
+        requireConfirmation
         onClose={() => setShowOutfitPicker(false)}
         onSelect={(outfit) => void handleOutfitSelect(outfit)}
       />
