@@ -2012,45 +2012,28 @@ function vehicleForbiddenBrandHint(prompt) {
   );
 }
 
-/** Nano Banana Pro for complex vehicle identity / lifestyle relocations. */
-function needsProModelVariant(prompt) {
-  return (
-    isAddAnimalPrompt(prompt) ||
-    isMotorcycleReplacePrompt(prompt) ||
-    isMotorcycleRidePrompt(prompt) ||
-    isFictionalVehiclePrompt(prompt) ||
-    (isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt))
-  );
+/** @deprecated Nano Banana Pro is forbidden — always Nano Banana 2 (`fast`). */
+function needsProModelVariant(_prompt) {
+  return false;
 }
 
-/** Honest client countdown — provider pass + typical vision QA / one corrective regen. */
+/** Compte à rebours honnête — Nano Banana 2, une seule passe (pas de regen QA). */
 function estimateGenerationSeconds(prompt, options = {}) {
   const refs = Math.max(0, Number(options.referenceImageCount) || 0);
-  const pro = needsProModelVariant(prompt);
-  let providerSec = pro ? 50 : 34;
-  if (refs >= 2) providerSec += 8;
-  if (refs >= 3) providerSec += 6;
-  if (isVehicleReplacePrompt(prompt)) providerSec += 12;
+  let sec = 42;
+  if (refs >= 2) sec += 6;
+  if (refs >= 3) sec += 4;
+  if (isVehicleReplacePrompt(prompt)) sec += 8;
   if (isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt)) {
-    providerSec += 8;
+    sec += 6;
   }
-  if (isLifestyleRelocatePrompt(prompt)) providerSec += 10;
+  if (isLifestyleRelocatePrompt(prompt)) sec += 8;
   if (isNamedVehiclePrompt(prompt) && !isNonCarLifestylePrompt(prompt)) {
-    providerSec += 6;
+    sec += 4;
   }
-  if (isFictionalVehiclePrompt(prompt)) providerSec += 6;
-  if (isAddAnimalPrompt(prompt)) providerSec += 8;
-  const vehicleReplace = isVehicleReplacePrompt(prompt);
-  const moto =
-    isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt);
-  const lifestyleCar =
-    isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt);
-  // Swaps with QA retry budget (vehicle replace skips QA — fast path).
-  const needsFullRetryBudget =
-    !vehicleReplace &&
-    (moto || lifestyleCar || isFictionalVehiclePrompt(prompt));
-  const qaSec = needsFullRetryBudget ? providerSec + 10 : 14;
-  return Math.min(110, Math.max(25, providerSec + qaSec));
+  if (isFictionalVehiclePrompt(prompt)) sec += 4;
+  if (isAddAnimalPrompt(prompt)) sec += 6;
+  return Math.min(68, Math.max(35, sec));
 }
 
 function detectCockpitVehicleModel(prompt) {

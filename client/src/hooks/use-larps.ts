@@ -29,7 +29,7 @@ function normalizeHistoryStatus(status: unknown): "waiting" | "success" | "fail"
 }
 
 function normalizeHistoryItem(raw: Record<string, unknown>): LarpHistoryItem {
-  const templateRaw = raw.template;
+  const templateRaw = raw.template ?? raw.templates;
   const template =
     templateRaw && typeof templateRaw === "object"
       ? {
@@ -124,6 +124,7 @@ interface GenerateLarpResponse {
   id: string;
   taskId: string;
   status: string;
+  createdAt?: string | null;
   estimatedSeconds?: number | null;
 }
 
@@ -134,6 +135,7 @@ interface LarpStatusResponse {
   watermarkedUrls?: string[];
   failMessage: string | null;
   costTime: number | null;
+  createdAt?: string | null;
   estimatedSeconds?: number | null;
   qaRetryCount?: number;
   remainingSeconds?: number | null;
@@ -142,7 +144,7 @@ interface LarpStatusResponse {
   resultType?: "image" | "video";
 }
 
-interface LarpHistoryItem {
+export interface LarpHistoryItem {
   id: string;
   userId: string;
   templateId: string | null;
@@ -247,8 +249,7 @@ export function useLarpStatus(taskId: string | null) {
       return failureCount < 8;
     },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-    // Keep polling even while in an error state so a transient failure
-    // recovers automatically once the server responds again.
+    refetchOnWindowFocus: true,
     refetchIntervalInBackground: true,
     refetchInterval: (query) => {
       const data = query.state.data;

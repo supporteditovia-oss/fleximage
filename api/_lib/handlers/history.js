@@ -1,16 +1,49 @@
 const { requireUser, sendError } = require("../user-auth");
 const { toAssetList, toClientStatus } = require("../generation");
+const { getBuiltinTemplate } = require("../builtin-image-templates");
 
 const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 100;
 
-function toLarpDto(row) {
+function resolveHistoryTemplate(row) {
   const template = row.templates;
-  const category =
-    template?.template_categories?.slug ||
-    template?.category_slug ||
-    template?.category ||
+  if (template && template.name) {
+    const category =
+      template.template_categories?.slug ||
+      template.category_slug ||
+      template.category ||
+      null;
+    return {
+      name: template.name,
+      nameEn: template.name_en ?? null,
+      category,
+    };
+  }
+
+  const meta =
+    row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+  const builtinId =
+    meta.builtin_template_id ||
+    meta.selected_builtin_template_id ||
     null;
+  if (typeof builtinId === "string" && builtinId) {
+    const builtin = getBuiltinTemplate(builtinId);
+    if (builtin) {
+      return {
+        name: builtin.name,
+        nameEn: null,
+        category: builtin.category || null,
+      };
+    }
+  }
+
+  return null;
+}
+
+function toLarpDto(row) {
+  const template = resolveHistoryTemplate(row);
+  const meta =
+    row.metadata && typeof row.metadata === "object" ? row.metadata : {};
 
   return {
     id: row.id,
@@ -28,13 +61,13 @@ function toLarpDto(row) {
     aspectRatio: row.aspect_ratio,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    template: template
-      ? {
-          name: template.name,
-          nameEn: template.name_en ?? null,
-          category,
-        }
-      : null,
+    template,
+    metadata: {
+      builtinTemplateId:
+        typeof meta.builtin_template_id === "string"
+          ? meta.builtin_template_id
+          : null,
+    },
   };
 }
 
@@ -42,6 +75,34 @@ function parsePositiveInt(value, fallback) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.trunc(n);
+}
+
+async function fetchHistoryRows(supabase, userId, limit, offset) {
+  const baseQuery = () =>
+    supabase
+      .from("generations")
+      .select("*", { count: "exact" })
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+  const withJoin = () =>
+    supabase
+      .from("generations")
+      .select("*, templates(name, name_en, template_categories(slug, name))", {
+        count: "exact",
+      })
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+  let result = await withJoin();
+  if (result.error) {
+    console.warn("[history] template join failed — fallback plain select", result.error.message);
+    result = await baseQuery();
+  }
+
+  return result;
 }
 
 module.exports = async function handler(req, res) {
@@ -64,16 +125,12 @@ module.exports = async function handler(req, res) {
     );
     const offset = Math.max(parsePositiveInt(req.query?.offset, 0), 0);
 
-    // Keep the select aligned with real columns: templates / categories
-    // do not have name_en in this project schema.
-    const { data, error, count } = await supabase
-      .from("generations")
-      .select("*, templates(name, template_categories(slug, name))", {
-        count: "exact",
-      })
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+    const { data, error, count } = await fetchHistoryRows(
+      supabase,
+      userId,
+      limit,
+      offset,
+    );
 
     if (error) throw error;
 

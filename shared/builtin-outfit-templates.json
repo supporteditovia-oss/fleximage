@@ -6,7 +6,8 @@
     "description": "Veste orange Stone Island, jean gris déchiré, sneakers LV orange.",
     "imagePath": "/outfits/outfit-stone-island-orange.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-vest-goyard",
@@ -15,7 +16,8 @@
     "description": "Gilet puffer bleu, col roulé noir, jean noir, sneakers Chanel, sac Goyard.",
     "imagePath": "/outfits/outfit-lv-vest-goyard.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-puffer-chanel",
@@ -24,7 +26,8 @@
     "description": "Doudoune LV bicolore, jean gris déchiré, sneakers Chanel, sac LV.",
     "imagePath": "/outfits/outfit-lv-puffer-chanel.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-cloud-windbreaker",
@@ -33,7 +36,8 @@
     "description": "Coupe-vent LV blanc/bleu avec nuages, jean gris, sneakers On, sac LV.",
     "imagePath": "/outfits/outfit-lv-cloud-windbreaker.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-parajumpers-gucci",
@@ -42,7 +46,8 @@
     "description": "Gilet Parajumpers gris, jean noir, sneakers On, sac Gucci monogramme.",
     "imagePath": "/outfits/outfit-parajumpers-gucci.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-turquoise-street",
@@ -51,7 +56,8 @@
     "description": "Veste LV turquoise/mint, jean déchiré gris, sneakers On, sac LV monogramme.",
     "imagePath": "/outfits/outfit-lv-turquoise-street.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-dove-navy",
@@ -60,7 +66,8 @@
     "description": "Coupe-vent LV dégradé navy avec colombe, jean Dsquared2, sac barrel LV.",
     "imagePath": "/outfits/outfit-lv-dove-navy.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-chanel-hoodie-grey",
@@ -69,7 +76,8 @@
     "description": "Sweat Chanel gris logo, jean anthracite, sneakers CC, casquette.",
     "imagePath": "/outfits/outfit-chanel-hoodie-grey.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-offwhite-floral",
@@ -78,7 +86,8 @@
     "description": "Veste LV monogramme bleu avec roses et oiseaux, tee Off-White, sneakers Off-White.",
     "imagePath": "/outfits/outfit-lv-offwhite-floral.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-dior-purple-brand",
@@ -87,7 +96,8 @@
     "description": "Sweat damier noir, jean Purple Brand, sac Dior Saddle, sneakers Hogan.",
     "imagePath": "/outfits/outfit-dior-purple-brand.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-gucci-snake",
@@ -96,7 +106,8 @@
     "description": "Veste Gucci serpent et fleurs, jean gris, sneakers Chanel, sac LV.",
     "imagePath": "/outfits/outfit-gucci-snake.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-parrot-navy",
@@ -105,7 +116,8 @@
     "description": "Coupe-vent LV navy avec perroquet et roses, jean Dsquared2, sneakers Loewe.",
     "imagePath": "/outfits/outfit-lv-parrot-navy.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-parrot-mint",
@@ -114,7 +126,8 @@
     "description": "Veste LV grise perroquet roses mint, jean Dsquared2, sneakers On, sac LV.",
     "imagePath": "/outfits/outfit-lv-parrot-mint.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-chanel-grid-black",
@@ -123,7 +136,8 @@
     "description": "Veste Chanel noir/blanc logo grid, jean gris Dsquared2, sneakers Chanel, sac Hermès.",
     "imagePath": "/outfits/outfit-chanel-grid-black.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-moncler-hermes",
@@ -132,7 +146,8 @@
     "description": "Gilet Moncler bleu, jean Dsquared2, sneakers Hermès navy, sac LV pixel.",
     "imagePath": "/outfits/outfit-moncler-hermes.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-parrot-sage",
@@ -141,7 +156,8 @@
     "description": "Coupe-vent LV crème/sage perroquet, pantalon Dsquared2, sac LV sage, sneakers LV.",
     "imagePath": "/outfits/outfit-lv-parrot-sage.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-amiri-birds",
@@ -150,7 +166,8 @@
     "description": "Tee LV oiseaux, jean Amiri déchiré, sneakers LV Skate, sac barrel gris.",
     "imagePath": "/outfits/outfit-lv-amiri-birds.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-hermes-cream-burgundy",
@@ -159,7 +176,8 @@
     "description": "Ensemble crème, sac crossbody bordeaux, sneakers Hermès H logo.",
     "imagePath": "/outfits/outfit-hermes-cream-burgundy.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-black-kelly",
@@ -168,7 +186,8 @@
     "description": "Pull LV damier noir, pantalon noir, sac Kelly cuir, casquette LV monogramme.",
     "imagePath": "/outfits/outfit-lv-black-kelly.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-hermes-beige-brown",
@@ -177,7 +196,8 @@
     "description": "Veste et pantalon beige, sac Kelly marron, sneakers Hermès chocolat.",
     "imagePath": "/outfits/outfit-hermes-beige-brown.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-prada-marsenio-black",
@@ -186,7 +206,8 @@
     "description": "Gilet Marsenio noir, pantalon noir, sac et sneakers Prada, montre sport.",
     "imagePath": "/outfits/outfit-prada-marsenio-black.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-prada-blue-grey",
@@ -195,7 +216,8 @@
     "description": "Coupe-vent bleu Maracho, jean gris, sneakers bleu/blanc style Prada.",
     "imagePath": "/outfits/outfit-prada-blue-grey.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-dior-goyard-amiri",
@@ -204,7 +226,8 @@
     "description": "Tee Off-White, gilet Dior oblique, jean Amiri, sac Goyard, sneakers Dior B22.",
     "imagePath": "/outfits/outfit-dior-goyard-amiri.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-beige-tonal",
@@ -213,7 +236,8 @@
     "description": "Ensemble beige Marbenio, sac Papillon LV, sneakers LV sable.",
     "imagePath": "/outfits/outfit-lv-beige-tonal.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-comms-heart-black",
@@ -222,7 +246,8 @@
     "description": "Veste noire cœur rouge, jean bleu foncé, sneakers noir/blanc, casquette.",
     "imagePath": "/outfits/outfit-comms-heart-black.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-damier-kelly",
@@ -231,7 +256,8 @@
     "description": "Pull LV damier noir, jean Purple Brand, sneakers LV, sac Kelly, casquette LV.",
     "imagePath": "/outfits/outfit-lv-damier-kelly.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-moncler-cream-lv",
@@ -240,7 +266,8 @@
     "description": "Coupe-vent Moncler crème, jean gris, sneakers LV navy.",
     "imagePath": "/outfits/outfit-moncler-cream-lv.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-stone-island-hermes",
@@ -249,7 +276,8 @@
     "description": "Sweat Stone Island vert, jean Amiri gris, sneakers Chanel, sac Kelly Hermès.",
     "imagePath": "/outfits/outfit-stone-island-hermes.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-dior-patchwork-blue",
@@ -258,7 +286,8 @@
     "description": "Doudoune bleu clair, jean patchwork, écharpe LV damier, sneakers Dior B22.",
     "imagePath": "/outfits/outfit-dior-patchwork-blue.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-moncler-amiri-winter",
@@ -267,7 +296,8 @@
     "description": "Doudoune Moncler crème, jean gris bande latérale, bonnet Chanel, sneakers Amiri.",
     "imagePath": "/outfits/outfit-moncler-amiri-winter.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-burberry-balenciaga",
@@ -276,7 +306,8 @@
     "description": "Hoodie Burberry tartan, jean Kenzo noir, sneakers Balenciaga, Chrome Hearts, Goyard.",
     "imagePath": "/outfits/outfit-burberry-balenciaga.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-navy-set",
@@ -285,7 +316,8 @@
     "description": "Tee LV navy floral, pantalon noir, sneakers LV, sac monogramme blanc, casquette.",
     "imagePath": "/outfits/outfit-lv-navy-set.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-goyard-hermes-grey",
@@ -294,7 +326,8 @@
     "description": "Gilet gris, pantalon gris, sac Goyard chevron, sneakers Hermès H logo.",
     "imagePath": "/outfits/outfit-goyard-hermes-grey.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-laabreno-navy-set",
@@ -303,7 +336,8 @@
     "description": "Gilet navy, tee crème, pantalon navy, sneakers navy, pochette.",
     "imagePath": "/outfits/outfit-laabreno-navy-set.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-burgundy-cream-loafers",
@@ -312,7 +346,8 @@
     "description": "Tee bordeaux, pantalon crème, mocassins suede cognac, sac blanc.",
     "imagePath": "/outfits/outfit-burgundy-cream-loafers.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-stone-island-lv-collage",
@@ -321,7 +356,8 @@
     "description": "Sweat Stone Island blanc, jean noir déchiré, sneakers LV monogramme, casquette.",
     "imagePath": "/outfits/outfit-stone-island-lv-collage.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-moncler-stone-white",
@@ -330,7 +366,8 @@
     "description": "Gilet Moncler blanc, pull Stone Island noir, jean Polo blanc, mocassins LV.",
     "imagePath": "/outfits/outfit-moncler-stone-white.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-polo-shorts-dior",
@@ -339,7 +376,8 @@
     "description": "Polo LV patchwork bleu, short LV monogramme, sneakers Dior.",
     "imagePath": "/outfits/outfit-lv-polo-shorts-dior.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-gallery-dept-dior",
@@ -348,7 +386,8 @@
     "description": "Tee Gallery Dept, short gris fleur, sneakers Dior, accessoires.",
     "imagePath": "/outfits/outfit-gallery-dept-dior.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-essentials-balenciaga",
@@ -357,7 +396,8 @@
     "description": "Hoodie vert fleurs, short Fear of God, Track Balenciaga LED, casquette Amiri.",
     "imagePath": "/outfits/outfit-essentials-balenciaga.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-mint-floral-on",
@@ -366,7 +406,8 @@
     "description": "Coupe-vent LV dégradé mint floral, jean gris déchiré, sneakers On, sac Papillon.",
     "imagePath": "/outfits/outfit-lv-mint-floral-on.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-ice-blue-hermes",
@@ -375,7 +416,8 @@
     "description": "Doudoune LV bleu glace hybrid, jean gris, sneakers Hermès, sac sling LV.",
     "imagePath": "/outfits/outfit-lv-ice-blue-hermes.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-chanel-red-white",
@@ -384,7 +426,8 @@
     "description": "Veste Chanel rouge/blanc logo, jean gris déchiré, sneakers CC rouges, sac camo.",
     "imagePath": "/outfits/outfit-chanel-red-white.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-chanel-orange-lv",
@@ -393,7 +436,8 @@
     "description": "Veste Chanel orange, jean Dsquared2 gris, sneakers LV orange, sac noir.",
     "imagePath": "/outfits/outfit-chanel-orange-lv.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-cloud-sky-loewe",
@@ -402,7 +446,8 @@
     "description": "Coupe-vent LV nuages bleu ciel, jean Dsquared2, sneakers Loewe On, sac graffiti LV.",
     "imagePath": "/outfits/outfit-lv-cloud-sky-loewe.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
   },
   {
     "id": "outfit-lv-dove-grey-goyard",
@@ -411,6 +456,127 @@
     "description": "Coupe-vent LV dégradé gris colombe, jean gris, sneakers Hermès, sac Goyard.",
     "imagePath": "/outfits/outfit-lv-dove-grey-goyard.jpg",
     "category": "outfits",
-    "categoryName": "Outfits"
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-women-burgundy-halter",
+    "slug": "women-burgundy-halter",
+    "name": "Robe bordeaux halter",
+    "description": "Mini robe bordeaux satin, bijoux or et sandales champagne.",
+    "imagePath": "/outfits/women/outfit-women-burgundy-halter.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-black-mermaid-dior",
+    "slug": "women-black-mermaid-dior",
+    "name": "Robe sirène noire Dior",
+    "description": "Robe longue noire épaules nues, Lady Dior paillettes et escarpins cristaux.",
+    "imagePath": "/outfits/women/outfit-women-black-mermaid-dior.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-white-peplum-pink",
+    "slug": "women-white-peplum-pink",
+    "name": "Ensemble blanc & rose",
+    "description": "Crop peplum blanc, pantalon évasé, sac Kelly rose et mules perle.",
+    "imagePath": "/outfits/women/outfit-women-white-peplum-pink.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-sage-jumpsuit-louboutin",
+    "slug": "women-sage-jumpsuit-louboutin",
+    "name": "Combinaison sage Louboutin",
+    "description": "Combinaison vert sauge, Louboutin blanc, Jacquemus et Rolex.",
+    "imagePath": "/outfits/women/outfit-women-sage-jumpsuit-louboutin.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-black-corset-slit",
+    "slug": "women-black-corset-slit",
+    "name": "Corset noir & jupe fendue",
+    "description": "Corset noir, jupe maxi fendue, Lady Dior cristaux et sandales D&G.",
+    "imagePath": "/outfits/women/outfit-women-black-corset-slit.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-black-gold-mermaid",
+    "slug": "women-black-gold-mermaid",
+    "name": "Robe noire & or",
+    "description": "Robe mermaid col roulé noir, escarpins or et pochette dorée.",
+    "imagePath": "/outfits/women/outfit-women-black-gold-mermaid.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-olive-jumpsuit-tomford",
+    "slug": "women-olive-jumpsuit-tomford",
+    "name": "Combinaison olive Tom Ford",
+    "description": "Combinaison vert olive, sandales or Tom Ford et sac suede.",
+    "imagePath": "/outfits/women/outfit-women-olive-jumpsuit-tomford.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-black-crystal-gown-chanel",
+    "slug": "women-black-crystal-gown-chanel",
+    "name": "Robe cristaux Chanel",
+    "description": "Robe longue corset cristaux, Lady Dior perles et escarpins dentelle.",
+    "imagePath": "/outfits/women/outfit-women-black-crystal-gown-chanel.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-black-lace-halter",
+    "slug": "women-black-lace-halter",
+    "name": "Robe dentelle noire",
+    "description": "Robe longue col montant dentelle, clutch cristaux et nœuds strass.",
+    "imagePath": "/outfits/women/outfit-women-black-lace-halter.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-sky-blue-ruffle",
+    "slug": "women-sky-blue-ruffle",
+    "name": "Co-ord bleu ciel volants",
+    "description": "Crop volants bleu ciel, pantalon ruffle, Jimmy Choo perles.",
+    "imagePath": "/outfits/women/outfit-women-sky-blue-ruffle.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-sky-blue-rose-jacket",
+    "slug": "women-sky-blue-rose-jacket",
+    "name": "Veste rose bleu ciel",
+    "description": "Veste structurée rose 3D, pantalon slim, broche cristaux et perles.",
+    "imagePath": "/outfits/women/outfit-women-sky-blue-rose-jacket.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
+  },
+  {
+    "id": "outfit-women-sky-blue-cape-ysl",
+    "slug": "women-sky-blue-cape-ysl",
+    "name": "Robe cape YSL bleu ciel",
+    "description": "Robe longue bleu ciel capuche, talons YSL et clutch YSL beige.",
+    "imagePath": "/outfits/women/outfit-women-sky-blue-cape-ysl.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "women"
   }
 ]
