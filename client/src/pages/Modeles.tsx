@@ -6,7 +6,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
-import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import {
+  getInFlightGeneration,
+  persistInFlightFromApiResult,
+} from "@/lib/in-flight-generation";
+import {
+  releaseGenerationSubmitLock,
+  tryAcquireGenerationSubmitLock,
+} from "@/lib/generation-submit-lock";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
@@ -292,12 +299,15 @@ export default function Modeles() {
 
   const feedRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const generationLockRef = useRef(false);
   const [scenePulse, setScenePulse] = useState(0);
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<FeedTemplate | null>(
     null,
   );
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(
+    () => getInFlightGeneration()?.taskId ?? null,
+  );
   const [busy, setBusy] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
@@ -456,6 +466,16 @@ export default function Modeles() {
     template: FeedTemplate,
     userImages: string[] = [],
   ) => {
+    if (
+      generationLockRef.current ||
+      busy ||
+      taskId ||
+      getInFlightGeneration() ||
+      !tryAcquireGenerationSubmitLock()
+    ) {
+      return;
+    }
+    generationLockRef.current = true;
     setBusy(true);
     try {
       const result = await generateDirect.mutateAsync({
@@ -464,14 +484,17 @@ export default function Modeles() {
         images: userImages,
         use_face_asset: false,
       });
+      persistInFlightFromApiResult(result, "modeles");
       setTaskId(result.taskId);
     } catch (error: any) {
+      generationLockRef.current = false;
       toast({
         variant: "destructive",
         title: "Génération impossible",
         description: error?.message || "Réessaie dans un instant.",
       });
     } finally {
+      releaseGenerationSubmitLock();
       setBusy(false);
       setPendingUserPhoto(null);
       setShowOutfitQuestion(false);
@@ -528,16 +551,6 @@ export default function Modeles() {
     setPendingUserPhoto(base64);
     setShowOutfitQuestion(true);
   };
-
-  if (taskId) {
-    return (
-      <GenerationProgress
-        taskId={taskId}
-        onReset={() => setTaskId(null)}
-        resultType="image"
-      />
-    );
-  }
 
   if (isLoading) {
     return (
@@ -710,10 +723,12 @@ export default function Modeles() {
       <OutfitPickerModal
         open={showOutfitPicker}
         title="Catalogue tenues"
-        subtitle="Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        subtitle="Hommes ou Femmes — Image 1 = toi · Image 2 = tenue · Image 3 = décor du modèle."
+        requireConfirmation
+        closeOnOverlayClick={false}
         onClose={() => {
           setShowOutfitPicker(false);
-          void finishWithUserPhotoOnly();
+          setShowOutfitQuestion(true);
         }}
         onSelect={(outfit) => void finishWithOutfit(outfit)}
       />

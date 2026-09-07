@@ -24,6 +24,9 @@ function listBuiltinOutfitsForApi() {
     previewUrl: resolveReferenceUrl(item.imagePath),
     category: item.category,
     categoryName: item.categoryName,
+    gender:
+      item.gender ||
+      (String(item.id || "").startsWith("outfit-women-") ? "women" : "men"),
   }));
 }
 

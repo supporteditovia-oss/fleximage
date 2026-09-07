@@ -80,6 +80,15 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "FORBIDDEN: new decor, relocated scene, rebuilt room, different vehicle or yacht, changed weather or time of day, artistic re-shoot, cutout halo. " +
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 
+/** Verrouillage caméra / décor pixel-par-pixel pour tous les modèles prêts. */
+const BUILTIN_SCENE_PIXEL_LOCK =
+  "PIXEL-PERFECT SCENE LOCK (critical — highest priority): treat image 2 as a frozen photograph. " +
+  "The output must use the IDENTICAL camera position, focal length, field of view, crop, aspect ratio 9:16, horizon line, and perspective as image 2. " +
+  "ZERO camera movement — forbidden: pan, tilt, zoom, dolly, reframe, wider/narrower shot, parallax shift, background drift, horizon creep, micro-shift of landmarks. " +
+  "Every non-human pixel must match image 2: sky gradient, clouds, buildings, sea, palm trees, road, bridge, railing, car exterior paint, window frame, A-pillar, roof line, dashboard, steering wheel angle and position, digital cluster, seat leather grain, door sill plates, floor mats, seatbelt, mirrors, and through-window background (Burj Al Arab position, Palm Jumeirah shape, sunset color). " +
+  "If engraved text or badges are visible in image 2 (e.g. URUS on door sill, brand on wheel, cluster UI), they MUST remain visible at the same pixel region, size, and angle — never crop them out. " +
+  "Only replace the human identity (face, hair, skin, body under the same clothes) — the photograph itself must NOT be re-shot, re-composed, or regenerated.";
+
 /** Renfort explicite — jambes/mains visibles entre vêtements (Urus, yacht torse nu, etc.). */
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   "UNIFORM SKIN MANDATORY (reject if violated): recolor EVERY pixel of exposed skin on the replaced person to match image 1 — " +
@@ -97,6 +106,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt) {
     "Replace the model person with the user while keeping the scene identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    BUILTIN_SCENE_PIXEL_LOCK,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
     REALISM_QUALITY_GUARD,
@@ -137,6 +147,7 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt) {
     "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
+    BUILTIN_SCENE_PIXEL_LOCK,
     OUTFIT_FROM_REF_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     userPart,
@@ -2012,45 +2023,28 @@ function vehicleForbiddenBrandHint(prompt) {
   );
 }
 
-/** Nano Banana Pro for complex vehicle identity / lifestyle relocations. */
-function needsProModelVariant(prompt) {
-  return (
-    isAddAnimalPrompt(prompt) ||
-    isMotorcycleReplacePrompt(prompt) ||
-    isMotorcycleRidePrompt(prompt) ||
-    isFictionalVehiclePrompt(prompt) ||
-    (isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt))
-  );
+/** @deprecated Nano Banana Pro is forbidden — always Nano Banana 2 (`fast`). */
+function needsProModelVariant(_prompt) {
+  return false;
 }
 
-/** Honest client countdown — provider pass + typical vision QA / one corrective regen. */
+/** Compte à rebours honnête — Nano Banana 2, une seule passe (pas de regen QA). */
 function estimateGenerationSeconds(prompt, options = {}) {
   const refs = Math.max(0, Number(options.referenceImageCount) || 0);
-  const pro = needsProModelVariant(prompt);
-  let providerSec = pro ? 50 : 34;
-  if (refs >= 2) providerSec += 8;
-  if (refs >= 3) providerSec += 6;
-  if (isVehicleReplacePrompt(prompt)) providerSec += 12;
+  let sec = 42;
+  if (refs >= 2) sec += 6;
+  if (refs >= 3) sec += 4;
+  if (isVehicleReplacePrompt(prompt)) sec += 8;
   if (isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt)) {
-    providerSec += 8;
+    sec += 6;
   }
-  if (isLifestyleRelocatePrompt(prompt)) providerSec += 10;
+  if (isLifestyleRelocatePrompt(prompt)) sec += 8;
   if (isNamedVehiclePrompt(prompt) && !isNonCarLifestylePrompt(prompt)) {
-    providerSec += 6;
+    sec += 4;
   }
-  if (isFictionalVehiclePrompt(prompt)) providerSec += 6;
-  if (isAddAnimalPrompt(prompt)) providerSec += 8;
-  const vehicleReplace = isVehicleReplacePrompt(prompt);
-  const moto =
-    isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt);
-  const lifestyleCar =
-    isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt);
-  // Swaps with QA retry budget (vehicle replace skips QA — fast path).
-  const needsFullRetryBudget =
-    !vehicleReplace &&
-    (moto || lifestyleCar || isFictionalVehiclePrompt(prompt));
-  const qaSec = needsFullRetryBudget ? providerSec + 10 : 14;
-  return Math.min(110, Math.max(25, providerSec + qaSec));
+  if (isFictionalVehiclePrompt(prompt)) sec += 4;
+  if (isAddAnimalPrompt(prompt)) sec += 6;
+  return Math.min(68, Math.max(35, sec));
 }
 
 function detectCockpitVehicleModel(prompt) {
