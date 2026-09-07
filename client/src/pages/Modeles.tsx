@@ -141,6 +141,24 @@ function TemplateSlideContent({
           </button>
         </div>
 
+        <button
+          type="button"
+          className="tpl-cta tpl-cta--lux"
+          disabled={busy}
+          onClick={() => onPrimaryAction(template)}
+        >
+          {busy ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isVehicleSwapTemplate(template) ? (
+            <>Remplacer le quad (Can-Am)</>
+          ) : (
+            <>
+              <ImagePlus className="h-5 w-5" aria-hidden />
+              Générer l’image
+            </>
+          )}
+        </button>
+
         <div className="tpl-badges tpl-badges--lux">
           <span className="tpl-badge">
             {isVehicleSwapTemplate(template)
@@ -178,24 +196,6 @@ function TemplateSlideContent({
             ))}
           </div>
         ) : null}
-
-        <button
-          type="button"
-          className="tpl-cta tpl-cta--lux"
-          disabled={busy}
-          onClick={() => onPrimaryAction(template)}
-        >
-          {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : isVehicleSwapTemplate(template) ? (
-            <>Remplacer le quad (Can-Am)</>
-          ) : (
-            <>
-              <ImagePlus className="h-5 w-5" aria-hidden />
-              Générer l’image
-            </>
-          )}
-        </button>
 
         <p className="tpl-hint">
           {comparePair
