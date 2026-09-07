@@ -4,6 +4,15 @@
  * stay photoreal with real-world brands and sharp readable text.
  * Keep in sync with api/_lib/prompt-guard.js (Vercel).
  */
+
+/** Règle globale de réalisme — obligatoire par défaut (sync api/_lib/global-realism-guard.js). */
+export const GLOBAL_REALISM_GUARD =
+  "GLOBAL REALISM LOCK (mandatory): spontaneous premium smartphone photo by a friend — NEVER AI art, ad, mannequin catalog, fashion campaign, 3D render, or overly perfect image. " +
+  "Keep EXACT reference identity (face, skin, hair, age, proportions) — no plastic/waxy skin, beauty filter, face morph. " +
+  "Natural pores, micro-asymmetry, 5 fingers; pose from outfit+furniture+activity+location; real fabric folds; coherent decor/light; candid 9:16 framing — never studio/catalog unless asked.";
+
+export const GLOBAL_REALISM_NEGATIVE_EXTRA =
+  "image IA, publicité, mannequin, campagne mode, rendu 3D, trop parfait, peau plastique, filtre beauté, pose mannequin, HDR excessif";
 export const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
   "LOCK identity and pose unless the user explicitly asks to change them: " +
@@ -45,6 +54,7 @@ export const SYSTEM_PRODUCTION_RULES =
  * Nano Banana has no native negativePrompt field — exclusions go in the main prompt.
  */
 export const NEGATIVE_PROMPT_EXCLUSIONS =
+  `${GLOBAL_REALISM_NEGATIVE_EXTRA}, ` +
   "hybrides, corps fusionnés, homme en robe, jambes supplémentaires, mains fantômes, doigts déformés, texte illisible, charabia, effet plastique, dessin 3D";
 
 export const NEGATIVE_PROMPT_CLAUSE =
@@ -122,9 +132,18 @@ export function needsLuxuryDetailGuard(_prompt: string): boolean {
 }
 
 function qualitySuffix(): string {
-  return [SYSTEM_PRODUCTION_RULES, REALISM_QUALITY_GUARD, NEGATIVE_PROMPT_CLAUSE]
+  return [GLOBAL_REALISM_GUARD, SYSTEM_PRODUCTION_RULES, REALISM_QUALITY_GUARD, NEGATIVE_PROMPT_CLAUSE]
     .filter(Boolean)
     .join(" ");
+}
+
+export function finalizeProviderPrompt(prompt: string, maxLen = MAX_FINAL_PROMPT): string {
+  const base = String(prompt || "").trim();
+  if (!base) return base;
+  const guarded = /GLOBAL REALISM LOCK/i.test(base)
+    ? base
+    : `${GLOBAL_REALISM_GUARD} ${base}`;
+  return guarded.length <= maxLen ? guarded : guarded.slice(0, maxLen);
 }
 
 /**
@@ -150,9 +169,7 @@ export function buildBuiltinTemplateFaceSwapPrompt(templatePrompt: string): stri
     cleaned ||
     "Replace the model person with the user while keeping the scene identical.";
   const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_GUARD}${BUILTIN_SKIN_UNIFORMITY_CLARIFIER} ${userPart} ${qualitySuffix()}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(combined);
 }
 
 const BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD =
@@ -168,9 +185,7 @@ export function buildBuiltinTemplateFaceSwapWithOutfitPrompt(
     cleaned ||
     "Replace the model person with the user, wearing outfit from image 2, scene from image 3 identical.";
   const combined = `${BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD} ${userPart} ${qualitySuffix()}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(combined);
 }
 
 /**
@@ -186,9 +201,7 @@ export function buildIdentityPreservingPrompt(userPrompt: string): string {
   const budget = Math.max(80, MAX_FINAL_PROMPT - prefix.length - suffix.length - 2);
   const userPart = cleaned.slice(0, budget);
   const combined = `${prefix} ${userPart} ${suffix}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(combined);
 }
 
 /** Append strict literal + production rules onto an already-built template prompt. */
@@ -199,9 +212,7 @@ export function appendProductionPromptRules(prompt: string): string {
     return base.slice(0, MAX_FINAL_PROMPT);
   }
   const combined = `${STRICT_LITERAL_EXECUTION} ${base} ${qualitySuffix()}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(combined);
 }
 
 /**
@@ -211,7 +222,5 @@ export function buildLiteralRetryPrompt(finalPrompt: string): string {
   const base = String(finalPrompt || "").trim();
   if (!base) return base;
   const combined = `${UNRESTRICTED_RETRY_PREFIX}${STRICT_LITERAL_EXECUTION} ${base}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(combined);
 }

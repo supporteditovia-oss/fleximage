@@ -9,6 +9,12 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  GLOBAL_REALISM_GUARD,
+  GLOBAL_REALISM_NEGATIVE_EXTRA,
+  GLOBAL_REALISM_QA_RETRY_PREFIX,
+  finalizeProviderPrompt,
+} = require("./global-realism-guard");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -97,6 +103,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt, options = {}) {
     "Replace the model person with the user while keeping the scene identical.";
   const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
+    GLOBAL_REALISM_GUARD,
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     subjectPoseBlock,
@@ -104,11 +111,7 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt, options = {}) {
     REALISM_QUALITY_GUARD,
     NEGATIVE_PROMPT_CLAUSE,
   ];
-  let combined = parts.filter(Boolean).join(" ");
-  if (combined.length > MAX_FINAL_PROMPT) {
-    combined = combined.slice(0, MAX_FINAL_PROMPT);
-  }
-  return combined;
+  return finalizeProviderPrompt(parts.filter(Boolean).join(" "));
 }
 
 /**
@@ -139,6 +142,7 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt, options = 
     "Replace the model person with the user, wearing the outfit from image 2, while keeping the scene from image 3 identical.";
   const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
+    GLOBAL_REALISM_GUARD,
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
     OUTFIT_FROM_REF_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
@@ -147,11 +151,7 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt, options = 
     REALISM_QUALITY_GUARD,
     NEGATIVE_PROMPT_CLAUSE,
   ];
-  let combined = parts.filter(Boolean).join(" ");
-  if (combined.length > MAX_FINAL_PROMPT) {
-    combined = combined.slice(0, MAX_FINAL_PROMPT);
-  }
-  return combined;
+  return finalizeProviderPrompt(parts.filter(Boolean).join(" "));
 }
 
 /** Additive clarifier when user says remplace / replace a person. */
@@ -2509,6 +2509,7 @@ const SYSTEM_PRODUCTION_RULES =
  * Nano Banana has no native negativePrompt field — exclusions go in the main prompt.
  */
 const NEGATIVE_PROMPT_EXCLUSIONS =
+  `${GLOBAL_REALISM_NEGATIVE_EXTRA}, ` +
   "hybrides, corps fusionnés, clone du sujet, personne dupliquée, jumeau miroir, yeux déformés, tête bizarre, telephone disparu, face swap, peau plastique, rendu 3D, homme en robe, jambes supplémentaires, mains fantômes, doigts déformés, animal colle, animal sticker, animal CGI, animal dessine, dessin animal, cartoon animal, anime animal, pixar animal, 3d animal, illustration animal, pattes en trop, animal flottant, sans ombre animal, sans ombre contact, cutout halo, stock png animal, lumiere studio animal, animal trop lumineux, peluche fake, bebe animal non demande, baby animal unwanted, adult when baby asked, texte illisible, charabia, effet plastique, dessin 3D, barbe brûlée, barbe plastique, barbe collée, moustache fake, poils CGI, torse flottant, sans jambes, siege vide sous le corps, jambes blanches peau noire, voiture en trop, troisieme voiture, conducteur invente, personne inventee dans la voiture, piece reconstruite, photo transformee, nouveau sol, nouveau plafond, murs reinventes, trou dans le sol, trou dans le plafond, trappe, cage d'escalier inventee, etage invente, mezzanine, sous-sol, ouverture inventee, architecture extra, compteur illisible, fausses jauges, interface inventee, chiffres melanges, symboles deformes, pseudo-lettres, icônes volant inventées, porte ouverte rouge, alerte porte ouverte, porte rouge tableau de bord, door open warning, red open door cluster, collage coupe vertical, demi capot exterieur, demi habitacle, floating pillar, toit flottant, cutaway car, dual perspective, exterior interior splice, sparkle diamants uniforme, montre générique, mauvaise generation, mélange de chassis, habitacle générique, cockpit hybride, voiture recentree, voiture reparkée, angle de stationnement change, boutique ouverte, rideaux releves, station reconstruite, blob jaune reservoir, lumiere dans la trappe essence, objet invente dans le plein, vetements colles, photo produit, packshot vetement, chaussures flottantes, jouet tableau de bord, mini voiture interieur, mauvaise direction route, guidon invisible, mains noires flottantes, celebrity CGI, celebrite brulee, lunettes enlevees, lunettes supprimees, cheveux attaches, chignon invente, visage different, autre personne, mannequin visage, voiture fantome devant, ghost car traffic, interieur clio, interieur renault, habitacle non change";
 
 const NEGATIVE_PROMPT_CLAUSE =
@@ -3371,6 +3372,7 @@ function needsLuxuryDetailGuard(_prompt) {
 
 function qualitySuffix(includeCelebrityGuard) {
   const parts = [
+    GLOBAL_REALISM_GUARD,
     includeCelebrityGuard ? CURRENT_CELEBRITY_LIKENESS_GUARD : null,
     SYSTEM_PRODUCTION_RULES,
     REALISM_QUALITY_GUARD,
@@ -3859,18 +3861,20 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
 
   for (const candidate of candidates) {
     if (candidate.length <= MAX_FINAL_PROMPT) {
-      return ensureDoorClosedFrontLock(candidate, {
-        vehicle:
-          vehicleScene ||
-          cockpitInteriorReplaceScene ||
-          rawCockpitRefine ||
-          rawVehicle ||
-          (lifestyleScene &&
-            !isNonCarLifestylePrompt(userPrompt) &&
-            (isInsideNamedCarPrompt(userPrompt) ||
-              isVehicleDriverPrompt(userPrompt) ||
-              isNamedVehiclePrompt(userPrompt))),
-      });
+      return finalizeProviderPrompt(
+        ensureDoorClosedFrontLock(candidate, {
+          vehicle:
+            vehicleScene ||
+            cockpitInteriorReplaceScene ||
+            rawCockpitRefine ||
+            rawVehicle ||
+            (lifestyleScene &&
+              !isNonCarLifestylePrompt(userPrompt) &&
+              (isInsideNamedCarPrompt(userPrompt) ||
+                isVehicleDriverPrompt(userPrompt) ||
+                isNamedVehiclePrompt(userPrompt))),
+        }),
+      );
     }
   }
 
@@ -3883,20 +3887,22 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
       : weatherAtmosphereScene
         ? cleaned
         : expandedUser;
-  return ensureDoorClosedFrontLock(
-    `${fixed} ${userForTrim.slice(0, budget)}`.slice(0, MAX_FINAL_PROMPT),
-    {
-      vehicle:
-        vehicleScene ||
-        cockpitInteriorReplaceScene ||
-        rawCockpitRefine ||
-        rawVehicle ||
-        (lifestyleScene &&
-          !isNonCarLifestylePrompt(userPrompt) &&
-          (isInsideNamedCarPrompt(userPrompt) ||
-            isVehicleDriverPrompt(userPrompt) ||
-            isNamedVehiclePrompt(userPrompt))),
-    },
+  return finalizeProviderPrompt(
+    ensureDoorClosedFrontLock(
+      `${fixed} ${userForTrim.slice(0, budget)}`.slice(0, MAX_FINAL_PROMPT),
+      {
+        vehicle:
+          vehicleScene ||
+          cockpitInteriorReplaceScene ||
+          rawCockpitRefine ||
+          rawVehicle ||
+          (lifestyleScene &&
+            !isNonCarLifestylePrompt(userPrompt) &&
+            (isInsideNamedCarPrompt(userPrompt) ||
+              isVehicleDriverPrompt(userPrompt) ||
+              isNamedVehiclePrompt(userPrompt))),
+      },
+    ),
   );
 }
 
@@ -3936,9 +3942,11 @@ function appendProductionPromptRules(prompt) {
   }
   const named = looksLikeNamedPublicFigurePrompt(base) || isPersonSwapPrompt(base);
   const combined = `${STRICT_LITERAL_EXECUTION} ${base} ${qualitySuffix(named)}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(
+    combined.length <= MAX_FINAL_PROMPT
+      ? combined
+      : combined.slice(0, MAX_FINAL_PROMPT),
+  );
 }
 
 /**
@@ -3950,9 +3958,11 @@ function buildLiteralRetryPrompt(finalPrompt) {
   if (!base) return base;
   const facialHairExtra = isFacialHairPrompt(base) ? FACIAL_HAIR_RETRY_PREFIX : "";
   const combined = `${facialHairExtra}${UNRESTRICTED_RETRY_PREFIX}${STRICT_LITERAL_EXECUTION} ${base}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(
+    combined.length <= MAX_FINAL_PROMPT
+      ? combined
+      : combined.slice(0, MAX_FINAL_PROMPT),
+  );
 }
 
 /**
@@ -3992,17 +4002,22 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
         "Show ALL doors closed on that white outline. Keep red ONLY if a door is visibly open in the photo. No contradictory door alerts. "
       : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
   const prefix =
+    `${GLOBAL_REALISM_QA_RETRY_PREFIX}` +
     "QA CORRECTION PASS (mandatory). Keep the SAME person identity. " +
     doorFix +
     `Fix ONLY these critical defects: ${fixList}. ` +
     "IDENTITY≠POSE: if relocating, invent a NEW natural pose — never paste the reference selfie/hand-on-cheek. " +
     "BODY: hips/legs/feet must sit/lie on the real support with contact shadows. " +
     "HUMAN: natural pores/asymmetry — no plastic/waxy doll skin; background people equally real. " +
+    "POSE: comfortable candid smartphone — no mannequin/catalog stance; outfit+furniture+activity coherent. " +
+    "DECOR/LIGHT: geographically coherent; no HDR/oversaturation/studio catalog look. " +
     "TEXT/LOGOS: no readable gibberish; money = imperfect real paper if present. ";
   const combined = `${prefix}${base}`;
-  return combined.length <= MAX_FINAL_PROMPT
-    ? combined
-    : combined.slice(0, MAX_FINAL_PROMPT);
+  return finalizeProviderPrompt(
+    combined.length <= MAX_FINAL_PROMPT
+      ? combined
+      : combined.slice(0, MAX_FINAL_PROMPT),
+  );
 }
 
 /**
@@ -4043,6 +4058,7 @@ module.exports = {
   buildLiteralRetryPrompt,
   buildVisionQaRetryPrompt,
   buildFacialHairHardRetryPrompt,
+  finalizeProviderPrompt,
   sanitizeUserPrompt,
   isPersonSwapPrompt,
   isAddCompanionPrompt,
@@ -4134,6 +4150,7 @@ module.exports = {
   NEGATIVE_PROMPT_EXCLUSIONS,
   NEGATIVE_PROMPT_CLAUSE,
   REALISM_QUALITY_GUARD,
+  GLOBAL_REALISM_GUARD,
   IDENTITY_NOT_POSE_CLARIFIER,
   PHYSICAL_PLACEMENT_CLARIFIER,
   HUMAN_PHOTOREAL_CLARIFIER,

@@ -458,59 +458,55 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = "Aucune image dans le résultat";
         } else if (larp.generation_type !== "video") {
-          // Vision QA: skip modèles prêts (builtin) — one image only, no auto-retry.
           const meta =
             larp.metadata && typeof larp.metadata === "object"
               ? larp.metadata
               : {};
-          const isBuiltinReadyModel = Boolean(meta.builtin_template_id);
-          if (!isBuiltinReadyModel) {
-            const qaModelVariant =
-              meta.oneshot_model_variant || ONESHOT_MODEL_VARIANT;
-            const qaDecision = await withTimeout(
-              maybeRetryAfterVisionQa({
-                supabase,
-                larp,
-                resultUrls,
-                uploadImageUrlsToOneshot,
-                createOneshotJob,
-                buildVisionQaRetryPrompt,
-                aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
-                modelVariant: qaModelVariant,
-              }),
-              18_000,
-              { action: "accept", qa: { skipped: true, reason: "timeout" } },
-            );
+          const qaModelVariant =
+            meta.oneshot_model_variant || ONESHOT_MODEL_VARIANT;
+          const qaDecision = await withTimeout(
+            maybeRetryAfterVisionQa({
+              supabase,
+              larp,
+              resultUrls,
+              uploadImageUrlsToOneshot,
+              createOneshotJob,
+              buildVisionQaRetryPrompt,
+              aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+              modelVariant: qaModelVariant,
+            }),
+            18_000,
+            { action: "accept", qa: { skipped: true, reason: "timeout" } },
+          );
 
-            if (qaDecision && qaDecision.action === "busy") {
-              res.status(200).json({
-                larpId: larp.id,
-                ...statusTimingFields(larp),
-                status: "waiting",
-                resultUrls: [],
-                failMessage: null,
-                costTime: null,
-                isSubscriber: false,
-                requiresPaywall: false,
-                resultType: "image",
-              });
-              return;
-            }
+          if (qaDecision && qaDecision.action === "busy") {
+            res.status(200).json({
+              larpId: larp.id,
+              ...statusTimingFields(larp),
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType: "image",
+            });
+            return;
+          }
 
-            if (qaDecision && qaDecision.action === "retry") {
-              res.status(200).json({
-                larpId: larp.id,
-                ...statusTimingFields(larp),
-                status: "waiting",
-                resultUrls: [],
-                failMessage: null,
-                costTime: null,
-                isSubscriber: false,
-                requiresPaywall: false,
-                resultType: "image",
-              });
-              return;
-            }
+          if (qaDecision && qaDecision.action === "retry") {
+            res.status(200).json({
+              larpId: larp.id,
+              ...statusTimingFields(larp),
+              status: "waiting",
+              resultUrls: [],
+              failMessage: null,
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType: "image",
+            });
+            return;
           }
         }
       }

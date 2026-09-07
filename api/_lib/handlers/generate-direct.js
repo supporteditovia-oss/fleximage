@@ -22,7 +22,7 @@ const {
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { analyzeSubjectContext } = require("../subject-analysis");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds, finalizeProviderPrompt } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -272,19 +272,21 @@ module.exports = async function handler(req, res) {
       faceSwapLockedPose: isBuiltinFaceSwap,
     });
 
-    const finalPrompt = isBuiltinFaceSwapWithOutfit
-      ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
-          "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
-          { subjectPoseBlock },
-        )
-      : isBuiltinFaceSwap
-        ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt, {
-            subjectPoseBlock,
-          })
-        : buildIdentityPreservingPrompt(effectivePrompt, {
-            referenceImageCount: imageUrls.length,
-            subjectPoseBlock,
-          });
+    const finalPrompt = finalizeProviderPrompt(
+      isBuiltinFaceSwapWithOutfit
+        ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
+            "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
+            { subjectPoseBlock },
+          )
+        : isBuiltinFaceSwap
+          ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt, {
+              subjectPoseBlock,
+            })
+          : buildIdentityPreservingPrompt(effectivePrompt, {
+              referenceImageCount: imageUrls.length,
+              subjectPoseBlock,
+            }),
+    );
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
