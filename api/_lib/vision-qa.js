@@ -26,6 +26,8 @@ const CRITICAL_CODES = new Set([
   "duplicated_objects",
   "unrequested_feature",
   "identity_lost",
+  "identity_blend",
+  "scene_face_used",
   "edit_not_applied",
   "pose_paste",
   "floating_person",
@@ -131,10 +133,32 @@ function sanitizeQaForFictional(qa, userPrompt, finalPrompt) {
   };
 }
 
-function buildQaSystemPrompt(userPrompt, finalPrompt) {
+function isMultiImageIdentitySceneQaContext(larp) {
+  const meta =
+    larp && larp.metadata && typeof larp.metadata === "object"
+      ? larp.metadata
+      : {};
+  if (meta.multi_image_identity_scene) return true;
+  const text = `${larp?.prompt || ""} ${larp?.final_prompt || ""}`;
+  return /\bMULTI-REFERENCE IDENTITY\+SCENE\b/i.test(text);
+}
+
+function getIdentityReferenceUrl(larp) {
+  const meta =
+    larp && larp.metadata && typeof larp.metadata === "object"
+      ? larp.metadata
+      : {};
+  const fromMeta = meta.identity_reference_url;
+  if (typeof fromMeta === "string" && fromMeta.trim()) return fromMeta.trim();
+  const assets = Array.isArray(larp?.input_assets) ? larp.input_assets : [];
+  return assets[0] || null;
+}
+
+function buildQaSystemPrompt(userPrompt, finalPrompt, options = {}) {
   const request = String(userPrompt || "").slice(0, 500);
   const finalBrief = String(finalPrompt || "").slice(0, 700);
   const cartoonAsked = isFictionalVehicleQaContext(request, finalBrief);
+  const identityScene = Boolean(options.multiImageIdentityScene);
   const cartoonNote = cartoonAsked
     ? "FICTIONAL VEHICLE OVERRIDE (critical instructions):\n" +
       "- User wants a cartoon/animated/game/fictional vehicle design (e.g. Cars movie), possibly with photoreal materials.\n" +
@@ -142,6 +166,16 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
       "- NEVER flag wrong_vehicle_interior just because it is not a Ferrari/Porsche/Lambo factory cabin.\n" +
       "- CRITICAL only if identity_lost OR edit_not_applied (generic real luxury cabin ignoring the fictional design/reference).\n" +
       "- Matching colors/shapes/decals from the reference fictional car = PASS.\n"
+    : "";
+  const identitySceneNote = identityScene
+    ? "MULTI-REFERENCE IDENTITY+SCENE OVERRIDE (critical):\n" +
+      "- Two reference images were provided: identity (face source) + scene (decor/pose only).\n" +
+      "- Compare the RESULT face to the IDENTITY REFERENCE image (2nd attached image if present).\n" +
+      "- CRITICAL identity_lost if the result person is not clearly the same individual as the identity reference.\n" +
+      "- CRITICAL identity_blend if the face looks mixed/averaged between two people or partially wrong.\n" +
+      "- CRITICAL scene_face_used if the result face matches the scene reference person instead of the identity reference.\n" +
+      "- CRITICAL plastic_face if over-smoothed/beautified/symmetrized vs the identity reference.\n" +
+      "- PASS only if the result face is a faithful match to the identity reference placed in the scene.\n"
     : "";
   const doorBlock = cartoonAsked
     ? ""
@@ -154,6 +188,7 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     "Schema:\n" +
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
     cartoonNote +
+    identitySceneNote +
     doorBlock +
     "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +
     "If only minor softness/noise, pass=true critical=false.\n" +
@@ -310,13 +345,121 @@ async function callOpenAiVision({ apiKey, image, promptText }) {
   return parseJsonFromModelText(text);
 }
 
+async function callGeminiVisionMulti({
+  apiKey,
+  resultImage,
+  identityImage,
+  promptText,
+}) {
+  const model =
+    process.env.GEMINI_VISION_MODEL ||
+    process.env.GOOGLE_VISION_MODEL ||
+    "gemini-2.0-flash";
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
+    `?key=${encodeURIComponent(apiKey)}`;
+  const parts = [{ text: promptText }, {
+    inline_data: {
+      mime_type: resultImage.mimeType,
+      data: resultImage.base64,
+    },
+  }];
+  if (identityImage) {
+    parts.push({
+      text: "IDENTITY REFERENCE (compare result face to this person):",
+    });
+    parts.push({
+      inline_data: {
+        mime_type: identityImage.mimeType,
+        data: identityImage.base64,
+      },
+    });
+  }
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 800,
+        responseMimeType: "application/json",
+      },
+    }),
+    signal: AbortSignal.timeout(VISION_QA_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`gemini_qa_${res.status}:${errText.slice(0, 160)}`);
+  }
+  const data = await res.json();
+  const text =
+    data?.candidates?.[0]?.content?.parts?.map((p) => p.text).filter(Boolean).join("\n") ||
+    "";
+  return parseJsonFromModelText(text);
+}
+
+async function callOpenAiVisionMulti({
+  apiKey,
+  resultImage,
+  identityImage,
+  promptText,
+}) {
+  const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
+  const content = [
+    { type: "text", text: promptText },
+    {
+      type: "image_url",
+      image_url: {
+        url: `data:${resultImage.mimeType};base64,${resultImage.base64}`,
+      },
+    },
+  ];
+  if (identityImage) {
+    content.push({
+      type: "text",
+      text: "IDENTITY REFERENCE (compare result face to this person):",
+    });
+    content.push({
+      type: "image_url",
+      image_url: {
+        url: `data:${identityImage.mimeType};base64,${identityImage.base64}`,
+      },
+    });
+  }
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      max_tokens: 800,
+      response_format: { type: "json_object" },
+      messages: [{ role: "user", content }],
+    }),
+    signal: AbortSignal.timeout(VISION_QA_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`openai_qa_${res.status}:${errText.slice(0, 160)}`);
+  }
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  return parseJsonFromModelText(text);
+}
+
 /**
  * Inspect a generated image. Never throws to callers — returns skipped/pass on errors.
  */
 async function inspectGenerationResult({
   imageUrl,
+  identityReferenceUrl,
   userPrompt,
   finalPrompt,
+  multiImageIdentityScene,
 } = {}) {
   if (!imageUrl) {
     return {
@@ -339,7 +482,9 @@ async function inspectGenerationResult({
 
   const provider = getVisionProvider();
   const apiKey = getVisionApiKey();
-  const promptText = buildQaSystemPrompt(userPrompt, finalPrompt);
+  const promptText = buildQaSystemPrompt(userPrompt, finalPrompt, {
+    multiImageIdentityScene,
+  });
 
   try {
     const image = await withTimeout(fetchImageAsBase64(imageUrl), 10_000, null);
@@ -354,10 +499,29 @@ async function inspectGenerationResult({
       };
     }
 
+    let identityImage = null;
+    if (multiImageIdentityScene && identityReferenceUrl) {
+      identityImage = await withTimeout(
+        fetchImageAsBase64(identityReferenceUrl),
+        10_000,
+        null,
+      );
+    }
+
     const raw =
       provider === "openai"
-        ? await callOpenAiVision({ apiKey, image, promptText })
-        : await callGeminiVision({ apiKey, image, promptText });
+        ? await callOpenAiVisionMulti({
+            apiKey,
+            resultImage: image,
+            identityImage,
+            promptText,
+          })
+        : await callGeminiVisionMulti({
+            apiKey,
+            resultImage: image,
+            identityImage,
+            promptText,
+          });
 
     if (!raw) {
       console.warn("[vision-qa] empty/unparseable model response — skipping");
@@ -442,10 +606,16 @@ async function maybeRetryAfterVisionQa({
 
   const imageUrl =
     Array.isArray(resultUrls) && resultUrls[0] ? resultUrls[0] : null;
+  const identityScene = isMultiImageIdentitySceneQaContext(larp);
+  const identityReferenceUrl = identityScene
+    ? getIdentityReferenceUrl(larp)
+    : null;
   const qa = await inspectGenerationResult({
     imageUrl,
+    identityReferenceUrl,
     userPrompt: larp.prompt,
     finalPrompt: larp.final_prompt,
+    multiImageIdentityScene: identityScene,
   });
 
   if (!qa || qa.skipped || !qa.critical) {
@@ -458,7 +628,21 @@ async function maybeRetryAfterVisionQa({
       larpId: larp && larp.id,
       issues: (qa.issues || []).map((i) => i.code),
     });
-    return { action: "accept", qa: { ...qa, reason: "max_retries" } };
+    const identityFail =
+      identityScene &&
+      (qa.issues || []).some((i) =>
+        ["identity_lost", "identity_blend", "scene_face_used"].includes(
+          String(i.code || ""),
+        ),
+      );
+    return {
+      action: "accept",
+      qa: {
+        ...qa,
+        reason: "max_retries",
+        identityWarning: identityFail,
+      },
+    };
   }
 
   const oneshotTaskId = String(larp.provider_task_id || "");

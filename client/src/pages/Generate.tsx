@@ -67,6 +67,13 @@ import {
   type BuiltinOutfit,
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
+import {
+  defaultUiRoles,
+  normalizeImageRoles,
+  type FaceFidelityLevel,
+  type ImageReferenceRole,
+} from "@shared/image-reference-roles";
+import { FaceFidelitySelector } from "@/components/generate/FaceFidelitySelector";
 import "@/components/outfits/outfit-picker.css";
 
 const IMAGE_CREDIT_COST = 10;
@@ -90,6 +97,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([
     null,
   ]);
+  const [imageRoles, setImageRoles] = useState<ImageReferenceRole[]>(["identity"]);
+  const [faceFidelity, setFaceFidelity] = useState<FaceFidelityLevel>("maximum");
   const [selectedTemplate, setSelectedTemplate] =
     useState<PromptTemplate | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(
@@ -623,6 +632,28 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     [],
   );
 
+  const syncImageRoles = useCallback(
+    (slots: ({ url: string; file: File } | null)[], prevRoles?: ImageReferenceRole[]) => {
+      const filled = slots.filter(Boolean).length;
+      if (filled === 0) return ["identity"] as ImageReferenceRole[];
+      const defaults = defaultUiRoles(Math.max(filled, slots.length));
+      const prev = prevRoles ?? imageRoles;
+      const next = slots.map((slot, index) => {
+        if (!slot) return defaults[index] ?? "identity";
+        const existing = prev[index];
+        if (existing) return existing;
+        return defaults[index] ?? "identity";
+      });
+      return normalizeImageRoles(next, slots.length);
+    },
+    [imageRoles],
+  );
+
+  const hasIdentityReference = useMemo(
+    () => imageRoles.includes("identity") && images.some(Boolean),
+    [imageRoles, images],
+  );
+
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
     setImages((prev) => {
@@ -634,6 +665,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       if (allFilled && next.length < maxSlots) {
         next.push(null);
       }
+      setImageRoles((roles) => syncImageRoles(next, roles));
       return next;
     });
     void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
@@ -652,7 +684,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     setImages((prev) => {
       revokeSlotUrl(prev[index]);
       const next = prev.filter((_, i) => i !== index);
-      return next.length === 0 ? [null] : next;
+      const normalized = next.length === 0 ? [null] : next;
+      setImageRoles((roles) => syncImageRoles(normalized, roles));
+      return normalized;
     });
   };
 
@@ -682,13 +716,17 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         if (allFilled && next.length < 3) {
           next.push(null);
         }
+        const roles = syncImageRoles(next, imageRoles);
+        roles[0] = "identity";
+        roles[1] = "outfit";
+        setImageRoles(normalizeImageRoles(roles, next.length));
         return next;
       });
       setPrompt((current) => replaceOutfitPrompt(current));
       setShowOutfitPicker(false);
       toast({
         title: "Tenue ajoutée",
-        description: `${outfit.name} — le prompt a été mis à jour (image 2).`,
+        description: `${outfit.name} — référence tenue en image 2, identité en image 1.`,
       });
     } catch (error: any) {
       toast({
@@ -721,6 +759,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       prev.forEach(revokeSlotUrl);
       return [null];
     });
+    setImageRoles(["identity"]);
+    setFaceFidelity("maximum");
     setGenerationMode("image");
     scrollAppToTop("smooth");
   };
@@ -733,6 +773,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       prev.forEach(revokeSlotUrl);
       return [null];
     });
+    setImageRoles(["identity"]);
+    setFaceFidelity("maximum");
   };
 
   // ── Generation ──────────────────────────────────────────────
@@ -1023,10 +1065,19 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             ),
           );
 
+      const rolesForApi = images
+        .map((img, index) => (img ? imageRoles[index] : null))
+        .filter((role): role is ImageReferenceRole => Boolean(role));
+
       const result = await generateDirect.mutateAsync({
         prompt: serverPrompt,
         aspect_ratio: aspectRatio,
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
+        image_roles:
+          rolesForApi.length > 0 && !isTemplateGeneration
+            ? rolesForApi
+            : undefined,
+        face_fidelity: hasIdentityReference ? faceFidelity : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
       });
@@ -1134,6 +1185,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       prev.forEach(revokeSlotUrl);
       return [null];
     });
+    setImageRoles(["identity"]);
+    setFaceFidelity("maximum");
     setSelectedTemplate(null);
     setPendingTemplateId(null);
     setGenerationMode("image");
@@ -1454,10 +1507,19 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             <>
               <ImageUploadGrid
                 images={images}
+                imageRoles={imageRoles}
                 onImageSelect={handleImageSelect}
                 onRemoveSlot={removeSlot}
                 generationMode="image"
               />
+
+              {hasIdentityReference ? (
+                <FaceFidelitySelector
+                  value={faceFidelity}
+                  onChange={setFaceFidelity}
+                  disabled={isSubmittingGeneration}
+                />
+              ) : null}
 
               <div className="flex w-full max-w-md justify-center md:max-w-xl">
                 <button
@@ -1507,7 +1569,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       <OutfitPickerModal
         open={showOutfitPicker}
         title="Catalogue tenues"
-        subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
+        subtitle="Image 1 = référence identité · Image 2 = référence tenue. Tu peux compléter le texte après."
         onClose={() => setShowOutfitPicker(false)}
         onSelect={(outfit) => void handleOutfitSelect(outfit)}
       />

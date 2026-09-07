@@ -54,6 +54,7 @@ function statusTimingFields(larp) {
       ? Number(estimatedRaw)
       : null;
   const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
+  const identityWarning = Boolean(meta.vision_qa_identity_warning);
   let remainingSeconds = null;
   if (estimatedSeconds != null && larp && larp.created_at) {
     const elapsed = Math.max(
@@ -62,7 +63,7 @@ function statusTimingFields(larp) {
     );
     remainingSeconds = Math.max(0, estimatedSeconds - elapsed);
   }
-  return { estimatedSeconds, qaRetryCount, remainingSeconds };
+  return { estimatedSeconds, qaRetryCount, remainingSeconds, identityWarning };
 }
 
 module.exports = async function handler(req, res) {
@@ -572,6 +573,22 @@ module.exports = async function handler(req, res) {
               resultType: "image",
             });
             return;
+          }
+
+          if (qaDecision?.qa?.identityWarning) {
+            const warnMeta =
+              larp.metadata && typeof larp.metadata === "object"
+                ? { ...larp.metadata }
+                : {};
+            warnMeta.vision_qa_identity_warning = true;
+            await supabase
+              .from("generations")
+              .update({
+                metadata: warnMeta,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", larp.id);
+            larp.metadata = warnMeta;
           }
         }
       }

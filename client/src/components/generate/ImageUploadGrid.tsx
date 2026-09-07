@@ -1,13 +1,20 @@
 import { useEffect, useRef, type ChangeEvent } from "react";
 import { Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { ImageReferenceRole } from "@shared/image-reference-roles";
+import "./face-fidelity.css";
 
 interface ImageUploadGridProps {
   images: ({ url: string; file: File } | null)[];
+  imageRoles?: ImageReferenceRole[];
   onImageSelect: (index: number, file: File) => void;
   onRemoveSlot: (index: number) => void;
   /** Controls drop label + file picker filter (image vs video). */
   generationMode?: "image" | "video";
+}
+
+function roleBadgeClass(role: ImageReferenceRole): string {
+  return `lx-upload-role-badge lx-upload-role-badge--${role}`;
 }
 
 /**
@@ -16,6 +23,7 @@ interface ImageUploadGridProps {
  */
 export function ImageUploadGrid({
   images,
+  imageRoles = [],
   onImageSelect,
   onRemoveSlot,
   generationMode = "image",
@@ -31,6 +39,8 @@ export function ImageUploadGrid({
   const dropLabel = isVideoMode ? t("hero.dropVideo") : t("hero.dropImage");
   const singleEmptySlot = images.length === 1 && !images[0];
   const multi = images.length > 1;
+  const filledCount = images.filter(Boolean).length;
+  const showRoles = !isVideoMode && (multi || filledCount >= 1);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -58,6 +68,13 @@ export function ImageUploadGrid({
     if (ok) onImageSelect(index, file);
   };
 
+  const roleLabel = (index: number): string | null => {
+    if (!showRoles) return null;
+    const role = imageRoles[index];
+    if (!role) return null;
+    return t(`imageUpload.roles.${role}`);
+  };
+
   return (
     <div className="lx-upload-wrap relative z-[15] w-full min-w-0">
       <div
@@ -70,6 +87,7 @@ export function ImageUploadGrid({
             const isVideoPreview = Boolean(
               img?.file.type.startsWith("video/"),
             );
+            const badge = roleLabel(i);
 
             return (
               <div key={i} className="lx-upload-slot" data-upload-slot={i}>
@@ -107,6 +125,13 @@ export function ImageUploadGrid({
                         draggable={false}
                       />
                     )}
+                    {badge ? (
+                      <span
+                        className={roleBadgeClass(imageRoles[i] ?? "identity")}
+                      >
+                        {badge}
+                      </span>
+                    ) : null}
                     <button
                       onClick={() => onRemoveSlot(i)}
                       className="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
@@ -138,6 +163,9 @@ export function ImageUploadGrid({
                         <Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-foreground" />
                       )}
                     </button>
+                    {badge ? (
+                      <span className="lx-upload-role-empty">{badge}</span>
+                    ) : null}
                     <span className="hero-image-slot pointer-events-none absolute inset-0 z-10 rounded-lg" />
                   </>
                 )}
