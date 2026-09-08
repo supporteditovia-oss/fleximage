@@ -25,8 +25,8 @@ export type FeedTemplate = {
   demoBeforeUrl?: string | null;
   /** URL exemple généré (après) pour l'aperçu comparatif. */
   demoAfterUrl?: string | null;
-  /** vehicle-swap = remplace le quad ; face-swap = remplace la personne. */
-  generationMode?: "vehicle-swap" | "face-swap";
+  /** vehicle-swap = remplace le quad ; face-swap = remplace la personne ; direct = scène générée depuis la photo user. */
+  generationMode?: "vehicle-swap" | "face-swap" | "direct";
   isBuiltin?: boolean;
 };
 

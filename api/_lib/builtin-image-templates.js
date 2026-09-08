@@ -27,6 +27,7 @@ function getBuiltinTemplate(templateId) {
 }
 
 function resolveGenerationMode(template) {
+  if (template.generationMode === "direct") return "direct";
   if (template.readyImagePath) return "face-swap";
   if (template.generationMode === "vehicle-swap") return "vehicle-swap";
   if (template.generationMode === "face-swap") return "face-swap";
@@ -92,6 +93,36 @@ function resolveBuiltinTemplateGeneration(templateId, { hasUserPhoto }) {
   }
 
   const mode = resolveGenerationMode(template);
+
+  if (mode === "direct") {
+    if (!hasUserPhoto) {
+      return {
+        ok: false,
+        code: "USER_PHOTO_REQUIRED",
+        message: "Ajoute une photo de toi pour utiliser ce modèle.",
+      };
+    }
+
+    const prompt = String(template.prompt || "").trim();
+    if (!prompt) {
+      return {
+        ok: false,
+        code: "TEMPLATE_NOT_READY",
+        message: "Ce modèle n'est pas encore configuré.",
+      };
+    }
+
+    return {
+      ok: true,
+      prompt,
+      referenceUrl: null,
+      extraReferenceUrls: [],
+      referenceId: template.id,
+      templateName: template.name,
+      isBuiltin: true,
+      generationMode: "direct",
+    };
+  }
 
   if (mode === "vehicle-swap") {
     if (!template.vehicleReferencePath) {

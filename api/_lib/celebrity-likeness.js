@@ -362,6 +362,36 @@ const CELEBRITY_CARDS = [
       "Same indoor/outdoor light, grain, and contact shadows as the uploaded photo — never CGI, never stock cutout, never burnt AI skin.",
   },
   {
+    id: "ronaldo",
+    match: /\b(ronaldo|cristiano\s*ronaldo|cr7)\b/,
+    label: "Cristiano Ronaldo",
+    card:
+      "CRISTIANO RONALDO 2026 — exact real CR7 likeness NOW: strong jaw, current short dark haircut/fade, athletic lean build, recognizable cheekbones and smile lines — Al-Nassr / Portugal era face, never a generic footballer. " +
+      "Standing IMMEDIATELY BESIDE the subject at believable height scale — relaxed friendly expression, natural shoulder overlap OK, arm on shoulder OK, both looking at camera OK. " +
+      "TWO distinct men — never fused, never missing Ronaldo, never blended into the subject. Same blue-hour/hotel light, grain, and ground contact shadows — never CGI cutout, never plastic skin.",
+  },
+  {
+    id: "neymar",
+    match: /\b(neymar)\b/,
+    label: "Neymar",
+    card: shortCard(
+      "NEYMAR",
+      "exact present-day Neymar face, hair, beard — instantly recognizable beside the subject, never a lookalike.",
+    ),
+  },
+  {
+    id: "benzema",
+    match: /\b(benzema|karim\s*benzema)\b/,
+    label: "Benzema",
+    card: shortCard("BENZEMA", "exact present-day Karim Benzema face/hair/beard — not a lookalike."),
+  },
+  {
+    id: "pogba",
+    match: /\b(pogba|paul\s*pogba)\b/,
+    label: "Pogba",
+    card: shortCard("POGBA", "exact present-day Paul Pogba face/hair — distinctive build, not a lookalike."),
+  },
+  {
     id: "messi",
     match: /\b(messi|lionel\s*messi)\b/,
     label: "Messi",

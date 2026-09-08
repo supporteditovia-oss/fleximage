@@ -11,7 +11,7 @@ type BuiltinCatalogEntry = {
   category: string;
   categoryName: string;
   vehicleReferencePath?: string;
-  generationMode?: "vehicle-swap" | "face-swap";
+  generationMode?: "vehicle-swap" | "face-swap" | "direct";
   requiresUserPhoto?: boolean;
   vehicleSwapPrompt?: string;
   faceSwapPrompt?: string;
@@ -22,7 +22,8 @@ type BuiltinCatalogEntry = {
 
 const entries = catalog as BuiltinCatalogEntry[];
 
-function resolveMode(item: BuiltinCatalogEntry): "vehicle-swap" | "face-swap" {
+function resolveMode(item: BuiltinCatalogEntry): "vehicle-swap" | "face-swap" | "direct" {
+  if (item.generationMode === "direct") return "direct";
   if (item.readyImagePath) return "face-swap";
   if (item.generationMode) return item.generationMode;
   if (item.vehicleReferencePath && item.requiresUserPhoto === false) {
@@ -61,8 +62,9 @@ export const BUILTIN_FEED_TEMPLATES: FeedTemplate[] = entries.map((item) => {
     generationType: "image",
     category: item.category,
     categoryName: item.categoryName,
-    referenceImageCount: item.readyImagePath ? 1 : item.vehicleReferencePath ? 2 : 1,
-    requiresUserPhoto: mode === "face-swap",
+    referenceImageCount:
+      mode === "direct" ? 1 : item.readyImagePath ? 1 : item.vehicleReferencePath ? 2 : 1,
+    requiresUserPhoto: mode === "face-swap" || mode === "direct",
     generationMode: mode,
     generationPrompt:
       mode === "vehicle-swap"

@@ -9,6 +9,12 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  CELEBRITY_FAN_PHOTO_GUARD,
+  CELEBRITY_FAN_PHOTO_CLARIFIER,
+  isCelebrityFanPhotoPrompt,
+  isCelebrityFanBesideCarPrompt,
+} = require("./celebrity-fan-photo-guard");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -924,6 +930,9 @@ function isSitOnCarPrompt(prompt) {
 
 /** Put me in a car / at the wheel / Urus / speeding — needs seated full-body guard. */
 function isVehicleDriverPrompt(prompt) {
+  if (isCelebrityFanPhotoPrompt(prompt) || isCelebrityFanBesideCarPrompt(prompt)) {
+    return false;
+  }
   if (isCartoonVehiclePrompt(prompt)) return false;
   if (isMotorcycleRidePrompt(prompt)) return false;
   if (isVehicleCockpitRefinePrompt(prompt)) return false;
@@ -2268,10 +2277,18 @@ function isJetSkiMultiPrompt(prompt) {
 }
 
 function isPersonSwapPrompt(prompt) {
+  if (isCelebrityFanPhotoPrompt(prompt)) return false;
   const text = String(prompt || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+  if (
+    /\b(must not|shall not|never|no)\b[^.]{0,80}\b(replaced|replace|missing|blended)\b/.test(
+      text,
+    )
+  ) {
+    return false;
+  }
   if (
     !/\b(remplac\w*|replace\w*|swap\w*|switch\w*|echange\w*|a\s+la\s+place|instead\s+of|put\s+(?:the|him|her)|met(?:s|tre)?\s+(?:le|la|un|une)\s+(?:mec|rappeur|homme|femme|meuf|fille|woman|girl|type|gars)|remplace\s+(?:la\s+)?(?:femme|meuf|fille|woman|girl|mec|gars|rappeur)|replace\s+the\s+(?:woman|girl|guy|man|rapper))\b/i.test(
       text,
@@ -3198,6 +3215,12 @@ function sanitizeUserPrompt(prompt) {
         cleaned = `${cleaned}${CELEBRITY_COMPANION_CLARIFIER}`;
       }
     }
+    if (
+      (isCelebrityFanPhotoPrompt(cleaned) || isCelebrityFanPhotoPrompt(prompt)) &&
+      !/FAN PHOTO LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${cleaned}${CELEBRITY_FAN_PHOTO_CLARIFIER}${SPEED_GAUGE_CLARIFIER}`;
+    }
   }
 
   // "moche / dégueulasse / ugly" → extreme shocking ugly, still photoreal.
@@ -3434,6 +3457,11 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !rawOutfitWear &&
     !rawWeatherAtmosphere &&
     isAddAnimalPrompt(userPrompt);
+  const rawCelebrityFanPhoto =
+    !rawFacialHair &&
+    !rawAddVehicles &&
+    !isPersonSwapPrompt(userPrompt) &&
+    isCelebrityFanPhotoPrompt(userPrompt);
   const rawVehicleReplace =
     !rawAddVehicles &&
     !rawCockpitRefine &&
@@ -3455,6 +3483,21 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
 
   if (isStairEditPrompt(userPrompt)) {
     return buildStairClosedSlabPrompt(userPrompt);
+  }
+  if (isCelebrityFanPhotoPrompt(userPrompt)) {
+    const cleanedFan = sanitizeUserPrompt(userPrompt);
+    const celebInjectFan = buildCelebrityAppearanceInjection(userPrompt);
+    const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
+    const subjectPoseInject = subjectPoseBlock ? ` ${subjectPoseBlock}` : "";
+    const head = `${CELEBRITY_FAN_PHOTO_GUARD}${subjectPoseInject}${celebInjectFan} ${NO_DONOR_LOGO_BLEED}${SEAMLESS_BLEND_LOCK}`.trim();
+    const rawUser = String(userPrompt || "").trim();
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
+    const core = `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+    const suffix = qualitySuffix(true);
+    for (const candidate of [`${core} ${suffix}`, core]) {
+      if (candidate.length <= MAX_FINAL_PROMPT) return candidate;
+    }
+    return core.slice(0, MAX_FINAL_PROMPT);
   }
   // Fictional / cartoon / game cars — dedicated path (real cabin guards kill these).
   if (
@@ -3570,6 +3613,20 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !outfitWearScene &&
     !weatherAtmosphereScene &&
     (rawAnimal || isAddAnimalPrompt(userPrompt));
+  const celebrityFanPhotoScene =
+    !facialHairOnly &&
+    !swap &&
+    !addVehiclesScene &&
+    !cockpitInteriorReplaceScene &&
+    !vehicleReplaceScene &&
+    !exteriorTrafficScene &&
+    !motorcycleRideScene &&
+    !vehicleBehindScene &&
+    !outfitWearScene &&
+    !weatherAtmosphereScene &&
+    !animalScene &&
+    !rawShopifyTrophy &&
+    (rawCelebrityFanPhoto || isCelebrityFanPhotoPrompt(userPrompt));
   const lifestyleScene =
     !facialHairOnly &&
     !swap &&
@@ -3582,6 +3639,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !outfitWearScene &&
     !weatherAtmosphereScene &&
     !animalScene &&
+    !celebrityFanPhotoScene &&
     !rawShopifyTrophy &&
     (rawLifestyle || isLifestyleRelocatePrompt(userPrompt));
   const jetSkiScene =
@@ -3610,6 +3668,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !weatherAtmosphereScene &&
     !animalScene &&
     !lifestyleScene &&
+    !celebrityFanPhotoScene &&
     !jetSkiScene &&
     !shopifyTrophyScene &&
     rawVehicle;
@@ -3626,11 +3685,15 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     vehicleBehindScene ||
     outfitWearScene ||
     weatherAtmosphereScene ||
-    animalScene
-      ? ""
+    animalScene ||
+    celebrityFanPhotoScene
+      ? celebrityFanPhotoScene
+        ? buildCelebrityAppearanceInjection(userPrompt)
+        : ""
       : buildCelebrityAppearanceInjection(userPrompt);
   const namedFigure =
     !rawLifestyle &&
+    !celebrityFanPhotoScene &&
     !jetSkiScene &&
     !shopifyTrophyScene &&
     !vehicleReplaceScene &&
@@ -3662,6 +3725,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !jetSkiScene &&
     !shopifyTrophyScene &&
     !rawLifestyle &&
+    !celebrityFanPhotoScene &&
     isAddCompanionPrompt(userPrompt);
   const screenUiScene =
     !swap &&
@@ -3676,6 +3740,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !weatherAtmosphereScene &&
     !animalScene &&
     !lifestyleScene &&
+    !celebrityFanPhotoScene &&
     !jetSkiScene &&
     !shopifyTrophyScene &&
     !vehicleScene &&
@@ -3695,6 +3760,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !weatherAtmosphereScene &&
     !animalScene &&
     !lifestyleScene &&
+    !celebrityFanPhotoScene &&
     !jetSkiScene &&
     !shopifyTrophyScene &&
     !vehicleScene &&
@@ -3747,6 +3813,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
                     ? WEATHER_ATMOSPHERE_GUARD
                     : animalScene
                     ? ADD_ANIMAL_SCENE_GUARD
+                    : celebrityFanPhotoScene
+                      ? CELEBRITY_FAN_PHOTO_GUARD
                     : lifestyleScene
                     ? LIFESTYLE_RELOCATE_GUARD
                     : vehicleScene
@@ -3764,7 +3832,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     : animalScene
       ? cleaned
       : expandImageEditUserRequest(cleaned, {
-          allowSceneChange: lifestyleScene || fullRewrite,
+          allowSceneChange: lifestyleScene || celebrityFanPhotoScene || fullRewrite,
           allowCameraChange: cameraChange,
         });
   const userBlock = weatherAtmosphereScene
@@ -3775,10 +3843,13 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     ? `Additive inpaint on the UNCHANGED uploaded photo (do not rebuild the room). Put the requested object LARGE and CENTERED with a real shadow. User request: ${expandedUser}`
     : `User request: ${expandedUser}`;
   const bleed =
-    swap || namedFigure || addCompanion ? ` ${NO_DONOR_LOGO_BLEED}` : "";
+    swap || namedFigure || celebrityFanPhotoScene || addCompanion
+      ? ` ${NO_DONOR_LOGO_BLEED}`
+      : "";
   const blend =
     swap ||
     namedFigure ||
+    celebrityFanPhotoScene ||
     addCompanion ||
     vehicleScene ||
     addVehiclesScene ||
@@ -3811,6 +3882,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const suffix = qualitySuffix(
     swap ||
       namedFigure ||
+      celebrityFanPhotoScene ||
       vehicleScene ||
       addVehiclesScene ||
       vehicleReplaceScene ||
@@ -3822,14 +3894,15 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
 
   // Lifestyle / exact vehicle / UI screenshot: keep intent — do not bury it under the 2900-char suffix.
   const compactLifestyleCore = (() => {
-    if (!lifestyleScene) return "";
-    const head = `${nonCarScenePrefix}${sceneGuard}${cameraOverride}${bleed}${blend}`.trim();
+    if (!lifestyleScene && !celebrityFanPhotoScene) return "";
+    const head = `${nonCarScenePrefix}${sceneGuard}${cameraOverride}${celebInject}${bleed}${blend}`.trim();
     const rawUser = String(userPrompt || "").trim();
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
   const candidates =
     lifestyleScene ||
+    celebrityFanPhotoScene ||
     jetSkiScene ||
     shopifyTrophyScene ||
     vehicleScene ||
@@ -3845,7 +3918,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     screenUiScene ||
     genericEditScene ||
     cameraChange
-      ? lifestyleScene
+      ? lifestyleScene || celebrityFanPhotoScene
         ? [compactLifestyleCore, core].filter(Boolean)
         : [core]
       : localObjectScene
@@ -4090,6 +4163,10 @@ module.exports = {
   PERSON_SWAP_GUARD,
   FULL_BODY_REPLACE_CLARIFIER,
   ADD_NAMED_FIGURE_GUARD,
+  CELEBRITY_FAN_PHOTO_GUARD,
+  CELEBRITY_FAN_PHOTO_CLARIFIER,
+  isCelebrityFanPhotoPrompt,
+  isCelebrityFanBesideCarPrompt,
   ADD_COMPANION_GUARD,
   ADD_ANIMAL_SCENE_GUARD,
   ADD_ANIMAL_CLARIFIER,
