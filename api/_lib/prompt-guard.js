@@ -12,11 +12,17 @@ const {
 const {
   VEHICLE_FROM_REFERENCE_GUARD,
   VEHICLE_FROM_REFERENCE_CLARIFIER,
+  VEHICLE_SCENE_FREEZE_CLARIFIER,
   LUXURY_VEHICLE_SYNONYM_CLARIFIER,
+  URUS_IDENTITY_CLARIFIER,
+  ANTI_POLICE_INVENTION_CLARIFIER,
+  NO_EXTERIOR_DASHBOARD_UI_CLARIFIER,
   isVehicleFromReferencePrompt,
   isVehicleReferenceImageMention,
   isVehicleReplaceIntent,
   isLuxuryVehicleSynonymPrompt,
+  isUrusReplacePrompt,
+  isExteriorVehicleBodySwapPrompt,
 } = require("./vehicle-from-reference-guard");
 
 const IDENTITY_GUARD =
@@ -558,11 +564,15 @@ const MOTORCYCLE_PARKED_REPLACE_CLARIFIER =
   "Keep the EXACT same street, cobblestones, buildings, rider, phone, pose, lighting, crop, and shadows. " +
   "Same kickstand/parking angle and tire contact points. Never teleport to another city, never import a police-car wheelie scene unless it is already in image 1.)";
 
-/** Freeze rider + background — but NOT the original bike colors/geometry. */
-const MOTORCYCLE_SCENE_CLARIFIER =
-  " (BIKE SCENE LOCK: freeze rider body/helmet/clothes/pose, police car or parked car (hood, lights, plate), street, houses, blur, sky, crop. " +
+/** Freeze rider + background when wheelie/stoppie on a car hood — police/parked car only if already in the upload. */
+const MOTORCYCLE_WHEEL_ON_CAR_SCENE_CLARIFIER =
+  " (BIKE SCENE LOCK: freeze rider body/helmet/clothes/pose, the EXISTING background car (hood, lights, plate) if any, street, houses, blur, sky, crop. " +
   "ONLY the motorcycle/scooter body becomes the named model. Front wheel contact on car hood MUST remain. " +
-  "FORBIDDEN: keeping original rim/wheel colors, Zip/SP decals, small 50cc silhouette, hanging keys, burnt HDR plastic look, repositioning bike away from car.)";
+  "FORBIDDEN: inventing a police car when none is in the upload, keeping original rim/wheel colors, Zip/SP decals, small 50cc silhouette, hanging keys, burnt HDR plastic look, repositioning bike away from car.)";
+
+/** Parked street swap — never prime police/wheelie context. */
+const MOTORCYCLE_PARKED_SCENE_CLARIFIER =
+  " (PARKED SCENE LOCK: freeze cobblestones/street/buildings/rider/pose/lighting/crop exactly. Swap bike body only. NEVER invent police cars, patrol vehicles, or wheelie-on-hood scenes unless already visible in the upload.)";
 
 /** Model-specific geometry so TMAX ≠ Zip and YZ ≠ scooter. */
 function motorcycleModelHint(prompt) {
@@ -2815,8 +2825,19 @@ function sanitizeUserPrompt(prompt) {
     cleaned = neutralizeStairPassageWording(cleaned);
   }
 
-  if (vehicleFromReferenceRequest && !/REFERENCE SWAP LOCK/i.test(cleaned)) {
-    cleaned = `${VEHICLE_FROM_REFERENCE_CLARIFIER}${cleaned}`;
+  if (vehicleFromReferenceRequest) {
+    if (!/REFERENCE SWAP LOCK/i.test(cleaned)) {
+      cleaned = `${VEHICLE_FROM_REFERENCE_CLARIFIER}${cleaned}`;
+    }
+    if (!/SCENE FREEZE LOCK/i.test(cleaned)) {
+      cleaned = `${VEHICLE_SCENE_FREEZE_CLARIFIER}${cleaned}`;
+    }
+    if (!/NO POLICE LOCK/i.test(cleaned)) {
+      cleaned = `${ANTI_POLICE_INVENTION_CLARIFIER}${cleaned}`;
+    }
+    if (!/NO DASHBOARD INSET/i.test(cleaned)) {
+      cleaned = `${NO_EXTERIOR_DASHBOARD_UI_CLARIFIER}${cleaned}`;
+    }
   }
 
   // Additive clarifier only (does not remove/replace user words).
@@ -2871,8 +2892,26 @@ function sanitizeUserPrompt(prompt) {
     if (motorcycleParkedReplaceRequest && !/PARKED BIKE SWAP LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_PARKED_REPLACE_CLARIFIER}`;
     }
+    if (motorcycleParkedReplaceRequest && !/PARKED SCENE LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${MOTORCYCLE_PARKED_SCENE_CLARIFIER}`;
+    }
     if (!/SCENE MATCH:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_SCENE_MATCH_CLARIFIER}`;
+    }
+    if (!/SCENE FREEZE LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${VEHICLE_SCENE_FREEZE_CLARIFIER}`;
+    }
+    if (!/NO POLICE LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${ANTI_POLICE_INVENTION_CLARIFIER}`;
+    }
+    if (!/NO DASHBOARD INSET/i.test(cleaned)) {
+      cleaned = `${cleaned}${NO_EXTERIOR_DASHBOARD_UI_CLARIFIER}`;
+    }
+    if (
+      (isUrusReplacePrompt(cleaned) || isUrusReplacePrompt(prompt)) &&
+      !/URUS LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${cleaned}${URUS_IDENTITY_CLARIFIER}`;
     }
     if (isLuxuryVehicleSynonymPrompt(cleaned) && !/LUXURY CAR LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${LUXURY_VEHICLE_SYNONYM_CLARIFIER}`;
@@ -2925,8 +2964,17 @@ function sanitizeUserPrompt(prompt) {
     if (!/RIDE LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_RIDE_CLARIFIER}`;
     }
-    if (!/BIKE SCENE LOCK:/i.test(cleaned)) {
-      cleaned = `${cleaned}${MOTORCYCLE_SCENE_CLARIFIER}`;
+    const wheelOnCar =
+      isMotorcycleWheelOnVehiclePrompt(cleaned) ||
+      isMotorcycleWheelOnVehiclePrompt(prompt);
+    if (wheelOnCar && !/BIKE SCENE LOCK:/i.test(cleaned)) {
+      cleaned = `${cleaned}${MOTORCYCLE_WHEEL_ON_CAR_SCENE_CLARIFIER}`;
+    }
+    if (!wheelOnCar && !/PARKED SCENE LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${MOTORCYCLE_PARKED_SCENE_CLARIFIER}`;
+    }
+    if (!wheelOnCar && !/NO POLICE LOCK/i.test(cleaned)) {
+      cleaned = `${ANTI_POLICE_INVENTION_CLARIFIER}${cleaned}`;
     }
   } else if (vehicleBehindRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
@@ -3520,7 +3568,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
     const subjectPoseInject = subjectPoseBlock ? ` ${subjectPoseBlock}` : "";
     const head =
-      `${VEHICLE_FROM_REFERENCE_GUARD}${subjectPoseInject}${VEHICLE_FROM_REFERENCE_CLARIFIER} ${NO_DONOR_LOGO_BLEED}${SEAMLESS_BLEND_LOCK}`.trim();
+      `${VEHICLE_FROM_REFERENCE_GUARD}${subjectPoseInject}${VEHICLE_FROM_REFERENCE_CLARIFIER}${VEHICLE_SCENE_FREEZE_CLARIFIER}${ANTI_POLICE_INVENTION_CLARIFIER}${NO_EXTERIOR_DASHBOARD_UI_CLARIFIER} ${NO_DONOR_LOGO_BLEED}${SEAMLESS_BLEND_LOCK}`.trim();
     const rawUser = String(userPrompt || "").trim();
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     const core = `${head} User request: ${rawUser.slice(0, budget)}`.trim();
@@ -3916,7 +3964,16 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     isLuxuryVehicleSynonymPrompt(userPrompt)
       ? LUXURY_VEHICLE_SYNONYM_CLARIFIER
       : "";
-  const core = `${nonCarScenePrefix}${sceneGuard}${luxuryVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
+  const urusVehicleInject =
+    (vehicleReplaceScene || motorcycleParkedReplaceScene || vehicleFromReferenceScene) &&
+    isUrusReplacePrompt(userPrompt)
+      ? URUS_IDENTITY_CLARIFIER
+      : "";
+  const exteriorVehicleSwapInject =
+    vehicleFromReferenceScene || motorcycleParkedReplaceScene || vehicleReplaceScene
+      ? `${VEHICLE_SCENE_FREEZE_CLARIFIER}${ANTI_POLICE_INVENTION_CLARIFIER}${NO_EXTERIOR_DASHBOARD_UI_CLARIFIER}`
+      : "";
+  const core = `${nonCarScenePrefix}${sceneGuard}${exteriorVehicleSwapInject}${luxuryVehicleInject}${urusVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
   const suffix = qualitySuffix(
     swap ||
@@ -3944,7 +4001,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!vehicleFromReferenceScene && !motorcycleParkedReplaceScene && !vehicleReplaceScene) {
       return "";
     }
-    const head = `${sceneGuard}${luxuryVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend}`.trim();
+    const head = `${sceneGuard}${exteriorVehicleSwapInject}${luxuryVehicleInject}${urusVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend}`.trim();
     const rawUser = String(sanitizeUserPrompt(userPrompt) || userPrompt || "").trim();
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
@@ -3985,6 +4042,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   for (const candidate of candidates) {
     if (candidate.length <= MAX_FINAL_PROMPT) {
       return ensureDoorClosedFrontLock(candidate, {
+        userPrompt,
+        referenceImageCount,
         vehicle:
           vehicleScene ||
           cockpitInteriorReplaceScene ||
@@ -4011,6 +4070,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   return ensureDoorClosedFrontLock(
     `${fixed} ${userForTrim.slice(0, budget)}`.slice(0, MAX_FINAL_PROMPT),
     {
+      userPrompt,
+      referenceImageCount,
       vehicle:
         vehicleScene ||
         cockpitInteriorReplaceScene ||
@@ -4025,10 +4086,23 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   );
 }
 
-/** Prepend absolute door-closed lock on any in-cabin / driver generation. */
-function ensureDoorClosedFrontLock(prompt, { vehicle } = {}) {
+/** Prepend absolute door-closed lock on in-cabin / driver generation only — never exterior body swaps. */
+function ensureDoorClosedFrontLock(prompt, { vehicle, userPrompt, referenceImageCount } = {}) {
   const text = String(prompt || "");
   if (/NO CAR DEFAULT|YACHT LOCK|GOLF SPORT LOCK/i.test(text)) {
+    return text.length <= MAX_FINAL_PROMPT ? text : text.slice(0, MAX_FINAL_PROMPT);
+  }
+  if (
+    userPrompt &&
+    isExteriorVehicleBodySwapPrompt(userPrompt, referenceImageCount || 0)
+  ) {
+    return text.length <= MAX_FINAL_PROMPT ? text : text.slice(0, MAX_FINAL_PROMPT);
+  }
+  if (
+    /VEHICLE FROM REFERENCE|NO DASHBOARD INSET|NO POLICE LOCK|SCENE FREEZE LOCK|PARKED BIKE SWAP LOCK|VEHICLE BODY SWAP on the uploaded photograph/i.test(
+      text,
+    )
+  ) {
     return text.length <= MAX_FINAL_PROMPT ? text : text.slice(0, MAX_FINAL_PROMPT);
   }
   if (!vehicle) return text;
@@ -4041,7 +4115,7 @@ function ensureDoorClosedFrontLock(prompt, { vehicle } = {}) {
   }
   // Lifestyle without car shouldn't get the door lock — only if cabin-ish.
   const looksInCar =
-    /DRIVER-SEAT|COCKPIT|IN-CAR|DOOR STATUS|DOORS CLOSED|volant|steering|cluster|MMI|habitacle|urus|bmw|mercedes|porsche|ferrari|lamborghini/i.test(
+    /DRIVER-SEAT|COCKPIT|IN-CAR|DOOR STATUS|DOORS CLOSED|volant|steering wheel|cluster|MMI|habitacle|interieur|interior|dashboard|tableau\s*de\s*bord|au\s+volant|behind\s+the\s+wheel|driver\s+seat/i.test(
       text,
     );
   if (!looksInCar) return text;
