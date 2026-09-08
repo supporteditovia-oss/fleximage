@@ -135,6 +135,21 @@
     "categoryName": "Yacht"
   },
   {
+    "id": "builtin-yacht-marina-nuit",
+    "slug": "yacht-marina-nuit",
+    "name": "Yacht marina nuit",
+    "description": "Du canal urbain de nuit au yacht en marina, verre à la main.",
+    "imagePath": "/models/modele-yacht-marina-avant.webp",
+    "readyImagePath": "/models/modele-yacht-marina-apres.webp",
+    "demoAfterPath": "/models/modele-yacht-marina-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure, sa carnation et sa morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose assise détendue sur le canapé blanc en L du yacht, le haut noir henley, le pantalon blanc, la veste noire posée sur les genoux, le verre ambré avec glace dans la main droite, la montre argentée, le pont en teck, la rambarde bois/inox, la marina de nuit avec yachts blancs, palmiers et lumières de la côte en arrière-plan, reflets sur l'eau, éclairage chaud du pont et cadrage vertical 9:16 de la seconde image. Photographie yachting lifestyle photoréaliste, pose naturelle et confortable, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde le yacht, la marina et la nuit identiques.",
+    "category": "yacht",
+    "categoryName": "Yacht"
+  },
+  {
     "id": "builtin-marrakech-voyage",
     "slug": "marrakech-voyage",
     "name": "Marrakech — rooftop golden hour",
