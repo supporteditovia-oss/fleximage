@@ -4,20 +4,12 @@
 
 export const MODELES_CATEGORIES = [
   {
-    slug: "lifestyle",
+    slug: "destinations",
     emoji: "🌴",
     label: "Lifestyle",
-    description: "Streetwear, flex urbain et moments premium du quotidien.",
-    coverImagePath: "/models/modele-scooter-urban.webp",
+    description: "Voyage premium — Paris, Prague, Capri, Marrakech et destinations iconiques.",
+    coverImagePath: "/models/modele-prague-capri-apres.webp",
     order: 1,
-  },
-  {
-    slug: "destinations",
-    emoji: "🌍",
-    label: "Destinations",
-    description: "Pays et villes iconiques — Paris, Dubaï, Marrakech et horizons premium.",
-    coverImagePath: "/models/modele-paris-eiffel-apres.webp",
-    order: 2,
   },
   {
     slug: "jets",
@@ -25,7 +17,7 @@ export const MODELES_CATEGORIES = [
     label: "Jets & Vol",
     description: "Business class, jets privés et cabines premium.",
     coverImagePath: "/models/modele-avion-business.webp",
-    order: 3,
+    order: 2,
   },
   {
     slug: "celebrites",
@@ -80,7 +72,7 @@ export type ModelesCategory = (typeof MODELES_CATEGORIES)[number];
 
 /** Anciennes catégories JSON → nouvelle taxonomie. */
 const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
-  lifestyle: "lifestyle",
+  lifestyle: "destinations",
   celebrites: "celebrites",
   destinations: "destinations",
   pays: "destinations",
@@ -95,7 +87,7 @@ const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
   supercars: "supercars",
   moto: "moto",
   yacht: "yacht",
-  outfits: "lifestyle",
+  outfits: "destinations",
   adrenaline: "supercars",
   dubai: "supercars",
   paris: "destinations",
@@ -103,16 +95,16 @@ const LEGACY_SCENE_CATEGORY_MAP: Record<string, ModelesCategorySlug> = {
   monaco: "destinations",
   "tokyo-istanbul": "destinations",
   "travel-tourism": "destinations",
-  streetwear: "lifestyle",
-  luxury: "lifestyle",
-  "luxury-lifestyle": "lifestyle",
+  streetwear: "destinations",
+  luxury: "destinations",
+  "luxury-lifestyle": "destinations",
 };
 
 export function normalizeSceneCategory(
   category: string | undefined | null,
 ): ModelesCategorySlug {
   const key = String(category || "").trim().toLowerCase();
-  return LEGACY_SCENE_CATEGORY_MAP[key] ?? "lifestyle";
+  return LEGACY_SCENE_CATEGORY_MAP[key] ?? "destinations";
 }
 
 export function getCategoryBySlug(slug: string): ModelesCategory | undefined {
