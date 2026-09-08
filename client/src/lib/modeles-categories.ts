@@ -15,8 +15,8 @@ export const MODELES_CATEGORIES = [
     slug: "jets",
     emoji: "✈️",
     label: "Jets & Vol",
-    description: "Business class, jets privés et cabines premium.",
-    coverImagePath: "/models/modele-avion-business.webp",
+    description: "Embarquement tarmac VIP, business class et jets privés.",
+    coverImagePath: "/models/modele-jet-prive-tarmac-apres.webp",
     order: 2,
   },
   {
