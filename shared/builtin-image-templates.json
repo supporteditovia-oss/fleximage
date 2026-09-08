@@ -178,5 +178,35 @@
     "prompt": "Remplace uniquement la personne, garde Capri et les Faraglioni identiques.",
     "category": "destinations",
     "categoryName": "Lifestyle"
+  },
+  {
+    "id": "builtin-maldives-overwater",
+    "slug": "maldives-overwater",
+    "name": "Canal → Maldives overwater",
+    "description": "Du canal urbain de nuit aux bungalows sur pilotis au golden hour.",
+    "imagePath": "/models/modele-maldives-overwater-avant.webp",
+    "readyImagePath": "/models/modele-maldives-overwater-apres.webp",
+    "demoAfterPath": "/models/modele-maldives-overwater-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure, sa carnation et sa morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose en marche pieds nus sur le ponton en bois, le haut henley gris manches longues, le pantalon blanc en lin, pieds nus, les bungalows sur pilotis avec toits de chaume, les passerelles en bois, la mer turquoise cristalline, l'île tropicale au loin, le ciel bleu doré du golden hour et le cadrage vertical 9:16 de la seconde image. Photographie voyage luxe photoréaliste, pose naturelle et détendue, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde les Maldives et le ponton identiques.",
+    "category": "destinations",
+    "categoryName": "Lifestyle"
+  },
+  {
+    "id": "builtin-prague-tokyo",
+    "slug": "prague-tokyo",
+    "name": "Prague → Shibuya Tokyo",
+    "description": "De la place de Prague la nuit au carrefour de Shibuya sous la pluie.",
+    "imagePath": "/models/modele-prague-tokyo-avant.webp",
+    "readyImagePath": "/models/modele-prague-tokyo-apres.webp",
+    "demoAfterPath": "/models/modele-prague-tokyo-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure, sa carnation et sa morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose debout face caméra, les mains jointes devant le buste, le blazer noir, la chemise blanche ouverte, la montre argentée au poignet, le carrefour de Shibuya de nuit sous la pluie, les néons UNIQLO et enseignes japonaises, le sol mouillé réfléchissant, la foule avec parapluies en arrière-plan, le bâtiment Shibuya 109 et le cadrage vertical 9:16 de la seconde image. Photographie voyage lifestyle photoréaliste, pose naturelle, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde Shibuya et la pluie identiques.",
+    "category": "destinations",
+    "categoryName": "Lifestyle"
   }
 ]

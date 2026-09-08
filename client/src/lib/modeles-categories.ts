@@ -7,7 +7,7 @@ export const MODELES_CATEGORIES = [
     slug: "destinations",
     emoji: "🌴",
     label: "Lifestyle",
-    description: "Voyage premium — Paris, Prague, Capri, Marrakech et destinations iconiques.",
+    description: "Voyage premium — Paris, Prague, Tokyo, Maldives, Marrakech et destinations iconiques.",
     coverImagePath: "/models/modele-prague-capri-apres.webp",
     order: 1,
   },
