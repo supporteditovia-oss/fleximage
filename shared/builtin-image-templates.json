@@ -178,5 +178,17 @@
     "prompt": "Remplace uniquement la personne, garde Capri et les Faraglioni identiques.",
     "category": "destinations",
     "categoryName": "Lifestyle"
+  },
+  {
+    "id": "builtin-ronaldo-dubai-fan",
+    "slug": "ronaldo-dubai-fan",
+    "name": "Ronaldo — fan photo Dubaï",
+    "description": "Photo fan fictive avec Cristiano Ronaldo devant un hôtel de luxe à Dubaï, voiture stationnée.",
+    "imagePath": "/models/modele-urus-dubai-sunset.webp",
+    "generationMode": "direct",
+    "requiresUserPhoto": true,
+    "prompt": "Create a clearly fictional, fan-made AI photo using the uploaded man as the exact identity reference. Preserve his face, skin tone, haircut, age, body proportions and natural features. Cristiano Ronaldo must be clearly visible and recognizable beside him. Scene: a luxury car parked safely at a private hotel entrance in Dubai at blue hour. The driver's door is open and both men are standing beside the car, taking a casual fan photo. Cristiano Ronaldo stands next to the main subject with a relaxed friendly expression. Keep realistic height difference, natural shoulder overlap and believable body proportions. The car is stationary, so the dashboard may be on but the speed display must show 0 km/h. No driving scene, no moving traffic, no person using a phone while driving. Luxury setting: modern hotel entrance, warm architectural lighting, palm trees, polished pavement, discreet valet staff and a premium car partially visible. Realistic smartphone photo taken by a third person, vertical 9:16, slightly imperfect framing, natural skin pores, fine hair detail, realistic shadows and subtle phone grain. Correct hands, five fingers, realistic footwear, clothing folds and reflections. Cristiano Ronaldo must not be missing, replaced or blended with the main subject. No solo driver image, no empty car interior, no impossible dashboard, no distorted faces, no plastic skin, no duplicate people, no text or watermark. Label the final post as fan-made AI content.",
+    "category": "celebrites",
+    "categoryName": "Célébrités"
   }
 ]

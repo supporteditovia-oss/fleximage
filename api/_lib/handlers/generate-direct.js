@@ -201,22 +201,26 @@ module.exports = async function handler(req, res) {
 
       templateReferenceId = resolvedTemplate.referenceId;
       effectivePrompt = resolvedTemplate.prompt;
-      const hasOutfitRef =
-        resolvedTemplate.generationMode === "face-swap" &&
-        uploadedUrls.length >= 2;
-      // Ordre : sans outfit → (1) user, (2) scène ; avec outfit → (1) user, (2) tenue, (3) scène.
-      imageUrls = hasOutfitRef
-        ? [
-            uploadedUrls[0],
-            uploadedUrls[1],
-            ...(resolvedTemplate.extraReferenceUrls || []),
-            resolvedTemplate.referenceUrl,
-          ]
-        : [
-            ...uploadedUrls,
-            ...(resolvedTemplate.extraReferenceUrls || []),
-            resolvedTemplate.referenceUrl,
-          ];
+      if (resolvedTemplate.generationMode === "direct") {
+        imageUrls = uploadedUrls;
+      } else {
+        const hasOutfitRef =
+          resolvedTemplate.generationMode === "face-swap" &&
+          uploadedUrls.length >= 2;
+        // Ordre : sans outfit → (1) user, (2) scène ; avec outfit → (1) user, (2) tenue, (3) scène.
+        imageUrls = hasOutfitRef
+          ? [
+              uploadedUrls[0],
+              uploadedUrls[1],
+              ...(resolvedTemplate.extraReferenceUrls || []),
+              resolvedTemplate.referenceUrl,
+            ]
+          : [
+              ...uploadedUrls,
+              ...(resolvedTemplate.extraReferenceUrls || []),
+              resolvedTemplate.referenceUrl,
+            ];
+      }
     } else {
       if (images.length === 0) {
         res.status(422).json({
