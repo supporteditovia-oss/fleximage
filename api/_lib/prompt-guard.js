@@ -9,6 +9,15 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  VEHICLE_FROM_REFERENCE_GUARD,
+  VEHICLE_FROM_REFERENCE_CLARIFIER,
+  LUXURY_VEHICLE_SYNONYM_CLARIFIER,
+  isVehicleFromReferencePrompt,
+  isVehicleReferenceImageMention,
+  isVehicleReplaceIntent,
+  isLuxuryVehicleSynonymPrompt,
+} = require("./vehicle-from-reference-guard");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -542,6 +551,12 @@ const MOTORCYCLE_REPLACE_CLARIFIER =
   "Do NOT keep original wheel colors, Zip/SP stickers, small scooter silhouette, or dangling keys. " +
   "TMAX 530/560 = big Yamaha maxi-scooter proportions under the rider. YZ125/motocross = real dirt-bike geometry. " +
   "Keep stoppie/wheelie/cabriole pose AND exact wheel-on-hood contact if present. Photoreal — never toy, never burnt AI.)";
+
+/** Parked scooter/moto swap — freeze cobblestone/street scene (NOT wheelie/police path). */
+const MOTORCYCLE_PARKED_REPLACE_CLARIFIER =
+  " (PARKED BIKE SWAP LOCK — critical: replace ONLY the scooter/motorcycle body in image 1. " +
+  "Keep the EXACT same street, cobblestones, buildings, rider, phone, pose, lighting, crop, and shadows. " +
+  "Same kickstand/parking angle and tire contact points. Never teleport to another city, never import a police-car wheelie scene unless it is already in image 1.)";
 
 /** Freeze rider + background — but NOT the original bike colors/geometry. */
 const MOTORCYCLE_SCENE_CLARIFIER =
@@ -1665,8 +1680,10 @@ function motorcycleWheelContactHint(prompt) {
   if (isMotorcycleWheelOnVehiclePrompt(prompt)) {
     return MOTORCYCLE_WHEEL_CONTACT_CLARIFIER;
   }
-  // Image-based bike swap: always preserve contact points (stoppie on hood is common).
-  if (isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt)) {
+  if (isVehicleReferenceImageMention(prompt) && isVehicleReplaceIntent(prompt)) {
+    return "";
+  }
+  if (isMotorcycleReplacePrompt(prompt) && isMotorcycleRidePrompt(prompt)) {
     return MOTORCYCLE_WHEEL_CONTACT_CLARIFIER;
   }
   return "";
@@ -1704,7 +1721,19 @@ function isMotorcycleRidePrompt(prompt) {
   if (isVehicleCockpitRefinePrompt(prompt)) return false;
   if (isAddVehiclesToScenePrompt(prompt)) return false;
   if (isVehicleBehindSubjectPrompt(prompt)) return false;
-  if (isMotorcycleReplacePrompt(prompt)) return true;
+  if (isMotorcycleReplacePrompt(prompt)) {
+    if (isVehicleReferenceImageMention(prompt) && isVehicleReplaceIntent(prompt)) {
+      return false;
+    }
+    const text = normalizePromptText(prompt);
+    if (
+      !isMotorcycleWheelOnVehiclePrompt(prompt) &&
+      !/\b(stoppie|wheelie|cabriole|endo|wheelieing)\b/.test(text)
+    ) {
+      return false;
+    }
+    return true;
+  }
   const text = normalizePromptText(prompt);
   if (!isMotorcycleBikeMention(prompt)) return false;
   if (/\b(derriere|behind|dans mon dos)\b/.test(text)) return false;
@@ -1714,6 +1743,14 @@ function isMotorcycleRidePrompt(prompt) {
     );
   if (rideIntent) return true;
   return false;
+}
+
+function isMotorcycleParkedReplacePrompt(prompt) {
+  return (
+    isMotorcycleReplacePrompt(prompt) &&
+    !isMotorcycleRidePrompt(prompt) &&
+    !(isVehicleReferenceImageMention(prompt) && isVehicleReplaceIntent(prompt))
+  );
 }
 
 /**
@@ -1819,6 +1856,14 @@ function isVehicleReplacePrompt(prompt) {
     ) &&
     /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
   if (replaceVerb) return true;
+  if (
+    /\b(remplac\w*|replace\w*|swap\w*|change\w*)\w*[\s\S]{0,50}\b(ma|my)\s+(voiture|car|auto|moto|scooter)\b/.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (isLuxuryVehicleSynonymPrompt(prompt) && replaceVerb) return true;
   // Implicit: user named a specific vehicle on a car photo (no "put me in", no city relocate).
   if (/\b(moi|me|je)\b/.test(text)) return false;
   return Boolean(parseVehicleSpec(prompt));
@@ -2613,6 +2658,9 @@ function sanitizeUserPrompt(prompt) {
     !cartoonVehicleRequest &&
     isExteriorTrafficReplacePrompt(cleaned);
   const motorcycleRideRequest = isMotorcycleRidePrompt(cleaned);
+  const vehicleFromReferenceRequest =
+    isVehicleReferenceImageMention(cleaned) && isVehicleReplaceIntent(cleaned);
+  const motorcycleParkedReplaceRequest = isMotorcycleParkedReplacePrompt(cleaned);
   const vehicleBehindRequest = isVehicleBehindSubjectPrompt(cleaned);
   const outfitWearRequest = isOutfitWearPrompt(cleaned);
   const weatherAtmosphereRequest = isWeatherAtmospherePrompt(cleaned);
@@ -2767,6 +2815,10 @@ function sanitizeUserPrompt(prompt) {
     cleaned = neutralizeStairPassageWording(cleaned);
   }
 
+  if (vehicleFromReferenceRequest && !/REFERENCE SWAP LOCK/i.test(cleaned)) {
+    cleaned = `${VEHICLE_FROM_REFERENCE_CLARIFIER}${cleaned}`;
+  }
+
   // Additive clarifier only (does not remove/replace user words).
   if (
     /\b(ajoute|ajouter|ajout|add|ajoutez|mets|mettre|with|avec)\b[\w\s,']{0,40}\b(femmes?|filles?|women|girls|ladies)\b/i.test(
@@ -2809,15 +2861,21 @@ function sanitizeUserPrompt(prompt) {
     if (countHint && !/EXACT COUNT:/i.test(cleaned)) {
       cleaned = `${cleaned}${countHint}`;
     }
-  } else if (vehicleReplaceRequest) {
+  } else if (vehicleReplaceRequest || motorcycleParkedReplaceRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
     if (!/PARK LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_REPLACE_CLARIFIER}`;
     }
+    if (motorcycleParkedReplaceRequest && !/PARKED BIKE SWAP LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${MOTORCYCLE_PARKED_REPLACE_CLARIFIER}`;
+    }
     if (!/SCENE MATCH:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_SCENE_MATCH_CLARIFIER}`;
+    }
+    if (isLuxuryVehicleSynonymPrompt(cleaned) && !/LUXURY CAR LOCK/i.test(cleaned)) {
+      cleaned = `${cleaned}${LUXURY_VEHICLE_SYNONYM_CLARIFIER}`;
     }
   } else if (exteriorTrafficRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
@@ -3434,6 +3492,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !rawOutfitWear &&
     !rawWeatherAtmosphere &&
     isAddAnimalPrompt(userPrompt);
+  const rawVehicleFromReference =
+    referenceImageCount >= 2 && isVehicleFromReferencePrompt(userPrompt, referenceImageCount);
   const rawVehicleReplace =
     !rawAddVehicles &&
     !rawCockpitRefine &&
@@ -3455,6 +3515,20 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
 
   if (isStairEditPrompt(userPrompt)) {
     return buildStairClosedSlabPrompt(userPrompt);
+  }
+  if (isVehicleFromReferencePrompt(userPrompt, referenceImageCount)) {
+    const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
+    const subjectPoseInject = subjectPoseBlock ? ` ${subjectPoseBlock}` : "";
+    const head =
+      `${VEHICLE_FROM_REFERENCE_GUARD}${subjectPoseInject}${VEHICLE_FROM_REFERENCE_CLARIFIER} ${NO_DONOR_LOGO_BLEED}${SEAMLESS_BLEND_LOCK}`.trim();
+    const rawUser = String(userPrompt || "").trim();
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
+    const core = `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+    const suffix = qualitySuffix(false);
+    for (const candidate of [`${core} ${suffix}`, core]) {
+      if (candidate.length <= MAX_FINAL_PROMPT) return candidate;
+    }
+    return core.slice(0, MAX_FINAL_PROMPT);
   }
   // Fictional / cartoon / game cars — dedicated path (real cabin guards kill these).
   if (
@@ -3504,23 +3578,42 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !cockpitInteriorReplaceScene &&
     (rawExteriorTraffic || isExteriorTrafficReplacePrompt(userPrompt));
   // Bike swap / ride BEFORE car body-swap — preserve wheelie/cabriole pose.
+  const vehicleFromReferenceScene =
+    !facialHairOnly &&
+    !swap &&
+    !addVehiclesScene &&
+    !cockpitInteriorReplaceScene &&
+    !exteriorTrafficScene &&
+    (rawVehicleFromReference ||
+      isVehicleFromReferencePrompt(userPrompt, referenceImageCount));
+  const motorcycleParkedReplaceScene =
+    !facialHairOnly &&
+    !swap &&
+    !addVehiclesScene &&
+    !cockpitInteriorReplaceScene &&
+    !exteriorTrafficScene &&
+    !vehicleFromReferenceScene &&
+    (isMotorcycleParkedReplacePrompt(userPrompt) ||
+      isMotorcycleParkedReplacePrompt(cleaned));
   const motorcycleRideScene =
     !facialHairOnly &&
     !swap &&
     !addVehiclesScene &&
     !cockpitInteriorReplaceScene &&
     !exteriorTrafficScene &&
+    !vehicleFromReferenceScene &&
+    !motorcycleParkedReplaceScene &&
     (rawMotorcycleRide ||
       isMotorcycleRidePrompt(userPrompt) ||
-      isMotorcycleRidePrompt(cleaned) ||
-      isMotorcycleReplacePrompt(userPrompt) ||
-      isMotorcycleReplacePrompt(cleaned));
+      isMotorcycleRidePrompt(cleaned));
   const vehicleReplaceScene =
     !facialHairOnly &&
     !swap &&
     !addVehiclesScene &&
     !cockpitInteriorReplaceScene &&
     !exteriorTrafficScene &&
+    !vehicleFromReferenceScene &&
+    !motorcycleParkedReplaceScene &&
     !motorcycleRideScene &&
     (rawVehicleReplace || isVehicleReplacePrompt(userPrompt) || isVehicleReplacePrompt(cleaned));
   const vehicleBehindScene =
@@ -3726,6 +3819,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           ? COCKPIT_INTERIOR_REPLACE_GUARD
           : exteriorTrafficScene
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
+            : vehicleFromReferenceScene
+              ? VEHICLE_FROM_REFERENCE_GUARD
+              : motorcycleParkedReplaceScene
+                ? VEHICLE_REPLACE_SCENE_GUARD
             : motorcycleRideScene
               ? isMotorcycleSeatedUserPrompt(userPrompt) ||
                 isMotorcycleSeatedUserPrompt(cleaned)
@@ -3775,11 +3872,19 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     ? `Additive inpaint on the UNCHANGED uploaded photo (do not rebuild the room). Put the requested object LARGE and CENTERED with a real shadow. User request: ${expandedUser}`
     : `User request: ${expandedUser}`;
   const bleed =
-    swap || namedFigure || addCompanion ? ` ${NO_DONOR_LOGO_BLEED}` : "";
+    swap ||
+    namedFigure ||
+    addCompanion ||
+    vehicleFromReferenceScene ||
+    motorcycleParkedReplaceScene
+      ? ` ${NO_DONOR_LOGO_BLEED}`
+      : "";
   const blend =
     swap ||
     namedFigure ||
     addCompanion ||
+    vehicleFromReferenceScene ||
+    motorcycleParkedReplaceScene ||
     vehicleScene ||
     addVehiclesScene ||
     vehicleReplaceScene ||
@@ -3806,11 +3911,18 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           isSwimwearBeachOutfitPrompt(userPrompt) ? SWIMWEAR_OUTFIT_CLARIFIER : ""
         }`
       : "";
-  const core = `${nonCarScenePrefix}${sceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
+  const luxuryVehicleInject =
+    (vehicleReplaceScene || motorcycleParkedReplaceScene) &&
+    isLuxuryVehicleSynonymPrompt(userPrompt)
+      ? LUXURY_VEHICLE_SYNONYM_CLARIFIER
+      : "";
+  const core = `${nonCarScenePrefix}${sceneGuard}${luxuryVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
   const suffix = qualitySuffix(
     swap ||
       namedFigure ||
+      vehicleFromReferenceScene ||
+      motorcycleParkedReplaceScene ||
       vehicleScene ||
       addVehiclesScene ||
       vehicleReplaceScene ||
@@ -3828,8 +3940,19 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const compactVehicleSwapCore = (() => {
+    if (!vehicleFromReferenceScene && !motorcycleParkedReplaceScene && !vehicleReplaceScene) {
+      return "";
+    }
+    const head = `${sceneGuard}${luxuryVehicleInject}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend}`.trim();
+    const rawUser = String(sanitizeUserPrompt(userPrompt) || userPrompt || "").trim();
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
+    return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  })();
   const candidates =
     lifestyleScene ||
+    vehicleFromReferenceScene ||
+    motorcycleParkedReplaceScene ||
     jetSkiScene ||
     shopifyTrophyScene ||
     vehicleScene ||
@@ -3847,7 +3970,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     cameraChange
       ? lifestyleScene
         ? [compactLifestyleCore, core].filter(Boolean)
-        : [core]
+        : vehicleFromReferenceScene || motorcycleParkedReplaceScene || vehicleReplaceScene
+          ? [compactVehicleSwapCore, core].filter(Boolean)
+          : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
@@ -4064,6 +4189,12 @@ module.exports = {
   isVehicleReplacePrompt,
   isMotorcycleRidePrompt,
   isMotorcycleReplacePrompt,
+  isMotorcycleParkedReplacePrompt,
+  isVehicleFromReferencePrompt,
+  VEHICLE_FROM_REFERENCE_GUARD,
+  VEHICLE_FROM_REFERENCE_CLARIFIER,
+  LUXURY_VEHICLE_SYNONYM_CLARIFIER,
+  MOTORCYCLE_PARKED_REPLACE_CLARIFIER,
   isMotorcycleSeatedUserPrompt,
   isMotorcycleWheelOnVehiclePrompt,
   motorcycleWheelContactHint,
