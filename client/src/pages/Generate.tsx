@@ -861,6 +861,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   };
 
   const executeGeneration = async () => {
+    if (isStartingGeneration || generateDirect.isPending || generateVideo.isPending) {
+      console.warn("[Generate] Ignored duplicate generate click — already in flight");
+      return;
+    }
+
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);

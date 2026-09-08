@@ -1,5 +1,6 @@
 const SUBMIT_LOCK_KEY = "luxeflexia:generation-submit-lock";
-const SUBMIT_LOCK_MS = 4_000;
+/** Aligné sur GENERATION_DEDUP_WINDOW_MS côté serveur (120 s). */
+const SUBMIT_LOCK_MS = 120_000;
 
 /** Verrou court cross-onglet pour éviter deux POST simultanés avant le dedup serveur. */
 export function tryAcquireGenerationSubmitLock(): boolean {

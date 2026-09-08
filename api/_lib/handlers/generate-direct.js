@@ -36,6 +36,7 @@ const {
 const {
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
+  reserveGenerationSlot,
 } = require("../generation-dedup");
 
 function normalizeAspectRatio(value) {
@@ -163,15 +164,95 @@ module.exports = async function handler(req, res) {
 
     const inFlight = await findRecentInFlightGeneration(supabase, userId);
     if (inFlight) {
+      console.info("[generate-direct] dedup — generation already in flight", {
+        userId,
+        existingId: inFlight.id,
+      });
       res.status(200).json(buildDedupGenerateResponse(inFlight));
       return;
     }
 
-    const uploadedUrls = await uploadInputImagesToR2(userId, images);
+    const oneshotConfig = getOneshotApiConfig();
+    const appSettings = await getAppSettings(supabase);
+    const kieReady = isKieConfigured();
 
-    const inFlightAfterUpload = await findRecentInFlightGeneration(supabase, userId);
-    if (inFlightAfterUpload) {
-      res.status(200).json(buildDedupGenerateResponse(inFlightAfterUpload));
+    if (
+      (appSettings.forceKieAi || !oneshotConfig.url || !oneshotConfig.key) &&
+      !kieReady
+    ) {
+      res.status(503).json({
+        message:
+          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
+      });
+      return;
+    }
+
+    // Reserve DB slot + debit credits BEFORE slow upload/prompt (blocks race/double-click).
+    const pendingTaskId = `pending_${randomUUID()}`;
+    const generationTemplateId = isBuiltinTemplateId(templateId)
+      ? null
+      : templateId;
+    const reserved = await reserveGenerationSlot(supabase, {
+      user_id: userId,
+      template_id: generationTemplateId,
+      generation_type: "image",
+      prompt: prompt,
+      final_prompt: prompt,
+      provider: "oneshot",
+      provider_task_id: pendingTaskId,
+      status: "processing",
+      aspect_ratio: aspectRatio,
+      input_assets: [],
+      credit_cost: creditCost,
+      metadata: { slot_reserved: true },
+    });
+    if (!reserved.ok) {
+      console.info("[generate-direct] dedup — slot already reserved", {
+        userId,
+        existingId: reserved.inFlight?.id,
+      });
+      res.status(200).json(buildDedupGenerateResponse(reserved.inFlight));
+      return;
+    }
+    let larp = reserved.larp;
+
+    const deductErr = await deductGenerationCredits(supabase, {
+      userId,
+      creditCost,
+      generationId: larp.id,
+      metadata: {
+        source: "direct_generation",
+        phase: "pre_provider",
+      },
+    });
+
+    if (deductErr) {
+      await supabase
+        .from("generations")
+        .update({
+          status: "failed",
+          fail_message: "Échec débit jetons",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
+      res.status(500).json({ message: "Échec du débit des jetons" });
+      return;
+    }
+
+    await recordGeneration(supabase, userId);
+
+    let uploadedUrls;
+    try {
+      uploadedUrls = await uploadInputImagesToR2(userId, images);
+    } catch (uploadErr) {
+      console.error("generate-direct upload failed", uploadErr);
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Échec upload des images",
+        source: "upload_failed",
+      });
+      res.status(502).json({ message: "Échec upload des images" });
       return;
     }
 
@@ -192,6 +273,12 @@ module.exports = async function handler(req, res) {
           });
 
       if (!resolvedTemplate.ok) {
+        await failAndRefund(supabase, {
+          userId,
+          generationId: larp.id,
+          failMessage: resolvedTemplate.message || "Modèle invalide",
+          source: "template_resolve_failed",
+        });
         res.status(422).json({
           code: resolvedTemplate.code,
           message: resolvedTemplate.message,
@@ -219,6 +306,12 @@ module.exports = async function handler(req, res) {
           ];
     } else {
       if (images.length === 0) {
+        await failAndRefund(supabase, {
+          userId,
+          generationId: larp.id,
+          failMessage: "Image de référence requise",
+          source: "reference_required",
+        });
         res.status(422).json({
           code: "REFERENCE_IMAGE_REQUIRED",
           message: copy(
@@ -233,6 +326,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (imageUrls.length === 0) {
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Image de référence requise",
+        source: "reference_required",
+      });
       res.status(422).json({
         code: "REFERENCE_IMAGE_REQUIRED",
         message: copy(
@@ -291,86 +390,32 @@ module.exports = async function handler(req, res) {
       modelVariant: oneshotModelVariant,
     });
 
-    const oneshotConfig = getOneshotApiConfig();
-    const appSettings = await getAppSettings(supabase);
-    const kieReady = isKieConfigured();
+    const generationMetadata = {
+      oneshot_model_variant: oneshotModelVariant,
+      estimated_seconds: estimatedSeconds,
+      subject_analysis: subjectAnalysis,
+      subject_type: subject,
+      pose_style: poseStyle,
+      ...(templateReferenceId
+        ? {
+            ...(isBuiltinTemplateId(templateId)
+              ? { builtin_template_id: templateReferenceId }
+              : { selected_template_reference_image_id: templateReferenceId }),
+          }
+        : {}),
+    };
 
-    if (
-      (appSettings.forceKieAi || !oneshotConfig.url || !oneshotConfig.key) &&
-      !kieReady
-    ) {
-      res.status(503).json({
-        message:
-          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
-      });
-      return;
-    }
-
-    // 3) Reserve generation row + debit credits BEFORE calling the AI.
-    const pendingTaskId = `pending_${randomUUID()}`;
-    const generationTemplateId = isBuiltinTemplateId(templateId)
-      ? null
-      : templateId;
-    const { data: larp, error: insertErr } = await supabase
+    await supabase
       .from("generations")
-      .insert({
-        user_id: userId,
-        template_id: generationTemplateId,
-        generation_type: "image",
-        prompt: prompt,
+      .update({
         final_prompt: finalPrompt,
-        provider: "oneshot",
-        provider_task_id: pendingTaskId,
-        status: "processing",
-        aspect_ratio: aspectRatio,
         input_assets: imageUrls,
-        credit_cost: creditCost,
-        metadata: {
-          oneshot_model_variant: oneshotModelVariant,
-          estimated_seconds: estimatedSeconds,
-          subject_analysis: subjectAnalysis,
-          subject_type: subject,
-          pose_style: poseStyle,
-          ...(templateReferenceId
-            ? {
-                ...(isBuiltinTemplateId(templateId)
-                  ? { builtin_template_id: templateReferenceId }
-                  : { selected_template_reference_image_id: templateReferenceId }),
-              }
-            : {}),
-        },
+        metadata: generationMetadata,
+        updated_at: new Date().toISOString(),
       })
-      .select()
-      .single();
+      .eq("id", larp.id);
 
-    if (insertErr) throw insertErr;
-
-    const deductErr = await deductGenerationCredits(supabase, {
-      userId,
-      creditCost,
-      generationId: larp.id,
-      metadata: {
-        source: "direct_generation",
-        phase: "pre_provider",
-      },
-    });
-
-    if (deductErr) {
-      await supabase
-        .from("generations")
-        .update({
-          status: "failed",
-          fail_message: "Échec débit jetons",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", larp.id);
-      res.status(500).json({ message: "Échec du débit des jetons" });
-      return;
-    }
-
-    await recordGeneration(supabase, userId);
-
-    // 4) Call image provider (credits already reserved).
+    // 4) Call image provider — ONE OneShot job max (no QA retry, no 2nd createOneshotJob).
     let externalTaskId;
     let provider = "oneshot";
 
