@@ -840,6 +840,26 @@
     "gender": "men"
   },
   {
+    "id": "outfit-loro-piana-lv-beige-knit",
+    "slug": "loro-piana-lv-beige-knit",
+    "name": "Loro Piana beige LV",
+    "description": "Polo knit beige côtelé, pantalon noir, mocassins Loro Piana beige, pochette LV monogramme, casquette Loro Piana.",
+    "imagePath": "/outfits/outfit-loro-piana-lv-beige-knit.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-gucci-polo-navy-loafers",
+    "slug": "gucci-polo-navy-loafers",
+    "name": "Gucci polo navy",
+    "description": "Polo knit noir côtelé, pantalon navy, mocassins suede noir semelle blanche, pochette Gucci GG.",
+    "imagePath": "/outfits/outfit-gucci-polo-navy-loafers.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
     "id": "outfit-women-burgundy-halter",
     "slug": "women-burgundy-halter",
     "name": "Robe bordeaux halter",
