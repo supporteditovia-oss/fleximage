@@ -368,6 +368,16 @@ const CELEBRITY_CARDS = [
     card: shortCard("MESSI", "exact present-day Lionel Messi face/hair — not a lookalike."),
   },
   {
+    id: "ronaldo",
+    match: /\b(ronaldo|cristiano\s*ronaldo|cr7)\b/,
+    label: "Cristiano Ronaldo",
+    card:
+      "CRISTIANO RONALDO 2026 — exact real Cristiano Ronaldo likeness NOW: current short groomed hair, strong jaw, athletic build, signature smile — never a generic lookalike. " +
+      "Standing NEXT TO the subject in a selfie at correct scale — both facing camera OK. " +
+      "Same outdoor light, grain, and contact shadows as the scene — never CGI, never stock cutout. " +
+      "NEVER replace Ronaldo with the user — only the companion on the left is swapped.",
+  },
+  {
     id: "rihanna",
     match: /\b(rihanna)\b/,
     label: "Rihanna",
