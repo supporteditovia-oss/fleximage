@@ -24,6 +24,10 @@ import {
   OUTPUT_ASPECT_RATIO,
   type GenerationAspectRatio,
 } from "@shared/schema";
+import {
+  IMAGE_EDIT_MODE_LABELS,
+  type ImageEditMode,
+} from "@/lib/image-edit-mode";
 
 interface PromptInputBarProps {
   prompt: string;
@@ -37,6 +41,9 @@ interface PromptInputBarProps {
   creditCost?: number;
   aspectRatio?: GenerationAspectRatio;
   onAspectRatioChange?: (value: GenerationAspectRatio) => void;
+  hasReferenceImage?: boolean;
+  imageEditMode?: ImageEditMode;
+  onImageEditModeChange?: (mode: ImageEditMode) => void;
 }
 
 const PROMPT_MIN_HEIGHT_PX = 52;
@@ -62,6 +69,9 @@ export function PromptInputBar({
   creditCost,
   aspectRatio = OUTPUT_ASPECT_RATIO,
   onAspectRatioChange,
+  hasReferenceImage = false,
+  imageEditMode = "auto",
+  onImageEditModeChange,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const { isAdmin } = useAuth();
@@ -139,6 +149,37 @@ export function PromptInputBar({
   return (
     <div className="relative z-10 flex w-full justify-center">
       <div className="flex w-full max-w-md flex-col gap-2 md:max-w-xl">
+        {hasReferenceImage && onImageEditModeChange ? (
+          <div
+            className="flex w-full rounded-xl border border-[var(--lx-gold)]/15 bg-white/80 p-1 shadow-sm backdrop-blur-sm"
+            role="group"
+            aria-label="Mode de génération"
+          >
+            {(["edit", "create"] as const).map((mode) => {
+              const active =
+                mode === "edit"
+                  ? imageEditMode === "edit" || imageEditMode === "auto"
+                  : imageEditMode === "create";
+              const label = IMAGE_EDIT_MODE_LABELS[mode];
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => onImageEditModeChange(mode)}
+                  className={`flex flex-1 flex-col items-start rounded-lg px-3 py-2 text-left transition-all ${
+                    active
+                      ? "bg-[var(--lx-gold)]/12 text-[#1a1408] shadow-[inset_0_0_0_1px_rgba(201,162,39,0.35)]"
+                      : "text-muted-foreground hover:bg-[var(--lx-gold)]/6"
+                  }`}
+                  aria-pressed={active}
+                >
+                  <span className="text-xs font-semibold">{label.title}</span>
+                  <span className="text-[10px] leading-snug opacity-80">{label.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         <div className="lx-prompt-composer group/composer w-full rounded-2xl border border-[var(--lx-gold)]/20 bg-white/90 px-3.5 py-3 shadow-[0_8px_32px_rgba(18,16,14,0.06)] backdrop-blur-md transition-all hover:border-[var(--lx-gold)]/35 focus-within:border-[var(--lx-gold)]/45 focus-within:shadow-[0_12px_40px_rgba(201,162,39,0.12)] focus-within:ring-2 focus-within:ring-[var(--lx-gold)]/15 md:px-4 md:py-3.5">
           <textarea
             ref={placeholderRef}

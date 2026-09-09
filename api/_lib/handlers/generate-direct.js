@@ -22,7 +22,7 @@ const {
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { analyzeSubjectContext } = require("../subject-analysis");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds, resolveImageEditMode, isBackgroundEditPrompt } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -40,6 +40,36 @@ const {
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
+}
+
+/** UI/API: auto | edit (preserve people) | create (free generation). */
+function parseEditModeFromBody(body) {
+  const raw = String(body?.edit_mode || body?.editMode || "auto")
+    .trim()
+    .toLowerCase();
+  if (raw === "edit" || raw === "preserve" || raw === "modify" || raw === "modifier") {
+    return "edit";
+  }
+  if (raw === "create" || raw === "generate" || raw === "free" || raw === "nouveau") {
+    return "create";
+  }
+  return "auto";
+}
+
+function resolveEffectiveEditMode(prompt, imageCount, body) {
+  const requested = parseEditModeFromBody(body);
+  if (requested !== "auto") return requested;
+  if (imageCount < 1) return "create";
+  if (
+    isBackgroundEditPrompt(prompt, {
+      editMode: "auto",
+      referenceImageCount: imageCount,
+      hasReferenceImage: true,
+    })
+  ) {
+    return "edit";
+  }
+  return "auto";
 }
 
 /** Official Shopify shopping-bag award shape (public static asset). */
@@ -263,14 +293,23 @@ module.exports = async function handler(req, res) {
       sceneContext,
     });
 
-    const subjectPoseBlock = buildSubjectPosePromptBlock({
-      subject,
-      poseStyle,
-      analysis: subjectAnalysis,
-      userPrompt: effectivePrompt,
-      sceneContext,
-      faceSwapLockedPose: isBuiltinFaceSwap,
-    });
+    const editMode = resolveEffectiveEditMode(effectivePrompt, imageUrls.length, body);
+    const visiblePeopleCount = Math.max(
+      1,
+      Number(subjectAnalysis?.visible_people_count) || 1,
+    );
+
+    const subjectPoseBlock =
+      editMode === "edit"
+        ? ""
+        : buildSubjectPosePromptBlock({
+            subject,
+            poseStyle,
+            analysis: subjectAnalysis,
+            userPrompt: effectivePrompt,
+            sceneContext,
+            faceSwapLockedPose: isBuiltinFaceSwap,
+          });
 
     const finalPrompt = isBuiltinFaceSwapWithOutfit
       ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
@@ -284,6 +323,8 @@ module.exports = async function handler(req, res) {
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
             subjectPoseBlock,
+            editMode,
+            visiblePeopleCount,
           });
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
@@ -331,6 +372,8 @@ module.exports = async function handler(req, res) {
           subject_analysis: subjectAnalysis,
           subject_type: subject,
           pose_style: poseStyle,
+          edit_mode: editMode,
+          expected_people_count: visiblePeopleCount,
           ...(templateReferenceId
             ? {
                 ...(isBuiltinTemplateId(templateId)

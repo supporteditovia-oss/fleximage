@@ -28,6 +28,7 @@ import {
   saveMediaBlob,
 } from "@/lib/download-media";
 import { ShareSheet } from "@/components/larp/ShareSheet";
+import { AI_MODIFIED_LABEL } from "@/lib/image-edit-mode";
 import {
   cleanupShareUiLocks,
   fetchShareBlob,
@@ -292,6 +293,12 @@ export function LarpResult({
                     className={RESULT_MEDIA_CLASS}
                     loading="lazy"
                   />
+                  <p
+                    className="pointer-events-none absolute left-2 top-2 z-[55] max-w-[calc(100%-1rem)] rounded-md bg-black/45 px-2 py-0.5 text-[10px] font-medium leading-tight text-white/90 backdrop-blur-sm"
+                    aria-label={AI_MODIFIED_LABEL}
+                  >
+                    {AI_MODIFIED_LABEL}
+                  </p>
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
                       <button

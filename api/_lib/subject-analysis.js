@@ -5,11 +5,12 @@
 
 const ANALYSIS_TIMEOUT_MS = 14_000;
 
-const ANALYSIS_SCHEMA_HINT = `Return ONLY valid JSON with these keys (strings, concise English values):
-subject_presentation, apparent_age, outfit_style, pose_direction, mood, activity, location_context, camera_style
+const ANALYSIS_SCHEMA_HINT = `Return ONLY valid JSON with these keys (strings unless noted, concise English values):
+subject_presentation, apparent_age, outfit_style, pose_direction, mood, activity, location_context, camera_style, visible_people_count
 
 Rules:
 - Infer from the reference photo AND scene/prompt context.
+- visible_people_count: integer — count every clearly visible human face/body in the reference photo (1 for solo selfie, 2 for duo, etc.).
 - Describe presentation, styling, attitude and pose direction only.
 - NEVER instruct to change identity, face, skin tone, hair, apparent age or body proportions.
 - Avoid stereotypes, caricature and sexualization.
@@ -173,6 +174,10 @@ function normalizeAnalysis(raw = {}) {
       "camera_style",
       "friend-taken smartphone photo, slight grain, imperfect framing, natural skin pores",
     ),
+    visible_people_count: Math.max(
+      1,
+      Math.min(8, Number.parseInt(String(raw.visible_people_count ?? ""), 10) || 1),
+    ),
     source: raw.source || "heuristic",
   };
 }
@@ -220,6 +225,14 @@ function heuristicAnalysis(userPrompt = "", sceneContext = "") {
   }
   if (/\b(parapluie|rain|pluie|météo|weather)\b/.test(text)) {
     analysis.location_context = `${analysis.location_context}; weather-aware scene`;
+  }
+
+  if (
+    /\b(mets[\s-]?les|les\s+deux|nous\s+deux|duo|ensemble|together|selfie\s+a\s+deux|avec\s+(cris|ronaldo|mbappe|messi|neymar|benzema|pogba))\b/.test(
+      text,
+    )
+  ) {
+    analysis.visible_people_count = 2;
   }
 
   return analysis;
