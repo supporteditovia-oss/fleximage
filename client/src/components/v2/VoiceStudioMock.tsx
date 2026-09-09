@@ -947,7 +947,7 @@ export function VoiceStudioMock() {
     <div className="voice-studio-page">
       <div className="voice-studio-page__inner voice-studio-page__inner--wide">
         <p className="voice-studio-page__eyebrow">Studio</p>
-        <h2 className="voice-studio-page__title">Voix IA</h2>
+        <h2 className="voice-studio-page__title">Clonage IA</h2>
 
         {activeVoice ? (
           <VoiceSelectedHero

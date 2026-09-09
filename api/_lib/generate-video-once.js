@@ -1,4 +1,5 @@
 const { createRunwayVideoTask } = require("./kie-runway");
+const { createAlephVideoTask } = require("./kie-runway-aleph");
 
 function readVideoApiCallCount(metadata) {
   const meta = metadata && typeof metadata === "object" ? metadata : {};
@@ -18,7 +19,9 @@ async function claimVideoProviderCall(supabase, generationId) {
   if (count >= 1) {
     const taskId = String(row.provider_task_id || "");
     const parts = taskId.split(",").filter(Boolean);
-    const videoPart = parts.find((p) => p.startsWith("video_")) || parts[parts.length - 1];
+    const videoPart =
+      parts.find((p) => p.startsWith("video_") || p.startsWith("aleph_")) ||
+      parts[parts.length - 1];
     return { allowed: false, generation: row, apiCallCount: count, externalTaskId: videoPart };
   }
 
@@ -51,7 +54,9 @@ async function claimVideoProviderCall(supabase, generationId) {
       allowed: false,
       generation: refreshed,
       apiCallCount: refreshedCount,
-      externalTaskId: parts.find((p) => p.startsWith("video_")) || null,
+      externalTaskId:
+        parts.find((p) => p.startsWith("video_") || p.startsWith("aleph_")) ||
+        null,
     };
   }
 
@@ -138,8 +143,88 @@ async function generateVideoOnce(supabase, params) {
   };
 }
 
+/**
+ * Single billable Aleph video-to-video call per generation row.
+ */
+async function generateVideoV2VOnce(supabase, params) {
+  const claim = await claimVideoProviderCall(supabase, params.generationId);
+  if (!claim.allowed) {
+    console.info("[generate-video-v2v-once] skipped duplicate provider call", {
+      generationId: params.generationId,
+      apiCallCount: claim.apiCallCount,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: claim.externalTaskId,
+      apiCallCount: claim.apiCallCount,
+    };
+  }
+
+  const startedAt = Date.now();
+  const aleph = await createAlephVideoTask({
+    prompt: params.prompt,
+    videoUrl: params.videoUrl,
+    aspectRatio: params.aspectRatio,
+    referenceImage: params.referenceImage,
+  });
+
+  const externalTaskId = `aleph_${aleph.taskId}`;
+  const durationMs = Date.now() - startedAt;
+  const prevAttempts = Array.isArray(claim.generation.provider_attempts)
+    ? claim.generation.provider_attempts
+    : [];
+
+  const nextMeta = {
+    ...(claim.generation.metadata || {}),
+    video_api_call_count: 1,
+    video_provider_completed_at: new Date().toISOString(),
+    aleph_task_id: aleph.taskId,
+    video_provider_duration_ms: durationMs,
+    video_auto_retries: 0,
+  };
+
+  await supabase
+    .from("generations")
+    .update({
+      provider: "runway_aleph",
+      provider_task_id: externalTaskId,
+      metadata: nextMeta,
+      provider_attempts: [
+        ...prevAttempts,
+        {
+          provider: "runway_aleph",
+          taskId: aleph.taskId,
+          externalTaskId,
+          durationMs,
+          autoRetry: false,
+        },
+      ],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.generationId);
+
+  console.info("[generate-video-v2v-once] aleph job created", {
+    generationId: params.generationId,
+    videoRequestId: nextMeta.video_request_id || null,
+    alephTaskId: aleph.taskId,
+    durationMs,
+    apiCallCount: 1,
+  });
+
+  return {
+    ok: true,
+    deduplicated: false,
+    externalTaskId,
+    apiCallCount: 1,
+    alephTaskId: aleph.taskId,
+    durationMs,
+  };
+}
+
 module.exports = {
   generateVideoOnce,
+  generateVideoV2VOnce,
   claimVideoProviderCall,
   readVideoApiCallCount,
 };

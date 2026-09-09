@@ -1,3 +1,4 @@
+export type VideoWorkflow = "image_to_video" | "video_to_video";
 export type VideoDuration = 5 | 10;
 export type VideoAspectRatio = "9:16" | "16:9" | "1:1";
 export type VideoCameraMovement =
@@ -22,66 +23,58 @@ export type VideoMotionPreset = {
   prompt: string;
 };
 
+/** Presets rapides pour le mode Image → Vidéo. */
 export const VIDEO_MOTION_PRESETS: VideoMotionPreset[] = [
   {
-    id: "camera_look",
-    label: "Regard caméra",
-    prompt:
-      "Léger sourire, regard naturel vers la caméra, petit mouvement de tête subtil, lumière réaliste.",
-  },
-  {
-    id: "luxury_walk",
-    label: "Marche luxe",
-    prompt:
-      "La personne avance calmement avec assurance, vêtements et arrière-plan bougent naturellement, allure premium.",
-  },
-  {
-    id: "car_exit",
-    label: "Sortie de voiture",
-    prompt:
-      "Ouverture de portière fluide, sortie élégante du véhicule, caméra cinématique latérale.",
-  },
-  {
     id: "rooftop_night",
-    label: "Rooftop de nuit",
+    label: "Rooftop",
     prompt:
       "Caméra lente, skyline lumineux en arrière-plan, vent léger, ambiance nocturne premium.",
   },
   {
     id: "private_jet",
-    label: "Jet privé",
+    label: "Jet",
     prompt:
       "Marche vers l'avion sur le tarmac, mouvements réalistes, lumière de fin de journée dorée.",
   },
   {
-    id: "fine_dining",
-    label: "Restaurant chic",
+    id: "luxury_walk",
+    label: "Marche",
     prompt:
-      "Sourire subtil, caméra qui se rapproche doucement, ambiance restaurant haut de gamme.",
+      "Il marche lentement, regarde la caméra et sourit. Mouvement naturel, allure premium.",
+  },
+];
+
+export type VehiclePreset = {
+  id: string;
+  label: string;
+  prompt: string;
+};
+
+export const VIDEO_VEHICLE_PRESETS: VehiclePreset[] = [
+  {
+    id: "lamborghini_urus",
+    label: "Lamborghini Urus",
+    prompt:
+      "Lamborghini Urus noir mat, proportions réalistes, jantes d'origine, reflets crédibles.",
   },
   {
-    id: "ugc_tiktok",
-    label: "Vidéo UGC / TikTok",
+    id: "porsche_gt3_rs",
+    label: "Porsche GT3 RS",
     prompt:
-      "Mouvement naturel de téléphone en main, authenticité UGC, format vertical, énergie organique.",
+      "Porsche 911 GT3 RS, aileron arrière, couleur sport, détails carrosserie fidèles.",
   },
   {
-    id: "talking_head",
-    label: "Face caméra parlante",
+    id: "ferrari",
+    label: "Ferrari",
     prompt:
-      "Visage stable centré, synchronisation labiale naturelle implicite, gestes légers des mains.",
+      "Ferrari rouge Rosso Corsa, supercar italienne, lignes agressives, rendu photoréaliste.",
   },
   {
-    id: "before_after",
-    label: "Transformation avant/après",
+    id: "g_wagon",
+    label: "G-Wagon",
     prompt:
-      "Mouvement de caméra dynamique, transition nette entre deux ambiances, rythme accrocheur.",
-  },
-  {
-    id: "product_car",
-    label: "Produit / voiture",
-    prompt:
-      "Travelling lent autour du sujet, reflets réalistes, rendu publicitaire premium luxe.",
+      "Mercedes-Benz G-Class G-Wagon noir, carrosserie cubique iconique, finitions luxe.",
   },
 ];
 
@@ -93,22 +86,19 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
   "Tu n'as pas besoin d'être prêt. Tu dois juste commencer.",
 ];
 
-export const VIDEO_STUDIO_STEPS = [
-  "Image",
-  "Mouvement",
-  "Voix",
-  "Sous-titres",
-  "Générer",
-] as const;
-
 export function computeVideoCreditCost(params: {
-  durationSec: VideoDuration;
-  quality: VideoQuality;
-  voiceEnabled: boolean;
+  durationSec?: VideoDuration;
+  quality?: VideoQuality;
+  voiceEnabled?: boolean;
+  workflow?: VideoWorkflow;
 }): number {
-  let cost = params.durationSec === 10 ? 35 : 20;
-  if (params.quality === "high") cost = Math.round(cost * 1.5);
-  if (params.voiceEnabled) cost += 5;
+  if (params.workflow === "video_to_video") return 25;
+  const durationSec = params.durationSec ?? 5;
+  const quality = params.quality ?? "standard";
+  const voiceEnabled = params.voiceEnabled ?? false;
+  let cost = durationSec === 10 ? 35 : 20;
+  if (quality === "high") cost = Math.round(cost * 1.5);
+  if (voiceEnabled) cost += 5;
   return cost;
 }
 

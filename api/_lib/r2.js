@@ -124,6 +124,16 @@ async function listR2Objects(prefix, maxKeys = 300) {
   return objects;
 }
 
+async function uploadInputVideoToR2(userId, dataUrl) {
+  const match = String(dataUrl).match(/^data:(video\/[\w+.-]+);base64,([\s\S]+)$/);
+  if (!match) return null;
+  const contentType = match[1];
+  const buffer = Buffer.from(match[2], "base64");
+  const ext = contentType.split("/")[1] || "mp4";
+  const key = `inputs/${userId}/${Date.now()}-source.${ext}`;
+  return uploadToR2(key, buffer, contentType);
+}
+
 async function uploadInputImagesToR2(userId, images) {
   if (!images || images.length === 0) return [];
 
@@ -199,6 +209,7 @@ module.exports = {
   deleteFromR2,
   listR2Objects,
   uploadInputImagesToR2,
+  uploadInputVideoToR2,
   downloadAndStoreImages,
   downloadAndStoreVideo,
   getR2Config,

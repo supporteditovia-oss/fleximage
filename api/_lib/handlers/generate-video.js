@@ -1,12 +1,13 @@
 const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
-const { uploadInputImagesToR2, uploadToR2 } = require("../r2");
+const { uploadInputImagesToR2, uploadInputVideoToR2 } = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
-const { generateVideoOnce } = require("../generate-video-once");
+const { generateVideoOnce, generateVideoV2VOnce } = require("../generate-video-once");
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
+  buildCarSwapPrompt,
   validateVoiceText,
 } = require("../video-studio");
 const {
@@ -95,6 +96,50 @@ async function resolveSourceImageUrl(supabase, userId, body) {
   return uploaded[0];
 }
 
+const VEHICLE_PRESET_PROMPTS = {
+  lamborghini_urus:
+    "Lamborghini Urus noir mat, proportions réalistes, jantes d'origine, reflets crédibles.",
+  porsche_gt3_rs:
+    "Porsche 911 GT3 RS, aileron arrière, couleur sport, détails carrosserie fidèles.",
+  ferrari:
+    "Ferrari rouge Rosso Corsa, supercar italienne, lignes agressives, rendu photoréaliste.",
+  g_wagon:
+    "Mercedes-Benz G-Class G-Wagon noir, carrosserie cubique iconique, finitions luxe.",
+};
+
+async function resolveSourceVideoUrl(userId, body) {
+  if (typeof body.video_url === "string" && body.video_url.startsWith("http")) {
+    return body.video_url;
+  }
+  const videos = Array.isArray(body.videos) ? body.videos : [];
+  if (videos.length === 0) {
+    throw Object.assign(new Error("Une vidéo source est requise"), {
+      status: 422,
+      code: "REFERENCE_VIDEO_REQUIRED",
+    });
+  }
+  const uploaded = await uploadInputVideoToR2(userId, videos[0]);
+  if (!uploaded) {
+    throw Object.assign(new Error("Échec upload vidéo (MP4 requis)"), {
+      status: 422,
+      code: "VIDEO_UPLOAD_FAILED",
+    });
+  }
+  return uploaded;
+}
+
+function resolveVehicleDescription(body) {
+  const custom =
+    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
+  if (custom.length >= 5) return custom;
+  const presetId =
+    typeof body.vehicle_preset === "string" ? body.vehicle_preset.trim() : "";
+  if (presetId && VEHICLE_PRESET_PROMPTS[presetId]) {
+    return VEHICLE_PRESET_PROMPTS[presetId];
+  }
+  return "";
+}
+
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
 
@@ -159,22 +204,43 @@ module.exports = async function handler(req, res) {
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
 
+    const workflow =
+      body.workflow === "video_to_video" ? "video_to_video" : "image_to_video";
+
     const motionPrompt =
       typeof body.motion_prompt === "string" ? body.motion_prompt.trim() : "";
-    if (!motionPrompt || motionPrompt.length < 10 || motionPrompt.length > 2000) {
-      res.status(400).json({
-        message: copy(
-          uiLocale,
-          "Décris le mouvement (10–2000 caractères).",
-          "Describe the motion (10–2000 characters).",
-        ),
-      });
-      return;
-    }
+    const vehicleDescription = resolveVehicleDescription(body);
 
-    if (isDisallowedAdultPrompt(motionPrompt)) {
-      res.status(422).json(contentPolicyResponse(uiLocale));
-      return;
+    if (workflow === "image_to_video") {
+      if (!motionPrompt || motionPrompt.length < 10 || motionPrompt.length > 2000) {
+        res.status(400).json({
+          message: copy(
+            uiLocale,
+            "Décris le mouvement (10–2000 caractères).",
+            "Describe the motion (10–2000 characters).",
+          ),
+        });
+        return;
+      }
+      if (isDisallowedAdultPrompt(motionPrompt)) {
+        res.status(422).json(contentPolicyResponse(uiLocale));
+        return;
+      }
+    } else {
+      if (!vehicleDescription || vehicleDescription.length > 500) {
+        res.status(400).json({
+          message: copy(
+            uiLocale,
+            "Choisis une supercar ou décris le véhicule de remplacement.",
+            "Pick a supercar or describe the replacement vehicle.",
+          ),
+        });
+        return;
+      }
+      if (isDisallowedAdultPrompt(vehicleDescription)) {
+        res.status(422).json(contentPolicyResponse(uiLocale));
+        return;
+      }
     }
 
     const admin = await isUserAdmin(supabase, userId);
@@ -208,6 +274,7 @@ module.exports = async function handler(req, res) {
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
     const creditCost = computeVideoCreditCost({
+      workflow,
       durationSec,
       quality,
       voiceEnabled,
@@ -268,35 +335,42 @@ module.exports = async function handler(req, res) {
     }
 
     let voiceClone = null;
-    try {
-      voiceClone = await validateVoiceOwnership(supabase, userId, body, uiLocale);
-    } catch (voiceErr) {
-      res.status(voiceErr.status || 422).json({
-        code: voiceErr.code || "VOICE_VALIDATION_FAILED",
-        message: voiceErr.message,
-      });
-      return;
+    if (workflow === "image_to_video" && voiceEnabled) {
+      try {
+        voiceClone = await validateVoiceOwnership(supabase, userId, body, uiLocale);
+      } catch (voiceErr) {
+        res.status(voiceErr.status || 422).json({
+          code: voiceErr.code || "VOICE_VALIDATION_FAILED",
+          message: voiceErr.message,
+        });
+        return;
+      }
     }
 
-    let sourceImageUrl;
+    let sourceAssetUrl;
+    let providerPrompt;
     try {
-      sourceImageUrl = await resolveSourceImageUrl(supabase, userId, body);
+      if (workflow === "video_to_video") {
+        sourceAssetUrl = await resolveSourceVideoUrl(userId, body);
+        providerPrompt = buildCarSwapPrompt(vehicleDescription);
+      } else {
+        sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
+        providerPrompt = buildRunwayPrompt({
+          motionPrompt,
+          cameraMovement: body.camera_movement,
+          motionIntensity: body.motion_intensity,
+          style: body.style,
+          voiceEnabled,
+          voiceText: body.voice_text,
+        });
+      }
     } catch (srcErr) {
       res.status(srcErr.status || 422).json({
-        code: srcErr.code || "SOURCE_IMAGE_REQUIRED",
+        code: srcErr.code || "SOURCE_REQUIRED",
         message: srcErr.message,
       });
       return;
     }
-
-    const runwayPrompt = buildRunwayPrompt({
-      motionPrompt,
-      cameraMovement: body.camera_movement,
-      motionIntensity: body.motion_intensity,
-      style: body.style,
-      voiceEnabled,
-      voiceText: body.voice_text,
-    });
 
     const pendingTaskId = `pending_${randomUUID()}`;
     const studioMetadata = {
@@ -304,28 +378,38 @@ module.exports = async function handler(req, res) {
       video_api_call_count: 0,
       video_auto_retries: 0,
       studio_stage: "VALIDATING",
-      workflow: "video_studio",
+      workflow,
       source: body.source || "video_studio",
       click_count: Number(body.click_count) > 0 ? Number(body.click_count) : 1,
       frontend_timestamp: body.frontend_timestamp || null,
-      duration_sec: durationSec,
-      quality,
+      duration_sec: workflow === "video_to_video" ? null : durationSec,
+      quality: workflow === "video_to_video" ? null : quality,
       camera_movement: body.camera_movement || "fixed",
       motion_intensity: body.motion_intensity || "natural",
       style: body.style || "realistic",
-      voice_enabled: voiceEnabled,
+      voice_enabled: workflow === "image_to_video" ? voiceEnabled : false,
       voice_mode: body.voice_mode || "none",
       voice_clone_id: voiceClone?.id || null,
-      voice_text: voiceEnabled ? String(body.voice_text || "").trim() : null,
+      voice_text:
+        workflow === "image_to_video" && voiceEnabled
+          ? String(body.voice_text || "").trim()
+          : null,
       voice_consent: Boolean(body.voice_consent),
       lip_sync_enabled: voiceEnabled,
-      subtitles_enabled: subtitlesEnabled,
+      subtitles_enabled:
+        workflow === "image_to_video" ? subtitlesEnabled : false,
       subtitle_style: body.subtitle_style || "minimal_white",
       subtitle_position: body.subtitle_position || "bottom",
       overlay_text: body.overlay_text || null,
+      vehicle_preset: body.vehicle_preset || null,
+      vehicle_prompt: vehicleDescription,
       ai_label: "Vidéo générée ou modifiée par IA.",
-      estimated_seconds: durationSec === 10 ? 180 : 120,
+      estimated_seconds:
+        workflow === "video_to_video" ? 240 : durationSec === 10 ? 180 : 120,
     };
+
+    const userPrompt =
+      workflow === "video_to_video" ? vehicleDescription : motionPrompt;
 
     const { data: larp, error: insertErr } = await supabase
       .from("generations")
@@ -333,13 +417,13 @@ module.exports = async function handler(req, res) {
         user_id: userId,
         template_id: null,
         generation_type: "video",
-        prompt: motionPrompt,
-        final_prompt: runwayPrompt,
-        provider: "runway",
+        prompt: userPrompt,
+        final_prompt: providerPrompt,
+        provider: workflow === "video_to_video" ? "runway_aleph" : "runway",
         provider_task_id: pendingTaskId,
         status: "processing",
         aspect_ratio: aspectRatio,
-        input_assets: [sourceImageUrl],
+        input_assets: [sourceAssetUrl],
         credit_cost: creditCost,
         metadata: studioMetadata,
         provider_attempts: [],
@@ -377,14 +461,23 @@ module.exports = async function handler(req, res) {
 
     let providerResult;
     try {
-      providerResult = await generateVideoOnce(supabase, {
-        generationId: larp.id,
-        prompt: runwayPrompt,
-        imageUrl: sourceImageUrl,
-        aspectRatio,
-        durationSec,
-        quality,
-      });
+      if (workflow === "video_to_video") {
+        providerResult = await generateVideoV2VOnce(supabase, {
+          generationId: larp.id,
+          prompt: providerPrompt,
+          videoUrl: sourceAssetUrl,
+          aspectRatio,
+        });
+      } else {
+        providerResult = await generateVideoOnce(supabase, {
+          generationId: larp.id,
+          prompt: providerPrompt,
+          imageUrl: sourceAssetUrl,
+          aspectRatio,
+          durationSec,
+          quality,
+        });
+      }
     } catch (providerErr) {
       console.error("[generate-video] provider failed", providerErr);
       await supabase
@@ -447,7 +540,7 @@ module.exports = async function handler(req, res) {
 
 module.exports.config = {
   api: {
-    bodyParser: { sizeLimit: "10mb" },
+    bodyParser: { sizeLimit: "25mb" },
   },
   maxDuration: 120,
 };

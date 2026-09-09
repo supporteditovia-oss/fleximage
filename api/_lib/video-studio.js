@@ -1,6 +1,7 @@
 const VIDEO_BASE_CREDIT_5S = 20;
 const VIDEO_BASE_CREDIT_10S = 35;
 const VIDEO_VOICE_EXTRA_CREDIT = 5;
+const VIDEO_V2V_BASE_CREDIT = 25;
 const VIDEO_HIGH_QUALITY_MULTIPLIER = 1.5;
 
 const CAMERA_PROMPTS = {
@@ -25,6 +26,9 @@ const STYLE_PROMPTS = {
 };
 
 function computeVideoCreditCost(options) {
+  if (options.workflow === "video_to_video") {
+    return options.isAdmin ? 0 : VIDEO_V2V_BASE_CREDIT;
+  }
   const duration = options.durationSec === 10 ? 10 : 5;
   let cost =
     duration === 10 ? VIDEO_BASE_CREDIT_10S : VIDEO_BASE_CREDIT_5S;
@@ -35,6 +39,16 @@ function computeVideoCreditCost(options) {
     cost += VIDEO_VOICE_EXTRA_CREDIT;
   }
   return options.isAdmin ? 0 : cost;
+}
+
+function buildCarSwapPrompt(vehicleDescription) {
+  const vehicle = String(vehicleDescription || "").trim();
+  return [
+    `Replace the vehicle in the video with ${vehicle}.`,
+    "Keep the background, ground, reflections, camera movement, lighting and all non-vehicle elements exactly unchanged.",
+    "Only swap the car body — same position, scale, angle and motion as the original vehicle.",
+    "Photorealistic render, consistent shadows and reflections on pavement.",
+  ].join(" ");
 }
 
 function buildRunwayPrompt(params) {
@@ -117,8 +131,10 @@ function studioStageLabel(stage) {
 module.exports = {
   VIDEO_BASE_CREDIT_5S,
   VIDEO_BASE_CREDIT_10S,
+  VIDEO_V2V_BASE_CREDIT,
   computeVideoCreditCost,
   buildRunwayPrompt,
+  buildCarSwapPrompt,
   maxVoiceCharsForDuration,
   validateVoiceText,
   mapStudioStage,

@@ -14,25 +14,31 @@ import type {
   VideoMotionIntensity,
   VideoQuality,
   VideoStyle,
+  VideoWorkflow,
 } from "@/lib/video-studio-config";
 
 export interface VideoStudioGenerateInput {
-  motion_prompt: string;
-  duration_sec: VideoDuration;
-  aspect_ratio: VideoAspectRatio;
-  camera_movement: VideoCameraMovement;
-  motion_intensity: VideoMotionIntensity;
-  style: VideoStyle;
-  quality: VideoQuality;
+  workflow: VideoWorkflow;
+  motion_prompt?: string;
+  duration_sec?: VideoDuration;
+  aspect_ratio?: VideoAspectRatio;
+  camera_movement?: VideoCameraMovement;
+  motion_intensity?: VideoMotionIntensity;
+  style?: VideoStyle;
+  quality?: VideoQuality;
   image_url?: string;
   source_larp_id?: string;
   images?: string[];
-  voice_enabled: boolean;
+  videos?: string[];
+  video_url?: string;
+  vehicle_preset?: string;
+  vehicle_prompt?: string;
+  voice_enabled?: boolean;
   voice_mode?: "cloned" | "catalog" | "none";
   voice_clone_id?: string;
   voice_text?: string;
   voice_consent?: boolean;
-  subtitles_enabled: boolean;
+  subtitles_enabled?: boolean;
   subtitle_style?: SubtitleStyle;
   subtitle_position?: SubtitlePosition;
   overlay_text?: string;

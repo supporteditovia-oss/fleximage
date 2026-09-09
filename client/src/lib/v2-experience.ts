@@ -99,6 +99,23 @@ export function createPathForUser(v2Enabled: boolean): string {
   return v2Enabled ? "/create" : "/generate";
 }
 
+/** Route cible pour un mode studio (navigation principale). */
+export function studioPathForMode(mode: StudioMode): string {
+  if (mode === "video") return "/video-ia";
+  return "/create";
+}
+
+/** Mode actif déduit de l'URL courante. */
+export function studioModeFromPath(pathname: string): StudioMode | null {
+  if (pathname === "/video-ia" || pathname.startsWith("/video-ia/")) {
+    return "video";
+  }
+  if (pathname === "/create" || pathname.startsWith("/create/")) {
+    return readStudioMode();
+  }
+  return null;
+}
+
 export function libraryPathForUser(v2Enabled: boolean): string {
   return v2Enabled ? "/bibliotheque" : "/historique";
 }

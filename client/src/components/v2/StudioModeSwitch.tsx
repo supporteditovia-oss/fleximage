@@ -6,13 +6,12 @@ type StudioModeSwitchProps = {
   onChange: (mode: StudioMode) => void;
   className?: string;
   size?: "default" | "compact";
-  /** Affiche l'onglet Vidéo IA (preview admin uniquement). */
-  showVideo?: boolean;
 };
 
-const BASE_MODES: { id: StudioMode; label: string }[] = [
-  { id: "image", label: "Image IA" },
-  { id: "voice", label: "Voix IA" },
+const STUDIO_MODES: { id: StudioMode; label: string; emoji: string }[] = [
+  { id: "image", label: "Image IA", emoji: "🖼️" },
+  { id: "voice", label: "Clonage IA", emoji: "🎙️" },
+  { id: "video", label: "Vidéo IA", emoji: "🎬" },
 ];
 
 export function StudioModeSwitch({
@@ -20,12 +19,7 @@ export function StudioModeSwitch({
   onChange,
   className,
   size = "default",
-  showVideo = false,
 }: StudioModeSwitchProps) {
-  const items = showVideo
-    ? [...BASE_MODES, { id: "video" as const, label: "Vidéo IA" }]
-    : BASE_MODES;
-
   return (
     <div
       className={cn(
@@ -36,7 +30,7 @@ export function StudioModeSwitch({
       role="tablist"
       aria-label="Mode du studio"
     >
-      {items.map((item) => {
+      {STUDIO_MODES.map((item) => {
         const active = mode === item.id;
         return (
           <button
@@ -47,12 +41,15 @@ export function StudioModeSwitch({
             onClick={() => onChange(item.id)}
             className={cn(
               "rounded-full font-medium transition-all duration-300 ease-out",
-              size === "compact" ? "px-3.5 py-1.5" : "px-5 py-2",
+              size === "compact" ? "px-3 py-1.5" : "px-4 py-2",
               active
                 ? "bg-[var(--lx-ink)] text-[var(--lx-surface-2)]"
                 : "text-[var(--lx-muted)] hover:text-[var(--lx-ink)]",
             )}
           >
+            <span aria-hidden className="mr-1">
+              {item.emoji}
+            </span>
             {item.label}
           </button>
         );

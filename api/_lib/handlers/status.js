@@ -206,12 +206,62 @@ module.exports = async function handler(req, res) {
     const pollMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const isVideoTask = activeTaskId.startsWith("video_");
+    const isAlephTask = activeTaskId.startsWith("aleph_");
     let apiStatus = "waiting";
     let apiResultJson = null;
     let apiFailMsg = null;
     let apiCostTime = null;
 
-    if (isVideoTask) {
+    if (isAlephTask) {
+      const {
+        getAlephVideoStatus,
+        mapAlephState,
+        extractAlephVideoUrl,
+      } = require("../kie-runway-aleph");
+      const alephTaskId = activeTaskId.replace("aleph_", "");
+      try {
+        const alephData = await getAlephVideoStatus(alephTaskId);
+        const state = mapAlephState(alephData);
+        const videoUrl = extractAlephVideoUrl(alephData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = toUserFailMessage(
+            alephData.errorMessage,
+            "Échec du remplacement véhicule",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg =
+            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+        }
+      } catch (err) {
+        console.error("Failed to poll Aleph video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de polling vidéo Aleph";
+      }
+    } else if (isVideoTask) {
       const runwayTaskId = activeTaskId.replace("video_", "");
       try {
         const runwayData = await getRunwayVideoStatus(runwayTaskId);

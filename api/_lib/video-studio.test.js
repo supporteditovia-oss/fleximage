@@ -4,6 +4,7 @@ const {
   computeVideoCreditCost,
   validateVoiceText,
   buildRunwayPrompt,
+  buildCarSwapPrompt,
   maxVoiceCharsForDuration,
 } = require("./video-studio");
 
@@ -53,5 +54,22 @@ describe("video-studio", () => {
   it("maxVoiceCharsForDuration", () => {
     assert.equal(maxVoiceCharsForDuration(5), 140);
     assert.equal(maxVoiceCharsForDuration(10), 280);
+  });
+
+  it("computeVideoCreditCost for video_to_video", () => {
+    assert.equal(
+      computeVideoCreditCost({
+        workflow: "video_to_video",
+        isAdmin: false,
+      }),
+      25,
+    );
+  });
+
+  it("buildCarSwapPrompt preserves scene lock", () => {
+    const prompt = buildCarSwapPrompt("Lamborghini Urus");
+    assert.match(prompt, /Lamborghini Urus/i);
+    assert.match(prompt, /background/i);
+    assert.match(prompt, /camera movement/i);
   });
 });

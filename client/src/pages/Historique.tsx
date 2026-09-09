@@ -523,14 +523,6 @@ export default function Historique() {
                 {label}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() => setLocation("/video-ia")}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--lx-gold)]/40 px-4 py-1.5 text-xs font-semibold text-[var(--lx-ink)]"
-            >
-              <Clapperboard className="h-3.5 w-3.5" />
-              Studio vidéo
-            </button>
           </div>
         ) : null}
 
