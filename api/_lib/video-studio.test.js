@@ -4,6 +4,7 @@ const {
   computeVideoCreditCost,
   validateVoiceText,
   buildRunwayPrompt,
+  buildVideoSwapPrompt,
   buildCarSwapPrompt,
   maxVoiceCharsForDuration,
 } = require("./video-studio");
@@ -75,10 +76,15 @@ describe("video-studio", () => {
     );
   });
 
-  it("buildCarSwapPrompt preserves scene lock", () => {
-    const prompt = buildCarSwapPrompt("Lamborghini Urus");
-    assert.match(prompt, /Lamborghini Urus/i);
+  it("buildVideoSwapPrompt preserves scene lock", () => {
+    const prompt = buildVideoSwapPrompt("Cristiano Ronaldo");
+    assert.match(prompt, /Cristiano Ronaldo/i);
     assert.match(prompt, /background/i);
     assert.match(prompt, /camera movement/i);
+  });
+
+  it("buildCarSwapPrompt delegates to buildVideoSwapPrompt", () => {
+    const prompt = buildCarSwapPrompt("Lamborghini Urus");
+    assert.match(prompt, /Lamborghini Urus/i);
   });
 });

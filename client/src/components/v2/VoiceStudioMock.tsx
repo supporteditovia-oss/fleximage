@@ -70,7 +70,7 @@ const GEN_MESSAGES = [
   "Analyse de la voix…",
   "Clonage vocal…",
   "Respirations & pauses…",
-  "Rendu Fish Audio…",
+  "Rendu haute fidélité…",
   "Finalisation MP3…",
 ];
 

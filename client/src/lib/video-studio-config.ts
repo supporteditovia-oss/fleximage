@@ -1,6 +1,6 @@
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
-/** Plafond rentable aligné API Kling (max technique 30s, on limite à 15s). */
+/** Plafond rentable vidéo v2v (max technique 30s, on limite à 15s). */
 export const VIDEO_V2V_MAX_DURATION_SEC = 15;
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
 export const VIDEO_V2V_MAX_SIZE_MB = 20;
@@ -54,13 +54,20 @@ export const VIDEO_MOTION_PRESETS: VideoMotionPreset[] = [
   },
 ];
 
-export type VehiclePreset = {
+export type VideoSwapPreset = {
   id: string;
   label: string;
   prompt: string;
 };
 
-export const VIDEO_VEHICLE_PRESETS: VehiclePreset[] = [
+/** Presets rapides Vidéo → Vidéo (personne, objet, véhicule…). */
+export const VIDEO_SWAP_PRESETS: VideoSwapPreset[] = [
+  {
+    id: "cristiano_ronaldo",
+    label: "Cristiano Ronaldo",
+    prompt:
+      "Cristiano Ronaldo, visage et corpulence photoréalistes, même posture et mouvements que le sujet original.",
+  },
   {
     id: "lamborghini_urus",
     label: "Lamborghini Urus",
@@ -86,6 +93,9 @@ export const VIDEO_VEHICLE_PRESETS: VehiclePreset[] = [
       "Mercedes-Benz G-Class G-Wagon noir, carrosserie cubique iconique, finitions luxe.",
   },
 ];
+
+/** @deprecated Utiliser VIDEO_SWAP_PRESETS */
+export const VIDEO_VEHICLE_PRESETS = VIDEO_SWAP_PRESETS;
 
 export const VIDEO_VOICE_SCRIPT_PRESETS = [
   "Personne ne croyait en moi, alors j'ai arrêté d'expliquer.",
