@@ -1,7 +1,7 @@
 const VIDEO_BASE_CREDIT_5S = 20;
 const VIDEO_BASE_CREDIT_10S = 35;
 const VIDEO_VOICE_EXTRA_CREDIT = 5;
-const VIDEO_V2V_BASE_CREDIT = 25;
+const { computeV2VCreditCost } = require("./video-limits");
 const VIDEO_HIGH_QUALITY_MULTIPLIER = 1.5;
 
 const CAMERA_PROMPTS = {
@@ -27,7 +27,7 @@ const STYLE_PROMPTS = {
 
 function computeVideoCreditCost(options) {
   if (options.workflow === "video_to_video") {
-    return options.isAdmin ? 0 : VIDEO_V2V_BASE_CREDIT;
+    return computeV2VCreditCost(options.sourceVideoDurationSec, options.isAdmin);
   }
   const duration = options.durationSec === 10 ? 10 : 5;
   let cost =
@@ -131,7 +131,6 @@ function studioStageLabel(stage) {
 module.exports = {
   VIDEO_BASE_CREDIT_5S,
   VIDEO_BASE_CREDIT_10S,
-  VIDEO_V2V_BASE_CREDIT,
   computeVideoCreditCost,
   buildRunwayPrompt,
   buildCarSwapPrompt,

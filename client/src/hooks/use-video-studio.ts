@@ -33,6 +33,9 @@ export interface VideoStudioGenerateInput {
   video_url?: string;
   vehicle_preset?: string;
   vehicle_prompt?: string;
+  source_video_duration_sec?: number;
+  reference_images?: string[];
+  reference_image_url?: string;
   voice_enabled?: boolean;
   voice_mode?: "cloned" | "catalog" | "none";
   voice_clone_id?: string;

@@ -1,5 +1,9 @@
 const { createRunwayVideoTask } = require("./kie-runway");
 const { createAlephVideoTask } = require("./kie-runway-aleph");
+const {
+  createKlingMotionTask,
+  buildKlingMotionPrompt,
+} = require("./kie-kling-motion");
 
 function readVideoApiCallCount(metadata) {
   const meta = metadata && typeof metadata === "object" ? metadata : {};
@@ -20,8 +24,12 @@ async function claimVideoProviderCall(supabase, generationId) {
     const taskId = String(row.provider_task_id || "");
     const parts = taskId.split(",").filter(Boolean);
     const videoPart =
-      parts.find((p) => p.startsWith("video_") || p.startsWith("aleph_")) ||
-      parts[parts.length - 1];
+      parts.find(
+        (p) =>
+          p.startsWith("video_") ||
+          p.startsWith("aleph_") ||
+          p.startsWith("kling_"),
+      ) || parts[parts.length - 1];
     return { allowed: false, generation: row, apiCallCount: count, externalTaskId: videoPart };
   }
 
@@ -55,8 +63,12 @@ async function claimVideoProviderCall(supabase, generationId) {
       generation: refreshed,
       apiCallCount: refreshedCount,
       externalTaskId:
-        parts.find((p) => p.startsWith("video_") || p.startsWith("aleph_")) ||
-        null,
+        parts.find(
+          (p) =>
+            p.startsWith("video_") ||
+            p.startsWith("aleph_") ||
+            p.startsWith("kling_"),
+        ) || null,
     };
   }
 
@@ -222,9 +234,92 @@ async function generateVideoV2VOnce(supabase, params) {
   };
 }
 
+/**
+ * Kling 3.0 Motion Control — image + vidéo (mouvements conservés).
+ */
+async function generateKlingMotionOnce(supabase, params) {
+  const claim = await claimVideoProviderCall(supabase, params.generationId);
+  if (!claim.allowed) {
+    console.info("[generate-kling-once] skipped duplicate provider call", {
+      generationId: params.generationId,
+      apiCallCount: claim.apiCallCount,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: claim.externalTaskId,
+      apiCallCount: claim.apiCallCount,
+    };
+  }
+
+  const startedAt = Date.now();
+  const klingPrompt = buildKlingMotionPrompt(params.prompt);
+  const kling = await createKlingMotionTask({
+    prompt: klingPrompt,
+    inputUrls: [params.imageUrl],
+    videoUrls: [params.videoUrl],
+    characterOrientation: "video",
+    mode: params.mode || "720p",
+  });
+
+  const externalTaskId = `kling_${kling.taskId}`;
+  const durationMs = Date.now() - startedAt;
+  const prevAttempts = Array.isArray(claim.generation.provider_attempts)
+    ? claim.generation.provider_attempts
+    : [];
+
+  const nextMeta = {
+    ...(claim.generation.metadata || {}),
+    video_api_call_count: 1,
+    video_provider_completed_at: new Date().toISOString(),
+    kling_task_id: kling.taskId,
+    video_provider_duration_ms: durationMs,
+    video_auto_retries: 0,
+    v2v_provider: "kling_motion",
+  };
+
+  await supabase
+    .from("generations")
+    .update({
+      provider: "kling_motion",
+      provider_task_id: externalTaskId,
+      metadata: nextMeta,
+      provider_attempts: [
+        ...prevAttempts,
+        {
+          provider: "kling_motion",
+          taskId: kling.taskId,
+          externalTaskId,
+          durationMs,
+          autoRetry: false,
+        },
+      ],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.generationId);
+
+  console.info("[generate-kling-once] kling job created", {
+    generationId: params.generationId,
+    videoRequestId: nextMeta.video_request_id || null,
+    klingTaskId: kling.taskId,
+    durationMs,
+    apiCallCount: 1,
+  });
+
+  return {
+    ok: true,
+    deduplicated: false,
+    externalTaskId,
+    apiCallCount: 1,
+    klingTaskId: kling.taskId,
+    durationMs,
+  };
+}
+
 module.exports = {
   generateVideoOnce,
   generateVideoV2VOnce,
+  generateKlingMotionOnce,
   claimVideoProviderCall,
   readVideoApiCallCount,
 };

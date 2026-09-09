@@ -56,13 +56,22 @@ describe("video-studio", () => {
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });
 
-  it("computeVideoCreditCost for video_to_video", () => {
+  it("computeVideoCreditCost for video_to_video scales with duration", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
+        sourceVideoDurationSec: 6,
         isAdmin: false,
       }),
       25,
+    );
+    assert.equal(
+      computeVideoCreditCost({
+        workflow: "video_to_video",
+        sourceVideoDurationSec: 14,
+        isAdmin: false,
+      }),
+      38,
     );
   });
 

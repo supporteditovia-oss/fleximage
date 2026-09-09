@@ -1,4 +1,9 @@
 export type VideoWorkflow = "image_to_video" | "video_to_video";
+
+/** Plafond rentable aligné API Kling (max technique 30s, on limite à 15s). */
+export const VIDEO_V2V_MAX_DURATION_SEC = 15;
+export const VIDEO_V2V_MIN_DURATION_SEC = 3;
+export const VIDEO_V2V_MAX_SIZE_MB = 20;
 export type VideoDuration = 5 | 10;
 export type VideoAspectRatio = "9:16" | "16:9" | "1:1";
 export type VideoCameraMovement =
@@ -90,13 +95,25 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
   "Tu n'as pas besoin d'être prêt. Tu dois juste commencer.",
 ];
 
+export function computeV2VCreditCost(
+  sourceVideoDurationSec?: number | null,
+): number {
+  const dur = sourceVideoDurationSec ?? VIDEO_V2V_MAX_DURATION_SEC;
+  if (dur <= 8) return 25;
+  if (dur <= 12) return 32;
+  return 38;
+}
+
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
   voiceEnabled?: boolean;
   workflow?: VideoWorkflow;
+  sourceVideoDurationSec?: number | null;
 }): number {
-  if (params.workflow === "video_to_video") return 25;
+  if (params.workflow === "video_to_video") {
+    return computeV2VCreditCost(params.sourceVideoDurationSec);
+  }
   const durationSec = params.durationSec ?? 5;
   const quality = params.quality ?? "standard";
   const voiceEnabled = params.voiceEnabled ?? false;

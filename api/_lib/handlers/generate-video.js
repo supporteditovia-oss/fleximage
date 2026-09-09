@@ -3,7 +3,16 @@ const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2, uploadInputVideoToR2 } = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
-const { generateVideoOnce, generateVideoV2VOnce } = require("../generate-video-once");
+const {
+  generateVideoOnce,
+  generateVideoV2VOnce,
+  generateKlingMotionOnce,
+} = require("../generate-video-once");
+const {
+  VIDEO_V2V_MAX_DURATION_SEC,
+  VIDEO_V2V_MAX_SIZE_BYTES,
+  validateSourceVideoDuration,
+} = require("../video-limits");
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
@@ -118,6 +127,19 @@ async function resolveSourceVideoUrl(userId, body) {
       code: "REFERENCE_VIDEO_REQUIRED",
     });
   }
+  const raw = String(videos[0] || "");
+  const sizeMatch = raw.match(/^data:video\/[\w+.-]+;base64,([\s\S]+)$/);
+  if (sizeMatch) {
+    const byteLen = Buffer.byteLength(sizeMatch[1], "base64");
+    if (byteLen > VIDEO_V2V_MAX_SIZE_BYTES) {
+      throw Object.assign(
+        new Error(
+          `Vidéo trop lourde (max ${Math.round(VIDEO_V2V_MAX_SIZE_BYTES / (1024 * 1024))} Mo).`,
+        ),
+        { status: 422, code: "VIDEO_TOO_LARGE" },
+      );
+    }
+  }
   const uploaded = await uploadInputVideoToR2(userId, videos[0]);
   if (!uploaded) {
     throw Object.assign(new Error("Échec upload vidéo (MP4 requis)"), {
@@ -126,6 +148,23 @@ async function resolveSourceVideoUrl(userId, body) {
     });
   }
   return uploaded;
+}
+
+async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
+  const refImages = Array.isArray(body.reference_images)
+    ? body.reference_images
+    : [];
+  if (refImages.length > 0) {
+    const uploaded = await uploadInputImagesToR2(userId, refImages);
+    return uploaded[0] || null;
+  }
+  if (
+    typeof body.reference_image_url === "string" &&
+    body.reference_image_url.startsWith("http")
+  ) {
+    return body.reference_image_url;
+  }
+  return null;
 }
 
 function resolveVehicleDescription(body) {
@@ -288,12 +327,30 @@ module.exports = async function handler(req, res) {
     const voiceEnabled = Boolean(body.voice_enabled);
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
+    let sourceVideoDurationSec = null;
+    if (workflow === "video_to_video") {
+      const durationCheck = validateSourceVideoDuration(
+        body.source_video_duration_sec,
+        uiLocale,
+      );
+      if (!durationCheck.ok) {
+        res.status(422).json({
+          code: durationCheck.code,
+          message: durationCheck.message,
+          maxDurationSec: VIDEO_V2V_MAX_DURATION_SEC,
+        });
+        return;
+      }
+      sourceVideoDurationSec = durationCheck.durationSec;
+    }
+
     const creditCost = computeVideoCreditCost({
       workflow,
       durationSec,
       quality,
       voiceEnabled,
       isAdmin,
+      sourceVideoDurationSec,
     });
 
     const limitResult = await checkGenerationLimits(supabase, userId);
@@ -363,10 +420,18 @@ module.exports = async function handler(req, res) {
     }
 
     let sourceAssetUrl;
+    let referenceImageUrl = null;
+    let v2vProvider = null;
     let providerPrompt;
     try {
       if (workflow === "video_to_video") {
         sourceAssetUrl = await resolveSourceVideoUrl(userId, body);
+        referenceImageUrl = await resolveOptionalReferenceImageUrl(
+          supabase,
+          userId,
+          body,
+        );
+        v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
         providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
@@ -418,6 +483,9 @@ module.exports = async function handler(req, res) {
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: vehicleDescription,
+      source_video_duration_sec: sourceVideoDurationSec,
+      v2v_provider: v2vProvider,
+      v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
       estimated_seconds:
         workflow === "video_to_video" ? 240 : durationSec === 10 ? 180 : 120,
@@ -434,11 +502,17 @@ module.exports = async function handler(req, res) {
         generation_type: "video",
         prompt: userPrompt,
         final_prompt: providerPrompt,
-        provider: workflow === "video_to_video" ? "runway_aleph" : "runway",
+        provider:
+          workflow === "video_to_video"
+            ? v2vProvider || "runway_aleph"
+            : "runway",
         provider_task_id: pendingTaskId,
         status: "processing",
         aspect_ratio: aspectRatio,
-        input_assets: [sourceAssetUrl],
+        input_assets:
+          workflow === "video_to_video" && referenceImageUrl
+            ? [referenceImageUrl, sourceAssetUrl]
+            : [sourceAssetUrl],
         credit_cost: creditCost,
         metadata: studioMetadata,
         provider_attempts: [],
@@ -477,12 +551,22 @@ module.exports = async function handler(req, res) {
     let providerResult;
     try {
       if (workflow === "video_to_video") {
-        providerResult = await generateVideoV2VOnce(supabase, {
-          generationId: larp.id,
-          prompt: providerPrompt,
-          videoUrl: sourceAssetUrl,
-          aspectRatio,
-        });
+        if (referenceImageUrl) {
+          providerResult = await generateKlingMotionOnce(supabase, {
+            generationId: larp.id,
+            prompt: providerPrompt,
+            imageUrl: referenceImageUrl,
+            videoUrl: sourceAssetUrl,
+            mode: "720p",
+          });
+        } else {
+          providerResult = await generateVideoV2VOnce(supabase, {
+            generationId: larp.id,
+            prompt: providerPrompt,
+            videoUrl: sourceAssetUrl,
+            aspectRatio,
+          });
+        }
       } else {
         providerResult = await generateVideoOnce(supabase, {
           generationId: larp.id,

@@ -207,12 +207,62 @@ module.exports = async function handler(req, res) {
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const isVideoTask = activeTaskId.startsWith("video_");
     const isAlephTask = activeTaskId.startsWith("aleph_");
+    const isKlingTask = activeTaskId.startsWith("kling_");
     let apiStatus = "waiting";
     let apiResultJson = null;
     let apiFailMsg = null;
     let apiCostTime = null;
 
-    if (isAlephTask) {
+    if (isKlingTask) {
+      const {
+        getKlingMotionStatus,
+        mapKlingMotionState,
+        extractKlingMotionVideoUrl,
+      } = require("../kie-kling-motion");
+      const klingTaskId = activeTaskId.replace("kling_", "");
+      try {
+        const klingData = await getKlingMotionStatus(klingTaskId);
+        const state = mapKlingMotionState(klingData);
+        const videoUrl = extractKlingMotionVideoUrl(klingData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = toUserFailMessage(
+            klingData.failMsg,
+            "Échec Kling Motion Control",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg =
+            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+        }
+      } catch (err) {
+        console.error("Failed to poll Kling video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de polling vidéo Kling";
+      }
+    } else if (isAlephTask) {
       const {
         getAlephVideoStatus,
         mapAlephState,

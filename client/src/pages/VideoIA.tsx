@@ -16,10 +16,16 @@ import { compressImageForGeneration } from "@/lib/compress-image";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  VIDEO_V2V_MAX_DURATION_SEC,
+  VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_VEHICLE_PRESETS,
   type VideoAspectRatio,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
+import {
+  readVideoDurationSec,
+  validateVideoDurationForUpload,
+} from "@/lib/video-duration";
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
@@ -62,6 +68,7 @@ export default function VideoIA() {
 
   const imageFileRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
+  const refImageFileRef = useRef<HTMLInputElement>(null);
 
   const [workflow, setWorkflow] = useState<VideoWorkflow>("image_to_video");
 
@@ -76,6 +83,9 @@ export default function VideoIA() {
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoBase64, setVideoBase64] = useState<string | null>(null);
+  const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
+  const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   const [swapPrompt, setSwapPrompt] = useState("");
 
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -108,6 +118,7 @@ export default function VideoIA() {
     durationSec,
     quality: "standard",
     voiceEnabled: false,
+    sourceVideoDurationSec: videoDurationSec,
   });
 
   const canGenerateI2V =
@@ -142,17 +153,28 @@ export default function VideoIA() {
       });
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
+    if (file.size > VIDEO_V2V_MAX_SIZE_MB * 1024 * 1024) {
       toast({
         variant: "destructive",
         title: "Vidéo trop lourde",
-        description: "Maximum 20 Mo pour l'upload.",
+        description: `Maximum ${VIDEO_V2V_MAX_SIZE_MB} Mo pour l'upload.`,
       });
       return;
     }
     try {
+      const duration = await readVideoDurationSec(file);
+      const check = validateVideoDurationForUpload(duration);
+      if (!check.ok) {
+        toast({
+          variant: "destructive",
+          title: "Vidéo refusée",
+          description: check.message,
+        });
+        return;
+      }
       const b64 = await fileToBase64(file);
       setVideoBase64(b64);
+      setVideoDurationSec(Math.ceil(duration));
       setVideoPreview(URL.createObjectURL(file));
     } catch {
       toast({
@@ -204,6 +226,22 @@ export default function VideoIA() {
     }
   };
 
+  const handleRefImageUpload = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const compressed = await compressImageForGeneration(file);
+      const b64 = await fileToBase64(compressed);
+      setRefImageBase64(b64);
+      setRefImagePreview(URL.createObjectURL(compressed));
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Import impossible",
+        description: "Choisis une image JPG ou PNG valide.",
+      });
+    }
+  };
+
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
     if (!canGenerateV2V || !videoBase64) return;
@@ -215,6 +253,8 @@ export default function VideoIA() {
         aspect_ratio: aspectRatio,
         videos: [videoBase64],
         vehicle_prompt: swapPrompt.trim(),
+        source_video_duration_sec: videoDurationSec ?? undefined,
+        ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
         source: "video_studio",
       });
       setTaskId(result.taskId);
@@ -387,8 +427,9 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton téléphone — ex. ta Clio garée. L&apos;IA conserve ta
-              caméra, le décor et tous les mouvements.
+              Filme avec ton téléphone — ex. ta Clio garée.{" "}
+              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> (rentabilité).
+              L&apos;IA conserve ta caméra, le décor et tous les mouvements.
             </p>
 
             <input
@@ -411,7 +452,10 @@ export default function VideoIA() {
               <span className="via-upload-zone__text">
                 {videoPreview ? "Changer la vidéo" : "Choisir une vidéo"}
               </span>
-              <span className="via-upload-zone__meta">MP4 · max 20 Mo</span>
+              <span className="via-upload-zone__meta">
+                MP4 · max {VIDEO_V2V_MAX_SIZE_MB} Mo · max {VIDEO_V2V_MAX_DURATION_SEC}s
+                {videoDurationSec ? ` · ${videoDurationSec}s détectées` : ""}
+              </span>
             </button>
 
             {videoPreview && (
@@ -422,6 +466,41 @@ export default function VideoIA() {
 
             {videoPreview && (
               <>
+                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Photo de référence (optionnel)
+                </label>
+                <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
+                  Urus, personnage ou objet cible — active Kling 3.0 Motion
+                  Control pour un rendu plus précis.
+                </p>
+                <input
+                  ref={refImageFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) =>
+                    void handleRefImageUpload(e.target.files?.[0] ?? null)
+                  }
+                />
+                <button
+                  type="button"
+                  className={`via-upload-zone ${refImagePreview ? "has-file" : ""}`}
+                  style={{ minHeight: "5rem" }}
+                  onClick={() => refImageFileRef.current?.click()}
+                >
+                  <span className="via-upload-zone__text">
+                    {refImagePreview
+                      ? "Changer la photo de référence"
+                      : "Ajouter une photo de référence"}
+                  </span>
+                </button>
+                {refImagePreview && (
+                  <div className="via-preview-frame" style={{ maxWidth: "8rem" }}>
+                    <img src={refImagePreview} alt="Référence" />
+                  </div>
+                )}
+
                 <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                   Étape 2 — Prompt
