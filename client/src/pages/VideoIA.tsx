@@ -43,12 +43,19 @@ import {
 } from "@/lib/video-studio-config";
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
 import { useStudioPath } from "@/hooks/use-studio-path";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { Redirect } from "wouter";
 
 type ImageSource = "luxeflexia" | "upload" | "none";
 
 export default function VideoIA() {
   const [, setLocation] = useLocation();
   const studioPath = useStudioPath();
+  const adminPreview = useAdminPreviewFeatures();
+
+  if (!adminPreview) {
+    return <Redirect to="/create" />;
+  }
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
   const { data: historyItems } = useLarpHistory();

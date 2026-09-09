@@ -198,6 +198,10 @@ function ModelesAdminRoute() {
   return <AdminPreviewRoute component={Modeles} />;
 }
 
+function VideoIAAdminRoute() {
+  return <AdminPreviewRoute component={VideoIA} />;
+}
+
 function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -247,7 +251,7 @@ function ProtectedAppRoutes() {
           <Route path="/modeles" component={ModelesAdminRoute} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
-          <Route path="/video-ia" component={VideoIA} />
+          <Route path="/video-ia" component={VideoIAAdminRoute} />
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />

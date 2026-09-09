@@ -35,6 +35,7 @@ import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
 import { pickVideoPosterUrl } from "@/lib/video-poster";
 import { useTranslation } from "react-i18next";
 import { useStudioPath } from "@/hooks/use-studio-path";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
 function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   if (!assets) return [];
@@ -69,6 +70,7 @@ const PLATFORM_LABEL: Record<SharePlatform, string> = {
 export default function Historique() {
   const [, setLocation] = useLocation();
   const studioPath = useStudioPath();
+  const adminPreview = useAdminPreviewFeatures();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const {
@@ -499,36 +501,38 @@ export default function Historique() {
           {t("history.pageTitle")}
         </h1>
 
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {(
-            [
-              ["all", "Tout"],
-              ["image", "Images"],
-              ["video", "Mes vidéos"],
-            ] as const
-          ).map(([id, label]) => (
+        {adminPreview ? (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {(
+              [
+                ["all", "Tout"],
+                ["image", "Images"],
+                ["video", "Mes vidéos"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMediaFilter(id)}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                  mediaFilter === id
+                    ? "bg-[var(--lx-gold)] text-[var(--lx-ink)]"
+                    : "border border-[var(--lx-gold)]/30 bg-white/80 text-[var(--lx-muted)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
             <button
-              key={id}
               type="button"
-              onClick={() => setMediaFilter(id)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                mediaFilter === id
-                  ? "bg-[var(--lx-gold)] text-[var(--lx-ink)]"
-                  : "border border-[var(--lx-gold)]/30 bg-white/80 text-[var(--lx-muted)]"
-              }`}
+              onClick={() => setLocation("/video-ia")}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--lx-gold)]/40 px-4 py-1.5 text-xs font-semibold text-[var(--lx-ink)]"
             >
-              {label}
+              <Clapperboard className="h-3.5 w-3.5" />
+              Studio vidéo
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setLocation("/video-ia")}
-            className="inline-flex items-center gap-1 rounded-full border border-[var(--lx-gold)]/40 px-4 py-1.5 text-xs font-semibold text-[var(--lx-ink)]"
-          >
-            <Clapperboard className="h-3.5 w-3.5" />
-            Studio vidéo
-          </button>
-        </div>
+          </div>
+        ) : null}
 
         {!selectionMode ? (
           <button
@@ -668,7 +672,7 @@ export default function Historique() {
                   className="absolute inset-x-0 top-0 z-30 flex items-start justify-end gap-1.5 bg-gradient-to-b from-black/55 to-transparent p-2 opacity-100 transition-opacity duration-200 max-md:opacity-100 md:opacity-0 md:group-hover/hist:opacity-100 md:group-focus-within/hist:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {resultType === "image" ? (
+                  {adminPreview && resultType === "image" ? (
                     <button
                       type="button"
                       title="Animer en vidéo"

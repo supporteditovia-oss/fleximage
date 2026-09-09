@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
+const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2, uploadToR2 } = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
 const { generateVideoOnce } = require("../generate-video-once");
@@ -176,20 +177,22 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const admin = await isUserAdmin(supabase, userId);
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_subscriber")
+      .select("role, is_subscriber, credits")
       .eq("id", userId)
       .single();
-    const isAdmin = profile?.role === "admin";
+    const isAdmin = admin || profile?.role === "admin";
 
-    if (!isAdmin && !profile?.is_subscriber) {
+    // Preview admin uniquement — les clients n'ont pas accès tant que la feature n'est pas ouverte.
+    if (!isAdmin) {
       res.status(403).json({
-        code: "SUBSCRIPTION_REQUIRED",
+        code: "ADMIN_PREVIEW_ONLY",
         message: copy(
           uiLocale,
-          "La vidéo IA nécessite un abonnement actif.",
-          "AI video requires an active subscription.",
+          "Le studio vidéo IA est réservé aux administrateurs (preview).",
+          "The AI video studio is admin-only preview.",
         ),
       });
       return;
