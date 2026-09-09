@@ -40,7 +40,7 @@ export const MODELES_CATEGORIES = [
     emoji: "🛥️",
     label: "Yacht",
     description: "Ponts en teck, mer turquoise et yachting de luxe.",
-    coverImagePath: "/models/modele-yacht-deck.webp",
+    coverImagePath: "/models/modele-yacht-deck-apres.webp",
     order: 6,
   },
   {
