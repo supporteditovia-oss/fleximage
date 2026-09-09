@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Download, Check, Loader2, Share2, Sparkles, Trash2, X } from "lucide-react";
+import {
+  Clapperboard,
+  Download,
+  Check,
+  Loader2,
+  Share2,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import { navigateToVideoStudio } from "@/lib/video-studio-prefill";
 import { createPortal, flushSync } from "react-dom";
 import { useDeleteLarp, useDeleteLarps, useLarpHistory } from "@/hooks/use-larps";
 import { authFetch } from "@/lib/api";
@@ -87,6 +97,9 @@ export default function Historique() {
   } | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video">(
+    "all",
+  );
   const [shareTarget, setShareTarget] = useState<{
     larpId: string;
     url: string;
@@ -143,9 +156,12 @@ export default function Historique() {
           ...getAssetUrls(larp.outputAssets),
           ...getAssetUrls(larp.watermarkedAssets),
         ];
-        return larp.status === "success" && urls.length > 0;
+        if (larp.status !== "success" || urls.length === 0) return false;
+        if (mediaFilter === "image") return larp.generationType !== "video";
+        if (mediaFilter === "video") return larp.generationType === "video";
+        return true;
       }) ?? [],
-    [larps],
+    [larps, mediaFilter],
   );
 
   const allVisibleSelected =
@@ -483,6 +499,37 @@ export default function Historique() {
           {t("history.pageTitle")}
         </h1>
 
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {(
+            [
+              ["all", "Tout"],
+              ["image", "Images"],
+              ["video", "Mes vidéos"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setMediaFilter(id)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                mediaFilter === id
+                  ? "bg-[var(--lx-gold)] text-[var(--lx-ink)]"
+                  : "border border-[var(--lx-gold)]/30 bg-white/80 text-[var(--lx-muted)]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setLocation("/video-ia")}
+            className="inline-flex items-center gap-1 rounded-full border border-[var(--lx-gold)]/40 px-4 py-1.5 text-xs font-semibold text-[var(--lx-ink)]"
+          >
+            <Clapperboard className="h-3.5 w-3.5" />
+            Studio vidéo
+          </button>
+        </div>
+
         {!selectionMode ? (
           <button
             type="button"
@@ -621,6 +668,22 @@ export default function Historique() {
                   className="absolute inset-x-0 top-0 z-30 flex items-start justify-end gap-1.5 bg-gradient-to-b from-black/55 to-transparent p-2 opacity-100 transition-opacity duration-200 max-md:opacity-100 md:opacity-0 md:group-hover/hist:opacity-100 md:group-focus-within/hist:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {resultType === "image" ? (
+                    <button
+                      type="button"
+                      title="Animer en vidéo"
+                      aria-label="Animer en vidéo"
+                      onClick={() =>
+                        navigateToVideoStudio(setLocation, {
+                          imageUrl: urls[0],
+                          sourceLarpId: larp.id,
+                        })
+                      }
+                      className={actionBtnClass}
+                    >
+                      <Clapperboard className="h-4 w-4 text-[var(--lx-gold-soft)]" />
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     title={t("history.share")}

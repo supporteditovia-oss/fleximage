@@ -173,12 +173,34 @@ async function downloadAndStoreImages(larpId, sourceUrls) {
   return r2Urls;
 }
 
+async function downloadAndStoreVideo(larpId, sourceUrl) {
+  try {
+    const controller = new AbortController();
+    const fetchTimer = setTimeout(() => controller.abort(), 45_000);
+    let response;
+    try {
+      response = await fetch(sourceUrl, { signal: controller.signal });
+    } finally {
+      clearTimeout(fetchTimer);
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") || "video/mp4";
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const key = `larps/${larpId}/video.mp4`;
+    return [await uploadToR2(key, buffer, contentType)];
+  } catch (err) {
+    console.error("R2 video store failed, keeping source URL", err);
+    return [sourceUrl];
+  }
+}
+
 module.exports = {
   uploadToR2,
   deleteFromR2,
   listR2Objects,
   uploadInputImagesToR2,
   downloadAndStoreImages,
+  downloadAndStoreVideo,
   getR2Config,
   getS3Client,
 };
