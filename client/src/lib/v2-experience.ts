@@ -6,7 +6,7 @@ export function isV2ExperienceEnabled(isAdmin: boolean): boolean {
   return isAdmin;
 }
 
-export type StudioMode = "image" | "voice";
+export type StudioMode = "image" | "voice" | "video";
 
 const STUDIO_MODE_KEY = "luxeflexia:studio-mode";
 const V2_ENABLED_KEY = "luxeflexia:v2-enabled";
@@ -27,7 +27,9 @@ export function markV2ExperienceEnabled(enabled: boolean): void {
 export function readStudioMode(): StudioMode {
   if (typeof window === "undefined") return "image";
   const raw = window.localStorage.getItem(STUDIO_MODE_KEY);
-  return raw === "voice" ? "voice" : "image";
+  if (raw === "voice") return "voice";
+  if (raw === "video") return "video";
+  return "image";
 }
 
 export function writeStudioMode(mode: StudioMode): void {

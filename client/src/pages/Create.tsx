@@ -5,9 +5,12 @@ import {
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useAuth } from "@/hooks/use-auth";
+import { writeStudioMode } from "@/lib/v2-experience";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
 import Generate from "@/pages/Generate";
+import VideoIA from "@/pages/VideoIA";
 import "./create-page.css";
 
 function useStudioMode() {
@@ -35,6 +38,11 @@ function useCreatePageClass(mode: StudioMode) {
     } else {
       document.documentElement.classList.remove("luxeflexia-generate-page");
     }
+    if (mode === "video") {
+      document.documentElement.classList.add("luxeflexia-video-page");
+    } else {
+      document.documentElement.classList.remove("luxeflexia-video-page");
+    }
     return () => {
       document.documentElement.classList.remove("luxeflexia-create-page");
       document.documentElement.classList.remove("luxeflexia-generate-page");
@@ -44,6 +52,7 @@ function useCreatePageClass(mode: StudioMode) {
 
 export default function Create() {
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
+  const { isAdmin } = useAuth();
   const [, navigate] = useLocation();
   const mode = useStudioMode();
   const [gateTimedOut, setGateTimedOut] = useState(false);
@@ -63,6 +72,12 @@ export default function Create() {
     }
   }, [gateLoading, gateTimedOut, navigate, v2Enabled]);
 
+  useEffect(() => {
+    if (mode === "video" && !isAdmin) {
+      writeStudioMode("image");
+    }
+  }, [mode, isAdmin]);
+
   if (gateLoading && !gateTimedOut) {
     return <AuthResolveShell />;
   }
@@ -78,6 +93,7 @@ export default function Create() {
         <Generate basePath="/create" />
       </div>
       {mode === "voice" ? <VoiceStudioMock /> : null}
+      {mode === "video" ? <VideoIA embedded /> : null}
     </>
   );
 }

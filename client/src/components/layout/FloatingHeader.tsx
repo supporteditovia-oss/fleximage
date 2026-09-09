@@ -381,6 +381,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             mode={studioMode}
             onChange={handleStudioModeChange}
             size="compact"
+            showVideo={isAdmin}
           />
         </div>
       ) : null}

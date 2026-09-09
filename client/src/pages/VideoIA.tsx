@@ -48,7 +48,12 @@ import { Redirect } from "wouter";
 
 type ImageSource = "luxeflexia" | "upload" | "none";
 
-export default function VideoIA() {
+type VideoIAProps = {
+  /** Intégré dans /create via le switch Image | Voix | Vidéo */
+  embedded?: boolean;
+};
+
+export default function VideoIA({ embedded = false }: VideoIAProps) {
   const [, setLocation] = useLocation();
   const studioPath = useStudioPath();
   const adminPreview = useAdminPreviewFeatures();
@@ -246,11 +251,16 @@ export default function VideoIA() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-28 pt-4 md:pb-10 md:pt-8">
+    <div
+      className={`mx-auto max-w-6xl px-4 pb-28 md:pb-10 ${embedded ? "pt-2" : "pt-4 md:pt-8"}`}
+    >
       <header className="mb-6 text-center md:mb-8">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--lx-gold)]/25 bg-white/80 px-3 py-1 text-xs font-medium text-[var(--lx-gold)]">
           <Clapperboard className="h-3.5 w-3.5" />
           Studio Vidéo IA
+          <span className="rounded bg-[var(--lx-gold)]/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+            Admin preview
+          </span>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1408] md:text-3xl">
           Crée ta vidéo IA

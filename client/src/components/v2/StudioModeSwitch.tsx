@@ -6,14 +6,26 @@ type StudioModeSwitchProps = {
   onChange: (mode: StudioMode) => void;
   className?: string;
   size?: "default" | "compact";
+  /** Affiche l'onglet Vidéo IA (preview admin uniquement). */
+  showVideo?: boolean;
 };
+
+const BASE_MODES: { id: StudioMode; label: string }[] = [
+  { id: "image", label: "Image IA" },
+  { id: "voice", label: "Voix IA" },
+];
 
 export function StudioModeSwitch({
   mode,
   onChange,
   className,
   size = "default",
+  showVideo = false,
 }: StudioModeSwitchProps) {
+  const items = showVideo
+    ? [...BASE_MODES, { id: "video" as const, label: "Vidéo IA" }]
+    : BASE_MODES;
+
   return (
     <div
       className={cn(
@@ -24,12 +36,7 @@ export function StudioModeSwitch({
       role="tablist"
       aria-label="Mode du studio"
     >
-      {(
-        [
-          { id: "image" as const, label: "Image IA" },
-          { id: "voice" as const, label: "Voix IA" },
-        ] as const
-      ).map((item) => {
+      {items.map((item) => {
         const active = mode === item.id;
         return (
           <button
