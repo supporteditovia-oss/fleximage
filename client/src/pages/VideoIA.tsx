@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import {
-  Camera,
-  Car,
   Clapperboard,
   Film,
+  ImageIcon,
   Loader2,
+  Sparkles,
   Upload,
   Video,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +23,7 @@ import {
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
+import "./video-ia-page.css";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -44,13 +44,13 @@ const WORKFLOW_OPTIONS: {
     id: "image_to_video",
     label: "Image → Vidéo",
     emoji: "📸",
-    hint: "Importe ta photo, l'IA la fait bouger",
+    hint: "Ta photo prend vie",
   },
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
     emoji: "🚗",
-    hint: "Importe ta vidéo, l'IA remplace l'objet",
+    hint: "Swap voiture ou objet",
   },
 ];
 
@@ -70,6 +70,7 @@ export default function VideoIA() {
   const [prefillImageUrl, setPrefillImageUrl] = useState<string | null>(null);
   const [prefillLarpId, setPrefillLarpId] = useState<string | null>(null);
 
+  const [motionPrompt, setMotionPrompt] = useState("");
   const [durationSec] = useState<5>(5);
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
@@ -109,7 +110,8 @@ export default function VideoIA() {
     voiceEnabled: false,
   });
 
-  const canGenerateI2V = Boolean(imagePreviewUrl);
+  const canGenerateI2V =
+    Boolean(imagePreviewUrl) && motionPrompt.trim().length >= 5;
   const canGenerateV2V = Boolean(videoBase64) && swapPrompt.trim().length >= 5;
 
   const handleImageUpload = async (file: File | null) => {
@@ -167,9 +169,14 @@ export default function VideoIA() {
 
     setIsSubmitting(true);
     try {
+      const prompt =
+        motionPrompt.trim().length >= 10
+          ? motionPrompt.trim()
+          : `${motionPrompt.trim()}. ${DEFAULT_IMAGE_TO_VIDEO_PROMPT}`;
+
       const result = await generateVideo.mutateAsync({
         workflow: "image_to_video",
-        motion_prompt: DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+        motion_prompt: prompt,
         duration_sec: durationSec,
         aspect_ratio: aspectRatio,
         camera_movement: "slow_zoom",
@@ -245,219 +252,232 @@ export default function VideoIA() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 pb-28 pt-4 md:pb-10 md:pt-8">
-      <header className="mb-6 text-center">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--lx-gold)]/25 bg-white/80 px-3 py-1 text-xs font-medium text-[var(--lx-gold)]">
+    <div className="via-studio pb-28 md:pb-10">
+      <header className="text-center">
+        <div className="via-hero__badge">
           <Clapperboard className="h-3.5 w-3.5" />
-          Vidéo IA
+          Studio premium
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1408] md:text-3xl">
-          Studio Vidéo IA
-        </h1>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-          Deux modes : anime ta photo, ou remplace un objet dans ta vidéo.
-          L&apos;IA gère le mouvement automatiquement.
+        <h1 className="via-hero__title">Vidéo IA</h1>
+        <p className="via-hero__sub">
+          Anime ta photo ou transforme ta vidéo smartphone. Rendu cinématique,
+          prêt pour TikTok &amp; Reels.
         </p>
       </header>
 
-      <div className="mb-6 grid gap-2 sm:grid-cols-2">
-        {WORKFLOW_OPTIONS.map((option) => {
-          const active = workflow === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setWorkflow(option.id)}
-              className={`rounded-2xl border px-4 py-4 text-left transition ${
-                active
-                  ? "border-[var(--lx-gold)] bg-[var(--lx-gold)]/10"
-                  : "border-[var(--lx-gold)]/20 bg-white/80 hover:border-[var(--lx-gold)]/40"
-              }`}
-            >
-              <span className="text-xl" aria-hidden>
-                {option.emoji}
-              </span>
-              <p className="mt-1 text-sm font-semibold">{option.label}</p>
-              <p className="text-xs text-muted-foreground">{option.hint}</p>
-            </button>
-          );
-        })}
+      <div className="via-mode-grid">
+        {WORKFLOW_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setWorkflow(option.id)}
+            className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
+          >
+            <span className="via-mode-card__emoji" aria-hidden>
+              {option.emoji}
+            </span>
+            <span className="via-mode-card__label">{option.label}</span>
+            <span className="via-mode-card__hint">{option.hint}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="rounded-2xl border border-[var(--lx-gold)]/15 bg-white/90 p-4 shadow-sm md:p-6">
+      <div key={workflow} className="via-panel via-panel-enter">
         {workflow === "image_to_video" ? (
-          <div className="space-y-5">
-            <section className="space-y-3">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Camera className="h-4 w-4 text-[var(--lx-gold)]" />
-                1. Importe ta photo
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Ta propre image (JPG/PNG). L&apos;IA la transforme en vidéo 5
-                secondes — mouvement, expressions, tout est automatique.
-              </p>
-              <input
-                ref={imageFileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) =>
-                  void handleImageUpload(e.target.files?.[0] ?? null)
-                }
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => imageFileRef.current?.click()}
+          <>
+            <p className="via-step-label">
+              <ImageIcon className="h-3.5 w-3.5" />
+              Étape 1
+            </p>
+            <h2 className="via-step-title">Importe ta photo</h2>
+            <p className="via-step-desc">
+              JPG ou PNG — ta propre image. L&apos;IA la transforme en vidéo 5 s
+              verticale, optimisée Reels &amp; TikTok.
+            </p>
+
+            <input
+              ref={imageFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) =>
+                void handleImageUpload(e.target.files?.[0] ?? null)
+              }
+            />
+            <button
+              type="button"
+              className={`via-upload-zone ${imagePreviewUrl ? "has-file" : ""}`}
+              onClick={() => imageFileRef.current?.click()}
+            >
+              <span className="via-upload-zone__icon">
+                <Upload className="h-4 w-4" />
+              </span>
+              <span className="via-upload-zone__text">
+                {imagePreviewUrl ? "Changer l'image" : "Choisir une image"}
+              </span>
+              <span className="via-upload-zone__meta">JPG · PNG · max 10 Mo</span>
+            </button>
+
+            {imagePreviewUrl && (
+              <div
+                className={`via-preview-frame ${aspectRatio === "16:9" ? "is-landscape" : ""}`}
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Choisir une image
-              </Button>
-              {imagePreviewUrl && (
-                <div className="mx-auto max-w-[200px] overflow-hidden rounded-xl ring-2 ring-[var(--lx-gold)]/30">
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Aperçu"
-                    className="aspect-[9/16] w-full object-cover"
-                  />
-                </div>
-              )}
-            </section>
+                <img src={imagePreviewUrl} alt="Aperçu" />
+              </div>
+            )}
 
-            <section>
-              <label className="text-sm font-medium">
-                Format
-                <select
-                  className="mt-1 block w-full rounded-lg border p-2 text-sm sm:max-w-xs"
-                  value={aspectRatio}
-                  onChange={(e) =>
-                    setAspectRatio(e.target.value as VideoAspectRatio)
-                  }
-                >
-                  <option value="9:16">9:16 vertical (TikTok/Reels)</option>
-                  <option value="16:9">16:9 horizontal</option>
-                </select>
-              </label>
-            </section>
+            {imagePreviewUrl && (
+              <>
+                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Étape 2 — Prompt
+                </label>
+                <textarea
+                  value={motionPrompt}
+                  onChange={(e) => setMotionPrompt(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ex. : Je veux qu'il tombe dans l'eau en souriant, caméra lente…"
+                  className="via-prompt-field"
+                />
+              </>
+            )}
 
-            <Button
-              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408]"
+            <div className="via-orient-toggle" role="group" aria-label="Orientation">
+              <button
+                type="button"
+                className={`via-orient-toggle__btn ${aspectRatio === "9:16" ? "is-active" : ""}`}
+                onClick={() => setAspectRatio("9:16")}
+              >
+                Vertical
+              </button>
+              <button
+                type="button"
+                className={`via-orient-toggle__btn ${aspectRatio === "16:9" ? "is-active" : ""}`}
+                onClick={() => setAspectRatio("16:9")}
+              >
+                Paysage
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="via-cta"
               disabled={!canGenerateI2V || isSubmitting || generateVideo.isPending}
               onClick={() => void handleGenerateI2V()}
             >
               {isSubmitting || generateVideo.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Génération…
                 </>
               ) : (
                 <>
-                  <Film className="mr-2 h-4 w-4" />
-                  Générer ma vidéo ({creditCost} crédits)
+                  <Film className="h-4 w-4" />
+                  Générer ma vidéo · {creditCost} crédits
                 </>
               )}
-            </Button>
-          </div>
+            </button>
+          </>
         ) : (
-          <div className="space-y-5">
-            <section className="space-y-3">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Video className="h-4 w-4 text-[var(--lx-gold)]" />
-                1. Importe ta vidéo
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Filme avec ton téléphone (ex. ta Clio garée). L&apos;IA garde ta
-                caméra, le décor et les mouvements.
-              </p>
-              <input
-                ref={videoFileRef}
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) =>
-                  void handleVideoUpload(e.target.files?.[0] ?? null)
-                }
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => videoFileRef.current?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Choisir une vidéo
-              </Button>
-              {videoPreview && (
-                <video
-                  src={videoPreview}
-                  className="mx-auto max-h-48 max-w-full rounded-xl"
-                  controls
-                  muted
-                  playsInline
-                />
-              )}
-            </section>
+          <>
+            <p className="via-step-label">
+              <Video className="h-3.5 w-3.5" />
+              Étape 1
+            </p>
+            <h2 className="via-step-title">Importe ta vidéo</h2>
+            <p className="via-step-desc">
+              Filme avec ton téléphone — ex. ta Clio garée. L&apos;IA conserve ta
+              caméra, le décor et tous les mouvements.
+            </p>
 
-            <section className="space-y-3">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <Car className="h-4 w-4 text-[var(--lx-gold)]" />
-                2. Dis à l&apos;IA quoi remplacer
-              </h2>
-              <textarea
-                value={swapPrompt}
-                onChange={(e) => setSwapPrompt(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus. Garde les mêmes mouvements de caméra."
-                className="w-full rounded-xl border border-[var(--lx-gold)]/20 p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--lx-gold)]/25"
-              />
-              <div className="flex flex-wrap gap-2">
-                {VIDEO_VEHICLE_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() =>
-                      setSwapPrompt(
-                        `Remplace le véhicule dans la vidéo par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
-                      )
-                    }
-                    className="rounded-full border border-[var(--lx-gold)]/25 px-3 py-1 text-xs font-medium hover:bg-[var(--lx-gold)]/10"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+            <input
+              ref={videoFileRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) =>
+                void handleVideoUpload(e.target.files?.[0] ?? null)
+              }
+            />
+            <button
+              type="button"
+              className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
+              onClick={() => videoFileRef.current?.click()}
+            >
+              <span className="via-upload-zone__icon">
+                <Upload className="h-4 w-4" />
+              </span>
+              <span className="via-upload-zone__text">
+                {videoPreview ? "Changer la vidéo" : "Choisir une vidéo"}
+              </span>
+              <span className="via-upload-zone__meta">MP4 · max 20 Mo</span>
+            </button>
+
+            {videoPreview && (
+              <div className="via-preview-frame">
+                <video src={videoPreview} controls muted playsInline />
               </div>
-            </section>
+            )}
 
-            <Button
-              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408]"
+            {videoPreview && (
+              <>
+                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Étape 2 — Prompt
+                </label>
+                <textarea
+                  value={swapPrompt}
+                  onChange={(e) => setSwapPrompt(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus, garde exactement les mêmes mouvements."
+                  className="via-prompt-field"
+                />
+                <div className="via-chips">
+                  {VIDEO_VEHICLE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className="via-chip"
+                      onClick={() =>
+                        setSwapPrompt(
+                          `Remplace le véhicule par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
+                        )
+                      }
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <button
+              type="button"
+              className="via-cta"
               disabled={!canGenerateV2V || isSubmitting || generateVideo.isPending}
               onClick={() => void handleGenerateV2V()}
             >
               {isSubmitting || generateVideo.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Remplacement…
                 </>
               ) : (
                 <>
-                  <Car className="mr-2 h-4 w-4" />
-                  Remplacer le véhicule ({creditCost} crédits)
+                  <Film className="h-4 w-4" />
+                  Remplacer le véhicule · {creditCost} crédits
                 </>
               )}
-            </Button>
-          </div>
+            </button>
+          </>
         )}
       </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        Tes vidéos finies sont dans{" "}
-        <button
-          type="button"
-          className="underline"
-          onClick={() => setLocation("/historique")}
-        >
+      <p className="via-footer-link">
+        Retrouve tes créations dans{" "}
+        <button type="button" onClick={() => setLocation("/historique")}>
           Historique → Mes vidéos
         </button>
       </p>

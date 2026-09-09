@@ -127,7 +127,8 @@ body[data-paywall-overlay] .floating-header-credits {
 }
 
 html.luxeflexia-create-page .floating-header::before,
-html.luxeflexia-generate-page .floating-header::before {
+html.luxeflexia-generate-page .floating-header::before,
+html.luxeflexia-video-page .floating-header::before {
   background: #f5f0e8;
 }
 
