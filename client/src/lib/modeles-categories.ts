@@ -24,7 +24,7 @@ export const MODELES_CATEGORIES = [
     emoji: "⭐",
     label: "Célébrités",
     description: "Scènes avec figures publiques — modèles exclusifs LuxeFlexIA.",
-    coverImagePath: "/models/modele-lamborghini-urus.webp",
+    coverImagePath: "/models/modele-ronaldo-selfie-apres.webp",
     order: 4,
   },
   {
