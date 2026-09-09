@@ -131,10 +131,16 @@ function resolveOneshotModelVariant(requested) {
   return ONESHOT_MODEL_VARIANT;
 }
 
-async function createOneshotJob(prompt, options) {
+async function createOneshotJob(prompt, options = {}) {
   const config = getOneshotApiConfig();
   if (!config.url || !config.key) {
     throw new Error("Missing ONESHOT_API_URL or ONESHOT_API_KEY");
+  }
+
+  if (!options.generationId || typeof options.generationId !== "string") {
+    throw new Error(
+      "createOneshotJob requires options.generationId — call via generateImageOnce only",
+    );
   }
 
   const modelVariant = resolveOneshotModelVariant(
@@ -152,6 +158,10 @@ async function createOneshotJob(prompt, options) {
       // Request max output; OneShot may still deliver ~1K today — we upscale on store.
       imageSize: "4K",
       aspectRatio: (options && options.aspectRatio) || "9:16",
+      // Strict single-image policy — never request variants or multiple candidates.
+      numberOfImages: 1,
+      candidateCount: 1,
+      n: 1,
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }
         : {}),
@@ -159,12 +169,16 @@ async function createOneshotJob(prompt, options) {
   };
 
   console.log(
-    "[oneshot] createJob",
+    "[oneshot] createJob BILLABLE",
     JSON.stringify({
+      generationId: options.generationId,
       modelVariant: payload.options.modelVariant,
       aspectRatio: payload.options.aspectRatio,
       promptLen: payload.prompt.length,
       refs: (payload.options.referenceFileIds || []).length,
+      numberOfImages: payload.options.numberOfImages,
+      candidateCount: payload.options.candidateCount,
+      caller: options.caller || "unknown",
     }),
   );
 

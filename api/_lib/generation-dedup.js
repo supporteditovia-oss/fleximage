@@ -1,5 +1,7 @@
 /** Une seule génération en cours par utilisateur (image ou vidéo). */
-const GENERATION_DEDUP_WINDOW_MS = 90_000;
+const GENERATION_DEDUP_WINDOW_MS = 120_000;
+/** Fenêtre stricte anti double-clic (requêtes concurrentes avec requestId différent). */
+const SESSION_BURST_WINDOW_MS = 5_000;
 
 function extractClientTaskId(providerTaskId) {
   const parts = String(providerTaskId || "")
@@ -9,8 +11,12 @@ function extractClientTaskId(providerTaskId) {
   return parts[parts.length - 1] || "";
 }
 
-async function findRecentInFlightGeneration(supabase, userId) {
-  const since = new Date(Date.now() - GENERATION_DEDUP_WINDOW_MS).toISOString();
+async function findRecentInFlightGeneration(
+  supabase,
+  userId,
+  windowMs = GENERATION_DEDUP_WINDOW_MS,
+) {
+  const since = new Date(Date.now() - windowMs).toISOString();
   const { data, error } = await supabase
     .from("generations")
     .select("id, provider_task_id, metadata, created_at, generation_type")
@@ -45,9 +51,51 @@ function buildDedupGenerateResponse(inFlight) {
   };
 }
 
+function isDuplicateKeyError(error) {
+  const code = String(error && error.code ? error.code : "");
+  const message = String(error && error.message ? error.message : "").toLowerCase();
+  return (
+    code === "23505" ||
+    message.includes("duplicate key") ||
+    message.includes("unique constraint")
+  );
+}
+
+/**
+ * Reserve a processing slot immediately (before slow upload/prompt work).
+ * Returns { ok: true, larp } or { ok: false, inFlight }.
+ */
+async function reserveGenerationSlot(supabase, row) {
+  const inFlight = await findRecentInFlightGeneration(supabase, row.user_id);
+  if (inFlight) {
+    return { ok: false, inFlight };
+  }
+
+  const { data, error } = await supabase
+    .from("generations")
+    .insert(row)
+    .select()
+    .single();
+
+  if (error) {
+    if (isDuplicateKeyError(error)) {
+      const retry = await findRecentInFlightGeneration(supabase, row.user_id);
+      if (retry) {
+        return { ok: false, inFlight: retry };
+      }
+    }
+    throw error;
+  }
+
+  return { ok: true, larp: data };
+}
+
 module.exports = {
   GENERATION_DEDUP_WINDOW_MS,
+  SESSION_BURST_WINDOW_MS,
   extractClientTaskId,
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
+  isDuplicateKeyError,
+  reserveGenerationSlot,
 };

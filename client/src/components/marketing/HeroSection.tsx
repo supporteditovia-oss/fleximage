@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { toGenerationImageFile } from "@/lib/video-frame";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -73,6 +74,7 @@ export default function HeroSection() {
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
     number | null
   >(null);
+  const isGeneratingRef = React.useRef(false);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -135,11 +137,16 @@ export default function HeroSection() {
   };
 
   const handleSubmit = async () => {
+    if (isGeneratingRef.current || generateDirect.isPending) return;
+    isGeneratingRef.current = true;
+    const generationRequestId = createGenerationRequestId();
+
     const files = images.filter(
       (img): img is { url: string; file: File } => img !== null,
     );
 
     if (files.length === 0) {
+      isGeneratingRef.current = false;
       toast({
         variant: "destructive",
         title: t("hero.referenceImageRequiredTitle"),
@@ -174,6 +181,10 @@ export default function HeroSection() {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: OUTPUT_ASPECT_RATIO,
           images: base64Images,
+          source: "hero" as const,
+          generation_request_id: generationRequestId,
+          frontend_timestamp: new Date().toISOString(),
+          click_count: 1,
         };
         const result = await generateDirect.mutateAsync(payload);
         setGenerationEstimateSeconds(
@@ -185,6 +196,7 @@ export default function HeroSection() {
         setTaskId(result.taskId);
         refetchEligibility();
       } catch (error: any) {
+        isGeneratingRef.current = false;
         if (error.code === "REFERENCE_IMAGE_REQUIRED") {
           toast({
             variant: "destructive",
@@ -237,8 +249,10 @@ export default function HeroSection() {
           title: t("hero.emptyPromptTitle"),
           description: message,
         });
+        isGeneratingRef.current = false;
       }
     } else {
+      isGeneratingRef.current = false;
       const guestPrompt = prompt.trim() || t("hero.surprisePrompt");
       // localStorage survives Google OAuth on mobile Safari better than huge IDB blobs
       markOnboardingResume({

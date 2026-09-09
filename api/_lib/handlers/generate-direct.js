@@ -1,16 +1,19 @@
-const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
   getOneshotApiConfig,
-  getAppSettings,
   isGoogleAiPromptFlagged,
-  uploadImageUrlsToOneshot,
-  createOneshotJob,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
-const { createKieTask, isKieConfigured } = require("../kie");
+const { generateImageOnce } = require("../generate-image-once");
+const {
+  normalizeGenerationRequestId,
+  buildIdempotentGenerateResponse,
+  claimGenerationRequest,
+  conflictResponse,
+  findGenerationByRequestId,
+} = require("../generation-idempotency");
 const {
   OUTPUT_ASPECT_RATIO,
   checkGenerationLimits,
@@ -22,7 +25,7 @@ const {
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { analyzeSubjectContext } = require("../subject-analysis");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -35,7 +38,7 @@ const {
 } = require("../builtin-image-templates");
 const {
   findRecentInFlightGeneration,
-  buildDedupGenerateResponse,
+  SESSION_BURST_WINDOW_MS,
 } = require("../generation-dedup");
 
 function normalizeAspectRatio(value) {
@@ -161,17 +164,205 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const inFlight = await findRecentInFlightGeneration(supabase, userId);
-    if (inFlight) {
-      res.status(200).json(buildDedupGenerateResponse(inFlight));
+    const generationRequestId = normalizeGenerationRequestId(
+      body.generation_request_id,
+    );
+    if (!generationRequestId) {
+      res.status(400).json({
+        code: "REQUEST_ID_REQUIRED",
+        message: copy(
+          uiLocale,
+          "Identifiant de requête manquant (generation_request_id UUID v4 requis).",
+          "Missing request id (generation_request_id UUID v4 required).",
+        ),
+      });
       return;
     }
 
-    const uploadedUrls = await uploadInputImagesToR2(userId, images);
+    const existingByRequestId = await findGenerationByRequestId(
+      supabase,
+      generationRequestId,
+    );
+    if (existingByRequestId) {
+      if (existingByRequestId.status === "failed") {
+        res.status(409).json({
+          code: "GENERATION_ALREADY_FAILED",
+          message: copy(
+            uiLocale,
+            "Cette génération a déjà échoué. Clique sur « Nouvelle génération » pour réessayer (nouvelle action payante).",
+            "This generation already failed. Start a new generation to retry (new billable action).",
+          ),
+          generationRequestId,
+        });
+        return;
+      }
+      console.info("[generate-direct] idempotent replay — same request_id", {
+        userId,
+        generationRequestId,
+        generationId: existingByRequestId.id,
+      });
+      res.status(409).json(
+        conflictResponse(existingByRequestId, generationRequestId, {
+          generationType: "image",
+        }),
+      );
+      return;
+    }
 
-    const inFlightAfterUpload = await findRecentInFlightGeneration(supabase, userId);
-    if (inFlightAfterUpload) {
-      res.status(200).json(buildDedupGenerateResponse(inFlightAfterUpload));
+    const burstInFlight = await findRecentInFlightGeneration(
+      supabase,
+      userId,
+      SESSION_BURST_WINDOW_MS,
+    );
+    if (burstInFlight) {
+      const burstRequestId =
+        burstInFlight.metadata &&
+        typeof burstInFlight.metadata === "object"
+          ? burstInFlight.metadata.generation_request_id
+          : null;
+      if (burstRequestId !== generationRequestId) {
+        console.info("[generate-direct] 409 burst — concurrent generation", {
+          userId,
+          generationRequestId,
+          existingRequestId: burstRequestId,
+          existingId: burstInFlight.id,
+        });
+        res.status(409).json(
+          conflictResponse(burstInFlight, generationRequestId, {
+            generationType: "image",
+          }),
+        );
+        return;
+      }
+    }
+
+    const inFlight = await findRecentInFlightGeneration(supabase, userId);
+    if (inFlight) {
+      const inflightRequestId =
+        inFlight.metadata && typeof inFlight.metadata === "object"
+          ? inFlight.metadata.generation_request_id
+          : null;
+      if (inflightRequestId !== generationRequestId) {
+        console.info("[generate-direct] 409 — generation already in flight", {
+          userId,
+          generationRequestId,
+          existingRequestId: inflightRequestId,
+          existingId: inFlight.id,
+        });
+        res.status(409).json(
+          conflictResponse(inFlight, generationRequestId, {
+            generationType: "image",
+          }),
+        );
+        return;
+      }
+    }
+
+    const oneshotConfig = getOneshotApiConfig();
+    if (!oneshotConfig.url || !oneshotConfig.key) {
+      res.status(503).json({
+        message:
+          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
+      });
+      return;
+    }
+    const frontendTimestamp =
+      typeof body.frontend_timestamp === "string"
+        ? body.frontend_timestamp
+        : null;
+    const clickCount =
+      typeof body.click_count === "number" && body.click_count > 0
+        ? body.click_count
+        : 1;
+    const source =
+      typeof body.source === "string" && body.source.trim()
+        ? body.source.trim()
+        : templateId
+          ? "catalog"
+          : "direct";
+
+    const generationTemplateId = isBuiltinTemplateId(templateId)
+      ? null
+      : templateId;
+
+    const claim = await claimGenerationRequest(supabase, {
+      generationRequestId,
+      userId,
+      templateId: generationTemplateId,
+      prompt,
+      aspectRatio,
+      creditCost,
+      clickCount,
+      frontendTimestamp,
+      source,
+    });
+
+    if (claim.kind === "duplicate") {
+      console.info("[generate-direct] 409 claim duplicate", {
+        userId,
+        generationRequestId: claim.generationRequestId,
+        generationId: claim.generation.id,
+      });
+      res.status(409).json(
+        conflictResponse(claim.generation, claim.generationRequestId, {
+          generationType: "image",
+        }),
+      );
+      return;
+    }
+
+    if (claim.kind === "failed") {
+      res.status(409).json({
+        code: "GENERATION_ALREADY_FAILED",
+        message: copy(
+          uiLocale,
+          "Cette génération a déjà échoué. Clique sur « Nouvelle génération » pour réessayer (nouvelle action payante).",
+          "This generation already failed. Start a new generation to retry (new billable action).",
+        ),
+        generationRequestId: claim.generationRequestId,
+      });
+      return;
+    }
+
+    let larp = claim.generation;
+
+    const deductErr = await deductGenerationCredits(supabase, {
+      userId,
+      creditCost,
+      generationId: larp.id,
+      metadata: {
+        source: "direct_generation",
+        phase: "pre_provider",
+      },
+    });
+
+    if (deductErr) {
+      await supabase
+        .from("generations")
+        .update({
+          status: "failed",
+          fail_message: "Échec débit jetons",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
+      res.status(500).json({ message: "Échec du débit des jetons" });
+      return;
+    }
+
+    await recordGeneration(supabase, userId);
+
+    let uploadedUrls;
+    try {
+      uploadedUrls = await uploadInputImagesToR2(userId, images);
+    } catch (uploadErr) {
+      console.error("generate-direct upload failed", uploadErr);
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Échec upload des images",
+        source: "upload_failed",
+      });
+      res.status(502).json({ message: "Échec upload des images" });
       return;
     }
 
@@ -192,6 +383,12 @@ module.exports = async function handler(req, res) {
           });
 
       if (!resolvedTemplate.ok) {
+        await failAndRefund(supabase, {
+          userId,
+          generationId: larp.id,
+          failMessage: resolvedTemplate.message || "Modèle invalide",
+          source: "template_resolve_failed",
+        });
         res.status(422).json({
           code: resolvedTemplate.code,
           message: resolvedTemplate.message,
@@ -219,6 +416,12 @@ module.exports = async function handler(req, res) {
           ];
     } else {
       if (images.length === 0) {
+        await failAndRefund(supabase, {
+          userId,
+          generationId: larp.id,
+          failMessage: "Image de référence requise",
+          source: "reference_required",
+        });
         res.status(422).json({
           code: "REFERENCE_IMAGE_REQUIRED",
           message: copy(
@@ -233,6 +436,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (imageUrls.length === 0) {
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Image de référence requise",
+        source: "reference_required",
+      });
       res.status(422).json({
         code: "REFERENCE_IMAGE_REQUIRED",
         message: copy(
@@ -291,198 +500,83 @@ module.exports = async function handler(req, res) {
       modelVariant: oneshotModelVariant,
     });
 
-    const oneshotConfig = getOneshotApiConfig();
-    const appSettings = await getAppSettings(supabase);
-    const kieReady = isKieConfigured();
-
-    if (
-      (appSettings.forceKieAi || !oneshotConfig.url || !oneshotConfig.key) &&
-      !kieReady
-    ) {
-      res.status(503).json({
-        message:
-          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
-      });
-      return;
-    }
-
-    // 3) Reserve generation row + debit credits BEFORE calling the AI.
-    const pendingTaskId = `pending_${randomUUID()}`;
-    const generationTemplateId = isBuiltinTemplateId(templateId)
-      ? null
-      : templateId;
-    const { data: larp, error: insertErr } = await supabase
-      .from("generations")
-      .insert({
-        user_id: userId,
-        template_id: generationTemplateId,
-        generation_type: "image",
-        prompt: prompt,
-        final_prompt: finalPrompt,
-        provider: "oneshot",
-        provider_task_id: pendingTaskId,
-        status: "processing",
-        aspect_ratio: aspectRatio,
-        input_assets: imageUrls,
-        credit_cost: creditCost,
-        metadata: {
-          oneshot_model_variant: oneshotModelVariant,
-          estimated_seconds: estimatedSeconds,
-          subject_analysis: subjectAnalysis,
-          subject_type: subject,
-          pose_style: poseStyle,
-          ...(templateReferenceId
-            ? {
-                ...(isBuiltinTemplateId(templateId)
-                  ? { builtin_template_id: templateReferenceId }
-                  : { selected_template_reference_image_id: templateReferenceId }),
-              }
-            : {}),
-        },
-      })
-      .select()
-      .single();
-
-    if (insertErr) throw insertErr;
-
-    const deductErr = await deductGenerationCredits(supabase, {
-      userId,
-      creditCost,
-      generationId: larp.id,
-      metadata: {
-        source: "direct_generation",
-        phase: "pre_provider",
-      },
-    });
-
-    if (deductErr) {
-      await supabase
-        .from("generations")
-        .update({
-          status: "failed",
-          fail_message: "Échec débit jetons",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", larp.id);
-      res.status(500).json({ message: "Échec du débit des jetons" });
-      return;
-    }
-
-    await recordGeneration(supabase, userId);
-
-    // 4) Call image provider (credits already reserved).
-    let externalTaskId;
-    let provider = "oneshot";
-
-    const createWithKie = async (promptOverride) => {
-      const kieResponse = await createKieTask({
-        prompt: promptOverride || finalPrompt,
-        aspect_ratio: aspectRatio,
-        image_input: imageUrls,
-      });
-      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-        return null;
-      }
-      return kieResponse.data.taskId;
+    const prevMeta =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    const generationMetadata = {
+      ...prevMeta,
+      oneshot_model_variant: oneshotModelVariant,
+      estimated_seconds: estimatedSeconds,
+      subject_analysis: subjectAnalysis,
+      subject_type: subject,
+      pose_style: poseStyle,
+      server_prompt_ready_at: new Date().toISOString(),
+      ...(templateReferenceId
+        ? {
+            ...(isBuiltinTemplateId(templateId)
+              ? { builtin_template_id: templateReferenceId }
+              : { selected_template_reference_image_id: templateReferenceId }),
+          }
+        : {}),
     };
-
-    try {
-      if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
-        try {
-          const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
-          const oneshotResponse = await createOneshotJob(finalPrompt, {
-            aspectRatio,
-            modelVariant: oneshotModelVariant,
-            ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-          });
-          if (!oneshotResponse || !oneshotResponse.id) {
-            throw new Error("Invalid response from OneshotAPI");
-          }
-          externalTaskId = `custom_${oneshotResponse.id}`;
-        } catch (err) {
-          // One OneShot job max — no 2nd createOneshotJob; Kie fallback or fail.
-          if (isGoogleAiPromptFlagged(err)) {
-            console.warn(
-              "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
-              err && err.message ? err.message : err,
-            );
-          }
-          if (!kieReady) {
-            console.error("OneshotAPI failed (no Kie fallback configured)", err);
-            const detail =
-              err && err.message
-                ? String(err.message).slice(0, 240)
-                : "erreur Oneshot";
-            const failMessage = isGoogleAiPromptFlagged(err)
-              ? "Échec provider (filtre). Reformule ou configure KIE_AI_API_KEY. Jetons remboursés."
-              : `Échec de la génération Oneshot (${detail})`;
-            await failAndRefund(supabase, {
-              userId,
-              generationId: larp.id,
-              failMessage,
-              source: "oneshot_create_failed",
-            });
-            res.status(502).json({ message: failMessage });
-            return;
-          }
-          console.error("OneshotAPI failed, falling back to Kie AI", err);
-          provider = "kie";
-          const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-          const kieTaskId = await createWithKie(kiePrompt);
-          if (!kieTaskId) {
-            await failAndRefund(supabase, {
-              userId,
-              generationId: larp.id,
-              failMessage: "Échec de création de la tâche",
-              source: "kie_create_failed",
-            });
-            res.status(502).json({ message: "Échec de création de la tâche" });
-            return;
-          }
-          await supabase
-            .from("generations")
-            .update({
-              final_prompt: kiePrompt,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", larp.id);
-          externalTaskId = kieTaskId;
-        }
-      } else {
-        provider = "kie";
-        const kieTaskId = await createWithKie();
-        if (!kieTaskId) {
-          await failAndRefund(supabase, {
-            userId,
-            generationId: larp.id,
-            failMessage: "Échec de création de la tâche",
-            source: "kie_create_failed",
-          });
-          res.status(502).json({ message: "Échec de création de la tâche" });
-          return;
-        }
-        externalTaskId = kieTaskId;
-      }
-    } catch (providerErr) {
-      console.error("provider create failed", providerErr);
-      await failAndRefund(supabase, {
-        userId,
-        generationId: larp.id,
-        failMessage: "Échec de création de la tâche",
-        source: "provider_create_exception",
-      });
-      res.status(502).json({ message: "Échec de création de la tâche" });
-      return;
-    }
 
     await supabase
       .from("generations")
       .update({
-        provider,
-        provider_task_id: externalTaskId,
+        final_prompt: finalPrompt,
+        input_assets: imageUrls,
+        metadata: generationMetadata,
         updated_at: new Date().toISOString(),
       })
       .eq("id", larp.id);
+
+    let providerResult;
+    try {
+      providerResult = await generateImageOnce(supabase, {
+        generationId: larp.id,
+        finalPrompt,
+        aspectRatio,
+        imageUrls,
+        modelVariant: oneshotModelVariant,
+        logContext: {
+          userId,
+          source,
+          generationRequestId: claim.generationRequestId,
+          clickCount,
+        },
+      });
+    } catch (providerErr) {
+      console.error("[generate-direct] generateImageOnce failed", providerErr);
+      const detail =
+        providerErr && providerErr.message
+          ? String(providerErr.message).slice(0, 240)
+          : "erreur Oneshot";
+      const failMessage = isGoogleAiPromptFlagged(providerErr)
+        ? "Échec provider (filtre). Reformule ta demande — jetons remboursés."
+        : `Échec de la génération (${detail}). Jetons remboursés.`;
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage,
+        source: "oneshot_create_failed",
+      });
+      res.status(502).json({
+        message: failMessage,
+        generationRequestId: claim.generationRequestId,
+      });
+      return;
+    }
+
+    const externalTaskId = providerResult.externalTaskId;
+    if (!externalTaskId) {
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage: "Échec de création de la tâche",
+        source: "provider_missing_task_id",
+      });
+      res.status(502).json({ message: "Échec de création de la tâche" });
+      return;
+    }
 
     res.status(201).json({
       id: larp.id,
@@ -491,6 +585,9 @@ module.exports = async function handler(req, res) {
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
       createdAt: larp.created_at,
+      generationRequestId: claim.generationRequestId,
+      deduplicated: Boolean(providerResult.deduplicated),
+      apiCallCount: providerResult.apiCallCount,
     });
   } catch (error) {
     console.error("generate-direct error", error);

@@ -22,6 +22,7 @@ import {
   persistInFlightFromApiResult,
   clearInFlightGeneration,
 } from "@/lib/in-flight-generation";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
   findTemplateByRouteKey,
@@ -506,12 +507,17 @@ export default function Modeles() {
     if (generationLockRef.current || busy) return;
     generationLockRef.current = true;
     setBusy(true);
+    const generationRequestId = createGenerationRequestId();
     try {
       const result = await generateDirect.mutateAsync({
         prompt: getBuiltinGenerationPrompt(template),
         template_id: template.id,
         images: userImages,
         use_face_asset: false,
+        source: "modeles",
+        generation_request_id: generationRequestId,
+        frontend_timestamp: new Date().toISOString(),
+        click_count: 1,
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);
@@ -599,6 +605,13 @@ export default function Modeles() {
     return (
       <GenerationProgress
         taskId={taskId}
+        inputImageUrl={
+          pendingUserPhoto
+            ? pendingUserPhoto.startsWith("data:")
+              ? pendingUserPhoto
+              : `data:image/jpeg;base64,${pendingUserPhoto}`
+            : undefined
+        }
         onReset={() => {
           reshuffleOutfitCatalog();
           setTaskId(null);

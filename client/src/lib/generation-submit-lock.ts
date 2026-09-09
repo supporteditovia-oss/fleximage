@@ -1,7 +1,8 @@
 const SUBMIT_LOCK_KEY = "luxeflexia:generation-submit-lock";
+/** Aligné sur GENERATION_DEDUP_WINDOW_MS côté serveur (120 s). */
 const SUBMIT_LOCK_MS = 120_000;
 
-/** Verrou court cross-onglet pour éviter deux POST simultanés avant le dedup serveur. */
+/** Verrou cross-onglet : empêche deux POST avant le claim serveur. */
 export function tryAcquireGenerationSubmitLock(): boolean {
   try {
     const raw = sessionStorage.getItem(SUBMIT_LOCK_KEY);
@@ -26,6 +27,7 @@ export function releaseGenerationSubmitLock(): void {
   }
 }
 
+/** Ne libère le verrou qu'après échec — en succès, le job in-flight le protège. */
 export function releaseGenerationSubmitLockOnError(): void {
   releaseGenerationSubmitLock();
 }

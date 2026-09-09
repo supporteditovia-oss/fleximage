@@ -7,10 +7,12 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Gem } from "lucide-react";
+import { Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
@@ -148,6 +150,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
   const zeroCreditsDismissedRef = useRef(false);
+  const isGeneratingRef = useRef(false);
+  const autoGenerateFiredRef = useRef(false);
 
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
@@ -316,6 +320,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const isFullscreenOverlayActive =
     showFakeOnboardingLoader ||
     pendingLoading ||
+    isStartingGeneration ||
     (!!taskId && !generationResultVisible) ||
     isPaywallOverlayActive ||
     unlockingLarp;
@@ -323,17 +328,20 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   useEffect(() => {
     if (taskId) {
       setGenerationResultVisible(false);
+      setTransitionBg(false);
     }
   }, [taskId]);
 
-  // ── Hide header/dock while fullscreen overlay is active ─────
+  // ── Hide header/dock + support widget while fullscreen overlay is active ─────
   useLayoutEffect(() => {
     if (isFullscreenOverlayActive) {
       document.documentElement.setAttribute("data-fullscreen-overlay", "true");
       document.body.setAttribute("data-fullscreen-overlay", "true");
+      window.$crisp?.push(["do", "chat:hide"]);
     } else {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      window.$crisp?.push(["do", "chat:show"]);
     }
 
     if (isPaywallOverlayActive) {
@@ -346,6 +354,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-paywall-overlay");
+      window.$crisp?.push(["do", "chat:show"]);
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
@@ -810,6 +819,29 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   const handleGenerate = async () => {
+    if (
+      isGeneratingRef.current ||
+      isStartingGeneration ||
+      generateDirect.isPending ||
+      generateVideo.isPending
+    ) {
+      console.warn("[Generate] Ignored duplicate generate click — already in flight");
+      return;
+    }
+    isGeneratingRef.current = true;
+    const generationRequestId = createGenerationRequestId();
+
+    const willUseFakeOnboardingLoader =
+      profile &&
+      !profile.is_subscriber &&
+      profile.role !== "admin" &&
+      !isReturningFromCheckout;
+
+    if (!willUseFakeOnboardingLoader) {
+      setPendingLoading(true);
+    }
+    setIsStartingGeneration(true);
+
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -833,6 +865,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.referenceImageRequiredTitle"),
           description: t("templateSelected.noReferenceImages"),
         });
+        isGeneratingRef.current = false;
+        setIsStartingGeneration(false);
         return;
       }
       if (!templateSupportsGenerationMode(activeTemplate, generationMode)) {
@@ -841,6 +875,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.templateModeUnavailableTitle"),
           description: t("generate.templateModeUnavailableDescription"),
         });
+        isGeneratingRef.current = false;
+        setIsStartingGeneration(false);
         return;
       }
     } else if (filesForGeneration.length === 0) {
@@ -855,13 +891,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             ? t("generate.referenceVideoRequiredDescription")
             : t("generate.referenceImageRequiredDescription"),
       });
+      isGeneratingRef.current = false;
+      setIsStartingGeneration(false);
       return;
     }
 
-    await executeGeneration();
+    await executeGeneration(generationRequestId);
   };
 
-  const executeGeneration = async () => {
+  const executeGeneration = async (generationRequestId: string) => {
+    let generationCommitted = false;
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -914,22 +953,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       !isReturningFromCheckout;
 
     if (shouldUseOnboardingPaywall) {
-      markOnboardingResume({
-        prompt: serverPrompt,
-        generationMode,
-      });
-      savePaywallPrompt(serverPrompt);
-
-      if (filesForGeneration[0]) {
-        try {
-          await savePaywallImage(
-            await toGenerationImageFile(filesForGeneration[0].file),
-          );
-          clearPaywallExpiry();
-        } catch {
-          /* preview optional */
-        }
-      } else if (!getPaywallImage()) {
+      if (!filesForGeneration[0] && !getPaywallImage()) {
         toast({
           variant: "destructive",
           title:
@@ -941,13 +965,30 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
               ? t("generate.referenceVideoRequiredDescription")
               : t("generate.referenceImageRequiredDescription"),
         });
+        setPendingLoading(false);
         return;
       }
 
-      // Best-effort draft for Stripe return — never block the fake loader on IDB failure (common on mobile Safari).
-      await saveCurrentDraftForCheckout();
-
+      markOnboardingResume({
+        prompt: serverPrompt,
+        generationMode,
+      });
+      savePaywallPrompt(serverPrompt);
       startOnboardingPaywallFlow();
+
+      void (async () => {
+        if (filesForGeneration[0]) {
+          try {
+            await savePaywallImage(
+              await toGenerationImageFile(filesForGeneration[0].file),
+            );
+            clearPaywallExpiry();
+          } catch {
+            /* preview optional */
+          }
+        }
+        await saveCurrentDraftForCheckout();
+      })();
       return;
     }
 
@@ -957,6 +998,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       profile.role !== "admin" &&
       profile.credits < requiredCredits
     ) {
+      setPendingLoading(false);
       await saveCurrentDraftForCheckout();
       startInsufficientCreditsFlow({
         currentCredits: profile.credits,
@@ -970,6 +1012,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     // the cached data is stale (user just got credits via Stripe).
     // Server will still validate credits.
     if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
+      setPendingLoading(false);
       await saveCurrentDraftForCheckout();
       startInsufficientCreditsFlow({
         currentCredits: profile?.credits ?? 0,
@@ -980,7 +1023,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     }
 
     try {
-      setIsStartingGeneration(true);
       setPendingLoading(true);
       clearLastGeneration();
       clearPendingLarp();
@@ -1028,6 +1070,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
+        generationCommitted = true;
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
           trackFunnelStep("generate", { source: "video", taskId: result.taskId });
@@ -1051,6 +1094,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
+        source: "generate",
+        generation_request_id: generationRequestId,
+        frontend_timestamp: new Date().toISOString(),
+        click_count: 1,
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1059,6 +1106,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           : null,
       );
       setTaskId(result.taskId);
+      generationCommitted = true;
       setPendingLoading(false);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
         trackFunnelStep("generate", { source: "image", taskId: result.taskId });
@@ -1136,10 +1184,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       });
     } finally {
       setIsStartingGeneration(false);
+      if (!generationCommitted) {
+        isGeneratingRef.current = false;
+        setPendingLoading(false);
+      }
     }
   };
 
   const handleReset = useCallback(() => {
+    isGeneratingRef.current = false;
+    autoGenerateFiredRef.current = false;
     reshuffleOutfitCatalog();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
@@ -1242,6 +1296,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       console.log("[Generate] Waiting for auth to load before auto-generate...");
       return; // effect will re-fire when isAuthLoading changes
     }
+    if (autoGenerateFiredRef.current) return;
+    autoGenerateFiredRef.current = true;
     setAutoGenerateReady(false);
 
     // Hard guard: never auto-bill when revisiting Créer.
@@ -1342,32 +1398,20 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     />
   ) : null;
 
-  const portalOverlay = pendingLoading
-    ? createPortal(
-      <div
-        className="fixed inset-0 z-[100] w-full"
-        style={lxCreamBgStyle}
-        role="status"
-        aria-live="polite"
-      >
-        {/* Wordmark pinned to true viewport center; spinner sits below without shifting the brand */}
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <div className="relative flex flex-col items-center">
-            <div className="inline-flex items-center justify-center gap-2.5 md:gap-3">
-              <Gem
-                className="h-8 w-8 shrink-0 text-[var(--lx-gold)] md:h-10 md:w-10"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <BrandMark className="text-[clamp(1.5rem,6vw,2.25rem)] font-semibold leading-none text-[var(--lx-ink)]" />
-            </div>
-            <Loader2 className="absolute top-full mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
-          </div>
-        </div>
-      </div>,
-      document.body,
-    )
-    : null;
+  const portalOverlay =
+    (pendingLoading || isStartingGeneration) && !taskId && !showFakeOnboardingLoader ? (
+      createPortal(
+        <GenerationLoader
+          taskId="pending"
+          status="connecting"
+          estimatedSeconds={
+            generationMode === "video" ? 150 : 50
+          }
+          inputImageUrl={loaderInputImageUrl}
+        />,
+        document.body,
+      )
+    ) : null;
 
   const paywallOverlayClassName =
     "fixed inset-0 z-[100] overflow-hidden animate-in fade-in duration-300";
@@ -1404,7 +1448,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Loading pending LARP from hero flow
-  if (pendingLoading) {
+  if (pendingLoading || (isStartingGeneration && !taskId && !showFakeOnboardingLoader)) {
     return (
       <>
         {transitionBackdrop}

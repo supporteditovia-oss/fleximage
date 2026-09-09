@@ -241,6 +241,8 @@ export const generations = pgTable("generations", {
   final_prompt: text("final_prompt").notNull(),
   provider: text("provider", { enum: ["kie", "runway", "oneshot", "fallback"] }),
   provider_task_id: text("provider_task_id"),
+  /** Client idempotency key — one user click maps to one generation row. */
+  generation_request_id: text("generation_request_id"),
   provider_attempts: jsonb("provider_attempts").$type<unknown[]>().notNull(),
   aspect_ratio: text("aspect_ratio"),
   input_assets: jsonb("input_assets").$type<string[]>().notNull(),

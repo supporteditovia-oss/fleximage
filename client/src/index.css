@@ -35,6 +35,21 @@ body[data-fullscreen-overlay] .bottom-dock {
   pointer-events: none !important;
 }
 
+/* Masquer le widget support (Crisp) pendant génération / loader plein écran */
+html[data-fullscreen-overlay] .crisp-client,
+html[data-fullscreen-overlay] #crisp-chatbox,
+html[data-fullscreen-overlay] .cc-1m2mf,
+body[data-fullscreen-overlay] .crisp-client,
+body[data-fullscreen-overlay] #crisp-chatbox,
+body[data-fullscreen-overlay] .cc-1m2mf,
+body[data-fullscreen-overlay] .crisp-client .cc-18m46,
+body[data-fullscreen-overlay] [class*="crisp-"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 /* Hide header/dock without locking page scroll (e.g. /image-prete on mobile) */
 body[data-hide-app-chrome] .floating-header,
 body[data-hide-app-chrome] .bottom-dock {

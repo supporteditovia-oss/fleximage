@@ -122,9 +122,23 @@ export async function authFetch(
         }
       }
     }
-    const error = new Error(message) as Error & { code?: string; status?: number };
+    const error = new Error(message) as Error & {
+      code?: string;
+      status?: number;
+      body?: Record<string, unknown>;
+    };
     error.code = code;
     error.status = res.status;
+    try {
+      if (text) {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === "object") {
+          error.body = parsed as Record<string, unknown>;
+        }
+      }
+    } catch {
+      /* ignore non-JSON error bodies */
+    }
     throw error;
   }
 

@@ -20,7 +20,7 @@ const PARTICLES = [
   { left: "88%", size: 2, dur: "14.5s", delay: "2.4s", drift: "9px" },
 ] as const;
 
-const DEFAULT_DURATION_MS = 4800;
+const DEFAULT_DURATION_MS = 3200;
 const MESSAGE_INTERVAL_MS = 1200;
 
 interface FakeOnboardingLoaderProps {
@@ -70,7 +70,7 @@ export function FakeOnboardingLoader({
       className="lx-fake-loader fixed inset-0 z-[200] overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       role="status"
       aria-live="polite"
       aria-busy="true"

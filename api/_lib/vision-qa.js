@@ -4,14 +4,11 @@
  * If no key / VISION_QA_ENABLED=0 → skip (pass) so generations never block.
  */
 
-/** Original + 1 corrective regen max — extra passes rarely help and feel stuck. */
-const MAX_VISION_QA_RETRIES = 1;
-/** Fictional/cartoon cars: 1 retry max — more retries eat the poll budget and feel stuck. */
-const MAX_VISION_QA_RETRIES_FICTIONAL = 1;
-/** Lifestyle + named luxury car: 1 retry — wrong-brand cabins rarely fix on pass 2+. */
-const MAX_VISION_QA_RETRIES_LIFESTYLE = 1;
-/** Parked-car body swap: 1 retry — pass 2+ rarely fixes pose/background drift. */
-const MAX_VISION_QA_RETRIES_VEHICLE_REPLACE = 1;
+/** ONE OneShot job per user action — never spawn a corrective regen (cost + duplicate logs). */
+const MAX_VISION_QA_RETRIES = 0;
+const MAX_VISION_QA_RETRIES_FICTIONAL = 0;
+const MAX_VISION_QA_RETRIES_LIFESTYLE = 0;
+const MAX_VISION_QA_RETRIES_VEHICLE_REPLACE = 0;
 const VISION_QA_TIMEOUT_MS = 12_000;
 
 const CRITICAL_CODES = new Set([
@@ -393,48 +390,21 @@ async function inspectGenerationResult({
  * After a successful store, optionally claim + spawn a corrective OneShot job.
  * Returns { action: "accept"|"retry"|"busy", qa, newTaskId? }
  *
- * While retries remain: CRITICAL results are NOT returned to the customer.
- * After max retries: best-effort accept (cost control).
+ * Policy: ONE OneShot job per generation — inspect for logs only, never retry.
  */
 async function maybeRetryAfterVisionQa({
   supabase,
   larp,
   resultUrls,
-  uploadImageUrlsToOneshot,
-  createOneshotJob,
   buildVisionQaRetryPrompt,
   aspectRatio,
   modelVariant,
 } = {}) {
-  const meta =
-    larp && larp.metadata && typeof larp.metadata === "object"
-      ? { ...larp.metadata }
-      : {};
-  const retryCount = Number(meta.vision_qa_retry_count || 0);
-  const fictional = isFictionalVehicleQaContext(
-    larp && larp.prompt,
-    larp && larp.final_prompt,
-  );
-  const lifestyleVehicle = isLifestyleNamedVehicleQaContext(
-    larp && larp.prompt,
-    larp && larp.final_prompt,
-  );
-  const vehicleReplace = isVehicleReplaceQaContext(
-    larp && larp.prompt,
-    larp && larp.final_prompt,
-  );
-  // Vehicle body swap: deliver first pass — QA retries add ~60s for little gain.
-  if (vehicleReplace) {
-    return { action: "accept", qa: { skipped: true, reason: "vehicle_replace_fast" } };
-  }
-  const maxRetries = fictional
-    ? MAX_VISION_QA_RETRIES_FICTIONAL
-    : lifestyleVehicle
-      ? MAX_VISION_QA_RETRIES_LIFESTYLE
-      : vehicleReplace
-        ? MAX_VISION_QA_RETRIES_VEHICLE_REPLACE
-        : MAX_VISION_QA_RETRIES;
-  const atMaxRetries = retryCount >= maxRetries;
+  void supabase;
+  void resultUrls;
+  void buildVisionQaRetryPrompt;
+  void aspectRatio;
+  void modelVariant;
 
   if (!isVisionQaEnabled()) {
     return { action: "accept", qa: { skipped: true } };
@@ -444,125 +414,14 @@ async function maybeRetryAfterVisionQa({
     Array.isArray(resultUrls) && resultUrls[0] ? resultUrls[0] : null;
   const qa = await inspectGenerationResult({
     imageUrl,
-    userPrompt: larp.prompt,
-    finalPrompt: larp.final_prompt,
+    userPrompt: larp && larp.prompt,
+    finalPrompt: larp && larp.final_prompt,
   });
 
-  if (!qa || qa.skipped || !qa.critical) {
-    return { action: "accept", qa };
-  }
-
-  // Critical but no retries left — deliver best effort (cost limit).
-  if (atMaxRetries) {
-    console.warn("[vision-qa] critical after max retries — accepting", {
-      larpId: larp && larp.id,
-      issues: (qa.issues || []).map((i) => i.code),
-    });
-    return { action: "accept", qa: { ...qa, reason: "max_retries" } };
-  }
-
-  const oneshotTaskId = String(larp.provider_task_id || "");
-  const claimMarker = `${oneshotTaskId},__vision_qa_claim__`;
-  const { data: claimedRows, error: claimErr } = await supabase
-    .from("generations")
-    .update({
-      provider_task_id: claimMarker,
-      updated_at: new Date().toISOString(),
-      metadata: {
-        ...meta,
-        vision_qa_pending: true,
-        vision_qa_last_issues: (qa.issues || []).slice(0, 8),
-      },
-    })
-    .eq("id", larp.id)
-    .eq("provider_task_id", oneshotTaskId)
-    .select("id");
-
-  if (claimErr) {
-    console.error("[vision-qa] claim failed", claimErr);
-    return { action: "accept", qa };
-  }
-  if (!claimedRows || claimedRows.length === 0) {
-    return { action: "busy", qa };
-  }
-
-  try {
-    const issuePayload =
-      qa.issues && qa.issues.length > 0
-        ? qa.issues
-        : qa.correctiveInstructions
-          ? [qa.correctiveInstructions]
-          : [];
-    const retryPrompt = buildVisionQaRetryPrompt(
-      larp.final_prompt || larp.prompt || "",
-      issuePayload,
-    );
-    const imageUrls = Array.isArray(larp.input_assets) ? larp.input_assets : [];
-    const referenceFileIds =
-      imageUrls.length > 0 ? await uploadImageUrlsToOneshot(imageUrls) : [];
-    const oneshotResponse = await createOneshotJob(retryPrompt, {
-      aspectRatio: aspectRatio || "9:16",
-      modelVariant: modelVariant || "default",
-      ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-    });
-    if (!oneshotResponse || !oneshotResponse.id) {
-      throw new Error("Invalid response from OneshotAPI (vision QA retry)");
-    }
-    const newTaskId = `custom_${oneshotResponse.id}`;
-    const prevEstimate = Number(meta.estimated_seconds);
-    const nextMeta = {
-      ...meta,
-      vision_qa_pending: false,
-      vision_qa_retry_count: retryCount + 1,
-      vision_qa_last_issues: (qa.issues || []).slice(0, 8),
-      vision_qa_rejected_assets: Array.isArray(resultUrls)
-        ? resultUrls.slice(0, 4)
-        : [],
-      oneshot_model_variant:
-        modelVariant || meta.oneshot_model_variant || "default",
-      estimated_seconds:
-        Number.isFinite(prevEstimate) && prevEstimate > 0
-          ? prevEstimate + 55
-          : meta.estimated_seconds,
-    };
-    await supabase
-      .from("generations")
-      .update({
-        status: "processing",
-        provider: "oneshot",
-        provider_task_id: `${oneshotTaskId},${newTaskId}`,
-        final_prompt: retryPrompt,
-        metadata: nextMeta,
-        updated_at: new Date().toISOString(),
-        completed_at: null,
-      })
-      .eq("id", larp.id);
-
-    console.info("[vision-qa] critical fail → corrective retry", {
-      larpId: larp.id,
-      retryCount: retryCount + 1,
-      issues: (qa.issues || []).map((i) => i.code),
-      newTaskId,
-    });
-    return { action: "retry", qa, newTaskId };
-  } catch (err) {
-    console.error("[vision-qa] retry spawn failed — accepting original", err);
-    await supabase
-      .from("generations")
-      .update({
-        provider_task_id: oneshotTaskId,
-        metadata: {
-          ...meta,
-          vision_qa_pending: false,
-          vision_qa_retry_error: String(
-            err && err.message ? err.message : err,
-          ).slice(0, 200),
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", larp.id);
-    return { action: "accept", qa };
-  }
+  return {
+    action: "accept",
+    qa: qa || { skipped: true, reason: "single_oneshot_policy" },
+  };
 }
 
 module.exports = {
