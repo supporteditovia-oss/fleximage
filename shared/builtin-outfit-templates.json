@@ -650,6 +650,196 @@
     "gender": "men"
   },
   {
+    "id": "outfit-chanel-quilt-gilet-cc",
+    "slug": "chanel-quilt-gilet-cc",
+    "name": "Chanel gilet matelassé",
+    "description": "Gilet blanc matelassé Chanel, tee noir, pantalon noir, sneakers CC noir/blanc.",
+    "imagePath": "/outfits/outfit-chanel-quilt-gilet-cc.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-fendi-shark-travis-gucci",
+    "slug": "fendi-shark-travis-gucci",
+    "name": "Fendi shark Travis Scott",
+    "description": "Tee beige Fendi poche FF, jean Amiri requins, sneakers Travis Scott mocha, sac Gucci GG.",
+    "imagePath": "/outfits/outfit-fendi-shark-travis-gucci.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lv-navy-orange-hermes",
+    "slug": "lv-navy-orange-hermes",
+    "name": "LV navy orange Hermès",
+    "description": "Coupe-vent LV navy monogramme, tee orange LV, shorts LV, sneakers Hermès H orange.",
+    "imagePath": "/outfits/outfit-lv-navy-orange-hermes.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-heart-quilt-black-kelly",
+    "slug": "heart-quilt-black-kelly",
+    "name": "Heart quilt noir",
+    "description": "Veste matelassée cœur rouge, tee blanc Marbenio, jean noir, sneakers noires, sac Kelly blanc.",
+    "imagePath": "/outfits/outfit-heart-quilt-black-kelly.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-moncler-logo-amiri-prada",
+    "slug": "moncler-logo-amiri-prada",
+    "name": "Moncler logo Amiri Prada",
+    "description": "Coupe-vent Moncler noir logo vertical, tee noir Marbenio, jean Amiri déchiré, sneakers Prada, sac Kelly.",
+    "imagePath": "/outfits/outfit-moncler-logo-amiri-prada.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lv-mint-floral-barrel-on",
+    "slug": "lv-mint-floral-barrel-on",
+    "name": "LV mint floral barrel",
+    "description": "Coupe-vent LV mint dégradé floral, jean gris déchiré, sneakers On Cloudmonster, sac barrel LV.",
+    "imagePath": "/outfits/outfit-lv-mint-floral-barrel-on.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lv-ice-blue-sling-bag",
+    "slug": "lv-ice-blue-sling-bag",
+    "name": "LV ice blue sling",
+    "description": "Doudoune LV bleu glace hybrid, jean gris, sneakers Hermès, sac sling LV blanc monogramme.",
+    "imagePath": "/outfits/outfit-lv-ice-blue-sling-bag.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-celine-moncler-violet-set",
+    "slug": "celine-moncler-violet-set",
+    "name": "Celine Moncler violet",
+    "description": "Tee Celine blanc, gilet Moncler violet, shorts Moncler, sneakers Prada violet.",
+    "imagePath": "/outfits/outfit-celine-moncler-violet-set.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-cardigan-monogram-amiri-prada",
+    "slug": "cardigan-monogram-amiri-prada",
+    "name": "Cardigan monogramme Prada",
+    "description": "Cardigan bleu monogramme, tee blanc, jean Amiri gris, sneakers Prada America's Cup, lunettes.",
+    "imagePath": "/outfits/outfit-cardigan-monogram-amiri-prada.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-stone-island-amiri-prada",
+    "slug": "stone-island-amiri-prada",
+    "name": "Stone Island Amiri Prada",
+    "description": "Cardigan gris Stone Island, tee noir Marbenio, jean Amiri noir déchiré, sneakers Prada, sac Kelly.",
+    "imagePath": "/outfits/outfit-stone-island-amiri-prada.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lacoste-croc-asics-gucci",
+    "slug": "lacoste-croc-asics-gucci",
+    "name": "Lacoste croc Asics Gucci",
+    "description": "Tee Lacoste crocodile bleu, shorts Lacoste blancs, sneakers Asics bleues, casquette Gucci monogramme.",
+    "imagePath": "/outfits/outfit-lacoste-croc-asics-gucci.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-prada-rose-set-cap",
+    "slug": "prada-rose-set-cap",
+    "name": "Prada rose set",
+    "description": "Chemise zip Prada rose, tee blanc, shorts Prada, sneakers America's Cup, casquette et montre.",
+    "imagePath": "/outfits/outfit-prada-rose-set-cap.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-burberry-check-slides",
+    "slug": "burberry-check-slides",
+    "name": "Burberry check slides",
+    "description": "Polo Burberry check, shorts check, sandales check, casquette et sac crossbody Burberry.",
+    "imagePath": "/outfits/outfit-burberry-check-slides.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-moncler-white-dior-b30",
+    "slug": "moncler-white-dior-b30",
+    "name": "Moncler blanc Dior B30",
+    "description": "Gilet Moncler blanc, hoodie Polo RL, jogger Polo RL, sneakers Dior B30, bonnet Moncler.",
+    "imagePath": "/outfits/outfit-moncler-white-dior-b30.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-essentials-goose-lv-beanie",
+    "slug": "essentials-goose-lv-beanie",
+    "name": "Essentials Canada Goose",
+    "description": "Gilet Canada Goose noir, hoodie noir, jogger Essentials FOG, sneakers chunky, bonnet LV damier.",
+    "imagePath": "/outfits/outfit-essentials-goose-lv-beanie.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lv-beige-papillon-set",
+    "slug": "lv-beige-papillon-set",
+    "name": "LV beige Papillon",
+    "description": "Gilet beige Marbenio, tee beige, pantalon beige, sac Papillon LV, sneakers LV monogramme.",
+    "imagePath": "/outfits/outfit-lv-beige-papillon-set.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-loewe-jacket-prada-kelly",
+    "slug": "loewe-jacket-prada-kelly",
+    "name": "Loewe jacket Prada",
+    "description": "Veste Loewe anagramme, pull gris Marbenio, pantalon noir, sneakers Prada, sac Kelly tan.",
+    "imagePath": "/outfits/outfit-loewe-jacket-prada-kelly.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-moncler-olive-hermes-h",
+    "slug": "moncler-olive-hermes-h",
+    "name": "Moncler olive Hermès",
+    "description": "Gilet Moncler olive, hoodie noir, jean gris, sneakers Hermès H olive.",
+    "imagePath": "/outfits/outfit-moncler-olive-hermes-h.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-asics-grey-lv-sling",
+    "slug": "asics-grey-lv-sling",
+    "name": "Asics gris LV sling",
+    "description": "Veste Asics grise matelassée, tee blanc, jogger Asics, sneakers Asics argent, sac sling LV gris.",
+    "imagePath": "/outfits/outfit-asics-grey-lv-sling.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
     "id": "outfit-women-burgundy-halter",
     "slug": "women-burgundy-halter",
     "name": "Robe bordeaux halter",
