@@ -23,6 +23,10 @@ export type VideoMotionPreset = {
   prompt: string;
 };
 
+/** Prompt automatique — l'IA anime la photo sans saisie utilisateur. */
+export const DEFAULT_IMAGE_TO_VIDEO_PROMPT =
+  "Mouvement naturel et cinématique : le sujet s'anime avec réalisme (expressions, micro-mouvements, regard vivant). Une seule prise fluide, rendu premium photoréaliste.";
+
 /** Presets rapides pour le mode Image → Vidéo. */
 export const VIDEO_MOTION_PRESETS: VideoMotionPreset[] = [
   {

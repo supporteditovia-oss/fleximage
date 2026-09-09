@@ -140,6 +140,21 @@ function resolveVehicleDescription(body) {
   return "";
 }
 
+function buildV2VProviderPrompt(body, vehicleDescription) {
+  const custom =
+    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
+  if (custom.length >= 10) {
+    const hasSceneLock =
+      /d[ée]cor|cam[ée]ra|reflet|background|ground|reflection|unchanged|identique/i.test(
+        custom,
+      );
+    return hasSceneLock
+      ? custom
+      : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
+  }
+  return buildCarSwapPrompt(vehicleDescription);
+}
+
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
 
@@ -352,7 +367,7 @@ module.exports = async function handler(req, res) {
     try {
       if (workflow === "video_to_video") {
         sourceAssetUrl = await resolveSourceVideoUrl(userId, body);
-        providerPrompt = buildCarSwapPrompt(vehicleDescription);
+        providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({

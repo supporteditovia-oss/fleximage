@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import {
   Camera,
@@ -6,25 +6,22 @@ import {
   Clapperboard,
   Film,
   Loader2,
-  Sparkles,
   Upload,
   Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLarpHistory } from "@/hooks/use-larps";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import {
   computeVideoCreditCost,
-  VIDEO_MOTION_PRESETS,
+  DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   VIDEO_VEHICLE_PRESETS,
   type VideoAspectRatio,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
-import { useStudioPath } from "@/hooks/use-studio-path";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
 
@@ -37,54 +34,48 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-type ImageSource = "luxeflexia" | "upload";
-
 const WORKFLOW_OPTIONS: {
   id: VideoWorkflow;
   label: string;
   emoji: string;
-  description: string;
+  hint: string;
 }[] = [
   {
     id: "image_to_video",
-    label: "Animer une photo",
+    label: "Image → Vidéo",
     emoji: "📸",
-    description: "Image vers Vidéo",
+    hint: "Importe ta photo, l'IA la fait bouger",
   },
   {
     id: "video_to_video",
-    label: "Remplacer dans une vidéo",
+    label: "Vidéo → Vidéo",
     emoji: "🚗",
-    description: "Vidéo vers Vidéo",
+    hint: "Importe ta vidéo, l'IA remplace l'objet",
   },
 ];
 
 export default function VideoIA() {
   const [, setLocation] = useLocation();
-  const studioPath = useStudioPath();
   const adminPreview = useAdminPreviewFeatures();
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
-  const { data: historyItems } = useLarpHistory();
 
   const imageFileRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
 
   const [workflow, setWorkflow] = useState<VideoWorkflow>("image_to_video");
-  const [imageSource, setImageSource] = useState<ImageSource>("luxeflexia");
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-  const [selectedLarpId, setSelectedLarpId] = useState<string | null>(null);
+
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [uploadBase64, setUploadBase64] = useState<string | null>(null);
+  const [prefillImageUrl, setPrefillImageUrl] = useState<string | null>(null);
+  const [prefillLarpId, setPrefillLarpId] = useState<string | null>(null);
 
-  const [motionPrompt, setMotionPrompt] = useState("");
   const [durationSec] = useState<5>(5);
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoBase64, setVideoBase64] = useState<string | null>(null);
-  const [vehiclePreset, setVehiclePreset] = useState<string>("lamborghini_urus");
-  const [vehiclePrompt, setVehiclePrompt] = useState("");
+  const [swapPrompt, setSwapPrompt] = useState("");
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,33 +91,16 @@ export default function VideoIA() {
     };
   }, []);
 
-  const imageItems = useMemo(() => {
-    return (historyItems ?? [])
-      .filter(
-        (item) => item.generationType === "image" && item.status === "success",
-      )
-      .flatMap((item) => {
-        const urls = item.outputAssets.length
-          ? item.outputAssets
-          : item.watermarkedAssets;
-        return urls.map((url: string) => ({
-          url,
-          larpId: item.id,
-        }));
-      });
-  }, [historyItems]);
-
   useEffect(() => {
     const prefill = consumeVideoStudioPrefill();
     if (prefill) {
       setWorkflow("image_to_video");
-      setSelectedImageUrl(prefill.imageUrl);
-      setSelectedLarpId(prefill.sourceLarpId ?? null);
-      setImageSource("luxeflexia");
+      setPrefillImageUrl(prefill.imageUrl);
+      setPrefillLarpId(prefill.sourceLarpId ?? null);
     }
   }, []);
 
-  const previewUrl = uploadPreview || selectedImageUrl;
+  const imagePreviewUrl = uploadPreview || prefillImageUrl;
 
   const creditCost = computeVideoCreditCost({
     workflow,
@@ -135,10 +109,8 @@ export default function VideoIA() {
     voiceEnabled: false,
   });
 
-  const canGenerateI2V = Boolean(previewUrl) && motionPrompt.trim().length >= 10;
-  const canGenerateV2V =
-    Boolean(videoBase64) &&
-    (vehiclePrompt.trim().length >= 5 || Boolean(vehiclePreset));
+  const canGenerateI2V = Boolean(imagePreviewUrl);
+  const canGenerateV2V = Boolean(videoBase64) && swapPrompt.trim().length >= 5;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -147,9 +119,8 @@ export default function VideoIA() {
       const b64 = await fileToBase64(compressed);
       setUploadBase64(b64);
       setUploadPreview(URL.createObjectURL(compressed));
-      setSelectedImageUrl(null);
-      setSelectedLarpId(null);
-      setImageSource("upload");
+      setPrefillImageUrl(null);
+      setPrefillLarpId(null);
     } catch {
       toast({
         variant: "destructive",
@@ -198,7 +169,7 @@ export default function VideoIA() {
     try {
       const result = await generateVideo.mutateAsync({
         workflow: "image_to_video",
-        motion_prompt: motionPrompt.trim(),
+        motion_prompt: DEFAULT_IMAGE_TO_VIDEO_PROMPT,
         duration_sec: durationSec,
         aspect_ratio: aspectRatio,
         camera_movement: "slow_zoom",
@@ -210,8 +181,8 @@ export default function VideoIA() {
         ...(uploadBase64
           ? { images: [uploadBase64] }
           : {
-              image_url: selectedImageUrl || undefined,
-              source_larp_id: selectedLarpId || undefined,
+              image_url: prefillImageUrl || undefined,
+              source_larp_id: prefillLarpId || undefined,
             }),
         source: "video_studio",
       });
@@ -236,15 +207,14 @@ export default function VideoIA() {
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
         videos: [videoBase64],
-        vehicle_preset: vehiclePrompt.trim() ? undefined : vehiclePreset,
-        vehicle_prompt: vehiclePrompt.trim() || undefined,
+        vehicle_prompt: swapPrompt.trim(),
         source: "video_studio",
       });
       setTaskId(result.taskId);
       setGenerationEstimate(result.estimatedSeconds ?? 240);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Remplacement véhicule impossible";
+        err instanceof Error ? err.message : "Remplacement impossible";
       toast({ variant: "destructive", title: "Erreur", description: message });
     } finally {
       setIsSubmitting(false);
@@ -265,7 +235,7 @@ export default function VideoIA() {
       <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-5xl px-4 py-6">
         <GenerationProgress
           taskId={taskId}
-          inputImageUrl={previewUrl || videoPreview || undefined}
+          inputImageUrl={imagePreviewUrl || videoPreview || undefined}
           onReset={resetStudio}
           resultType="video"
           initialEstimatedSeconds={generationEstimate ?? undefined}
@@ -275,24 +245,22 @@ export default function VideoIA() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-28 pt-4 md:pb-10 md:pt-8">
-      <header className="mb-6 text-center md:mb-8">
+    <div className="mx-auto max-w-4xl px-4 pb-28 pt-4 md:pb-10 md:pt-8">
+      <header className="mb-6 text-center">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--lx-gold)]/25 bg-white/80 px-3 py-1 text-xs font-medium text-[var(--lx-gold)]">
           <Clapperboard className="h-3.5 w-3.5" />
           Vidéo IA
-          <span className="rounded bg-[var(--lx-gold)]/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-            Admin preview
-          </span>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1408] md:text-3xl">
           Studio Vidéo IA
         </h1>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground md:text-base">
-          Anime une photo ou remplace un véhicule dans ta vidéo smartphone.
+        <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+          Deux modes : anime ta photo, ou remplace un objet dans ta vidéo.
+          L&apos;IA gère le mouvement automatiquement.
         </p>
       </header>
 
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
+      <div className="mb-6 grid gap-2 sm:grid-cols-2">
         {WORKFLOW_OPTIONS.map((option) => {
           const active = workflow === option.id;
           return (
@@ -300,158 +268,68 @@ export default function VideoIA() {
               key={option.id}
               type="button"
               onClick={() => setWorkflow(option.id)}
-              className={`flex flex-1 flex-col items-center rounded-2xl border px-4 py-4 text-center transition sm:max-w-xs ${
+              className={`rounded-2xl border px-4 py-4 text-left transition ${
                 active
-                  ? "border-[var(--lx-gold)] bg-[var(--lx-gold)]/10 shadow-sm"
+                  ? "border-[var(--lx-gold)] bg-[var(--lx-gold)]/10"
                   : "border-[var(--lx-gold)]/20 bg-white/80 hover:border-[var(--lx-gold)]/40"
               }`}
             >
-              <span className="text-2xl" aria-hidden>
+              <span className="text-xl" aria-hidden>
                 {option.emoji}
               </span>
-              <span className="mt-1 text-sm font-semibold text-[#1a1408]">
-                {option.label}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({option.description})
-              </span>
+              <p className="mt-1 text-sm font-semibold">{option.label}</p>
+              <p className="text-xs text-muted-foreground">{option.hint}</p>
             </button>
           );
         })}
       </div>
 
-      {workflow === "image_to_video" ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-5 rounded-2xl border border-[var(--lx-gold)]/15 bg-white/85 p-4 shadow-sm backdrop-blur md:p-6">
-            <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Camera className="h-5 w-5 text-[var(--lx-gold)]" />
-                Image source
-              </h2>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {(
-                  [
-                    ["luxeflexia", "Mes créations LuxeFlexIA", Sparkles],
-                    ["upload", "Importer une image", Upload],
-                  ] as const
-                ).map(([id, label, Icon]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setImageSource(id)}
-                    className={`flex items-center gap-3 rounded-xl border p-4 text-sm transition-all ${
-                      imageSource === id
-                        ? "border-[var(--lx-gold)] bg-[var(--lx-gold)]/8"
-                        : "border-border hover:border-[var(--lx-gold)]/40"
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {imageSource === "luxeflexia" && (
-                <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-                  {imageItems.map((item) => (
-                    <button
-                      key={`${item.larpId}-${item.url}`}
-                      type="button"
-                      onClick={() => {
-                        setSelectedImageUrl(item.url);
-                        setSelectedLarpId(item.larpId);
-                        setUploadPreview(null);
-                        setUploadBase64(null);
-                      }}
-                      className={`relative aspect-[9/16] overflow-hidden rounded-lg ring-2 ${
-                        selectedImageUrl === item.url
-                          ? "ring-[var(--lx-gold)]"
-                          : "ring-transparent"
-                      }`}
-                    >
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </button>
-                  ))}
-                  {imageItems.length === 0 && (
-                    <p className="col-span-full text-sm text-muted-foreground">
-                      Aucune image générée.{" "}
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() => setLocation(studioPath)}
-                      >
-                        Crée une image d'abord
-                      </button>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {imageSource === "upload" && (
-                <div>
-                  <input
-                    ref={imageFileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      void handleImageUpload(e.target.files?.[0] ?? null)
-                    }
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => imageFileRef.current?.click()}
-                  >
-                    Choisir une image
-                  </Button>
-                </div>
-              )}
-            </section>
-
+      <div className="rounded-2xl border border-[var(--lx-gold)]/15 bg-white/90 p-4 shadow-sm md:p-6">
+        {workflow === "image_to_video" ? (
+          <div className="space-y-5">
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Prompt de mouvement</h2>
-              <textarea
-                value={motionPrompt}
-                onChange={(e) => setMotionPrompt(e.target.value)}
-                rows={3}
-                maxLength={2000}
-                placeholder='Ex. : "Il marche lentement, regarde la caméra et sourit."'
-                className="w-full rounded-xl border border-[var(--lx-gold)]/20 bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--lx-gold)]/25"
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <Camera className="h-4 w-4 text-[var(--lx-gold)]" />
+                1. Importe ta photo
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Ta propre image (JPG/PNG). L&apos;IA la transforme en vidéo 5
+                secondes — mouvement, expressions, tout est automatique.
+              </p>
+              <input
+                ref={imageFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  void handleImageUpload(e.target.files?.[0] ?? null)
+                }
               />
-              <div className="flex flex-wrap gap-2">
-                {VIDEO_MOTION_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setMotionPrompt(preset.prompt)}
-                    className="rounded-full border border-[var(--lx-gold)]/25 px-3 py-1 text-xs font-medium hover:bg-[var(--lx-gold)]/10"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => imageFileRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Choisir une image
+              </Button>
+              {imagePreviewUrl && (
+                <div className="mx-auto max-w-[200px] overflow-hidden rounded-xl ring-2 ring-[var(--lx-gold)]/30">
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Aperçu"
+                    className="aspect-[9/16] w-full object-cover"
+                  />
+                </div>
+              )}
             </section>
 
-            <section className="grid gap-3 sm:grid-cols-2">
-              <label className="text-sm font-medium">
-                Durée
-                <select
-                  className="mt-1 w-full rounded-lg border p-2 text-sm"
-                  value={durationSec}
-                  disabled
-                >
-                  <option value={5}>5 secondes</option>
-                </select>
-              </label>
+            <section>
               <label className="text-sm font-medium">
                 Format
                 <select
-                  className="mt-1 w-full rounded-lg border p-2 text-sm"
+                  className="mt-1 block w-full rounded-lg border p-2 text-sm sm:max-w-xs"
                   value={aspectRatio}
                   onChange={(e) =>
                     setAspectRatio(e.target.value as VideoAspectRatio)
@@ -464,14 +342,14 @@ export default function VideoIA() {
             </section>
 
             <Button
-              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408] sm:w-auto"
+              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408]"
               disabled={!canGenerateI2V || isSubmitting || generateVideo.isPending}
               onClick={() => void handleGenerateI2V()}
             >
               {isSubmitting || generateVideo.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Génération en cours…
+                  Génération…
                 </>
               ) : (
                 <>
@@ -481,44 +359,16 @@ export default function VideoIA() {
               )}
             </Button>
           </div>
-
-          <aside className="rounded-2xl border border-[var(--lx-gold)]/15 bg-white/90 p-3 shadow-sm">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Aperçu
-            </p>
-            <div
-              className={`relative mx-auto overflow-hidden rounded-xl bg-black ${
-                aspectRatio === "16:9"
-                  ? "aspect-video w-full"
-                  : "aspect-[9/16] w-full max-w-[240px]"
-              }`}
-            >
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Aperçu source"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
-                  <Video className="h-10 w-10 opacity-40" />
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-5 rounded-2xl border border-[var(--lx-gold)]/15 bg-white/85 p-4 shadow-sm backdrop-blur md:p-6">
-            <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Video className="h-5 w-5 text-[var(--lx-gold)]" />
-                Vidéo source
+        ) : (
+          <div className="space-y-5">
+            <section className="space-y-3">
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <Video className="h-4 w-4 text-[var(--lx-gold)]" />
+                1. Importe ta vidéo
               </h2>
               <p className="text-sm text-muted-foreground">
-                Importe une vidéo filmée au smartphone (ex. : ta voiture garée).
-                Le décor, le sol, les reflets et les mouvements de caméra seront
-                conservés.
+                Filme avec ton téléphone (ex. ta Clio garée). L&apos;IA garde ta
+                caméra, le décor et les mouvements.
               </p>
               <input
                 ref={videoFileRef}
@@ -532,74 +382,63 @@ export default function VideoIA() {
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => videoFileRef.current?.click()}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Importer une vidéo
+                Choisir une vidéo
               </Button>
+              {videoPreview && (
+                <video
+                  src={videoPreview}
+                  className="mx-auto max-h-48 max-w-full rounded-xl"
+                  controls
+                  muted
+                  playsInline
+                />
+              )}
             </section>
 
             <section className="space-y-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <Car className="h-5 w-5 text-[var(--lx-gold)]" />
-                Véhicule de remplacement
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <Car className="h-4 w-4 text-[var(--lx-gold)]" />
+                2. Dis à l&apos;IA quoi remplacer
               </h2>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <textarea
+                value={swapPrompt}
+                onChange={(e) => setSwapPrompt(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus. Garde les mêmes mouvements de caméra."
+                className="w-full rounded-xl border border-[var(--lx-gold)]/20 p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--lx-gold)]/25"
+              />
+              <div className="flex flex-wrap gap-2">
                 {VIDEO_VEHICLE_PRESETS.map((preset) => (
                   <button
                     key={preset.id}
                     type="button"
-                    onClick={() => {
-                      setVehiclePreset(preset.id);
-                      setVehiclePrompt("");
-                    }}
-                    className={`rounded-xl border p-3 text-left text-sm transition ${
-                      vehiclePreset === preset.id && !vehiclePrompt.trim()
-                        ? "border-[var(--lx-gold)] bg-[var(--lx-gold)]/8"
-                        : "border-border hover:border-[var(--lx-gold)]/40"
-                    }`}
+                    onClick={() =>
+                      setSwapPrompt(
+                        `Remplace le véhicule dans la vidéo par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
+                      )
+                    }
+                    className="rounded-full border border-[var(--lx-gold)]/25 px-3 py-1 text-xs font-medium hover:bg-[var(--lx-gold)]/10"
                   >
                     {preset.label}
                   </button>
                 ))}
               </div>
-              <label className="block text-sm font-medium">
-                Ou prompt véhicule personnalisé
-                <input
-                  value={vehiclePrompt}
-                  onChange={(e) => setVehiclePrompt(e.target.value)}
-                  maxLength={500}
-                  placeholder="Ex. : Rolls-Royce Cullinan noir, finitions chrome…"
-                  className="mt-1 w-full rounded-lg border p-2 text-sm"
-                />
-              </label>
-            </section>
-
-            <section>
-              <label className="text-sm font-medium">
-                Format de sortie
-                <select
-                  className="mt-1 w-full rounded-lg border p-2 text-sm sm:max-w-xs"
-                  value={aspectRatio}
-                  onChange={(e) =>
-                    setAspectRatio(e.target.value as VideoAspectRatio)
-                  }
-                >
-                  <option value="9:16">9:16 vertical</option>
-                  <option value="16:9">16:9 horizontal</option>
-                </select>
-              </label>
             </section>
 
             <Button
-              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408] sm:w-auto"
+              className="w-full bg-[linear-gradient(135deg,#e8c547_0%,#c9a227_45%,#8b6914_100%)] text-[#1a1408]"
               disabled={!canGenerateV2V || isSubmitting || generateVideo.isPending}
               onClick={() => void handleGenerateV2V()}
             >
               {isSubmitting || generateVideo.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Remplacement en cours…
+                  Remplacement…
                 </>
               ) : (
                 <>
@@ -609,40 +448,18 @@ export default function VideoIA() {
               )}
             </Button>
           </div>
+        )}
+      </div>
 
-          <aside className="rounded-2xl border border-[var(--lx-gold)]/15 bg-white/90 p-3 shadow-sm">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Aperçu vidéo
-            </p>
-            <div className="relative aspect-[9/16] w-full max-w-[240px] overflow-hidden rounded-xl bg-black">
-              {videoPreview ? (
-                <video
-                  src={videoPreview}
-                  className="h-full w-full object-cover"
-                  controls
-                  muted
-                  playsInline
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
-                  <Video className="h-10 w-10 opacity-40" />
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
-      )}
-
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        Retrouve toutes tes vidéos dans{" "}
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        Tes vidéos finies sont dans{" "}
         <button
           type="button"
-          className="font-medium underline"
+          className="underline"
           onClick={() => setLocation("/historique")}
         >
-          Mes vidéos
-        </button>{" "}
-        (historique).
+          Historique → Mes vidéos
+        </button>
       </p>
     </div>
   );
