@@ -77,10 +77,13 @@ async function ensureFishReferenceId({ fishReferenceId, referenceAudio, label })
 function mapFishErrorMessage(message) {
   const raw = String(message || "");
   if (/reference audio is not valid/i.test(raw)) {
-    return "Échantillon vocal refusé par Fish Audio. Réimporte 15–20 s de voix claire, sans musique de fond.";
+    return "Échantillon vocal refusé. Réimporte 15–20 s de voix claire, sans musique de fond.";
   }
   if (/reference_id/i.test(raw) && /invalid|not found/i.test(raw)) {
-    return "Voix introuvable côté Fish. Réimporte ton extrait et regénère.";
+    return "Voix introuvable. Réimporte ton extrait et regénère.";
+  }
+  if (/fish audio/i.test(raw)) {
+    return raw.replace(/fish audio/gi, "le service vocal");
   }
   return raw;
 }

@@ -30,16 +30,30 @@ const {
   withTimeout,
 } = require("../generation");
 
+const PROVIDER_NAME_RE =
+  /\b(fish\s*audio|kling(?:\s*[\d.]+\s*motion\s*control)?|runway|aleph|fic\s*audio)\b/gi;
+
+function sanitizeProviderNames(text) {
+  return String(text || "").replace(PROVIDER_NAME_RE, "le moteur IA");
+}
+
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
 function toUserFailMessage(value, fallback = "Échec de la génération") {
   if (value == null || value === "") return fallback;
   if (typeof value === "string") {
-    return value === "[object Object]" ? fallback : value;
+    if (value === "[object Object]") return fallback;
+    return sanitizeProviderNames(value);
   }
   if (typeof value === "object") {
-    if (typeof value.message === "string" && value.message) return value.message;
-    if (typeof value.error === "string" && value.error) return value.error;
-    if (typeof value.msg === "string" && value.msg) return value.msg;
+    if (typeof value.message === "string" && value.message) {
+      return sanitizeProviderNames(value.message);
+    }
+    if (typeof value.error === "string" && value.error) {
+      return sanitizeProviderNames(value.error);
+    }
+    if (typeof value.msg === "string" && value.msg) {
+      return sanitizeProviderNames(value.msg);
+    }
     try {
       const s = JSON.stringify(value);
       if (s && s !== "{}" && s !== "null") return s.slice(0, 280);
@@ -233,7 +247,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             klingData.failMsg,
-            "Échec Kling Motion Control",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -260,7 +274,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Kling";
+        apiFailMsg = "Erreur lors du traitement vidéo";
       }
     } else if (isAlephTask) {
       const {
@@ -282,7 +296,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             alephData.errorMessage,
-            "Échec du remplacement véhicule",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -309,7 +323,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Aleph";
+        apiFailMsg = "Erreur lors du traitement vidéo";
       }
     } else if (isVideoTask) {
       const runwayTaskId = activeTaskId.replace("video_", "");

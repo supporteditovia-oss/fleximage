@@ -41,14 +41,19 @@ function computeVideoCreditCost(options) {
   return options.isAdmin ? 0 : cost;
 }
 
-function buildCarSwapPrompt(vehicleDescription) {
-  const vehicle = String(vehicleDescription || "").trim();
+function buildVideoSwapPrompt(description) {
+  const target = String(description || "").trim();
   return [
-    `Replace the vehicle in the video with ${vehicle}.`,
-    "Keep the background, ground, reflections, camera movement, lighting and all non-vehicle elements exactly unchanged.",
-    "Only swap the car body — same position, scale, angle and motion as the original vehicle.",
-    "Photorealistic render, consistent shadows and reflections on pavement.",
+    `Apply this transformation to the video: ${target}.`,
+    "Keep the background, ground, reflections, camera movement, lighting and all non-target elements exactly unchanged.",
+    "Same position, scale, angle and motion as the original subject.",
+    "Photorealistic render, consistent shadows and reflections.",
   ].join(" ");
+}
+
+/** @deprecated Utiliser buildVideoSwapPrompt */
+function buildCarSwapPrompt(vehicleDescription) {
+  return buildVideoSwapPrompt(vehicleDescription);
 }
 
 function buildRunwayPrompt(params) {
@@ -133,6 +138,7 @@ module.exports = {
   VIDEO_BASE_CREDIT_10S,
   computeVideoCreditCost,
   buildRunwayPrompt,
+  buildVideoSwapPrompt,
   buildCarSwapPrompt,
   maxVoiceCharsForDuration,
   validateVoiceText,

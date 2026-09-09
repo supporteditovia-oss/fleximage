@@ -18,7 +18,7 @@ import {
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
-  VIDEO_VEHICLE_PRESETS,
+  VIDEO_SWAP_PRESETS,
   type VideoAspectRatio,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
@@ -55,8 +55,8 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    emoji: "🚗",
-    hint: "Swap voiture ou objet",
+    emoji: "🎬",
+    hint: "Personne, objet ou scène",
   },
 ];
 
@@ -300,8 +300,8 @@ export default function VideoIA() {
         </div>
         <h1 className="via-hero__title">Vidéo IA</h1>
         <p className="via-hero__sub">
-          Anime ta photo ou transforme ta vidéo smartphone. Rendu cinématique,
-          prêt pour TikTok &amp; Reels.
+          Anime ta photo ou transforme ta vidéo : remplace une personne, un objet
+          ou une scène. Rendu cinématique, prêt pour TikTok &amp; Reels.
         </p>
       </header>
 
@@ -427,8 +427,8 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton téléphone — ex. ta Clio garée.{" "}
-              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> (rentabilité).
+              Filme avec ton téléphone — toi, une voiture, un objet, une scène…{" "}
+              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong>.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
             </p>
 
@@ -471,8 +471,8 @@ export default function VideoIA() {
                   Photo de référence (optionnel)
                 </label>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Urus, personnage ou objet cible — active Kling 3.0 Motion
-                  Control pour un rendu plus précis.
+                  Personnage, objet ou style cible — pour affiner le rendu si
+                  besoin.
                 </p>
                 <input
                   ref={refImageFileRef}
@@ -510,18 +510,18 @@ export default function VideoIA() {
                   onChange={(e) => setSwapPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus, garde exactement les mêmes mouvements."
+                  placeholder="Ex. : Remplace-moi par Cristiano Ronaldo, garde exactement les mêmes mouvements et le même décor."
                   className="via-prompt-field"
                 />
                 <div className="via-chips">
-                  {VIDEO_VEHICLE_PRESETS.map((preset) => (
+                  {VIDEO_SWAP_PRESETS.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       className="via-chip"
                       onClick={() =>
                         setSwapPrompt(
-                          `Remplace le véhicule par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
+                          `Remplace le sujet par ${preset.label}. Garde le décor, les reflets et les mouvements de caméra identiques.`,
                         )
                       }
                     >
@@ -546,7 +546,7 @@ export default function VideoIA() {
               ) : (
                 <>
                   <Film className="h-4 w-4" />
-                  Remplacer le véhicule · {creditCost} crédits
+                  Transformer ma vidéo · {creditCost} crédits
                 </>
               )}
             </button>

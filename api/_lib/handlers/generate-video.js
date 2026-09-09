@@ -16,7 +16,7 @@ const {
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
-  buildCarSwapPrompt,
+  buildVideoSwapPrompt,
   validateVoiceText,
 } = require("../video-studio");
 const {
@@ -105,7 +105,9 @@ async function resolveSourceImageUrl(supabase, userId, body) {
   return uploaded[0];
 }
 
-const VEHICLE_PRESET_PROMPTS = {
+const SWAP_PRESET_PROMPTS = {
+  cristiano_ronaldo:
+    "Cristiano Ronaldo, visage et corpulence photoréalistes, même posture et mouvements que le sujet original.",
   lamborghini_urus:
     "Lamborghini Urus noir mat, proportions réalistes, jantes d'origine, reflets crédibles.",
   porsche_gt3_rs:
@@ -167,19 +169,19 @@ async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
   return null;
 }
 
-function resolveVehicleDescription(body) {
+function resolveSwapDescription(body) {
   const custom =
     typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
   if (custom.length >= 5) return custom;
   const presetId =
     typeof body.vehicle_preset === "string" ? body.vehicle_preset.trim() : "";
-  if (presetId && VEHICLE_PRESET_PROMPTS[presetId]) {
-    return VEHICLE_PRESET_PROMPTS[presetId];
+  if (presetId && SWAP_PRESET_PROMPTS[presetId]) {
+    return SWAP_PRESET_PROMPTS[presetId];
   }
   return "";
 }
 
-function buildV2VProviderPrompt(body, vehicleDescription) {
+function buildV2VProviderPrompt(body, swapDescription) {
   const custom =
     typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
   if (custom.length >= 10) {
@@ -191,7 +193,7 @@ function buildV2VProviderPrompt(body, vehicleDescription) {
       ? custom
       : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
   }
-  return buildCarSwapPrompt(vehicleDescription);
+  return buildVideoSwapPrompt(swapDescription);
 }
 
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
@@ -263,7 +265,7 @@ module.exports = async function handler(req, res) {
 
     const motionPrompt =
       typeof body.motion_prompt === "string" ? body.motion_prompt.trim() : "";
-    const vehicleDescription = resolveVehicleDescription(body);
+    const swapDescription = resolveSwapDescription(body);
 
     if (workflow === "image_to_video") {
       if (!motionPrompt || motionPrompt.length < 10 || motionPrompt.length > 2000) {
@@ -281,17 +283,17 @@ module.exports = async function handler(req, res) {
         return;
       }
     } else {
-      if (!vehicleDescription || vehicleDescription.length > 500) {
+      if (!swapDescription || swapDescription.length > 500) {
         res.status(400).json({
           message: copy(
             uiLocale,
-            "Choisis une supercar ou décris le véhicule de remplacement.",
-            "Pick a supercar or describe the replacement vehicle.",
+            "Décris ce que tu veux remplacer ou transformer (personne, objet, scène…).",
+            "Describe what you want to replace or transform (person, object, scene…).",
           ),
         });
         return;
       }
-      if (isDisallowedAdultPrompt(vehicleDescription)) {
+      if (isDisallowedAdultPrompt(swapDescription)) {
         res.status(422).json(contentPolicyResponse(uiLocale));
         return;
       }
@@ -432,7 +434,7 @@ module.exports = async function handler(req, res) {
           body,
         );
         v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
-        providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
+        providerPrompt = buildV2VProviderPrompt(body, swapDescription);
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({
@@ -482,7 +484,7 @@ module.exports = async function handler(req, res) {
       subtitle_position: body.subtitle_position || "bottom",
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
-      vehicle_prompt: vehicleDescription,
+      vehicle_prompt: swapDescription,
       source_video_duration_sec: sourceVideoDurationSec,
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
@@ -492,7 +494,7 @@ module.exports = async function handler(req, res) {
     };
 
     const userPrompt =
-      workflow === "video_to_video" ? vehicleDescription : motionPrompt;
+      workflow === "video_to_video" ? swapDescription : motionPrompt;
 
     const { data: larp, error: insertErr } = await supabase
       .from("generations")
@@ -583,7 +585,7 @@ module.exports = async function handler(req, res) {
         .from("generations")
         .update({
           status: "failed",
-          fail_message: String(providerErr.message || "Échec Runway").slice(0, 240),
+          fail_message: String(providerErr.message || "Échec de la génération vidéo").slice(0, 240),
           metadata: {
             ...studioMetadata,
             studio_stage: "FAILED",

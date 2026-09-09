@@ -67,7 +67,7 @@ function cleanEnv(value) {
 function getFishConfig() {
   const apiKey = cleanEnv(process.env.FISH_AUDIO_API_KEY || process.env.FISH_API_KEY);
   if (!apiKey) {
-    throw Object.assign(new Error("Configuration Fish Audio manquante"), {
+    throw Object.assign(new Error("Configuration vocale manquante"), {
       status: 500,
       code: "missing_fish_env",
     });
@@ -131,7 +131,7 @@ async function waitForVoiceModelReady(referenceId, options = {}) {
     const state = String(model.state || "").toLowerCase();
     if (state === "trained") return model;
     if (state === "failed") {
-      throw Object.assign(new Error("Le clonage vocal a échoué côté Fish Audio"), {
+      throw Object.assign(new Error("Le clonage vocal a échoué"), {
         status: 502,
         code: "fish_clone_failed",
       });
@@ -200,7 +200,7 @@ async function createVoiceModel({
   const payload = await response.json();
   const id = payload._id || payload.id;
   if (!id) {
-    throw Object.assign(new Error("Réponse Fish Audio invalide"), {
+    throw Object.assign(new Error("Réponse du service vocal invalide"), {
       status: 502,
       code: "fish_invalid_response",
     });
