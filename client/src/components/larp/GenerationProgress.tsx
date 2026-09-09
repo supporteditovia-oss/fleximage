@@ -98,12 +98,16 @@ export function GenerationProgress({
     void queryClient.invalidateQueries({ queryKey: ["larp-history"] });
   }, [data?.status, data?.larpId, data?.resultUrls, data?.resultType, hasResultMedia, resultType, taskId, queryClient]);
 
-  // Wait for loader exit animation before showing result
+  // Mount result layer as soon as media is ready (crossfade under loader exit).
   useEffect(() => {
-    if (revealDone) {
-      const timer = setTimeout(() => setShowResult(true), 180);
-      return () => clearTimeout(timer);
+    if (!hasResultMedia && !restoredReady) return;
+    if (data?.status === "success" || restoredReady) {
+      setShowResult(true);
     }
+  }, [data?.status, hasResultMedia, restoredReady]);
+
+  useEffect(() => {
+    if (revealDone) setShowResult(true);
   }, [revealDone]);
 
   // Fallback if loader reveal never completes (e.g. animation edge case).
@@ -300,7 +304,11 @@ export function GenerationProgress({
       {/* After reveal: show the result */}
       {canShowResult &&
         createPortal(
-          <div className="fixed inset-0 z-40 overflow-hidden px-4 animate-in fade-in duration-500">
+          <div
+            className={`fixed inset-0 overflow-hidden px-4 transition-opacity duration-500 ease-out ${
+              revealDone ? "z-[110] opacity-100" : "z-[90] opacity-0"
+            }`}
+          >
             {/* Same backdrop as /login & /register (Auth.tsx) */}
             <div
               className="pointer-events-none absolute inset-0"

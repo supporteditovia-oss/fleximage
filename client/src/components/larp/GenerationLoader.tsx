@@ -40,7 +40,7 @@ export function GenerationLoader({
   startedAtMs = null,
   taskId = "loader",
   inputImageUrl,
-  resultUrls: _resultUrls,
+  resultUrls,
   onRevealComplete,
 }: GenerationLoaderProps) {
   const { t } = useTranslation();
@@ -53,12 +53,11 @@ export function GenerationLoader({
     ],
     [t],
   );
-  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo" | "result">(
-    "dissolve",
-  );
+  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">("dissolve");
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const [resultPreloaded, setResultPreloaded] = useState(false);
   const revealFired = useRef(false);
   const lockedEstimate = useRef(Math.max(25, Math.round(estimatedSeconds)));
 
@@ -89,17 +88,40 @@ export function GenerationLoader({
     return () => clearTimeout(timer);
   }, [phase]);
 
-  useEffect(() => {
-    if (status !== "success" || phase === "result") return;
-    setPhase("result");
-  }, [status, phase]);
+  const resultUrl = resultUrls?.[0] ?? null;
 
   useEffect(() => {
-    if (phase !== "result" || revealFired.current) return;
-    revealFired.current = true;
-    setIsExiting(true);
-    onRevealComplete?.();
-  }, [phase, onRevealComplete]);
+    if (status !== "success") {
+      setResultPreloaded(false);
+      return;
+    }
+    if (!resultUrl) {
+      setResultPreloaded(true);
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setResultPreloaded(true);
+    };
+    img.onerror = () => {
+      if (!cancelled) setResultPreloaded(true);
+    };
+    img.src = resultUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [status, resultUrl]);
+
+  useEffect(() => {
+    if (status !== "success" || !resultPreloaded || revealFired.current) return;
+    const timer = window.setTimeout(() => {
+      if (revealFired.current) return;
+      revealFired.current = true;
+      setIsExiting(true);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [status, resultPreloaded]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -109,10 +131,10 @@ export function GenerationLoader({
     return () => clearInterval(id);
   }, [progressMessages.length]);
 
-  const finishing = status !== "success" && remaining === 0;
+  const finishing =
+    status === "success" || (status !== "success" && remaining === 0);
 
-  const isBlurring = phase === "blur" || phase === "logo" || phase === "result";
-  const showContent = !isExiting;
+  const isBlurring = phase === "blur" || phase === "logo";
   const particles = useMemo(() => PARTICLES, []);
 
   return (
@@ -123,6 +145,9 @@ export function GenerationLoader({
       transition={{
         duration: isExiting ? EXIT_FADE_MS / 1000 : 0.45,
         ease: "easeInOut",
+      }}
+      onAnimationComplete={() => {
+        if (isExiting) onRevealComplete?.();
       }}
     >
       <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
@@ -173,16 +198,12 @@ export function GenerationLoader({
       )}
 
       <div className="absolute inset-0 z-10 flex w-full items-center justify-center px-4">
-        <AnimatePresence>
-          {showContent && (
-            <motion.div
-              key="loader-content"
-              className="flex w-full max-w-sm flex-col items-center justify-center gap-5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-            >
+        <motion.div
+          className="flex w-full max-w-sm flex-col items-center justify-center gap-5"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isExiting ? 0 : 1 }}
+          transition={{ duration: isExiting ? EXIT_FADE_MS / 1000 : 0.4, delay: isExiting ? 0 : 0.1 }}
+        >
               <div className="flex w-full items-center justify-center">
                 <div className="lx-gen-loader__brand">
                   <div className="lx-gen-loader__brand-inner">
@@ -209,17 +230,27 @@ export function GenerationLoader({
               </div>
 
               <div className="flex flex-col items-center gap-1.5">
-                <p
-                  className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
-                  style={{ fontFamily: "var(--lx-display)" }}
-                  aria-live="polite"
-                >
-                  <span>{remaining}</span>
-                  <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
-                    {t("progress.seconds")}
-                  </span>
-                </p>
-                {finishing && (
+                {status === "success" ? (
+                  <p
+                    className="m-0 w-full text-center text-lg font-semibold leading-snug text-[#e8c547] md:text-xl"
+                    style={{ fontFamily: "var(--lx-display)" }}
+                    aria-live="polite"
+                  >
+                    {t("progress.stepFinishing")}
+                  </p>
+                ) : (
+                  <p
+                    className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
+                    style={{ fontFamily: "var(--lx-display)" }}
+                    aria-live="polite"
+                  >
+                    <span>{remaining}</span>
+                    <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
+                      {t("progress.seconds")}
+                    </span>
+                  </p>
+                )}
+                {finishing && status !== "success" && (
                   <p className="m-0 text-center text-xs font-medium text-[#f5e6b8]/70">
                     {t("progress.stepFinishing")}
                   </p>
@@ -234,9 +265,7 @@ export function GenerationLoader({
                   {progressMessages[messageIndex]}
                 </span>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </motion.div>
       </div>
     </motion.div>
   );
