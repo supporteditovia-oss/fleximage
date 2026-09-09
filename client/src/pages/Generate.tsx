@@ -66,6 +66,7 @@ import {
   replaceOutfitPrompt,
   type BuiltinOutfit,
 } from "@/lib/builtin-outfit-templates";
+import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
@@ -1139,6 +1140,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   };
 
   const handleReset = useCallback(() => {
+    reshuffleOutfitCatalog();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
     setGenerationResultVisible(false);
@@ -1327,7 +1329,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       taskId={taskId}
       inputImageUrl={loaderInputImageUrl}
       onReset={handleReset}
-      onResultVisible={() => setGenerationResultVisible(true)}
+      onResultVisible={() => {
+        setGenerationResultVisible(true);
+        reshuffleOutfitCatalog();
+      }}
       resultType={generationMode}
       referenceImageCount={Math.max(
         1,

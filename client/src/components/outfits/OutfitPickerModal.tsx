@@ -7,6 +7,10 @@ import {
   type BuiltinOutfit,
   type OutfitGender,
 } from "@/lib/builtin-outfit-templates";
+import {
+  getDisplayOutfitsByGender,
+  getOutfitCatalogOrderVersion,
+} from "@/lib/outfit-display-order";
 import "./outfit-picker.css";
 
 type OutfitPickerModalProps = {
@@ -37,7 +41,11 @@ export function OutfitPickerModal({
   const [gender, setGender] = useState<OutfitGender>(defaultGender);
   const [confirmOutfit, setConfirmOutfit] = useState<BuiltinOutfit | null>(null);
 
-  const outfits = useMemo(() => getOutfitsByGender(gender), [gender]);
+  const catalogOrderVersion = getOutfitCatalogOrderVersion();
+  const outfits = useMemo(
+    () => getDisplayOutfitsByGender(gender),
+    [gender, catalogOrderVersion],
+  );
 
   useEffect(() => {
     if (!open) {
