@@ -22,6 +22,7 @@ import {
   persistInFlightFromApiResult,
   clearInFlightGeneration,
 } from "@/lib/in-flight-generation";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
   findTemplateByRouteKey,
@@ -506,6 +507,7 @@ export default function Modeles() {
     if (generationLockRef.current || busy) return;
     generationLockRef.current = true;
     setBusy(true);
+    const generationRequestId = createGenerationRequestId();
     try {
       const result = await generateDirect.mutateAsync({
         prompt: getBuiltinGenerationPrompt(template),
@@ -513,6 +515,9 @@ export default function Modeles() {
         images: userImages,
         use_face_asset: false,
         source: "modeles",
+        generation_request_id: generationRequestId,
+        frontend_timestamp: new Date().toISOString(),
+        click_count: 1,
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);

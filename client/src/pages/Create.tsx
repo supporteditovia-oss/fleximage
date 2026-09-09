@@ -35,6 +35,7 @@ function useCreatePageClass(mode: StudioMode) {
     } else {
       document.documentElement.classList.remove("luxeflexia-generate-page");
     }
+    document.documentElement.classList.remove("luxeflexia-video-page");
     return () => {
       document.documentElement.classList.remove("luxeflexia-create-page");
       document.documentElement.classList.remove("luxeflexia-generate-page");
@@ -62,6 +63,12 @@ export default function Create() {
       navigate("/generate", { replace: true });
     }
   }, [gateLoading, gateTimedOut, navigate, v2Enabled]);
+
+  useEffect(() => {
+    if (mode === "video") {
+      navigate("/video-ia", { replace: true });
+    }
+  }, [mode, navigate]);
 
   if (gateLoading && !gateTimedOut) {
     return <AuthResolveShell />;

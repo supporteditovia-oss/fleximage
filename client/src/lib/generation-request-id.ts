@@ -1,4 +1,4 @@
-/** Unique idempotency key per user click on « Générer ». */
+/** Clé d'idempotence unique par clic utilisateur sur « Générer ». */
 export function createGenerationRequestId(): string {
   if (
     typeof crypto !== "undefined" &&

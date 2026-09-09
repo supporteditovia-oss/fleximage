@@ -19,6 +19,16 @@ function createGenerationRequestId() {
   return randomUUID();
 }
 
+function conflictResponse(generation, generationRequestId, extras = {}) {
+  return {
+    code: "GENERATION_IN_PROGRESS",
+    message:
+      "Une génération est déjà en cours pour cette action. Aucun second appel fournisseur n'a été lancé.",
+    generationRequestId,
+    ...buildIdempotentGenerateResponse(generation, extras),
+  };
+}
+
 function readApiCallCount(metadata) {
   const meta =
     metadata && typeof metadata === "object" ? metadata : {};
@@ -79,9 +89,15 @@ async function findGenerationByRequestId(supabase, generationRequestId) {
  * Returns { kind: "claimed"|"duplicate"|"failed", generation, generationRequestId }
  */
 async function claimGenerationRequest(supabase, params) {
-  const generationRequestId =
-    normalizeGenerationRequestId(params.generationRequestId) ||
-    createGenerationRequestId();
+  const generationRequestId = normalizeGenerationRequestId(
+    params.generationRequestId,
+  );
+  if (!generationRequestId) {
+    throw Object.assign(new Error("generation_request_id requis (UUID v4)"), {
+      status: 400,
+      code: "REQUEST_ID_REQUIRED",
+    });
+  }
 
   const existing = await findGenerationByRequestId(
     supabase,
@@ -183,6 +199,7 @@ module.exports = {
   createGenerationRequestId,
   readApiCallCount,
   buildIdempotentGenerateResponse,
+  conflictResponse,
   findGenerationByRequestId,
   claimGenerationRequest,
 };

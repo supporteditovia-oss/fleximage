@@ -14,7 +14,7 @@
     "seo:indexnow": "node script/ping-indexnow.mjs",
     "start": "NODE_ENV=production bun run dist/index.js",
     "check": "tsc",
-    "test": "node --test api/_lib/generation-idempotency.test.js api/_lib/generate-image-once.test.js && tsx --test client/src/lib/generation-submit-lock.test.ts",
+    "test": "node --test api/_lib/generation-idempotency.test.js api/_lib/generate-image-once.test.js api/_lib/video-studio.test.js api/_lib/video-limits.test.js api/_lib/generate-video-once.test.js && tsx --test client/src/lib/generation-submit-lock.test.ts",
     "db:push": "drizzle-kit push",
     "cleanup:larps": "bun run script/purge-larps.ts",
     "stripe:audit": "bun run script/audit-stripe.ts",

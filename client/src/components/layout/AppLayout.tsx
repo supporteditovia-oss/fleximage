@@ -34,7 +34,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="luxeflexia-app fixed inset-0 flex w-full flex-col overflow-hidden bg-[var(--lx-surface)] text-[var(--lx-ink)]"
-      data-route={pathname === "/create" ? "create" : undefined}
+      data-route={
+        pathname === "/create"
+          ? "create"
+          : pathname === "/video-ia"
+            ? "video-ia"
+            : undefined
+      }
     >
       <FloatingHeader variant="app" />
       <main
@@ -42,11 +48,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         className="luxeflexia-app-scroll flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-4 pb-28 pt-[calc(var(--lx-app-header-h)+0.35rem)] md:px-8"
       >
         <div
-          className={
-            isWideStudioPage
-              ? "mx-auto max-w-full md:max-w-6xl"
-              : "mx-auto max-w-full md:max-w-[60vw]"
-          }
+          key={pathname}
+          className={`studio-route-enter mx-auto max-w-full ${
+            isWideStudioPage ? "md:max-w-6xl" : "md:max-w-[60vw]"
+          }`}
         >
           {children}
         </div>

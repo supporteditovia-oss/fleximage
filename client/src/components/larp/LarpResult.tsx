@@ -1,4 +1,7 @@
-import { Download, Share2, X } from "lucide-react";
+import { Clapperboard, Download, Share2, X } from "lucide-react";
+import { useLocation } from "wouter";
+import { navigateToVideoStudio } from "@/lib/video-studio-prefill";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -71,6 +74,8 @@ export function LarpResult({
 }: LarpResultProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const adminPreview = useAdminPreviewFeatures();
   const isMobile = useIsMobile();
   const [shareDialog, setShareDialog] = useState<{ imageIndex: number } | null>(
     null,
@@ -294,6 +299,20 @@ export function LarpResult({
                   />
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
+                      {adminPreview ? (
+                        <button
+                          onClick={() =>
+                            navigateToVideoStudio(setLocation, {
+                              imageUrl: url,
+                              sourceLarpId: larpId,
+                            })
+                          }
+                          className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"
+                          title="Animer en vidéo"
+                        >
+                          <Clapperboard className="h-5 w-5" />
+                        </button>
+                      ) : null}
                       <button
                         onClick={() => void handleDownload(index)}
                         className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all"

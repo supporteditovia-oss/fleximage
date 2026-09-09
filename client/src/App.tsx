@@ -26,6 +26,7 @@ import ImagePrete from "@/pages/ImagePrete";
 import Historique from "@/pages/Historique";
 import Bibliotheque from "@/pages/Bibliotheque";
 import Resultat from "@/pages/Resultat";
+import VideoIA from "@/pages/VideoIA";
 import Settings from "@/pages/Settings";
 import { SnapPixelProvider } from "@/components/analytics/SnapPixelProvider";
 import MentionsLegales from "@/pages/MentionsLegales";
@@ -197,6 +198,10 @@ function ModelesAdminRoute() {
   return <AdminPreviewRoute component={Modeles} />;
 }
 
+function VideoIAAdminRoute() {
+  return <AdminPreviewRoute component={VideoIA} />;
+}
+
 function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -246,6 +251,7 @@ function ProtectedAppRoutes() {
           <Route path="/modeles" component={ModelesAdminRoute} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
+          <Route path="/video-ia" component={VideoIAAdminRoute} />
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />
@@ -277,6 +283,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/register": "meta:titles.register",
   "/welcome": "meta:titles.welcome",
   "/generate": "meta:titles.generate",
+  "/video-ia": "Vidéo IA — LuxeFlexIA",
   "/create": "Studio — LuxeFlexIA",
   "/modeles": "Modèles — LuxeFlexIA",
   "/image-prete": "meta:titles.imageReady",
@@ -302,6 +309,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 const PROTECTED_PATHS = new Set([
   "/welcome",
   "/generate",
+  "/video-ia",
   "/create",
   "/modeles",
   "/image-prete",

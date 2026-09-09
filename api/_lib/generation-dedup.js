@@ -1,5 +1,7 @@
 /** Une seule génération en cours par utilisateur (image ou vidéo). */
 const GENERATION_DEDUP_WINDOW_MS = 120_000;
+/** Fenêtre stricte anti double-clic (requêtes concurrentes avec requestId différent). */
+const SESSION_BURST_WINDOW_MS = 5_000;
 
 function extractClientTaskId(providerTaskId) {
   const parts = String(providerTaskId || "")
@@ -9,8 +11,12 @@ function extractClientTaskId(providerTaskId) {
   return parts[parts.length - 1] || "";
 }
 
-async function findRecentInFlightGeneration(supabase, userId) {
-  const since = new Date(Date.now() - GENERATION_DEDUP_WINDOW_MS).toISOString();
+async function findRecentInFlightGeneration(
+  supabase,
+  userId,
+  windowMs = GENERATION_DEDUP_WINDOW_MS,
+) {
+  const since = new Date(Date.now() - windowMs).toISOString();
   const { data, error } = await supabase
     .from("generations")
     .select("id, provider_task_id, metadata, created_at, generation_type")
@@ -86,6 +92,7 @@ async function reserveGenerationSlot(supabase, row) {
 
 module.exports = {
   GENERATION_DEDUP_WINDOW_MS,
+  SESSION_BURST_WINDOW_MS,
   extractClientTaskId,
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,

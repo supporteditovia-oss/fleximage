@@ -1,5 +1,10 @@
 const { requireUser, sendError } = require("../user-auth");
-const { downloadAndStoreImages } = require("../r2");
+const { downloadAndStoreImages, downloadAndStoreVideo } = require("../r2");
+const { getRunwayVideoStatus } = require("../kie-runway");
+const {
+  mapStudioStage,
+  studioStageLabel,
+} = require("../video-studio");
 const {
   getAppSettings,
   isGoogleAiPromptFlagged,
@@ -197,13 +202,161 @@ module.exports = async function handler(req, res) {
       });
       return;
     }
-    const isCustomApi = activeTaskId.startsWith("custom_");
+    const resultType = larp.generation_type === "video" ? "video" : "image";
+    const pollMeta =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    const isVideoTask = activeTaskId.startsWith("video_");
+    const isAlephTask = activeTaskId.startsWith("aleph_");
+    const isKlingTask = activeTaskId.startsWith("kling_");
     let apiStatus = "waiting";
     let apiResultJson = null;
     let apiFailMsg = null;
     let apiCostTime = null;
 
-    if (isCustomApi) {
+    if (isKlingTask) {
+      const {
+        getKlingMotionStatus,
+        mapKlingMotionState,
+        extractKlingMotionVideoUrl,
+      } = require("../kie-kling-motion");
+      const klingTaskId = activeTaskId.replace("kling_", "");
+      try {
+        const klingData = await getKlingMotionStatus(klingTaskId);
+        const state = mapKlingMotionState(klingData);
+        const videoUrl = extractKlingMotionVideoUrl(klingData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = toUserFailMessage(
+            klingData.failMsg,
+            "Échec Kling Motion Control",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg =
+            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+        }
+      } catch (err) {
+        console.error("Failed to poll Kling video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de polling vidéo Kling";
+      }
+    } else if (isAlephTask) {
+      const {
+        getAlephVideoStatus,
+        mapAlephState,
+        extractAlephVideoUrl,
+      } = require("../kie-runway-aleph");
+      const alephTaskId = activeTaskId.replace("aleph_", "");
+      try {
+        const alephData = await getAlephVideoStatus(alephTaskId);
+        const state = mapAlephState(alephData);
+        const videoUrl = extractAlephVideoUrl(alephData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = toUserFailMessage(
+            alephData.errorMessage,
+            "Échec du remplacement véhicule",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg =
+            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+        }
+      } catch (err) {
+        console.error("Failed to poll Aleph video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de polling vidéo Aleph";
+      }
+    } else if (isVideoTask) {
+      const runwayTaskId = activeTaskId.replace("video_", "");
+      try {
+        const runwayData = await getRunwayVideoStatus(runwayTaskId);
+        const state = runwayData.state ?? runwayData.status ?? "waiting";
+        const videoUrl =
+          runwayData.videoInfo?.videoUrl ?? runwayData.video_url ?? null;
+        if (state === "success" || state === "completed") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail" || state === "failed") {
+          apiStatus = "fail";
+          apiFailMsg = toUserFailMessage(
+            runwayData.failMsg || runwayData.fail_reason,
+            "Échec de la génération vidéo",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg =
+            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+        }
+      } catch (err) {
+        console.error("Failed to poll Runway video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de polling vidéo";
+      }
+    } else if (activeTaskId.startsWith("custom_")) {
       const jobId = activeTaskId.replace("custom_", "");
       const currentSettings = await getAppSettings(supabase);
       const isTimeout = ageInMs > currentSettings.fallbackTimeoutMs;
@@ -295,8 +448,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const pollMeta =
-      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const qaRetryCount = Number(pollMeta.vision_qa_retry_count || 0);
     const softRetryCount = Number(
       pollMeta.oneshot_soft_retry_count || (pollMeta.oneshot_soft_retry ? 1 : 0),
@@ -333,15 +484,25 @@ module.exports = async function handler(req, res) {
             typeof apiResultJson === "string"
               ? JSON.parse(apiResultJson)
               : apiResultJson;
-          resultUrls = extractImageUrls(parsed);
+          if (resultType === "video" && parsed && parsed.video_url) {
+            const stored = await withTimeout(
+              downloadAndStoreVideo(larp.id, parsed.video_url),
+              20_000,
+              null,
+            );
+            resultUrls =
+              Array.isArray(stored) && stored.length > 0
+                ? stored
+                : [parsed.video_url];
+          } else {
+            resultUrls = extractImageUrls(parsed);
+          }
         } catch (parseErr) {
           console.error("Failed to parse result JSON", parseErr);
         }
 
-        if (resultUrls.length > 0) {
+        if (resultUrls.length > 0 && resultType !== "video") {
           try {
-            // Never block the status response past ~25s — Vercel maxDuration is 60s.
-            // On timeout, keep provider URLs so the user still gets the image.
             const stored = await withTimeout(
               downloadAndStoreImages(larp.id, resultUrls),
               4_000,
@@ -357,7 +518,10 @@ module.exports = async function handler(req, res) {
 
         if (resultUrls.length === 0) {
           apiStatus = "fail";
-          apiFailMsg = "Aucune image dans le résultat";
+          apiFailMsg =
+            resultType === "video"
+              ? "Aucune vidéo dans le résultat"
+              : "Aucune image dans le résultat";
         } else if (larp.generation_type !== "video") {
           // Vision QA: skip modèles prêts (builtin) — one image only, no auto-retry.
           const meta =
@@ -425,6 +589,14 @@ module.exports = async function handler(req, res) {
         profile?.is_subscriber || profile?.role === "admin",
       );
 
+      const terminalMeta =
+        apiStatus === "success" && resultType === "video"
+          ? {
+              ...pollMeta,
+              studio_stage: "COMPLETED",
+            }
+          : pollMeta;
+
       await supabase
         .from("generations")
         .update({
@@ -433,6 +605,7 @@ module.exports = async function handler(req, res) {
           watermarked_assets: [],
           fail_message: toUserFailMessage(apiFailMsg, null) || null,
           cost_time: apiCostTime == null ? null : Number(apiCostTime),
+          metadata: terminalMeta,
           updated_at: new Date().toISOString(),
           completed_at: new Date().toISOString(),
         })

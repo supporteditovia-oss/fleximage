@@ -155,6 +155,7 @@ async function createOneshotJob(prompt, options) {
       // Strict single-image policy — never request variants or multiple candidates.
       numberOfImages: 1,
       candidateCount: 1,
+      n: 1,
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }
         : {}),

@@ -11,7 +11,6 @@ import {
   releaseGenerationSubmitLockOnError,
   tryAcquireGenerationSubmitLock,
 } from "@/lib/generation-submit-lock";
-import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
 
 function toAssetUrls(value: unknown): string[] {
@@ -121,8 +120,8 @@ interface GenerateDirectInput {
   use_face_asset?: boolean;
   subject_type?: SubjectType;
   pose_style?: PoseStyle;
-  /** Idempotency key — one per user click. */
-  generation_request_id?: string;
+  /** Idempotency key — one per user click (obligatoire). */
+  generation_request_id: string;
   frontend_timestamp?: string;
   click_count?: number;
   source?: "generate" | "modeles" | "hero" | "catalog" | "direct";
@@ -245,11 +244,14 @@ export function useGenerateDirectLarp() {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
 
-      const generationRequestId =
-        data.generation_request_id || createGenerationRequestId();
+      if (!data.generation_request_id?.trim()) {
+        throw new Error(
+          "generation_request_id manquant — créer un UUID au clic utilisateur.",
+        );
+      }
+
       const payload: GenerateDirectInput = {
         ...data,
-        generation_request_id: generationRequestId,
         frontend_timestamp: data.frontend_timestamp || new Date().toISOString(),
         click_count: data.click_count ?? 1,
         source: data.source || (data.template_id ? "catalog" : "direct"),
@@ -262,14 +264,55 @@ export function useGenerateDirectLarp() {
         });
         const json = (await res.json()) as GenerateLarpResponse;
         if (json?.taskId) {
-          persistInFlightFromApiResult(json, payload.source === "modeles" ? "modeles" : payload.source === "hero" ? "hero" : "generate", "image");
+          persistInFlightFromApiResult(
+            json,
+            payload.source === "modeles"
+              ? "modeles"
+              : payload.source === "hero"
+                ? "hero"
+                : "generate",
+            "image",
+          );
         }
         return {
           ...json,
           generationRequestId:
-            json.generationRequestId || generationRequestId,
+            json.generationRequestId || payload.generation_request_id,
         };
       } catch (err) {
+        const status = (err as { status?: number }).status;
+        const body = (err as { body?: Record<string, unknown> }).body;
+        if (
+          status === 409 &&
+          body &&
+          typeof body === "object" &&
+          typeof body.taskId === "string" &&
+          body.taskId
+        ) {
+          const deduped: GenerateLarpResponse = {
+            id: String(body.id || body.taskId),
+            taskId: String(body.taskId),
+            status: String(body.status || "processing"),
+            estimatedSeconds:
+              typeof body.estimatedSeconds === "number"
+                ? body.estimatedSeconds
+                : null,
+            deduplicated: true,
+            generationRequestId: String(
+              body.generationRequestId || payload.generation_request_id,
+            ),
+          };
+          persistInFlightFromApiResult(
+            deduped,
+            payload.source === "modeles"
+              ? "modeles"
+              : payload.source === "hero"
+                ? "hero"
+                : "generate",
+            "image",
+          );
+          return deduped;
+        }
         releaseGenerationSubmitLockOnError();
         throw err;
       }

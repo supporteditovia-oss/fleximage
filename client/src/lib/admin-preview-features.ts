@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 
-/** Modèles prêts, catalogue outfits, etc. — visible uniquement par les admins. */
+/** Modèles prêts, catalogue outfits, studio vidéo IA, etc. — visible uniquement par les admins. */
 export function canAccessAdminPreviewFeatures(input: {
   isAdmin: boolean;
   isAuthLoading: boolean;

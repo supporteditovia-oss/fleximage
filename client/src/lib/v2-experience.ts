@@ -6,7 +6,7 @@ export function isV2ExperienceEnabled(isAdmin: boolean): boolean {
   return isAdmin;
 }
 
-export type StudioMode = "image" | "voice";
+export type StudioMode = "image" | "voice" | "video";
 
 const STUDIO_MODE_KEY = "luxeflexia:studio-mode";
 const V2_ENABLED_KEY = "luxeflexia:v2-enabled";
@@ -27,7 +27,9 @@ export function markV2ExperienceEnabled(enabled: boolean): void {
 export function readStudioMode(): StudioMode {
   if (typeof window === "undefined") return "image";
   const raw = window.localStorage.getItem(STUDIO_MODE_KEY);
-  return raw === "voice" ? "voice" : "image";
+  if (raw === "voice") return "voice";
+  if (raw === "video") return "video";
+  return "image";
 }
 
 export function writeStudioMode(mode: StudioMode): void {
@@ -95,6 +97,23 @@ export function clearSelectedVoice(): void {
 
 export function createPathForUser(v2Enabled: boolean): string {
   return v2Enabled ? "/create" : "/generate";
+}
+
+/** Route cible pour un mode studio (navigation principale). */
+export function studioPathForMode(mode: StudioMode): string {
+  if (mode === "video") return "/video-ia";
+  return "/create";
+}
+
+/** Mode actif déduit de l'URL courante. */
+export function studioModeFromPath(pathname: string): StudioMode | null {
+  if (pathname === "/video-ia" || pathname.startsWith("/video-ia/")) {
+    return "video";
+  }
+  if (pathname === "/create" || pathname.startsWith("/create/")) {
+    return readStudioMode();
+  }
+  return null;
 }
 
 export function libraryPathForUser(v2Enabled: boolean): string {

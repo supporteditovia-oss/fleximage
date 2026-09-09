@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import { Loader2, Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
@@ -148,6 +149,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
   const zeroCreditsDismissedRef = useRef(false);
+  const isGeneratingRef = useRef(false);
 
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
@@ -810,10 +812,17 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   const handleGenerate = async () => {
-    if (isStartingGeneration || generateDirect.isPending || generateVideo.isPending) {
+    if (
+      isGeneratingRef.current ||
+      isStartingGeneration ||
+      generateDirect.isPending ||
+      generateVideo.isPending
+    ) {
       console.warn("[Generate] Ignored duplicate generate click — already in flight");
       return;
     }
+    isGeneratingRef.current = true;
+    const generationRequestId = createGenerationRequestId();
     setIsStartingGeneration(true);
 
     const selectedOrPendingTemplateId =
@@ -839,6 +848,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.referenceImageRequiredTitle"),
           description: t("templateSelected.noReferenceImages"),
         });
+        isGeneratingRef.current = false;
         setIsStartingGeneration(false);
         return;
       }
@@ -848,6 +858,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.templateModeUnavailableTitle"),
           description: t("generate.templateModeUnavailableDescription"),
         });
+        isGeneratingRef.current = false;
         setIsStartingGeneration(false);
         return;
       }
@@ -863,14 +874,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             ? t("generate.referenceVideoRequiredDescription")
             : t("generate.referenceImageRequiredDescription"),
       });
+      isGeneratingRef.current = false;
       setIsStartingGeneration(false);
       return;
     }
 
-    await executeGeneration();
+    await executeGeneration(generationRequestId);
   };
 
-  const executeGeneration = async () => {
+  const executeGeneration = async (generationRequestId: string) => {
+    let generationCommitted = false;
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -1037,6 +1050,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
         setTaskId(result.taskId);
+        generationCommitted = true;
         setPendingLoading(false);
         void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
           trackFunnelStep("generate", { source: "video", taskId: result.taskId });
@@ -1061,6 +1075,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
         source: "generate",
+        generation_request_id: generationRequestId,
+        frontend_timestamp: new Date().toISOString(),
+        click_count: 1,
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1069,6 +1086,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           : null,
       );
       setTaskId(result.taskId);
+      generationCommitted = true;
       setPendingLoading(false);
       void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
         trackFunnelStep("generate", { source: "image", taskId: result.taskId });
@@ -1146,10 +1164,14 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       });
     } finally {
       setIsStartingGeneration(false);
+      if (!generationCommitted) {
+        isGeneratingRef.current = false;
+      }
     }
   };
 
   const handleReset = useCallback(() => {
+    isGeneratingRef.current = false;
     reshuffleOutfitCatalog();
     setTaskId(null);
     setGenerationEstimateSeconds(null);

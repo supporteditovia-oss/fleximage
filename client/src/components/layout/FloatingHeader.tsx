@@ -26,6 +26,8 @@ import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
 import {
   createPathForUser,
   readStudioMode,
+  studioModeFromPath,
+  studioPathForMode,
   writeStudioMode,
   type StudioMode,
 } from "@/lib/v2-experience";
@@ -35,7 +37,7 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({ variant = "landing" }: FloatingHeaderProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, profile, isAdmin, isLoading } = useAuth();
   const { v2Enabled } = useV2Access();
   const { t, i18n } = useTranslation();
@@ -90,11 +92,19 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
 
   const pathname = location.split("?")[0] || location;
   const isModelesPage = pathname === "/modeles" || pathname.startsWith("/modeles/");
-  const isCreateStudio = variant === "app" && pathname === "/create";
+  const isStudioNavPage =
+    variant === "app" &&
+    (pathname === "/create" || pathname === "/video-ia");
+  const activeStudioMode: StudioMode =
+    studioModeFromPath(pathname) ?? studioMode;
 
   const handleStudioModeChange = (next: StudioMode) => {
     if (chromeHidden) return;
     writeStudioMode(next);
+    const target = studioPathForMode(next);
+    if (pathname !== target) {
+      navigate(target);
+    }
   };
   const v2Ready = !isLoading && v2Enabled;
   const logoHref = variant === "app" ? createPathForUser(v2Ready) : "/";
@@ -375,10 +385,10 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
         )}
       </header>
 
-      {isCreateStudio && !chromeHidden ? (
+      {isStudioNavPage && !chromeHidden ? (
         <div className="floating-header__modes pointer-events-auto flex justify-center pt-2">
           <StudioModeSwitch
-            mode={studioMode}
+            mode={activeStudioMode}
             onChange={handleStudioModeChange}
             size="compact"
           />
