@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
 import { OutfitChangeQuestion } from "@/components/outfits/OutfitChangeQuestion";
 import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
+import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
 import {
   getInFlightGeneration,
@@ -600,12 +601,14 @@ export default function Modeles() {
       <GenerationProgress
         taskId={taskId}
         onReset={() => {
+          reshuffleOutfitCatalog();
           setTaskId(null);
           setGenerationEstimateSeconds(null);
           generationLockRef.current = false;
           outfitResolvedRef.current = false;
           clearInFlightGeneration();
         }}
+        onResultVisible={() => reshuffleOutfitCatalog()}
         resultType="image"
         referenceImageCount={pendingUserPhoto ? 2 : 1}
         initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
