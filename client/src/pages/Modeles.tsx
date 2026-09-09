@@ -605,6 +605,13 @@ export default function Modeles() {
     return (
       <GenerationProgress
         taskId={taskId}
+        inputImageUrl={
+          pendingUserPhoto
+            ? pendingUserPhoto.startsWith("data:")
+              ? pendingUserPhoto
+              : `data:image/jpeg;base64,${pendingUserPhoto}`
+            : undefined
+        }
         onReset={() => {
           reshuffleOutfitCatalog();
           setTaskId(null);

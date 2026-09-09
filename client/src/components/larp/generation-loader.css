@@ -4,9 +4,44 @@
   --lx-display: "Playfair Display", Georgia, serif;
 }
 
-/* Base sombre sobre */
+/* Base sombre luxe */
 .lx-gen-loader__base {
-  background: linear-gradient(180deg, #0a0a0a 0%, #141414 50%, #1a1a1a 100%);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(201, 162, 39, 0.08) 0%, transparent 55%),
+    linear-gradient(180deg, #050505 0%, #0c0c0c 45%, #121212 100%);
+}
+
+/* Grain cinématique discret */
+.lx-gen-loader__grain {
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.lx-gen-loader__frame {
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    0 0 80px rgba(201, 162, 39, 0.08);
+}
+
+.lx-gen-loader__vignette {
+  background: radial-gradient(
+    ellipse 85% 75% at 50% 45%,
+    transparent 35%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  pointer-events: none;
+}
+
+.lx-gen-loader__halo--secondary {
+  width: min(95vw, 680px);
+  height: min(95vw, 680px);
+  margin-left: calc(min(95vw, 680px) / -2);
+  margin-top: calc(min(95vw, 680px) / -2);
+  opacity: 0.12;
+  animation-duration: 14s;
+  animation-direction: reverse;
 }
 
 /* Un seul halo doré discret qui se déplace très lentement */
@@ -74,6 +109,10 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.lx-gen-loader__ring--glow {
+  box-shadow: 0 0 24px rgba(232, 197, 71, 0.35);
 }
 
 .lx-gen-loader__ring {

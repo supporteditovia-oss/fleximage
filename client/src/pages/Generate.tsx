@@ -7,11 +7,12 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Gem } from "lucide-react";
+import { Gem } from "lucide-react";
 import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { createGenerationRequestId } from "@/lib/generation-request-id";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
@@ -326,17 +327,20 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   useEffect(() => {
     if (taskId) {
       setGenerationResultVisible(false);
+      setTransitionBg(false);
     }
   }, [taskId]);
 
-  // ── Hide header/dock while fullscreen overlay is active ─────
+  // ── Hide header/dock + support widget while fullscreen overlay is active ─────
   useLayoutEffect(() => {
     if (isFullscreenOverlayActive) {
       document.documentElement.setAttribute("data-fullscreen-overlay", "true");
       document.body.setAttribute("data-fullscreen-overlay", "true");
+      window.$crisp?.push(["do", "chat:hide"]);
     } else {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      window.$crisp?.push(["do", "chat:show"]);
     }
 
     if (isPaywallOverlayActive) {
@@ -349,6 +353,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-paywall-overlay");
+      window.$crisp?.push(["do", "chat:show"]);
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
@@ -1378,32 +1383,20 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     />
   ) : null;
 
-  const portalOverlay = pendingLoading
-    ? createPortal(
-      <div
-        className="fixed inset-0 z-[100] w-full"
-        style={lxCreamBgStyle}
-        role="status"
-        aria-live="polite"
-      >
-        {/* Wordmark pinned to true viewport center; spinner sits below without shifting the brand */}
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <div className="relative flex flex-col items-center">
-            <div className="inline-flex items-center justify-center gap-2.5 md:gap-3">
-              <Gem
-                className="h-8 w-8 shrink-0 text-[var(--lx-gold)] md:h-10 md:w-10"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <BrandMark className="text-[clamp(1.5rem,6vw,2.25rem)] font-semibold leading-none text-[var(--lx-ink)]" />
-            </div>
-            <Loader2 className="absolute top-full mt-8 h-6 w-6 animate-spin text-[var(--lx-gold)]" />
-          </div>
-        </div>
-      </div>,
-      document.body,
-    )
-    : null;
+  const portalOverlay =
+    pendingLoading && !taskId ? (
+      createPortal(
+        <GenerationLoader
+          taskId="pending"
+          status="connecting"
+          estimatedSeconds={
+            generationMode === "video" ? 150 : 50
+          }
+          inputImageUrl={loaderInputImageUrl}
+        />,
+        document.body,
+      )
+    ) : null;
 
   const paywallOverlayClassName =
     "fixed inset-0 z-[100] overflow-hidden animate-in fade-in duration-300";

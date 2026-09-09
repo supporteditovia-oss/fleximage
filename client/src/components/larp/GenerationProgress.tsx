@@ -54,6 +54,7 @@ export function GenerationProgress({
   const restoredReady =
     restored?.taskId === taskId && (restored.resultUrls?.length ?? 0) > 0;
   const [revealDone, setRevealDone] = useState(restoredReady);
+  const [revealStarted, setRevealStarted] = useState(restoredReady);
   const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
@@ -98,38 +99,56 @@ export function GenerationProgress({
     void queryClient.invalidateQueries({ queryKey: ["larp-history"] });
   }, [data?.status, data?.larpId, data?.resultUrls, data?.resultType, hasResultMedia, resultType, taskId, queryClient]);
 
-  // Wait for loader exit animation before showing result
+  const primaryResultUrl = displayUrls[0] ?? null;
+
   useEffect(() => {
-    if (revealDone) {
-      const timer = setTimeout(() => setShowResult(true), 180);
-      return () => clearTimeout(timer);
+    if (!primaryResultUrl || displayResultType === "video") return;
+    const img = new Image();
+    img.src = primaryResultUrl;
+  }, [displayResultType, primaryResultUrl]);
+
+  useEffect(() => {
+    if (!hasResultMedia && !restoredReady) return;
+    if (data?.status === "success" || restoredReady) {
+      setShowResult(true);
     }
+  }, [data?.status, hasResultMedia, restoredReady]);
+
+  useEffect(() => {
+    if (revealDone) setShowResult(true);
   }, [revealDone]);
 
-  // Fallback if loader reveal never completes (e.g. animation edge case).
   useEffect(() => {
     if (data?.status !== "success" || !hasResultMedia || revealDone) return;
-    const timer = setTimeout(() => setRevealDone(true), 5000);
+    const timer = setTimeout(() => {
+      setRevealStarted(true);
+      setRevealDone(true);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [data?.status, hasResultMedia, revealDone]);
 
-  // Swap the fullscreen loader for a clean result surface.
+  // Plein écran + masquer Crisp pendant toute la génération (pas seulement sur /create).
   useEffect(() => {
-    if (showResult) {
-      document.documentElement.removeAttribute("data-fullscreen-overlay");
-      document.body.removeAttribute("data-fullscreen-overlay");
-      document.documentElement.setAttribute("data-larp-result-mode", "true");
-      document.body.setAttribute("data-larp-result-mode", "true");
-      onResultVisible?.();
-    }
+    if (fatalConnectionError || data?.status === "fail") return;
+    if (revealStarted) return;
+    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
+    document.body.setAttribute("data-fullscreen-overlay", "true");
+    window.$crisp?.push(["do", "chat:hide"]);
+  }, [data?.status, fatalConnectionError, revealStarted]);
+
+  useEffect(() => {
+    if (!revealStarted) return;
+    document.documentElement.removeAttribute("data-fullscreen-overlay");
+    document.body.removeAttribute("data-fullscreen-overlay");
+    document.documentElement.setAttribute("data-larp-result-mode", "true");
+    document.body.setAttribute("data-larp-result-mode", "true");
+    onResultVisible?.();
 
     return () => {
-      if (showResult) {
-        document.documentElement.removeAttribute("data-larp-result-mode");
-        document.body.removeAttribute("data-larp-result-mode");
-      }
+      document.documentElement.removeAttribute("data-larp-result-mode");
+      document.body.removeAttribute("data-larp-result-mode");
     };
-  }, [onResultVisible, showResult]);
+  }, [onResultVisible, revealStarted]);
 
   const loaderStatus =
     !data || isLoading
@@ -292,6 +311,7 @@ export function GenerationProgress({
             startedAtMs={startedAtMs}
             inputImageUrl={inputImageUrl}
             resultUrls={data?.resultUrls}
+            onRevealStart={() => setRevealStarted(true)}
             onRevealComplete={() => setRevealDone(true)}
           />
         )}
@@ -300,7 +320,13 @@ export function GenerationProgress({
       {/* After reveal: show the result */}
       {canShowResult &&
         createPortal(
-          <div className="fixed inset-0 z-40 overflow-hidden px-4 animate-in fade-in duration-500">
+          <div
+            className={`fixed inset-0 overflow-hidden px-4 transition-opacity duration-[400ms] ease-out ${
+              revealStarted
+                ? "z-[100] opacity-100"
+                : "z-[100] opacity-0 pointer-events-none"
+            }`}
+          >
             {/* Same backdrop as /login & /register (Auth.tsx) */}
             <div
               className="pointer-events-none absolute inset-0"
