@@ -51,6 +51,21 @@
     "categoryName": "Jets & Vol"
   },
   {
+    "id": "builtin-jet-prive-tarmac",
+    "slug": "jet-prive-tarmac",
+    "name": "Jet privé — embarquement tarmac",
+    "description": "De la salle de sport au tarmac VIP avec Gulfstream et escalier d'embarquement.",
+    "imagePath": "/models/modele-jet-prive-tarmac-avant.webp",
+    "readyImagePath": "/models/modele-jet-prive-tarmac-apres.webp",
+    "demoAfterPath": "/models/modele-jet-prive-tarmac-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure fade, sa carnation et sa morphologie réelle (comme sur la photo utilisateur). Garde exactement la pose en marche sur le tarmac d'aéroport face caméra, le t-shirt noir, le pantalon gris foncé, les baskets blanches, le sac de voyage en cuir noir à la main gauche, le petit piercing à l'oreille, le jet privé blanc Gulfstream clairement visible derrière (fuselage, ailes, hublots), l'escalier d'embarquement mobile contre la porte ouverte, les marquages blancs et jaunes sur le tarmac, le camion de service au loin, le personnel au gilet jaune, le terminal et les collines au fond, le ciel dégagé, la lumière naturelle golden hour et le cadrage vertical 9:16 de la seconde image. Scène EXTÉRIEURE sur tarmac uniquement — jamais escalier intérieur ni couloir de bâtiment. Photographie voyage VIP photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde le tarmac, le jet privé et l'escalier d'embarquement identiques.",
+    "category": "jets",
+    "categoryName": "Jets & Vol"
+  },
+  {
     "id": "builtin-scooter-urban",
     "slug": "scooter-urban",
     "name": "Scooter urbain",

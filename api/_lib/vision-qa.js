@@ -4,6 +4,11 @@
  * If no key / VISION_QA_ENABLED=0 → skip (pass) so generations never block.
  */
 
+const {
+  privateJetTarmacVisionQaBlock,
+  isPrivateJetTarmacQaContext,
+} = require("./private-jet-tarmac-guard");
+
 /** Original + 1 corrective regen max — extra passes rarely help and feel stuck. */
 const MAX_VISION_QA_RETRIES = 1;
 /** Fictional/cartoon cars: 1 retry max — more retries eat the poll budget and feel stuck. */
@@ -37,6 +42,11 @@ const CRITICAL_CODES = new Set([
   "activity_implausible",
   "money_unrealistic",
   "severe_lighting_mismatch",
+  "missing_aircraft",
+  "interior_staircase",
+  "no_tarmac",
+  "no_sky",
+  "no_boarding_stairs",
 ]);
 
 function isVisionQaEnabled() {
@@ -135,6 +145,7 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
   const request = String(userPrompt || "").slice(0, 500);
   const finalBrief = String(finalPrompt || "").slice(0, 700);
   const cartoonAsked = isFictionalVehicleQaContext(request, finalBrief);
+  const privateJetTarmacAsked = isPrivateJetTarmacQaContext(request, finalBrief);
   const cartoonNote = cartoonAsked
     ? "FICTIONAL VEHICLE OVERRIDE (critical instructions):\n" +
       "- User wants a cartoon/animated/game/fictional vehicle design (e.g. Cars movie), possibly with photoreal materials.\n" +
@@ -148,12 +159,14 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     : "PRIORITY #1 — DOOR STATE (REAL cars only):\n" +
       "If physical doors look CLOSED → white top-down car silhouette on screens must show ALL doors closed (no red open-door). " +
       "Contradiction = CRITICAL door_state_contradiction.\n";
+  const privateJetBlock = privateJetTarmacAsked ? privateJetTarmacVisionQaBlock() : "";
   return (
     "You are a strict photoreal image-edit QA inspector for a lifestyle photo AI product (Luxeflexia). " +
     "Inspect the RESULT image against the user request. Reply with JSON ONLY (no markdown).\n" +
     "Schema:\n" +
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
     cartoonNote +
+    privateJetBlock +
     doorBlock +
     "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +
     "If only minor softness/noise, pass=true critical=false.\n" +

@@ -9,6 +9,16 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  isPrivateJetBoardingPrompt,
+  isPrivateJetCabinPrompt,
+  isPrivateJetPrompt,
+  PRIVATE_JET_TARMAC_CLARIFIER,
+  PRIVATE_JET_TARMAC_GUARD,
+  buildPrivateJetTarmacPrompt,
+  isPrivateJetTarmacQaContext,
+  buildPrivateJetTarmacRetryPrefix,
+} = require("./private-jet-tarmac-guard");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -1103,6 +1113,7 @@ function isYachtPrimaryPrompt(prompt) {
  * Explicit car model names (Urus, etc.) override this.
  */
 function isNonCarLifestylePrompt(prompt) {
+  if (isPrivateJetBoardingPrompt(prompt)) return true;
   if (isGolfSportPrompt(prompt)) return true;
   if (isYachtBoatActivityPrompt(prompt)) return true;
   const text = normalizePromptText(prompt);
@@ -1129,11 +1140,25 @@ function isNonCarLifestylePrompt(prompt) {
  */
 function scenePlacementHint(prompt) {
   const text = normalizePromptText(prompt);
+  if (isPrivateJetBoardingPrompt(prompt)) {
+    return (
+      " (JET TARMAC PLACE: subject on outdoor airport tarmac walking toward a visible private jet OR climbing mobile boarding stairs against the aircraft door. " +
+      "Real contact shadows on asphalt. Jet fuselage, wings, and windows readable in the same photo. NOT cabin interior. NOT indoor building stairs.)"
+    );
+  }
   if (
-    /\b(business\s*class|first\s*class|classe\s*affaires|premiere\s*classe|premi[eè]re\s*classe|avion|airplane|jet\s*priv|private\s*jet|cabine)\b/.test(
+    /\b(business\s*class|first\s*class|classe\s*affaires|premiere\s*classe|premi[eè]re\s*classe|cabine)\b/.test(
       text,
-    )
+    ) ||
+    (isPrivateJetCabinPrompt(prompt) &&
+      /\b(cabine|cabin|interieur|interior|assis|seated|selfie|hublot)\b/.test(text))
   ) {
+    return (
+      " (PLANE SEAT: sit fully inside the seat — hips on cushion, back on seatback, legs forward, arms on armrests or lap. " +
+      "Natural travel pose, NOT the reference selfie hand-on-cheek. Match cabin light.)"
+    );
+  }
+  if (/\b(avion|airplane|aircraft)\b/.test(text) && !isPrivateJetPrompt(text)) {
     return (
       " (PLANE SEAT: sit fully inside the seat — hips on cushion, back on seatback, legs forward, arms on armrests or lap. " +
       "Natural travel pose, NOT the reference selfie hand-on-cheek. Match cabin light.)"
@@ -1220,6 +1245,7 @@ const POSE_VARIETY_CLARIFIER =
  * Short prompts default to conservative local edits.
  */
 function isLocalObjectEditPrompt(prompt) {
+  if (isPrivateJetBoardingPrompt(prompt)) return false;
   if (
     isPersonSwapPrompt(prompt) ||
     isFacialHairPrompt(prompt) ||
@@ -1280,6 +1306,7 @@ function isWeatherAtmospherePrompt(prompt) {
 }
 
 function isStairEditPrompt(prompt) {
+  if (isPrivateJetBoardingPrompt(prompt)) return false;
   const text = String(prompt || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -1722,6 +1749,7 @@ function isMotorcycleRidePrompt(prompt) {
  */
 function isLifestyleRelocatePrompt(prompt) {
   if (
+    isPrivateJetBoardingPrompt(prompt) ||
     isStairEditPrompt(prompt) ||
     isFacialHairPrompt(prompt) ||
     isPersonSwapPrompt(prompt) ||
@@ -2667,8 +2695,14 @@ function sanitizeUserPrompt(prompt) {
     !isCameraViewpointChangePrompt(cleaned) &&
     isLocalObjectEditPrompt(cleaned);
   const stairRequest = isStairEditPrompt(cleaned);
+  const privateJetBoardingRequest =
+    isPrivateJetBoardingPrompt(cleaned) || isPrivateJetBoardingPrompt(prompt);
 
   const norm = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  if (privateJetBoardingRequest && !/JET TARMAC LOCK/i.test(cleaned)) {
+    cleaned = `${PRIVATE_JET_TARMAC_CLARIFIER}${cleaned}`;
+  }
 
   // Animals on shoulder / ground — front-load anti-sticker (shadow + light) first.
   if (animalRequest) {
@@ -3361,6 +3395,13 @@ function sanitizeUserPrompt(prompt) {
     if (front) cleaned = `${front}${cleaned}`;
   }
 
+  if (
+    (isPrivateJetBoardingPrompt(cleaned) || isPrivateJetBoardingPrompt(prompt)) &&
+    !/PRIVATE JET TARMAC BOARDING/i.test(cleaned)
+  ) {
+    cleaned = `${PRIVATE_JET_TARMAC_GUARD}${cleaned}`;
+  }
+
   return cleaned;
 }
 
@@ -3452,6 +3493,10 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const fullRewrite = isFullSceneRewritePrompt(userPrompt);
   const cleaned = sanitizeUserPrompt(userPrompt);
   if (!cleaned) return cleaned;
+
+  if (isPrivateJetBoardingPrompt(userPrompt)) {
+    return buildPrivateJetTarmacPrompt(userPrompt, options);
+  }
 
   if (isStairEditPrompt(userPrompt)) {
     return buildStairClosedSlabPrompt(userPrompt);
@@ -3975,6 +4020,13 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
         .slice(0, 6)
     : [];
   const blob = list.join(" ").toLowerCase();
+  if (isPrivateJetTarmacQaContext("", base)) {
+    const jetFix = buildPrivateJetTarmacRetryPrefix(issues);
+    const combined = `${jetFix}${base}`;
+    return combined.length <= MAX_FINAL_PROMPT
+      ? combined
+      : combined.slice(0, MAX_FINAL_PROMPT);
+  }
   const doorFail =
     /\bdoor_state_contradiction\b/.test(blob) ||
     /\b(door.?open|open.?door|porte\s+ouverte|red\s+door|ajar)\b/.test(blob);
@@ -4069,6 +4121,10 @@ module.exports = {
   motorcycleWheelContactHint,
   isLocalObjectEditPrompt,
   isStairEditPrompt,
+  isPrivateJetBoardingPrompt,
+  isPrivateJetCabinPrompt,
+  isPrivateJetPrompt,
+  buildPrivateJetTarmacPrompt,
   isWeatherAtmospherePrompt,
   isLifestyleRelocatePrompt,
   isGolfSportPrompt,
