@@ -159,12 +159,38 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
+  const meta =
+    claim.generation.metadata && typeof claim.generation.metadata === "object"
+      ? claim.generation.metadata
+      : {};
+  const existingJobId =
+    typeof meta.oneshot_job_id === "string" && meta.oneshot_job_id.trim()
+      ? meta.oneshot_job_id.trim()
+      : null;
+  if (existingJobId) {
+    const externalTaskId = `custom_${existingJobId}`;
+    console.info("[generate-image-once] reusing existing oneshot job", {
+      generationId,
+      oneshotJobId: existingJobId,
+      ...logContext,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId,
+      apiCallCount: readApiCallCount(meta),
+      provider: "oneshot",
+    };
+  }
+
   const referenceFileIds =
     Array.isArray(imageUrls) && imageUrls.length > 0
       ? await uploadImageUrlsToOneshot(imageUrls)
       : [];
 
   const oneshotResponse = await createOneshotJob(finalPrompt, {
+    generationId,
+    caller: "generateImageOnce",
     aspectRatio,
     modelVariant,
     ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),

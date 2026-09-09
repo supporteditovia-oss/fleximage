@@ -9,8 +9,6 @@ const {
   getAppSettings,
   isGoogleAiPromptFlagged,
   getOneshotJobStatus,
-  uploadImageUrlsToOneshot,
-  createOneshotJob,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
 const { getKieTaskStatus } = require("../kie");
@@ -537,8 +535,6 @@ module.exports = async function handler(req, res) {
                 supabase,
                 larp,
                 resultUrls,
-                uploadImageUrlsToOneshot,
-                createOneshotJob,
                 buildVisionQaRetryPrompt,
                 aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
                 modelVariant: qaModelVariant,

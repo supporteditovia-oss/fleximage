@@ -150,6 +150,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const { data: templatesList } = useTemplates();
   const zeroCreditsDismissedRef = useRef(false);
   const isGeneratingRef = useRef(false);
+  const autoGenerateFiredRef = useRef(false);
 
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
@@ -1172,6 +1173,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
 
   const handleReset = useCallback(() => {
     isGeneratingRef.current = false;
+    autoGenerateFiredRef.current = false;
     reshuffleOutfitCatalog();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
@@ -1274,6 +1276,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       console.log("[Generate] Waiting for auth to load before auto-generate...");
       return; // effect will re-fire when isAuthLoading changes
     }
+    if (autoGenerateFiredRef.current) return;
+    autoGenerateFiredRef.current = true;
     setAutoGenerateReady(false);
 
     // Hard guard: never auto-bill when revisiting Créer.

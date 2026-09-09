@@ -396,16 +396,12 @@ async function maybeRetryAfterVisionQa({
   supabase,
   larp,
   resultUrls,
-  uploadImageUrlsToOneshot,
-  createOneshotJob,
   buildVisionQaRetryPrompt,
   aspectRatio,
   modelVariant,
 } = {}) {
   void supabase;
   void resultUrls;
-  void uploadImageUrlsToOneshot;
-  void createOneshotJob;
   void buildVisionQaRetryPrompt;
   void aspectRatio;
   void modelVariant;
