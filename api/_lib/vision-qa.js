@@ -4,8 +4,10 @@
  * If no key / VISION_QA_ENABLED=0 → skip (pass) so generations never block.
  */
 
-/** Original + 1 corrective regen max — extra passes rarely help and feel stuck. */
-const MAX_VISION_QA_RETRIES = 1;
+const { GLOBAL_REALISM_QA_CHECKLIST } = require("./global-realism-guard");
+
+/** Original + up to 2 corrective regens — global realism QA rejects AI/mannequin looks. */
+const MAX_VISION_QA_RETRIES = 2;
 /** Fictional/cartoon cars: 1 retry max — more retries eat the poll budget and feel stuck. */
 const MAX_VISION_QA_RETRIES_FICTIONAL = 1;
 /** Lifestyle + named luxury car: 1 retry — wrong-brand cabins rarely fix on pass 2+. */
@@ -37,6 +39,13 @@ const CRITICAL_CODES = new Set([
   "activity_implausible",
   "money_unrealistic",
   "severe_lighting_mismatch",
+  "ai_look",
+  "mannequin_pose",
+  "beauty_filter",
+  "catalog_photo",
+  "studio_look",
+  "incoherent_location",
+  "oversaturated_hdr",
 ]);
 
 function isVisionQaEnabled() {
@@ -155,7 +164,9 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
     cartoonNote +
     doorBlock +
-    "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +
+    GLOBAL_REALISM_QA_CHECKLIST +
+    "Issue codes include: identity_lost, plastic_face, beauty_filter, ai_look, mannequin_pose, catalog_photo, studio_look, anatomy_error, bad_physical_placement, floating_person, pose_paste, incoherent_location, oversaturated_hdr, gibberish_text, distorted_logo.\n" +
+    "Check: edit applied, identity, skin pores/texture, pose for outfit+scene, placement, anatomy (5 fingers), clothing folds, accessories scale, decor/light coherence, AI/ad/mannequin/3D artifacts.\n" +
     "If only minor softness/noise, pass=true critical=false.\n" +
     "correctiveInstructions: short English fix for CRITICAL issues only (max 400 chars).\n" +
     `User request: ${request}\n` +
