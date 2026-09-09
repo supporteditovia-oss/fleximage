@@ -68,6 +68,11 @@ import {
 } from "@/lib/builtin-outfit-templates";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import {
+  suggestImageEditMode,
+  isExplicitMultiPersonPreservePrompt,
+  type ImageEditMode,
+} from "@/lib/image-edit-mode";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -137,7 +142,27 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     useState<GenerationMode>("image");
   const [aspectRatio, setAspectRatio] =
     useState<GenerationAspectRatio>(OUTPUT_ASPECT_RATIO);
-  const { toast } = useToast();
+  const [imageEditMode, setImageEditMode] = useState<ImageEditMode>("auto");
+  const hasReferenceImage = images.some((img) => img !== null);
+
+  useEffect(() => {
+    if (!hasReferenceImage) {
+      setImageEditMode("create");
+      return;
+    }
+    if (
+      suggestImageEditMode(prompt, true) === "edit" ||
+      isExplicitMultiPersonPreservePrompt(prompt)
+    ) {
+      setImageEditMode("edit");
+    }
+  }, [prompt, hasReferenceImage]);
+
+  useEffect(() => {
+    if (hasReferenceImage && imageEditMode === "create" && !prompt.trim()) {
+      setImageEditMode("edit");
+    }
+  }, [hasReferenceImage, imageEditMode, prompt]);
   const topRef = useRef<HTMLDivElement>(null);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
@@ -1050,6 +1075,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
+        edit_mode: hasReferenceImage ? imageEditMode : "create",
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&
@@ -1503,6 +1529,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 canGenerate={images.some((img) => img !== null)}
                 aspectRatio={aspectRatio}
                 onAspectRatioChange={setAspectRatio}
+                hasReferenceImage={hasReferenceImage}
+                imageEditMode={imageEditMode}
+                onImageEditModeChange={setImageEditMode}
               />
 
               {adminPreview ? <TemplateStrip variant="compact" /> : null}

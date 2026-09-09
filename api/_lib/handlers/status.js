@@ -511,6 +511,14 @@ module.exports = async function handler(req, res) {
               });
               return;
             }
+
+            if (qaDecision && qaDecision.action === "fail") {
+              apiStatus = "fail";
+              apiFailMsg =
+                (qaDecision.qa && qaDecision.qa.userMessage) ||
+                "La modification n'a pas pu préserver toutes les personnes de ta photo.";
+              resultUrls = [];
+            }
           }
         }
       }

@@ -120,6 +120,8 @@ interface GenerateDirectInput {
   use_face_asset?: boolean;
   subject_type?: SubjectType;
   pose_style?: PoseStyle;
+  /** auto | edit (preserve people) | create (free generation) */
+  edit_mode?: "auto" | "edit" | "create";
 }
 
 interface GenerateVideoInput {

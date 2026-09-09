@@ -9,6 +9,17 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  BACKGROUND_EDIT_GUARD,
+  BACKGROUND_EDIT_CLARIFIER,
+  MULTI_PERSON_PRESERVE_CLARIFIER,
+  NO_INVENTED_SCENE_VEHICLE_CLARIFIER,
+  isBackgroundEditPrompt,
+  isBackgroundChangeIntent,
+  buildBackgroundEditPromptHead,
+  peopleCountClarifier,
+  resolveImageEditMode,
+} = require("./background-edit-guard");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -1721,6 +1732,9 @@ function isMotorcycleRidePrompt(prompt) {
  * Not a local inpaint, not "add parked cars to this garage".
  */
 function isLifestyleRelocatePrompt(prompt) {
+  if (isBackgroundEditPrompt(prompt, { hasReferenceImage: true, referenceImageCount: 1 })) {
+    return false;
+  }
   if (
     isStairEditPrompt(prompt) ||
     isFacialHairPrompt(prompt) ||
@@ -2619,7 +2633,11 @@ function sanitizeUserPrompt(prompt) {
   const cockpitRefineRequest =
     !cartoonVehicleRequest && isVehicleCockpitRefinePrompt(prompt);
   const animalRequest = isAddAnimalPrompt(cleaned);
-  const lifestyleRequest = isLifestyleRelocatePrompt(cleaned);
+  const backgroundEditRequest =
+    isBackgroundEditPrompt(cleaned, { hasReferenceImage: true, referenceImageCount: 1 }) ||
+    isBackgroundEditPrompt(prompt, { hasReferenceImage: true, referenceImageCount: 1 });
+  const lifestyleRequest =
+    !backgroundEditRequest && isLifestyleRelocatePrompt(cleaned);
   const vehicleReplaceRequest =
     !cartoonVehicleRequest &&
     !addVehiclesRequest &&
@@ -2686,6 +2704,18 @@ function sanitizeUserPrompt(prompt) {
     const placeHint = animalPlacementHint(prompt);
     if (placeHint && !/ANIMAL PLACE:/i.test(cleaned)) {
       cleaned = `${cleaned}${placeHint}`;
+    }
+  }
+
+  if (backgroundEditRequest) {
+    if (!/BACKGROUND EDIT LOCK/i.test(cleaned)) {
+      cleaned = `${BACKGROUND_EDIT_CLARIFIER}${cleaned}`;
+    }
+    if (!/MULTI-PERSON LOCK/i.test(cleaned)) {
+      cleaned = `${MULTI_PERSON_PRESERVE_CLARIFIER}${cleaned}`;
+    }
+    if (!/NO INVENTED VEHICLE/i.test(cleaned)) {
+      cleaned = `${NO_INVENTED_SCENE_VEHICLE_CLARIFIER}${cleaned}`;
     }
   }
 
@@ -3379,6 +3409,26 @@ function qualitySuffix(includeCelebrityGuard) {
   return parts.filter(Boolean).join(" ");
 }
 
+/** Backdrop-only edit — freeze all people, replace environment behind them. */
+function buildBackgroundEditPrompt(userPrompt, options = {}) {
+  const visiblePeopleCount = Math.max(0, Number(options.visiblePeopleCount) || 0);
+  const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
+  const celebInject = looksLikeNamedPublicFigurePrompt(userPrompt)
+    ? buildCelebrityAppearanceInjection(userPrompt)
+    : "";
+  const head =
+    `${buildBackgroundEditPromptHead({ visiblePeopleCount })}${celebInject ? ` ${celebInject}` : ""}` +
+    `${subjectPoseBlock ? ` ${subjectPoseBlock}` : ""} ${SEAMLESS_BLEND_LOCK}`.trim();
+  const rawUser = String(userPrompt || "").trim();
+  const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 20);
+  const core = `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  const suffix = qualitySuffix(Boolean(celebInject));
+  for (const candidate of [`${core} ${suffix}`, core]) {
+    if (candidate.length <= MAX_FINAL_PROMPT) return candidate;
+  }
+  return core.slice(0, MAX_FINAL_PROMPT);
+}
+
 /**
  * Build final provider prompt.
  * Priority: scene guard + celebrity cards + user request (never truncated first).
@@ -3456,6 +3506,30 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   if (isStairEditPrompt(userPrompt)) {
     return buildStairClosedSlabPrompt(userPrompt);
   }
+
+  const editMode = String(options.editMode || "auto").toLowerCase();
+  const visiblePeopleCount = Math.max(0, Number(options.visiblePeopleCount) || 0);
+  const backgroundEditRequest =
+    referenceImageCount >= 1 &&
+    !rawFacialHair &&
+    !isPersonSwapPrompt(userPrompt) &&
+    !rawVehicleReplace &&
+    !rawCockpitInteriorReplace &&
+    !rawAddVehicles &&
+    isBackgroundEditPrompt(userPrompt, {
+      editMode,
+      referenceImageCount,
+      hasReferenceImage: true,
+      visiblePeopleCount,
+    });
+  if (backgroundEditRequest) {
+    return buildBackgroundEditPrompt(userPrompt, {
+      referenceImageCount,
+      visiblePeopleCount,
+      subjectPoseBlock: String(options.subjectPoseBlock || "").trim(),
+    });
+  }
+
   // Fictional / cartoon / game cars — dedicated path (real cabin guards kill these).
   if (
     !rawFacialHair &&
@@ -3975,6 +4049,13 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
         .slice(0, 6)
     : [];
   const blob = list.join(" ").toLowerCase();
+  const peopleFail =
+    /\b(wrong_people_count|missing_person|person_replaced|person_removed|extra_person|face_fusion|invented_vehicle_scene)\b/.test(
+      blob,
+    ) ||
+    /\b(missing\s+person|person\s+removed|wrong\s+people|solo\s+portrait|companion\s+gone)\b/.test(
+      blob,
+    );
   const doorFail =
     /\bdoor_state_contradiction\b/.test(blob) ||
     /\b(door.?open|open.?door|porte\s+ouverte|red\s+door|ajar)\b/.test(blob);
@@ -3987,10 +4068,12 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
       : "fix critical photoreal defects (door open warning, pose paste, floating body, plastic face, gibberish text, wrong cabin, speed contradiction, anatomy)";
   const doorFix = cartoonBase
     ? "FICTIONAL VEHICLE REQUIRED: preserve THAT vehicle's design language (exterior + matching interior). Photoreal materials OK if asked — FORBIDDEN to substitute a generic Ferrari/Porsche/Lamborghini/Urus cabin. Match reference if uploaded. "
-    : doorFail
-      ? "DOOR FIX (highest priority): physical doors are CLOSED → erase EVERY red open-door highlight on the white top-down car graphic on cluster AND MMI. " +
-        "Show ALL doors closed on that white outline. Keep red ONLY if a door is visibly open in the photo. No contradictory door alerts. "
-      : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
+    : peopleFail
+      ? "PEOPLE PRESERVE FIX (highest priority): restore ALL people from the reference photo — exact same count, same faces, same positions, same selfie crop. Background/backdrop ONLY changed. FORBIDDEN: solo portrait, missing companion/celebrity, new faces, car interior, dashboard, driver seat. "
+      : doorFail
+        ? "DOOR FIX (highest priority): physical doors are CLOSED → erase EVERY red open-door highlight on the white top-down car graphic on cluster AND MMI. " +
+          "Show ALL doors closed on that white outline. Keep red ONLY if a door is visibly open in the photo. No contradictory door alerts. "
+        : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
   const prefix =
     "QA CORRECTION PASS (mandatory). Keep the SAME person identity. " +
     doorFix +
@@ -4033,6 +4116,10 @@ function buildFacialHairHardRetryPrompt(finalPrompt) {
 
 module.exports = {
   buildIdentityPreservingPrompt,
+  buildBackgroundEditPrompt,
+  isBackgroundEditPrompt,
+  resolveImageEditMode,
+  BACKGROUND_EDIT_GUARD,
   buildBuiltinTemplateFaceSwapPrompt,
   buildBuiltinTemplateFaceSwapWithOutfitPrompt,
   expandImageEditUserRequest,

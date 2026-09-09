@@ -10,6 +10,8 @@ const MAX_VISION_QA_RETRIES = 1;
 const MAX_VISION_QA_RETRIES_FICTIONAL = 1;
 /** Lifestyle + named luxury car: 1 retry — wrong-brand cabins rarely fix on pass 2+. */
 const MAX_VISION_QA_RETRIES_LIFESTYLE = 1;
+/** Background edit: up to 2 retries — missing companion is common on pass 1. */
+const MAX_VISION_QA_RETRIES_BACKGROUND_EDIT = 2;
 /** Parked-car body swap: 1 retry — pass 2+ rarely fixes pose/background drift. */
 const MAX_VISION_QA_RETRIES_VEHICLE_REPLACE = 1;
 const VISION_QA_TIMEOUT_MS = 12_000;
@@ -32,6 +34,12 @@ const CRITICAL_CODES = new Set([
   "bad_physical_placement",
   "plastic_face",
   "fake_background_person",
+  "wrong_people_count",
+  "missing_person",
+  "person_replaced",
+  "extra_person",
+  "face_fusion",
+  "invented_vehicle_scene",
   "door_state_contradiction",
   "speed_state_contradiction",
   "activity_implausible",
@@ -131,10 +139,26 @@ function sanitizeQaForFictional(qa, userPrompt, finalPrompt) {
   };
 }
 
-function buildQaSystemPrompt(userPrompt, finalPrompt) {
+function isBackgroundEditQaContext(userPrompt, finalPrompt, metadata = {}) {
+  if (metadata && metadata.edit_mode === "edit") return true;
+  const text = `${userPrompt || ""} ${finalPrompt || ""}`;
+  return (
+    /\bBACKGROUND-ONLY IMAGE EDIT\b/i.test(text) ||
+    /\bBACKGROUND EDIT LOCK\b/i.test(text) ||
+    /\bMULTI-PERSON LOCK\b/i.test(text)
+  );
+}
+
+function buildQaSystemPrompt(userPrompt, finalPrompt, options = {}) {
   const request = String(userPrompt || "").slice(0, 500);
   const finalBrief = String(finalPrompt || "").slice(0, 700);
+  const expectedPeople = Math.max(0, Number(options.expectedPeopleCount) || 0);
   const cartoonAsked = isFictionalVehicleQaContext(request, finalBrief);
+  const backgroundEdit = isBackgroundEditQaContext(
+    request,
+    finalBrief,
+    options.metadata || {},
+  );
   const cartoonNote = cartoonAsked
     ? "FICTIONAL VEHICLE OVERRIDE (critical instructions):\n" +
       "- User wants a cartoon/animated/game/fictional vehicle design (e.g. Cars movie), possibly with photoreal materials.\n" +
@@ -148,12 +172,22 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     : "PRIORITY #1 — DOOR STATE (REAL cars only):\n" +
       "If physical doors look CLOSED → white top-down car silhouette on screens must show ALL doors closed (no red open-door). " +
       "Contradiction = CRITICAL door_state_contradiction.\n";
+  const peopleBlock = backgroundEdit
+    ? "PRIORITY #1 — PEOPLE PRESERVATION (background edit):\n" +
+      (expectedPeople >= 2
+        ? `Reference had ${expectedPeople} people — result MUST show exactly ${expectedPeople} distinguishable people with the same faces/positions. `
+        : "Keep every person from the reference — same count, faces, poses, crop. ") +
+      "CRITICAL if: wrong_people_count, missing_person (companion/celebrity gone), person_replaced, extra_person, face_fusion. " +
+      "CRITICAL invented_vehicle_scene if a car interior/dashboard/driver POV appeared but was NOT requested. " +
+      "PASS if only the backdrop changed and all people remain.\n"
+    : "";
   return (
     "You are a strict photoreal image-edit QA inspector for a lifestyle photo AI product (Luxeflexia). " +
     "Inspect the RESULT image against the user request. Reply with JSON ONLY (no markdown).\n" +
     "Schema:\n" +
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
     cartoonNote +
+    peopleBlock +
     doorBlock +
     "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +
     "If only minor softness/noise, pass=true critical=false.\n" +
@@ -317,6 +351,9 @@ async function inspectGenerationResult({
   imageUrl,
   userPrompt,
   finalPrompt,
+  referenceImageUrl,
+  expectedPeopleCount,
+  metadata,
 } = {}) {
   if (!imageUrl) {
     return {
@@ -339,7 +376,10 @@ async function inspectGenerationResult({
 
   const provider = getVisionProvider();
   const apiKey = getVisionApiKey();
-  const promptText = buildQaSystemPrompt(userPrompt, finalPrompt);
+  const promptText = buildQaSystemPrompt(userPrompt, finalPrompt, {
+    expectedPeopleCount,
+    metadata,
+  });
 
   try {
     const image = await withTimeout(fetchImageAsBase64(imageUrl), 10_000, null);
@@ -423,17 +463,24 @@ async function maybeRetryAfterVisionQa({
     larp && larp.prompt,
     larp && larp.final_prompt,
   );
+  const backgroundEdit = isBackgroundEditQaContext(
+    larp && larp.prompt,
+    larp && larp.final_prompt,
+    meta,
+  );
   // Vehicle body swap: deliver first pass — QA retries add ~60s for little gain.
   if (vehicleReplace) {
     return { action: "accept", qa: { skipped: true, reason: "vehicle_replace_fast" } };
   }
   const maxRetries = fictional
     ? MAX_VISION_QA_RETRIES_FICTIONAL
-    : lifestyleVehicle
-      ? MAX_VISION_QA_RETRIES_LIFESTYLE
-      : vehicleReplace
-        ? MAX_VISION_QA_RETRIES_VEHICLE_REPLACE
-        : MAX_VISION_QA_RETRIES;
+    : backgroundEdit
+      ? MAX_VISION_QA_RETRIES_BACKGROUND_EDIT
+      : lifestyleVehicle
+        ? MAX_VISION_QA_RETRIES_LIFESTYLE
+        : vehicleReplace
+          ? MAX_VISION_QA_RETRIES_VEHICLE_REPLACE
+          : MAX_VISION_QA_RETRIES;
   const atMaxRetries = retryCount >= maxRetries;
 
   if (!isVisionQaEnabled()) {
@@ -442,14 +489,54 @@ async function maybeRetryAfterVisionQa({
 
   const imageUrl =
     Array.isArray(resultUrls) && resultUrls[0] ? resultUrls[0] : null;
+  const referenceImageUrl =
+    Array.isArray(larp.input_assets) && larp.input_assets[0]
+      ? larp.input_assets[0]
+      : null;
+  const expectedPeopleCount = Number(
+    meta.expected_people_count ||
+      meta.subject_analysis?.visible_people_count ||
+      0,
+  );
   const qa = await inspectGenerationResult({
     imageUrl,
+    referenceImageUrl,
+    expectedPeopleCount,
+    metadata: meta,
     userPrompt: larp.prompt,
     finalPrompt: larp.final_prompt,
   });
 
   if (!qa || qa.skipped || !qa.critical) {
     return { action: "accept", qa };
+  }
+
+  // Background edit: never deliver when a person disappeared — retry or fail clearly.
+  if (backgroundEdit && atMaxRetries) {
+    const peopleIssue = (qa.issues || []).some((i) =>
+      [
+        "wrong_people_count",
+        "missing_person",
+        "person_replaced",
+        "identity_lost",
+        "invented_vehicle_scene",
+      ].includes(String(i.code || "")),
+    );
+    if (peopleIssue) {
+      console.warn("[vision-qa] background edit people fail after max retries — failing", {
+        larpId: larp && larp.id,
+        issues: (qa.issues || []).map((i) => i.code),
+      });
+      return {
+        action: "fail",
+        qa: {
+          ...qa,
+          reason: "people_preserve_failed",
+          userMessage:
+            "La modification n'a pas pu préserver toutes les personnes de ta photo. Réessaie avec le mode « Modifier mon image » ou un prompt plus précis (ex. garde les personnes, change seulement le fond).",
+        },
+      };
+    }
   }
 
   // Critical but no retries left — deliver best effort (cost limit).
