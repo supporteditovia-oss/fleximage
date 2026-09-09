@@ -1,16 +1,17 @@
-const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
   getOneshotApiConfig,
-  getAppSettings,
   isGoogleAiPromptFlagged,
-  uploadImageUrlsToOneshot,
-  createOneshotJob,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
-const { createKieTask, isKieConfigured } = require("../kie");
+const { generateImageOnce } = require("../generate-image-once");
+const {
+  normalizeGenerationRequestId,
+  buildIdempotentGenerateResponse,
+  claimGenerationRequest,
+} = require("../generation-idempotency");
 const {
   OUTPUT_ASPECT_RATIO,
   checkGenerationLimits,
@@ -22,7 +23,7 @@ const {
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { analyzeSubjectContext } = require("../subject-analysis");
-const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, buildLiteralRetryPrompt, buildFacialHairHardRetryPrompt, isFacialHairPrompt, isAddAnimalPrompt, isShopifyTrophyPrompt, isMotorcycleRidePrompt, isMotorcycleReplacePrompt, isFictionalVehiclePrompt, needsProModelVariant, estimateGenerationSeconds } = require("../prompt-guard");
+const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -36,7 +37,6 @@ const {
 const {
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
-  reserveGenerationSlot,
 } = require("../generation-dedup");
 
 function normalizeAspectRatio(value) {
@@ -173,13 +173,7 @@ module.exports = async function handler(req, res) {
     }
 
     const oneshotConfig = getOneshotApiConfig();
-    const appSettings = await getAppSettings(supabase);
-    const kieReady = isKieConfigured();
-
-    if (
-      (appSettings.forceKieAi || !oneshotConfig.url || !oneshotConfig.key) &&
-      !kieReady
-    ) {
+    if (!oneshotConfig.url || !oneshotConfig.key) {
       res.status(503).json({
         message:
           "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
@@ -187,34 +181,68 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Reserve DB slot + debit credits BEFORE slow upload/prompt (blocks race/double-click).
-    const pendingTaskId = `pending_${randomUUID()}`;
+    const generationRequestId = normalizeGenerationRequestId(
+      body.generation_request_id,
+    );
+    const frontendTimestamp =
+      typeof body.frontend_timestamp === "string"
+        ? body.frontend_timestamp
+        : null;
+    const clickCount =
+      typeof body.click_count === "number" && body.click_count > 0
+        ? body.click_count
+        : 1;
+    const source =
+      typeof body.source === "string" && body.source.trim()
+        ? body.source.trim()
+        : templateId
+          ? "catalog"
+          : "direct";
+
     const generationTemplateId = isBuiltinTemplateId(templateId)
       ? null
       : templateId;
-    const reserved = await reserveGenerationSlot(supabase, {
-      user_id: userId,
-      template_id: generationTemplateId,
-      generation_type: "image",
-      prompt: prompt,
-      final_prompt: prompt,
-      provider: "oneshot",
-      provider_task_id: pendingTaskId,
-      status: "processing",
-      aspect_ratio: aspectRatio,
-      input_assets: [],
-      credit_cost: creditCost,
-      metadata: { slot_reserved: true },
+
+    const claim = await claimGenerationRequest(supabase, {
+      generationRequestId,
+      userId,
+      templateId: generationTemplateId,
+      prompt,
+      aspectRatio,
+      creditCost,
+      clickCount,
+      frontendTimestamp,
+      source,
     });
-    if (!reserved.ok) {
-      console.info("[generate-direct] dedup — slot already reserved", {
+
+    if (claim.kind === "duplicate") {
+      console.info("[generate-direct] idempotent duplicate request", {
         userId,
-        existingId: reserved.inFlight?.id,
+        generationRequestId: claim.generationRequestId,
+        generationId: claim.generation.id,
       });
-      res.status(200).json(buildDedupGenerateResponse(reserved.inFlight));
+      res.status(200).json(
+        buildIdempotentGenerateResponse(claim.generation, {
+          generationType: "image",
+        }),
+      );
       return;
     }
-    let larp = reserved.larp;
+
+    if (claim.kind === "failed") {
+      res.status(409).json({
+        code: "GENERATION_ALREADY_FAILED",
+        message: copy(
+          uiLocale,
+          "Cette génération a déjà échoué. Clique sur « Nouvelle génération » pour réessayer (nouvelle action payante).",
+          "This generation already failed. Start a new generation to retry (new billable action).",
+        ),
+        generationRequestId: claim.generationRequestId,
+      });
+      return;
+    }
+
+    let larp = claim.generation;
 
     const deductErr = await deductGenerationCredits(supabase, {
       userId,
@@ -390,12 +418,16 @@ module.exports = async function handler(req, res) {
       modelVariant: oneshotModelVariant,
     });
 
+    const prevMeta =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const generationMetadata = {
+      ...prevMeta,
       oneshot_model_variant: oneshotModelVariant,
       estimated_seconds: estimatedSeconds,
       subject_analysis: subjectAnalysis,
       subject_type: subject,
       pose_style: poseStyle,
+      server_prompt_ready_at: new Date().toISOString(),
       ...(templateReferenceId
         ? {
             ...(isBuiltinTemplateId(templateId)
@@ -415,119 +447,54 @@ module.exports = async function handler(req, res) {
       })
       .eq("id", larp.id);
 
-    // 4) Call image provider — ONE OneShot job max (no QA retry, no 2nd createOneshotJob).
-    let externalTaskId;
-    let provider = "oneshot";
-
-    const createWithKie = async (promptOverride) => {
-      const kieResponse = await createKieTask({
-        prompt: promptOverride || finalPrompt,
-        aspect_ratio: aspectRatio,
-        image_input: imageUrls,
-      });
-      if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-        return null;
-      }
-      return kieResponse.data.taskId;
-    };
-
+    let providerResult;
     try {
-      if (!appSettings.forceKieAi && oneshotConfig.url && oneshotConfig.key) {
-        try {
-          const referenceFileIds = await uploadImageUrlsToOneshot(imageUrls);
-          const oneshotResponse = await createOneshotJob(finalPrompt, {
-            aspectRatio,
-            modelVariant: oneshotModelVariant,
-            ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-          });
-          if (!oneshotResponse || !oneshotResponse.id) {
-            throw new Error("Invalid response from OneshotAPI");
-          }
-          externalTaskId = `custom_${oneshotResponse.id}`;
-        } catch (err) {
-          // One OneShot job max — no 2nd createOneshotJob; Kie fallback or fail.
-          if (isGoogleAiPromptFlagged(err)) {
-            console.warn(
-              "OneshotAPI flagged prompt — Kie fallback only (no 2nd OneShot job)",
-              err && err.message ? err.message : err,
-            );
-          }
-          if (!kieReady) {
-            console.error("OneshotAPI failed (no Kie fallback configured)", err);
-            const detail =
-              err && err.message
-                ? String(err.message).slice(0, 240)
-                : "erreur Oneshot";
-            const failMessage = isGoogleAiPromptFlagged(err)
-              ? "Échec provider (filtre). Reformule ou configure KIE_AI_API_KEY. Jetons remboursés."
-              : `Échec de la génération Oneshot (${detail})`;
-            await failAndRefund(supabase, {
-              userId,
-              generationId: larp.id,
-              failMessage,
-              source: "oneshot_create_failed",
-            });
-            res.status(502).json({ message: failMessage });
-            return;
-          }
-          console.error("OneshotAPI failed, falling back to Kie AI", err);
-          provider = "kie";
-          const kiePrompt = buildLiteralRetryPrompt(finalPrompt);
-          const kieTaskId = await createWithKie(kiePrompt);
-          if (!kieTaskId) {
-            await failAndRefund(supabase, {
-              userId,
-              generationId: larp.id,
-              failMessage: "Échec de création de la tâche",
-              source: "kie_create_failed",
-            });
-            res.status(502).json({ message: "Échec de création de la tâche" });
-            return;
-          }
-          await supabase
-            .from("generations")
-            .update({
-              final_prompt: kiePrompt,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", larp.id);
-          externalTaskId = kieTaskId;
-        }
-      } else {
-        provider = "kie";
-        const kieTaskId = await createWithKie();
-        if (!kieTaskId) {
-          await failAndRefund(supabase, {
-            userId,
-            generationId: larp.id,
-            failMessage: "Échec de création de la tâche",
-            source: "kie_create_failed",
-          });
-          res.status(502).json({ message: "Échec de création de la tâche" });
-          return;
-        }
-        externalTaskId = kieTaskId;
-      }
+      providerResult = await generateImageOnce(supabase, {
+        generationId: larp.id,
+        finalPrompt,
+        aspectRatio,
+        imageUrls,
+        modelVariant: oneshotModelVariant,
+        logContext: {
+          userId,
+          source,
+          generationRequestId: claim.generationRequestId,
+          clickCount,
+        },
+      });
     } catch (providerErr) {
-      console.error("provider create failed", providerErr);
+      console.error("[generate-direct] generateImageOnce failed", providerErr);
+      const detail =
+        providerErr && providerErr.message
+          ? String(providerErr.message).slice(0, 240)
+          : "erreur Oneshot";
+      const failMessage = isGoogleAiPromptFlagged(providerErr)
+        ? "Échec provider (filtre). Reformule ta demande — jetons remboursés."
+        : `Échec de la génération (${detail}). Jetons remboursés.`;
+      await failAndRefund(supabase, {
+        userId,
+        generationId: larp.id,
+        failMessage,
+        source: "oneshot_create_failed",
+      });
+      res.status(502).json({
+        message: failMessage,
+        generationRequestId: claim.generationRequestId,
+      });
+      return;
+    }
+
+    const externalTaskId = providerResult.externalTaskId;
+    if (!externalTaskId) {
       await failAndRefund(supabase, {
         userId,
         generationId: larp.id,
         failMessage: "Échec de création de la tâche",
-        source: "provider_create_exception",
+        source: "provider_missing_task_id",
       });
       res.status(502).json({ message: "Échec de création de la tâche" });
       return;
     }
-
-    await supabase
-      .from("generations")
-      .update({
-        provider,
-        provider_task_id: externalTaskId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", larp.id);
 
     res.status(201).json({
       id: larp.id,
@@ -536,6 +503,9 @@ module.exports = async function handler(req, res) {
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
       createdAt: larp.created_at,
+      generationRequestId: claim.generationRequestId,
+      deduplicated: Boolean(providerResult.deduplicated),
+      apiCallCount: providerResult.apiCallCount,
     });
   } catch (error) {
     console.error("generate-direct error", error);

@@ -174,6 +174,7 @@ export default function HeroSection() {
           prompt: prompt.trim() || t("hero.surprisePrompt"),
           aspect_ratio: OUTPUT_ASPECT_RATIO,
           images: base64Images,
+          source: "hero" as const,
         };
         const result = await generateDirect.mutateAsync(payload);
         setGenerationEstimateSeconds(

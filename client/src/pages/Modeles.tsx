@@ -511,6 +511,7 @@ export default function Modeles() {
         template_id: template.id,
         images: userImages,
         use_face_asset: false,
+        source: "modeles",
       });
       persistInFlightFromApiResult(result, "modeles", "image");
       setTaskId(result.taskId);

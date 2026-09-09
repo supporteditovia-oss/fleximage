@@ -809,6 +809,12 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isStartingGeneration || generateDirect.isPending || generateVideo.isPending;
 
   const handleGenerate = async () => {
+    if (isStartingGeneration || generateDirect.isPending || generateVideo.isPending) {
+      console.warn("[Generate] Ignored duplicate generate click — already in flight");
+      return;
+    }
+    setIsStartingGeneration(true);
+
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -832,6 +838,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.referenceImageRequiredTitle"),
           description: t("templateSelected.noReferenceImages"),
         });
+        setIsStartingGeneration(false);
         return;
       }
       if (!templateSupportsGenerationMode(activeTemplate, generationMode)) {
@@ -840,6 +847,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           title: t("generate.templateModeUnavailableTitle"),
           description: t("generate.templateModeUnavailableDescription"),
         });
+        setIsStartingGeneration(false);
         return;
       }
     } else if (filesForGeneration.length === 0) {
@@ -854,6 +862,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
             ? t("generate.referenceVideoRequiredDescription")
             : t("generate.referenceImageRequiredDescription"),
       });
+      setIsStartingGeneration(false);
       return;
     }
 
@@ -861,11 +870,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   };
 
   const executeGeneration = async () => {
-    if (isStartingGeneration || generateDirect.isPending || generateVideo.isPending) {
-      console.warn("[Generate] Ignored duplicate generate click — already in flight");
-      return;
-    }
-
     const selectedOrPendingTemplateId =
       selectedTemplate?.id ?? pendingTemplateId ?? undefined;
     const isTemplateGeneration = Boolean(selectedOrPendingTemplateId);
@@ -1055,6 +1059,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
+        source: "generate",
       });
       setGenerationEstimateSeconds(
         typeof result.estimatedSeconds === "number" &&

@@ -152,6 +152,9 @@ async function createOneshotJob(prompt, options) {
       // Request max output; OneShot may still deliver ~1K today — we upscale on store.
       imageSize: "4K",
       aspectRatio: (options && options.aspectRatio) || "9:16",
+      // Strict single-image policy — never request variants or multiple candidates.
+      numberOfImages: 1,
+      candidateCount: 1,
       ...((options && options.referenceFileIds && options.referenceFileIds.length > 0)
         ? { referenceFileIds: options.referenceFileIds }
         : {}),

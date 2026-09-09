@@ -8,9 +8,10 @@ import {
   persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
 import {
-  releaseGenerationSubmitLock,
+  releaseGenerationSubmitLockOnError,
   tryAcquireGenerationSubmitLock,
 } from "@/lib/generation-submit-lock";
+import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
 
 function toAssetUrls(value: unknown): string[] {
@@ -120,6 +121,11 @@ interface GenerateDirectInput {
   use_face_asset?: boolean;
   subject_type?: SubjectType;
   pose_style?: PoseStyle;
+  /** Idempotency key — one per user click. */
+  generation_request_id?: string;
+  frontend_timestamp?: string;
+  click_count?: number;
+  source?: "generate" | "modeles" | "hero" | "catalog" | "direct";
 }
 
 interface GenerateVideoInput {
@@ -138,6 +144,8 @@ interface GenerateLarpResponse {
   estimatedSeconds?: number | null;
   createdAt?: string | null;
   deduplicated?: boolean;
+  generationRequestId?: string | null;
+  apiCallCount?: number;
 }
 
 interface LarpStatusResponse {
@@ -237,18 +245,33 @@ export function useGenerateDirectLarp() {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
 
+      const generationRequestId =
+        data.generation_request_id || createGenerationRequestId();
+      const payload: GenerateDirectInput = {
+        ...data,
+        generation_request_id: generationRequestId,
+        frontend_timestamp: data.frontend_timestamp || new Date().toISOString(),
+        click_count: data.click_count ?? 1,
+        source: data.source || (data.template_id ? "catalog" : "direct"),
+      };
+
       try {
         const res = await authFetch("/api/larps/generate-direct", {
           method: "POST",
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
         const json = (await res.json()) as GenerateLarpResponse;
         if (json?.taskId) {
-          persistInFlightFromApiResult(json, "generate", "image");
+          persistInFlightFromApiResult(json, payload.source === "modeles" ? "modeles" : payload.source === "hero" ? "hero" : "generate", "image");
         }
-        return json;
-      } finally {
-        releaseGenerationSubmitLock();
+        return {
+          ...json,
+          generationRequestId:
+            json.generationRequestId || generationRequestId,
+        };
+      } catch (err) {
+        releaseGenerationSubmitLockOnError();
+        throw err;
       }
     },
     onSuccess: () => {
