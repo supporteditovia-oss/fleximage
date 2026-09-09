@@ -320,6 +320,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const isFullscreenOverlayActive =
     showFakeOnboardingLoader ||
     pendingLoading ||
+    isStartingGeneration ||
     (!!taskId && !generationResultVisible) ||
     isPaywallOverlayActive ||
     unlockingLarp;
@@ -829,6 +830,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     }
     isGeneratingRef.current = true;
     const generationRequestId = createGenerationRequestId();
+
+    const willUseFakeOnboardingLoader =
+      profile &&
+      !profile.is_subscriber &&
+      profile.role !== "admin" &&
+      !isReturningFromCheckout;
+
+    if (!willUseFakeOnboardingLoader) {
+      setPendingLoading(true);
+    }
     setIsStartingGeneration(true);
 
     const selectedOrPendingTemplateId =
@@ -942,22 +953,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       !isReturningFromCheckout;
 
     if (shouldUseOnboardingPaywall) {
-      markOnboardingResume({
-        prompt: serverPrompt,
-        generationMode,
-      });
-      savePaywallPrompt(serverPrompt);
-
-      if (filesForGeneration[0]) {
-        try {
-          await savePaywallImage(
-            await toGenerationImageFile(filesForGeneration[0].file),
-          );
-          clearPaywallExpiry();
-        } catch {
-          /* preview optional */
-        }
-      } else if (!getPaywallImage()) {
+      if (!filesForGeneration[0] && !getPaywallImage()) {
         toast({
           variant: "destructive",
           title:
@@ -969,13 +965,30 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
               ? t("generate.referenceVideoRequiredDescription")
               : t("generate.referenceImageRequiredDescription"),
         });
+        setPendingLoading(false);
         return;
       }
 
-      // Best-effort draft for Stripe return — never block the fake loader on IDB failure (common on mobile Safari).
-      await saveCurrentDraftForCheckout();
-
+      markOnboardingResume({
+        prompt: serverPrompt,
+        generationMode,
+      });
+      savePaywallPrompt(serverPrompt);
       startOnboardingPaywallFlow();
+
+      void (async () => {
+        if (filesForGeneration[0]) {
+          try {
+            await savePaywallImage(
+              await toGenerationImageFile(filesForGeneration[0].file),
+            );
+            clearPaywallExpiry();
+          } catch {
+            /* preview optional */
+          }
+        }
+        await saveCurrentDraftForCheckout();
+      })();
       return;
     }
 
@@ -985,6 +998,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       profile.role !== "admin" &&
       profile.credits < requiredCredits
     ) {
+      setPendingLoading(false);
       await saveCurrentDraftForCheckout();
       startInsufficientCreditsFlow({
         currentCredits: profile.credits,
@@ -998,6 +1012,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     // the cached data is stale (user just got credits via Stripe).
     // Server will still validate credits.
     if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
+      setPendingLoading(false);
       await saveCurrentDraftForCheckout();
       startInsufficientCreditsFlow({
         currentCredits: profile?.credits ?? 0,
@@ -1008,7 +1023,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     }
 
     try {
-      setIsStartingGeneration(true);
       setPendingLoading(true);
       clearLastGeneration();
       clearPendingLarp();
@@ -1172,6 +1186,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       setIsStartingGeneration(false);
       if (!generationCommitted) {
         isGeneratingRef.current = false;
+        setPendingLoading(false);
       }
     }
   };
@@ -1384,7 +1399,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   ) : null;
 
   const portalOverlay =
-    pendingLoading && !taskId ? (
+    (pendingLoading || isStartingGeneration) && !taskId && !showFakeOnboardingLoader ? (
       createPortal(
         <GenerationLoader
           taskId="pending"
@@ -1433,7 +1448,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Loading pending LARP from hero flow
-  if (pendingLoading) {
+  if (pendingLoading || (isStartingGeneration && !taskId && !showFakeOnboardingLoader)) {
     return (
       <>
         {transitionBackdrop}

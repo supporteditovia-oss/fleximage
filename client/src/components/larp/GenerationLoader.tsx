@@ -51,7 +51,9 @@ export function GenerationLoader({
     ],
     [t],
   );
-  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">("dissolve");
+  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">(
+    status === "connecting" ? "logo" : "dissolve",
+  );
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -146,7 +148,7 @@ export function GenerationLoader({
       className="lx-gen-loader fixed inset-0 z-[101] overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       role="status"
       aria-live="polite"
       aria-busy={!isExiting}
