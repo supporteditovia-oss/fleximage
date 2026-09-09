@@ -295,7 +295,8 @@ export function LarpResult({
                     src={url}
                     alt={t("result.generatedAlt", { index: index + 1 })}
                     className={RESULT_MEDIA_CLASS}
-                    loading="lazy"
+                    loading="eager"
+                    decoding="async"
                   />
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>

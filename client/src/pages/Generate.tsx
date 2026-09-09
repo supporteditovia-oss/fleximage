@@ -323,6 +323,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   useEffect(() => {
     if (taskId) {
       setGenerationResultVisible(false);
+      setTransitionBg(false);
     }
   }, [taskId]);
 

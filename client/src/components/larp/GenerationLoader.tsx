@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
@@ -18,6 +18,8 @@ interface GenerationLoaderProps {
   taskId?: string;
   inputImageUrl?: string;
   resultUrls?: string[];
+  /** Déclenché au début du fondu sortie — le résultat peut apparaître en parallèle. */
+  onRevealStart?: () => void;
   onRevealComplete?: () => void;
 }
 
@@ -41,6 +43,7 @@ export function GenerationLoader({
   taskId = "loader",
   inputImageUrl,
   resultUrls,
+  onRevealStart,
   onRevealComplete,
 }: GenerationLoaderProps) {
   const { t } = useTranslation();
@@ -118,10 +121,17 @@ export function GenerationLoader({
     const timer = window.setTimeout(() => {
       if (revealFired.current) return;
       revealFired.current = true;
+      onRevealStart?.();
       setIsExiting(true);
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [status, resultPreloaded]);
+  }, [status, resultPreloaded, onRevealStart]);
+
+  useEffect(() => {
+    if (!isExiting) return;
+    const timer = window.setTimeout(() => onRevealComplete?.(), EXIT_FADE_MS);
+    return () => window.clearTimeout(timer);
+  }, [isExiting, onRevealComplete]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -139,19 +149,32 @@ export function GenerationLoader({
 
   return (
     <motion.div
-      className="lx-gen-loader fixed inset-0 z-[100] overflow-hidden"
+      className="lx-gen-loader fixed inset-0 z-[101] overflow-hidden"
       initial={{ opacity: 0 }}
-      animate={{ opacity: isExiting ? 0 : 1 }}
-      transition={{
-        duration: isExiting ? EXIT_FADE_MS / 1000 : 0.45,
-        ease: "easeInOut",
-      }}
-      onAnimationComplete={() => {
-        if (isExiting) onRevealComplete?.();
-      }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
     >
       <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
       <div className="lx-gen-loader__halo" aria-hidden />
+
+      {resultUrl && isExiting && (
+        <motion.div
+          className="absolute inset-0 z-[5] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: EXIT_FADE_MS / 1000, ease: "easeOut" }}
+          aria-hidden
+        >
+          <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-lg shadow-xl md:h-[min(82svh,720px)]">
+            <img
+              src={resultUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              decoding="async"
+            />
+          </div>
+        </motion.div>
+      )}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {particles.map((p, i) => (
@@ -172,11 +195,11 @@ export function GenerationLoader({
         ))}
       </div>
 
-      {inputImageUrl && (
+      {inputImageUrl && !isExiting && (
         <motion.div
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
-          animate={{ opacity: isExiting ? 0 : 1 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.45 }}
         >
           <div className="relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-lg shadow-xl md:h-[min(82svh,720px)]">
