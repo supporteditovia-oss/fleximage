@@ -460,6 +460,196 @@
     "gender": "men"
   },
   {
+    "id": "outfit-moncler-black-saucony",
+    "slug": "moncler-black-saucony",
+    "name": "Moncler noir Saucony",
+    "description": "Gilet Moncler noir sur hoodie, jean noir, sneakers Saucony blanc/orange.",
+    "imagePath": "/outfits/outfit-moncler-black-saucony.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-fendi-kway-amiri-hermes",
+    "slug": "fendi-kway-amiri-hermes",
+    "name": "Fendi K-Way + Amiri",
+    "description": "Coupe-vent Fendi x K-Way monogramme, tee Casablanca, jean Amiri déchiré, sneakers Hermès H.",
+    "imagePath": "/outfits/outfit-fendi-kway-amiri-hermes.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-gucci-gg-dior-goyard",
+    "slug": "gucci-gg-dior-goyard",
+    "name": "Gucci GG + Dior B30",
+    "description": "Pull Gucci GG gris, jean Dsquared2 déchiré, sneakers Dior B30, sac Goyard.",
+    "imagePath": "/outfits/outfit-gucci-gg-dior-goyard.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-celine-moncler-purple-prada",
+    "slug": "celine-moncler-purple-prada",
+    "name": "Celine + Moncler violet",
+    "description": "Tee Celine blanc, gilet Moncler violet, shorts Moncler, sneakers Prada violet.",
+    "imagePath": "/outfits/outfit-celine-moncler-purple-prada.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-marbenio-beige-set",
+    "slug": "marbenio-beige-set",
+    "name": "Marbenio beige tonal",
+    "description": "Gilet beige Marbenio, tee blanc, pantalon beige, sneakers beige, pochette Kelly.",
+    "imagePath": "/outfits/outfit-marbenio-beige-set.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-marbenio-black-cream-hermes",
+    "slug": "marbenio-black-cream-hermes",
+    "name": "Marbenio noir & crème",
+    "description": "Tee noir Marbenio, shorts crème, casquette blanche, sandales Hermès, pochette Kelly.",
+    "imagePath": "/outfits/outfit-marbenio-black-cream-hermes.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-burberry-check-full",
+    "slug": "burberry-check-full",
+    "name": "Burberry check complet",
+    "description": "Polo Burberry check, shorts check, sandales check, casquette et sac crossbody Burberry.",
+    "imagePath": "/outfits/outfit-burberry-check-full.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-prada-dusty-rose",
+    "slug": "prada-dusty-rose",
+    "name": "Prada rose poudré",
+    "description": "Chemise zip Prada rose, tee blanc, shorts Prada, sneakers America's Cup, casquette et montre.",
+    "imagePath": "/outfits/outfit-prada-dusty-rose.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-stone-island-grey-cardigan",
+    "slug": "stone-island-grey-cardigan",
+    "name": "Stone Island gris",
+    "description": "Cardigan gris Stone Island, tee blanc Marbenio, pantalon noir, sneakers Hermès H, sac et montre.",
+    "imagePath": "/outfits/outfit-stone-island-grey-cardigan.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-amiri-black-windbreaker",
+    "slug": "amiri-black-windbreaker",
+    "name": "Amiri all black",
+    "description": "Coupe-vent noir camouflage, tee noir Marbenio, jean Amiri noir, sneakers noires, sac crossbody.",
+    "imagePath": "/outfits/outfit-amiri-black-windbreaker.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-cardigan-blue-amiri-prada",
+    "slug": "cardigan-blue-amiri-prada",
+    "name": "Cardigan bleu Amiri",
+    "description": "Cardigan bleu monogramme, tee blanc, jean Amiri gris déchiré, sneakers Prada America's Cup bleues.",
+    "imagePath": "/outfits/outfit-cardigan-blue-amiri-prada.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-marbenio-black-fendi-slides",
+    "slug": "marbenio-black-fendi-slides",
+    "name": "Marbenio noir Fendi",
+    "description": "Gilet sans manches noir Marbenio, tee noir, shorts noirs, slides Fendi FF, pochette Kelly.",
+    "imagePath": "/outfits/outfit-marbenio-black-fendi-slides.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-tracksuit-olive-prada-gucci",
+    "slug": "tracksuit-olive-prada-gucci",
+    "name": "Tracksuit olive",
+    "description": "Veste track olive Marbenio, tee blanc, pantalon olive, sneakers Prada, casquette Gucci monogramme.",
+    "imagePath": "/outfits/outfit-tracksuit-olive-prada-gucci.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-tracksuit-black-fendi-cap",
+    "slug": "tracksuit-black-fendi-cap",
+    "name": "Tracksuit noir Fendi",
+    "description": "Survêtement noir Marbenio, tee blanc, sneakers Hermès H, casquette Fendi monogramme.",
+    "imagePath": "/outfits/outfit-tracksuit-black-fendi-cap.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-gilet-black-beige-shorts",
+    "slug": "gilet-black-beige-shorts",
+    "name": "Gilet noir shorts beige",
+    "description": "Gilet noir beige lining, tee blanc, shorts beige, sneakers Hermès H beige, pochette Kelly.",
+    "imagePath": "/outfits/outfit-gilet-black-beige-shorts.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-parajumpers-lv-dior-saddle",
+    "slug": "parajumpers-lv-dior-saddle",
+    "name": "Parajumpers LV Dior",
+    "description": "Hoodie Parajumpers noir matelassé, tee blanc, jean gris déchiré, sneakers LV, sac Dior Saddle.",
+    "imagePath": "/outfits/outfit-parajumpers-lv-dior-saddle.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-gucci-teal-hermes-lv",
+    "slug": "gucci-teal-hermes-lv",
+    "name": "Gucci teal Hermès",
+    "description": "Veste Gucci GG teal, tee blanc, jean gris éclaboussures, sneakers Hermès teal, sac LV mini duffle.",
+    "imagePath": "/outfits/outfit-gucci-teal-hermes-lv.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-burberry-beige-hermes-lv",
+    "slug": "burberry-beige-hermes-lv",
+    "name": "Burberry beige Hermès",
+    "description": "Coupe-vent Burberry beige check, tee blanc, pantalon blanc, sneakers Hermès H, sac LV crossbody.",
+    "imagePath": "/outfits/outfit-burberry-beige-hermes-lv.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
+    "id": "outfit-lv-cloud-black-dior-saddle",
+    "slug": "lv-cloud-black-dior-saddle",
+    "name": "LV nuages noir Dior",
+    "description": "Coupe-vent LV noir nuages, tee blanc LV, jean Dsquared2 noir, sneakers LV, sac Dior Saddle.",
+    "imagePath": "/outfits/outfit-lv-cloud-black-dior-saddle.jpg",
+    "category": "outfits",
+    "categoryName": "Outfits",
+    "gender": "men"
+  },
+  {
     "id": "outfit-women-burgundy-halter",
     "slug": "women-burgundy-halter",
     "name": "Robe bordeaux halter",
