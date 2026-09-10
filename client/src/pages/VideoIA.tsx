@@ -9,10 +9,13 @@ import {
   Upload,
   Video,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
+import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
@@ -66,6 +69,8 @@ const WORKFLOW_OPTIONS: {
 export default function VideoIA() {
   const [, setLocation] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
+  const { user } = useAuth();
+  const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
 
@@ -146,12 +151,19 @@ export default function VideoIA() {
         }
       : { voice_enabled: false };
 
+  const creditBalance = plan?.credits ?? 0;
+  const canAfford = creditBalance >= creditCost;
+
   const canGenerateI2V =
     Boolean(imagePreviewUrl) &&
     motionPrompt.trim().length >= 5 &&
-    voiceReady;
+    voiceReady &&
+    canAfford;
   const canGenerateV2V =
-    Boolean(videoBase64) && swapPrompt.trim().length >= 5 && voiceReady;
+    Boolean(videoBase64) &&
+    swapPrompt.trim().length >= 5 &&
+    voiceReady &&
+    canAfford;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -352,6 +364,8 @@ export default function VideoIA() {
       </div>
 
       <div key={workflow} className="via-panel via-panel-enter">
+        <VideoCreditSummary creditCost={creditCost} />
+
         {workflow === "image_to_video" ? (
           <>
             <p className="via-step-label">
@@ -513,8 +527,8 @@ export default function VideoIA() {
                   Photo de référence (optionnel)
                 </label>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Urus, personnage ou objet cible — active Kling 3.0 Motion
-                  Control pour un rendu plus précis.
+                  Photo du véhicule, personnage ou objet à intégrer — pour un
+                  rendu plus précis.
                 </p>
                 <input
                   ref={refImageFileRef}

@@ -354,6 +354,51 @@ html.luxeflexia-video-page .floating-header::before {
   border-color: rgba(201, 162, 39, 0.45);
 }
 
+.via-credit-summary {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--lx-ink);
+}
+
+.via-credit-summary--low {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(254, 242, 242, 0.85);
+}
+
+.via-credit-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.via-credit-summary__row + .via-credit-summary__row {
+  margin-top: 0.35rem;
+}
+
+.via-credit-summary__row--cost {
+  padding-left: 1.45rem;
+  font-size: 0.75rem;
+  color: var(--lx-muted);
+}
+
+.via-credit-summary__row strong {
+  font-weight: 700;
+  color: var(--lx-ink);
+}
+
+.via-credit-summary__warn {
+  margin: 0.55rem 0 0;
+  padding-left: 1.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
 .via-cta {
   display: inline-flex;
   width: 100%;
