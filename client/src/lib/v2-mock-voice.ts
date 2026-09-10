@@ -103,7 +103,7 @@ function catalogPhoto(slug: string): string {
 
 /** Modeles publics Fish Audio : vraie voix de l'artiste. */
 const CATALOG_FISH_IDS: Partial<Record<string, string>> = {
-  maes: "28fc2a488a62441fb1c22e6e3fe5a2ec",
+  maes: "22b7c6809d5d405aa6a5ae2402272b53",
   gims: "d986afc13e7346ada353a747bce8a811",
   damso: "cd8c1c3eead843c2b6b855cace16f520",
   ninho: "3cfa191ad09b4cfea8e4eebc4c31c923",
