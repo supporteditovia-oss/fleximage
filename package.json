@@ -17,6 +17,7 @@
     "test": "node --test api/_lib/generation-idempotency.test.js api/_lib/generate-image-once.test.js api/_lib/video-studio.test.js api/_lib/video-limits.test.js api/_lib/generate-video-once.test.js && tsx --test client/src/lib/generation-submit-lock.test.ts",
     "db:push": "drizzle-kit push",
     "cleanup:larps": "bun run script/purge-larps.ts",
+    "cleanup:retention": "node --env-file=.env script/purge-retention-now.mjs",
     "stripe:audit": "bun run script/audit-stripe.ts",
     "stripe:plans": "bun run script/create-stripe-plans.ts",
     "stripe:webhook": "bun run script/create-stripe-webhook.ts"
