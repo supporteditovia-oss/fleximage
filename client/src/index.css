@@ -26,6 +26,7 @@ html[data-fullscreen-overlay],
 body[data-fullscreen-overlay] {
   overflow: hidden !important;
   overscroll-behavior: none;
+  background: #050505 !important;
 }
 
 body[data-fullscreen-overlay] .floating-header,

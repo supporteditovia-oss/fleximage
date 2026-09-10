@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
-import { useGenerationCountdown } from "@/hooks/use-generation-countdown";
+import {
+  useGenerationCountdown,
+  useGenerationProgress,
+} from "@/hooks/use-generation-countdown";
 import "./generation-loader.css";
 
 interface GenerationLoaderProps {
@@ -51,9 +55,7 @@ export function GenerationLoader({
     ],
     [t],
   );
-  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">(
-    status === "connecting" ? "logo" : "dissolve",
-  );
+  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">("dissolve");
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -75,6 +77,15 @@ export function GenerationLoader({
     status === "success",
     serverRemainingSeconds,
   );
+
+  const progress = useGenerationProgress(
+    taskId,
+    startedAtMs,
+    lockedEstimate.current,
+    status === "success",
+  );
+
+  const isOvertime = remaining <= 0 && status !== "success";
 
   useEffect(() => {
     if (phase !== "dissolve") return;
@@ -138,12 +149,10 @@ export function GenerationLoader({
     return () => clearInterval(id);
   }, [progressMessages.length]);
 
-  const finishing =
-    status === "success" || (status !== "success" && remaining === 0);
   const isBlurring = phase === "blur" || phase === "logo";
   const particles = useMemo(() => PARTICLES, []);
 
-  return (
+  const loaderTree = (
     <motion.div
       className="lx-gen-loader fixed inset-0 z-[101] overflow-hidden"
       initial={{ opacity: 0 }}
@@ -252,33 +261,76 @@ export function GenerationLoader({
           </div>
 
           <div className="relative flex h-20 w-20 shrink-0 items-center justify-center md:h-24 md:w-24">
+            <svg
+              className="absolute inset-0 h-full w-full -rotate-90"
+              viewBox="0 0 100 100"
+              aria-hidden
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="44"
+                fill="none"
+                stroke="rgba(255,255,255,0.08)"
+                strokeWidth="4"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="44"
+                fill="none"
+                stroke="url(#lx-gen-progress)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={`${Math.max(8, progress * 276.46)} 276.46`}
+                className="transition-[stroke-dasharray] duration-300 ease-out"
+              />
+              <defs>
+                <linearGradient id="lx-gen-progress" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#f0d875" />
+                  <stop offset="100%" stopColor="#c9a227" />
+                </linearGradient>
+              </defs>
+            </svg>
             <div className="lx-gen-loader__ring lx-gen-loader__ring--glow" aria-hidden />
           </div>
 
-          <div className="flex flex-col items-center gap-1.5">
-            {status === "success" ? (
-              <p
-                className="m-0 w-full text-center text-lg font-semibold leading-snug text-[#e8c547] md:text-xl"
-                style={{ fontFamily: "var(--lx-display)" }}
-              >
-                {t("progress.stepFinishing")}
-              </p>
-            ) : (
-              <p
-                className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
-                style={{ fontFamily: "var(--lx-display)" }}
-              >
-                <span>{remaining}</span>
-                <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
-                  {t("progress.seconds")}
-                </span>
-              </p>
-            )}
-            {finishing && status !== "success" && (
-              <p className="m-0 text-center text-xs font-medium text-[#f5e6b8]/70">
-                {t("progress.stepFinishing")}
-              </p>
-            )}
+          <div className="flex w-full max-w-xs flex-col items-center gap-2">
+            <div
+              className="h-1 w-full overflow-hidden rounded-full bg-white/10"
+              aria-hidden
+            >
+              <div
+                className="lx-gen-loader__bar h-full rounded-full"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+
+            <div className="flex flex-col items-center gap-1.5">
+              {status === "success" || isOvertime ? (
+                <p
+                  className="m-0 w-full text-center text-lg font-semibold leading-snug text-[#e8c547] md:text-xl"
+                  style={{ fontFamily: "var(--lx-display)" }}
+                >
+                  {t("progress.stepFinishing")}
+                </p>
+              ) : (
+                <p
+                  className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
+                  style={{ fontFamily: "var(--lx-display)" }}
+                >
+                  <span>{remaining}</span>
+                  <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
+                    {t("progress.seconds")}
+                  </span>
+                </p>
+              )}
+              {isOvertime && status !== "success" ? (
+                <p className="m-0 text-center text-xs font-medium text-[#f5e6b8]/75">
+                  {t("progress.almostReady", "Presque prêt — ne quitte pas l'écran…")}
+                </p>
+              ) : null}
+            </div>
           </div>
 
           <div className="relative flex h-7 w-full items-center justify-center">
@@ -293,4 +345,7 @@ export function GenerationLoader({
       </div>
     </motion.div>
   );
+
+  if (typeof document === "undefined") return loaderTree;
+  return createPortal(loaderTree, document.body);
 }

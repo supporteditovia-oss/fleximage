@@ -12,8 +12,8 @@ export function computeGenerationRemaining(
 }
 
 /**
- * Compte à rebours strictement monotone.
- * Priorité : remainingSeconds serveur > calcul client (estimate + startedAt verrouillés).
+ * Compte à rebours strictement monotone, tick client 4×/s.
+ * Le serveur ne peut que raccourcir l'estimation (sync), jamais la bloquer.
  */
 export function useGenerationCountdown(
   taskId: string,
@@ -24,12 +24,21 @@ export function useGenerationCountdown(
 ): number {
   const estimate = Math.max(1, Math.round(estimatedSeconds));
   const floorRef = useRef<number | null>(null);
+  const localStartRef = useRef<number | null>(null);
   const taskRef = useRef(taskId);
   const [, setTick] = useState(0);
 
   if (taskRef.current !== taskId) {
     taskRef.current = taskId;
     floorRef.current = null;
+    localStartRef.current = null;
+  }
+
+  if (!isComplete && localStartRef.current === null) {
+    localStartRef.current =
+      startedAtMs != null && Number.isFinite(startedAtMs)
+        ? startedAtMs
+        : Date.now();
   }
 
   useEffect(() => {
@@ -52,16 +61,18 @@ export function useGenerationCountdown(
     return 0;
   }
 
-  let candidate: number;
+  const effectiveStart =
+    startedAtMs != null && Number.isFinite(startedAtMs)
+      ? startedAtMs
+      : (localStartRef.current ?? Date.now());
+
+  let candidate = computeGenerationRemaining(effectiveStart, estimate);
+
   if (
     typeof serverRemainingSeconds === "number" &&
     Number.isFinite(serverRemainingSeconds)
   ) {
-    candidate = Math.max(0, Math.round(serverRemainingSeconds));
-  } else if (startedAtMs) {
-    candidate = computeGenerationRemaining(startedAtMs, estimate);
-  } else {
-    candidate = estimate;
+    candidate = Math.min(candidate, Math.max(0, Math.round(serverRemainingSeconds)));
   }
 
   if (floorRef.current === null) {
@@ -71,4 +82,44 @@ export function useGenerationCountdown(
   }
 
   return floorRef.current;
+}
+
+/** Progression 0–1 pour la barre / anneau (peut dépasser 1 si dépassement). */
+export function useGenerationProgress(
+  taskId: string,
+  startedAtMs: number | null | undefined,
+  estimatedSeconds: number,
+  isComplete: boolean,
+): number {
+  const estimate = Math.max(1, Math.round(estimatedSeconds));
+  const localStartRef = useRef<number | null>(null);
+  const taskRef = useRef(taskId);
+  const [, setTick] = useState(0);
+
+  if (taskRef.current !== taskId) {
+    taskRef.current = taskId;
+    localStartRef.current = null;
+  }
+
+  if (!isComplete && localStartRef.current === null) {
+    localStartRef.current =
+      startedAtMs != null && Number.isFinite(startedAtMs)
+        ? startedAtMs
+        : Date.now();
+  }
+
+  useEffect(() => {
+    if (isComplete) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 250);
+    return () => window.clearInterval(id);
+  }, [isComplete, taskId]);
+
+  if (isComplete) return 1;
+
+  const effectiveStart =
+    startedAtMs != null && Number.isFinite(startedAtMs)
+      ? startedAtMs
+      : (localStartRef.current ?? Date.now());
+  const elapsed = Math.max(0, (Date.now() - effectiveStart) / 1000);
+  return Math.min(0.98, elapsed / estimate);
 }

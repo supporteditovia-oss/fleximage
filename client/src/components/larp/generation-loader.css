@@ -111,6 +111,11 @@
   }
 }
 
+.lx-gen-loader__bar {
+  background: linear-gradient(90deg, #c9a227 0%, #f0d875 50%, #e8c547 100%);
+  transition: width 0.35s ease-out;
+}
+
 .lx-gen-loader__ring--glow {
   box-shadow: 0 0 24px rgba(232, 197, 71, 0.35);
 }
