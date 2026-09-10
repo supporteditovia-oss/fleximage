@@ -234,20 +234,31 @@ export function GenerationLoader({
 
       <div className="absolute inset-0 z-10 flex w-full items-center justify-center px-4">
         <motion.div
-          className="flex w-full max-w-sm flex-col items-center justify-center gap-5"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: isExiting ? 0 : 1, y: isExiting ? -6 : 0 }}
-          transition={{ duration: isExiting ? EXIT_FADE_MS / 1000 : 0.45, delay: isExiting ? 0 : 0.08 }}
+          className="lx-gen-loader__panel-wrap"
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{
+            opacity: isExiting ? 0 : 1,
+            y: isExiting ? -8 : 0,
+            scale: isExiting ? 0.98 : 1,
+          }}
+          transition={{
+            duration: isExiting ? EXIT_FADE_MS / 1000 : 0.5,
+            delay: isExiting ? 0 : 0.06,
+            ease: [0.22, 1, 0.36, 1],
+          }}
         >
-          <div className="flex w-full items-center justify-center">
+          <div className="lx-gen-loader__panel" aria-hidden />
+          <div className="lx-gen-loader__panel-shimmer" aria-hidden />
+
+          <div className="lx-gen-loader__panel-content">
             <div className="lx-gen-loader__brand">
               <div className="lx-gen-loader__brand-inner">
                 <span
-                  className="inline-flex max-w-full items-center justify-center gap-2.5 text-[clamp(1.5rem,6vw,2.25rem)] font-semibold leading-none text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]"
+                  className="inline-flex max-w-full items-center justify-center gap-2 text-[clamp(1.35rem,5.5vw,2rem)] font-semibold leading-none text-white"
                   style={{ fontFamily: "var(--lx-display)" }}
                 >
                   <Gem
-                    className="h-[0.9em] w-[0.9em] shrink-0 text-[#e8c547]"
+                    className="h-[0.88em] w-[0.88em] shrink-0 text-[#e8c547]"
                     strokeWidth={1.75}
                     aria-hidden
                   />
@@ -258,88 +269,73 @@ export function GenerationLoader({
                 </span>
               </div>
             </div>
-          </div>
 
-          <div className="relative flex h-20 w-20 shrink-0 items-center justify-center md:h-24 md:w-24">
-            <svg
-              className="absolute inset-0 h-full w-full -rotate-90"
-              viewBox="0 0 100 100"
-              aria-hidden
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="44"
-                fill="none"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth="4"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="44"
-                fill="none"
-                stroke="url(#lx-gen-progress)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={`${Math.max(8, progress * 276.46)} 276.46`}
-                className="transition-[stroke-dasharray] duration-300 ease-out"
-              />
-              <defs>
-                <linearGradient id="lx-gen-progress" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#f0d875" />
-                  <stop offset="100%" stopColor="#c9a227" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="lx-gen-loader__ring lx-gen-loader__ring--glow" aria-hidden />
-          </div>
+            <div className="lx-gen-loader__orb">
+              <svg
+                className="lx-gen-loader__orb-svg"
+                viewBox="0 0 100 100"
+                aria-hidden
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.07)"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="url(#lx-gen-progress)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${Math.max(6, progress * 263.89)} 263.89`}
+                  className="lx-gen-loader__orb-progress"
+                />
+                <defs>
+                  <linearGradient id="lx-gen-progress" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#f0d875" />
+                    <stop offset="55%" stopColor="#e8c547" />
+                    <stop offset="100%" stopColor="#c9a227" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="lx-gen-loader__orb-center">
+                {status === "success" || isOvertime ? (
+                  <span className="lx-gen-loader__orb-label">✦</span>
+                ) : (
+                  <>
+                    <span className="lx-gen-loader__orb-time">{remaining}</span>
+                    <span className="lx-gen-loader__orb-unit">
+                      {t("progress.seconds")}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
 
-          <div className="flex w-full max-w-xs flex-col items-center gap-2">
-            <div
-              className="h-1 w-full overflow-hidden rounded-full bg-white/10"
-              aria-hidden
-            >
+            <div className="lx-gen-loader__track" aria-hidden>
               <div
-                className="lx-gen-loader__bar h-full rounded-full"
+                className="lx-gen-loader__track-fill"
                 style={{ width: `${Math.round(progress * 100)}%` }}
               />
             </div>
 
-            <div className="flex flex-col items-center gap-1.5">
-              {status === "success" || isOvertime ? (
-                <p
-                  className="m-0 w-full text-center text-lg font-semibold leading-snug text-[#e8c547] md:text-xl"
-                  style={{ fontFamily: "var(--lx-display)" }}
-                >
-                  {t("progress.stepFinishing")}
-                </p>
-              ) : (
-                <p
-                  className="m-0 w-full text-center text-2xl font-semibold leading-none tabular-nums tracking-wide text-[#e8c547] md:text-3xl"
-                  style={{ fontFamily: "var(--lx-display)" }}
-                >
-                  <span>{remaining}</span>
-                  <span className="ml-1.5 text-lg font-medium text-[#e8c547]/80 md:text-xl">
-                    {t("progress.seconds")}
-                  </span>
-                </p>
-              )}
+            <div className="lx-gen-loader__status-block">
               {isOvertime && status !== "success" ? (
-                <p className="m-0 text-center text-xs font-medium text-[#f5e6b8]/75">
+                <p className="lx-gen-loader__status-hint">
                   {t("progress.almostReady", "Presque prêt — ne quitte pas l'écran…")}
                 </p>
               ) : null}
+              <span key={messageKey} className="lx-gen-loader__msg">
+                {status === "success"
+                  ? t("progress.stepFinishing")
+                  : progressMessages[messageIndex]}
+              </span>
             </div>
-          </div>
-
-          <div className="relative flex h-7 w-full items-center justify-center">
-            <span
-              key={messageKey}
-              className="lx-gen-loader__msg block w-full text-center text-sm font-medium text-[#f5e6b8]/90 md:text-base"
-            >
-              {progressMessages[messageIndex]}
-            </span>
           </div>
         </motion.div>
       </div>
