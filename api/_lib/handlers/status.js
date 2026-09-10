@@ -503,7 +503,7 @@ module.exports = async function handler(req, res) {
                 : {};
             const shouldPreserveSourceAudio =
               meta.workflow === "video_to_video" &&
-              meta.preserve_source_audio !== false;
+              meta.preserve_source_audio === true;
             if (shouldPreserveSourceAudio && resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
               if (sourceVideoUrl) {

@@ -104,11 +104,12 @@ export function computeV2VCreditCost(
   return VIDEO_FLAT_CREDIT_COST;
 }
 
-/** 1 vidéo = 50 crédits (max 8s, 720p) ; +5 si voix activée. */
+/** 1 vidéo = 50 crédits (max 8s, 720p) ; +5 si voix IA (I2V) ou voix filmée (V2V). */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
   voiceEnabled?: boolean;
+  preserveSourceAudio?: boolean;
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
 }): number {
@@ -116,7 +117,11 @@ export function computeVideoCreditCost(params: {
     params.workflow === "video_to_video"
       ? computeV2VCreditCost(params.sourceVideoDurationSec)
       : VIDEO_FLAT_CREDIT_COST;
-  if (params.voiceEnabled) cost += VIDEO_VOICE_EXTRA_CREDIT;
+  if (params.workflow === "video_to_video") {
+    if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
+  } else if (params.voiceEnabled) {
+    cost += VIDEO_VOICE_EXTRA_CREDIT;
+  }
   return cost;
 }
 

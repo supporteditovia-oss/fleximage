@@ -36,6 +36,7 @@ export interface VideoStudioGenerateInput {
   source_video_duration_sec?: number;
   reference_images?: string[];
   reference_image_url?: string;
+  preserve_source_audio?: boolean;
   voice_enabled?: boolean;
   voice_mode?: "cloned" | "catalog" | "none";
   voice_clone_id?: string;

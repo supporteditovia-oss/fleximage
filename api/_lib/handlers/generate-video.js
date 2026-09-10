@@ -337,7 +337,10 @@ module.exports = async function handler(req, res) {
         ? body.aspect_ratio
         : "9:16";
     const quality = body.quality === "high" ? "high" : "standard";
-    const voiceEnabled = Boolean(body.voice_enabled);
+    const voiceEnabled =
+      workflow === "image_to_video" && Boolean(body.voice_enabled);
+    const preserveSourceAudio =
+      workflow === "video_to_video" && Boolean(body.preserve_source_audio);
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
     let sourceVideoDurationSec = null;
@@ -362,6 +365,7 @@ module.exports = async function handler(req, res) {
       durationSec,
       quality,
       voiceEnabled,
+      preserveSourceAudio,
       isAdmin,
       sourceVideoDurationSec,
     });
@@ -498,7 +502,7 @@ module.exports = async function handler(req, res) {
       source_video_duration_sec: sourceVideoDurationSec,
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,
-      preserve_source_audio: workflow === "video_to_video",
+      preserve_source_audio: preserveSourceAudio,
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
