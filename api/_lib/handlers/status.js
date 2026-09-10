@@ -1,5 +1,9 @@
 const { requireUser, sendError } = require("../user-auth");
 const { downloadAndStoreImages, downloadAndStoreVideo } = require("../r2");
+const {
+  getSourceVideoUrlFromLarp,
+  muxSourceAudioOntoVideo,
+} = require("../mux-source-audio");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -492,6 +496,32 @@ module.exports = async function handler(req, res) {
               Array.isArray(stored) && stored.length > 0
                 ? stored
                 : [parsed.video_url];
+
+            const meta =
+              larp.metadata && typeof larp.metadata === "object"
+                ? larp.metadata
+                : {};
+            const shouldPreserveSourceAudio =
+              meta.workflow === "video_to_video" &&
+              meta.preserve_source_audio !== false;
+            if (shouldPreserveSourceAudio && resultUrls[0]) {
+              const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
+              if (sourceVideoUrl) {
+                const muxedUrl = await withTimeout(
+                  muxSourceAudioOntoVideo({
+                    sourceVideoUrl,
+                    generatedVideoUrl: resultUrls[0],
+                    larpId: larp.id,
+                  }),
+                  90_000,
+                  null,
+                );
+                if (muxedUrl) {
+                  resultUrls = [muxedUrl];
+                  meta.source_audio_muxed = true;
+                }
+              }
+            }
           } else {
             resultUrls = extractImageUrls(parsed);
           }

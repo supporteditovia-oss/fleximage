@@ -70,7 +70,7 @@ const WORKFLOW_OPTIONS: {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
     emoji: "🚗",
-    hint: "Swap voiture ou objet",
+    hint: "Swap voiture — ta voix conservée",
   },
 ];
 
@@ -521,6 +521,8 @@ export default function VideoIA() {
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
               {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
+              <strong> Parle pendant le tournage — ta voix originale sera
+              conservée</strong> dans la vidéo finale.
             </p>
 
             <input
