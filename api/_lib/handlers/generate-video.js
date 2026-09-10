@@ -496,6 +496,9 @@ module.exports = async function handler(req, res) {
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: vehicleDescription,
       source_video_duration_sec: sourceVideoDurationSec,
+      source_video_url:
+        workflow === "video_to_video" ? sourceAssetUrl : null,
+      preserve_source_audio: workflow === "video_to_video",
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
