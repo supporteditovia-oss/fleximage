@@ -339,20 +339,21 @@ function preloadCatalogAudioUrl(url: string): Promise<void> {
   });
 }
 
-/** Précharge les aperçus catalogue en arrière-plan (lecture instantanée au clic). */
+/** Précharge les extraits locaux (+ cache Fish unifié en arrière-plan). */
 export function prefetchCatalogPreviews(
-  profiles: Array<Pick<MockVoiceProfile, "fishReferenceId">>,
+  profiles: Array<Pick<MockVoiceProfile, "fishReferenceId" | "sampleUrl">>,
 ): void {
   if (typeof window === "undefined") return;
 
   for (const profile of profiles) {
+    if (profile.sampleUrl) {
+      void preloadCatalogAudioUrl(profile.sampleUrl);
+    }
     const fishReferenceId = profile.fishReferenceId;
     if (!fishReferenceId) continue;
-
-    void (async () => {
-      const url = await fetchUnifiedCatalogPreviewUrl(fishReferenceId);
-      if (url) await preloadCatalogAudioUrl(url);
-    })();
+    void fetchUnifiedCatalogPreviewUrl(fishReferenceId).then((url) => {
+      if (url) void preloadCatalogAudioUrl(url);
+    });
   }
 }
 
@@ -365,14 +366,26 @@ function resolveCatalogPreviewCallbacks(
   return onEndOrCallbacks ?? {};
 }
 
+function isAudioReadyForPlayback(audio: HTMLAudioElement, url: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const expected = new URL(url, window.location.origin).href;
+    const current = audio.currentSrc || audio.src;
+    return (
+      current === expected && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+    );
+  } catch {
+    return false;
+  }
+}
+
 function playCatalogAudio(
   url: string,
   callbacks: CatalogPreviewCallbacks,
 ): () => void {
   stopCatalogSample();
-  callbacks.onLoading?.();
 
-  const token = ++catalogToken;
+  const token = catalogToken;
   let cancelled = false;
   let started = false;
 
@@ -418,13 +431,24 @@ function playCatalogAudio(
     });
   };
 
+  const preloaded = preloadedAudioByUrl.get(url);
+  if (preloaded && isAudioReadyForPlayback(preloaded, url)) {
+    startPlayback(preloaded);
+    return () => {
+      cancelled = true;
+      if (token === catalogToken) stopCatalogSample();
+    };
+  }
+
+  callbacks.onLoading?.();
+
   void (async () => {
     await preloadCatalogAudioUrl(url);
     if (cancelled || token !== catalogToken) return;
 
-    const preloaded = preloadedAudioByUrl.get(url);
-    if (preloaded) {
-      startPlayback(preloaded);
+    const cached = preloadedAudioByUrl.get(url);
+    if (cached) {
+      startPlayback(cached);
       return;
     }
 
@@ -460,18 +484,21 @@ export function speakCatalogSample(
   };
 
   if (profile.fishReferenceId) {
+    void fetchUnifiedCatalogPreviewUrl(profile.fishReferenceId);
+  }
+
+  if (profile.sampleUrl) {
+    return playCatalogAudio(profile.sampleUrl, callbacks);
+  }
+
+  if (profile.fishReferenceId) {
     void (async () => {
       const unifiedUrl = await fetchUnifiedCatalogPreviewUrl(
         profile.fishReferenceId!,
       );
       if (cancelled) return;
-
       if (unifiedUrl) {
         playCatalogAudio(unifiedUrl, callbacks);
-        return;
-      }
-      if (profile.sampleUrl) {
-        playCatalogAudio(profile.sampleUrl, callbacks);
         return;
       }
       callbacks.onPlaying?.();
@@ -485,10 +512,6 @@ export function speakCatalogSample(
       );
     })();
     return cancel;
-  }
-
-  if (profile.sampleUrl) {
-    return playCatalogAudio(profile.sampleUrl, callbacks);
   }
   callbacks.onPlaying?.();
   return speakRaw(

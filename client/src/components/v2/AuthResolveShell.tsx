@@ -5,7 +5,7 @@ export function AuthResolveShell() {
       className="flex min-h-[100svh] items-center justify-center"
       style={{
         background:
-          "linear-gradient(165deg, #ffffff 0%, #f5f0e8 42%, #ebe6df 100%)",
+          "linear-gradient(165deg, #12100e 0%, #1a1714 42%, #141210 100%)",
       }}
       role="status"
       aria-live="polite"
