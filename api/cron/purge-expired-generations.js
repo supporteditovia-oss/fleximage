@@ -1,5 +1,8 @@
 const { getSupabaseAdmin } = require("../_lib/user-auth");
 const { purgeExpiredGenerations } = require("../_lib/purge-generation");
+const {
+  purgeChurnedExSubscriberGenerations,
+} = require("../_lib/purge-churned-users");
 
 function authorizeCron(req) {
   const secret = process.env.CRON_SECRET;
@@ -34,7 +37,12 @@ module.exports = async function handler(req, res) {
       Math.max(Number(req.query?.limit) || 200, 1),
       500,
     );
-    const result = await purgeExpiredGenerations(supabase, limit);
+    const expired = await purgeExpiredGenerations(supabase, limit);
+    const churned = await purgeChurnedExSubscriberGenerations(supabase, {
+      userLimit: Math.min(Math.max(Number(req.query?.churnUsers) || 50, 1), 200),
+      genBatch: limit,
+    });
+    const result = { expired, churned };
     console.info("[cron/purge-expired-generations]", result);
     res.status(200).json({ ok: true, ...result });
   } catch (error) {

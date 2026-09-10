@@ -11,6 +11,9 @@ const {
   purgeExpiredGenerations,
   purgeGenerationsOlderThan,
 } = require("../api/_lib/purge-generation.js");
+const {
+  purgeChurnedExSubscriberGenerations,
+} = require("../api/_lib/purge-churned-users.js");
 
 const daysArg = process.argv.find((a) => a.startsWith("--days="));
 const batchArg = process.argv.find((a) => a.startsWith("--batch="));
@@ -48,4 +51,25 @@ for (;;) {
   if (r.scanned < batch) break;
 }
 
-console.log(`[purge-retention] Done. rows=${totalPurged} r2Keys=${totalKeys}`);
+console.log(
+  `[purge-retention] Purge ex-abonnés résiliés + inactifs (>${days}j sans retour)...`,
+);
+let totalChurnUsers = 0;
+let totalChurnGens = 0;
+for (;;) {
+  const r = await purgeChurnedExSubscriberGenerations(supabase, {
+    userLimit: 50,
+    genBatch: batch,
+  });
+  totalChurnUsers += r.usersPurged;
+  totalChurnGens += r.generationsPurged;
+  totalKeys += r.keys;
+  console.log(
+    `  batch churned: scannedUsers=${r.scannedUsers} usersPurged=${r.usersPurged} gens=${r.generationsPurged}`,
+  );
+  if (r.scannedUsers < 50) break;
+}
+
+console.log(
+  `[purge-retention] Done. rows=${totalPurged} churnUsers=${totalChurnUsers} churnGens=${totalChurnGens} r2Keys=${totalKeys}`,
+);
