@@ -35,7 +35,8 @@ import {
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
 import {
   formatVideoSizeMb,
-  uploadVideoFileForStudio,
+  prepareVideoFileForStudio,
+  type StudioVideoUpload,
 } from "@/lib/upload-video";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
@@ -94,7 +95,9 @@ export default function VideoIA() {
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoSource, setVideoSource] = useState<StudioVideoUpload | null>(
+    null,
+  );
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
@@ -165,7 +168,7 @@ export default function VideoIA() {
     voiceReady &&
     canAfford;
   const canGenerateV2V =
-    Boolean(videoUrl) &&
+    Boolean(videoSource) &&
     swapPrompt.trim().length >= 5 &&
     voiceReady &&
     canAfford &&
@@ -208,7 +211,7 @@ export default function VideoIA() {
       return;
     }
     setIsVideoUploading(true);
-    setVideoUrl(null);
+    setVideoSource(null);
     try {
       const duration = await readVideoDurationSec(file);
       const check = validateVideoDurationForUpload(duration);
@@ -223,8 +226,8 @@ export default function VideoIA() {
       const preview = URL.createObjectURL(file);
       setVideoDurationSec(Math.ceil(duration));
       setVideoPreview(preview);
-      const uploadedUrl = await uploadVideoFileForStudio(file);
-      setVideoUrl(uploadedUrl);
+      const prepared = await prepareVideoFileForStudio(file);
+      setVideoSource(prepared);
     } catch (err: unknown) {
       setVideoPreview(null);
       setVideoDurationSec(null);
@@ -299,14 +302,16 @@ export default function VideoIA() {
 
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
-    if (!canGenerateV2V || !videoUrl) return;
+    if (!canGenerateV2V || !videoSource) return;
 
     setIsSubmitting(true);
     try {
       const result = await generateVideo.mutateAsync({
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
-        video_url: videoUrl,
+        ...(videoSource.mode === "url"
+          ? { video_url: videoSource.videoUrl }
+          : { videos: [videoSource.dataUrl] }),
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
         ...buildVoicePayload(),
