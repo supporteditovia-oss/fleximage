@@ -49,9 +49,9 @@ export type ClonedVoice = {
   createdAt: string;
 };
 
-/** Sample catalogue uniquement — court, neutre, non personnalisable. */
+/** Phrase unique pour tous les aperçus catalogue (identique côté Fish TTS). */
 export const CATALOG_SAMPLE_LINE =
-  "Aperçu LuxeFlexIA. Ceci est un extrait modèle, pas ton texte.";
+  "Personne ne croyait en moi, alors j'ai arrêté d'expliquer.";
 
 const ACCENTS = [
   "linear-gradient(145deg, #1a1a1a, #5c4a2a)",
@@ -83,13 +83,10 @@ const MANUAL_PHOTO_FILES: Partial<Record<string, string>> = {
   gazo: "gazo.webp",
   damso: "damso.webp",
   dadju: "dadju.png",
-  klm: "klm.png",
-  badbad: "badbad.jpg",
   kaaris: "kaaris.jpg",
   tiakola: "tiakola.jpg",
   ninho: "ninho.jpg",
   niska: "niska.jpg",
-  werenoi: "werenoi.jpg",
   plk: "plk.jpg",
   sdm: "sdm.webp",
 };
@@ -111,10 +108,9 @@ const CATALOG_FISH_IDS: Partial<Record<string, string>> = {
   jul: "66754cdcb9554e62bdff1ab6446dc78d",
   sch: "d4b887e7013045bcba9bc9bb2fe2d3d5",
   gazo: "0ff4b00e39e2429981b93bd7c6256d98",
-  niska: "7f88f98abc7142e2a1353f63e6b9cb31",
+  niska: "6be490a175744894826dd464cf3a5004",
   plk: "c9188f639648467f8f1c513b0dbac9f7",
   kaaris: "30679093939d4335b780f6d45709de08",
-  werenoi: "c569031ca13d447e90794eb076fc7f89",
   sdm: "0a011b2e359e4b5580f0e46764795c3c",
   tiakola: "38aca316167d449288bab317c60cd70b",
 };
@@ -137,10 +133,7 @@ const CATALOG_SEEDS: Seed[] = [
   { slug: "gazo", name: "Gazo", category: "Rap", description: "Drill FR", pitch: 0.76, rate: 1.04 },
   { slug: "niska", name: "Niska", category: "Rap", description: "Trap Paris", pitch: 0.74, rate: 1.0 },
   { slug: "plk", name: "PLK", category: "Rap", description: "Cloud rap", pitch: 0.8, rate: 0.98 },
-  { slug: "klm", name: "KLM", category: "Rap", description: "Rap drill", pitch: 0.77, rate: 1.05 },
-  { slug: "badbad", name: "BadBad", category: "Rap", description: "Rap nouvelle vague", pitch: 0.79, rate: 1.03 },
   { slug: "kaaris", name: "Kaaris", category: "Rap", description: "Trap hard", pitch: 0.69, rate: 0.94 },
-  { slug: "werenoi", name: "Werenoi", category: "Rap", description: "Rap FR montant", pitch: 0.75, rate: 1.02 },
   { slug: "sdm", name: "SDM", category: "Rap", description: "Rap Parisien", pitch: 0.73, rate: 1.0 },
   { slug: "tiakola", name: "Tiakola", category: "Rap", description: "Afro trap", pitch: 0.81, rate: 1.04 },
 ];
@@ -289,15 +282,66 @@ function playCatalogAudio(url: string, onEnd?: () => void): () => void {
   };
 }
 
+async function fetchUnifiedCatalogPreviewUrl(
+  fishReferenceId: string,
+): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({ fish_id: fishReferenceId });
+    const res = await fetch(`/api/larps/voice/catalog-preview?${params}`, {
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { audioUrl?: string };
+    return typeof json.audioUrl === "string" && json.audioUrl ? json.audioUrl : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Aperçu catalogue UNIQUEMENT.
- * Joue l'extrait officiel Fish Audio de l'artiste. La synthèse du navigateur
- * ne sert plus que de secours pour une voix sans extrait.
+ * Aperçu catalogue UNIQUEMENT — même phrase et même modèle Fish que la génération.
  */
 export function speakCatalogSample(
-  profile: Pick<MockVoiceProfile, "name" | "pitch" | "rate" | "sampleUrl">,
+  profile: Pick<
+    MockVoiceProfile,
+    "name" | "pitch" | "rate" | "sampleUrl" | "fishReferenceId"
+  >,
   onEnd?: () => void,
 ): () => void {
+  if (profile.fishReferenceId) {
+    const token = ++catalogToken;
+    let cancelled = false;
+
+    void (async () => {
+      const unifiedUrl = await fetchUnifiedCatalogPreviewUrl(
+        profile.fishReferenceId!,
+      );
+      if (cancelled || token !== catalogToken) return;
+
+      if (unifiedUrl) {
+        playCatalogAudio(unifiedUrl, onEnd);
+        return;
+      }
+      if (profile.sampleUrl) {
+        playCatalogAudio(profile.sampleUrl, onEnd);
+        return;
+      }
+      speakRaw(
+        {
+          text: CATALOG_SAMPLE_LINE,
+          pitch: profile.pitch ?? 1,
+          rate: profile.rate ?? 1,
+        },
+        onEnd,
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      stopCatalogSample();
+    };
+  }
+
   if (profile.sampleUrl) {
     return playCatalogAudio(profile.sampleUrl, onEnd);
   }
