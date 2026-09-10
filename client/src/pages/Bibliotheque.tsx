@@ -7,6 +7,7 @@ import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
 import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
+  prefetchCatalogPreviews,
   speakCatalogSample,
   stopCatalogSample,
   type VoiceCategory,
@@ -116,6 +117,7 @@ function VoiceCatalogLibrary() {
     readSelectedCatalogVoiceId(),
   );
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const stopSpeakRef = useRef<(() => void) | null>(null);
 
   const filtered = useMemo(() => {
@@ -132,6 +134,7 @@ function VoiceCatalogLibrary() {
   }, [filter, query]);
 
   useEffect(() => {
+    prefetchCatalogPreviews(MOCK_VOICE_CATALOG);
     return () => {
       stopSpeakRef.current?.();
       stopCatalogSample();
@@ -166,10 +169,19 @@ function VoiceCatalogLibrary() {
 
     if (play) {
       stopSpeakRef.current?.();
-      setPreviewId(id);
-      stopSpeakRef.current = speakCatalogSample(voice, () => {
-        setPreviewId(null);
-        stopSpeakRef.current = null;
+      setPreviewId(null);
+      setLoadingPreviewId(id);
+      stopSpeakRef.current = speakCatalogSample(voice, {
+        onLoading: () => setLoadingPreviewId(id),
+        onPlaying: () => {
+          setLoadingPreviewId(null);
+          setPreviewId(id);
+        },
+        onEnd: () => {
+          setPreviewId(null);
+          setLoadingPreviewId(null);
+          stopSpeakRef.current = null;
+        },
       });
     }
   };
@@ -227,6 +239,7 @@ function VoiceCatalogLibrary() {
         {filtered.map((voice) => {
           const selected = selectedId === voice.id;
           const previewing = previewId === voice.id;
+          const loadingPreview = loadingPreviewId === voice.id;
           return (
             <div
               key={voice.id}
@@ -235,6 +248,7 @@ function VoiceCatalogLibrary() {
                 "biblio-catalog__item",
                 selected && "is-selected",
                 previewing && "is-playing",
+                loadingPreview && "is-loading",
               )}
             >
               <span
@@ -263,16 +277,22 @@ function VoiceCatalogLibrary() {
                 type="button"
                 className="biblio-catalog__play-btn"
                 onClick={() => {
-                  if (previewId === voice.id) {
+                  if (previewId === voice.id || loadingPreview) {
                     stopSpeakRef.current?.();
                     setPreviewId(null);
+                    setLoadingPreviewId(null);
                     return;
                   }
                   selectVoice(voice.id, true);
                 }}
-                aria-label={`${voice.name}. ${previewing ? "Arrêter" : "Écouter"}`}
+                aria-busy={loadingPreview}
+                aria-label={`${voice.name}. ${
+                  loadingPreview ? "Chargement" : previewing ? "Arrêter" : "Écouter"
+                }`}
               >
-                {previewing ? (
+                {loadingPreview ? (
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                ) : previewing ? (
                   <Pause className="h-3 w-3" aria-hidden />
                 ) : (
                   <Play className="h-3 w-3" aria-hidden />

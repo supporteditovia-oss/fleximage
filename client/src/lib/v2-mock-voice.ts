@@ -51,7 +51,13 @@ export type ClonedVoice = {
 
 /** Phrase unique pour tous les aperçus catalogue (identique côté Fish TTS). */
 export const CATALOG_SAMPLE_LINE =
-  "Personne ne croyait en moi, alors j'ai arrêté d'expliquer.";
+  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
+
+export type CatalogPreviewCallbacks = {
+  onLoading?: () => void;
+  onPlaying?: () => void;
+  onEnd?: () => void;
+};
 
 const ACCENTS = [
   "linear-gradient(145deg, #1a1a1a, #5c4a2a)",
@@ -239,6 +245,16 @@ let catalogAudio: HTMLAudioElement | null = null;
 let catalogToken = 0;
 let catalogOnEnd: (() => void) | null = null;
 
+const previewUrlCache = new Map<string, string>();
+const previewUrlInflight = new Map<string, Promise<string | null>>();
+const preloadedAudioByUrl = new Map<string, HTMLAudioElement>();
+
+function configureMobileAudio(audio: HTMLAudioElement) {
+  audio.preload = "auto";
+  audio.setAttribute("playsinline", "true");
+  audio.setAttribute("webkit-playsinline", "true");
+}
+
 function finishCatalogAudio() {
   const callback = catalogOnEnd;
   catalogOnEnd = null;
@@ -259,43 +275,170 @@ export function stopCatalogSample(): void {
   if (typeof window !== "undefined") window.speechSynthesis?.cancel();
 }
 
-function playCatalogAudio(url: string, onEnd?: () => void): () => void {
-  stopCatalogSample();
-
-  if (!catalogAudio) {
-    catalogAudio = new Audio();
-    catalogAudio.preload = "auto";
-    catalogAudio.addEventListener("ended", finishCatalogAudio);
-    catalogAudio.addEventListener("error", finishCatalogAudio);
-  }
-
-  const token = ++catalogToken;
-  catalogOnEnd = onEnd ?? null;
-  catalogAudio.src = url;
-  catalogAudio.currentTime = 0;
-  void catalogAudio.play().catch(() => {
-    if (token === catalogToken) finishCatalogAudio();
-  });
-
-  return () => {
-    if (token === catalogToken) stopCatalogSample();
-  };
-}
-
 async function fetchUnifiedCatalogPreviewUrl(
   fishReferenceId: string,
 ): Promise<string | null> {
-  try {
-    const params = new URLSearchParams({ fish_id: fishReferenceId });
-    const res = await fetch(`/api/larps/voice/catalog-preview?${params}`, {
-      credentials: "include",
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { audioUrl?: string };
-    return typeof json.audioUrl === "string" && json.audioUrl ? json.audioUrl : null;
-  } catch {
-    return null;
+  const cached = previewUrlCache.get(fishReferenceId);
+  if (cached) return cached;
+
+  const inflight = previewUrlInflight.get(fishReferenceId);
+  if (inflight) return inflight;
+
+  const request = (async () => {
+    try {
+      const params = new URLSearchParams({ fish_id: fishReferenceId });
+      const res = await fetch(`/api/larps/voice/catalog-preview?${params}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { audioUrl?: string };
+      const audioUrl =
+        typeof json.audioUrl === "string" && json.audioUrl ? json.audioUrl : null;
+      if (audioUrl) previewUrlCache.set(fishReferenceId, audioUrl);
+      return audioUrl;
+    } catch {
+      return null;
+    } finally {
+      previewUrlInflight.delete(fishReferenceId);
+    }
+  })();
+
+  previewUrlInflight.set(fishReferenceId, request);
+  return request;
+}
+
+function preloadCatalogAudioUrl(url: string): Promise<void> {
+  const existing = preloadedAudioByUrl.get(url);
+  if (existing && existing.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+    return Promise.resolve();
   }
+
+  return new Promise((resolve) => {
+    let audio = preloadedAudioByUrl.get(url);
+    if (!audio) {
+      audio = new Audio();
+      configureMobileAudio(audio);
+      preloadedAudioByUrl.set(url, audio);
+    }
+
+    const done = () => {
+      audio?.removeEventListener("canplaythrough", done);
+      audio?.removeEventListener("error", done);
+      resolve();
+    };
+
+    if (audio.src === url && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      resolve();
+      return;
+    }
+
+    audio.addEventListener("canplaythrough", done, { once: true });
+    audio.addEventListener("error", done, { once: true });
+    audio.src = url;
+    audio.load();
+  });
+}
+
+/** Précharge les aperçus catalogue en arrière-plan (lecture instantanée au clic). */
+export function prefetchCatalogPreviews(
+  profiles: Array<Pick<MockVoiceProfile, "fishReferenceId">>,
+): void {
+  if (typeof window === "undefined") return;
+
+  for (const profile of profiles) {
+    const fishReferenceId = profile.fishReferenceId;
+    if (!fishReferenceId) continue;
+
+    void (async () => {
+      const url = await fetchUnifiedCatalogPreviewUrl(fishReferenceId);
+      if (url) await preloadCatalogAudioUrl(url);
+    })();
+  }
+}
+
+function resolveCatalogPreviewCallbacks(
+  onEndOrCallbacks?: (() => void) | CatalogPreviewCallbacks,
+): CatalogPreviewCallbacks {
+  if (typeof onEndOrCallbacks === "function") {
+    return { onEnd: onEndOrCallbacks };
+  }
+  return onEndOrCallbacks ?? {};
+}
+
+function playCatalogAudio(
+  url: string,
+  callbacks: CatalogPreviewCallbacks,
+): () => void {
+  stopCatalogSample();
+  callbacks.onLoading?.();
+
+  const token = ++catalogToken;
+  let cancelled = false;
+  let started = false;
+
+  const notifyPlaying = () => {
+    if (started || cancelled || token !== catalogToken) return;
+    started = true;
+    callbacks.onPlaying?.();
+  };
+
+  const finish = () => {
+    if (token !== catalogToken) return;
+    finishCatalogAudio();
+  };
+
+  const startPlayback = (audio: HTMLAudioElement) => {
+    if (cancelled || token !== catalogToken) return;
+
+    catalogAudio = audio;
+    catalogOnEnd = callbacks.onEnd ?? null;
+
+    if (!audio.dataset.catalogBound) {
+      audio.dataset.catalogBound = "1";
+      audio.addEventListener("ended", finishCatalogAudio);
+      audio.addEventListener("error", finishCatalogAudio);
+    }
+
+    const onPlaying = () => {
+      audio.removeEventListener("playing", onPlaying);
+      notifyPlaying();
+    };
+    audio.addEventListener("playing", onPlaying);
+
+    try {
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+
+    void audio.play().then(() => {
+      if (audio.currentTime > 0 && !started) notifyPlaying();
+    }).catch(() => {
+      if (token === catalogToken) finish();
+    });
+  };
+
+  void (async () => {
+    await preloadCatalogAudioUrl(url);
+    if (cancelled || token !== catalogToken) return;
+
+    const preloaded = preloadedAudioByUrl.get(url);
+    if (preloaded) {
+      startPlayback(preloaded);
+      return;
+    }
+
+    const audio = new Audio();
+    configureMobileAudio(audio);
+    preloadedAudioByUrl.set(url, audio);
+    audio.src = url;
+    startPlayback(audio);
+  })();
+
+  return () => {
+    cancelled = true;
+    if (token === catalogToken) stopCatalogSample();
+  };
 }
 
 /**
@@ -306,52 +449,55 @@ export function speakCatalogSample(
     MockVoiceProfile,
     "name" | "pitch" | "rate" | "sampleUrl" | "fishReferenceId"
   >,
-  onEnd?: () => void,
+  onEndOrCallbacks?: (() => void) | CatalogPreviewCallbacks,
 ): () => void {
-  if (profile.fishReferenceId) {
-    const token = ++catalogToken;
-    let cancelled = false;
+  const callbacks = resolveCatalogPreviewCallbacks(onEndOrCallbacks);
+  let cancelled = false;
 
+  const cancel = () => {
+    cancelled = true;
+    stopCatalogSample();
+  };
+
+  if (profile.fishReferenceId) {
     void (async () => {
       const unifiedUrl = await fetchUnifiedCatalogPreviewUrl(
         profile.fishReferenceId!,
       );
-      if (cancelled || token !== catalogToken) return;
+      if (cancelled) return;
 
       if (unifiedUrl) {
-        playCatalogAudio(unifiedUrl, onEnd);
+        playCatalogAudio(unifiedUrl, callbacks);
         return;
       }
       if (profile.sampleUrl) {
-        playCatalogAudio(profile.sampleUrl, onEnd);
+        playCatalogAudio(profile.sampleUrl, callbacks);
         return;
       }
+      callbacks.onPlaying?.();
       speakRaw(
         {
           text: CATALOG_SAMPLE_LINE,
           pitch: profile.pitch ?? 1,
           rate: profile.rate ?? 1,
         },
-        onEnd,
+        callbacks.onEnd,
       );
     })();
-
-    return () => {
-      cancelled = true;
-      stopCatalogSample();
-    };
+    return cancel;
   }
 
   if (profile.sampleUrl) {
-    return playCatalogAudio(profile.sampleUrl, onEnd);
+    return playCatalogAudio(profile.sampleUrl, callbacks);
   }
+  callbacks.onPlaying?.();
   return speakRaw(
     {
       text: CATALOG_SAMPLE_LINE,
       pitch: profile.pitch ?? 1,
       rate: profile.rate ?? 1,
     },
-    onEnd,
+    callbacks.onEnd,
   );
 }
 
