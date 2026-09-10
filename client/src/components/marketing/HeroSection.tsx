@@ -26,6 +26,8 @@ import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import "@/components/larp/generation-loader.css";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
@@ -74,6 +76,7 @@ export default function HeroSection() {
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = React.useState<
     number | null
   >(null);
+  const [isGenerating, setIsGenerating] = React.useState(false);
   const isGeneratingRef = React.useRef(false);
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -139,6 +142,7 @@ export default function HeroSection() {
   const handleSubmit = async () => {
     if (isGeneratingRef.current || generateDirect.isPending) return;
     isGeneratingRef.current = true;
+    setIsGenerating(true);
     const generationRequestId = createGenerationRequestId();
 
     const files = images.filter(
@@ -147,6 +151,7 @@ export default function HeroSection() {
 
     if (files.length === 0) {
       isGeneratingRef.current = false;
+      setIsGenerating(false);
       toast({
         variant: "destructive",
         title: t("hero.referenceImageRequiredTitle"),
@@ -167,6 +172,8 @@ export default function HeroSection() {
         } catch (error) {
           console.error("Ignored IDB save error:", error);
         }
+        setIsGenerating(false);
+        isGeneratingRef.current = false;
         navigate("/generate");
         return;
       }
@@ -194,9 +201,11 @@ export default function HeroSection() {
             : null,
         );
         setTaskId(result.taskId);
+        setIsGenerating(false);
         refetchEligibility();
       } catch (error: any) {
         isGeneratingRef.current = false;
+        setIsGenerating(false);
         if (error.code === "REFERENCE_IMAGE_REQUIRED") {
           toast({
             variant: "destructive",
@@ -250,9 +259,11 @@ export default function HeroSection() {
           description: message,
         });
         isGeneratingRef.current = false;
+        setIsGenerating(false);
       }
     } else {
       isGeneratingRef.current = false;
+      setIsGenerating(false);
       const guestPrompt = prompt.trim() || t("hero.surprisePrompt");
       // localStorage survives Google OAuth on mobile Safari better than huge IDB blobs
       markOnboardingResume({
@@ -443,6 +454,18 @@ export default function HeroSection() {
         <span className="text-xs font-medium tracking-wide">{t("hero.discover")}</span>
         <ChevronDown className="h-5 w-5" aria-hidden />
       </a>
+
+      {(isGenerating || generateDirect.isPending) && !taskId
+        ? createPortal(
+            <GenerationLoader
+              taskId="hero-pending"
+              status="connecting"
+              estimatedSeconds={generationEstimateSeconds ?? 50}
+              inputImageUrl={images[0]?.url}
+            />,
+            document.body,
+          )
+        : null}
 
       {taskId && createPortal(
         <GenerationProgress
