@@ -798,7 +798,6 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }, [navigate, profile?.id]);
 
   const startOnboardingPaywallFlow = useCallback(() => {
-    setPendingLoading(false);
     setFakePaywallReason("onboarding");
     setShowLuxePaywall(false);
     setFakeLoaderImageUrl(
@@ -832,15 +831,16 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     isGeneratingRef.current = true;
     const generationRequestId = createGenerationRequestId();
 
+    const requiredCreditsPreview =
+      generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
     const willUseFakeOnboardingLoader =
       profile &&
       !profile.is_subscriber &&
       profile.role !== "admin" &&
-      !isReturningFromCheckout;
+      !isReturningFromCheckout &&
+      profile.credits < requiredCreditsPreview;
 
-    if (!willUseFakeOnboardingLoader) {
-      setPendingLoading(true);
-    }
+    setPendingLoading(true);
     setIsStartingGeneration(true);
 
     const selectedOrPendingTemplateId =
@@ -945,13 +945,13 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
 
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
-    // Non-subscribers always get fake loading → paywall (even with 0 credits).
-    // Never open the paywall directly from Créer for this audience.
+    // Non-abonnés sans assez de crédits : loader identique aux abonnés → paywall.
     const shouldUseOnboardingPaywall =
       profile &&
       !profile.is_subscriber &&
       profile.role !== "admin" &&
-      !isReturningFromCheckout;
+      !isReturningFromCheckout &&
+      profile.credits < requiredCredits;
 
     if (shouldUseOnboardingPaywall) {
       if (!filesForGeneration[0] && !getPaywallImage()) {

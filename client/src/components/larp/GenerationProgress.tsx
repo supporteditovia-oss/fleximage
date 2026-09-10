@@ -65,7 +65,7 @@ export function GenerationProgress({
   // surfaced. Transient blips (5xx, network) during polling are ignored —
   // the generation keeps running server-side.
   const connectionErrorSince = useRef<number | null>(null);
-  const CONNECTION_ERROR_GRACE_MS = 60_000;
+  const CONNECTION_ERROR_GRACE_MS = 180_000;
   const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
   const displayUrls = hasResultMedia
     ? data!.resultUrls
@@ -193,9 +193,11 @@ export function GenerationProgress({
       document.documentElement.removeAttribute("data-larp-result-mode");
       document.body.removeAttribute("data-larp-result-mode");
       toast({
-        variant: "destructive",
-        title: t("progress.connectionError"),
-        description: error?.message ?? t("progress.connectionError"),
+        title: t("progress.stillWorking", "Génération en cours"),
+        description: t(
+          "progress.stillWorkingHint",
+          "La connexion a eu un coup de mou — rouvre Créer ou Historique dans un instant pour retrouver ta photo.",
+        ),
       });
       onReset();
       navigate(studioPath);
