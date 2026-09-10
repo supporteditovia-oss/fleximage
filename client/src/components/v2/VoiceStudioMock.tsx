@@ -909,11 +909,13 @@ export function VoiceStudioMock() {
           }
           deliveryStyle = resolveDeliveryStyle(activeVoice);
         } else if (activeVoice?.kind === "catalog") {
+          fishReferenceId = activeVoice.profile?.fishReferenceId;
+          if (!fishReferenceId) {
+            throw new Error(
+              "Voix catalogue indisponible. Choisis une autre voix dans la bibliothèque.",
+            );
+          }
           deliveryStyle = resolveDeliveryStyle(activeVoice);
-          setCaptureError(
-            "Importe un extrait audio (micro ou fichier) pour cloner cette voix, puis génère.",
-          );
-          return;
         } else {
           throw new Error("Choisis ou crée une voix avant de générer.");
         }
