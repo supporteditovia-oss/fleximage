@@ -1,9 +1,12 @@
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
-/** Plafond rentable aligné API Kling (max technique 30s, on limite à 15s). */
-export const VIDEO_V2V_MAX_DURATION_SEC = 15;
+/** Plafond rentable Kling Motion Control 720p — prix fixe 50 crédits / vidéo. */
+export const VIDEO_V2V_MAX_DURATION_SEC = 8;
+export const VIDEO_FLAT_CREDIT_COST = 50;
+export const VIDEO_VOICE_EXTRA_CREDIT = 5;
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
-export const VIDEO_V2V_MAX_SIZE_MB = 20;
+/** Upload direct R2 — les vidéos smartphone 8s dépassent souvent 20 Mo. */
+export const VIDEO_V2V_MAX_SIZE_MB = 100;
 export type VideoDuration = 5 | 10;
 export type VideoAspectRatio = "9:16" | "16:9" | "1:1";
 export type VideoCameraMovement =
@@ -96,14 +99,12 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
 ];
 
 export function computeV2VCreditCost(
-  sourceVideoDurationSec?: number | null,
+  _sourceVideoDurationSec?: number | null,
 ): number {
-  const dur = sourceVideoDurationSec ?? VIDEO_V2V_MAX_DURATION_SEC;
-  if (dur <= 8) return 25;
-  if (dur <= 12) return 32;
-  return 38;
+  return VIDEO_FLAT_CREDIT_COST;
 }
 
+/** 1 vidéo = 50 crédits (max 8s, 720p) ; +5 si voix activée. */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
@@ -111,18 +112,21 @@ export function computeVideoCreditCost(params: {
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
 }): number {
-  if (params.workflow === "video_to_video") {
-    return computeV2VCreditCost(params.sourceVideoDurationSec);
-  }
-  const durationSec = params.durationSec ?? 5;
-  const quality = params.quality ?? "standard";
-  const voiceEnabled = params.voiceEnabled ?? false;
-  let cost = durationSec === 10 ? 35 : 20;
-  if (quality === "high") cost = Math.round(cost * 1.5);
-  if (voiceEnabled) cost += 5;
+  let cost =
+    params.workflow === "video_to_video"
+      ? computeV2VCreditCost(params.sourceVideoDurationSec)
+      : VIDEO_FLAT_CREDIT_COST;
+  if (params.voiceEnabled) cost += VIDEO_VOICE_EXTRA_CREDIT;
   return cost;
 }
 
+export function maxVoiceCharsForVideoDuration(durationSec?: number | null): number {
+  const d = Number(durationSec) || 5;
+  if (d >= 10) return 280;
+  if (d >= 8) return 200;
+  return 140;
+}
+
 export function maxVoiceChars(durationSec: VideoDuration): number {
-  return durationSec === 10 ? 280 : 140;
+  return maxVoiceCharsForVideoDuration(durationSec);
 }

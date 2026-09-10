@@ -1,7 +1,11 @@
 const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
-const { uploadInputImagesToR2, uploadInputVideoToR2 } = require("../r2");
+const {
+  uploadInputImagesToR2,
+  uploadInputVideoToR2,
+  isOwnedR2PublicUrl,
+} = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
 const {
   generateVideoOnce,
@@ -118,6 +122,12 @@ const VEHICLE_PRESET_PROMPTS = {
 
 async function resolveSourceVideoUrl(userId, body) {
   if (typeof body.video_url === "string" && body.video_url.startsWith("http")) {
+    if (!isOwnedR2PublicUrl(body.video_url)) {
+      throw Object.assign(new Error("URL vidéo non autorisée"), {
+        status: 422,
+        code: "VIDEO_URL_FORBIDDEN",
+      });
+    }
     return body.video_url;
   }
   const videos = Array.isArray(body.videos) ? body.videos : [];
@@ -212,10 +222,13 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
     );
   }
 
-  const voiceTextCheck = validateVoiceText(
-    body.voice_text,
-    body.duration_sec === 10 ? 10 : 5,
-  );
+  const voiceDurationSec =
+    body.source_video_duration_sec != null
+      ? Math.min(8, Math.max(3, Number(body.source_video_duration_sec) || 5))
+      : body.duration_sec === 10
+        ? 10
+        : 5;
+  const voiceTextCheck = validateVoiceText(body.voice_text, voiceDurationSec);
   if (!voiceTextCheck.ok) {
     throw Object.assign(new Error(voiceTextCheck.reason), {
       status: 422,
@@ -407,7 +420,7 @@ module.exports = async function handler(req, res) {
     }
 
     let voiceClone = null;
-    if (workflow === "image_to_video" && voiceEnabled) {
+    if (voiceEnabled) {
       try {
         voiceClone = await validateVoiceOwnership(supabase, userId, body, uiLocale);
       } catch (voiceErr) {
@@ -467,13 +480,12 @@ module.exports = async function handler(req, res) {
       camera_movement: body.camera_movement || "fixed",
       motion_intensity: body.motion_intensity || "natural",
       style: body.style || "realistic",
-      voice_enabled: workflow === "image_to_video" ? voiceEnabled : false,
-      voice_mode: body.voice_mode || "none",
+      voice_enabled: voiceEnabled,
+      voice_mode: voiceEnabled ? body.voice_mode || "catalog" : "none",
       voice_clone_id: voiceClone?.id || null,
-      voice_text:
-        workflow === "image_to_video" && voiceEnabled
-          ? String(body.voice_text || "").trim()
-          : null,
+      voice_text: voiceEnabled
+        ? String(body.voice_text || "").trim()
+        : null,
       voice_consent: Boolean(body.voice_consent),
       lip_sync_enabled: voiceEnabled,
       subtitles_enabled:

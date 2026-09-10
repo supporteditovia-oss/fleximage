@@ -354,6 +354,51 @@ html.luxeflexia-video-page .floating-header::before {
   border-color: rgba(201, 162, 39, 0.45);
 }
 
+.via-credit-summary {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--lx-ink);
+}
+
+.via-credit-summary--low {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(254, 242, 242, 0.85);
+}
+
+.via-credit-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.via-credit-summary__row + .via-credit-summary__row {
+  margin-top: 0.35rem;
+}
+
+.via-credit-summary__row--cost {
+  padding-left: 1.45rem;
+  font-size: 0.75rem;
+  color: var(--lx-muted);
+}
+
+.via-credit-summary__row strong {
+  font-weight: 700;
+  color: var(--lx-ink);
+}
+
+.via-credit-summary__warn {
+  margin: 0.55rem 0 0;
+  padding-left: 1.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
 .via-cta {
   display: inline-flex;
   width: 100%;
@@ -418,4 +463,76 @@ html.luxeflexia-video-page .floating-header::before {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.via-voice-addon {
+  margin-top: 1rem;
+}
+
+.via-voice-addon__toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(18, 16, 14, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--lx-ink);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.via-voice-addon__toggle.is-active {
+  border-color: rgba(201, 162, 39, 0.45);
+  background: rgba(255, 252, 245, 0.95);
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12);
+}
+
+.via-voice-addon__toggle-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.via-voice-addon__toggle-meta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lx-bronze);
+}
+
+.via-voice-addon__panel {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(201, 162, 39, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.via-voice-addon__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  color: var(--lx-muted);
+}
+
+.via-voice-addon__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--lx-muted);
+  cursor: pointer;
+}
+
+.via-voice-addon__consent input {
+  margin-top: 0.15rem;
+  accent-color: var(--lx-bronze);
 }

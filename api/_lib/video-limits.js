@@ -1,8 +1,12 @@
-/** Limites rentables — alignées API Kie (Kling max 30s, on plafonne à 15s). */
+/** Limites rentables — Kling Motion Control (720p), plafond 8s. */
 
-const VIDEO_V2V_MAX_DURATION_SEC = 15;
+const VIDEO_V2V_MAX_DURATION_SEC = 8;
 const VIDEO_V2V_MIN_DURATION_SEC = 3;
-const VIDEO_V2V_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+/** iPhone 8s en 4K peut dépasser 20 Mo — upload direct R2 jusqu'à 100 Mo. */
+const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
+
+/** Prix fixe client : 1 vidéo = N crédits (3–8s, 720p). */
+const VIDEO_FLAT_CREDIT_COST = 50;
 
 const VIDEO_I2V_OUTPUT_DURATION_SEC = 5;
 
@@ -34,19 +38,16 @@ function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
       code: "VIDEO_TOO_LONG",
       message:
         uiLocale === "fr"
-          ? `Vidéo trop longue (max ${VIDEO_V2V_MAX_DURATION_SEC}s pour rester rentable). Coupe ta vidéo avant de l'importer.`
+          ? `Vidéo trop longue (max ${VIDEO_V2V_MAX_DURATION_SEC}s). Coupe ta vidéo avant de l'importer.`
           : `Video too long (max ${VIDEO_V2V_MAX_DURATION_SEC}s). Trim before upload.`,
     };
   }
   return { ok: true, durationSec: dur };
 }
 
-function computeV2VCreditCost(durationSec, isAdmin = false) {
+function computeV2VCreditCost(_durationSec, isAdmin = false) {
   if (isAdmin) return 0;
-  const dur = Number(durationSec) || VIDEO_V2V_MAX_DURATION_SEC;
-  if (dur <= 8) return 25;
-  if (dur <= 12) return 32;
-  return 38;
+  return VIDEO_FLAT_CREDIT_COST;
 }
 
 module.exports = {
@@ -54,6 +55,7 @@ module.exports = {
   VIDEO_V2V_MIN_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
+  VIDEO_FLAT_CREDIT_COST,
   validateSourceVideoDuration,
   computeV2VCreditCost,
 };

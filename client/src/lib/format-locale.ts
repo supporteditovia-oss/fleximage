@@ -5,15 +5,12 @@ export function safeLocale(locale?: string | null): string {
   return resolvePreferredLocale(locale, DEFAULT_LOCALE);
 }
 
+/** Solde crédits toujours en chiffre lisible (jamais « 1 Md » / compact). */
 export function formatCredits(value: number, locale?: string | null): string {
   const n = Number.isFinite(value) ? value : 0;
   const lang = safeLocale(locale);
   try {
-    if (n < 100_000) return n.toLocaleString(lang);
-    return new Intl.NumberFormat(lang, {
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(n);
+    return n.toLocaleString(lang);
   } catch {
     return String(n);
   }

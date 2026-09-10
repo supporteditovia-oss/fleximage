@@ -1,8 +1,8 @@
-const VIDEO_BASE_CREDIT_5S = 20;
-const VIDEO_BASE_CREDIT_10S = 35;
+const {
+  VIDEO_FLAT_CREDIT_COST,
+  computeV2VCreditCost,
+} = require("./video-limits");
 const VIDEO_VOICE_EXTRA_CREDIT = 5;
-const { computeV2VCreditCost } = require("./video-limits");
-const VIDEO_HIGH_QUALITY_MULTIPLIER = 1.5;
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",
@@ -25,20 +25,20 @@ const STYLE_PROMPTS = {
   luxury_ad: "Publicité luxe, éclairage premium, rendu haut de gamme.",
 };
 
+/** 1 vidéo Kling (max 8s, 720p) = prix fixe ; voix optionnelle en supplément. */
 function computeVideoCreditCost(options) {
-  if (options.workflow === "video_to_video") {
-    return computeV2VCreditCost(options.sourceVideoDurationSec, options.isAdmin);
-  }
-  const duration = options.durationSec === 10 ? 10 : 5;
+  if (options.isAdmin) return 0;
+
   let cost =
-    duration === 10 ? VIDEO_BASE_CREDIT_10S : VIDEO_BASE_CREDIT_5S;
-  if (options.quality === "high") {
-    cost = Math.round(cost * VIDEO_HIGH_QUALITY_MULTIPLIER);
-  }
+    options.workflow === "video_to_video"
+      ? computeV2VCreditCost(options.sourceVideoDurationSec, false)
+      : VIDEO_FLAT_CREDIT_COST;
+
   if (options.voiceEnabled) {
     cost += VIDEO_VOICE_EXTRA_CREDIT;
   }
-  return options.isAdmin ? 0 : cost;
+
+  return cost;
 }
 
 function buildCarSwapPrompt(vehicleDescription) {
@@ -73,7 +73,10 @@ function buildRunwayPrompt(params) {
 }
 
 function maxVoiceCharsForDuration(durationSec) {
-  return durationSec === 10 ? 280 : 140;
+  const d = Number(durationSec) || 5;
+  if (d >= 10) return 280;
+  if (d >= 8) return 200;
+  return 140;
 }
 
 function validateVoiceText(text, durationSec) {
@@ -129,8 +132,8 @@ function studioStageLabel(stage) {
 }
 
 module.exports = {
-  VIDEO_BASE_CREDIT_5S,
-  VIDEO_BASE_CREDIT_10S,
+  VIDEO_FLAT_CREDIT_COST,
+  VIDEO_VOICE_EXTRA_CREDIT,
   computeVideoCreditCost,
   buildRunwayPrompt,
   buildCarSwapPrompt,

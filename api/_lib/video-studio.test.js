@@ -6,10 +6,11 @@ const {
   buildRunwayPrompt,
   buildCarSwapPrompt,
   maxVoiceCharsForDuration,
+  VIDEO_FLAT_CREDIT_COST,
 } = require("./video-studio");
 
 describe("video-studio", () => {
-  it("computeVideoCreditCost for 5s standard without voice", () => {
+  it("computeVideoCreditCost flat 50 for image_to_video", () => {
     assert.equal(
       computeVideoCreditCost({
         durationSec: 5,
@@ -17,19 +18,19 @@ describe("video-studio", () => {
         voiceEnabled: false,
         isAdmin: false,
       }),
-      20,
+      VIDEO_FLAT_CREDIT_COST,
     );
   });
 
-  it("computeVideoCreditCost adds voice and high quality", () => {
+  it("computeVideoCreditCost adds voice extra", () => {
     assert.equal(
       computeVideoCreditCost({
-        durationSec: 10,
-        quality: "high",
+        durationSec: 5,
+        quality: "standard",
         voiceEnabled: true,
         isAdmin: false,
       }),
-      58,
+      VIDEO_FLAT_CREDIT_COST + 5,
     );
   });
 
@@ -56,22 +57,22 @@ describe("video-studio", () => {
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });
 
-  it("computeVideoCreditCost for video_to_video scales with duration", () => {
+  it("computeVideoCreditCost flat for video_to_video", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
         sourceVideoDurationSec: 6,
         isAdmin: false,
       }),
-      25,
+      VIDEO_FLAT_CREDIT_COST,
     );
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
-        sourceVideoDurationSec: 14,
+        sourceVideoDurationSec: 8,
         isAdmin: false,
       }),
-      38,
+      VIDEO_FLAT_CREDIT_COST,
     );
   });
 

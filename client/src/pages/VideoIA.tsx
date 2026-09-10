@@ -9,13 +9,19 @@ import {
   Upload,
   Video,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
+import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  maxVoiceCharsForVideoDuration,
+  VIDEO_FLAT_CREDIT_COST,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_VEHICLE_PRESETS,
@@ -27,6 +33,10 @@ import {
   validateVideoDurationForUpload,
 } from "@/lib/video-duration";
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
+import {
+  formatVideoSizeMb,
+  uploadVideoFileForStudio,
+} from "@/lib/upload-video";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
 import "./video-ia-page.css";
@@ -63,6 +73,8 @@ const WORKFLOW_OPTIONS: {
 export default function VideoIA() {
   const [, setLocation] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
+  const { user } = useAuth();
+  const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
 
@@ -82,11 +94,16 @@ export default function VideoIA() {
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [videoBase64, setVideoBase64] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   const [swapPrompt, setSwapPrompt] = useState("");
+
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceConsent, setVoiceConsent] = useState(false);
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,17 +130,46 @@ export default function VideoIA() {
 
   const imagePreviewUrl = uploadPreview || prefillImageUrl;
 
+  const voiceMaxChars = maxVoiceCharsForVideoDuration(
+    workflow === "video_to_video" ? videoDurationSec : durationSec,
+  );
+
+  const voiceReady =
+    !voiceEnabled ||
+    (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
+
   const creditCost = computeVideoCreditCost({
     workflow,
     durationSec,
     quality: "standard",
-    voiceEnabled: false,
+    voiceEnabled,
     sourceVideoDurationSec: videoDurationSec,
   });
 
+  const buildVoicePayload = () =>
+    voiceEnabled
+      ? {
+          voice_enabled: true,
+          voice_mode: "catalog" as const,
+          voice_text: voiceText.trim(),
+          voice_consent: voiceConsent,
+        }
+      : { voice_enabled: false };
+
+  const creditBalance = plan?.credits ?? 0;
+  const canAfford = creditBalance >= creditCost;
+
   const canGenerateI2V =
-    Boolean(imagePreviewUrl) && motionPrompt.trim().length >= 5;
-  const canGenerateV2V = Boolean(videoBase64) && swapPrompt.trim().length >= 5;
+    Boolean(imagePreviewUrl) &&
+    motionPrompt.trim().length >= 5 &&
+    voiceReady &&
+    canAfford;
+  const canGenerateV2V =
+    Boolean(videoUrl) &&
+    swapPrompt.trim().length >= 5 &&
+    voiceReady &&
+    canAfford &&
+    !isVideoUploading;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -157,10 +203,12 @@ export default function VideoIA() {
       toast({
         variant: "destructive",
         title: "Vidéo trop lourde",
-        description: `Maximum ${VIDEO_V2V_MAX_SIZE_MB} Mo pour l'upload.`,
+        description: `Ta vidéo fait ${formatVideoSizeMb(file.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 1080p ou coupe avant d'importer.`,
       });
       return;
     }
+    setIsVideoUploading(true);
+    setVideoUrl(null);
     try {
       const duration = await readVideoDurationSec(file);
       const check = validateVideoDurationForUpload(duration);
@@ -172,16 +220,23 @@ export default function VideoIA() {
         });
         return;
       }
-      const b64 = await fileToBase64(file);
-      setVideoBase64(b64);
+      const preview = URL.createObjectURL(file);
       setVideoDurationSec(Math.ceil(duration));
-      setVideoPreview(URL.createObjectURL(file));
-    } catch {
+      setVideoPreview(preview);
+      const uploadedUrl = await uploadVideoFileForStudio(file);
+      setVideoUrl(uploadedUrl);
+    } catch (err: unknown) {
+      setVideoPreview(null);
+      setVideoDurationSec(null);
+      const message =
+        err instanceof Error ? err.message : "Impossible de lire cette vidéo.";
       toast({
         variant: "destructive",
         title: "Import impossible",
-        description: "Impossible de lire cette vidéo.",
+        description: message,
       });
+    } finally {
+      setIsVideoUploading(false);
     }
   };
 
@@ -205,8 +260,8 @@ export default function VideoIA() {
         motion_intensity: "natural",
         style: "cinematic",
         quality: "standard",
-        voice_enabled: false,
         subtitles_enabled: false,
+        ...buildVoicePayload(),
         ...(uploadBase64
           ? { images: [uploadBase64] }
           : {
@@ -244,16 +299,17 @@ export default function VideoIA() {
 
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
-    if (!canGenerateV2V || !videoBase64) return;
+    if (!canGenerateV2V || !videoUrl) return;
 
     setIsSubmitting(true);
     try {
       const result = await generateVideo.mutateAsync({
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
-        videos: [videoBase64],
+        video_url: videoUrl,
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
+        ...buildVoicePayload(),
         ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
         source: "video_studio",
       });
@@ -323,6 +379,8 @@ export default function VideoIA() {
       </div>
 
       <div key={workflow} className="via-panel via-panel-enter">
+        <VideoCreditSummary creditCost={creditCost} />
+
         {workflow === "image_to_video" ? (
           <>
             <p className="via-step-label">
@@ -331,8 +389,8 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. L&apos;IA la transforme en vidéo 5 s
-              verticale, optimisée Reels &amp; TikTok.
+              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
+              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
             </p>
 
             <input
@@ -400,6 +458,18 @@ export default function VideoIA() {
               </button>
             </div>
 
+            {imagePreviewUrl ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
+
             <button
               type="button"
               className="via-cta"
@@ -428,7 +498,8 @@ export default function VideoIA() {
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
               Filme avec ton téléphone — ex. ta Clio garée.{" "}
-              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> (rentabilité).
+              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
+              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
             </p>
 
@@ -444,13 +515,22 @@ export default function VideoIA() {
             <button
               type="button"
               className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
+              disabled={isVideoUploading}
               onClick={() => videoFileRef.current?.click()}
             >
               <span className="via-upload-zone__icon">
-                <Upload className="h-4 w-4" />
+                {isVideoUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
               </span>
               <span className="via-upload-zone__text">
-                {videoPreview ? "Changer la vidéo" : "Choisir une vidéo"}
+                {isVideoUploading
+                  ? "Envoi de la vidéo…"
+                  : videoPreview
+                    ? "Changer la vidéo"
+                    : "Choisir une vidéo"}
               </span>
               <span className="via-upload-zone__meta">
                 MP4 · max {VIDEO_V2V_MAX_SIZE_MB} Mo · max {VIDEO_V2V_MAX_DURATION_SEC}s
@@ -471,8 +551,8 @@ export default function VideoIA() {
                   Photo de référence (optionnel)
                 </label>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Urus, personnage ou objet cible — active Kling 3.0 Motion
-                  Control pour un rendu plus précis.
+                  Photo du véhicule, personnage ou objet à intégrer — pour un
+                  rendu plus précis.
                 </p>
                 <input
                   ref={refImageFileRef}
@@ -532,13 +612,35 @@ export default function VideoIA() {
               </>
             )}
 
+            {videoPreview ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
+
             <button
               type="button"
               className="via-cta"
-              disabled={!canGenerateV2V || isSubmitting || generateVideo.isPending}
+              disabled={
+                !canGenerateV2V ||
+                isSubmitting ||
+                generateVideo.isPending ||
+                isVideoUploading
+              }
               onClick={() => void handleGenerateV2V()}
             >
-              {isSubmitting || generateVideo.isPending ? (
+              {isVideoUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Envoi de la vidéo…
+                </>
+              ) : isSubmitting || generateVideo.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Remplacement…
