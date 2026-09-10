@@ -33,6 +33,10 @@ import {
   validateVideoDurationForUpload,
 } from "@/lib/video-duration";
 import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
+import {
+  formatVideoSizeMb,
+  uploadVideoFileForStudio,
+} from "@/lib/upload-video";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
 import "./video-ia-page.css";
@@ -90,8 +94,9 @@ export default function VideoIA() {
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
-  const [videoBase64, setVideoBase64] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   const [swapPrompt, setSwapPrompt] = useState("");
@@ -160,10 +165,11 @@ export default function VideoIA() {
     voiceReady &&
     canAfford;
   const canGenerateV2V =
-    Boolean(videoBase64) &&
+    Boolean(videoUrl) &&
     swapPrompt.trim().length >= 5 &&
     voiceReady &&
-    canAfford;
+    canAfford &&
+    !isVideoUploading;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -197,10 +203,12 @@ export default function VideoIA() {
       toast({
         variant: "destructive",
         title: "Vidéo trop lourde",
-        description: `Maximum ${VIDEO_V2V_MAX_SIZE_MB} Mo pour l'upload.`,
+        description: `Ta vidéo fait ${formatVideoSizeMb(file.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 1080p ou coupe avant d'importer.`,
       });
       return;
     }
+    setIsVideoUploading(true);
+    setVideoUrl(null);
     try {
       const duration = await readVideoDurationSec(file);
       const check = validateVideoDurationForUpload(duration);
@@ -212,16 +220,23 @@ export default function VideoIA() {
         });
         return;
       }
-      const b64 = await fileToBase64(file);
-      setVideoBase64(b64);
+      const preview = URL.createObjectURL(file);
       setVideoDurationSec(Math.ceil(duration));
-      setVideoPreview(URL.createObjectURL(file));
-    } catch {
+      setVideoPreview(preview);
+      const uploadedUrl = await uploadVideoFileForStudio(file);
+      setVideoUrl(uploadedUrl);
+    } catch (err: unknown) {
+      setVideoPreview(null);
+      setVideoDurationSec(null);
+      const message =
+        err instanceof Error ? err.message : "Impossible de lire cette vidéo.";
       toast({
         variant: "destructive",
         title: "Import impossible",
-        description: "Impossible de lire cette vidéo.",
+        description: message,
       });
+    } finally {
+      setIsVideoUploading(false);
     }
   };
 
@@ -284,14 +299,14 @@ export default function VideoIA() {
 
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
-    if (!canGenerateV2V || !videoBase64) return;
+    if (!canGenerateV2V || !videoUrl) return;
 
     setIsSubmitting(true);
     try {
       const result = await generateVideo.mutateAsync({
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
-        videos: [videoBase64],
+        video_url: videoUrl,
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
         ...buildVoicePayload(),
@@ -500,13 +515,22 @@ export default function VideoIA() {
             <button
               type="button"
               className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
+              disabled={isVideoUploading}
               onClick={() => videoFileRef.current?.click()}
             >
               <span className="via-upload-zone__icon">
-                <Upload className="h-4 w-4" />
+                {isVideoUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
               </span>
               <span className="via-upload-zone__text">
-                {videoPreview ? "Changer la vidéo" : "Choisir une vidéo"}
+                {isVideoUploading
+                  ? "Envoi de la vidéo…"
+                  : videoPreview
+                    ? "Changer la vidéo"
+                    : "Choisir une vidéo"}
               </span>
               <span className="via-upload-zone__meta">
                 MP4 · max {VIDEO_V2V_MAX_SIZE_MB} Mo · max {VIDEO_V2V_MAX_DURATION_SEC}s
@@ -603,10 +627,20 @@ export default function VideoIA() {
             <button
               type="button"
               className="via-cta"
-              disabled={!canGenerateV2V || isSubmitting || generateVideo.isPending}
+              disabled={
+                !canGenerateV2V ||
+                isSubmitting ||
+                generateVideo.isPending ||
+                isVideoUploading
+              }
               onClick={() => void handleGenerateV2V()}
             >
-              {isSubmitting || generateVideo.isPending ? (
+              {isVideoUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Envoi de la vidéo…
+                </>
+              ) : isSubmitting || generateVideo.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Remplacement…

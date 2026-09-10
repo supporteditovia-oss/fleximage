@@ -1,7 +1,11 @@
 const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
-const { uploadInputImagesToR2, uploadInputVideoToR2 } = require("../r2");
+const {
+  uploadInputImagesToR2,
+  uploadInputVideoToR2,
+  isOwnedR2PublicUrl,
+} = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
 const {
   generateVideoOnce,
@@ -118,6 +122,12 @@ const VEHICLE_PRESET_PROMPTS = {
 
 async function resolveSourceVideoUrl(userId, body) {
   if (typeof body.video_url === "string" && body.video_url.startsWith("http")) {
+    if (!isOwnedR2PublicUrl(body.video_url)) {
+      throw Object.assign(new Error("URL vidéo non autorisée"), {
+        status: 422,
+        code: "VIDEO_URL_FORBIDDEN",
+      });
+    }
     return body.video_url;
   }
   const videos = Array.isArray(body.videos) ? body.videos : [];

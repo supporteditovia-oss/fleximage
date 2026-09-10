@@ -1,4 +1,11 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { VIDEO_V2V_MAX_SIZE_BYTES } = require("./video-limits");
 
 function cleanEnv(value) {
   if (value == null) return "";
@@ -124,6 +131,58 @@ async function listR2Objects(prefix, maxKeys = 300) {
   return objects;
 }
 
+async function createPresignedVideoUploadUrl(userId, { contentType, fileSizeBytes }) {
+  const mime = String(contentType || "video/mp4").trim().toLowerCase();
+  if (!mime.startsWith("video/")) {
+    throw Object.assign(new Error("Format vidéo invalide"), {
+      status: 422,
+      code: "INVALID_VIDEO_TYPE",
+    });
+  }
+  const size = Number(fileSizeBytes);
+  if (!Number.isFinite(size) || size <= 0) {
+    throw Object.assign(new Error("Taille vidéo invalide"), {
+      status: 422,
+      code: "INVALID_VIDEO_SIZE",
+    });
+  }
+  if (size > VIDEO_V2V_MAX_SIZE_BYTES) {
+    throw Object.assign(
+      new Error(
+        `Vidéo trop lourde (max ${Math.round(VIDEO_V2V_MAX_SIZE_BYTES / (1024 * 1024))} Mo).`,
+      ),
+      { status: 422, code: "VIDEO_TOO_LARGE" },
+    );
+  }
+
+  const config = getR2Config();
+  const ext = mime.split("/")[1]?.replace(/[^a-z0-9+.-]/gi, "") || "mp4";
+  const key = `inputs/${userId}/${Date.now()}-source.${ext}`;
+  const client = getS3Client();
+  const uploadUrl = await getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+      ContentType: mime,
+      ContentLength: size,
+    }),
+    { expiresIn: 900 },
+  );
+  const videoUrl = `${config.publicUrl.replace(/\/$/, "")}/${key}`;
+  return { uploadUrl, videoUrl, key };
+}
+
+function isOwnedR2PublicUrl(url) {
+  try {
+    const config = getR2Config();
+    const publicBase = config.publicUrl.replace(/\/$/, "");
+    return String(url).startsWith(`${publicBase}/inputs/`);
+  } catch {
+    return false;
+  }
+}
+
 async function uploadInputVideoToR2(userId, dataUrl) {
   const match = String(dataUrl).match(/^data:(video\/[\w+.-]+);base64,([\s\S]+)$/);
   if (!match) return null;
@@ -210,6 +269,8 @@ module.exports = {
   listR2Objects,
   uploadInputImagesToR2,
   uploadInputVideoToR2,
+  createPresignedVideoUploadUrl,
+  isOwnedR2PublicUrl,
   downloadAndStoreImages,
   downloadAndStoreVideo,
   getR2Config,

@@ -2,7 +2,8 @@
 
 const VIDEO_V2V_MAX_DURATION_SEC = 8;
 const VIDEO_V2V_MIN_DURATION_SEC = 3;
-const VIDEO_V2V_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+/** iPhone 8s en 4K peut dépasser 20 Mo — upload direct R2 jusqu'à 100 Mo. */
+const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
 
 /** Prix fixe client : 1 vidéo = N crédits (3–8s, 720p). */
 const VIDEO_FLAT_CREDIT_COST = 50;

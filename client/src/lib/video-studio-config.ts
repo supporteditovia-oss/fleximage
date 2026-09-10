@@ -5,7 +5,8 @@ export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 export const VIDEO_FLAT_CREDIT_COST = 50;
 export const VIDEO_VOICE_EXTRA_CREDIT = 5;
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
-export const VIDEO_V2V_MAX_SIZE_MB = 20;
+/** Upload direct R2 — les vidéos smartphone 8s dépassent souvent 20 Mo. */
+export const VIDEO_V2V_MAX_SIZE_MB = 100;
 export type VideoDuration = 5 | 10;
 export type VideoAspectRatio = "9:16" | "16:9" | "1:1";
 export type VideoCameraMovement =
