@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Redirect, useLocation } from "wouter";
 import {
   Clapperboard,
@@ -13,6 +14,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
@@ -336,6 +339,18 @@ export default function VideoIA() {
 
   if (!adminPreview) {
     return <Redirect to="/create" />;
+  }
+
+  if ((isSubmitting || generateVideo.isPending) && !taskId) {
+    return createPortal(
+      <GenerationLoader
+        taskId="video-pending"
+        status="connecting"
+        estimatedSeconds={generationEstimate ?? 120}
+        inputImageUrl={imagePreviewUrl || videoPreview || undefined}
+      />,
+      document.body,
+    );
   }
 
   if (taskId) {

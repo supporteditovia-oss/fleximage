@@ -8,6 +8,8 @@ import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import "@/components/larp/generation-loader.css";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
@@ -599,6 +601,24 @@ export default function Modeles() {
 
   if (!isAuthLoading && profile && !adminPreview) {
     return null;
+  }
+
+  if (busy && !taskId) {
+    return createPortal(
+      <GenerationLoader
+        taskId="modeles-pending"
+        status="connecting"
+        estimatedSeconds={pendingUserPhoto ? 62 : 50}
+        inputImageUrl={
+          pendingUserPhoto
+            ? pendingUserPhoto.startsWith("data:")
+              ? pendingUserPhoto
+              : `data:image/jpeg;base64,${pendingUserPhoto}`
+            : undefined
+        }
+      />,
+      document.body,
+    );
   }
 
   if (taskId) {
