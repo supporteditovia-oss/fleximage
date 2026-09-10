@@ -33,6 +33,7 @@ import {
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
 import {
+  formatVideoDurationLabel,
   readVideoDurationSec,
   validateVideoDurationForUpload,
 } from "@/lib/video-duration";
@@ -229,7 +230,7 @@ export default function VideoIA() {
         return;
       }
       const preview = URL.createObjectURL(file);
-      setVideoDurationSec(Math.ceil(duration));
+      setVideoDurationSec(Number(formatVideoDurationLabel(duration)));
       setVideoPreview(preview);
       const prepared = await prepareVideoFileForStudio(file);
       setVideoSource(prepared);
