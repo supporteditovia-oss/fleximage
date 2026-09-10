@@ -142,8 +142,9 @@
   overflow: hidden;
   isolation: isolate;
   color: #fff;
+  background: #141210;
   box-shadow: 0 6px 18px rgba(18, 16, 14, 0.16);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .biblio-catalog__photo {
@@ -218,11 +219,11 @@
   width: 1.5rem;
   height: 1.5rem;
   margin-top: 0.1rem;
-  border: 1px solid rgba(18, 16, 14, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.28);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(20, 18, 16, 0.06);
   color: var(--lx-ink);
-  box-shadow: 0 2px 8px rgba(18, 16, 14, 0.1);
+  box-shadow: 0 2px 8px rgba(18, 16, 14, 0.08);
   cursor: pointer;
   padding: 0;
   transition:

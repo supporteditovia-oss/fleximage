@@ -3,7 +3,6 @@ import { Redirect, useLocation } from "wouter";
 import { Loader2, Pause, Play, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useV2Access } from "@/hooks/use-v2-access";
-import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
 import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
@@ -159,35 +158,36 @@ function VoiceCatalogLibrary() {
     ).length;
   };
 
-  const selectVoice = (id: string, play = true) => {
-    const voice = MOCK_VOICE_CATALOG.find((v) => v.id === id);
-    if (!voice) return;
-
+  const selectVoice = (id: string) => {
     setSelectedId(id);
     writeSelectedCatalogVoiceId(id);
     writeStudioMode("voice");
+  };
 
-    if (play) {
-      stopSpeakRef.current?.();
-      setPreviewId(null);
-      setLoadingPreviewId(id);
-      stopSpeakRef.current = speakCatalogSample(voice, {
-        onLoading: () => setLoadingPreviewId(id),
-        onPlaying: () => {
-          setLoadingPreviewId(null);
-          setPreviewId(id);
-        },
-        onEnd: () => {
-          setPreviewId(null);
-          setLoadingPreviewId(null);
-          stopSpeakRef.current = null;
-        },
-      });
-    }
+  const previewVoice = (id: string) => {
+    const voice = MOCK_VOICE_CATALOG.find((v) => v.id === id);
+    if (!voice) return;
+
+    stopSpeakRef.current?.();
+    setPreviewId(null);
+    setLoadingPreviewId(null);
+
+    stopSpeakRef.current = speakCatalogSample(voice, {
+      onLoading: () => setLoadingPreviewId(id),
+      onPlaying: () => {
+        setLoadingPreviewId(null);
+        setPreviewId(id);
+      },
+      onEnd: () => {
+        setPreviewId(null);
+        setLoadingPreviewId(null);
+        stopSpeakRef.current = null;
+      },
+    });
   };
 
   const useVoice = (id: string) => {
-    selectVoice(id, false);
+    selectVoice(id);
     stopSpeakRef.current?.();
     stopCatalogSample();
     navigate("/create");
@@ -260,7 +260,8 @@ function VoiceCatalogLibrary() {
                     src={voice.photoUrl}
                     alt=""
                     className="biblio-catalog__photo"
-                    loading="lazy"
+                    loading="eager"
+                    fetchPriority="high"
                     decoding="async"
                     width={70}
                     height={70}
@@ -283,7 +284,7 @@ function VoiceCatalogLibrary() {
                     setLoadingPreviewId(null);
                     return;
                   }
-                  selectVoice(voice.id, true);
+                  previewVoice(voice.id);
                 }}
                 aria-busy={loadingPreview}
                 aria-label={`${voice.name}. ${
@@ -324,21 +325,9 @@ function VoiceCatalogLibrary() {
 export default function Bibliotheque() {
   const { isLoading: authLoading } = useAuth();
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
-  const [shellTimedOut, setShellTimedOut] = useState(false);
   const [studioMode, setStudioMode] = useState<StudioMode>(() =>
     readStudioMode(),
   );
-
-  const blocking = authLoading || gateLoading;
-
-  useEffect(() => {
-    if (!blocking) {
-      setShellTimedOut(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setShellTimedOut(true), 2500);
-    return () => window.clearTimeout(timer);
-  }, [blocking]);
 
   useEffect(() => {
     const sync = () => setStudioMode(readStudioMode());
@@ -353,15 +342,11 @@ export default function Bibliotheque() {
     };
   }, []);
 
-  if (blocking && !shellTimedOut) {
-    return <AuthResolveShell />;
-  }
+  const isVoice = studioMode === "voice";
 
-  if (!v2Enabled) {
+  if (!authLoading && !gateLoading && !v2Enabled) {
     return <Redirect to="/historique" />;
   }
-
-  const isVoice = studioMode === "voice";
 
   if (!isVoice) {
     return <Redirect to="/historique" />;
