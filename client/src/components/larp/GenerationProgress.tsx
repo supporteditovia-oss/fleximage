@@ -269,13 +269,13 @@ export function GenerationProgress({
         parseApiCreatedAtMs(data?.createdAt) ??
         (inflightSnapshot?.taskId === taskId
           ? inflightSnapshot.startedAtMs
-          : null),
+          : Date.now()),
     });
   }
 
   const lockedTiming = timingLockRef.current;
   const displayEstimate = lockedTiming?.estimate ?? estimatedSeconds;
-  const startedAtMs = lockedTiming?.startedAtMs ?? null;
+  const startedAtMs = lockedTiming?.startedAtMs ?? Date.now();
 
   const serverRemainingSeconds =
     data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)

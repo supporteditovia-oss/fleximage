@@ -12,6 +12,7 @@ import { useGenerateDirectLarp, useGenerateVideoLarp } from "@/hooks/use-larps";
 import { createGenerationRequestId } from "@/lib/generation-request-id";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
+import "@/components/larp/generation-loader.css";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
@@ -1069,6 +1070,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         });
         setPaywallDefaultPlan("essential");
         setGenerationEstimateSeconds(null);
+        setTransitionBg(false);
         setTaskId(result.taskId);
         generationCommitted = true;
         setPendingLoading(false);
@@ -1105,6 +1107,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
           ? result.estimatedSeconds
           : null,
       );
+      setTransitionBg(false);
       setTaskId(result.taskId);
       generationCommitted = true;
       setPendingLoading(false);
@@ -1361,12 +1364,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)",
   } as const;
 
-  // ── Transition backdrop ─────────────────────────────────────
+  // ── Transition backdrop (sombre — jamais d'écran blanc pendant génération) ──
   const transitionBackdrop = transitionBg
-    ? createPortal(
-      <div className="fixed inset-0 z-[99]" style={lxCreamBgStyle} />,
-      document.body,
-    )
+    ? createPortal(<div className="lx-gen-loader__base fixed inset-0 z-[99]" />, document.body)
     : null;
 
   // ── Debug logging ───────────────────────────────────────────
@@ -1439,12 +1439,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
 
   // -- Generation in progress
   if (taskId) {
-    return (
-      <>
-        {transitionBackdrop}
-        {generationProgress}
-      </>
-    );
+    return generationProgress;
   }
 
   // -- Loading pending LARP from hero flow
