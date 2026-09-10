@@ -174,13 +174,42 @@
   letter-spacing: 0.04em;
 }
 
-.biblio-catalog__item.is-selected .biblio-catalog__avatar,
+.biblio-catalog__item.is-selected .biblio-catalog__avatar {
+  transform: scale(1.04);
+  box-shadow:
+    0 0 0 2px rgba(201, 162, 39, 0.55),
+    0 8px 20px rgba(18, 16, 14, 0.18);
+}
+
 .biblio-catalog__item.is-playing .biblio-catalog__avatar {
   transform: scale(1.04);
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 4px rgba(201, 162, 39, 0.9),
-    0 8px 20px rgba(18, 16, 14, 0.2);
+    0 0 0 2px rgba(201, 162, 39, 0.9),
+    0 0 0 5px rgba(201, 162, 39, 0.22),
+    0 8px 22px rgba(201, 162, 39, 0.28);
+  animation: biblio-catalog-pulse 1.2s ease-in-out infinite;
+}
+
+.biblio-catalog__item.is-loading .biblio-catalog__avatar {
+  box-shadow:
+    0 0 0 2px rgba(201, 162, 39, 0.35),
+    0 6px 16px rgba(18, 16, 14, 0.14);
+}
+
+@keyframes biblio-catalog-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(201, 162, 39, 0.9),
+      0 0 0 5px rgba(201, 162, 39, 0.18),
+      0 8px 22px rgba(201, 162, 39, 0.24);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(201, 162, 39, 1),
+      0 0 0 6px rgba(201, 162, 39, 0.28),
+      0 10px 26px rgba(201, 162, 39, 0.34);
+  }
 }
 
 .biblio-catalog__play-btn {
@@ -191,20 +220,28 @@
   margin-top: 0.1rem;
   border: 1px solid rgba(18, 16, 14, 0.1);
   border-radius: 999px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.96);
   color: var(--lx-ink);
   box-shadow: 0 2px 8px rgba(18, 16, 14, 0.1);
   cursor: pointer;
   padding: 0;
   transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    transform 0.2s ease;
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+
+.biblio-catalog__item.is-loading .biblio-catalog__play-btn {
+  border-color: rgba(201, 162, 39, 0.35);
+  background: rgba(201, 162, 39, 0.1);
+  color: rgba(201, 162, 39, 0.95);
 }
 
 .biblio-catalog__item.is-playing .biblio-catalog__play-btn {
-  border-color: rgba(201, 162, 39, 0.5);
-  background: rgba(201, 162, 39, 0.16);
+  border-color: rgba(201, 162, 39, 0.55);
+  background: rgba(201, 162, 39, 0.2);
+  color: #1a1408;
   transform: scale(1.05);
 }
 

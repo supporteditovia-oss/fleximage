@@ -1,6 +1,6 @@
 /** Phrase unique pour tous les aperçus catalogue — identique à la génération Fish. */
 const CATALOG_SAMPLE_LINE =
-  "Personne ne croyait en moi, alors j'ai arrêté d'expliquer.";
+  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
 
 function isValidFishReferenceId(id) {
   return /^[a-f0-9]{32}$/i.test(String(id || "").trim());

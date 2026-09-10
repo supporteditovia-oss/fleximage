@@ -8,7 +8,7 @@ const {
 
 describe("voice-catalog", () => {
   it("uses a unified sample line", () => {
-    assert.match(CATALOG_SAMPLE_LINE, /Personne ne croyait/i);
+    assert.match(CATALOG_SAMPLE_LINE, /Dubai Marina/i);
   });
 
   it("validates fish reference ids", () => {
