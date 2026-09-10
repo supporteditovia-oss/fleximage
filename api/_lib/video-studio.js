@@ -73,7 +73,10 @@ function buildRunwayPrompt(params) {
 }
 
 function maxVoiceCharsForDuration(durationSec) {
-  return durationSec === 10 ? 280 : 140;
+  const d = Number(durationSec) || 5;
+  if (d >= 10) return 280;
+  if (d >= 8) return 200;
+  return 140;
 }
 
 function validateVoiceText(text, durationSec) {

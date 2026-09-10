@@ -212,10 +212,13 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
     );
   }
 
-  const voiceTextCheck = validateVoiceText(
-    body.voice_text,
-    body.duration_sec === 10 ? 10 : 5,
-  );
+  const voiceDurationSec =
+    body.source_video_duration_sec != null
+      ? Math.min(8, Math.max(3, Number(body.source_video_duration_sec) || 5))
+      : body.duration_sec === 10
+        ? 10
+        : 5;
+  const voiceTextCheck = validateVoiceText(body.voice_text, voiceDurationSec);
   if (!voiceTextCheck.ok) {
     throw Object.assign(new Error(voiceTextCheck.reason), {
       status: 422,
@@ -407,7 +410,7 @@ module.exports = async function handler(req, res) {
     }
 
     let voiceClone = null;
-    if (workflow === "image_to_video" && voiceEnabled) {
+    if (voiceEnabled) {
       try {
         voiceClone = await validateVoiceOwnership(supabase, userId, body, uiLocale);
       } catch (voiceErr) {
@@ -467,13 +470,12 @@ module.exports = async function handler(req, res) {
       camera_movement: body.camera_movement || "fixed",
       motion_intensity: body.motion_intensity || "natural",
       style: body.style || "realistic",
-      voice_enabled: workflow === "image_to_video" ? voiceEnabled : false,
-      voice_mode: body.voice_mode || "none",
+      voice_enabled: voiceEnabled,
+      voice_mode: voiceEnabled ? body.voice_mode || "catalog" : "none",
       voice_clone_id: voiceClone?.id || null,
-      voice_text:
-        workflow === "image_to_video" && voiceEnabled
-          ? String(body.voice_text || "").trim()
-          : null,
+      voice_text: voiceEnabled
+        ? String(body.voice_text || "").trim()
+        : null,
       voice_consent: Boolean(body.voice_consent),
       lip_sync_enabled: voiceEnabled,
       subtitles_enabled:

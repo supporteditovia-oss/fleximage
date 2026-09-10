@@ -3,6 +3,7 @@ export type VideoWorkflow = "image_to_video" | "video_to_video";
 /** Plafond rentable Kling Motion Control 720p — prix fixe 50 crédits / vidéo. */
 export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 export const VIDEO_FLAT_CREDIT_COST = 50;
+export const VIDEO_VOICE_EXTRA_CREDIT = 5;
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
 export const VIDEO_V2V_MAX_SIZE_MB = 20;
 export type VideoDuration = 5 | 10;
@@ -114,10 +115,17 @@ export function computeVideoCreditCost(params: {
     params.workflow === "video_to_video"
       ? computeV2VCreditCost(params.sourceVideoDurationSec)
       : VIDEO_FLAT_CREDIT_COST;
-  if (params.voiceEnabled) cost += 5;
+  if (params.voiceEnabled) cost += VIDEO_VOICE_EXTRA_CREDIT;
   return cost;
 }
 
+export function maxVoiceCharsForVideoDuration(durationSec?: number | null): number {
+  const d = Number(durationSec) || 5;
+  if (d >= 10) return 280;
+  if (d >= 8) return 200;
+  return 140;
+}
+
 export function maxVoiceChars(durationSec: VideoDuration): number {
-  return durationSec === 10 ? 280 : 140;
+  return maxVoiceCharsForVideoDuration(durationSec);
 }

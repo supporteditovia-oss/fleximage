@@ -13,9 +13,11 @@ import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  maxVoiceCharsForVideoDuration,
   VIDEO_FLAT_CREDIT_COST,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -89,6 +91,10 @@ export default function VideoIA() {
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   const [swapPrompt, setSwapPrompt] = useState("");
 
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceConsent, setVoiceConsent] = useState(false);
+
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generationEstimate, setGenerationEstimate] = useState<number | null>(
@@ -114,17 +120,38 @@ export default function VideoIA() {
 
   const imagePreviewUrl = uploadPreview || prefillImageUrl;
 
+  const voiceMaxChars = maxVoiceCharsForVideoDuration(
+    workflow === "video_to_video" ? videoDurationSec : durationSec,
+  );
+
+  const voiceReady =
+    !voiceEnabled ||
+    (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
+
   const creditCost = computeVideoCreditCost({
     workflow,
     durationSec,
     quality: "standard",
-    voiceEnabled: false,
+    voiceEnabled,
     sourceVideoDurationSec: videoDurationSec,
   });
 
+  const buildVoicePayload = () =>
+    voiceEnabled
+      ? {
+          voice_enabled: true,
+          voice_mode: "catalog" as const,
+          voice_text: voiceText.trim(),
+          voice_consent: voiceConsent,
+        }
+      : { voice_enabled: false };
+
   const canGenerateI2V =
-    Boolean(imagePreviewUrl) && motionPrompt.trim().length >= 5;
-  const canGenerateV2V = Boolean(videoBase64) && swapPrompt.trim().length >= 5;
+    Boolean(imagePreviewUrl) &&
+    motionPrompt.trim().length >= 5 &&
+    voiceReady;
+  const canGenerateV2V =
+    Boolean(videoBase64) && swapPrompt.trim().length >= 5 && voiceReady;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -206,8 +233,8 @@ export default function VideoIA() {
         motion_intensity: "natural",
         style: "cinematic",
         quality: "standard",
-        voice_enabled: false,
         subtitles_enabled: false,
+        ...buildVoicePayload(),
         ...(uploadBase64
           ? { images: [uploadBase64] }
           : {
@@ -255,6 +282,7 @@ export default function VideoIA() {
         videos: [videoBase64],
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
+        ...buildVoicePayload(),
         ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
         source: "video_studio",
       });
@@ -401,6 +429,18 @@ export default function VideoIA() {
               </button>
             </div>
 
+            {imagePreviewUrl ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
+
             <button
               type="button"
               className="via-cta"
@@ -533,6 +573,18 @@ export default function VideoIA() {
                 </div>
               </>
             )}
+
+            {videoPreview ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
 
             <button
               type="button"
