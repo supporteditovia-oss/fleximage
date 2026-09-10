@@ -16,6 +16,7 @@ import { compressImageForGeneration } from "@/lib/compress-image";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  VIDEO_FLAT_CREDIT_COST,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_VEHICLE_PRESETS,
@@ -331,8 +332,8 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. L&apos;IA la transforme en vidéo 5 s
-              verticale, optimisée Reels &amp; TikTok.
+              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
+              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
             </p>
 
             <input
@@ -428,7 +429,8 @@ export default function VideoIA() {
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
               Filme avec ton téléphone — ex. ta Clio garée.{" "}
-              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> (rentabilité).
+              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
+              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
             </p>
 
