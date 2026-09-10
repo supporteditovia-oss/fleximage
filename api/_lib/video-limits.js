@@ -1,7 +1,13 @@
 /** Limites rentables — Kling Motion Control (720p), plafond 8s. */
 
 const VIDEO_V2V_MAX_DURATION_SEC = 8;
+/** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
+const VIDEO_V2V_MAX_DURATION_SLACK_SEC = 0.5;
 const VIDEO_V2V_MIN_DURATION_SEC = 3;
+
+function getVideoDurationUploadLimitSec() {
+  return VIDEO_V2V_MAX_DURATION_SEC + VIDEO_V2V_MAX_DURATION_SLACK_SEC;
+}
 /** iPhone 8s en 4K peut dépasser 20 Mo — upload direct R2 jusqu'à 100 Mo. */
 const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
 
@@ -32,7 +38,7 @@ function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
           : `Video too short (minimum ${VIDEO_V2V_MIN_DURATION_SEC}s).`,
     };
   }
-  if (dur > VIDEO_V2V_MAX_DURATION_SEC) {
+  if (dur > getVideoDurationUploadLimitSec()) {
     return {
       ok: false,
       code: "VIDEO_TOO_LONG",
@@ -52,7 +58,9 @@ function computeV2VCreditCost(_durationSec, isAdmin = false) {
 
 module.exports = {
   VIDEO_V2V_MAX_DURATION_SEC,
+  VIDEO_V2V_MAX_DURATION_SLACK_SEC,
   VIDEO_V2V_MIN_DURATION_SEC,
+  getVideoDurationUploadLimitSec,
   VIDEO_V2V_MAX_SIZE_BYTES,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_FLAT_CREDIT_COST,
