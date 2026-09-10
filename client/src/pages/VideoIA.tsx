@@ -19,6 +19,7 @@ import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
+import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
@@ -70,7 +71,7 @@ const WORKFLOW_OPTIONS: {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
     emoji: "🚗",
-    hint: "Swap voiture — ta voix conservée",
+    hint: "Swap voiture ou objet",
   },
 ];
 
@@ -110,6 +111,7 @@ export default function VideoIA() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
   const [voiceConsent, setVoiceConsent] = useState(false);
+  const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -149,6 +151,7 @@ export default function VideoIA() {
     durationSec,
     quality: "standard",
     voiceEnabled,
+    preserveSourceAudio: preserveSourceVoice,
     sourceVideoDurationSec: videoDurationSec,
   });
 
@@ -173,7 +176,6 @@ export default function VideoIA() {
   const canGenerateV2V =
     Boolean(videoSource) &&
     swapPrompt.trim().length >= 5 &&
-    voiceReady &&
     canAfford &&
     !isVideoUploading;
 
@@ -317,7 +319,8 @@ export default function VideoIA() {
           : { videos: [videoSource.dataUrl] }),
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
-        ...buildVoicePayload(),
+        preserve_source_audio: preserveSourceVoice,
+        voice_enabled: false,
         ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
         source: "video_studio",
       });
@@ -521,8 +524,8 @@ export default function VideoIA() {
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
               {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
-              <strong> Parle pendant le tournage — ta voix originale sera
-              conservée</strong> dans la vidéo finale.
+              Par défaut, la vidéo générée est <strong>muette</strong> — active
+              l&apos;option voix ci-dessous pour conserver ta voix filmée.
             </p>
 
             <input
@@ -635,14 +638,9 @@ export default function VideoIA() {
             )}
 
             {videoPreview ? (
-              <VideoVoiceAddon
-                enabled={voiceEnabled}
-                onEnabledChange={setVoiceEnabled}
-                text={voiceText}
-                onTextChange={setVoiceText}
-                consent={voiceConsent}
-                onConsentChange={setVoiceConsent}
-                maxChars={voiceMaxChars}
+              <VideoSourceVoiceAddon
+                enabled={preserveSourceVoice}
+                onEnabledChange={setPreserveSourceVoice}
               />
             ) : null}
 

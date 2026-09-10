@@ -25,7 +25,7 @@ const STYLE_PROMPTS = {
   luxury_ad: "Publicité luxe, éclairage premium, rendu haut de gamme.",
 };
 
-/** 1 vidéo Kling (max 8s, 720p) = prix fixe ; voix optionnelle en supplément. */
+/** 1 vidéo Kling (max 8s, 720p) = prix fixe ; voix IA (I2V) ou voix filmée (V2V) en supplément. */
 function computeVideoCreditCost(options) {
   if (options.isAdmin) return 0;
 
@@ -34,7 +34,11 @@ function computeVideoCreditCost(options) {
       ? computeV2VCreditCost(options.sourceVideoDurationSec, false)
       : VIDEO_FLAT_CREDIT_COST;
 
-  if (options.voiceEnabled) {
+  if (options.workflow === "video_to_video") {
+    if (options.preserveSourceAudio) {
+      cost += VIDEO_VOICE_EXTRA_CREDIT;
+    }
+  } else if (options.voiceEnabled) {
     cost += VIDEO_VOICE_EXTRA_CREDIT;
   }
 

@@ -76,6 +76,17 @@ describe("video-studio", () => {
     );
   });
 
+  it("computeVideoCreditCost adds source voice extra for video_to_video", () => {
+    assert.equal(
+      computeVideoCreditCost({
+        workflow: "video_to_video",
+        preserveSourceAudio: true,
+        isAdmin: false,
+      }),
+      VIDEO_FLAT_CREDIT_COST + 5,
+    );
+  });
+
   it("buildCarSwapPrompt preserves scene lock", () => {
     const prompt = buildCarSwapPrompt("Lamborghini Urus");
     assert.match(prompt, /Lamborghini Urus/i);
