@@ -1227,6 +1227,7 @@ function isLocalObjectEditPrompt(prompt) {
     isVehicleCockpitRefinePrompt(prompt) ||
     isAddVehiclesToScenePrompt(prompt) ||
     isVehicleReplacePrompt(prompt) ||
+    isMotorcycleReplacePrompt(prompt) ||
     isAddAnimalPrompt(prompt) ||
     isAddCompanionPrompt(prompt) ||
     isScreenUiPrompt(prompt) ||
@@ -1681,13 +1682,16 @@ function isMotorcycleReplacePrompt(prompt) {
   if (isAddVehiclesToScenePrompt(prompt)) return false;
   if (isVehicleBehindSubjectPrompt(prompt)) return false;
   if (isPersonSwapPrompt(prompt) || isFacialHairPrompt(prompt)) return false;
-  if (!isMotorcycleBikeMention(prompt)) return false;
   const text = normalizePromptText(prompt);
   if (/\b(derriere|behind|dans mon dos)\b/.test(text)) return false;
   const replaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*)\b/.test(
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets\s+a\s+la\s+place|mettre\s+a\s+la\s+place)\b/.test(
       text,
     );
+  const hasBikeSource = /\b(velo|bike|bicycle|vtt|cycl)\b/.test(text);
+  const hasBikeTarget = isMotorcycleBikeMention(prompt);
+  if (replaceVerb && hasBikeSource && hasBikeTarget) return true;
+  if (!isMotorcycleBikeMention(prompt)) return false;
   if (replaceVerb) return true;
   // "mets un TMAX" / "put a TMAX" on an existing bike photo (no "put ME on").
   if (
@@ -1813,12 +1817,21 @@ function isVehicleReplacePrompt(prompt) {
   if (/\b(moi|me|je)\b/.test(text) && isInsideNamedCarPrompt(text)) return false;
   const hasCar = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
   if (!hasCar) return false;
+  const sourceObject =
+    /\b(voiture|voitures|car|cars|auto|autos|vehicule|vehicules|vehicle|vehicles|moto|motos|scooter|scooters|velo|bike|bicycle|bicycles|vtt|citadine|citadines|twingo|clio|megane|berline|berlines|suv|coupe|camion|camions|truck|trucks|van|vans)\b/.test(
+      text,
+    );
   const replaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|put)\b/.test(
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets\s+a\s+la\s+place|mettre\s+a\s+la\s+place)\b/.test(
       text,
     ) &&
-    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
+    sourceObject;
   if (replaceVerb) return true;
+  const implicitPut =
+    /\b(mets|mettre|put)\b/.test(text) &&
+    sourceObject &&
+    !/\b(moi|me|je)\b/.test(text);
+  if (implicitPut && parseVehicleSpec(prompt)) return true;
   // Implicit: user named a specific vehicle on a car photo (no "put me in", no city relocate).
   if (/\b(moi|me|je)\b/.test(text)) return false;
   return Boolean(parseVehicleSpec(prompt));
@@ -3386,6 +3399,21 @@ function qualitySuffix(includeCelebrityGuard) {
  */
 function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const referenceImageCount = Math.max(0, Number(options.referenceImageCount) || 0);
+
+  if (referenceImageCount >= 1) {
+    const {
+      detectObjectReplacement,
+      buildObjectReplacementPrompt,
+    } = require("./object-replacement-prompt");
+    const objectReplacementIntent = detectObjectReplacement(userPrompt, options);
+    if (objectReplacementIntent) {
+      return buildObjectReplacementPrompt(userPrompt, {
+        ...options,
+        intent: objectReplacementIntent,
+      });
+    }
+  }
+
   // Detect facial-hair intent on the RAW user text (before clarifiers add "replace", etc.).
   const rawFacialHair = isFacialHairPrompt(userPrompt);
   const rawAddVehicles = isAddVehiclesToScenePrompt(userPrompt);
