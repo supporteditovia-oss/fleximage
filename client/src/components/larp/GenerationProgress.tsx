@@ -19,6 +19,7 @@ import {
   parseApiCreatedAtMs,
   type GenerationTimingLock,
 } from "@/lib/in-flight-generation";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -160,7 +161,8 @@ export function GenerationProgress({
     if (revealStarted) return;
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
-    window.$crisp?.push(["do", "chat:hide"]);
+    setCrispOverlaySuppressed(true);
+    return () => setCrispOverlaySuppressed(false);
   }, [data?.status, fatalConnectionError, revealStarted]);
 
   useEffect(() => {

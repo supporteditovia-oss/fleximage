@@ -35,6 +35,7 @@ import {
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
+import { canUseCrispChat, openCrispChat } from "@/lib/crisp-gate";
 import {
   Dialog,
   DialogContent,
@@ -186,8 +187,13 @@ export default function Settings() {
     }
   };
 
+  const canUseSupportChat =
+    canUseCrispChat(profile) ||
+    billingActive ||
+    profile?.role === "admin";
+
   const openSupportChat = () => {
-    window.$crisp?.push(["do", "chat:open"]);
+    openCrispChat();
   };
 
   const deleteDialogBody = (
@@ -375,30 +381,31 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* Support section */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
-          {t("layout.dock.support")}
-        </h2>
-        <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
-          <button
-            type="button"
-            onClick={openSupportChat}
-            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
-          >
-            <Headphones className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{t("support.settingsTitle")}</p>
-              <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground/60">
-                {t("support.settingsDescription")}
-              </p>
-            </div>
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <MessageCircle className="h-4 w-4" />
-            </span>
-          </button>
-        </div>
-      </section>
+      {canUseSupportChat ? (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground/70 uppercase px-1">
+            {t("layout.dock.support")}
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
+            <button
+              type="button"
+              onClick={openSupportChat}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
+            >
+              <Headphones className="w-4.5 h-4.5 text-muted-foreground/60 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("support.settingsTitle")}</p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground/60">
+                  {t("support.settingsDescription")}
+                </p>
+              </div>
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <MessageCircle className="h-4 w-4" />
+              </span>
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {/* Account actions */}
       <section className="space-y-4">

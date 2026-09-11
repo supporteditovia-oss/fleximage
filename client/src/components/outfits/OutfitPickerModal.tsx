@@ -12,6 +12,7 @@ import {
   getOutfitCatalogOrderVersion,
 } from "@/lib/outfit-display-order";
 import "./outfit-picker.css";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 
 type OutfitPickerModalProps = {
   open: boolean;
@@ -60,13 +61,11 @@ export function OutfitPickerModal({
     if (!open) return;
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
-    window.$crisp?.push(["do", "chat:hide"]);
+    setCrispOverlaySuppressed(true);
     return () => {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      if (!document.documentElement.classList.contains("luxeflexia-modeles-page")) {
-        window.$crisp?.push(["do", "chat:show"]);
-      }
+      setCrispOverlaySuppressed(false);
     };
   }, [open]);
 
