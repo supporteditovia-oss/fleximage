@@ -584,6 +584,17 @@ html.luxeflexia-video-page .floating-header::before {
   color: var(--lx-muted);
 }
 
+.via-voice-addon__hint--warn {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(180, 80, 40, 0.35);
+  background: rgba(255, 240, 230, 0.85);
+  color: #6b3a1f;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .via-voice-addon__consent {
   display: flex;
   align-items: flex-start;

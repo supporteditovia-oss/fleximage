@@ -27,6 +27,7 @@ const {
   resolveV2vVoiceMode,
   isV2vVoiceTransformMode,
 } = require("../v2v-voice-pool");
+const { validateV2vVoicePromptPolicy } = require("../v2v-prompt-guard");
 const {
   checkGenerationLimits,
   deductGenerationCredits,
@@ -339,6 +340,25 @@ module.exports = async function handler(req, res) {
       workflow === "video_to_video" && isV2vVoiceTransformMode(v2vVoiceMode);
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
+    let visualSwapDescription = vehicleDescription;
+    let v2vPromptVoiceIntentDetected = false;
+    if (workflow === "video_to_video") {
+      const voicePolicy = validateV2vVoicePromptPolicy({
+        swapPrompt: vehicleDescription,
+        v2vVoiceMode,
+        uiLocale,
+      });
+      if (!voicePolicy.ok) {
+        res.status(422).json({
+          code: voicePolicy.code,
+          message: voicePolicy.message,
+        });
+        return;
+      }
+      visualSwapDescription = voicePolicy.visualPrompt;
+      v2vPromptVoiceIntentDetected = Boolean(voicePolicy.voiceIntentDetected);
+    }
+
     let sourceVideoDurationSec = null;
     if (workflow === "video_to_video") {
       const durationCheck = validateSourceVideoDuration(
@@ -446,7 +466,10 @@ module.exports = async function handler(req, res) {
           body,
         );
         v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
-        providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
+        providerPrompt = buildV2VProviderPrompt(
+          { ...body, vehicle_prompt: visualSwapDescription },
+          visualSwapDescription,
+        );
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({
@@ -496,6 +519,8 @@ module.exports = async function handler(req, res) {
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: vehicleDescription,
+      vehicle_prompt_visual: visualSwapDescription,
+      v2v_prompt_voice_intent_detected: v2vPromptVoiceIntentDetected,
       source_video_duration_sec: sourceVideoDurationSec,
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,

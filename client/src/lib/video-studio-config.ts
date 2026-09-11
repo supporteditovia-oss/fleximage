@@ -189,3 +189,10 @@ export function maxVoiceCharsForVideoDuration(durationSec?: number | null): numb
 export function maxVoiceChars(durationSec: VideoDuration): number {
   return maxVoiceCharsForVideoDuration(durationSec);
 }
+
+/** Détecte une demande de voix dans le prompt V2V (contournement +5 cr.). */
+export function detectVoiceIntentInV2vPrompt(text: string): boolean {
+  return /\b(voix|voice|parle(?:r|nt|z)?|mielleux|mielleuse|douce(?:ment)?|grave|raque|rauque|sensuel(?:le)?|timbre|tonalit[ée]|accent|lip[\s-]?sync|whisper|vocal)\b/i.test(
+    String(text || ""),
+  );
+}

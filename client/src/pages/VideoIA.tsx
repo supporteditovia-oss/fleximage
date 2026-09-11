@@ -27,8 +27,10 @@ import { VideoV2vVoiceAddon } from "@/components/video/VideoV2vVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  detectVoiceIntentInV2vPrompt,
   maxVoiceCharsForVideoDuration,
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_VOICE_EXTRA_CREDIT,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_V2V_SWAP_PRESETS,
@@ -179,11 +181,18 @@ export default function VideoIA() {
     motionPrompt.trim().length >= 5 &&
     voiceReady &&
     canAfford;
+  const v2vPromptVoiceIntent =
+    workflow === "video_to_video" && detectVoiceIntentInV2vPrompt(swapPrompt);
+  const v2vVoiceOptionRequired =
+    v2vPromptVoiceIntent &&
+    (v2vVoiceMode === "none" || v2vVoiceMode === "preserve");
+
   const canGenerateV2V =
     Boolean(videoSource) &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !isVideoUploading;
+    !isVideoUploading &&
+    !v2vVoiceOptionRequired;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -636,6 +645,13 @@ export default function VideoIA() {
                     </button>
                   ))}
                 </div>
+                {v2vVoiceOptionRequired ? (
+                  <p className="via-voice-addon__hint via-voice-addon__hint--warn">
+                    Tu demandes une voix dans le prompt. Active Voix femme,
+                    Voix homme ou Voix auto (+{VIDEO_VOICE_EXTRA_CREDIT}{" "}
+                    crédits) — le texte seul ne change pas la voix.
+                  </p>
+                ) : null}
                 <div className="via-chips via-chips--secondary">
                   {VIDEO_VEHICLE_PRESETS.map((preset) => (
                     <button

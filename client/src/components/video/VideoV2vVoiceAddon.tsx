@@ -78,6 +78,9 @@ export function VideoV2vVoiceAddon({
       </div>
 
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
+        Les instructions vocales dans le prompt ne fonctionnent pas sans cette
+        option — le provider vidéo ne génère pas de son.
+        {" "}
         {selected.hint}
         {mode === "auto" || mode === "female" || mode === "male" ? (
           <>
