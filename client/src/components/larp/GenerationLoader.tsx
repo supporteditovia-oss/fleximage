@@ -25,14 +25,60 @@ interface GenerationLoaderProps {
 const DEFAULT_ESTIMATE_SECONDS = 50;
 const MESSAGE_INTERVAL_MS = 1800;
 const EXIT_FADE_MS = 400;
+/** Périmètre approx. du cadre 9:16 arrondi (viewBox 100×160). */
+const FRAME_PERIMETER = 482;
 
-const PARTICLES = [
-  { left: "12%", size: 2, dur: "14s", delay: "0s", drift: "12px" },
-  { left: "28%", size: 1.5, dur: "16s", delay: "2s", drift: "-10px" },
-  { left: "55%", size: 2, dur: "15s", delay: "4s", drift: "8px" },
-  { left: "78%", size: 1.5, dur: "17s", delay: "1s", drift: "-6px" },
-  { left: "90%", size: 2, dur: "15.5s", delay: "3.5s", drift: "10px" },
+const THEME_PALETTES = [
+  {
+    accent: "#e8c547",
+    accentSoft: "#f0d875",
+    accentDeep: "#a8841a",
+    glow: "rgba(232, 197, 71, 0.42)",
+    auroraA: "rgba(232, 197, 71, 0.22)",
+    auroraB: "rgba(201, 162, 39, 0.12)",
+  },
+  {
+    accent: "#e8a4b8",
+    accentSoft: "#f5c6d0",
+    accentDeep: "#c46b88",
+    glow: "rgba(232, 164, 184, 0.42)",
+    auroraA: "rgba(232, 164, 184, 0.2)",
+    auroraB: "rgba(196, 107, 136, 0.1)",
+  },
+  {
+    accent: "#d4b896",
+    accentSoft: "#f5e6c8",
+    accentDeep: "#9a7b55",
+    glow: "rgba(212, 184, 150, 0.42)",
+    auroraA: "rgba(245, 230, 200, 0.2)",
+    auroraB: "rgba(154, 123, 85, 0.1)",
+  },
+  {
+    accent: "#b8c5e0",
+    accentSoft: "#e8edf5",
+    accentDeep: "#7a8aaa",
+    glow: "rgba(184, 197, 224, 0.42)",
+    auroraA: "rgba(184, 197, 224, 0.2)",
+    auroraB: "rgba(122, 138, 170, 0.1)",
+  },
 ] as const;
+
+const SPARKS = [
+  { left: "8%", top: "18%", size: 3, dur: "7s", delay: "0s" },
+  { left: "22%", top: "72%", size: 2, dur: "9s", delay: "1.2s" },
+  { left: "68%", top: "28%", size: 2.5, dur: "8s", delay: "0.6s" },
+  { left: "84%", top: "58%", size: 2, dur: "10s", delay: "2s" },
+  { left: "46%", top: "8%", size: 2, dur: "8.5s", delay: "1.8s" },
+  { left: "92%", top: "82%", size: 3, dur: "7.5s", delay: "0.4s" },
+] as const;
+
+function pickTheme(taskId: string) {
+  let hash = 0;
+  for (let i = 0; i < taskId.length; i += 1) {
+    hash = (hash + taskId.charCodeAt(i) * (i + 3)) % THEME_PALETTES.length;
+  }
+  return THEME_PALETTES[hash];
+}
 
 export function GenerationLoader({
   status,
@@ -55,6 +101,7 @@ export function GenerationLoader({
     ],
     [t],
   );
+  const theme = useMemo(() => pickTheme(taskId), [taskId]);
   const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">("dissolve");
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
@@ -150,195 +197,221 @@ export function GenerationLoader({
   }, [progressMessages.length]);
 
   const isBlurring = phase === "blur" || phase === "logo";
-  const particles = useMemo(() => PARTICLES, []);
+  const progressDash = Math.max(8, progress * FRAME_PERIMETER);
+  const progressPct = Math.round(progress * 100);
+
+  const themeStyle = {
+    "--lx-accent": theme.accent,
+    "--lx-accent-soft": theme.accentSoft,
+    "--lx-accent-deep": theme.accentDeep,
+    "--lx-glow": theme.glow,
+    "--lx-aurora-a": theme.auroraA,
+    "--lx-aurora-b": theme.auroraB,
+  } as CSSProperties;
+
+  const renderFrame = (imageSrc: string, alt: string, isResult = false) => (
+    <div className="lx-gen-loader__viewport">
+      <motion.img
+        src={imageSrc}
+        alt={alt}
+        className="lx-gen-loader__photo"
+        animate={
+          isResult
+            ? { filter: "blur(0px) brightness(1) saturate(1.05)", scale: 1 }
+            : {
+                filter: isBlurring
+                  ? "blur(22px) brightness(0.38) saturate(0.8)"
+                  : "blur(0px) brightness(1) saturate(1)",
+                scale: isBlurring ? 1.06 : 1,
+              }
+        }
+        transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
+      />
+      <div className="lx-gen-loader__photo-shade" aria-hidden />
+      {!isResult && !isExiting ? (
+        <>
+          <div className="lx-gen-loader__scan" aria-hidden />
+          <div className="lx-gen-loader__prism" aria-hidden />
+        </>
+      ) : null}
+
+      <svg
+        className="lx-gen-loader__frame-ring"
+        viewBox="0 0 100 160"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <rect
+          x="2.5"
+          y="2.5"
+          width="95"
+          height="155"
+          rx="10"
+          ry="10"
+          fill="none"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth="1.8"
+          vectorEffect="non-scaling-stroke"
+        />
+        {!isResult && (
+          <rect
+            x="2.5"
+            y="2.5"
+            width="95"
+            height="155"
+            rx="10"
+            ry="10"
+            fill="none"
+            stroke="url(#lx-frame-progress)"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeDasharray={`${progressDash} ${FRAME_PERIMETER}`}
+            className="lx-gen-loader__frame-progress"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+        <defs>
+          <linearGradient id="lx-frame-progress" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--lx-accent-deep)" />
+            <stop offset="45%" stopColor="var(--lx-accent-soft)" />
+            <stop offset="100%" stopColor="var(--lx-accent)" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <span className="lx-gen-loader__corner lx-gen-loader__corner--tl" aria-hidden />
+      <span className="lx-gen-loader__corner lx-gen-loader__corner--tr" aria-hidden />
+      <span className="lx-gen-loader__corner lx-gen-loader__corner--bl" aria-hidden />
+      <span className="lx-gen-loader__corner lx-gen-loader__corner--br" aria-hidden />
+    </div>
+  );
 
   const loaderTree = (
     <motion.div
       className="lx-gen-loader fixed inset-0 z-[101] overflow-hidden"
+      style={themeStyle}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       role="status"
       aria-live="polite"
       aria-busy={!isExiting}
     >
       <div className="lx-gen-loader__base absolute inset-0" aria-hidden />
+      <div className="lx-gen-loader__aurora absolute inset-0" aria-hidden />
+      <div className="lx-gen-loader__rays absolute inset-0" aria-hidden />
       <div className="lx-gen-loader__grain absolute inset-0" aria-hidden />
-      <div className="lx-gen-loader__halo" aria-hidden />
-      <div className="lx-gen-loader__halo lx-gen-loader__halo--secondary" aria-hidden />
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        {particles.map((p, i) => (
+        {SPARKS.map((s, i) => (
           <span
             key={i}
-            className="lx-gen-loader__particle"
+            className="lx-gen-loader__spark"
             style={
               {
-                left: p.left,
-                width: p.size,
-                height: p.size,
-                "--dur": p.dur,
-                "--delay": p.delay,
-                "--drift": p.drift,
+                left: s.left,
+                top: s.top,
+                width: s.size,
+                height: s.size,
+                "--dur": s.dur,
+                "--delay": s.delay,
               } as CSSProperties
             }
           />
         ))}
       </div>
 
-      {resultUrl && isExiting && (
-        <motion.div
-          className="absolute inset-0 z-[5] flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: EXIT_FADE_MS / 1000, ease: "easeOut" }}
-          aria-hidden
-        >
-          <div className="lx-gen-loader__frame relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-xl shadow-2xl md:h-[min(82svh,720px)]">
-            <img
-              src={resultUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              decoding="async"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20" />
-          </div>
-        </motion.div>
-      )}
-
-      {inputImageUrl && !isExiting && (
-        <motion.div
-          className="absolute inset-0 flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="lx-gen-loader__frame relative aspect-[9/16] h-[min(78svh,640px)] w-auto max-w-[92vw] overflow-hidden rounded-xl shadow-2xl md:h-[min(82svh,720px)]">
-            <motion.img
-              src={inputImageUrl}
-              alt={t("progress.inputAlt")}
-              className="absolute inset-0 h-full w-full object-cover"
-              animate={{
-                filter: isBlurring
-                  ? "blur(28px) brightness(0.42) saturate(0.85)"
-                  : "blur(0px) brightness(1) saturate(1)",
-                scale: isBlurring ? 1.08 : 1,
-              }}
-              transition={{ duration: 1.6, ease: [0.4, 0, 0.2, 1] }}
-            />
-            <div className="absolute inset-0 bg-black/50" />
-            <div className="lx-gen-loader__vignette absolute inset-0" aria-hidden />
-          </div>
-        </motion.div>
-      )}
-
-      <div className="absolute inset-0 z-10 flex w-full items-center justify-center px-4">
-        <motion.div
-          className="lx-gen-loader__panel-wrap"
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{
-            opacity: isExiting ? 0 : 1,
-            y: isExiting ? -8 : 0,
-            scale: isExiting ? 0.98 : 1,
-          }}
-          transition={{
-            duration: isExiting ? EXIT_FADE_MS / 1000 : 0.5,
-            delay: isExiting ? 0 : 0.06,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-        >
-          <div className="lx-gen-loader__panel" aria-hidden />
-          <div className="lx-gen-loader__panel-shimmer" aria-hidden />
-
-          <div className="lx-gen-loader__panel-content">
-            <div className="lx-gen-loader__brand">
-              <div className="lx-gen-loader__brand-inner">
-                <span
-                  className="inline-flex max-w-full items-center justify-center gap-2 text-[clamp(1.35rem,5.5vw,2rem)] font-semibold leading-none text-white"
-                  style={{ fontFamily: "var(--lx-display)" }}
-                >
-                  <Gem
-                    className="h-[0.88em] w-[0.88em] shrink-0 text-[#e8c547]"
-                    strokeWidth={1.75}
-                    aria-hidden
-                  />
-                  <BrandMark
-                    className="min-w-0 text-inherit font-semibold leading-none"
-                    accentClassName="text-[#e8c547]"
-                  />
-                </span>
-              </div>
-            </div>
-
-            <div className="lx-gen-loader__orb">
-              <svg
-                className="lx-gen-loader__orb-svg"
-                viewBox="0 0 100 100"
-                aria-hidden
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.07)"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="url(#lx-gen-progress)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray={`${Math.max(6, progress * 263.89)} 263.89`}
-                  className="lx-gen-loader__orb-progress"
-                />
-                <defs>
-                  <linearGradient id="lx-gen-progress" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#f0d875" />
-                    <stop offset="55%" stopColor="#e8c547" />
-                    <stop offset="100%" stopColor="#c9a227" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="lx-gen-loader__orb-center">
-                {status === "success" || isOvertime ? (
-                  <span className="lx-gen-loader__orb-label">✦</span>
-                ) : (
-                  <>
-                    <span className="lx-gen-loader__orb-time">{remaining}</span>
-                    <span className="lx-gen-loader__orb-unit">
-                      {t("progress.seconds")}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="lx-gen-loader__track" aria-hidden>
-              <div
-                className="lx-gen-loader__track-fill"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
-
-            <div className="lx-gen-loader__status-block">
-              {isOvertime && status !== "success" ? (
-                <p className="lx-gen-loader__status-hint">
-                  {t("progress.almostReady", "Presque prêt — ne quitte pas l'écran…")}
-                </p>
-              ) : null}
-              <span key={messageKey} className="lx-gen-loader__msg">
-                {status === "success"
-                  ? t("progress.stepFinishing")
-                  : progressMessages[messageIndex]}
-              </span>
+      <div className="lx-gen-loader__stage">
+        {resultUrl && isExiting ? (
+          <motion.div
+            className="lx-gen-loader__frame-wrap"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: EXIT_FADE_MS / 1000, ease: "easeOut" }}
+          >
+            {renderFrame(resultUrl, "", true)}
+          </motion.div>
+        ) : inputImageUrl && !isExiting ? (
+          <motion.div
+            className="lx-gen-loader__frame-wrap"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {renderFrame(inputImageUrl, t("progress.inputAlt"))}
+          </motion.div>
+        ) : (
+          <div className="lx-gen-loader__frame-wrap lx-gen-loader__frame-wrap--empty">
+            <div className="lx-gen-loader__viewport lx-gen-loader__viewport--empty">
+              <div className="lx-gen-loader__empty-glow" aria-hidden />
             </div>
           </div>
-        </motion.div>
+        )}
       </div>
+
+      <motion.div
+        className="lx-gen-loader__hud"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{
+          opacity: isExiting ? 0 : 1,
+          y: isExiting ? 12 : 0,
+        }}
+        transition={{
+          duration: isExiting ? EXIT_FADE_MS / 1000 : 0.55,
+          delay: isExiting ? 0 : 0.15,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+      >
+        <div className="lx-gen-loader__hud-top">
+          <div className="lx-gen-loader__count-block">
+            {status === "success" || isOvertime ? (
+              <span className="lx-gen-loader__count-symbol" aria-hidden>
+                ✦
+              </span>
+            ) : (
+              <>
+                <span className="lx-gen-loader__count-num">{remaining}</span>
+                <span className="lx-gen-loader__count-unit">
+                  {t("progress.seconds")}
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="lx-gen-loader__meter" aria-hidden>
+            <div
+              className="lx-gen-loader__meter-fill"
+              style={{ width: `${progressPct}%` }}
+            />
+            <span className="lx-gen-loader__meter-label">{progressPct}%</span>
+          </div>
+        </div>
+
+        <div className="lx-gen-loader__copy">
+          {isOvertime && status !== "success" ? (
+            <p className="lx-gen-loader__hint">
+              {t("progress.almostReady", "Presque prêt — ne quitte pas l'écran…")}
+            </p>
+          ) : null}
+          <p key={messageKey} className="lx-gen-loader__step">
+            {status === "success"
+              ? t("progress.stepFinishing")
+              : progressMessages[messageIndex]}
+          </p>
+        </div>
+
+        <div className="lx-gen-loader__brand">
+          <Gem
+            className="lx-gen-loader__brand-gem"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <BrandMark
+            className="lx-gen-loader__brand-text"
+            accentClassName="lx-gen-loader__brand-accent"
+          />
+        </div>
+      </motion.div>
     </motion.div>
   );
 
