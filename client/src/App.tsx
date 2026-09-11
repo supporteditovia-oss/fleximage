@@ -22,6 +22,8 @@ import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
+import VoixPrete from "@/pages/VoixPrete";
+import VideoPrete from "@/pages/VideoPrete";
 import Historique from "@/pages/Historique";
 import Bibliotheque from "@/pages/Bibliotheque";
 import Resultat from "@/pages/Resultat";
@@ -255,6 +257,8 @@ function ProtectedAppRoutes() {
           <Route path="/generate" component={GenerateRoute} />
           <Route path="/video-ia" component={VideoIARoute} />
           <Route path="/image-prete" component={ImagePrete} />
+          <Route path="/voix-prete" component={VoixPrete} />
+          <Route path="/video-prete" component={VideoPrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />
           <Route path="/mon-resultat">
@@ -289,6 +293,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/create": "Studio — LuxeFlexIA",
   "/modeles": "Modèles — LuxeFlexIA",
   "/image-prete": "meta:titles.imageReady",
+  "/voix-prete": "Vocal prêt — LuxeFlexIA",
+  "/video-prete": "Vidéo prête — LuxeFlexIA",
   "/resultat": "meta:titles.result",
   "/historique": "meta:titles.history",
   "/bibliotheque": "Bibliothèque — LuxeFlexIA",
@@ -315,6 +321,8 @@ const PROTECTED_PATHS = new Set([
   "/create",
   "/modeles",
   "/image-prete",
+  "/voix-prete",
+  "/video-prete",
   "/debug-generate",
   "/resultat",
   "/mon-resultat",

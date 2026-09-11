@@ -1,7 +1,7 @@
 const STORAGE_KEY = "larpking_fake_paywall_reached";
 const SESSION_KEY = "fake_paywall_reached";
 
-export type PaywallGenerationMode = "image" | "video";
+export type PaywallGenerationMode = "image" | "voice" | "video";
 
 type StoredFakePaywallState = {
   userId: string | null;
@@ -63,7 +63,9 @@ export function getFakePaywallGenerationMode(
     if (userId && data.userId && data.userId !== userId) {
       return "image";
     }
-    return data.generationMode === "video" ? "video" : "image";
+    if (data.generationMode === "video") return "video";
+    if (data.generationMode === "voice") return "voice";
+    return "image";
   } catch {
     return "image";
   }

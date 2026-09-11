@@ -35,6 +35,12 @@ import {
   voiceOwnSampleGenerateCost,
 } from "@/lib/voice-pricing";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
+import { useLocation } from "wouter";
+import { startLandingGuestFunnel } from "@/lib/landing-funnel";
+import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
+import { markFakePaywallReached } from "@/lib/fake-paywall-state";
+import { resetPaywallExpiry } from "@/lib/paywall-expiry";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import {
@@ -103,7 +109,12 @@ function resolveActiveFromStorage(): {
   };
 }
 
-export function VoiceStudioMock() {
+type VoiceStudioMockProps = {
+  /** Landing marketing — jamais d'appel API, funnel inscription + cadenas. */
+  guestFunnel?: boolean;
+};
+
+export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const fileInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const recordTimerRef = useRef<number | null>(null);
@@ -119,7 +130,8 @@ export function VoiceStudioMock() {
   const importPreviewUrlRef = useRef<string | null>(null);
   const rebuildDebounceRef = useRef<number | null>(null);
 
-  const { user, isAdmin } = useAuth();
+  const [, navigate] = useLocation();
+  const { user, isAdmin, profile } = useAuth();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan();
   const hasPaidAccess = Boolean(
@@ -128,6 +140,17 @@ export function VoiceStudioMock() {
       plan?.isSubscriber ||
       (typeof plan?.credits === "number" && plan.credits > 0),
   );
+
+  const { showFakeLoader: showOnboardingFakeLoader, finishFakeLoader } =
+    useOnboardingFakeLoader({
+      mode: "voice",
+      enabled: !guestFunnel && Boolean(user),
+      isSubscriber: Boolean(
+        profile?.is_subscriber || profile?.role === "admin" || isAdmin,
+      ),
+      userId: profile?.id,
+      onRestorePrompt: (value) => setText(value),
+    });
 
   const [captureMode, setCaptureMode] = useState<CaptureMode>("record");
   const [voiceName, setVoiceName] = useState("");
@@ -317,14 +340,12 @@ export function VoiceStudioMock() {
   const stopPreview = () => {
     stopSpeakRef.current?.();
     stopSpeakRef.current = null;
-    cloneReplayRef.current?.pause();
     const audio = resultAudioRef.current;
     if (audio) {
       audio.pause();
       audio.ontimeupdate = null;
       audio.onloadedmetadata = null;
     }
-    setReplayCloneId(null);
     setPlaying(false);
   };
 
@@ -786,6 +807,31 @@ export function VoiceStudioMock() {
     stopPreview();
     setCaptureError(null);
 
+    if (guestFunnel) {
+      void (async () => {
+        await startLandingGuestFunnel({
+          mode: "voice",
+          prompt: text.trim(),
+        });
+        if (!user) {
+          navigate("/register");
+          return;
+        }
+        releaseGenerationLoaderTheme();
+        voiceGenStartedAtRef.current = Date.now();
+        setIsGenerating(true);
+        if (genTimerRef.current) window.clearTimeout(genTimerRef.current);
+        genTimerRef.current = window.setTimeout(() => {
+          setIsGenerating(false);
+          genTimerRef.current = null;
+          markFakePaywallReached(profile?.id, "voice");
+          resetPaywallExpiry();
+          navigate("/voix-prete?paywall=1");
+        }, FAKE_GEN_MS);
+      })();
+      return;
+    }
+
     if (!hasPaidAccess) {
       releaseGenerationLoaderTheme();
       voiceGenStartedAtRef.current = Date.now();
@@ -869,7 +915,6 @@ export function VoiceStudioMock() {
           });
           setActiveVoice(voice);
           writeSelectedCatalogVoiceId(null);
-          activeForStyle = voice;
           resetCapture();
           setVoiceName("");
         }
@@ -1222,14 +1267,23 @@ export function VoiceStudioMock() {
           ) : null}
         </section>
 
-        <VoiceHistorySection
-          enabled={Boolean(user)}
-          onPlay={() => stopPreview()}
-          onStop={() => stopPreview()}
-        />
+        {guestFunnel ? null : (
+          <VoiceHistorySection
+            enabled={Boolean(user)}
+            onPlay={() => stopPreview()}
+            onStop={() => stopPreview()}
+          />
+        )}
       </div>
 
-      {isGenerating
+      {showOnboardingFakeLoader ? (
+        <FakeOnboardingLoader
+          inputImageUrl={undefined}
+          onComplete={finishFakeLoader}
+        />
+      ) : null}
+
+      {isGenerating && !showOnboardingFakeLoader
         ? createPortal(
             <GenerationLoader
               taskId="voice-generating"
