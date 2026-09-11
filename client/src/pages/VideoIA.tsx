@@ -14,7 +14,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import {
+  GenerationLoader,
+  GenerationLoaderBackdrop,
+} from "@/components/larp/GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
@@ -253,6 +257,7 @@ export default function VideoIA() {
     if (isSubmitting || generateVideo.isPending || taskId) return;
     if (!canGenerateI2V) return;
 
+    releaseGenerationLoaderTheme();
     setIsSubmitting(true);
     try {
       const prompt =
@@ -310,6 +315,7 @@ export default function VideoIA() {
     if (isSubmitting || generateVideo.isPending || taskId) return;
     if (!canGenerateV2V || !videoSource) return;
 
+    releaseGenerationLoaderTheme();
     setIsSubmitting(true);
     try {
       const result = await generateVideo.mutateAsync({
@@ -337,6 +343,7 @@ export default function VideoIA() {
   };
 
   const resetStudio = useCallback(() => {
+    releaseGenerationLoaderTheme();
     setTaskId(null);
     setGenerationEstimate(null);
   }, []);
@@ -346,7 +353,10 @@ export default function VideoIA() {
   }
 
   if ((isSubmitting || generateVideo.isPending) && !taskId) {
-    return createPortal(
+    return (
+      <>
+        <GenerationLoaderBackdrop zIndex={99} />
+        {createPortal(
       <GenerationLoader
         taskId="video-pending"
         status="connecting"
@@ -354,11 +364,15 @@ export default function VideoIA() {
         inputImageUrl={imagePreviewUrl || videoPreview || undefined}
       />,
       document.body,
+        )}
+      </>
     );
   }
 
   if (taskId) {
     return (
+      <>
+        <GenerationLoaderBackdrop zIndex={99} />
       <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-5xl px-4 py-6">
         <GenerationProgress
           taskId={taskId}
@@ -368,6 +382,7 @@ export default function VideoIA() {
           initialEstimatedSeconds={generationEstimate ?? undefined}
         />
       </div>
+      </>
     );
   }
 

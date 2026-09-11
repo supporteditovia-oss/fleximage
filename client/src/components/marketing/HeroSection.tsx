@@ -26,7 +26,11 @@ import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useToast } from "@/hooks/use-toast";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import {
+  GenerationLoader,
+  GenerationLoaderBackdrop,
+} from "@/components/larp/GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -141,6 +145,7 @@ export default function HeroSection() {
 
   const handleSubmit = async () => {
     if (isGeneratingRef.current || generateDirect.isPending) return;
+    releaseGenerationLoaderTheme();
     isGeneratingRef.current = true;
     setIsGenerating(true);
     const generationRequestId = createGenerationRequestId();
@@ -292,6 +297,7 @@ export default function HeroSection() {
   };
 
   const handleReset = () => {
+    releaseGenerationLoaderTheme();
     setTaskId(null);
     setGenerationEstimateSeconds(null);
     setPrompt("");
@@ -454,6 +460,10 @@ export default function HeroSection() {
         <span className="text-xs font-medium tracking-wide">{t("hero.discover")}</span>
         <ChevronDown className="h-5 w-5" aria-hidden />
       </a>
+
+      {(isGenerating || generateDirect.isPending || taskId) && (
+        <GenerationLoaderBackdrop zIndex={99} />
+      )}
 
       {(isGenerating || generateDirect.isPending) && !taskId
         ? createPortal(

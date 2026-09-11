@@ -8,7 +8,20 @@ import {
   useGenerationCountdown,
   useGenerationProgress,
 } from "@/hooks/use-generation-countdown";
+import { acquireGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "./generation-loader.css";
+
+export function GenerationLoaderBackdrop({ zIndex = 100 }: { zIndex?: number }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="lx-gen-loader__base fixed inset-0"
+      style={{ zIndex }}
+      aria-hidden
+    />,
+    document.body,
+  );
+}
 
 interface GenerationLoaderProps {
   status: "connecting" | "waiting" | "success";
@@ -28,41 +41,6 @@ const EXIT_FADE_MS = 400;
 /** Périmètre approx. du cadre 9:16 arrondi (viewBox 100×160). */
 const FRAME_PERIMETER = 482;
 
-const THEME_PALETTES = [
-  {
-    accent: "#e8c547",
-    accentSoft: "#f0d875",
-    accentDeep: "#a8841a",
-    glow: "rgba(232, 197, 71, 0.42)",
-    auroraA: "rgba(232, 197, 71, 0.22)",
-    auroraB: "rgba(201, 162, 39, 0.12)",
-  },
-  {
-    accent: "#e8a4b8",
-    accentSoft: "#f5c6d0",
-    accentDeep: "#c46b88",
-    glow: "rgba(232, 164, 184, 0.42)",
-    auroraA: "rgba(232, 164, 184, 0.2)",
-    auroraB: "rgba(196, 107, 136, 0.1)",
-  },
-  {
-    accent: "#d4b896",
-    accentSoft: "#f5e6c8",
-    accentDeep: "#9a7b55",
-    glow: "rgba(212, 184, 150, 0.42)",
-    auroraA: "rgba(245, 230, 200, 0.2)",
-    auroraB: "rgba(154, 123, 85, 0.1)",
-  },
-  {
-    accent: "#b8c5e0",
-    accentSoft: "#e8edf5",
-    accentDeep: "#7a8aaa",
-    glow: "rgba(184, 197, 224, 0.42)",
-    auroraA: "rgba(184, 197, 224, 0.2)",
-    auroraB: "rgba(122, 138, 170, 0.1)",
-  },
-] as const;
-
 const SPARKS = [
   { left: "8%", top: "18%", size: 3, dur: "7s", delay: "0s" },
   { left: "22%", top: "72%", size: 2, dur: "9s", delay: "1.2s" },
@@ -71,14 +49,6 @@ const SPARKS = [
   { left: "46%", top: "8%", size: 2, dur: "8.5s", delay: "1.8s" },
   { left: "92%", top: "82%", size: 3, dur: "7.5s", delay: "0.4s" },
 ] as const;
-
-function pickTheme(taskId: string) {
-  let hash = 0;
-  for (let i = 0; i < taskId.length; i += 1) {
-    hash = (hash + taskId.charCodeAt(i) * (i + 3)) % THEME_PALETTES.length;
-  }
-  return THEME_PALETTES[hash];
-}
 
 export function GenerationLoader({
   status,
@@ -101,8 +71,11 @@ export function GenerationLoader({
     ],
     [t],
   );
-  const theme = useMemo(() => pickTheme(taskId), [taskId]);
-  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">("dissolve");
+  const themeBundleRef = useRef(acquireGenerationLoaderTheme(taskId));
+  const { theme, isContinuation } = themeBundleRef.current;
+  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">(
+    isContinuation ? "logo" : "dissolve",
+  );
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -290,9 +263,8 @@ export function GenerationLoader({
     <motion.div
       className="lx-gen-loader fixed inset-0 z-[101] overflow-hidden"
       style={themeStyle}
-      initial={{ opacity: 0 }}
+      initial={false}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
       role="status"
       aria-live="polite"
       aria-busy={!isExiting}
@@ -334,9 +306,9 @@ export function GenerationLoader({
         ) : inputImageUrl && !isExiting ? (
           <motion.div
             className="lx-gen-loader__frame-wrap"
-            initial={{ opacity: 0, y: 16 }}
+            initial={isContinuation ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: isContinuation ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
             {renderFrame(inputImageUrl, t("progress.inputAlt"))}
           </motion.div>
@@ -351,14 +323,14 @@ export function GenerationLoader({
 
       <motion.div
         className="lx-gen-loader__hud"
-        initial={{ opacity: 0, y: 24 }}
+        initial={isContinuation ? false : { opacity: 0, y: 24 }}
         animate={{
           opacity: isExiting ? 0 : 1,
           y: isExiting ? 12 : 0,
         }}
         transition={{
-          duration: isExiting ? EXIT_FADE_MS / 1000 : 0.55,
-          delay: isExiting ? 0 : 0.15,
+          duration: isExiting ? EXIT_FADE_MS / 1000 : isContinuation ? 0 : 0.55,
+          delay: isExiting || isContinuation ? 0 : 0.15,
           ease: [0.22, 1, 0.36, 1],
         }}
       >
