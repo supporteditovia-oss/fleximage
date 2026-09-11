@@ -2,13 +2,8 @@ const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { isUserAdmin } = require("../admin-access");
 const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require("../fish-audio");
-const { uploadToR2 } = require("../r2");
-const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
 const { applyCreditDelta } = require("../generation");
-const {
-  VOICE_CLONE_CREDIT_COST,
-  MAX_VOICE_CLONES_PER_USER,
-} = require("../voice-pricing");
+const { VOICE_CLONE_CREDIT_COST } = require("../voice-pricing");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 
@@ -20,41 +15,7 @@ function parseDataUrl(dataUrl) {
   return { contentType: match[1], buffer };
 }
 
-async function persistClone(supabase, userId, payload) {
-  const { data, error } = await supabase
-    .from("voice_clones")
-    .insert(payload)
-    .select(
-      "id, name, fish_reference_id, fish_state, source_type, source_label, duration_sec, created_at",
-    )
-    .single();
-
-  if (!error) return data;
-
-  const missingTable =
-    error.code === "42P01" ||
-    error.code === "PGRST205" ||
-    /voice_clones/i.test(String(error.message || ""));
-
-  if (!missingTable) throw error;
-
-  const row = buildCloneRecord({
-    userId,
-    name: payload.name,
-    fishReferenceId: payload.fish_reference_id,
-    fishState: payload.fish_state,
-    sourceType: payload.source_type,
-    sourceLabel: payload.source_label,
-    durationSec: payload.duration_sec,
-    sampleKey: payload.sample_r2_key,
-    sampleUrl: payload.metadata?.sample_url,
-    referenceTranscript: payload.metadata?.reference_transcript,
-  });
-
-  await saveVoiceCloneManifest(userId, row);
-  return row;
-}
-
+/** Clone éphémère — modèle Fish uniquement, rien en base ni R2. */
 module.exports = async function voiceCloneHandler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -91,22 +52,6 @@ module.exports = async function voiceCloneHandler(req, res) {
     const isAdmin = admin || profile?.role === "admin";
 
     if (!isAdmin) {
-      const { count, error: countErr } = await supabase
-        .from("voice_clones")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId);
-      if (countErr && countErr.code !== "42P01" && countErr.code !== "PGRST205") {
-        throw countErr;
-      }
-      const cloneCount = Number(count) || 0;
-      if (cloneCount >= MAX_VOICE_CLONES_PER_USER) {
-        res.status(403).json({
-          code: "VOICE_CLONE_LIMIT",
-          message: `Limite de ${MAX_VOICE_CLONES_PER_USER} clones vocaux atteinte.`,
-        });
-        return;
-      }
-
       creditCost = VOICE_CLONE_CREDIT_COST;
       if ((profile?.credits ?? 0) < creditCost) {
         res.status(402).json({
@@ -136,9 +81,6 @@ module.exports = async function voiceCloneHandler(req, res) {
       typeof body.durationSec === "number" && body.durationSec > 0
         ? body.durationSec
         : null;
-
-    const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
-    const sampleUrl = await uploadToR2(sampleKey, parsed.buffer, parsed.contentType);
 
     if (creditCost > 0) {
       const { error: chargeErr } = await applyCreditDelta(supabase, {
@@ -172,7 +114,7 @@ module.exports = async function voiceCloneHandler(req, res) {
 
     const fishVoice = await createVoiceModel({
       title: `LuxeFlexIA — ${name}`.slice(0, 80),
-      description: `Clone user ${userId}`,
+      description: `Ephemeral clone ${userId}`,
       audioBuffers: [parsed.buffer],
       texts: referenceTranscript ? [referenceTranscript] : undefined,
       trainMode: "fast",
@@ -185,23 +127,21 @@ module.exports = async function voiceCloneHandler(req, res) {
       console.warn("voice-clone model wait", waitErr);
     }
 
-    const row = await persistClone(supabase, userId, {
-      user_id: userId,
-      name,
-      fish_reference_id: fishVoice.id,
-      fish_state: fishVoice.state,
-      source_type: sourceType,
-      source_label: sourceLabel,
-      duration_sec: durationSec,
-      sample_r2_key: sampleKey,
-      metadata: {
-        sample_url: sampleUrl,
-        reference_transcript: referenceTranscript,
-      },
-    });
+    const ephemeralId = randomUUID();
+    const createdAt = new Date().toISOString();
 
     res.status(201).json({
-      clone: row,
+      clone: {
+        id: ephemeralId,
+        name,
+        fish_reference_id: fishVoice.id,
+        fish_state: fishVoice.state,
+        source_type: sourceType,
+        source_label: sourceLabel,
+        duration_sec: durationSec,
+        created_at: createdAt,
+        ephemeral: true,
+      },
       fishReferenceId: fishVoice.id,
       creditCost,
     });
