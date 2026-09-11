@@ -55,6 +55,7 @@ import { isIndexableSitePath } from "@shared/site-seo";
 import { parseSeoNicheSlugFromPath } from "@shared/seo-niches";
 import { setRobotsMeta } from "@/lib/robots-meta";
 import { applyLocaleFromSearch, readLocaleFromSearch } from "@/i18n";
+import { useCrispSubscriberGate } from "@/hooks/use-crisp-subscriber-gate";
 
 // OAuth callback — consumes ?code= (PKCE) or hash tokens, then goes to /welcome
 function AuthCallback() {
@@ -335,6 +336,8 @@ function Router() {
   const [location] = useLocation();
   const { t, i18n } = useTranslation();
   const pathname = location.split("?")[0] || location;
+
+  useCrispSubscriberGate();
 
   React.useEffect(() => {
     applyLocaleFromSearch(window.location.search);

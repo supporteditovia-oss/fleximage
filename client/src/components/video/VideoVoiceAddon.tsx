@@ -21,7 +21,7 @@ export function VideoVoiceAddon({
   onTextChange,
   consent,
   onConsentChange,
-  maxChars = 200,
+  maxChars = 140,
 }: VideoVoiceAddonProps) {
   return (
     <div className="via-voice-addon">
@@ -33,7 +33,7 @@ export function VideoVoiceAddon({
       >
         <Mic className="h-4 w-4 shrink-0" aria-hidden />
         <span className="via-voice-addon__toggle-text">
-          Ajouter une voix IA
+          Voix adaptée à la photo
           <span className="via-voice-addon__toggle-meta">
             +{VIDEO_VOICE_EXTRA_CREDIT} crédits
           </span>
@@ -42,32 +42,39 @@ export function VideoVoiceAddon({
 
       {enabled ? (
         <div className="via-voice-addon__panel">
+          <p className="via-voice-addon__hint via-voice-addon__hint--panel">
+            L&apos;IA analyse ta photo (homme, femme, enfant…) et génère une voix
+            réaliste adaptée. Ex. : tombe dans l&apos;eau → cri « Ah ! »
+            automatique si tu ne saisis rien.
+          </p>
           <label className="via-step-label" htmlFor="video-voice-script">
-            Texte à lire
+            Ce qu&apos;il dit (optionnel)
           </label>
           <textarea
             id="video-voice-script"
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
-            rows={3}
+            rows={2}
             maxLength={maxChars}
-            placeholder="Ex. : Personne ne croyait en moi, alors j'ai arrêté d'expliquer."
+            placeholder='Ex. : "Ah !" — laissé vide = déduit de ton prompt mouvement'
             className="via-prompt-field"
           />
           <p className="via-voice-addon__hint">
-            {text.trim().length}/{maxChars} caractères · voix catalogue
+            {text.trim().length}/{maxChars} caractères · voix IA premium
           </p>
           <div className="via-chips">
-            {VIDEO_VOICE_SCRIPT_PRESETS.slice(0, 3).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className="via-chip"
-                onClick={() => onTextChange(preset)}
-              >
-                {preset.length > 42 ? `${preset.slice(0, 42)}…` : preset}
-              </button>
-            ))}
+            {["Ah !", "Oh !", "Haha !", ...VIDEO_VOICE_SCRIPT_PRESETS.slice(0, 2)].map(
+              (preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className="via-chip"
+                  onClick={() => onTextChange(preset)}
+                >
+                  {preset.length > 42 ? `${preset.slice(0, 42)}…` : preset}
+                </button>
+              ),
+            )}
           </div>
           <label className="via-voice-addon__consent">
             <input

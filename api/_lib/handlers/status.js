@@ -4,6 +4,13 @@ const {
   getSourceVideoUrlFromLarp,
   muxSourceAudioOntoVideo,
 } = require("../mux-source-audio");
+const { transformV2vVoiceAndMux } = require("../v2v-voice-transform");
+const { applyI2vAdaptiveVoiceAndMux } = require("../i2v-voice");
+const {
+  isV2vVoiceTransformMode,
+  v2vVoiceModeChargesCredits,
+} = require("../v2v-voice-pool");
+const { VIDEO_VOICE_EXTRA_CREDIT } = require("../video-studio");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -23,6 +30,7 @@ const {
   PROVIDER_POLL_HARD_TIMEOUT_MS,
   PROVIDER_POLL_QA_RETRY_EXTRA_MS,
   refundGenerationCreditsIfCharged,
+  refundGenerationCreditsPartial,
   extractImageUrls,
   toAssetList,
   toClientStatus,
@@ -33,10 +41,19 @@ const {
 } = require("../generation");
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
+function sanitizeClientFacingMessage(text) {
+  return String(text || "")
+    .replace(/\b(Kling|Runway|Aleph|Fish Audio|Fish|TTS|Kie\.ai|Kie)\b/gi, "IA")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function toUserFailMessage(value, fallback = "Échec de la génération") {
   if (value == null || value === "") return fallback;
   if (typeof value === "string") {
-    return value === "[object Object]" ? fallback : value;
+    return value === "[object Object]"
+      ? fallback
+      : sanitizeClientFacingMessage(value);
   }
   if (typeof value === "object") {
     if (typeof value.message === "string" && value.message) return value.message;
@@ -236,7 +253,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             klingData.failMsg,
-            "Échec Kling Motion Control",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -263,7 +280,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Kling";
+        apiFailMsg = "Erreur de génération vidéo";
       }
     } else if (isAlephTask) {
       const {
@@ -285,7 +302,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             alephData.errorMessage,
-            "Échec du remplacement véhicule",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -312,7 +329,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Aleph";
+        apiFailMsg = "Erreur de génération vidéo";
       }
     } else if (isVideoTask) {
       const runwayTaskId = activeTaskId.replace("video_", "");
@@ -503,12 +520,13 @@ module.exports = async function handler(req, res) {
               larp.metadata && typeof larp.metadata === "object"
                 ? larp.metadata
                 : {};
-            const shouldPreserveSourceAudio =
-              meta.workflow === "video_to_video" &&
-              meta.preserve_source_audio === true;
-            if (shouldPreserveSourceAudio && resultUrls[0]) {
+            const voiceMode =
+              meta.v2v_voice_mode ||
+              (meta.preserve_source_audio ? "preserve" : "none");
+            if (meta.workflow === "video_to_video" && resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
-              if (sourceVideoUrl) {
+
+              if (sourceVideoUrl && voiceMode === "preserve") {
                 const muxedUrl = await withTimeout(
                   muxSourceAudioOntoVideo({
                     sourceVideoUrl,
@@ -521,9 +539,114 @@ module.exports = async function handler(req, res) {
                 if (muxedUrl) {
                   resultUrls = [muxedUrl];
                   metadataPatch.source_audio_muxed = true;
+                } else {
+                  metadataPatch.source_audio_mux_failed = true;
                 }
+              } else if (
+                sourceVideoUrl &&
+                isV2vVoiceTransformMode(voiceMode)
+              ) {
+                const transformed = await withTimeout(
+                  transformV2vVoiceAndMux({
+                    sourceVideoUrl,
+                    generatedVideoUrl: resultUrls[0],
+                    larpId: larp.id,
+                    voiceMode,
+                    swapPrompt: meta.vehicle_prompt || larp.prompt || "",
+                  }),
+                  120_000,
+                  null,
+                );
+                if (transformed?.url) {
+                  resultUrls = [transformed.url];
+                  metadataPatch.source_audio_transformed = true;
+                  metadataPatch.voice_transform_gender = transformed.gender;
+                  metadataPatch.voice_transform_fish_id =
+                    transformed.fishReferenceId;
+                  metadataPatch.voice_transform_transcript =
+                    transformed.transcript;
+                } else {
+                  metadataPatch.voice_transform_failed = true;
+                }
+                metadataPatch.voice_transform_pending = false;
+              }
+
+            } else if (
+              meta.workflow === "image_to_video" &&
+              meta.voice_enabled === true &&
+              resultUrls[0]
+            ) {
+              const sourceImageUrl =
+                meta.source_image_url ||
+                (Array.isArray(larp.input_assets) ? larp.input_assets[0] : null);
+              if (sourceImageUrl) {
+                const i2vVoice = await withTimeout(
+                  applyI2vAdaptiveVoiceAndMux({
+                    generatedVideoUrl: resultUrls[0],
+                    larpId: larp.id,
+                    sourceImageUrl,
+                    motionPrompt: larp.prompt || "",
+                    voiceText: meta.voice_text || "",
+                  }),
+                  120_000,
+                  null,
+                );
+                if (i2vVoice?.url) {
+                  resultUrls = [i2vVoice.url];
+                  metadataPatch.i2v_voice_applied = true;
+                  metadataPatch.i2v_voice_category = i2vVoice.voiceCategory;
+                  metadataPatch.i2v_voice_line = i2vVoice.voiceLine;
+                } else {
+                  metadataPatch.i2v_voice_failed = true;
+                }
+                metadataPatch.voice_transform_pending = false;
               }
             }
+
+            const voiceAddonFailed =
+              metadataPatch.source_audio_mux_failed === true ||
+              metadataPatch.voice_transform_failed === true ||
+              metadataPatch.i2v_voice_failed === true;
+            if (voiceAddonFailed) {
+              const billedVoiceMode =
+                meta.workflow === "video_to_video"
+                  ? voiceMode ||
+                    (meta.preserve_source_audio ? "preserve" : "none")
+                  : null;
+              const shouldRefundVoiceAddon =
+                (meta.workflow === "video_to_video" &&
+                  v2vVoiceModeChargesCredits(billedVoiceMode)) ||
+                (meta.workflow === "image_to_video" && meta.voice_enabled === true);
+              if (shouldRefundVoiceAddon) {
+                  const partialErr = await refundGenerationCreditsPartial(
+                    supabase,
+                    {
+                      userId,
+                      generationId: larp.id,
+                      amount: VIDEO_VOICE_EXTRA_CREDIT,
+                      idempotencyKey: `generation:${larp.id}:refund_voice_addon`,
+                      source: metadataPatch.i2v_voice_failed
+                        ? "i2v_voice_failed"
+                        : metadataPatch.voice_transform_failed
+                          ? "voice_transform_failed"
+                          : "source_audio_mux_failed",
+                      failMessage: metadataPatch.i2v_voice_failed
+                        ? "Voix adaptée non appliquée — remboursement partiel"
+                        : metadataPatch.voice_transform_failed
+                          ? "Voix IA non appliquée — remboursement partiel"
+                          : "Voix filmée non intégrée — remboursement partiel",
+                    },
+                  ).catch((err) => {
+                    console.error("voice addon partial refund failed", err);
+                    return err;
+                  });
+                  if (!partialErr) {
+                    metadataPatch.voice_addon_refunded = true;
+                    metadataPatch.voice_addon_refund_credits =
+                      VIDEO_VOICE_EXTRA_CREDIT;
+                  }
+                }
+              }
           } else {
             resultUrls = extractImageUrls(parsed);
           }
@@ -649,6 +772,13 @@ module.exports = async function handler(req, res) {
         }).catch((err) => console.error("refund failed", err));
       }
 
+      const partialVoiceRefund =
+        apiStatus === "success" &&
+        metadataPatch.voice_addon_refunded === true &&
+        Number(metadataPatch.voice_addon_refund_credits) > 0
+          ? Number(metadataPatch.voice_addon_refund_credits)
+          : 0;
+
       res.status(200).json({
         larpId: larp.id,
         ...statusTimingFields(larp),
@@ -660,6 +790,11 @@ module.exports = async function handler(req, res) {
         isSubscriber,
         requiresPaywall: false,
         resultType,
+        creditsPartialRefund: partialVoiceRefund || undefined,
+        partialRefundMessage:
+          partialVoiceRefund > 0
+            ? `Option voix non appliquée — ${partialVoiceRefund} crédits remboursés.`
+            : undefined,
       });
       return;
     }

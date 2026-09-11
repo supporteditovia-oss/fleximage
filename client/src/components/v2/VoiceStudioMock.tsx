@@ -20,26 +20,20 @@ import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import {
   MOCK_VOICE_CATALOG,
-  type ClonedVoice,
   type MockVoiceProfile,
 } from "@/lib/v2-mock-voice";
 import {
   readSelectedCatalogVoiceId,
-  readSelectedClonedVoiceId,
   clearSelectedVoice,
   writeSelectedCatalogVoiceId,
-  writeSelectedClonedVoiceId,
 } from "@/lib/v2-experience";
-import {
-  getStoredClonedVoice,
-  persistClonedVoice,
-  readClonedVoices,
-  updateClonedVoiceServerIds,
-  voiceClipToDataUrl,
-  type StoredClonedVoice,
-} from "@/lib/cloned-voices-storage";
+import { voiceClipToDataUrl } from "@/lib/cloned-voices-storage";
 import { queryClient } from "@/lib/queryClient";
-import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
+import { generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
+import {
+  VOICE_GENERATE_CREDIT_COST,
+  voiceOwnSampleGenerateCost,
+} from "@/lib/voice-pricing";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
@@ -72,6 +66,12 @@ type RecordState = "idle" | "recording" | "ready";
 const FAKE_GEN_MS = 3200;
 const VOICE_GEN_ESTIMATE_SEC = 40;
 
+type SessionOwnVoice = {
+  id: string;
+  name: string;
+  fishReferenceId: string;
+};
+
 function formatTimer(ms: number) {
   const s = Math.min(MAX_CLIP_SEC, Math.floor(ms / 1000));
   return `0:${String(s).padStart(2, "0")}`;
@@ -91,14 +91,6 @@ function resolveActiveFromStorage(): {
   kind: "catalog" | "cloned";
   profile?: MockVoiceProfile;
 } | null {
-  const clonedId = readSelectedClonedVoiceId();
-  if (clonedId) {
-    const stored = getStoredClonedVoice(clonedId);
-    if (stored) {
-      return { id: stored.id, name: stored.name, kind: "cloned" };
-    }
-  }
-
   const id = readSelectedCatalogVoiceId();
   if (!id) return null;
   const profile = MOCK_VOICE_CATALOG.find((v) => v.id === id);
@@ -119,7 +111,6 @@ export function VoiceStudioMock() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordChunksRef = useRef<Blob[]>([]);
   const stopSpeakRef = useRef<(() => void) | null>(null);
-  const cloneReplayRef = useRef<HTMLAudioElement | null>(null);
   const resultAudioRef = useRef<HTMLAudioElement | null>(null);
   const shareBlobRef = useRef<Blob | null>(null);
   const genTimerRef = useRef<number | null>(null);
@@ -152,8 +143,7 @@ export function VoiceStudioMock() {
   const [isDecoding, setIsDecoding] = useState(false);
   const [voiceClip, setVoiceClip] = useState<VoiceClip | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [cloned, setCloned] = useState<StoredClonedVoice[]>(() => readClonedVoices());
-  const [replayCloneId, setReplayCloneId] = useState<string | null>(null);
+  const [sessionOwnVoice, setSessionOwnVoice] = useState<SessionOwnVoice | null>(null);
   const [activeVoice, setActiveVoice] = useState<{
     id: string;
     name: string;
@@ -226,6 +216,11 @@ export function VoiceStudioMock() {
     text.trim() && !isGenerating && (hasPendingCapture || (activeVoice && !creatingOwnVoice)),
   );
 
+  const generateCreditCost =
+    hasPendingCapture || (activeVoice?.kind === "cloned" && !sessionOwnVoice?.fishReferenceId)
+      ? voiceOwnSampleGenerateCost()
+      : VOICE_GENERATE_CREDIT_COST;
+
   const setClip = useCallback((next: VoiceClip | null) => {
     setVoiceClip((prev) => {
       if (prev?.url && prev.url !== next?.url) revokeVoiceClipUrl(prev);
@@ -280,7 +275,6 @@ export function VoiceStudioMock() {
   useEffect(() => {
     const sync = () => setActiveVoice(resolveActiveFromStorage());
     sync();
-    setCloned(readClonedVoices());
     window.addEventListener("luxeflexia:selected-voice", sync as EventListener);
     window.addEventListener("focus", sync);
     return () => {
@@ -292,7 +286,6 @@ export function VoiceStudioMock() {
       cleanupMedia();
       if (genTimerRef.current) window.clearTimeout(genTimerRef.current);
       stopSpeakRef.current?.();
-      cloneReplayRef.current?.pause();
       window.speechSynthesis?.cancel();
       setClip(null);
     };
@@ -417,29 +410,6 @@ export function VoiceStudioMock() {
     } finally {
       setIsSharing(false);
     }
-  };
-
-  const toggleCloneReplay = (voice: StoredClonedVoice) => {
-    stopPreview();
-
-    if (replayCloneId === voice.id) {
-      setReplayCloneId(null);
-      return;
-    }
-
-    let audio = cloneReplayRef.current;
-    if (!audio) {
-      audio = new Audio();
-      cloneReplayRef.current = audio;
-    }
-
-    audio.onended = () => setReplayCloneId(null);
-    audio.onerror = () => setReplayCloneId(null);
-    audio.src = voice.clipDataUrl;
-    audio.currentTime = 0;
-    void audio.play().then(() => setReplayCloneId(voice.id)).catch(() => {
-      setReplayCloneId(null);
-    });
   };
 
   const finalizeRecording = async (blob: Blob) => {
@@ -807,6 +777,7 @@ export function VoiceStudioMock() {
     setResultAudioUrl(null);
     setResultGenerationId(null);
     setActiveVoice(null);
+    setSessionOwnVoice(null);
     clearSelectedVoice();
   }, [playResultAudio]);
 
@@ -845,65 +816,23 @@ export function VoiceStudioMock() {
     setResultGenerationId(null);
 
       try {
-        let voiceCloneId: string | undefined;
         let fishReferenceId: string | undefined;
         let instantAudioDataUrl: string | undefined;
         let deliveryStyle: VoiceDeliveryStyle = "casual";
-        let activeForStyle = activeVoice;
 
         if (hasPendingCapture && voiceClip) {
-          const name = voiceName.trim();
-          const audioDataUrl = await voiceClipToDataUrl(voiceClip);
-          const clonedRemote = await cloneVoice({
-            name,
-            audioDataUrl,
-            sourceType: voiceClip.source,
-            sourceLabel:
-              voiceClip.source === "record"
-                ? `Enregistrement ${formatClipTime(voiceClip.durationSec)}`
-                : voiceClip.fileName ?? "Import audio",
-            durationSec: voiceClip.durationSec,
-          });
-
-          voiceCloneId = clonedRemote.clone.id;
-          fishReferenceId = clonedRemote.fishReferenceId;
+          instantAudioDataUrl = await voiceClipToDataUrl(voiceClip);
           deliveryStyle = "rap";
-
-          const entry: ClonedVoice = {
-            id: `clone-${Date.now()}`,
-            name,
-            source: voiceClip.source,
-            sourceLabel:
-              voiceClip.source === "record"
-                ? `Enregistrement ${formatClipTime(voiceClip.durationSec)}`
-                : voiceClip.fileName ?? "Import audio",
-            createdAt: new Date().toISOString(),
-          };
-          await persistClonedVoice(entry, voiceClip);
-          updateClonedVoiceServerIds(entry.id, {
-            serverCloneId: voiceCloneId,
-            fishReferenceId,
-          });
-          setCloned(readClonedVoices());
-
-          const voice = { id: entry.id, name: entry.name, kind: "cloned" as const };
-          setActiveVoice(voice);
-          writeSelectedClonedVoiceId(entry.id);
-          writeSelectedCatalogVoiceId(null);
-          activeForStyle = voice;
-          resetCapture();
-          setVoiceName("");
         } else if (activeVoice?.kind === "cloned") {
-          const stored = getStoredClonedVoice(activeVoice.id);
-          if (stored?.serverCloneId) {
-            voiceCloneId = stored.serverCloneId;
-            fishReferenceId = stored.fishReferenceId;
-          } else if (stored?.fishReferenceId) {
-            fishReferenceId = stored.fishReferenceId;
-          } else if (stored?.clipDataUrl) {
-            instantAudioDataUrl = stored.clipDataUrl;
+          if (
+            sessionOwnVoice?.id === activeVoice.id &&
+            sessionOwnVoice.fishReferenceId
+          ) {
+            fishReferenceId = sessionOwnVoice.fishReferenceId;
           } else {
-            throw new Error("Voix locale introuvable. Réimporte un extrait.");
+            throw new Error(
+              "Voix expirée pour cette session. Réimporte un extrait vocal.",
+            );
           }
           deliveryStyle = resolveDeliveryStyle(activeVoice);
         } else if (activeVoice?.kind === "catalog") {
@@ -920,12 +849,30 @@ export function VoiceStudioMock() {
 
         const result = await generateVoice({
           text: text.trim(),
-          voiceCloneId,
           fishReferenceId,
           instantAudioDataUrl,
           style: deliveryStyle,
           humanize: false,
         });
+
+        if (hasPendingCapture && voiceClip && result.fishReferenceId) {
+          const name = voiceName.trim();
+          const voice = {
+            id: `session-${Date.now()}`,
+            name,
+            kind: "cloned" as const,
+          };
+          setSessionOwnVoice({
+            id: voice.id,
+            name,
+            fishReferenceId: result.fishReferenceId,
+          });
+          setActiveVoice(voice);
+          writeSelectedCatalogVoiceId(null);
+          activeForStyle = voice;
+          resetCapture();
+          setVoiceName("");
+        }
 
         setResultAudioUrl(result.audioUrl);
         setResultGenerationId(result.generation.id);
@@ -973,8 +920,8 @@ export function VoiceStudioMock() {
               </h3>
               <p className="vs-card__sub">
                 {showLockedVoiceName
-                  ? "Écris ton texte puis génère."
-                  : "Enregistre ou importe un extrait, écris ton texte, puis génère."}
+                  ? `Écris ton texte puis génère · ${VOICE_GENERATE_CREDIT_COST} cr./génération (ta voix n'est pas enregistrée).`
+                  : `Enregistre ou importe un extrait · ${voiceOwnSampleGenerateCost()} cr. la 1ʳᵉ fois · ${VOICE_GENERATE_CREDIT_COST} cr. ensuite (session uniquement, rien n'est sauvegardé).`}
               </p>
             </div>
           </div>
@@ -1266,7 +1213,7 @@ export function VoiceStudioMock() {
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            Générer la voix
+            Générer la voix · {generateCreditCost} cr.
           </button>
           {generateBlockReason ? (
             <p className="vs-help vs-help--block" role="status">
@@ -1274,72 +1221,6 @@ export function VoiceStudioMock() {
             </p>
           ) : null}
         </section>
-
-        {cloned.length > 0 ? (
-          <section className="vs-card vs-card--list" aria-labelledby="vs-cloned-title">
-            <h3 id="vs-cloned-title" className="vs-card__title">
-              Mes voix
-            </h3>
-            <p className="vs-card__sub vs-card__sub--tight">
-              Tes clones restent ici — réécoute l’extrait quand tu veux.
-            </p>
-            <ul className="vs-cloned-list">
-              {cloned.map((v) => {
-                const isActive =
-                  activeVoice?.kind === "cloned" && activeVoice.id === v.id;
-                const isReplaying = replayCloneId === v.id;
-                return (
-                  <li key={v.id} className="vs-cloned-item">
-                    <button
-                      type="button"
-                      className={`vs-cloned-row${isActive ? " is-active" : ""}`}
-                      onClick={() => {
-                        stopPreview();
-                        setActiveVoice({
-                          id: v.id,
-                          name: v.name,
-                          kind: "cloned",
-                        });
-                        writeSelectedClonedVoiceId(v.id);
-                        writeSelectedCatalogVoiceId(null);
-                        setReadyToPlay(false);
-                      }}
-                    >
-                      <span className="vs-cloned-row__avatar" aria-hidden>
-                        {v.name.slice(0, 2).toUpperCase()}
-                      </span>
-                      <span className="vs-cloned-row__copy">
-                        <strong>{v.name}</strong>
-                        <span>
-                          {v.sourceLabel} · {formatClipTime(v.durationSec)}
-                        </span>
-                      </span>
-                      {isActive ? (
-                        <span className="vs-cloned-row__badge">Active</span>
-                      ) : null}
-                    </button>
-                    <button
-                      type="button"
-                      className={`vs-cloned-row__replay${isReplaying ? " is-playing" : ""}`}
-                      aria-label={
-                        isReplaying
-                          ? `Pause ${v.name}`
-                          : `Réécouter l’extrait de ${v.name}`
-                      }
-                      onClick={() => toggleCloneReplay(v)}
-                    >
-                      {isReplaying ? (
-                        <Pause className="h-3.5 w-3.5" aria-hidden />
-                      ) : (
-                        <Play className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
 
         <VoiceHistorySection
           enabled={Boolean(user)}

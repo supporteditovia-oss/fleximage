@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GenerationLoader } from "./GenerationLoader";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import "./generation-loader.css";
 
 /** Durée crédible pour l'essai gratuit — même UX que les abonnés. */
@@ -25,7 +26,7 @@ export function FakeOnboardingLoader({
   useEffect(() => {
     document.documentElement.setAttribute("data-fullscreen-overlay", "true");
     document.body.setAttribute("data-fullscreen-overlay", "true");
-    window.$crisp?.push(["do", "chat:hide"]);
+    setCrispOverlaySuppressed(true);
 
     const timer = window.setTimeout(() => {
       onCompleteRef.current();
@@ -35,7 +36,7 @@ export function FakeOnboardingLoader({
       window.clearTimeout(timer);
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     };
   }, [durationMs]);
 

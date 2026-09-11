@@ -23,17 +23,22 @@ import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
-import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
+import { VideoV2vVoiceAddon } from "@/components/video/VideoV2vVoiceAddon";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
+  detectVoiceIntentInV2vPrompt,
   maxVoiceCharsForVideoDuration,
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_VOICE_EXTRA_CREDIT,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
+  VIDEO_V2V_SWAP_PRESETS,
   VIDEO_VEHICLE_PRESETS,
   type VideoAspectRatio,
   type VideoWorkflow,
+  type V2vVoiceMode,
 } from "@/lib/video-studio-config";
 import {
   formatVideoDurationLabel,
@@ -74,8 +79,8 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    emoji: "🚗",
-    hint: "Swap voiture ou objet",
+    emoji: "🎬",
+    hint: "Personnage, objet, véhicule…",
   },
 ];
 
@@ -115,7 +120,7 @@ export default function VideoIA() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
   const [voiceConsent, setVoiceConsent] = useState(false);
-  const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
+  const [v2vVoiceMode, setV2vVoiceMode] = useState<V2vVoiceMode>("none");
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -146,16 +151,14 @@ export default function VideoIA() {
     workflow === "video_to_video" ? videoDurationSec : durationSec,
   );
 
-  const voiceReady =
-    !voiceEnabled ||
-    (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
+  const voiceReady = !voiceEnabled || (voiceConsent && voiceText.length <= voiceMaxChars);
 
   const creditCost = computeVideoCreditCost({
     workflow,
     durationSec,
     quality: "standard",
     voiceEnabled,
-    preserveSourceAudio: preserveSourceVoice,
+    v2vVoiceMode,
     sourceVideoDurationSec: videoDurationSec,
   });
 
@@ -163,7 +166,7 @@ export default function VideoIA() {
     voiceEnabled
       ? {
           voice_enabled: true,
-          voice_mode: "catalog" as const,
+          voice_mode: "auto_adaptive" as const,
           voice_text: voiceText.trim(),
           voice_consent: voiceConsent,
         }
@@ -177,11 +180,18 @@ export default function VideoIA() {
     motionPrompt.trim().length >= 5 &&
     voiceReady &&
     canAfford;
+  const v2vPromptVoiceIntent =
+    workflow === "video_to_video" && detectVoiceIntentInV2vPrompt(swapPrompt);
+  const v2vVoiceOptionRequired =
+    v2vPromptVoiceIntent &&
+    (v2vVoiceMode === "none" || v2vVoiceMode === "preserve");
+
   const canGenerateV2V =
     Boolean(videoSource) &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !isVideoUploading;
+    !isVideoUploading &&
+    !v2vVoiceOptionRequired;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -325,7 +335,8 @@ export default function VideoIA() {
           : { videos: [videoSource.dataUrl] }),
         vehicle_prompt: swapPrompt.trim(),
         source_video_duration_sec: videoDurationSec ?? undefined,
-        preserve_source_audio: preserveSourceVoice,
+        v2v_voice_mode: v2vVoiceMode,
+        preserve_source_audio: v2vVoiceMode === "preserve",
         voice_enabled: false,
         ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
         source: "video_studio",
@@ -427,8 +438,10 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
-              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
+              JPG ou PNG — ta propre image. Vidéo{" "}
+              <strong>{durationSec} s</strong> ·{" "}
+              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération
+              (+{VIDEO_VOICE_EXTRA_CREDIT} cr. option voix adaptée).
             </p>
 
             <input
@@ -479,6 +492,18 @@ export default function VideoIA() {
               </>
             )}
 
+            {imagePreviewUrl ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
+
             <div className="via-orient-toggle" role="group" aria-label="Orientation">
               <button
                 type="button"
@@ -523,12 +548,12 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton téléphone — ex. ta Clio garée.{" "}
+              Filme avec ton téléphone — toi, ta voiture, un objet…{" "}
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
               {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
               L&apos;IA conserve ta caméra, le décor et tous les mouvements.
-              Par défaut, la vidéo générée est <strong>muette</strong> — active
-              l&apos;option voix ci-dessous pour conserver ta voix filmée.
+              Ajoute une photo de référence pour remplacer un personnage ou un
+              objet avec précision.
             </p>
 
             <input
@@ -579,8 +604,8 @@ export default function VideoIA() {
                   Photo de référence (optionnel)
                 </label>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Photo du véhicule, personnage ou objet à intégrer — pour un
-                  rendu plus précis.
+                  Photo du personnage, objet ou véhicule cible — recommandé pour
+                  un swap précis (ex. look célébrité, supercar, tenue).
                 </p>
                 <input
                   ref={refImageFileRef}
@@ -618,22 +643,41 @@ export default function VideoIA() {
                   onChange={(e) => setSwapPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus, garde exactement les mêmes mouvements."
+                  placeholder="Ex. : Remplace-moi par la personne de la photo, ou ma Clio par une Urus — garde les mêmes mouvements."
                   className="via-prompt-field"
                 />
                 <div className="via-chips">
-                  {VIDEO_VEHICLE_PRESETS.map((preset) => (
+                  {VIDEO_V2V_SWAP_PRESETS.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       className="via-chip"
+                      onClick={() => setSwapPrompt(preset.prompt)}
+                    >
+                      {preset.emoji} {preset.label}
+                    </button>
+                  ))}
+                </div>
+                {v2vVoiceOptionRequired ? (
+                  <p className="via-voice-addon__hint via-voice-addon__hint--warn">
+                    Tu demandes une voix dans le prompt. Active Voix femme,
+                    Voix homme ou Voix auto (+{VIDEO_VOICE_EXTRA_CREDIT}{" "}
+                    crédits) — le texte seul ne change pas la voix.
+                  </p>
+                ) : null}
+                <div className="via-chips via-chips--secondary">
+                  {VIDEO_VEHICLE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className="via-chip via-chip--subtle"
                       onClick={() =>
                         setSwapPrompt(
                           `Remplace le véhicule par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
                         )
                       }
                     >
-                      {preset.label}
+                      🏎️ {preset.label}
                     </button>
                   ))}
                 </div>
@@ -641,9 +685,9 @@ export default function VideoIA() {
             )}
 
             {videoPreview ? (
-              <VideoSourceVoiceAddon
-                enabled={preserveSourceVoice}
-                onEnabledChange={setPreserveSourceVoice}
+              <VideoV2vVoiceAddon
+                mode={v2vVoiceMode}
+                onModeChange={setV2vVoiceMode}
               />
             ) : null}
 
@@ -671,7 +715,7 @@ export default function VideoIA() {
               ) : (
                 <>
                   <Film className="h-4 w-4" />
-                  Remplacer le véhicule · {creditCost} crédits
+                  Transformer ma vidéo · {creditCost} crédits
                 </>
               )}
             </button>

@@ -20,9 +20,14 @@ const {
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
-  buildCarSwapPrompt,
+  buildV2VProviderPrompt,
   validateVoiceText,
 } = require("../video-studio");
+const {
+  resolveV2vVoiceMode,
+  isV2vVoiceTransformMode,
+} = require("../v2v-voice-pool");
+const { validateV2vVoicePromptPolicy } = require("../v2v-prompt-guard");
 const {
   checkGenerationLimits,
   deductGenerationCredits,
@@ -189,21 +194,6 @@ function resolveVehicleDescription(body) {
   return "";
 }
 
-function buildV2VProviderPrompt(body, vehicleDescription) {
-  const custom =
-    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
-  if (custom.length >= 10) {
-    const hasSceneLock =
-      /d[ée]cor|cam[ée]ra|reflet|background|ground|reflection|unchanged|identique/i.test(
-        custom,
-      );
-    return hasSceneLock
-      ? custom
-      : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
-  }
-  return buildCarSwapPrompt(vehicleDescription);
-}
-
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
 
@@ -228,6 +218,22 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
       : body.duration_sec === 10
         ? 10
         : 5;
+  const voiceMode = body.voice_mode || "catalog";
+  const voiceTextRaw = String(body.voice_text || "").trim();
+
+  if (voiceMode === "auto_adaptive") {
+    if (voiceTextRaw.length > 0) {
+      const voiceTextCheck = validateVoiceText(voiceTextRaw, voiceDurationSec);
+      if (!voiceTextCheck.ok) {
+        throw Object.assign(new Error(voiceTextCheck.reason), {
+          status: 422,
+          code: "VOICE_TEXT_TOO_LONG",
+        });
+      }
+    }
+    return { id: null, name: "Voix adaptée", fish_reference_id: null };
+  }
+
   const voiceTextCheck = validateVoiceText(body.voice_text, voiceDurationSec);
   if (!voiceTextCheck.ok) {
     throw Object.assign(new Error(voiceTextCheck.reason), {
@@ -236,7 +242,7 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
     });
   }
 
-  if (body.voice_mode === "cloned" && body.voice_clone_id) {
+  if (voiceMode === "cloned" && body.voice_clone_id) {
     const { data: clone, error } = await supabase
       .from("voice_clones")
       .select("id, user_id, name, fish_reference_id")
@@ -298,8 +304,8 @@ module.exports = async function handler(req, res) {
         res.status(400).json({
           message: copy(
             uiLocale,
-            "Choisis une supercar ou décris le véhicule de remplacement.",
-            "Pick a supercar or describe the replacement vehicle.",
+            "Décris la transformation souhaitée (véhicule, personnage, objet…).",
+            "Describe the desired transformation (vehicle, person, object…).",
           ),
         });
         return;
@@ -338,9 +344,38 @@ module.exports = async function handler(req, res) {
     const quality = body.quality === "high" ? "high" : "standard";
     const voiceEnabled =
       workflow === "image_to_video" && Boolean(body.voice_enabled);
-    const preserveSourceAudio =
+    const preserveSourceAudioLegacy =
       workflow === "video_to_video" && Boolean(body.preserve_source_audio);
+    const v2vVoiceMode =
+      workflow === "video_to_video"
+        ? resolveV2vVoiceMode(body.v2v_voice_mode, preserveSourceAudioLegacy)
+        : "none";
+    const preserveSourceAudio =
+      workflow === "video_to_video" && v2vVoiceMode === "preserve";
+    const v2vVoiceTransform =
+      workflow === "video_to_video" && isV2vVoiceTransformMode(v2vVoiceMode);
+    const i2vVoicePending =
+      workflow === "image_to_video" && voiceEnabled;
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
+
+    let visualSwapDescription = vehicleDescription;
+    let v2vPromptVoiceIntentDetected = false;
+    if (workflow === "video_to_video") {
+      const voicePolicy = validateV2vVoicePromptPolicy({
+        swapPrompt: vehicleDescription,
+        v2vVoiceMode,
+        uiLocale,
+      });
+      if (!voicePolicy.ok) {
+        res.status(422).json({
+          code: voicePolicy.code,
+          message: voicePolicy.message,
+        });
+        return;
+      }
+      visualSwapDescription = voicePolicy.visualPrompt;
+      v2vPromptVoiceIntentDetected = Boolean(voicePolicy.voiceIntentDetected);
+    }
 
     let sourceVideoDurationSec = null;
     if (workflow === "video_to_video") {
@@ -365,6 +400,7 @@ module.exports = async function handler(req, res) {
       quality,
       voiceEnabled,
       preserveSourceAudio,
+      v2vVoiceMode,
       isAdmin,
       sourceVideoDurationSec,
     });
@@ -448,7 +484,10 @@ module.exports = async function handler(req, res) {
           body,
         );
         v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
-        providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
+        providerPrompt = buildV2VProviderPrompt(
+          { ...body, vehicle_prompt: visualSwapDescription },
+          visualSwapDescription,
+        );
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({
@@ -498,10 +537,16 @@ module.exports = async function handler(req, res) {
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: vehicleDescription,
+      vehicle_prompt_visual: visualSwapDescription,
+      v2v_prompt_voice_intent_detected: v2vPromptVoiceIntentDetected,
       source_video_duration_sec: sourceVideoDurationSec,
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
+      v2v_voice_mode: v2vVoiceMode,
+      voice_transform_pending: v2vVoiceTransform || i2vVoicePending,
+      source_image_url:
+        workflow === "image_to_video" ? sourceAssetUrl : null,
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
@@ -601,7 +646,10 @@ module.exports = async function handler(req, res) {
         .from("generations")
         .update({
           status: "failed",
-          fail_message: String(providerErr.message || "Échec Runway").slice(0, 240),
+          fail_message: String(providerErr.message || "Échec génération vidéo").slice(
+            0,
+            240,
+          ),
           metadata: {
             ...studioMetadata,
             studio_stage: "FAILED",

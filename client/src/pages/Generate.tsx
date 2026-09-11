@@ -29,6 +29,7 @@ import { ZeroCreditsModal } from "@/components/generate/ZeroCreditsModal";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import "./generate-page.css";
@@ -342,11 +343,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     if (isFullscreenOverlayActive) {
       document.documentElement.setAttribute("data-fullscreen-overlay", "true");
       document.body.setAttribute("data-fullscreen-overlay", "true");
-      window.$crisp?.push(["do", "chat:hide"]);
+      setCrispOverlaySuppressed(true);
     } else {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     }
 
     if (isPaywallOverlayActive) {
@@ -359,7 +360,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-paywall-overlay");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
