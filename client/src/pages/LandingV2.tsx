@@ -1,15 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { setDocumentMeta } from "@/lib/document-meta";
 import { setAppLanguage } from "@/i18n";
 import { resolvePreferredLocale, type AppLocale } from "@shared/locales";
-import {
-  readStudioMode,
-  writeStudioMode,
-  type StudioMode,
-} from "@/lib/v2-experience";
+import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
 import "./landing-v2.css";
 
 const EDITORIAL = [
@@ -51,10 +48,16 @@ const EDITORIAL = [
   },
 ] as const;
 
+const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
+
 const FAQ = [
   {
     q: "Qu’est-ce que LuxeFlexIA ?",
-    a: "LuxeFlexIA est un studio créatif basé sur l’IA. À partir d’une simple photo, tu peux créer des scènes ultra-réalistes dans l’univers que tu imagines. Tu peux également créer une voix IA à partir d’un court extrait audio, puis générer un vocal à partir du texte que tu écris.",
+    a: "LuxeFlexIA est un studio créatif basé sur l’IA. Transforme une photo en scène ultra-réaliste, anime une image en vidéo (Image → Vidéo), transforme une vidéo smartphone (Vidéo → Vidéo), ou génère un vocal IA à partir d’un court extrait audio.",
+  },
+  {
+    q: "Comment fonctionne la vidéo IA ?",
+    a: "Importe une photo pour l’animer en clip vertical (Image → Vidéo), ou importe une vidéo filmée au smartphone pour remplacer un personnage, un objet ou un véhicule (Vidéo → Vidéo). Rendu cinématique prêt pour TikTok et Reels.",
   },
   {
     q: "Comment fonctionne la création d’image ?",
@@ -74,8 +77,6 @@ const FAQ = [
   },
 ] as const;
 
-const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
-const MINI_WAVE = [7, 12, 18, 9, 24, 15, 29, 18, 12, 22, 30, 14, 9, 20, 12, 7];
 
 function BrandLink({ className = "" }: { className?: string }) {
   return (
@@ -97,14 +98,6 @@ export default function LandingV2() {
   const startHref = loggedIn ? "/create" : "/register";
   const loginHref = loggedIn ? "/create" : "/login";
 
-  const [mode, setMode] = useState<StudioMode>(() => readStudioMode());
-  const [ratio, setRatio] = useState<"9:16" | "16:9" | "1:1">("16:9");
-  const [imagePrompt, setImagePrompt] = useState(
-    "Mets-moi au volant d’une supercar à Monaco au coucher du soleil.",
-  );
-  const [voicePrompt, setVoicePrompt] = useState(
-    "Bienvenue dans mon univers. Ici, chaque idée peut prendre vie.",
-  );
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [voicePlaying, setVoicePlaying] = useState(false);
 
@@ -114,7 +107,7 @@ export default function LandingV2() {
     setDocumentMeta({
       title: "LuxeFlexIA — Crée ce que tu imagines",
       description:
-        "Transforme une simple photo en scène ultra-réaliste, ou crée une voix IA à partir de quelques secondes d’audio.",
+        "Image IA, Vidéo IA (Image→Vidéo & Vidéo→Vidéo) et Clonage vocal — le studio créatif tout-en-un.",
       canonicalPath: "/",
     });
   }, []);
@@ -124,16 +117,9 @@ export default function LandingV2() {
     setAppLanguage(locale, { trackSignupLocale: !user });
   };
 
-  const handleMode = (next: StudioMode) => {
-    setMode(next);
-    writeStudioMode(next);
-  };
-
   const toggleReveal = (id: string) => {
     setRevealed((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
-  const studioKey = useMemo(() => mode, [mode]);
 
   return (
     <div className="landing-v2">
@@ -164,156 +150,12 @@ export default function LandingV2() {
           tu imagines.
         </h1>
         <p className="hero-copy">
-          Transforme une simple photo en scène ultra-réaliste,
-          <br /> ou crée une voix IA à partir de quelques secondes d’audio.
+          Image IA, Clonage vocal et Vidéo IA — Image→Vidéo ou Vidéo→Vidéo.
+          <br />
+          Le même studio que dans l’app, directement depuis la page d’accueil.
         </p>
 
-        <div className="mode-switch" role="tablist" aria-label="Choisir le mode de création">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "image"}
-            className={mode === "image" ? "active" : ""}
-            onClick={() => handleMode("image")}
-          >
-            Image IA
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "voice"}
-            className={mode === "voice" ? "active" : ""}
-            onClick={() => handleMode("voice")}
-          >
-            Voix IA
-          </button>
-        </div>
-
-        <div className={`studio-shell mode-${mode}`} key={studioKey}>
-          {mode === "image" ? (
-            <>
-              <div className="studio-topline">
-                <span>Image IA</span>
-                <span>Photo → nouvelle scène</span>
-              </div>
-              <div className="studio-content">
-                <section className="input-panel source-panel" aria-label="Image source">
-                  <span className="field-index">01</span>
-                  <div>
-                    <p className="field-label">Ta photo</p>
-                    <p className="field-help">Ajoute la photo que tu veux transformer</p>
-                  </div>
-                  <button
-                    className="dropzone"
-                    type="button"
-                    onClick={() => {
-                      window.location.href = startHref;
-                    }}
-                  >
-                    <span className="upload-icon" aria-hidden>
-                      ＋
-                    </span>
-                    <span>Ajouter une image</span>
-                    <small>JPG ou PNG · 10 Mo max.</small>
-                  </button>
-                </section>
-                <section className="input-panel prompt-panel" aria-label="Instruction">
-                  <span className="field-index">02</span>
-                  <div>
-                    <label className="field-label" htmlFor="lv2-prompt">
-                      Que veux-tu créer ?
-                    </label>
-                    <p className="field-help">Décris simplement la nouvelle scène</p>
-                  </div>
-                  <textarea
-                    id="lv2-prompt"
-                    aria-label="Description de l’image"
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                  />
-                  <div className="ratio-row" aria-label="Format de l’image">
-                    <span>Format</span>
-                    <div>
-                      {(["9:16", "16:9", "1:1"] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          className={ratio === r ? "selected" : ""}
-                          onClick={() => setRatio(r)}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              </div>
-              <div className="studio-footer">
-                <p>
-                  <span>✦</span> Rendu en moins d’une minute
-                </p>
-                <Link className="primary-button" href={startHref}>
-                  Créer l’image <span>↗</span>
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="studio-topline">
-                <span>Voix IA</span>
-                <span>Audio → nouveau vocal</span>
-              </div>
-              <div className="studio-content">
-                <section className="input-panel source-panel" aria-label="Voix source">
-                  <span className="field-index">01</span>
-                  <div>
-                    <p className="field-label">Ta voix</p>
-                    <p className="field-help">Importe ou enregistre quelques secondes</p>
-                  </div>
-                  <button className="dropzone" type="button">
-                    <span className="upload-icon" aria-hidden>
-                      ＋
-                    </span>
-                    <span>Ajouter une voix</span>
-                    <small>MP3, WAV ou M4A · 30 s min.</small>
-                  </button>
-                  <button className="record-link" type="button">
-                    <span className="record-dot" /> Enregistrer maintenant
-                  </button>
-                </section>
-                <section className="input-panel prompt-panel" aria-label="Instruction">
-                  <span className="field-index">02</span>
-                  <div>
-                    <label className="field-label" htmlFor="lv2-voice-prompt">
-                      Ton message
-                    </label>
-                    <p className="field-help">Que veux-tu lui faire dire ?</p>
-                  </div>
-                  <textarea
-                    id="lv2-voice-prompt"
-                    aria-label="Texte à prononcer"
-                    value={voicePrompt}
-                    onChange={(e) => setVoicePrompt(e.target.value)}
-                  />
-                  <div className="mini-wave" aria-label="Aperçu de la voix">
-                    {MINI_WAVE.map((h, i) => (
-                      <i key={i} style={{ height: `${h}px` }} />
-                    ))}
-                    <span>0:08</span>
-                  </div>
-                </section>
-              </div>
-              <div className="studio-footer">
-                <p>
-                  <span>✦</span> Voix privée et sécurisée
-                </p>
-                <Link className="primary-button" href={startHref}>
-                  Générer la voix <span>↗</span>
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
+        <LandingStudioWidget />
 
         <p className="hero-note">Aucune compétence technique. Seulement ton imagination.</p>
       </section>
@@ -327,8 +169,8 @@ export default function LandingV2() {
             tu imagines.
           </h2>
           <div className="section-intro">
-            <p>Importe une photo, décris simplement la scène et LuxeFlexIA crée le reste.</p>
-            <span>Voitures · Voyages · Villas · Lifestyle</span>
+            <p>Photo, vidéo ou voix — décris ce que tu imagines et LuxeFlexIA crée le reste.</p>
+            <span>Image · Vidéo · Voix · Lifestyle</span>
           </div>
         </div>
         <div className="editorial-grid">
@@ -428,7 +270,7 @@ export default function LandingV2() {
               href="#top"
               onClick={(e) => {
                 e.preventDefault();
-                handleMode("voice");
+                writeStudioMode("voice");
                 document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
               }}
             >

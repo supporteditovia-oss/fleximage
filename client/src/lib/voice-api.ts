@@ -28,6 +28,8 @@ export type VoiceGenerateResult = {
   };
   audioUrl: string;
   creditCost: number;
+  /** Référence Fish pour regénérer dans la même session (non stockée). */
+  fishReferenceId?: string | null;
 };
 
 export async function cloneVoice(params: {

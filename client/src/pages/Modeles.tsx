@@ -23,6 +23,7 @@ import { OutfitChangeQuestion } from "@/components/outfits/OutfitChangeQuestion"
 import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
 import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import {
   getInFlightGeneration,
   persistInFlightFromApiResult,
@@ -409,12 +410,12 @@ export default function Modeles() {
   useLayoutEffect(() => {
     document.documentElement.classList.add("luxeflexia-modeles-page");
     document.body.setAttribute("data-hide-app-chrome", "true");
-    window.$crisp?.push(["do", "chat:hide"]);
+    setCrispOverlaySuppressed(true);
     return () => {
       document.documentElement.classList.remove("luxeflexia-modeles-page");
       document.documentElement.classList.remove("luxeflexia-modeles-desktop");
       document.body.removeAttribute("data-hide-app-chrome");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     };
   }, []);
 

@@ -139,10 +139,11 @@
         window.__snapPixelReady = true;
       })();
     </script>
-    <!-- Crisp customer chat — global on all routes -->
+    <!-- Crisp — chargé globalement, affiché seulement aux abonnés (voir crisp-gate.ts) -->
     <script type="text/javascript">
       window.$crisp = [];
       window.CRISP_WEBSITE_ID = "0bd8246d-f45e-4434-a23c-104ed0c14d66";
+      window.$crisp.push(["do", "chat:hide"]);
       (function () {
         var d = document;
         var s = d.createElement("script");

@@ -29,6 +29,7 @@ import { ZeroCreditsModal } from "@/components/generate/ZeroCreditsModal";
 import { useToast } from "@/hooks/use-toast";
 import { useGenerationEligibility } from "@/hooks/use-generation-limits";
 import { useAuth } from "@/hooks/use-auth";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import { getPendingLarp, clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import "./generate-page.css";
@@ -342,11 +343,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     if (isFullscreenOverlayActive) {
       document.documentElement.setAttribute("data-fullscreen-overlay", "true");
       document.body.setAttribute("data-fullscreen-overlay", "true");
-      window.$crisp?.push(["do", "chat:hide"]);
+      setCrispOverlaySuppressed(true);
     } else {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     }
 
     if (isPaywallOverlayActive) {
@@ -359,7 +360,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-paywall-overlay");
-      window.$crisp?.push(["do", "chat:show"]);
+      setCrispOverlaySuppressed(false);
     };
   }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
 
@@ -374,7 +375,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       Boolean(paywallPreview) &&
       Boolean(paywallExpiresAt) &&
       !isPaywallExpired(paywallExpiresAt);
-    const hasOnboardingDraft = Boolean(resume && paywallPreview);
+    const hasOnboardingDraft = Boolean(
+      resume && paywallPreview && resume.generationMode === "image",
+    );
 
     // Explicit fresh start from expired preview CTA.
     const wantsFresh =
@@ -400,7 +403,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       if (file) {
         setImages([{ url: paywallPreview, file }]);
       }
-      setGenerationMode(resume.generationMode === "video" ? "video" : "image");
+      setGenerationMode("image");
       setTaskId(null);
       setGenerationResultVisible(false);
       setUnlockedLarp(null);
@@ -479,7 +482,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     }
 
     // Need an onboarding intent (landing CTA) to auto-start the fake flow.
-    if (!resume) return;
+    if (!resume || resume.generationMode !== "image") return;
 
     console.log("[Generate] Starting onboarding fake loader → image-prete");
     if (resume.prompt) {
@@ -490,7 +493,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     if (file) {
       setImages([{ url: paywallPreview, file }]);
     }
-    setGenerationMode(resume.generationMode === "video" ? "video" : "image");
+    setGenerationMode("image");
     setFakePaywallReason("onboarding");
     setShowLuxePaywall(false);
     setFakeLoaderImageUrl(paywallPreview);
@@ -523,7 +526,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
     const resumeFromLocalStorage = () => {
       const resume = getOnboardingResume();
       const paywallPreview = getPaywallImage();
-      if (!resume || !paywallPreview) {
+      if (!resume || resume.generationMode !== "image" || !paywallPreview) {
         console.log("[Generate] No pending LARP / onboarding resume found");
         setPendingLoading(false);
         return;
@@ -531,7 +534,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
 
       console.log("[Generate] Resuming onboarding from localStorage (checkout)");
       setPendingLoading(true);
-      setGenerationMode(resume.generationMode);
+      setGenerationMode("image");
       if (resume.prompt) {
         setPrompt(resume.prompt);
         savePaywallPrompt(resume.prompt);

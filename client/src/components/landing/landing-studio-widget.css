@@ -1,0 +1,36 @@
+.landing-studio-widget {
+  width: min(100%, 720px);
+  margin: 0 auto;
+}
+
+.landing-studio-widget__tabs {
+  margin-bottom: 1.25rem;
+}
+
+.landing-studio-widget__panel {
+  border-radius: 1.25rem;
+  border: 1px solid rgba(23, 23, 19, 0.08);
+  background: rgba(255, 253, 250, 0.92);
+  box-shadow: 0 24px 60px rgba(18, 16, 14, 0.08);
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+.landing-studio-widget .voice-studio-page__inner--wide {
+  max-width: none;
+  padding: 0;
+}
+
+.landing-studio-widget .voice-studio-page__title,
+.landing-studio-widget .voice-studio-page__eyebrow {
+  text-align: center;
+}
+
+.landing-video-panel .via-hero__title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.landing-image-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

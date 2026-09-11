@@ -35,7 +35,11 @@ function computeVideoCreditCost(options) {
       : VIDEO_FLAT_CREDIT_COST;
 
   if (options.workflow === "video_to_video") {
-    if (options.preserveSourceAudio) {
+    const { v2vVoiceModeChargesCredits } = require("./v2v-voice-pool");
+    const voiceMode =
+      options.v2vVoiceMode ||
+      (options.preserveSourceAudio ? "preserve" : "none");
+    if (v2vVoiceModeChargesCredits(voiceMode)) {
       cost += VIDEO_VOICE_EXTRA_CREDIT;
     }
   } else if (options.voiceEnabled) {
@@ -53,6 +57,40 @@ function buildCarSwapPrompt(vehicleDescription) {
     "Only swap the car body — same position, scale, angle and motion as the original vehicle.",
     "Photorealistic render, consistent shadows and reflections on pavement.",
   ].join(" ");
+}
+
+function isVehicleSwapPrompt(text) {
+  return /\b(voiture|véhicule|vehicle|car|auto|supercar|lamborghini|ferrari|porsche|urus|gt3|g-wagon|mercedes|clio|bmw|audi)\b/i.test(
+    String(text || ""),
+  );
+}
+
+function buildGeneralSwapPrompt(description) {
+  const subject = String(description || "").trim();
+  return [
+    `Transform the video as follows: ${subject}.`,
+    "Keep the background, ground, reflections, camera movement, lighting and all unchanged elements exactly consistent with the source video.",
+    "Photorealistic render, natural motion, consistent shadows and perspective.",
+    "Only modify the targeted subject — preserve scene composition and camera path.",
+  ].join(" ");
+}
+
+function buildV2VProviderPrompt(body, swapDescription) {
+  const custom =
+    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
+  if (custom.length >= 10) {
+    const hasSceneLock =
+      /d[ée]cor|cam[ée]ra|reflet|background|ground|reflection|unchanged|identique/i.test(
+        custom,
+      );
+    return hasSceneLock
+      ? custom
+      : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
+  }
+  if (isVehicleSwapPrompt(swapDescription) || body.vehicle_preset) {
+    return buildCarSwapPrompt(swapDescription);
+  }
+  return buildGeneralSwapPrompt(swapDescription);
 }
 
 function buildRunwayPrompt(params) {
@@ -104,7 +142,10 @@ function mapStudioStage(metadata, providerState) {
   if (meta.voice_pending) return "GENERATING_VOICE";
   if (meta.subtitles_pending) return "ADDING_SUBTITLES";
   if (providerState === "success" || providerState === "completed") {
-    return meta.voice_enabled ? "GENERATING_VOICE" : "PROCESSING";
+    if (meta.voice_enabled || meta.voice_transform_pending) {
+      return "GENERATING_VOICE";
+    }
+    return "PROCESSING";
   }
   if (
     providerState === "waiting" ||
@@ -141,6 +182,9 @@ module.exports = {
   computeVideoCreditCost,
   buildRunwayPrompt,
   buildCarSwapPrompt,
+  buildGeneralSwapPrompt,
+  buildV2VProviderPrompt,
+  isVehicleSwapPrompt,
   maxVoiceCharsForDuration,
   validateVoiceText,
   mapStudioStage,

@@ -101,20 +101,28 @@ async function deductGenerationCredits(supabase, params) {
   return error;
 }
 
-async function refundGenerationCreditsIfCharged(supabase, params) {
-  const { data: charges, error: chargeFetchErr } = await supabase
-    .from("credit_ledger")
-    .select("delta")
-    .eq("generation_id", params.generationId)
-    .eq("reason", "generation_charge");
-
-  if (chargeFetchErr) throw chargeFetchErr;
-
-  const refundAmount = (charges || []).reduce((total, entry) => {
+function sumGenerationCharges(charges) {
+  return (charges || []).reduce((total, entry) => {
     const delta = Number(entry.delta);
     return delta < 0 ? total + Math.abs(delta) : total;
   }, 0);
+}
 
+async function fetchGenerationChargeTotal(supabase, generationId) {
+  const { data: charges, error } = await supabase
+    .from("credit_ledger")
+    .select("delta")
+    .eq("generation_id", generationId)
+    .eq("reason", "generation_charge");
+  if (error) throw error;
+  return sumGenerationCharges(charges);
+}
+
+async function refundGenerationCreditsIfCharged(supabase, params) {
+  const refundAmount = await fetchGenerationChargeTotal(
+    supabase,
+    params.generationId,
+  );
   if (refundAmount === 0) return null;
 
   const { error } = await applyCreditDelta(supabase, {
@@ -124,6 +132,38 @@ async function refundGenerationCreditsIfCharged(supabase, params) {
     generationId: params.generationId,
     idempotencyKey: `generation:${params.generationId}:refund`,
     metadata: {
+      source: params.source,
+      fail_message: params.failMessage || null,
+      ...(params.metadata || {}),
+    },
+  });
+  return error;
+}
+
+/** Remboursement partiel idempotent (ex. +5 cr. voix V2V non appliquée). */
+async function refundGenerationCreditsPartial(supabase, params) {
+  const amount = Math.floor(Number(params.amount));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  const charged = await fetchGenerationChargeTotal(
+    supabase,
+    params.generationId,
+  );
+  if (charged === 0) return null;
+
+  const refundAmount = Math.min(amount, charged);
+  const idempotencyKey =
+    params.idempotencyKey ||
+    `generation:${params.generationId}:refund_partial:${refundAmount}`;
+
+  const { error } = await applyCreditDelta(supabase, {
+    userId: params.userId,
+    delta: refundAmount,
+    reason: "refund",
+    generationId: params.generationId,
+    idempotencyKey,
+    metadata: {
+      partial: true,
       source: params.source,
       fail_message: params.failMessage || null,
       ...(params.metadata || {}),
@@ -292,6 +332,8 @@ module.exports = {
   applyCreditDelta,
   deductGenerationCredits,
   refundGenerationCreditsIfCharged,
+  refundGenerationCreditsPartial,
+  fetchGenerationChargeTotal,
   recordGeneration,
   extractImageUrls,
   toAssetList,

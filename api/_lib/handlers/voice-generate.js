@@ -17,9 +17,12 @@ const {
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
 
-const VOICE_CREDIT_COST = 8;
+const {
+  VOICE_GENERATE_CREDIT_COST,
+  VOICE_CLONE_CREDIT_COST,
+} = require("../voice-pricing");
 
-async function checkVoiceCredits(supabase, userId) {
+async function checkVoiceCredits(supabase, userId, creditCost) {
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_subscriber, role, credits")
@@ -34,7 +37,7 @@ async function checkVoiceCredits(supabase, userId) {
     return { allowed: true, isAdmin: true, creditCost: 0 };
   }
 
-  if (profile.credits < VOICE_CREDIT_COST) {
+  if (profile.credits < creditCost) {
     return {
       allowed: false,
       reason: profile.is_subscriber
@@ -44,7 +47,7 @@ async function checkVoiceCredits(supabase, userId) {
     };
   }
 
-  return { allowed: true, isAdmin: false, creditCost: VOICE_CREDIT_COST };
+  return { allowed: true, isAdmin: false, creditCost };
 }
 
 function parseDataUrl(dataUrl) {
@@ -77,10 +80,10 @@ async function ensureFishReferenceId({ fishReferenceId, referenceAudio, label })
 function mapFishErrorMessage(message) {
   const raw = String(message || "");
   if (/reference audio is not valid/i.test(raw)) {
-    return "Échantillon vocal refusé par Fish Audio. Réimporte 15–20 s de voix claire, sans musique de fond.";
+    return "Échantillon vocal refusé. Réimporte 15–20 s de voix claire, sans musique de fond.";
   }
   if (/reference_id/i.test(raw) && /invalid|not found/i.test(raw)) {
-    return "Voix introuvable côté Fish. Réimporte ton extrait et regénère.";
+    return "Voix introuvable. Réimporte ton extrait et regénère.";
   }
   return raw;
 }
@@ -159,7 +162,21 @@ module.exports = async function voiceGenerateHandler(req, res) {
       return;
     }
 
-    const limitResult = await checkVoiceCredits(supabase, userId);
+    const voiceCloneId =
+      typeof body.voiceCloneId === "string" ? body.voiceCloneId.trim() : "";
+    let fishReferenceId =
+      typeof body.fishReferenceId === "string" ? body.fishReferenceId.trim() : "";
+
+    const instantAudio =
+      typeof body.instantAudioDataUrl === "string"
+        ? parseDataUrl(body.instantAudioDataUrl)
+        : null;
+
+    const usesInlineClone = Boolean(instantAudio) && !fishReferenceId && !voiceCloneId;
+    const requestedCreditCost =
+      VOICE_GENERATE_CREDIT_COST + (usesInlineClone ? VOICE_CLONE_CREDIT_COST : 0);
+
+    const limitResult = await checkVoiceCredits(supabase, userId, requestedCreditCost);
     if (!limitResult.allowed) {
       res.status(402).json({
         message: limitResult.reason || "Crédits insuffisants",
@@ -169,11 +186,6 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     creditCost = limitResult.creditCost || 0;
-
-    const voiceCloneId =
-      typeof body.voiceCloneId === "string" ? body.voiceCloneId.trim() : "";
-    let fishReferenceId =
-      typeof body.fishReferenceId === "string" ? body.fishReferenceId.trim() : "";
 
     const voiceContext = await resolveVoiceContext(
       supabase,
@@ -188,11 +200,6 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     fishReferenceId = voiceContext.fishReferenceId || fishReferenceId;
-
-    const instantAudio =
-      typeof body.instantAudioDataUrl === "string"
-        ? parseDataUrl(body.instantAudioDataUrl)
-        : null;
 
     const fallbackAudio = instantAudio || voiceContext.sampleBuffer;
 
@@ -378,6 +385,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
       generation: completed,
       audioUrl,
       creditCost,
+      fishReferenceId: resolvedFishId || null,
     });
   } catch (error) {
     console.error("voice-generate error", error);
