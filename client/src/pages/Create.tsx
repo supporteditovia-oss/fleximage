@@ -5,8 +5,13 @@ import {
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useAuth } from "@/hooks/use-auth";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
+import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
+import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
+import { getOnboardingResume } from "@/lib/onboarding-resume";
+import { getPaywallImage } from "@/lib/paywall-image";
 import Generate from "@/pages/Generate";
 import "./create-page.css";
 
@@ -45,9 +50,20 @@ function useCreatePageClass(mode: StudioMode) {
 
 export default function Create() {
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
+  const { user, profile, isAdmin } = useAuth();
   const [, navigate] = useLocation();
   const mode = useStudioMode();
   const [gateTimedOut, setGateTimedOut] = useState(false);
+
+  const { showFakeLoader: showVideoFakeLoader, finishFakeLoader: finishVideoFakeLoader } =
+    useOnboardingFakeLoader({
+      mode: "video",
+      enabled: mode === "video" && Boolean(user),
+      isSubscriber: Boolean(
+        profile?.is_subscriber || profile?.role === "admin" || isAdmin,
+      ),
+      userId: profile?.id,
+    });
 
   useCreatePageClass(mode);
 
@@ -65,10 +81,11 @@ export default function Create() {
   }, [gateLoading, gateTimedOut, navigate, v2Enabled]);
 
   useEffect(() => {
-    if (mode === "video") {
-      navigate("/video-ia", { replace: true });
-    }
-  }, [mode, navigate]);
+    if (mode !== "video" || showVideoFakeLoader) return;
+    const resume = getOnboardingResume();
+    if (resume?.generationMode === "video") return;
+    navigate("/video-ia", { replace: true });
+  }, [mode, navigate, showVideoFakeLoader]);
 
   if (gateLoading && !gateTimedOut) {
     return <AuthResolveShell />;
@@ -76,6 +93,15 @@ export default function Create() {
 
   if (!v2Enabled) {
     return <Redirect to="/generate" />;
+  }
+
+  if (showVideoFakeLoader) {
+    return (
+      <FakeOnboardingLoader
+        inputImageUrl={getPaywallImage() ?? undefined}
+        onComplete={finishVideoFakeLoader}
+      />
+    );
   }
 
   return (

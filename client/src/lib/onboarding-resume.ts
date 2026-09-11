@@ -3,7 +3,7 @@ const RESUME_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export type OnboardingResume = {
   prompt: string;
-  generationMode: "image" | "video";
+  generationMode: "image" | "voice" | "video";
   timestamp: number;
 };
 
@@ -38,7 +38,12 @@ export function getOnboardingResume(): OnboardingResume | null {
     }
     return {
       prompt: typeof parsed.prompt === "string" ? parsed.prompt : "",
-      generationMode: parsed.generationMode === "video" ? "video" : "image",
+      generationMode:
+        parsed.generationMode === "video"
+          ? "video"
+          : parsed.generationMode === "voice"
+            ? "voice"
+            : "image",
       timestamp: parsed.timestamp,
     };
   } catch {
