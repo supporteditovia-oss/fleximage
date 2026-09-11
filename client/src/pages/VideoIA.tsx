@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import {
   Clapperboard,
   Film,
@@ -46,6 +46,7 @@ import {
   prepareVideoFileForStudio,
   type StudioVideoUpload,
 } from "@/lib/upload-video";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
 import "./video-ia-page.css";
 
@@ -80,6 +81,7 @@ const WORKFLOW_OPTIONS: {
 
 export default function VideoIA() {
   const [, setLocation] = useLocation();
+  const adminPreview = useAdminPreviewFeatures();
   const { user } = useAuth();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
@@ -344,6 +346,10 @@ export default function VideoIA() {
     setTaskId(null);
     setGenerationEstimate(null);
   }, []);
+
+  if (!adminPreview) {
+    return <Redirect to="/create" />;
+  }
 
   if ((isSubmitting || generateVideo.isPending) && !taskId) {
     return (

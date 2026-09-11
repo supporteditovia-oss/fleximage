@@ -5,16 +5,13 @@ export type V2AccessProfile = {
 };
 
 /**
- * Studio V2 (Image / Voix / Vidéo / Modèles) — admins + abonnés + utilisateurs avec crédits.
+ * Studio V2 — preview admin uniquement tant que Voix / Vidéo / Modèles ne sont pas finalisés.
  */
 export function isV2ExperienceEnabled(
   profile: V2AccessProfile | null | undefined,
   isAdmin = false,
 ): boolean {
-  if (isAdmin || profile?.role === "admin") return true;
-  if (profile?.is_subscriber) return true;
-  if (typeof profile?.credits === "number" && profile.credits > 0) return true;
-  return false;
+  return isAdmin || profile?.role === "admin";
 }
 
 export type StudioMode = "image" | "voice" | "video";

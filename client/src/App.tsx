@@ -133,7 +133,7 @@ function AuthCallback() {
 }
 
 function useV2GateWithTimeout(maxMs = 2500) {
-  const { v2Enabled, isLoading } = useV2Access();
+  const { v2Enabled, isLoading, isAdmin } = useV2Access();
   const [timedOut, setTimedOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -145,9 +145,10 @@ function useV2GateWithTimeout(maxMs = 2500) {
     return () => window.clearTimeout(timer);
   }, [isLoading, maxMs]);
 
+  // Ne jamais forcer v2Enabled=false au timeout — seulement arrêter le spinner.
   return {
-    v2Enabled: timedOut ? false : v2Enabled,
-    isLoading: isLoading && !timedOut,
+    v2Enabled: isAdmin || v2Enabled,
+    isLoading: isLoading && !timedOut && !isAdmin && !v2Enabled,
   };
 }
 

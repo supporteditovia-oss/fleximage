@@ -48,7 +48,7 @@ async function fetchV2Access(): Promise<V2AccessResponse> {
   }
 }
 
-/** V2 studio — admins, abonnés actifs, ou comptes avec crédits. */
+/** V2 studio — preview admin (API confirme isAdmin pendant le chargement profil). */
 export function useV2Access() {
   const { user, isAdmin, profile, isLoading: authLoading } = useAuth();
 
@@ -63,7 +63,9 @@ export function useV2Access() {
   });
 
   const ipAllowed = Boolean(data?.ipAllowed);
-  const v2Enabled = isV2ExperienceEnabled(profile, isAdmin);
+  const serverAdmin = Boolean(data?.isAdmin);
+  const effectiveAdmin = isAdmin || serverAdmin;
+  const v2Enabled = isV2ExperienceEnabled(profile, effectiveAdmin);
   const isLoading = authLoading;
 
   useEffect(() => {
@@ -75,6 +77,6 @@ export function useV2Access() {
     isLoading,
     clientIp: data?.ip,
     ipAllowed,
-    isAdmin,
+    isAdmin: effectiveAdmin,
   };
 }
