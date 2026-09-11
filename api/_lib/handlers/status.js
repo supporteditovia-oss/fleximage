@@ -111,6 +111,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const resultType = larp.generation_type === "video" ? "video" : "image";
+
     if (larp.status === "succeeded" || larp.status === "failed") {
       if (larp.status === "failed") {
         await refundGenerationCreditsIfCharged(supabase, {
@@ -148,7 +150,7 @@ module.exports = async function handler(req, res) {
         costTime: larp.cost_time == null ? null : Number(larp.cost_time),
         isSubscriber,
         requiresPaywall: false,
-        resultType: larp.generation_type === "video" ? "video" : "image",
+        resultType,
       });
       return;
     }
@@ -169,7 +171,7 @@ module.exports = async function handler(req, res) {
           costTime: null,
           isSubscriber: false,
           requiresPaywall: false,
-          resultType: "image",
+          resultType,
         });
         return;
       }
@@ -200,11 +202,10 @@ module.exports = async function handler(req, res) {
         costTime: null,
         isSubscriber: false,
         requiresPaywall: false,
-        resultType: "image",
+        resultType,
       });
       return;
     }
-    const resultType = larp.generation_type === "video" ? "video" : "image";
     const pollMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const isVideoTask = activeTaskId.startsWith("video_");
@@ -390,7 +391,7 @@ module.exports = async function handler(req, res) {
             costTime: null,
             isSubscriber: false,
             requiresPaywall: false,
-            resultType: "image",
+            resultType,
           });
           return;
         }
@@ -441,7 +442,7 @@ module.exports = async function handler(req, res) {
             costTime: null,
             isSubscriber: false,
             requiresPaywall: false,
-            resultType: "image",
+            resultType,
           });
           return;
         }
@@ -480,6 +481,7 @@ module.exports = async function handler(req, res) {
 
     if (apiStatus === "success" || apiStatus === "fail") {
       let resultUrls = [];
+      let metadataPatch = {};
       if (apiStatus === "success" && apiResultJson) {
         try {
           const parsed =
@@ -518,7 +520,7 @@ module.exports = async function handler(req, res) {
                 );
                 if (muxedUrl) {
                   resultUrls = [muxedUrl];
-                  meta.source_audio_muxed = true;
+                  metadataPatch.source_audio_muxed = true;
                 }
               }
             }
@@ -583,7 +585,7 @@ module.exports = async function handler(req, res) {
                 costTime: null,
                 isSubscriber: false,
                 requiresPaywall: false,
-                resultType: "image",
+                resultType,
               });
               return;
             }
@@ -598,7 +600,7 @@ module.exports = async function handler(req, res) {
                 costTime: null,
                 isSubscriber: false,
                 requiresPaywall: false,
-                resultType: "image",
+                resultType,
               });
               return;
             }
@@ -616,10 +618,11 @@ module.exports = async function handler(req, res) {
       );
 
       const terminalMeta =
-        apiStatus === "success" && resultType === "video"
+        apiStatus === "success"
           ? {
               ...pollMeta,
-              studio_stage: "COMPLETED",
+              ...metadataPatch,
+              ...(resultType === "video" ? { studio_stage: "COMPLETED" } : {}),
             }
           : pollMeta;
 
@@ -656,7 +659,7 @@ module.exports = async function handler(req, res) {
         costTime: apiCostTime == null ? null : Number(apiCostTime),
         isSubscriber,
         requiresPaywall: false,
-        resultType: "image",
+        resultType,
       });
       return;
     }
@@ -670,7 +673,7 @@ module.exports = async function handler(req, res) {
       costTime: null,
       isSubscriber: false,
       requiresPaywall: false,
-      resultType: "image",
+      resultType,
     });
   } catch (error) {
     console.error("larp status error", error);

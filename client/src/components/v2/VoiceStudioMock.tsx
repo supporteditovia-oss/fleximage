@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   CloudUpload,
@@ -39,6 +40,9 @@ import {
 } from "@/lib/cloned-voices-storage";
 import { queryClient } from "@/lib/queryClient";
 import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
+import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
+import "@/components/larp/generation-loader.css";
 import {
   fetchVoiceBlob,
   shareVoiceAudio,
@@ -66,13 +70,7 @@ type CaptureMode = "record" | "import";
 type RecordState = "idle" | "recording" | "ready";
 
 const FAKE_GEN_MS = 3200;
-const GEN_MESSAGES = [
-  "Analyse de la voix…",
-  "Clonage vocal…",
-  "Respirations & pauses…",
-  "Rendu Fish Audio…",
-  "Finalisation MP3…",
-];
+const VOICE_GEN_ESTIMATE_SEC = 40;
 
 function formatTimer(ms: number) {
   const s = Math.min(MAX_CLIP_SEC, Math.floor(ms / 1000));
@@ -172,7 +170,7 @@ export function VoiceStudioMock() {
   const [playbackDurationSec, setPlaybackDurationSec] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [genMessageIndex, setGenMessageIndex] = useState(0);
+  const voiceGenStartedAtRef = useRef<number>(Date.now());
   const [resultAudioUrl, setResultAudioUrl] = useState<string | null>(null);
   const [resultGenerationId, setResultGenerationId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -301,21 +299,17 @@ export function VoiceStudioMock() {
   }, [cleanupMedia, setClip]);
 
   useEffect(() => {
-    if (!isGenerating) return;
-    setGenMessageIndex(0);
-    const id = window.setInterval(() => {
-      setGenMessageIndex((i) => (i + 1) % GEN_MESSAGES.length);
-    }, 800);
-    return () => window.clearInterval(id);
-  }, [isGenerating]);
-
-  useEffect(() => {
-    if (isGenerating) {
-      document.body.setAttribute("data-fullscreen-overlay", "true");
-    } else {
+    if (!isGenerating) {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
       document.body.removeAttribute("data-fullscreen-overlay");
+      return;
     }
-    return () => document.body.removeAttribute("data-fullscreen-overlay");
+    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
+    document.body.setAttribute("data-fullscreen-overlay", "true");
+    return () => {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-fullscreen-overlay");
+    };
   }, [isGenerating]);
 
   useEffect(() => {
@@ -822,6 +816,8 @@ export function VoiceStudioMock() {
     setCaptureError(null);
 
     if (!hasPaidAccess) {
+      releaseGenerationLoaderTheme();
+      voiceGenStartedAtRef.current = Date.now();
       setReadyToPlay(false);
       setIsGenerating(true);
       if (genTimerRef.current) window.clearTimeout(genTimerRef.current);
@@ -839,6 +835,8 @@ export function VoiceStudioMock() {
     }
 
     void (async () => {
+      releaseGenerationLoaderTheme();
+      voiceGenStartedAtRef.current = Date.now();
       setIsGenerating(true);
       setReadyToPlay(false);
       setPlaybackCurrentSec(0);
@@ -1349,16 +1347,19 @@ export function VoiceStudioMock() {
         />
       </div>
 
-      {isGenerating ? (
-        <div className="vs-gen-overlay" role="status" aria-live="polite">
-          <div className="vs-gen-overlay__card">
-            <div className="vs-gen-overlay__spinner" aria-hidden />
-            <p className="vs-gen-overlay__msg">
-              {GEN_MESSAGES[genMessageIndex]}
-            </p>
-          </div>
-        </div>
-      ) : null}
+      {isGenerating
+        ? createPortal(
+            <GenerationLoader
+              taskId="voice-generating"
+              status="waiting"
+              estimatedSeconds={
+                hasPaidAccess ? VOICE_GEN_ESTIMATE_SEC : Math.ceil(FAKE_GEN_MS / 1000)
+              }
+              startedAtMs={voiceGenStartedAtRef.current}
+            />,
+            document.body,
+          )
+        : null}
 
       <LuxePaywallModal
         open={showPaywall}

@@ -20,7 +20,6 @@ import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import ImagePrete from "@/pages/ImagePrete";
 import Historique from "@/pages/Historique";
@@ -186,20 +185,21 @@ function HistoriqueRoute() {
   return <Historique />;
 }
 
-function AdminPreviewRoute({ component: Component }: { component: React.ComponentType }) {
-  const adminPreview = useAdminPreviewFeatures();
-  if (!adminPreview) {
-    return <Redirect to="/create" />;
+function StudioFeatureRoute({ component: Component }: { component: React.ComponentType }) {
+  const { v2Enabled, isLoading } = useV2GateWithTimeout();
+  if (isLoading) return <AuthResolveShell />;
+  if (!v2Enabled) {
+    return <Redirect to="/generate" />;
   }
   return <Component />;
 }
 
-function ModelesAdminRoute() {
-  return <AdminPreviewRoute component={Modeles} />;
+function ModelesRoute() {
+  return <StudioFeatureRoute component={Modeles} />;
 }
 
-function VideoIAAdminRoute() {
-  return <AdminPreviewRoute component={VideoIA} />;
+function VideoIARoute() {
+  return <StudioFeatureRoute component={VideoIA} />;
 }
 
 function ProtectedAppRoutes() {
@@ -246,12 +246,12 @@ function ProtectedAppRoutes() {
       <ErrorBoundary>
         <Switch>
           <Route path="/create" component={Create} />
-          <Route path="/modeles/m/:templateSlug" component={ModelesAdminRoute} />
-          <Route path="/modeles/c/:categorySlug" component={ModelesAdminRoute} />
-          <Route path="/modeles" component={ModelesAdminRoute} />
+          <Route path="/modeles/m/:templateSlug" component={ModelesRoute} />
+          <Route path="/modeles/c/:categorySlug" component={ModelesRoute} />
+          <Route path="/modeles" component={ModelesRoute} />
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
-          <Route path="/video-ia" component={VideoIAAdminRoute} />
+          <Route path="/video-ia" component={VideoIARoute} />
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/debug-generate" component={DebugGenerate} />
           <Route path="/resultat" component={Resultat} />

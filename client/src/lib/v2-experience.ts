@@ -1,9 +1,20 @@
+export type V2AccessProfile = {
+  role?: string | null;
+  is_subscriber?: boolean | null;
+  credits?: number | null;
+};
+
 /**
- * LuxeFlexIA V2 — réservé aux comptes admin.
- * Les utilisateurs normaux ne voient jamais les surfaces V2.
+ * Studio V2 (Image / Voix / Vidéo / Modèles) — admins + abonnés + utilisateurs avec crédits.
  */
-export function isV2ExperienceEnabled(isAdmin: boolean): boolean {
-  return isAdmin;
+export function isV2ExperienceEnabled(
+  profile: V2AccessProfile | null | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin || profile?.role === "admin") return true;
+  if (profile?.is_subscriber) return true;
+  if (typeof profile?.credits === "number" && profile.credits > 0) return true;
+  return false;
 }
 
 export type StudioMode = "image" | "voice" | "video";

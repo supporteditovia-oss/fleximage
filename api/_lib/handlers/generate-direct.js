@@ -139,31 +139,6 @@ module.exports = async function handler(req, res) {
     }
     const creditCost = getBillableCreditCost(limitResult);
 
-    if (!admin) {
-      if (templateId && isBuiltinTemplateId(templateId)) {
-        res.status(403).json({
-          code: "ADMIN_PREVIEW_ONLY",
-          message: copy(
-            uiLocale,
-            "Les modèles prêts sont réservés aux administrateurs.",
-            "Ready-made models are admin-only preview features.",
-          ),
-        });
-        return;
-      }
-      if (isCatalogOutfitCatalogPrompt(prompt) && images.length >= 2) {
-        res.status(403).json({
-          code: "ADMIN_PREVIEW_ONLY",
-          message: copy(
-            uiLocale,
-            "Le catalogue outfits est réservé aux administrateurs.",
-            "The outfit catalog is an admin-only preview feature.",
-          ),
-        });
-        return;
-      }
-    }
-
     const generationRequestId = normalizeGenerationRequestId(
       body.generation_request_id,
     );
