@@ -951,6 +951,7 @@ export function VoiceStudioMock() {
 
         {activeVoice ? (
           <VoiceSelectedHero
+            voiceId={activeVoice.id}
             name={activeVoice.name}
             category={activeVoice.profile?.category}
             profile={activeVoice.profile}
