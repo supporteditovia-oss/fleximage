@@ -75,38 +75,54 @@ html.luxeflexia-create-page::before {
   line-height: 1.4;
 }
 
-/* Voix active — cercle en haut */
+/* Voix active — photo catalogue + identité */
 .vs-voice-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0.25rem 0 0.5rem;
-  padding: 1.1rem 1rem 1.25rem;
-  border-radius: 1.35rem;
-  border: 1px solid rgba(201, 162, 39, 0.22);
+  gap: 0.55rem;
+  margin: 0.25rem 0 0.65rem;
+  padding: 1.25rem 1.1rem 1.35rem;
+  border-radius: 1.45rem;
+  border: 1px solid rgba(201, 162, 39, 0.28);
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201, 162, 39, 0.12), transparent 70%),
-    rgba(255, 255, 255, 0.55);
+    radial-gradient(ellipse 90% 70% at 50% -10%, rgba(201, 162, 39, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 100%);
   text-align: center;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    0 18px 42px rgba(18, 16, 14, 0.08);
+}
+
+.vs-voice-hero__visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
 }
 
 .vs-voice-hero__avatar-wrap {
   position: relative;
-  margin-bottom: 0.35rem;
+  width: 7rem;
+  height: 7rem;
+  flex-shrink: 0;
 }
 
 .vs-voice-hero__avatar {
   position: relative;
-  z-index: 1;
-  width: 5.5rem;
-  height: 5.5rem;
+  z-index: 2;
+  display: block;
+  width: 7rem;
+  height: 7rem;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   overflow: hidden;
   isolation: isolate;
   color: #fff;
-  box-shadow: 0 10px 28px rgba(18, 16, 14, 0.22);
+  box-shadow:
+    0 14px 34px rgba(18, 16, 14, 0.24),
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset;
 }
 
 .vs-voice-hero__photo {
@@ -139,16 +155,46 @@ html.luxeflexia-create-page::before {
 
 .vs-voice-hero__ring {
   position: absolute;
-  inset: -5px;
+  inset: -6px;
+  z-index: 3;
   border-radius: 999px;
-  border: 2px solid rgba(201, 162, 39, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(201, 162, 39, 0.62);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.88);
+  pointer-events: none;
+}
+
+.vs-voice-hero__glow {
+  position: absolute;
+  inset: 12%;
+  z-index: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(201, 162, 39, 0.35) 0%, transparent 72%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.vs-voice-hero__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.vs-voice-hero__cloned-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .vs-voice-hero__label {
   margin: 0;
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--lx-muted);
 }
@@ -156,21 +202,22 @@ html.luxeflexia-create-page::before {
 .vs-voice-hero__name {
   margin: 0;
   font-family: var(--lx-display);
-  font-size: 1.55rem;
+  font-size: clamp(1.65rem, 5.5vw, 1.95rem);
+  font-weight: 600;
+  line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--lx-ink);
 }
 
 .vs-voice-hero__tag {
   display: inline-flex;
-  margin-top: 0.15rem;
   border-radius: 999px;
   background: var(--lx-ink);
   color: #fff;
-  padding: 0.28rem 0.65rem;
-  font-size: 0.65rem;
+  padding: 0.32rem 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 

@@ -97,9 +97,18 @@ const MANUAL_PHOTO_FILES: Partial<Record<string, string>> = {
   sdm: "sdm.webp",
 };
 
-function catalogPhoto(slug: string): string {
+export function catalogPhotoForSlug(slug: string): string {
   const file = MANUAL_PHOTO_FILES[slug] ?? `${slug}.jpg`;
   return `/assets/voice-catalog/${file}`;
+}
+
+export function slugFromCatalogVoiceId(voiceId: string): string | null {
+  const match = String(voiceId).match(/^cat-(.+)$/);
+  return match?.[1] ?? null;
+}
+
+function catalogPhoto(slug: string): string {
+  return catalogPhotoForSlug(slug);
 }
 
 /** Catalogue voix — noms publics + photo locale (script/fetch-voice-catalog-photos.mjs). */
