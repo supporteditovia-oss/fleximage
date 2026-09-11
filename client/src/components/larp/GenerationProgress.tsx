@@ -58,6 +58,7 @@ export function GenerationProgress({
   const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
+  const hasHandledPartialRefund = useRef(false);
   const timingLockRef = useRef<GenerationTimingLock | null>(null);
   const inflightSnapshot = getInFlightGeneration();
   const hasPersistedResult = useRef(false);
@@ -118,6 +119,27 @@ export function GenerationProgress({
       setShowResult(true);
     }
   }, [data?.status, hasResultMedia, restoredReady]);
+
+  useEffect(() => {
+    if (hasHandledPartialRefund.current) return;
+    if (data?.status !== "success") return;
+    const message =
+      typeof data.partialRefundMessage === "string"
+        ? data.partialRefundMessage.trim()
+        : "";
+    if (!message) return;
+    hasHandledPartialRefund.current = true;
+    toast({
+      title: "Remboursement partiel",
+      description: message,
+    });
+    void queryClient.invalidateQueries({ queryKey: ["profile"] });
+  }, [
+    data?.status,
+    data?.partialRefundMessage,
+    queryClient,
+    toast,
+  ]);
 
   useEffect(() => {
     if (revealDone) setShowResult(true);

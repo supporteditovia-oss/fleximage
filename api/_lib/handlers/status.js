@@ -5,7 +5,11 @@ const {
   muxSourceAudioOntoVideo,
 } = require("../mux-source-audio");
 const { transformV2vVoiceAndMux } = require("../v2v-voice-transform");
-const { isV2vVoiceTransformMode } = require("../v2v-voice-pool");
+const {
+  isV2vVoiceTransformMode,
+  v2vVoiceModeChargesCredits,
+} = require("../v2v-voice-pool");
+const { VIDEO_VOICE_EXTRA_CREDIT } = require("../video-studio");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -25,6 +29,7 @@ const {
   PROVIDER_POLL_HARD_TIMEOUT_MS,
   PROVIDER_POLL_QA_RETRY_EXTRA_MS,
   refundGenerationCreditsIfCharged,
+  refundGenerationCreditsPartial,
   extractImageUrls,
   toAssetList,
   toClientStatus,
@@ -555,6 +560,40 @@ module.exports = async function handler(req, res) {
                 }
                 metadataPatch.voice_transform_pending = false;
               }
+
+              const voiceAddonFailed =
+                metadataPatch.source_audio_mux_failed === true ||
+                metadataPatch.voice_transform_failed === true;
+              if (voiceAddonFailed) {
+                const billedVoiceMode =
+                  voiceMode ||
+                  (meta.preserve_source_audio ? "preserve" : "none");
+                if (v2vVoiceModeChargesCredits(billedVoiceMode)) {
+                  const partialErr = await refundGenerationCreditsPartial(
+                    supabase,
+                    {
+                      userId,
+                      generationId: larp.id,
+                      amount: VIDEO_VOICE_EXTRA_CREDIT,
+                      idempotencyKey: `generation:${larp.id}:refund_voice_addon`,
+                      source: metadataPatch.voice_transform_failed
+                        ? "voice_transform_failed"
+                        : "source_audio_mux_failed",
+                      failMessage: metadataPatch.voice_transform_failed
+                        ? "Voix IA non appliquée — remboursement partiel"
+                        : "Voix filmée non intégrée — remboursement partiel",
+                    },
+                  ).catch((err) => {
+                    console.error("voice addon partial refund failed", err);
+                    return err;
+                  });
+                  if (!partialErr) {
+                    metadataPatch.voice_addon_refunded = true;
+                    metadataPatch.voice_addon_refund_credits =
+                      VIDEO_VOICE_EXTRA_CREDIT;
+                  }
+                }
+              }
             }
           } else {
             resultUrls = extractImageUrls(parsed);
@@ -681,6 +720,13 @@ module.exports = async function handler(req, res) {
         }).catch((err) => console.error("refund failed", err));
       }
 
+      const partialVoiceRefund =
+        apiStatus === "success" &&
+        metadataPatch.voice_addon_refunded === true &&
+        Number(metadataPatch.voice_addon_refund_credits) > 0
+          ? Number(metadataPatch.voice_addon_refund_credits)
+          : 0;
+
       res.status(200).json({
         larpId: larp.id,
         ...statusTimingFields(larp),
@@ -692,6 +738,11 @@ module.exports = async function handler(req, res) {
         isSubscriber,
         requiresPaywall: false,
         resultType,
+        creditsPartialRefund: partialVoiceRefund || undefined,
+        partialRefundMessage:
+          partialVoiceRefund > 0
+            ? `Option voix non appliquée — ${partialVoiceRefund} crédits remboursés.`
+            : undefined,
       });
       return;
     }
