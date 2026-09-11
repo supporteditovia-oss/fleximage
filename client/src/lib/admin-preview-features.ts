@@ -1,32 +1,24 @@
 import { useAuth } from "@/hooks/use-auth";
-import { isV2ExperienceEnabled } from "@/lib/v2-experience";
+import { useV2Access } from "@/hooks/use-v2-access";
 
-/** Modèles prêts, catalogue outfits, studio vidéo IA — même accès que le studio V2. */
+/** Modèles prêts, catalogue outfits, studio vidéo IA — preview admin uniquement. */
 export function canAccessAdminPreviewFeatures(input: {
   isAdmin: boolean;
-  isSubscriber: boolean;
-  credits: number;
   isAuthLoading: boolean;
   profileLoaded: boolean;
 }): boolean {
-  if (input.isAuthLoading || !input.profileLoaded) return false;
-  return isV2ExperienceEnabled(
-    {
-      role: input.isAdmin ? "admin" : "user",
-      is_subscriber: input.isSubscriber,
-      credits: input.credits,
-    },
-    input.isAdmin,
-  );
+  if (!input.profileLoaded && !input.isAdmin) return false;
+  if (input.isAuthLoading && !input.isAdmin) return false;
+  return input.isAdmin;
 }
 
 export function useAdminPreviewFeatures(): boolean {
   const { isAdmin, isLoading, profile, user } = useAuth();
+  const { isAdmin: v2Admin } = useV2Access();
+  const effectiveAdmin = isAdmin || v2Admin;
   return canAccessAdminPreviewFeatures({
-    isAdmin,
-    isSubscriber: Boolean(profile?.is_subscriber),
-    credits: profile?.credits ?? 0,
-    isAuthLoading: isLoading,
+    isAdmin: effectiveAdmin,
+    isAuthLoading: isLoading && !effectiveAdmin,
     profileLoaded: Boolean(user && profile),
   });
 }

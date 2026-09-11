@@ -3,6 +3,7 @@ import { authFetch } from "@/lib/api";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useV2Access } from "@/hooks/use-v2-access";
 
 /** Modèle tel que le voit l'utilisateur dans le fil plein écran. */
 export type FeedTemplate = {
@@ -116,9 +117,11 @@ function mergeTemplateLists(
 
 export function useTemplateFeed(options: { enabled?: boolean } = {}) {
   const { isAdmin, isLoading, profile, user } = useAuth();
+  const { isAdmin: v2Admin } = useV2Access();
+  const effectiveAdmin = isAdmin || v2Admin;
   const adminPreview = canAccessAdminPreviewFeatures({
-    isAdmin,
-    isAuthLoading: isLoading,
+    isAdmin: effectiveAdmin,
+    isAuthLoading: isLoading && !effectiveAdmin,
     profileLoaded: Boolean(user && profile),
   });
   const fallbackTemplates = adminPreview ? BUILTIN_FEED_TEMPLATES : [];
