@@ -40,7 +40,7 @@ export interface VideoStudioGenerateInput {
   preserve_source_audio?: boolean;
   v2v_voice_mode?: V2vVoiceMode;
   voice_enabled?: boolean;
-  voice_mode?: "cloned" | "catalog" | "none";
+  voice_mode?: "cloned" | "catalog" | "auto_adaptive" | "none";
   voice_clone_id?: string;
   voice_text?: string;
   voice_consent?: boolean;

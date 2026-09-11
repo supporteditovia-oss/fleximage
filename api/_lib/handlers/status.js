@@ -5,6 +5,7 @@ const {
   muxSourceAudioOntoVideo,
 } = require("../mux-source-audio");
 const { transformV2vVoiceAndMux } = require("../v2v-voice-transform");
+const { applyI2vAdaptiveVoiceAndMux } = require("../i2v-voice");
 const {
   isV2vVoiceTransformMode,
   v2vVoiceModeChargesCredits,
@@ -40,10 +41,19 @@ const {
 } = require("../generation");
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
+function sanitizeClientFacingMessage(text) {
+  return String(text || "")
+    .replace(/\b(Kling|Runway|Aleph|Fish Audio|Fish|TTS|Kie\.ai|Kie)\b/gi, "IA")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function toUserFailMessage(value, fallback = "Échec de la génération") {
   if (value == null || value === "") return fallback;
   if (typeof value === "string") {
-    return value === "[object Object]" ? fallback : value;
+    return value === "[object Object]"
+      ? fallback
+      : sanitizeClientFacingMessage(value);
   }
   if (typeof value === "object") {
     if (typeof value.message === "string" && value.message) return value.message;
@@ -243,7 +253,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             klingData.failMsg,
-            "Échec Kling Motion Control",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -270,7 +280,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Kling";
+        apiFailMsg = "Erreur de génération vidéo";
       }
     } else if (isAlephTask) {
       const {
@@ -292,7 +302,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             alephData.errorMessage,
-            "Échec du remplacement véhicule",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -319,7 +329,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Aleph";
+        apiFailMsg = "Erreur de génération vidéo";
       }
     } else if (isVideoTask) {
       const runwayTaskId = activeTaskId.replace("video_", "");
@@ -510,11 +520,11 @@ module.exports = async function handler(req, res) {
               larp.metadata && typeof larp.metadata === "object"
                 ? larp.metadata
                 : {};
+            const voiceMode =
+              meta.v2v_voice_mode ||
+              (meta.preserve_source_audio ? "preserve" : "none");
             if (meta.workflow === "video_to_video" && resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
-              const voiceMode =
-                meta.v2v_voice_mode ||
-                (meta.preserve_source_audio ? "preserve" : "none");
 
               if (sourceVideoUrl && voiceMode === "preserve") {
                 const muxedUrl = await withTimeout(
@@ -561,14 +571,53 @@ module.exports = async function handler(req, res) {
                 metadataPatch.voice_transform_pending = false;
               }
 
-              const voiceAddonFailed =
-                metadataPatch.source_audio_mux_failed === true ||
-                metadataPatch.voice_transform_failed === true;
-              if (voiceAddonFailed) {
-                const billedVoiceMode =
-                  voiceMode ||
-                  (meta.preserve_source_audio ? "preserve" : "none");
-                if (v2vVoiceModeChargesCredits(billedVoiceMode)) {
+            } else if (
+              meta.workflow === "image_to_video" &&
+              meta.voice_enabled === true &&
+              resultUrls[0]
+            ) {
+              const sourceImageUrl =
+                meta.source_image_url ||
+                (Array.isArray(larp.input_assets) ? larp.input_assets[0] : null);
+              if (sourceImageUrl) {
+                const i2vVoice = await withTimeout(
+                  applyI2vAdaptiveVoiceAndMux({
+                    generatedVideoUrl: resultUrls[0],
+                    larpId: larp.id,
+                    sourceImageUrl,
+                    motionPrompt: larp.prompt || "",
+                    voiceText: meta.voice_text || "",
+                  }),
+                  120_000,
+                  null,
+                );
+                if (i2vVoice?.url) {
+                  resultUrls = [i2vVoice.url];
+                  metadataPatch.i2v_voice_applied = true;
+                  metadataPatch.i2v_voice_category = i2vVoice.voiceCategory;
+                  metadataPatch.i2v_voice_line = i2vVoice.voiceLine;
+                } else {
+                  metadataPatch.i2v_voice_failed = true;
+                }
+                metadataPatch.voice_transform_pending = false;
+              }
+            }
+
+            const voiceAddonFailed =
+              metadataPatch.source_audio_mux_failed === true ||
+              metadataPatch.voice_transform_failed === true ||
+              metadataPatch.i2v_voice_failed === true;
+            if (voiceAddonFailed) {
+              const billedVoiceMode =
+                meta.workflow === "video_to_video"
+                  ? voiceMode ||
+                    (meta.preserve_source_audio ? "preserve" : "none")
+                  : null;
+              const shouldRefundVoiceAddon =
+                (meta.workflow === "video_to_video" &&
+                  v2vVoiceModeChargesCredits(billedVoiceMode)) ||
+                (meta.workflow === "image_to_video" && meta.voice_enabled === true);
+              if (shouldRefundVoiceAddon) {
                   const partialErr = await refundGenerationCreditsPartial(
                     supabase,
                     {
@@ -576,12 +625,16 @@ module.exports = async function handler(req, res) {
                       generationId: larp.id,
                       amount: VIDEO_VOICE_EXTRA_CREDIT,
                       idempotencyKey: `generation:${larp.id}:refund_voice_addon`,
-                      source: metadataPatch.voice_transform_failed
-                        ? "voice_transform_failed"
-                        : "source_audio_mux_failed",
-                      failMessage: metadataPatch.voice_transform_failed
-                        ? "Voix IA non appliquée — remboursement partiel"
-                        : "Voix filmée non intégrée — remboursement partiel",
+                      source: metadataPatch.i2v_voice_failed
+                        ? "i2v_voice_failed"
+                        : metadataPatch.voice_transform_failed
+                          ? "voice_transform_failed"
+                          : "source_audio_mux_failed",
+                      failMessage: metadataPatch.i2v_voice_failed
+                        ? "Voix adaptée non appliquée — remboursement partiel"
+                        : metadataPatch.voice_transform_failed
+                          ? "Voix IA non appliquée — remboursement partiel"
+                          : "Voix filmée non intégrée — remboursement partiel",
                     },
                   ).catch((err) => {
                     console.error("voice addon partial refund failed", err);
@@ -594,7 +647,6 @@ module.exports = async function handler(req, res) {
                   }
                 }
               }
-            }
           } else {
             resultUrls = extractImageUrls(parsed);
           }

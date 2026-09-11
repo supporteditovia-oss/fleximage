@@ -196,8 +196,42 @@ async function transformV2vVoiceAndMux({
   }
 }
 
+/** Synthèse MP3 → mux sur vidéo générée (I2V voix adaptée). */
+async function muxSpeechMp3OntoVideo({
+  generatedVideoUrl,
+  larpId,
+  mp3Buffer,
+}) {
+  if (!ffmpegPath || !generatedVideoUrl || !larpId || !mp3Buffer?.length) {
+    return null;
+  }
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-voice-"));
+  const genPath = path.join(tmpDir, "generated.mp4");
+  const mp3Path = path.join(tmpDir, "voice.mp3");
+  const outPath = path.join(tmpDir, "output.mp4");
+
+  try {
+    await downloadToFile(generatedVideoUrl, genPath);
+    await fs.writeFile(mp3Path, mp3Buffer);
+    const muxed = await muxAudioOntoVideo(genPath, mp3Path, outPath);
+    if (!muxed) return null;
+
+    const outBuffer = await fs.readFile(outPath);
+    const { uploadToR2 } = require("./r2");
+    const key = `larps/${larpId}/video.mp4`;
+    return await uploadToR2(key, outBuffer, "video/mp4");
+  } catch (err) {
+    console.error("[muxSpeechMp3OntoVideo] failed", { larpId, err });
+    return null;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 module.exports = {
   transformV2vVoiceAndMux,
+  muxSpeechMp3OntoVideo,
   isFishConfigured,
   extractAudioWav,
   muxAudioOntoVideo,

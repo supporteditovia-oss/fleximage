@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoV2vVoiceAddon } from "@/components/video/VideoV2vVoiceAddon";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
@@ -150,9 +151,7 @@ export default function VideoIA() {
     workflow === "video_to_video" ? videoDurationSec : durationSec,
   );
 
-  const voiceReady =
-    !voiceEnabled ||
-    (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
+  const voiceReady = !voiceEnabled || (voiceConsent && voiceText.length <= voiceMaxChars);
 
   const creditCost = computeVideoCreditCost({
     workflow,
@@ -167,7 +166,7 @@ export default function VideoIA() {
     voiceEnabled
       ? {
           voice_enabled: true,
-          voice_mode: "catalog" as const,
+          voice_mode: "auto_adaptive" as const,
           voice_text: voiceText.trim(),
           voice_consent: voiceConsent,
         }
@@ -439,8 +438,10 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
-              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
+              JPG ou PNG — ta propre image. Vidéo{" "}
+              <strong>{durationSec} s</strong> ·{" "}
+              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération
+              (+{VIDEO_VOICE_EXTRA_CREDIT} cr. option voix adaptée).
             </p>
 
             <input
@@ -490,6 +491,18 @@ export default function VideoIA() {
                 />
               </>
             )}
+
+            {imagePreviewUrl ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={setVoiceEnabled}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+              />
+            ) : null}
 
             <div className="via-orient-toggle" role="group" aria-label="Orientation">
               <button

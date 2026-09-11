@@ -1,7 +1,14 @@
+const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
+const { isUserAdmin } = require("../admin-access");
 const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require("../fish-audio");
 const { uploadToR2 } = require("../r2");
 const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
+const { applyCreditDelta } = require("../generation");
+const {
+  VOICE_CLONE_CREDIT_COST,
+  MAX_VOICE_CLONES_PER_USER,
+} = require("../voice-pricing");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 
@@ -59,14 +66,55 @@ module.exports = async function voiceCloneHandler(req, res) {
     return;
   }
 
+  let supabase;
+  let userId;
+  let cloneRequestId = randomUUID();
+  let creditCost = 0;
+  let charged = false;
+
   try {
-    const { supabase, userId } = await requireUser(req);
+    ({ supabase, userId } = await requireUser(req));
     const body = readBody(req);
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) {
       res.status(400).json({ message: "Nom de voix requis", code: "missing_name" });
       return;
+    }
+
+    const admin = await isUserAdmin(supabase, userId);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, credits")
+      .eq("id", userId)
+      .single();
+    const isAdmin = admin || profile?.role === "admin";
+
+    if (!isAdmin) {
+      const { count, error: countErr } = await supabase
+        .from("voice_clones")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      if (countErr && countErr.code !== "42P01" && countErr.code !== "PGRST205") {
+        throw countErr;
+      }
+      const cloneCount = Number(count) || 0;
+      if (cloneCount >= MAX_VOICE_CLONES_PER_USER) {
+        res.status(403).json({
+          code: "VOICE_CLONE_LIMIT",
+          message: `Limite de ${MAX_VOICE_CLONES_PER_USER} clones vocaux atteinte.`,
+        });
+        return;
+      }
+
+      creditCost = VOICE_CLONE_CREDIT_COST;
+      if ((profile?.credits ?? 0) < creditCost) {
+        res.status(402).json({
+          code: "insufficient_credits",
+          message: `Plus assez de jetons (${creditCost} cr. requis pour cloner une voix).`,
+        });
+        return;
+      }
     }
 
     const parsed = parseDataUrl(body.audioDataUrl);
@@ -91,6 +139,22 @@ module.exports = async function voiceCloneHandler(req, res) {
 
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
     const sampleUrl = await uploadToR2(sampleKey, parsed.buffer, parsed.contentType);
+
+    if (creditCost > 0) {
+      const { error: chargeErr } = await applyCreditDelta(supabase, {
+        userId,
+        delta: -creditCost,
+        reason: "generation_charge",
+        generationId: null,
+        idempotencyKey: `voice-clone:${cloneRequestId}:charge`,
+        metadata: { type: "voice_clone", clone_request_id: cloneRequestId },
+      });
+      if (chargeErr) {
+        res.status(500).json({ message: "Échec du débit des jetons" });
+        return;
+      }
+      charged = true;
+    }
 
     let referenceTranscript = null;
     try {
@@ -139,9 +203,24 @@ module.exports = async function voiceCloneHandler(req, res) {
     res.status(201).json({
       clone: row,
       fishReferenceId: fishVoice.id,
+      creditCost,
     });
   } catch (error) {
     console.error("voice-clone error", error);
+    if (charged && supabase && userId && creditCost > 0) {
+      try {
+        await applyCreditDelta(supabase, {
+          userId,
+          delta: creditCost,
+          reason: "refund",
+          generationId: null,
+          idempotencyKey: `voice-clone:${cloneRequestId}:refund`,
+          metadata: { type: "voice_clone_refund", clone_request_id: cloneRequestId },
+        });
+      } catch (refundErr) {
+        console.error("voice-clone refund failed", refundErr);
+      }
+    }
     if (error && error.message && /reference audio is not valid/i.test(error.message)) {
       error.message =
         "Échantillon vocal refusé. Réimporte 15–20 s de voix claire, sans musique.";

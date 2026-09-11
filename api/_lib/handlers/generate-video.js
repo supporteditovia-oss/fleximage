@@ -218,6 +218,22 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
       : body.duration_sec === 10
         ? 10
         : 5;
+  const voiceMode = body.voice_mode || "catalog";
+  const voiceTextRaw = String(body.voice_text || "").trim();
+
+  if (voiceMode === "auto_adaptive") {
+    if (voiceTextRaw.length > 0) {
+      const voiceTextCheck = validateVoiceText(voiceTextRaw, voiceDurationSec);
+      if (!voiceTextCheck.ok) {
+        throw Object.assign(new Error(voiceTextCheck.reason), {
+          status: 422,
+          code: "VOICE_TEXT_TOO_LONG",
+        });
+      }
+    }
+    return { id: null, name: "Voix adaptée", fish_reference_id: null };
+  }
+
   const voiceTextCheck = validateVoiceText(body.voice_text, voiceDurationSec);
   if (!voiceTextCheck.ok) {
     throw Object.assign(new Error(voiceTextCheck.reason), {
@@ -226,7 +242,7 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
     });
   }
 
-  if (body.voice_mode === "cloned" && body.voice_clone_id) {
+  if (voiceMode === "cloned" && body.voice_clone_id) {
     const { data: clone, error } = await supabase
       .from("voice_clones")
       .select("id, user_id, name, fish_reference_id")
@@ -338,6 +354,8 @@ module.exports = async function handler(req, res) {
       workflow === "video_to_video" && v2vVoiceMode === "preserve";
     const v2vVoiceTransform =
       workflow === "video_to_video" && isV2vVoiceTransformMode(v2vVoiceMode);
+    const i2vVoicePending =
+      workflow === "image_to_video" && voiceEnabled;
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
     let visualSwapDescription = vehicleDescription;
@@ -526,7 +544,9 @@ module.exports = async function handler(req, res) {
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
       v2v_voice_mode: v2vVoiceMode,
-      voice_transform_pending: v2vVoiceTransform,
+      voice_transform_pending: v2vVoiceTransform || i2vVoicePending,
+      source_image_url:
+        workflow === "image_to_video" ? sourceAssetUrl : null,
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
@@ -626,7 +646,10 @@ module.exports = async function handler(req, res) {
         .from("generations")
         .update({
           status: "failed",
-          fail_message: String(providerErr.message || "Échec Runway").slice(0, 240),
+          fail_message: String(providerErr.message || "Échec génération vidéo").slice(
+            0,
+            240,
+          ),
           metadata: {
             ...studioMetadata,
             studio_stage: "FAILED",

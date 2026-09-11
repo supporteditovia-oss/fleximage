@@ -9,6 +9,13 @@ const DEFAULT_FEMALE_IDS = [
   "b545c585f631496c914815291da4e893",
 ];
 
+/** Voix jeunes / enfant (cross-lingue). */
+const DEFAULT_CHILD_IDS = [
+  "b545c585f631496c914815291da4e893",
+  "933563129e564b19a115bedd57b7406a",
+  "5567200c7d8341738f0892bbacd3be3c",
+];
+
 /** Mix voix neutres Fish + rappeurs FR du catalogue (variété homme). */
 const DEFAULT_MALE_IDS = [
   "536d3a5e000945adb7038665781a4aca",
@@ -37,13 +44,28 @@ function hashSeed(seed) {
   return hash;
 }
 
-function pickVoiceReferenceId(gender, seed) {
-  const pool =
-    gender === "female"
-      ? parseEnvIds("V2V_VOICE_FEMALE_IDS", DEFAULT_FEMALE_IDS)
-      : parseEnvIds("V2V_VOICE_MALE_IDS", DEFAULT_MALE_IDS);
+function pickVoiceReferenceId(voiceCategory, seed) {
+  const key = String(voiceCategory || "male").toLowerCase();
+  let pool;
+  if (key === "child") {
+    pool = parseEnvIds("V2V_VOICE_CHILD_IDS", DEFAULT_CHILD_IDS);
+  } else if (key === "female") {
+    pool = parseEnvIds("V2V_VOICE_FEMALE_IDS", DEFAULT_FEMALE_IDS);
+  } else if (key === "unknown") {
+    pool = parseEnvIds("V2V_VOICE_MALE_IDS", DEFAULT_MALE_IDS);
+  } else {
+    pool = parseEnvIds("V2V_VOICE_MALE_IDS", DEFAULT_MALE_IDS);
+  }
   if (pool.length === 0) return null;
   return pool[hashSeed(seed) % pool.length];
+}
+
+function resolveVoiceCategoryFromProfile(profile) {
+  const p = profile && typeof profile === "object" ? profile : {};
+  if (p.voice_category === "child" || p.age_band === "child") return "child";
+  if (p.presented_gender === "female") return "female";
+  if (p.presented_gender === "male") return "male";
+  return "male";
 }
 
 function inferGenderFromPrompt(prompt) {
@@ -87,7 +109,9 @@ module.exports = {
   V2V_VOICE_MODES,
   DEFAULT_FEMALE_IDS,
   DEFAULT_MALE_IDS,
+  DEFAULT_CHILD_IDS,
   pickVoiceReferenceId,
+  resolveVoiceCategoryFromProfile,
   inferGenderFromPrompt,
   resolveV2vVoiceMode,
   isV2vVoiceTransformMode,

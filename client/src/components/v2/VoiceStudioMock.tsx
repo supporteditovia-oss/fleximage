@@ -40,6 +40,11 @@ import {
 } from "@/lib/cloned-voices-storage";
 import { queryClient } from "@/lib/queryClient";
 import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
+import {
+  VOICE_CLONE_CREDIT_COST,
+  VOICE_GENERATE_CREDIT_COST,
+  MAX_VOICE_CLONES,
+} from "@/lib/voice-pricing";
 import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
@@ -973,8 +978,8 @@ export function VoiceStudioMock() {
               </h3>
               <p className="vs-card__sub">
                 {showLockedVoiceName
-                  ? "Écris ton texte puis génère."
-                  : "Enregistre ou importe un extrait, écris ton texte, puis génère."}
+                  ? `Écris ton texte puis génère · ${VOICE_GENERATE_CREDIT_COST} cr./génération.`
+                  : `Enregistre ou importe un extrait · clone ${VOICE_CLONE_CREDIT_COST} cr. (max ${MAX_VOICE_CLONES}) · génération ${VOICE_GENERATE_CREDIT_COST} cr.`}
               </p>
             </div>
           </div>
@@ -1266,7 +1271,7 @@ export function VoiceStudioMock() {
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            Générer la voix
+            Générer la voix · {VOICE_GENERATE_CREDIT_COST} cr.
           </button>
           {generateBlockReason ? (
             <p className="vs-help vs-help--block" role="status">
