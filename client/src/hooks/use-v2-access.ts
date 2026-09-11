@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { authFetch } from "@/lib/api";
-import { markV2ExperienceEnabled } from "@/lib/v2-experience";
+import {
+  isV2ExperienceEnabled,
+  markV2ExperienceEnabled,
+} from "@/lib/v2-experience";
 
 type V2AccessResponse = {
   enabled: boolean;
@@ -45,12 +48,9 @@ async function fetchV2Access(): Promise<V2AccessResponse> {
   }
 }
 
-/**
- * V2 studio — réservé aux admins (tous appareils / réseaux).
- * L’IP allowlist reste exposée pour debug ; ne bloque plus l’accès admin.
- */
+/** V2 studio — admins, abonnés actifs, ou comptes avec crédits. */
 export function useV2Access() {
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, profile, isLoading: authLoading } = useAuth();
 
   const { data } = useQuery({
     queryKey: ["v2-access", user?.id ?? "anon"],
@@ -63,7 +63,7 @@ export function useV2Access() {
   });
 
   const ipAllowed = Boolean(data?.ipAllowed);
-  const v2Enabled = Boolean(isAdmin);
+  const v2Enabled = isV2ExperienceEnabled(profile, isAdmin);
   const isLoading = authLoading;
 
   useEffect(() => {

@@ -318,19 +318,6 @@ module.exports = async function handler(req, res) {
       .single();
     const isAdmin = admin || profile?.role === "admin";
 
-    // Preview admin uniquement — les clients n'ont pas accès tant que la feature n'est pas ouverte.
-    if (!isAdmin) {
-      res.status(403).json({
-        code: "ADMIN_PREVIEW_ONLY",
-        message: copy(
-          uiLocale,
-          "Le studio vidéo IA est réservé aux administrateurs (preview).",
-          "The AI video studio is admin-only preview.",
-        ),
-      });
-      return;
-    }
-
     const durationSec = body.duration_sec === 10 ? 10 : 5;
     const aspectRatio =
       body.aspect_ratio === "16:9" || body.aspect_ratio === "1:1"

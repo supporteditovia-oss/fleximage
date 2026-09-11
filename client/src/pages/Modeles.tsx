@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -299,11 +298,10 @@ function TemplatePreviewLightbox({
 export default function Modeles() {
   const [location, navigate] = useLocation();
   const { profile, isLoading: isAuthLoading } = useAuth();
-  const adminPreview = useAdminPreviewFeatures();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
   const { data: templates, isLoading } = useTemplateFeed({
-    enabled: adminPreview,
+    enabled: Boolean(profile?.id),
   });
   const generateDirect = useGenerateDirectLarp();
   const generationLockRef = useRef(false);
@@ -365,13 +363,6 @@ export default function Modeles() {
     () => categoryScenes,
     [categoryScenes],
   );
-
-  useEffect(() => {
-    if (isAuthLoading) return;
-    if (profile && !adminPreview) {
-      navigate("/create", { replace: true });
-    }
-  }, [profile, adminPreview, isAuthLoading, navigate]);
 
   // Rediriger l'ancienne catégorie outfits vers le catalogue.
   useEffect(() => {
@@ -603,10 +594,6 @@ export default function Modeles() {
       });
     }
   };
-
-  if (!isAuthLoading && profile && !adminPreview) {
-    return null;
-  }
 
   if (busy && !taskId) {
     return (

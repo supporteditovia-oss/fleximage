@@ -4,7 +4,7 @@ const { requireUser, sendError } = require("./_lib/user-auth");
 
 /**
  * GET /api/v2-access
- * Returns whether the current session may use LuxeFlexIA V2 (admin only).
+ * Returns whether the current session may use LuxeFlexIA V2 (admin, abonné ou crédits > 0).
  * Works without auth (ip + ipAllowed only); with Bearer token also returns isAdmin + enabled.
  */
 module.exports = async function handler(req, res) {
@@ -28,10 +28,22 @@ module.exports = async function handler(req, res) {
       const { supabase, userId } = await requireUser(req);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_subscriber, credits")
         .eq("id", userId)
         .maybeSingle();
       isAdmin = profile?.role === "admin";
+      const hasCredits =
+        typeof profile?.credits === "number" && profile.credits > 0;
+      const enabled =
+        isAdmin || Boolean(profile?.is_subscriber) || hasCredits;
+
+      res.status(200).json({
+        enabled,
+        isAdmin,
+        ipAllowed,
+        ip,
+      });
+      return;
     } catch {
       /* optional auth — IP discovery still works */
     }
