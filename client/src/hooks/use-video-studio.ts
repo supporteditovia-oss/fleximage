@@ -15,6 +15,7 @@ import type {
   VideoQuality,
   VideoStyle,
   VideoWorkflow,
+  V2vVoiceMode,
 } from "@/lib/video-studio-config";
 
 export interface VideoStudioGenerateInput {
@@ -37,6 +38,7 @@ export interface VideoStudioGenerateInput {
   reference_images?: string[];
   reference_image_url?: string;
   preserve_source_audio?: boolean;
+  v2v_voice_mode?: V2vVoiceMode;
   voice_enabled?: boolean;
   voice_mode?: "cloned" | "catalog" | "none";
   voice_clone_id?: string;

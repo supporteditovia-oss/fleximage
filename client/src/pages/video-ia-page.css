@@ -469,6 +469,61 @@ html.luxeflexia-video-page .floating-header::before {
   margin-top: 1rem;
 }
 
+.via-voice-addon__header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+  color: var(--lx-ink);
+}
+
+.via-voice-addon__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.via-voice-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+@media (min-width: 480px) {
+  .via-voice-mode-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.via-voice-mode-btn {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(18, 16, 14, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--lx-ink);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.via-voice-mode-btn.is-active {
+  border-color: rgba(201, 162, 39, 0.45);
+  background: rgba(255, 252, 245, 0.95);
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12);
+}
+
+.via-chips--secondary {
+  margin-top: 0.35rem;
+}
+
+.via-chip--subtle {
+  opacity: 0.88;
+  font-size: 0.68rem;
+}
+
 .via-voice-addon__toggle {
   display: flex;
   width: 100%;

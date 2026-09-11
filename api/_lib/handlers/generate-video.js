@@ -20,9 +20,13 @@ const {
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
-  buildCarSwapPrompt,
+  buildV2VProviderPrompt,
   validateVoiceText,
 } = require("../video-studio");
+const {
+  resolveV2vVoiceMode,
+  isV2vVoiceTransformMode,
+} = require("../v2v-voice-pool");
 const {
   checkGenerationLimits,
   deductGenerationCredits,
@@ -189,21 +193,6 @@ function resolveVehicleDescription(body) {
   return "";
 }
 
-function buildV2VProviderPrompt(body, vehicleDescription) {
-  const custom =
-    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
-  if (custom.length >= 10) {
-    const hasSceneLock =
-      /d[ée]cor|cam[ée]ra|reflet|background|ground|reflection|unchanged|identique/i.test(
-        custom,
-      );
-    return hasSceneLock
-      ? custom
-      : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
-  }
-  return buildCarSwapPrompt(vehicleDescription);
-}
-
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
 
@@ -298,8 +287,8 @@ module.exports = async function handler(req, res) {
         res.status(400).json({
           message: copy(
             uiLocale,
-            "Choisis une supercar ou décris le véhicule de remplacement.",
-            "Pick a supercar or describe the replacement vehicle.",
+            "Décris la transformation souhaitée (véhicule, personnage, objet…).",
+            "Describe the desired transformation (vehicle, person, object…).",
           ),
         });
         return;
@@ -338,8 +327,16 @@ module.exports = async function handler(req, res) {
     const quality = body.quality === "high" ? "high" : "standard";
     const voiceEnabled =
       workflow === "image_to_video" && Boolean(body.voice_enabled);
-    const preserveSourceAudio =
+    const preserveSourceAudioLegacy =
       workflow === "video_to_video" && Boolean(body.preserve_source_audio);
+    const v2vVoiceMode =
+      workflow === "video_to_video"
+        ? resolveV2vVoiceMode(body.v2v_voice_mode, preserveSourceAudioLegacy)
+        : "none";
+    const preserveSourceAudio =
+      workflow === "video_to_video" && v2vVoiceMode === "preserve";
+    const v2vVoiceTransform =
+      workflow === "video_to_video" && isV2vVoiceTransformMode(v2vVoiceMode);
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
     let sourceVideoDurationSec = null;
@@ -365,6 +362,7 @@ module.exports = async function handler(req, res) {
       quality,
       voiceEnabled,
       preserveSourceAudio,
+      v2vVoiceMode,
       isAdmin,
       sourceVideoDurationSec,
     });
@@ -502,6 +500,8 @@ module.exports = async function handler(req, res) {
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
+      v2v_voice_mode: v2vVoiceMode,
+      voice_transform_pending: v2vVoiceTransform,
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",

@@ -1,5 +1,8 @@
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
+/** Voix V2V : muet, conserver l'original, ou recréer (homme / femme / auto). */
+export type V2vVoiceMode = "none" | "preserve" | "female" | "male" | "auto";
+
 /** Plafond rentable Kling Motion Control 720p — prix fixe 50 crédits / vidéo. */
 export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 /** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
@@ -65,6 +68,45 @@ export type VehiclePreset = {
   prompt: string;
 };
 
+export type V2vSwapPreset = {
+  id: string;
+  label: string;
+  emoji: string;
+  prompt: string;
+};
+
+/** Presets rapides V2V — véhicule, personnage, objet. */
+export const VIDEO_V2V_SWAP_PRESETS: V2vSwapPreset[] = [
+  {
+    id: "supercar",
+    label: "Supercar",
+    emoji: "🏎️",
+    prompt:
+      "Remplace le véhicule par une supercar de luxe. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.",
+  },
+  {
+    id: "person",
+    label: "Personnage",
+    emoji: "🧑",
+    prompt:
+      "Remplace la personne dans la vidéo par celle de la photo de référence. Garde exactement les mêmes mouvements, le décor et la caméra.",
+  },
+  {
+    id: "celebrity_look",
+    label: "Look célébrité",
+    emoji: "⭐",
+    prompt:
+      "Remplace-moi par la personne de la photo de référence (traits, coiffure, tenue). Mouvements et décor identiques à la vidéo source.",
+  },
+  {
+    id: "object",
+    label: "Objet",
+    emoji: "📦",
+    prompt:
+      "Remplace l'objet principal par celui de la photo de référence. Garde le décor, la lumière et les mouvements de caméra identiques.",
+  },
+];
+
 export const VIDEO_VEHICLE_PRESETS: VehiclePreset[] = [
   {
     id: "lamborghini_urus",
@@ -107,11 +149,16 @@ export function computeV2VCreditCost(
 }
 
 /** 1 vidéo = 50 crédits (max 8s, 720p) ; +5 si voix IA (I2V) ou voix filmée (V2V). */
+function v2vVoiceModeChargesCredits(mode: V2vVoiceMode): boolean {
+  return mode === "preserve" || mode === "female" || mode === "male" || mode === "auto";
+}
+
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
   voiceEnabled?: boolean;
   preserveSourceAudio?: boolean;
+  v2vVoiceMode?: V2vVoiceMode;
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
 }): number {
@@ -120,7 +167,12 @@ export function computeVideoCreditCost(params: {
       ? computeV2VCreditCost(params.sourceVideoDurationSec)
       : VIDEO_FLAT_CREDIT_COST;
   if (params.workflow === "video_to_video") {
-    if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
+    const voiceMode =
+      params.v2vVoiceMode ??
+      (params.preserveSourceAudio ? "preserve" : "none");
+    if (v2vVoiceModeChargesCredits(voiceMode)) {
+      cost += VIDEO_VOICE_EXTRA_CREDIT;
+    }
   } else if (params.voiceEnabled) {
     cost += VIDEO_VOICE_EXTRA_CREDIT;
   }

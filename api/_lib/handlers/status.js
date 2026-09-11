@@ -4,6 +4,8 @@ const {
   getSourceVideoUrlFromLarp,
   muxSourceAudioOntoVideo,
 } = require("../mux-source-audio");
+const { transformV2vVoiceAndMux } = require("../v2v-voice-transform");
+const { isV2vVoiceTransformMode } = require("../v2v-voice-pool");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -503,12 +505,13 @@ module.exports = async function handler(req, res) {
               larp.metadata && typeof larp.metadata === "object"
                 ? larp.metadata
                 : {};
-            const shouldPreserveSourceAudio =
-              meta.workflow === "video_to_video" &&
-              meta.preserve_source_audio === true;
-            if (shouldPreserveSourceAudio && resultUrls[0]) {
+            if (meta.workflow === "video_to_video" && resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
-              if (sourceVideoUrl) {
+              const voiceMode =
+                meta.v2v_voice_mode ||
+                (meta.preserve_source_audio ? "preserve" : "none");
+
+              if (sourceVideoUrl && voiceMode === "preserve") {
                 const muxedUrl = await withTimeout(
                   muxSourceAudioOntoVideo({
                     sourceVideoUrl,
@@ -521,7 +524,36 @@ module.exports = async function handler(req, res) {
                 if (muxedUrl) {
                   resultUrls = [muxedUrl];
                   metadataPatch.source_audio_muxed = true;
+                } else {
+                  metadataPatch.source_audio_mux_failed = true;
                 }
+              } else if (
+                sourceVideoUrl &&
+                isV2vVoiceTransformMode(voiceMode)
+              ) {
+                const transformed = await withTimeout(
+                  transformV2vVoiceAndMux({
+                    sourceVideoUrl,
+                    generatedVideoUrl: resultUrls[0],
+                    larpId: larp.id,
+                    voiceMode,
+                    swapPrompt: meta.vehicle_prompt || larp.prompt || "",
+                  }),
+                  120_000,
+                  null,
+                );
+                if (transformed?.url) {
+                  resultUrls = [transformed.url];
+                  metadataPatch.source_audio_transformed = true;
+                  metadataPatch.voice_transform_gender = transformed.gender;
+                  metadataPatch.voice_transform_fish_id =
+                    transformed.fishReferenceId;
+                  metadataPatch.voice_transform_transcript =
+                    transformed.transcript;
+                } else {
+                  metadataPatch.voice_transform_failed = true;
+                }
+                metadataPatch.voice_transform_pending = false;
               }
             }
           } else {
