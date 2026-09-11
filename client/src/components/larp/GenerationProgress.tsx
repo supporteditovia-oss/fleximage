@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Gem } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLarpStatus } from "@/hooks/use-larps";
 import { useToast } from "@/hooks/use-toast";
 import { LarpResult } from "./LarpResult";
-import { GenerationLoader } from "./GenerationLoader";
+import { GenerationLoader, GenerationLoaderBackdrop } from "./GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { BrandMark } from "@/components/BrandMark";
@@ -66,6 +66,11 @@ export function GenerationProgress({
   // the generation keeps running server-side.
   const connectionErrorSince = useRef<number | null>(null);
   const CONNECTION_ERROR_GRACE_MS = 180_000;
+
+  const handleReset = useCallback(() => {
+    releaseGenerationLoaderTheme();
+    onReset();
+  }, [onReset]);
   const hasResultMedia = (data?.resultUrls?.length ?? 0) > 0;
   const displayUrls = hasResultMedia
     ? data!.resultUrls
@@ -199,7 +204,7 @@ export function GenerationProgress({
           "La connexion a eu un coup de mou — rouvre Créer ou Historique dans un instant pour retrouver ta photo.",
         ),
       });
-      onReset();
+      handleReset();
       navigate(studioPath);
       return;
     }
@@ -228,7 +233,7 @@ export function GenerationProgress({
       });
       // Credits may have been refunded server-side on policy/provider fail.
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
-      onReset();
+      handleReset();
       navigate(studioPath);
     }
   }, [
@@ -236,8 +241,8 @@ export function GenerationProgress({
     data?.failMessage,
     fatalConnectionError,
     error,
+    handleReset,
     navigate,
-    onReset,
     queryClient,
     studioPath,
     t,
@@ -302,22 +307,20 @@ export function GenerationProgress({
 
   return (
     <>
-      {/* Immersive fullscreen loader via portal-like fixed overlay */}
-      <AnimatePresence>
-        {showLoader && (
-          <GenerationLoader
-            taskId={taskId}
-            status={loaderStatus}
-            estimatedSeconds={displayEstimate}
-            serverRemainingSeconds={serverRemainingSeconds}
-            startedAtMs={startedAtMs}
-            inputImageUrl={inputImageUrl}
-            resultUrls={data?.resultUrls}
-            onRevealStart={() => setRevealStarted(true)}
-            onRevealComplete={() => setRevealDone(true)}
-          />
-        )}
-      </AnimatePresence>
+      {showLoader ? <GenerationLoaderBackdrop zIndex={100} /> : null}
+      {showLoader ? (
+        <GenerationLoader
+          taskId={taskId}
+          status={loaderStatus}
+          estimatedSeconds={displayEstimate}
+          serverRemainingSeconds={serverRemainingSeconds}
+          startedAtMs={startedAtMs}
+          inputImageUrl={inputImageUrl}
+          resultUrls={data?.resultUrls}
+          onRevealStart={() => setRevealStarted(true)}
+          onRevealComplete={() => setRevealDone(true)}
+        />
+      ) : null}
 
       {/* After reveal: show the result */}
       {canShowResult &&
@@ -358,9 +361,7 @@ export function GenerationProgress({
               />
               <button
                 type="button"
-                onClick={() => {
-                  onReset();
-                }}
+                onClick={handleReset}
                 className="pointer-events-auto rounded-full border border-[var(--lx-gold)]/40 bg-white/95 px-5 py-2.5 text-sm font-semibold text-[var(--lx-ink)] shadow-md backdrop-blur-sm transition active:scale-[0.98]"
               >
                 {t("progress.createAnother")}

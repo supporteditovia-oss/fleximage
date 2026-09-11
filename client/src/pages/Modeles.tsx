@@ -8,7 +8,11 @@ import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import {
+  GenerationLoader,
+  GenerationLoaderBackdrop,
+} from "@/components/larp/GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
@@ -507,6 +511,7 @@ export default function Modeles() {
     userImages: string[] = [],
   ) => {
     if (generationLockRef.current || busy) return;
+    releaseGenerationLoaderTheme();
     generationLockRef.current = true;
     setBusy(true);
     const generationRequestId = createGenerationRequestId();
@@ -604,7 +609,10 @@ export default function Modeles() {
   }
 
   if (busy && !taskId) {
-    return createPortal(
+    return (
+      <>
+        <GenerationLoaderBackdrop zIndex={99} />
+        {createPortal(
       <GenerationLoader
         taskId="modeles-pending"
         status="connecting"
@@ -618,11 +626,15 @@ export default function Modeles() {
         }
       />,
       document.body,
+        )}
+      </>
     );
   }
 
   if (taskId) {
     return (
+      <>
+        <GenerationLoaderBackdrop zIndex={99} />
       <GenerationProgress
         taskId={taskId}
         inputImageUrl={
@@ -633,6 +645,7 @@ export default function Modeles() {
             : undefined
         }
         onReset={() => {
+          releaseGenerationLoaderTheme();
           reshuffleOutfitCatalog();
           setTaskId(null);
           setGenerationEstimateSeconds(null);
@@ -645,6 +658,7 @@ export default function Modeles() {
         referenceImageCount={pendingUserPhoto ? 2 : 1}
         initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
       />
+      </>
     );
   }
 

@@ -13,7 +13,11 @@ import { createGenerationRequestId } from "@/lib/generation-request-id";
 import { TemplateStrip } from "@/components/generate/TemplateStrip";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import "@/components/larp/generation-loader.css";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
+import {
+  GenerationLoader,
+  GenerationLoaderBackdrop,
+} from "@/components/larp/GenerationLoader";
+import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
@@ -828,6 +832,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       console.warn("[Generate] Ignored duplicate generate click — already in flight");
       return;
     }
+    releaseGenerationLoaderTheme();
     isGeneratingRef.current = true;
     const generationRequestId = createGenerationRequestId();
 
@@ -1195,6 +1200,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   };
 
   const handleReset = useCallback(() => {
+    releaseGenerationLoaderTheme();
     isGeneratingRef.current = false;
     autoGenerateFiredRef.current = false;
     reshuffleOutfitCatalog();
@@ -1364,10 +1370,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       "linear-gradient(160deg, #ffffff 0%, #f5f0e8 48%, #ebe6df 100%)",
   } as const;
 
-  // ── Transition backdrop (sombre — jamais d'écran blanc pendant génération) ──
-  const transitionBackdrop = transitionBg
-    ? createPortal(<div className="lx-gen-loader__base fixed inset-0 z-[99]" />, document.body)
-    : null;
+  const generationBackdropActive =
+    Boolean(taskId) ||
+    ((pendingLoading || isStartingGeneration) && !showFakeOnboardingLoader);
 
   // ── Debug logging ───────────────────────────────────────────
   console.log("[Generate] Render:", {
@@ -1439,14 +1444,19 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
 
   // -- Generation in progress
   if (taskId) {
-    return generationProgress;
+    return (
+      <>
+        {generationBackdropActive ? <GenerationLoaderBackdrop zIndex={99} /> : null}
+        {generationProgress}
+      </>
+    );
   }
 
   // -- Loading pending LARP from hero flow
   if (pendingLoading || (isStartingGeneration && !taskId && !showFakeOnboardingLoader)) {
     return (
       <>
-        {transitionBackdrop}
+        {generationBackdropActive ? <GenerationLoaderBackdrop zIndex={99} /> : null}
         {portalOverlay}
       </>
     );
