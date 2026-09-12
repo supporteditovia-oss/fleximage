@@ -14,11 +14,11 @@ import "./landing-studio-widget.css";
 
 const MODE_CAPTIONS: Record<StudioMode, string> = {
   image:
-    "Image IA — importe une photo, décris ta scène, génère un rendu lifestyle ultra-réaliste.",
+    "Atelier Image — une photographie, une intention, un rendu lifestyle photoréaliste.",
   voice:
-    "Clonage vocal — quelques secondes d'audio suffisent pour créer ta voix IA.",
+    "Atelier Voix — quelques secondes d’audio suffisent pour créer votre signature vocale.",
   video:
-    "Vidéo IA — Image→Vidéo : anime ta photo en clip vertical · Vidéo→Vidéo : remplace personnage, objet ou véhicule dans ta vidéo.",
+    "Atelier Vidéo — cinématique photo ou séquence transformée. Format vertical 9:16, rendu premium.",
 };
 
 export function LandingStudioWidget() {

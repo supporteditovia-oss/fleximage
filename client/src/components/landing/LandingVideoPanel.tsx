@@ -32,8 +32,18 @@ const WORKFLOW_OPTIONS: {
   emoji: string;
   hint: string;
 }[] = [
-  { id: "image_to_video", label: "Image → Vidéo", emoji: "📸", hint: "Ta photo prend vie" },
-  { id: "video_to_video", label: "Vidéo → Vidéo", emoji: "🎬", hint: "Personnage, objet, véhicule…" },
+  {
+    id: "image_to_video",
+    label: "Cinématique photo",
+    emoji: "◈",
+    hint: "Image → Vidéo · 5 s",
+  },
+  {
+    id: "video_to_video",
+    label: "Séquence transformée",
+    emoji: "◈",
+    hint: "Vidéo → Vidéo · smartphone",
+  },
 ];
 
 export function LandingVideoPanel() {
@@ -110,14 +120,14 @@ export function LandingVideoPanel() {
 
   return (
     <div className="via-studio landing-video-panel pb-4">
-      <header className="text-center">
+      <header className="landing-video-panel__header text-center">
         <div className="via-hero__badge">
           <Clapperboard className="h-3.5 w-3.5" />
-          Studio premium
+          Atelier Vidéo
         </div>
-        <h2 className="via-hero__title">Vidéo IA</h2>
+        <h2 className="via-hero__title">Studio cinématique</h2>
         <p className="via-hero__sub">
-          Anime ta photo ou transforme ta vidéo smartphone. Rendu cinématique, prêt pour TikTok &amp; Reels.
+          Format vertical 9:16 — rendu premium, prêt à publier.
         </p>
       </header>
 
@@ -145,10 +155,10 @@ export function LandingVideoPanel() {
               <ImageIcon className="h-3.5 w-3.5" />
               Étape 1
             </p>
-            <h3 className="via-step-title">Importe ta photo</h3>
+            <h3 className="via-step-title">Votre référence visuelle</h3>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo <strong>5 s</strong> ·{" "}
-              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
+              Portrait ou scène lifestyle — plan animé de <strong>5 secondes</strong> ·{" "}
+              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong>.
             </p>
             <input
               ref={imageFileRef}
@@ -196,10 +206,10 @@ export function LandingVideoPanel() {
               <Video className="h-3.5 w-3.5" />
               Étape 1
             </p>
-            <h3 className="via-step-title">Importe ta vidéo</h3>
+            <h3 className="via-step-title">Votre séquence source</h3>
             <p className="via-step-desc">
-              Filme avec ton téléphone — max <strong>{VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
-              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
+              Plan filmé au smartphone — max <strong>{VIDEO_V2V_MAX_DURATION_SEC} s</strong> ·{" "}
+              {VIDEO_FLAT_CREDIT_COST} crédits.
             </p>
             <input
               ref={videoFileRef}

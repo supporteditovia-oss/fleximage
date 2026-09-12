@@ -57,7 +57,7 @@ const FAQ = [
   },
   {
     q: "Comment fonctionne la vidéo IA ?",
-    a: "Importe une photo pour l’animer en clip vertical (Image → Vidéo), ou importe une vidéo filmée au smartphone pour remplacer un personnage, un objet ou un véhicule (Vidéo → Vidéo). Rendu cinématique prêt pour TikTok et Reels.",
+    a: "Deux ateliers : Cinématique photo (Image → Vidéo) — une image fixe devient un plan en mouvement de 5 secondes ; Séquence transformée (Vidéo → Vidéo) — votre clip smartphone est réinventé (personnage, objet, véhicule) sans perdre l’angle caméra. Format vertical 9:16, rendu premium.",
   },
   {
     q: "Comment fonctionne la création d’image ?",
@@ -143,22 +143,21 @@ export default function LandingV2() {
       </header>
 
       <section className="hero" id="top">
-        <p className="eyebrow">Image · Voix · Vidéo IA</p>
+        <p className="eyebrow">Studio · Image · Voix · Vidéo</p>
         <h1>
           Crée ce que
           <br />
           tu imagines.
         </h1>
         <p className="hero-copy">
-          Le studio tout-en-un LuxeFlexIA : photos lifestyle ultra-réalistes, clips verticaux animés
-          (Image→Vidéo), transformations vidéo (Vidéo→Vidéo) et clonage vocal — le même outil que
-          dans l’app, directement sur la page d’accueil.
+          Photographies lifestyle, clips verticaux cinématiques et voix synthétique — le studio
+          LuxeFlexIA, tel qu’à l’intérieur de l’application.
         </p>
 
         <div className="hero-mode-strip" aria-label="Modes du studio">
-          <span className="hero-mode-pill">🖼️ Image IA</span>
-          <span className="hero-mode-pill">🎙️ Clonage vocal</span>
-          <span className="hero-mode-pill hero-mode-pill--accent">🎬 Vidéo IA</span>
+          <span className="hero-mode-pill">Image</span>
+          <span className="hero-mode-pill">Voix</span>
+          <span className="hero-mode-pill hero-mode-pill--accent">Vidéo</span>
         </div>
 
         <LandingStudioWidget />
@@ -257,30 +256,70 @@ export default function LandingV2() {
         </p>
       </section>
 
-      <section className="video-section" id="video-ia" aria-labelledby="video-title">
-        <div className="video-inner">
-          <div className="video-copy">
-            <p className="section-kicker">Vidéo IA</p>
+      <section className="video-cinema-section" id="video-ia" aria-labelledby="video-title">
+        <div className="video-cinema-inner">
+          <div className="video-cinema-header">
+            <p className="section-kicker">Studio Vidéo</p>
             <h2 id="video-title">
-              Anime tes photos.
+              Le mouvement,
               <br />
-              Transforme tes vidéos.
+              en cinq secondes.
             </h2>
-            <p className="video-lead">
-              Deux workflows pensés pour TikTok, Reels et Shorts — rendu cinématique, prêt à publier.
+            <p className="video-cinema-lead">
+              Deux ateliers de création pour le format vertical — esthétique cinéma, prêt à publier
+              sur TikTok, Reels et Shorts.
             </p>
-            <ol className="video-explanation">
-              <li>
-                <strong>Image→Vidéo</strong> — importe une photo, décris le mouvement, LuxeFlexIA
-                génère un clip vertical de 5 secondes.
-              </li>
-              <li>
-                <strong>Vidéo→Vidéo</strong> — filme avec ton smartphone, remplace un personnage,
-                un objet ou un véhicule tout en gardant le mouvement d’origine.
-              </li>
-            </ol>
+          </div>
+
+          <div className="video-cinema-stage">
+            <div className="video-cinema-phone" aria-hidden>
+              <div className="video-cinema-phone__bezel">
+                <img
+                  src="/assets/landing-v2/dubai-generated.jpg"
+                  alt=""
+                  loading="lazy"
+                />
+                <div className="video-cinema-phone__overlay">
+                  <span className="video-cinema-phone__play" aria-hidden>
+                    ▶
+                  </span>
+                  <span className="video-cinema-phone__time">00:05</span>
+                </div>
+                <div className="video-cinema-phone__grain" aria-hidden />
+              </div>
+              <span className="video-cinema-phone__caption">Rendu cinématique · 9:16</span>
+            </div>
+
+            <div className="video-cinema-lanes" aria-label="Ateliers vidéo">
+              <article className="video-cinema-lane">
+                <span className="video-cinema-lane__index">01</span>
+                <div className="video-cinema-lane__body">
+                  <h3>Cinématique photo</h3>
+                  <p className="video-cinema-lane__tech">Image → Vidéo</p>
+                  <p className="video-cinema-lane__desc">
+                    Une image fixe devient un plan vivant — lumière, profondeur et mouvement de
+                    caméra en cinq secondes.
+                  </p>
+                </div>
+              </article>
+              <article className="video-cinema-lane video-cinema-lane--accent">
+                <span className="video-cinema-lane__index">02</span>
+                <div className="video-cinema-lane__body">
+                  <h3>Séquence transformée</h3>
+                  <p className="video-cinema-lane__tech">Vidéo → Vidéo</p>
+                  <p className="video-cinema-lane__desc">
+                    Votre plan filmé au smartphone, réinventé — personnage, objet ou véhicule — le
+                    geste caméra et l’angle restent les vôtres.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div className="video-cinema-footer">
+            <span className="video-cinema-specs">9:16 · 5 s · Rendu premium</span>
             <a
-              className="video-cta"
+              className="light-button"
               href="#top"
               onClick={(e) => {
                 e.preventDefault();
@@ -288,26 +327,8 @@ export default function LandingV2() {
                 document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Essayer la Vidéo IA <span>↗</span>
+              Ouvrir le studio vidéo <span>↗</span>
             </a>
-          </div>
-          <div className="video-showcase" aria-label="Workflows Vidéo IA">
-            <article className="video-workflow-card">
-              <span className="video-workflow-card__tag">Image → Vidéo</span>
-              <h3>Ta photo prend vie</h3>
-              <p>
-                Selfie, portrait ou scène lifestyle — l’IA ajoute mouvement, lumière et profondeur
-                pour un clip vertical prêt à poster.
-              </p>
-            </article>
-            <article className="video-workflow-card video-workflow-card--accent">
-              <span className="video-workflow-card__tag">Vidéo → Vidéo</span>
-              <h3>Remplace sans refilmer</h3>
-              <p>
-                Voiture, personnage, objet — transforme ce qui apparaît dans ta vidéo smartphone
-                sans perdre l’angle ni le rythme du plan original.
-              </p>
-            </article>
           </div>
         </div>
       </section>
