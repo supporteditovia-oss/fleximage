@@ -93,26 +93,155 @@ function extractMentionedSpeedKmh(text) {
   return loose ? loose[1] : null;
 }
 
-function buildV2VDashboardLockSuffix(userPrompt) {
-  const speed = extractMentionedSpeedKmh(userPrompt);
-  const speedLine = speed
-    ? ` Speedometer and all gauges must read exactly ${speed} km/h at every frame — never a different speed.`
-    : " Preserve the exact same speedometer/tachometer digits and needle positions as the source video at every frame (if source shows 120 km/h, output must show 120 km/h).";
+const VEHICLE_MODEL_CATALOG = [
+  {
+    pattern: /\b(urus)\b/i,
+    model: "Lamborghini Urus",
+    interior:
+      "authentic Lamborghini Urus OEM cabin: Urus steering wheel with Lamborghini badge, dual digital screens with Urus UI, Urus center console and air vents — not a generic SUV.",
+  },
+  {
+    pattern: /\b(purosangue|puro[\s-]?sangue)\b/i,
+    model: "Ferrari Purosangue",
+    interior:
+      "authentic Ferrari Purosangue OEM cabin: Ferrari dashboard design, Purosangue-specific steering wheel, dual screens with Ferrari UI — not a generic SUV.",
+  },
+  {
+    pattern: /\b(cullinan)\b/i,
+    model: "Rolls-Royce Cullinan",
+    interior:
+      "authentic Rolls-Royce Cullinan OEM cabin: Spirit of Ecstasy details, Rolls-Royce infotainment, luxury rear/front layout.",
+  },
+  {
+    pattern: /\b(g[\s-]?wagon|g[\s-]?class|g63)\b/i,
+    model: "Mercedes-AMG G-Class",
+    interior:
+      "authentic Mercedes G-Class OEM cabin: G-Class dashboard, physical buttons, Mercedes MBUX screens.",
+  },
+  {
+    pattern: /\b(cayenne|turbo\s*gt)\b/i,
+    model: "Porsche Cayenne",
+    interior:
+      "authentic Porsche Cayenne OEM cabin: Porsche PCM screens, Porsche steering wheel, center tachometer layout if visible.",
+  },
+  {
+    pattern: /\b(911|gt3|turbo\s*s)\b/i,
+    model: "Porsche 911",
+    interior:
+      "authentic Porsche 911 OEM cabin: classic Porsche dashboard, sport steering wheel, Porsche PCM.",
+  },
+  {
+    pattern: /\b(ferrari|sf90|296|812|f8|roma)\b/i,
+    model: "Ferrari",
+    interior:
+      "authentic Ferrari OEM cabin matching the requested Ferrari model — Ferrari steering wheel, dual screens, Ferrari UI.",
+  },
+  {
+    pattern: /\b(lamborghini|lambo|aventador|hurac[aá]n|revuelto)\b/i,
+    model: "Lamborghini",
+    interior:
+      "authentic Lamborghini OEM cabin matching the requested model — Lamborghini hexagonal details, digital cluster.",
+  },
+];
 
-  return [
-    " CRITICAL cockpit lock:",
-    speedLine,
-    " Keep dashboard screens lit, doors closed, seatbelt and hand positions unchanged.",
-    " Only swap the vehicle interior/exterior styling — never alter visible speed readings.",
-  ].join("");
+function extractRequestedVehicleModel(text) {
+  const source = String(text || "");
+  for (const entry of VEHICLE_MODEL_CATALOG) {
+    if (entry.pattern.test(source)) return entry;
+  }
+  return null;
+}
+
+function extractCustomInteriorFeatures(text) {
+  const source = String(text || "");
+  const features = [];
+
+  if (/\b([ée]toil[ée]|starlight|plafond\s+[ée]toil|star\s+headliner|fiber\s*optic\s*stars?)\b/i.test(source)) {
+    features.push(
+      "luxury starlight headliner (fiber-optic stars on ceiling) integrated naturally and photorealistically",
+    );
+  }
+  if (/\b(cuir\s+(?:blanc|beige|rouge|noir)|white\s+leather|red\s+interior|alcantara)\b/i.test(source)) {
+    features.push("requested upholstery color and material applied consistently");
+  }
+  if (/\b(carbon|carbone|carbon\s+fiber)\b/i.test(source)) {
+    features.push("carbon fiber trim where appropriate for the model");
+  }
+
+  return features;
+}
+
+function buildV2VCockpitIntelligenceLock(userPrompt) {
+  const source = String(userPrompt || "");
+  const vehicle = extractRequestedVehicleModel(source);
+  const speed = extractMentionedSpeedKmh(source);
+  const customFeatures = extractCustomInteriorFeatures(source);
+
+  const parts = [" CRITICAL vehicle realism lock:"];
+
+  if (vehicle) {
+    parts.push(
+      ` Use the exact authentic ${vehicle.model} — interior AND exterior must match this specific model (${vehicle.interior}). Never substitute another brand or a generic luxury car.`,
+    );
+  } else if (isVehicleDrivingPrompt(source)) {
+    parts.push(
+      " Match the exact vehicle model named in the prompt — authentic OEM interior layout, steering wheel badge, screen UI and materials for that specific brand and model only.",
+    );
+  }
+
+  parts.push(
+    " INTELLIGENT STATE — mirror source video logic frame-by-frame (do not apply dumb static rules):",
+  );
+  parts.push(
+    " • Parked with doors closed: screens off or dim, gear in Park (P), engine realistically idle/off, cabin static.",
+  );
+  parts.push(
+    " • Door opening in source: screen wake-up must happen WHEN the door opens — not before; natural startup animation.",
+  );
+  parts.push(
+    " • Driving in source: doors closed, appropriate gear (D/R), screens on, seatbelt if visible, speedometer matches source speed.",
+  );
+  parts.push(
+    " • Never incoherent: no bright driving UI while parked, no open doors while driving fast, no Drive gear in a parked scene, no wrong model interior.",
+  );
+
+  if (speed) {
+    parts.push(
+      ` When moving, speedometer must read exactly ${speed} km/h at every frame.`,
+    );
+  } else {
+    parts.push(
+      " When moving, preserve exact speedometer/tachometer digits and needle positions from the source video.",
+    );
+  }
+
+  if (customFeatures.length > 0) {
+    parts.push(
+      ` Integrate custom options photorealistically: ${customFeatures.join("; ")}.`,
+    );
+  }
+
+  parts.push(
+    " Premium photorealistic materials, correct glass reflections, luxury finish — must look indistinguishable from real footage.",
+  );
+
+  return parts.join("");
+}
+
+/** @deprecated alias */
+function buildV2VDashboardLockSuffix(userPrompt) {
+  return buildV2VCockpitIntelligenceLock(userPrompt);
 }
 
 function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt = "" } = {}) {
   let result = String(prompt || "").trim();
   const source = userPrompt || result;
 
-  if (isVehicleDrivingPrompt(source) && !/speedometer|compteur|dashboard lock|CRITICAL cockpit/i.test(result)) {
-    result += buildV2VDashboardLockSuffix(source);
+  if (
+    isVehicleDrivingPrompt(source) &&
+    !/INTELLIGENT STATE|vehicle realism lock|CRITICAL vehicle/i.test(result)
+  ) {
+    result += buildV2VCockpitIntelligenceLock(source);
   }
 
   return preserveSourceAudio ? result : `${result}${V2V_SILENT_OUTPUT_LOCK}`;
@@ -248,6 +377,8 @@ module.exports = {
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
+  extractRequestedVehicleModel,
+  buildV2VCockpitIntelligenceLock,
   buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   validateVoiceText,
