@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Redirect, useLocation } from "wouter";
 import {
-  Clapperboard,
   Film,
   ImageIcon,
   Loader2,
   Sparkles,
   Upload,
   Video,
+  Wand2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
@@ -31,10 +31,11 @@ import {
   VIDEO_FLAT_CREDIT_COST,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
-  VIDEO_VEHICLE_PRESETS,
+  VIDEO_V2V_PRESETS,
   type VideoAspectRatio,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
+import { finalizeV2VPromptForSubmit } from "@/lib/v2v-prompt";
 import {
   formatVideoDurationLabel,
   readVideoDurationSec,
@@ -62,20 +63,20 @@ function fileToBase64(file: File): Promise<string> {
 const WORKFLOW_OPTIONS: {
   id: VideoWorkflow;
   label: string;
-  emoji: string;
   hint: string;
+  icon: typeof ImageIcon;
 }[] = [
   {
     id: "image_to_video",
     label: "Image → Vidéo",
-    emoji: "📸",
-    hint: "Ta photo prend vie",
+    hint: "Anime ta photo en clip",
+    icon: ImageIcon,
   },
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    emoji: "🚗",
-    hint: "Swap voiture ou objet",
+    hint: "Transforme tout : lieu, look, objet…",
+    icon: Wand2,
   },
 ];
 
@@ -317,13 +318,18 @@ export default function VideoIA() {
     releaseGenerationLoaderTheme();
     setIsSubmitting(true);
     try {
+      const sanitizedPrompt = finalizeV2VPromptForSubmit(
+        swapPrompt,
+        preserveSourceVoice,
+      );
+
       const result = await generateVideo.mutateAsync({
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
         ...(videoSource.mode === "url"
           ? { video_url: videoSource.videoUrl }
           : { videos: [videoSource.dataUrl] }),
-        vehicle_prompt: swapPrompt.trim(),
+        vehicle_prompt: sanitizedPrompt,
         source_video_duration_sec: videoDurationSec ?? undefined,
         preserve_source_audio: preserveSourceVoice,
         voice_enabled: false,
@@ -387,33 +393,39 @@ export default function VideoIA() {
 
   return (
     <div className="via-studio pb-28 md:pb-10">
-      <header className="text-center">
-        <div className="via-hero__badge">
-          <Clapperboard className="h-3.5 w-3.5" />
-          Studio premium
-        </div>
+      <div className="via-studio__mesh" aria-hidden />
+
+      <header className="via-hero">
         <h1 className="via-hero__title">Vidéo IA</h1>
         <p className="via-hero__sub">
-          Anime ta photo ou transforme ta vidéo smartphone. Rendu cinématique,
-          prêt pour TikTok &amp; Reels.
+          Anime ta photo ou transforme ta vidéo smartphone — décor, personnage,
+          objet, lieu. Rendu cinématique prêt pour TikTok &amp; Reels.
         </p>
+        <div className="via-capabilities" aria-hidden>
+          <span className="via-capability">Dubai · Yacht · Jet</span>
+          <span className="via-capability">Personnage · Tenue</span>
+          <span className="via-capability">Objet · Véhicule</span>
+        </div>
       </header>
 
       <div className="via-mode-grid">
-        {WORKFLOW_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setWorkflow(option.id)}
-            className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
-          >
-            <span className="via-mode-card__emoji" aria-hidden>
-              {option.emoji}
-            </span>
-            <span className="via-mode-card__label">{option.label}</span>
-            <span className="via-mode-card__hint">{option.hint}</span>
-          </button>
-        ))}
+        {WORKFLOW_OPTIONS.map((option) => {
+          const Icon = option.icon;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setWorkflow(option.id)}
+              className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
+            >
+              <span className="via-mode-card__icon" aria-hidden>
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="via-mode-card__label">{option.label}</span>
+              <span className="via-mode-card__hint">{option.hint}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div key={workflow} className="via-panel via-panel-enter">
@@ -421,7 +433,7 @@ export default function VideoIA() {
 
         {workflow === "image_to_video" ? (
           <>
-            <p className="via-step-label">
+            <p className="via-step-pill">
               <ImageIcon className="h-3.5 w-3.5" />
               Étape 1
             </p>
@@ -464,10 +476,10 @@ export default function VideoIA() {
 
             {imagePreviewUrl && (
               <>
-                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                   Étape 2 — Prompt
-                </label>
+                </p>
                 <textarea
                   value={motionPrompt}
                   onChange={(e) => setMotionPrompt(e.target.value)}
@@ -517,18 +529,19 @@ export default function VideoIA() {
           </>
         ) : (
           <>
-            <p className="via-step-label">
+            <p className="via-step-pill">
               <Video className="h-3.5 w-3.5" />
               Étape 1
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton téléphone — ex. ta Clio garée.{" "}
+              Filme avec ton smartphone — toi, un objet, une scène, un véhicule…{" "}
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
-              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo.
-              L&apos;IA conserve ta caméra, le décor et tous les mouvements.
-              Par défaut, la vidéo générée est <strong>muette</strong> — active
-              l&apos;option voix ci-dessous pour conserver ta voix filmée.
+              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo. L&apos;IA conserve ta
+              caméra et tous les mouvements. Change le décor (Dubai, yacht…),
+              le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
+              <strong>muette</strong> — active l&apos;option voix (+5 crédits)
+              pour garder ta voix filmée.
             </p>
 
             <input
@@ -574,13 +587,13 @@ export default function VideoIA() {
 
             {videoPreview && (
               <>
-                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <ImageIcon className="h-3.5 w-3.5" />
-                  Photo de référence (optionnel)
-                </label>
+                  Référence visuelle (optionnel)
+                </p>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Photo du véhicule, personnage ou objet à intégrer — pour un
-                  rendu plus précis.
+                  Photo du personnage, objet, tenue ou véhicule à intégrer — pour
+                  un rendu plus précis.
                 </p>
                 <input
                   ref={refImageFileRef}
@@ -609,30 +622,39 @@ export default function VideoIA() {
                   </div>
                 )}
 
-                <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
+                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                   Étape 2 — Prompt
-                </label>
+                </p>
                 <textarea
                   value={swapPrompt}
                   onChange={(e) => setSwapPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Remplace ma Clio par une Lamborghini Urus, garde exactement les mêmes mouvements."
+                  placeholder="Ex. : Transporte-moi à Dubai Marina la nuit, ou remplace ma tenue par un costume de créateur — garde les mêmes mouvements."
                   className="via-prompt-field"
                 />
+                {!preserveSourceVoice ? (
+                  <p className="via-voice-blocked-note">
+                    Sans l&apos;option voix (+5 cr), les demandes de voix ou de
+                    son dans le prompt sont ignorées — sortie 100 % muette.
+                  </p>
+                ) : null}
                 <div className="via-chips">
-                  {VIDEO_VEHICLE_PRESETS.map((preset) => (
+                  {VIDEO_V2V_PRESETS.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       className="via-chip"
                       onClick={() =>
                         setSwapPrompt(
-                          `Remplace le véhicule par ${preset.label}. Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
+                          `${preset.prompt} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
                         )
                       }
                     >
+                      <span className="via-chip__emoji" aria-hidden>
+                        {preset.emoji}
+                      </span>
                       {preset.label}
                     </button>
                   ))}
@@ -671,7 +693,7 @@ export default function VideoIA() {
               ) : (
                 <>
                   <Film className="h-4 w-4" />
-                  Remplacer le véhicule · {creditCost} crédits
+                  Transformer ma vidéo · {creditCost} crédits
                 </>
               )}
             </button>

@@ -5,6 +5,8 @@ const {
   validateVoiceText,
   buildRunwayPrompt,
   buildCarSwapPrompt,
+  buildV2VProviderPrompt,
+  stripVoiceInstructionsFromPrompt,
   maxVoiceCharsForDuration,
   VIDEO_FLAT_CREDIT_COST,
 } = require("./video-studio");
@@ -92,5 +94,31 @@ describe("video-studio", () => {
     assert.match(prompt, /Lamborghini Urus/i);
     assert.match(prompt, /background/i);
     assert.match(prompt, /camera movement/i);
+  });
+
+  it("stripVoiceInstructionsFromPrompt removes voice clauses", () => {
+    const raw =
+      "Remplace ma voiture par une Urus et mets ma voix de meuf. Garde la caméra identique.";
+    const cleaned = stripVoiceInstructionsFromPrompt(raw);
+    assert.doesNotMatch(cleaned, /voix/i);
+    assert.match(cleaned, /Urus/i);
+  });
+
+  it("buildV2VProviderPrompt forces silent output without voice addon", () => {
+    const prompt = buildV2VProviderPrompt(
+      "Remplace le véhicule par une Ferrari et mets ma voix.",
+      { preserveSourceAudio: false },
+    );
+    assert.match(prompt, /silent/i);
+    assert.doesNotMatch(prompt, /voix/i);
+  });
+
+  it("buildV2VProviderPrompt keeps voice instructions when voice addon paid", () => {
+    const prompt = buildV2VProviderPrompt(
+      "Transporte-moi à Dubai Marina la nuit.",
+      { preserveSourceAudio: true },
+    );
+    assert.doesNotMatch(prompt, /completely silent/i);
+    assert.match(prompt, /Dubai/i);
   });
 });

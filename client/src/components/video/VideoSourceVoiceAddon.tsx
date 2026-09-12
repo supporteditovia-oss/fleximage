@@ -1,4 +1,4 @@
-import { Mic2 } from "lucide-react";
+import { Mic2, VolumeX } from "lucide-react";
 import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
 
 type VideoSourceVoiceAddonProps = {
@@ -18,7 +18,9 @@ export function VideoSourceVoiceAddon({
         onClick={() => onEnabledChange(!enabled)}
         aria-pressed={enabled}
       >
-        <Mic2 className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="via-voice-addon__icon" aria-hidden>
+          <Mic2 className="h-4 w-4" />
+        </span>
         <span className="via-voice-addon__toggle-text">
           Intégrer ta voix filmée
           <span className="via-voice-addon__toggle-meta">
@@ -29,14 +31,20 @@ export function VideoSourceVoiceAddon({
 
       {enabled ? (
         <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-          La voix enregistrée pendant ton tournage sera conservée dans la
-          vidéo finale. Parle clairement face à la caméra pour un rendu optimal.
+          La voix enregistrée pendant ton tournage sera conservée dans la vidéo
+          finale. Tu peux aussi mentionner la voix dans ton prompt.
         </p>
       ) : (
-        <p className="via-voice-addon__hint">
-          Sans cette option, la vidéo générée est muette — aucune voix
-          n&apos;est conservée.
-        </p>
+        <>
+          <p className="via-voice-addon__hint via-voice-addon__hint--warn">
+            <VolumeX
+              className="mr-1 inline h-3.5 w-3.5 align-text-bottom"
+              aria-hidden
+            />
+            Sans cette option, la vidéo est <strong>100 % muette</strong> — même
+            si tu demandes une voix dans le prompt.
+          </p>
+        </>
       )}
     </div>
   );
