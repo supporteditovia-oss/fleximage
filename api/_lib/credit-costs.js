@@ -2,14 +2,14 @@
  * Coûts crédits par action — grille « zéro perte » (pire cas API + Stripe + URSSAF).
  * Source de vérité backend ; miroir de shared/credit-costs.ts côté client.
  */
-const IMAGE_CREDIT_COST = 12;
-const VOICE_CREDIT_COST = 8;
-const VOICE_CLONE_CREDIT_COST = 8;
+const IMAGE_CREDIT_COST = 10;
+const VOICE_CREDIT_COST = 10;
+const VOICE_CLONE_CREDIT_COST = 10;
 const VIDEO_FLAT_CREDIT_COST = 60;
 const VIDEO_VOICE_EXTRA_CREDIT = 5;
 
-/** PPCM image (12) + vidéo (60) + voix/clone (8) — quotas = multiples entiers. */
-const CREDIT_CYCLE_UNIT = 120;
+/** PPCM image (10) + vidéo (60) + voix/clone (10) = 60 — quotas = multiples entiers. */
+const CREDIT_CYCLE_UNIT = 60;
 
 const PLAN_CREDITS = {
   discovery: 240,

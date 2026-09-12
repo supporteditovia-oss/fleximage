@@ -48,9 +48,9 @@ const CREDIT_PACKS_EUR = [
     amountCents: 799,
     label: "Boost S",
     priceLabel: "7,99 €",
-    images: 5,
+    images: 6,
     videos: 1,
-    voices: 7,
+    voices: 6,
   },
   {
     id: "standard",
@@ -59,9 +59,9 @@ const CREDIT_PACKS_EUR = [
     amountCents: 1499,
     label: "Boost M",
     priceLabel: "14,99 €",
-    images: 10,
+    images: 12,
     videos: 2,
-    voices: 15,
+    voices: 12,
     recommended: true,
   },
   {
@@ -71,9 +71,9 @@ const CREDIT_PACKS_EUR = [
     amountCents: 2799,
     label: "Boost L",
     priceLabel: "27,99 €",
-    images: 20,
+    images: 24,
     videos: 4,
-    voices: 30,
+    voices: 24,
     bestValue: true,
   },
 ];
@@ -86,9 +86,9 @@ const CREDIT_PACKS_USD = [
     amountCents: 799,
     label: "Boost S",
     priceLabel: "$7.99",
-    images: 5,
+    images: 6,
     videos: 1,
-    voices: 7,
+    voices: 6,
   },
   {
     id: "standard",
@@ -97,9 +97,9 @@ const CREDIT_PACKS_USD = [
     amountCents: 1499,
     label: "Boost M",
     priceLabel: "$14.99",
-    images: 10,
+    images: 12,
     videos: 2,
-    voices: 15,
+    voices: 12,
     recommended: true,
   },
   {
@@ -109,9 +109,9 @@ const CREDIT_PACKS_USD = [
     amountCents: 2799,
     label: "Boost L",
     priceLabel: "$27.99",
-    images: 20,
+    images: 24,
     videos: 4,
-    voices: 30,
+    voices: 24,
     bestValue: true,
   },
 ];
@@ -134,7 +134,7 @@ const UPGRADE_COPY_EUR = {
     creditsLabel: "1 920 crédits",
     headline: "Passe en Ultimate",
     pitch:
-      "1 920 cr / mois — 160 images, 32 vidéos, voix & clones. Meilleur rapport.",
+      "1 920 cr / mois — 192 images, 32 vidéos, voix & clones. Meilleur rapport.",
     cta: "Passer à Ultimate — 49 €/mois",
   },
 };
@@ -157,7 +157,7 @@ const UPGRADE_COPY_USD = {
     creditsLabel: "1,920 credits",
     headline: "Upgrade to Ultimate",
     pitch:
-      "1,920 cr / month — 160 images, 32 videos, voice & clones. Best value.",
+      "1,920 cr / month — 192 images, 32 videos, voice & clones. Best value.",
     cta: "Upgrade to Ultimate — $49.99/mo",
   },
 };

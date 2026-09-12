@@ -1,16 +1,15 @@
 /** Coûts crédits par action — grille « zéro perte » (pire cas API + Stripe + URSSAF). */
-export const IMAGE_CREDIT_COST = 12;
-export const VOICE_CREDIT_COST = 8;
-export const VOICE_CLONE_CREDIT_COST = 8;
+export const IMAGE_CREDIT_COST = 10;
+export const VOICE_CREDIT_COST = 10;
+export const VOICE_CLONE_CREDIT_COST = 10;
 export const VIDEO_FLAT_CREDIT_COST = 60;
 export const VIDEO_VOICE_EXTRA_CREDIT = 5;
 
 /**
- * PPCM image (12) + vidéo (60) + voix/clone (8).
- * Chaque quota d’abo/pack est un multiple entier → épuisement possible à 0 crédit
- * (jamais de reste inutilisable type 1–7 cr).
+ * PPCM image (10) + vidéo (60) + voix/clone (10) = 60.
+ * Quotas abo/packs = multiples de 60 → épuisement possible à 0 crédit exact.
  */
-export const CREDIT_CYCLE_UNIT = 120;
+export const CREDIT_CYCLE_UNIT = 60;
 
 export const PLAN_CREDITS = {
   discovery: 240,

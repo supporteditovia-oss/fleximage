@@ -88,8 +88,8 @@ function buildPreviewPlan(
         plan: "essential",
         headline: isEn ? "Upgrade to Essential" : "Passe en Essential",
         pitch: isEn
-          ? "840 credits / month (70 images or 14 videos) — much better value than packs."
-          : "840 crédits / mois (70 images ou 14 vidéos) — bien plus rentable que les packs.",
+          ? "840 credits / month (84 images or 14 videos) — much better value than packs."
+          : "840 crédits / mois (84 images ou 14 vidéos) — bien plus rentable que les packs.",
         cta: isEn
           ? "Upgrade to Essential — $22.99/month"
           : "Passer à Essential — 22,90 €/mois",
@@ -101,8 +101,8 @@ function buildPreviewPlan(
         plan: "ultimate",
         headline: isEn ? "Upgrade to Ultimate" : "Passe en Ultimate",
         pitch: isEn
-          ? "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image."
-          : "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
+          ? "1,920 credits / month (192 images or 32 videos). Maximum volume, lowest cost per image."
+          : "1 920 crédits / mois (192 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
         cta: isEn
           ? "Upgrade to Ultimate — $44.99/month"
           : "Passer à Ultimate — 44,90 €/mois",
@@ -118,8 +118,8 @@ function buildPreviewPlan(
         plan: "ultimate",
         headline: isEn ? "Upgrade to Ultimate" : "Passe en Ultimate",
         pitch: isEn
-          ? "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image."
-          : "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
+          ? "1,920 credits / month (192 images or 32 videos). Maximum volume, lowest cost per image."
+          : "1 920 crédits / mois (192 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
         cta: isEn
           ? "Upgrade to Ultimate — $44.99/month"
           : "Passer à Ultimate — 44,90 €/mois",

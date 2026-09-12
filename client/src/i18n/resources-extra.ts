@@ -528,7 +528,7 @@ export const extraResources = {
         ultimate: {
           headline: "Passe en Ultimate",
           pitch:
-            "1 920 cr / mois — 160 images, 32 vidéos, voix & clones. Meilleur rapport.",
+            "1 920 cr / mois — 192 images, 32 vidéos, voix & clones. Meilleur rapport.",
           cta: "Passer à Ultimate — 49 €/mois",
           creditsLabel: "1 920 crédits",
         },
@@ -1060,7 +1060,7 @@ export const extraResources = {
         ultimate: {
           headline: "Upgrade to Ultimate",
           pitch:
-            "1,920 cr / month — 160 images, 32 videos, voice & clones. Best value.",
+            "1,920 cr / month — 192 images, 32 videos, voice & clones. Best value.",
           cta: "Switch to Ultimate — $49.99/month",
           creditsLabel: "1,920 credits",
         },
@@ -1490,14 +1490,14 @@ export const extraResources = {
         essential: {
           headline: "Pasa a Essential",
           pitch:
-            "840 creditos / mes (70 imagenes o 14 videos): mucho mas rentable que los packs.",
+            "840 creditos / mes (84 imagenes o 14 videos): mucho mas rentable que los packs.",
           cta: "Pasar a Essential — 22,90 €/mes",
           creditsLabel: "840 creditos",
         },
         ultimate: {
           headline: "Pasa a Ultimate",
           pitch:
-            "1 920 creditos / mes (160 imagenes o 32 videos). Maximo volumen, menor coste por imagen.",
+            "1 920 creditos / mes (192 imagenes o 32 videos). Maximo volumen, menor coste por imagen.",
           cta: "Pasar a Ultimate — 44,90 €/mes",
           creditsLabel: "1 920 creditos",
         },
@@ -1929,14 +1929,14 @@ export const extraResources = {
         essential: {
           headline: "Wechsel zu Essential",
           pitch:
-            "840 Credits / Monat (70 Bilder oder 14 Videos) — deutlich besserer Preis als Packs.",
+            "840 Credits / Monat (84 Bilder oder 14 Videos) — deutlich besserer Preis als Packs.",
           cta: "Zu Essential — 22,90 €/Monat",
           creditsLabel: "840 Credits",
         },
         ultimate: {
           headline: "Wechsel zu Ultimate",
           pitch:
-            "1.920 Credits / Monat (160 Bilder oder 32 Videos). Maximales Volumen, niedrigster Preis pro Bild.",
+            "1.920 Credits / Monat (192 Bilder oder 32 Videos). Maximales Volumen, niedrigster Preis pro Bild.",
           cta: "Zu Ultimate — 44,90 €/Monat",
           creditsLabel: "1.920 Credits",
         },

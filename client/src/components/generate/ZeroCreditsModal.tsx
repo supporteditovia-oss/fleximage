@@ -250,7 +250,7 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
                             credits: pack.credits,
                             images: pack.images,
                             videos: pack.videos ?? Math.floor(pack.credits / 60),
-                            voices: pack.voices ?? Math.floor(pack.credits / 8),
+                            voices: pack.voices ?? Math.floor(pack.credits / 10),
                           })}
                         </span>
                       </span>
