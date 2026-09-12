@@ -17,9 +17,18 @@ export type LandingVoiceEntry = {
   accent?: string;
 };
 
+/** Incrémenter pour invalider le cache landing + R2 après changement de voix Fish. */
+export const LANDING_VOICE_DEMO_VERSION = 2;
+
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
 export const LANDING_VOICE_DEFAULT_SLUG = "gims";
+
+export function pickRandomLandingVoiceSlug(): string {
+  if (LANDING_VOICE_CATALOG.length === 0) return LANDING_VOICE_DEFAULT_SLUG;
+  const index = Math.floor(Math.random() * LANDING_VOICE_CATALOG.length);
+  return LANDING_VOICE_CATALOG[index]?.slug ?? LANDING_VOICE_DEFAULT_SLUG;
+}
 
 export function buildLandingVoiceScript(entry: Pick<LandingVoiceEntry, "name" | "demoKind">): string {
   if (entry.demoKind === "natural-male") {
@@ -38,7 +47,11 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
 
 /** MP3 same-origin — évite les blocages cross-origin R2 sur mobile. */
 export function landingVoiceDemoSrc(slug: string): string {
-  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1`;
+  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
+export function isAudioReady(audio: HTMLAudioElement): boolean {
+  return audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
 }
 
 export function splitSubtitleWords(text: string): string[] {
