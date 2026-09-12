@@ -626,18 +626,28 @@ module.exports = async function handler(req, res) {
             }
           : pollMeta;
 
+      const completedAtIso = new Date().toISOString();
+      const terminalUpdate = {
+        status: toDbStatus(apiStatus),
+        output_assets: resultUrls,
+        watermarked_assets: [],
+        fail_message: toUserFailMessage(apiFailMsg, null) || null,
+        cost_time: apiCostTime == null ? null : Number(apiCostTime),
+        metadata: terminalMeta,
+        updated_at: completedAtIso,
+        completed_at: completedAtIso,
+      };
+      if (apiStatus === "success" && resultUrls.length > 0) {
+        const { computeGenerationExpiresAt } = require("../generation-retention");
+        terminalUpdate.expires_at = computeGenerationExpiresAt(
+          completedAtIso,
+          larp.created_at,
+        );
+      }
+
       await supabase
         .from("generations")
-        .update({
-          status: toDbStatus(apiStatus),
-          output_assets: resultUrls,
-          watermarked_assets: [],
-          fail_message: toUserFailMessage(apiFailMsg, null) || null,
-          cost_time: apiCostTime == null ? null : Number(apiCostTime),
-          metadata: terminalMeta,
-          updated_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-        })
+        .update(terminalUpdate)
         .eq("id", larp.id);
 
       if (apiStatus === "fail") {

@@ -28,6 +28,8 @@ function toLarpDto(row) {
     aspectRatio: row.aspect_ratio,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    completedAt: row.completed_at ?? null,
+    expiresAt: row.expires_at ?? null,
     template: template
       ? {
           name: template.name,
