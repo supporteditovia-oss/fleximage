@@ -3,7 +3,6 @@ import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
 import { LandingVideoPanel } from "@/components/landing/LandingVideoPanel";
-import { LandingVoiceDemo } from "@/components/landing/LandingVoiceDemo";
 import {
   readStudioMode,
   writeStudioMode,
@@ -56,10 +55,7 @@ export function LandingStudioWidget() {
         {mode === "image" ? (
           <LandingImagePanel />
         ) : mode === "voice" ? (
-          <>
-            <LandingVoiceDemo />
-            <VoiceStudioMock guestFunnel />
-          </>
+          <VoiceStudioMock guestFunnel />
         ) : (
           <LandingVideoPanel />
         )}
