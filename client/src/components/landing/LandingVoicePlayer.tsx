@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  LANDING_VOICE_CATALOG,
   LANDING_VOICE_DEFAULT_SLUG,
-  LANDING_VOICE_RAPPERS,
+  type LandingVoiceEntry,
+  type LandingVoiceGender,
   buildLandingVoiceScript,
   formatVoiceClock,
   landingVoiceDemoSrc,
+  landingVoicePhoto,
   splitSubtitleWords,
   spokenWordCount,
 } from "@/lib/landing-voice-demo";
@@ -15,6 +18,22 @@ const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 
 type LandingVoicePlayerProps = {
   variant?: "widget" | "section";
 };
+
+function VoiceAvatar({ entry, className }: { entry: LandingVoiceEntry; className?: string }) {
+  const photo = landingVoicePhoto(entry);
+  if (photo) {
+    return <img className={className} src={photo} alt="" loading="lazy" />;
+  }
+  return (
+    <span
+      className={`landing-voice-avatar-fallback ${className ?? ""}`.trim()}
+      style={{ background: entry.accent ?? "linear-gradient(145deg, #1e2430, #6b5a3a)" }}
+      aria-hidden
+    >
+      {entry.initials ?? entry.name.slice(0, 1)}
+    </span>
+  );
+}
 
 function SubtitleBlock({ words, visibleWords }: { words: string[]; visibleWords: number }) {
   return (
@@ -39,11 +58,38 @@ function SubtitleBlock({ words, visibleWords }: { words: string[]; visibleWords:
   );
 }
 
+function GenderTabs({
+  gender,
+  onChange,
+}: {
+  gender: LandingVoiceGender;
+  onChange: (gender: LandingVoiceGender) => void;
+}) {
+  return (
+    <div className="landing-voice-gender-tabs" role="tablist" aria-label="Genre de voix">
+      {(["homme", "femme"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={gender === value}
+          className={`landing-voice-gender-tabs__btn ${gender === value ? "is-active" : ""}`}
+          onClick={() => onChange(value)}
+        >
+          {value === "homme" ? "Homme" : "Femme"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function VoicePicker({
+  voices,
   activeSlug,
   onSelect,
   compact,
 }: {
+  voices: LandingVoiceEntry[];
   activeSlug: string;
   onSelect: (slug: string) => void;
   compact?: boolean;
@@ -70,7 +116,7 @@ function VoicePicker({
       el.removeEventListener("scroll", updateScrollState);
       ro.disconnect();
     };
-  }, []);
+  }, [voices]);
 
   const scrollBy = (delta: number) => {
     scrollerRef.current?.scrollBy({ left: delta, behavior: "smooth" });
@@ -95,17 +141,17 @@ function VoicePicker({
         role="listbox"
         aria-label="Choisir une voix du catalogue"
       >
-        {LANDING_VOICE_RAPPERS.map((rapper) => (
+        {voices.map((voice) => (
           <button
-            key={rapper.slug}
+            key={voice.slug}
             type="button"
             role="option"
-            aria-selected={activeSlug === rapper.slug}
-            className={`landing-voice-picker__chip ${activeSlug === rapper.slug ? "is-active" : ""}`}
-            onClick={() => onSelect(rapper.slug)}
+            aria-selected={activeSlug === voice.slug}
+            className={`landing-voice-picker__chip ${activeSlug === voice.slug ? "is-active" : ""}`}
+            onClick={() => onSelect(voice.slug)}
           >
-            <img src={rapper.photo} alt="" loading="lazy" />
-            <span>{rapper.name}</span>
+            <VoiceAvatar entry={voice} className="landing-voice-picker__chip-avatar" />
+            <span>{voice.name}</span>
           </button>
         ))}
       </div>
@@ -124,6 +170,7 @@ function VoicePicker({
 
 export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [gender, setGender] = useState<LandingVoiceGender>("homme");
   const [activeSlug, setActiveSlug] = useState(LANDING_VOICE_DEFAULT_SLUG);
   const [playing, setPlaying] = useState(false);
   const [currentSec, setCurrentSec] = useState(0);
@@ -132,10 +179,24 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
 
-  const rapper = LANDING_VOICE_RAPPERS.find((item) => item.slug === activeSlug) ?? LANDING_VOICE_RAPPERS[0];
-  const script = useMemo(() => buildLandingVoiceScript(rapper.name), [rapper.name]);
+  const voices = useMemo(
+    () => LANDING_VOICE_CATALOG.filter((item) => item.gender === gender),
+    [gender],
+  );
+
+  const entry =
+    LANDING_VOICE_CATALOG.find((item) => item.slug === activeSlug) ??
+    voices[0] ??
+    LANDING_VOICE_CATALOG[0];
+
+  const script = useMemo(() => buildLandingVoiceScript(entry), [entry]);
   const words = useMemo(() => splitSubtitleWords(script), [script]);
   const visibleWords = spokenWordCount(currentSec, durationSec, words.length);
+
+  useEffect(() => {
+    if (voices.some((voice) => voice.slug === activeSlug)) return;
+    setActiveSlug(voices[0]?.slug ?? LANDING_VOICE_DEFAULT_SLUG);
+  }, [gender, voices, activeSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +259,13 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     setActiveSlug(slug);
   };
 
+  const changeGender = (next: LandingVoiceGender) => {
+    if (next === gender) return;
+    audioRef.current?.pause();
+    setPlaying(false);
+    setGender(next);
+  };
+
   const toggle = async () => {
     const audio = audioRef.current;
     if (!audio || loading || !ready || error) return;
@@ -224,13 +292,14 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   if (variant === "section") {
     return (
       <div className={`voice-card voice-card--premium ${playing ? "is-playing" : ""}`}>
-        <VoicePicker activeSlug={activeSlug} onSelect={selectVoice} />
+        <GenderTabs gender={gender} onChange={changeGender} />
+        <VoicePicker voices={voices} activeSlug={activeSlug} onSelect={selectVoice} />
         <div className="voice-card-top voice-card-top--premium">
           <div className="voice-avatar voice-avatar--photo">
-            <img src={rapper.photo} alt="" loading="lazy" />
+            <VoiceAvatar entry={entry} />
           </div>
           <div>
-            <strong>{rapper.name}</strong>
+            <strong>{entry.name}</strong>
             <span>Généré par LuxeFlexIA · Clonage IA · Français</span>
           </div>
           <span className="voice-badge voice-badge--live">Exemple</span>
@@ -261,7 +330,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
         <div className="voice-card-footer voice-card-footer--premium">
           <span>Clonage IA</span>
           <i />
-          <span>Catalogue rap</span>
+          <span>Catalogue {gender === "homme" ? "homme" : "femme"}</span>
           <i />
           <span>LuxeFlexIA</span>
         </div>
@@ -271,12 +340,13 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
   return (
     <div className={`landing-voice-demo landing-voice-demo--premium ${playing ? "is-playing" : ""}`}>
-      <VoicePicker activeSlug={activeSlug} onSelect={selectVoice} compact />
+      <GenderTabs gender={gender} onChange={changeGender} />
+      <VoicePicker voices={voices} activeSlug={activeSlug} onSelect={selectVoice} compact />
       <div className="landing-voice-demo__head landing-voice-demo__head--premium">
-        <img className="landing-voice-demo__thumb" src={rapper.photo} alt="" loading="lazy" />
+        <VoiceAvatar entry={entry} className="landing-voice-demo__thumb" />
         <div className="landing-voice-demo__identity">
           <span className="landing-voice-demo__badge">Démo · Voix IA</span>
-          <strong className="landing-voice-demo__name">{rapper.name}</strong>
+          <strong className="landing-voice-demo__name">{entry.name}</strong>
           <span className="landing-voice-demo__meta">Généré par LuxeFlexIA</span>
         </div>
       </div>
@@ -304,7 +374,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
       {error ? (
         <p className="landing-voice-demo__error">Aperçu indisponible — réessayez dans un instant.</p>
       ) : null}
-      <p className="landing-voice-demo__note">Voix générée par intelligence artificielle · Catalogue rap FR</p>
+      <p className="landing-voice-demo__note">
+        Voix générée par intelligence artificielle · {gender === "homme" ? "Homme & rap FR" : "Femme"}
+      </p>
     </div>
   );
 }

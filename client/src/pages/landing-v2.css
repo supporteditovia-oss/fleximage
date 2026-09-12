@@ -1147,6 +1147,55 @@
   background: rgba(183, 139, 50, 0.08);
 }
 
+.landing-v2 .landing-voice-gender-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(211, 189, 139, 0.18);
+}
+
+.landing-v2 .landing-voice-gender-tabs__btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(126, 123, 115);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  font-size: 8px;
+  font-weight: 700;
+  font: inherit;
+}
+
+.landing-v2 .landing-voice-gender-tabs__btn.is-active {
+  color: rgb(245, 241, 232);
+  background: rgba(183, 139, 50, 0.14);
+  border: 1px solid rgba(211, 189, 139, 0.28);
+}
+
+.landing-v2 .landing-voice-avatar-fallback {
+  color: #fff;
+  font-family: var(--font-cormorant);
+  place-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  display: grid;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-v2 .landing-voice-picker__chip-avatar,
+.landing-v2 .landing-voice-avatar-fallback.landing-voice-picker__chip-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .landing-v2 .landing-voice-picker-wrap {
   align-items: center;
   gap: 8px;

@@ -3,12 +3,12 @@ const { uploadToR2, getR2Config } = require("../r2");
 const {
   buildLandingVoiceScript,
   landingVoiceR2Key,
-  resolveLandingVoiceRapper,
+  resolveLandingVoiceEntry,
   LANDING_VOICE_DEFAULT_SLUG,
 } = require("../landing-voice-demo");
 
-async function getLandingDemoBuffer(rapper) {
-  const cacheKey = landingVoiceR2Key(rapper.slug);
+async function getLandingDemoBuffer(entry) {
+  const cacheKey = landingVoiceR2Key(entry.slug);
   const { publicUrl } = getR2Config();
   const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
 
@@ -25,8 +25,8 @@ async function getLandingDemoBuffer(rapper) {
   }
 
   const buffer = await synthesizeSpeech({
-    text: buildLandingVoiceScript(rapper.name),
-    referenceId: rapper.fishId,
+    text: buildLandingVoiceScript(entry),
+    referenceId: entry.fishId,
     format: "mp3",
   });
 
@@ -51,8 +51,8 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     return;
   }
 
-  const rapper = resolveLandingVoiceRapper(req.query?.slug || LANDING_VOICE_DEFAULT_SLUG);
-  if (!rapper) {
+  const entry = resolveLandingVoiceEntry(req.query?.slug || LANDING_VOICE_DEFAULT_SLUG);
+  if (!entry) {
     res.status(400).json({
       code: "invalid_slug",
       message: "Voix landing inconnue.",
@@ -66,7 +66,7 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     String(req.headers.accept || "").includes("audio/");
 
   try {
-    const { buffer, cached } = await getLandingDemoBuffer(rapper);
+    const { buffer, cached } = await getLandingDemoBuffer(entry);
 
     if (streamMedia) {
       res.setHeader("Content-Type", "audio/mpeg");
@@ -76,12 +76,12 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     }
 
     const { publicUrl } = getR2Config();
-    const audioUrl = `${publicUrl.replace(/\/$/, "")}/${landingVoiceR2Key(rapper.slug)}`;
+    const audioUrl = `${publicUrl.replace(/\/$/, "")}/${landingVoiceR2Key(entry.slug)}`;
     res.status(200).json({
       audioUrl,
       cached,
-      slug: rapper.slug,
-      name: rapper.name,
+      slug: entry.slug,
+      name: entry.name,
     });
   } catch (error) {
     console.error("[landing-voice-demo]", error);

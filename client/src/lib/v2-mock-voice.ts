@@ -1,5 +1,9 @@
+import catalog from "@shared/voice-catalog.json";
+
 export type VoiceCategory =
   | "Rap"
+  | "Homme"
+  | "Femme"
   | "Actrice"
   | "Cinéma"
   | "Musique"
@@ -9,6 +13,8 @@ export type VoiceCategory =
   | "Médias"
   | "Influenceur";
 
+export type VoiceGender = "homme" | "femme";
+
 export type MockVoiceProfile = {
   id: string;
   name: string;
@@ -17,6 +23,7 @@ export type MockVoiceProfile = {
   isDefault?: boolean;
   catalog?: boolean;
   category?: VoiceCategory;
+  gender?: VoiceGender;
   initials?: string;
   accent?: string;
   /** Photo catalogue (optionnel). */
@@ -74,32 +81,10 @@ const ACCENTS = [
   "linear-gradient(145deg, #241810, #c9a227)",
 ];
 
-type Seed = {
-  slug: string;
-  name: string;
-  category: VoiceCategory;
-  description: string;
-  pitch: number;
-  rate: number;
-};
-
-/** Photos validées manuellement — extension peut varier (jpg/png/webp). */
-const MANUAL_PHOTO_FILES: Partial<Record<string, string>> = {
-  maes: "maes.jpg",
-  gazo: "gazo.webp",
-  damso: "damso.webp",
-  dadju: "dadju.png",
-  kaaris: "kaaris.jpg",
-  tiakola: "tiakola.jpg",
-  ninho: "ninho.jpg",
-  niska: "niska.jpg",
-  plk: "plk.jpg",
-  sdm: "sdm.webp",
-};
-
 export function catalogPhotoForSlug(slug: string): string {
-  const file = MANUAL_PHOTO_FILES[slug] ?? `${slug}.jpg`;
-  return `/assets/voice-catalog/${file}`;
+  const entry = catalog.entries.find((item) => item.slug === slug);
+  if (entry?.photo) return `/assets/voice-catalog/${entry.photo}`;
+  return `/assets/voice-catalog/${slug}.jpg`;
 }
 
 export function slugFromCatalogVoiceId(voiceId: string): string | null {
@@ -107,53 +92,8 @@ export function slugFromCatalogVoiceId(voiceId: string): string | null {
   return match?.[1] ?? null;
 }
 
-function catalogPhoto(slug: string): string {
-  return catalogPhotoForSlug(slug);
-}
-
-/** Catalogue voix — noms publics + photo locale (script/fetch-voice-catalog-photos.mjs). */
-
-/** Modeles publics Fish Audio : vraie voix de l'artiste. */
-const CATALOG_FISH_IDS: Partial<Record<string, string>> = {
-  maes: "22b7c6809d5d405aa6a5ae2402272b53",
-  gims: "d986afc13e7346ada353a747bce8a811",
-  damso: "cd8c1c3eead843c2b6b855cace16f520",
-  ninho: "3cfa191ad09b4cfea8e4eebc4c31c923",
-  booba: "82ec8e836aaf47aaae8bfb52f3d744b2",
-  jul: "66754cdcb9554e62bdff1ab6446dc78d",
-  sch: "d4b887e7013045bcba9bc9bb2fe2d3d5",
-  gazo: "0ff4b00e39e2429981b93bd7c6256d98",
-  niska: "6be490a175744894826dd464cf3a5004",
-  plk: "c9188f639648467f8f1c513b0dbac9f7",
-  kaaris: "30679093939d4335b780f6d45709de08",
-  sdm: "0a011b2e359e4b5580f0e46764795c3c",
-  tiakola: "38aca316167d449288bab317c60cd70b",
-};
-
-/** Extrait officiel du modele, servi en local. */
-function catalogSampleUrl(slug: string): string | undefined {
-  return CATALOG_FISH_IDS[slug]
-    ? `/assets/voice-catalog/samples/${slug}.mp3`
-    : undefined;
-}
-const CATALOG_SEEDS: Seed[] = [
-  // Rap
-  { slug: "maes", name: "Maes", category: "Rap", description: "Rap FR — street", pitch: 0.78, rate: 0.95 },
-  { slug: "gims", name: "Maître Gims", category: "Rap", description: "Pop urbaine", pitch: 0.88, rate: 1.0 },
-  { slug: "damso", name: "Damso", category: "Rap", description: "Flow introspectif", pitch: 0.72, rate: 0.92 },
-  { slug: "ninho", name: "Ninho", category: "Rap", description: "Meltrap", pitch: 0.8, rate: 1.02 },
-  { slug: "booba", name: "Booba", category: "Rap", description: "Légende du rap FR", pitch: 0.7, rate: 0.9 },
-  { slug: "jul", name: "Jul", category: "Rap", description: "Marseille — energie", pitch: 0.82, rate: 1.06 },
-  { slug: "sch", name: "SCH", category: "Rap", description: "Voix grave", pitch: 0.68, rate: 0.88 },
-  { slug: "gazo", name: "Gazo", category: "Rap", description: "Drill FR", pitch: 0.76, rate: 1.04 },
-  { slug: "niska", name: "Niska", category: "Rap", description: "Trap Paris", pitch: 0.74, rate: 1.0 },
-  { slug: "plk", name: "PLK", category: "Rap", description: "Cloud rap", pitch: 0.8, rate: 0.98 },
-  { slug: "kaaris", name: "Kaaris", category: "Rap", description: "Trap hard", pitch: 0.69, rate: 0.94 },
-  { slug: "sdm", name: "SDM", category: "Rap", description: "Rap Parisien", pitch: 0.73, rate: 1.0 },
-  { slug: "tiakola", name: "Tiakola", category: "Rap", description: "Afro trap", pitch: 0.81, rate: 1.04 },
-];
-
-function initialsFrom(name: string): string {
+function initialsFrom(name: string, override?: string): string {
+  if (override) return override;
   const parts = name.replace(/\./g, "").split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -161,27 +101,32 @@ function initialsFrom(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = CATALOG_SEEDS.map(
+export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
   (seed, index) => ({
     id: `cat-${seed.slug}`,
     name: seed.name,
     description: seed.description,
     durationLabel: "0:06",
     catalog: true,
-    category: seed.category,
-    initials: initialsFrom(seed.name),
-    accent: ACCENTS[index % ACCENTS.length],
-    photoUrl: catalogPhoto(seed.slug),
+    category: seed.category as VoiceCategory,
+    gender: seed.gender as VoiceGender,
+    initials: initialsFrom(seed.name, seed.initials),
+    accent: seed.accent ?? ACCENTS[index % ACCENTS.length],
+    photoUrl: seed.photo ? `/assets/voice-catalog/${seed.photo}` : undefined,
     sampleText: CATALOG_SAMPLE_LINE,
     pitch: seed.pitch,
     rate: seed.rate,
-    sampleUrl: catalogSampleUrl(seed.slug),
-    fishReferenceId: CATALOG_FISH_IDS[seed.slug],
+    sampleUrl: `/assets/voice-catalog/samples/${seed.slug}.mp3`,
+    fishReferenceId: seed.fishId,
   }),
 );
 
-export const VOICE_CATALOG_FILTERS: Array<"Tous" | VoiceCategory> = [
+export type VoiceCatalogFilter = "Tous" | "Homme" | "Femme" | "Rap";
+
+export const VOICE_CATALOG_FILTERS: VoiceCatalogFilter[] = [
   "Tous",
+  "Homme",
+  "Femme",
   "Rap",
 ];
 

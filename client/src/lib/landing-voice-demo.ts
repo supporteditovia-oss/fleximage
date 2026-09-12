@@ -1,30 +1,39 @@
-/** Démo voix landing — catalogue rappeurs (même modèles Fish que le studio). */
+import catalog from "@shared/voice-catalog.json";
 
-export type LandingVoiceRapper = {
+export type LandingVoiceGender = "homme" | "femme";
+
+export type LandingVoiceEntry = {
   slug: string;
   name: string;
-  photo: string;
+  gender: LandingVoiceGender;
+  category: string;
+  description: string;
+  fishId: string;
+  photo?: string;
+  pitch: number;
+  rate: number;
+  demoKind: "artist" | "natural-male" | "natural-female";
+  initials?: string;
+  accent?: string;
 };
 
-export const LANDING_VOICE_RAPPERS: LandingVoiceRapper[] = [
-  { slug: "gims", name: "Maître Gims", photo: "/assets/voice-catalog/gims.jpg" },
-  { slug: "maes", name: "Maes", photo: "/assets/voice-catalog/maes.jpg" },
-  { slug: "niska", name: "Niska", photo: "/assets/voice-catalog/niska.jpg" },
-  { slug: "booba", name: "Booba", photo: "/assets/voice-catalog/booba.jpg" },
-  { slug: "jul", name: "Jul", photo: "/assets/voice-catalog/jul.jpg" },
-  { slug: "damso", name: "Damso", photo: "/assets/voice-catalog/damso.jpg" },
-  { slug: "ninho", name: "Ninho", photo: "/assets/voice-catalog/ninho.jpg" },
-  { slug: "sch", name: "SCH", photo: "/assets/voice-catalog/sch.jpg" },
-  { slug: "gazo", name: "Gazo", photo: "/assets/voice-catalog/gazo.jpg" },
-  { slug: "plk", name: "PLK", photo: "/assets/voice-catalog/plk.jpg" },
-  { slug: "sdm", name: "SDM", photo: "/assets/voice-catalog/sdm.jpg" },
-  { slug: "tiakola", name: "Tiakola", photo: "/assets/voice-catalog/tiakola.jpg" },
-];
+export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
 export const LANDING_VOICE_DEFAULT_SLUG = "gims";
 
-export function buildLandingVoiceScript(name: string): string {
-  return `Salut, je me présente, c'est ${name} — j'ai été généré par LuxeFlexIA.`;
+export function buildLandingVoiceScript(entry: Pick<LandingVoiceEntry, "name" | "demoKind">): string {
+  if (entry.demoKind === "natural-male") {
+    return "Bonjour, voici une voix masculine naturelle — générée par LuxeFlexIA.";
+  }
+  if (entry.demoKind === "natural-female") {
+    return "Bonjour, voici une voix féminine naturelle — générée par LuxeFlexIA.";
+  }
+  return `Salut, je me présente, c'est ${entry.name} — j'ai été généré par LuxeFlexIA.`;
+}
+
+export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
+  if (!entry.photo) return null;
+  return `/assets/voice-catalog/${entry.photo}`;
 }
 
 /** MP3 same-origin — évite les blocages cross-origin R2 sur mobile. */
@@ -40,7 +49,6 @@ export function splitSubtitleWords(text: string): string[] {
     .filter(Boolean);
 }
 
-/** Nombre de mots « prononcés » selon la progression audio. */
 export function spokenWordCount(
   currentSec: number,
   durationSec: number,

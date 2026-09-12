@@ -9,7 +9,7 @@ import {
   prefetchCatalogPreviews,
   speakCatalogSample,
   stopCatalogSample,
-  type VoiceCategory,
+  type VoiceCatalogFilter,
 } from "@/lib/v2-mock-voice";
 import {
   readSelectedCatalogVoiceId,
@@ -22,7 +22,7 @@ import { useLarpHistory } from "@/hooks/use-larps";
 import { cn } from "@/lib/utils";
 import "./bibliotheque-page.css";
 
-type CatalogFilter = (typeof VOICE_CATALOG_FILTERS)[number];
+type CatalogFilter = VoiceCatalogFilter;
 
 function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   if (!assets) return [];
@@ -122,7 +122,9 @@ function VoiceCatalogLibrary() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return MOCK_VOICE_CATALOG.filter((v) => {
-      if (filter !== "Tous" && v.category !== filter) return false;
+      if (filter === "Homme" && v.gender !== "homme") return false;
+      if (filter === "Femme" && v.gender !== "femme") return false;
+      if (filter === "Rap" && v.category !== "Rap") return false;
       if (!q) return true;
       return (
         v.name.toLowerCase().includes(q) ||
@@ -153,9 +155,9 @@ function VoiceCatalogLibrary() {
 
   const categoryCount = (cat: CatalogFilter) => {
     if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
-    return MOCK_VOICE_CATALOG.filter(
-      (v) => v.category === (cat as VoiceCategory),
-    ).length;
+    if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
+    if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
+    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
   };
 
   const selectVoice = (id: string) => {

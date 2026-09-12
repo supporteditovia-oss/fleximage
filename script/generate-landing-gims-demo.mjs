@@ -14,11 +14,11 @@ const require = createRequire(import.meta.url);
 const { synthesizeSpeech } = require("../api/_lib/fish-audio.js");
 const {
   buildLandingVoiceScript,
-  resolveLandingVoiceRapper,
+  resolveLandingVoiceEntry,
   LANDING_VOICE_DEFAULT_SLUG,
 } = require("../api/_lib/landing-voice-demo.js");
 
-const rapper = resolveLandingVoiceRapper(LANDING_VOICE_DEFAULT_SLUG);
+const rapper = resolveLandingVoiceEntry(LANDING_VOICE_DEFAULT_SLUG);
 const outPath = path.join(
   process.cwd(),
   "client/public/assets/landing-v2/gims-voice-demo.mp3",
@@ -27,7 +27,7 @@ const outPath = path.join(
 let buffer;
 try {
   buffer = await synthesizeSpeech({
-    text: buildLandingVoiceScript(rapper.name),
+    text: buildLandingVoiceScript(rapper),
     referenceId: rapper.fishId,
     format: "mp3",
   });
