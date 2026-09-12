@@ -634,7 +634,7 @@ export default function VideoIA() {
                   onChange={(e) => setSwapPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Remplace ma Twingo et ma clé Twingo par une Lamborghini Urus avec la vraie clé Lamborghini — garde les mêmes mouvements."
+                  placeholder="Ex. : Remplace ma voiture et ma clé par le modèle exact demandé (clé OEM incluse) — ex. Purosangue, G-Class, RS6…"
                   className="via-prompt-field"
                 />
                 {!preserveSourceVoice ? (
@@ -646,10 +646,9 @@ export default function VideoIA() {
                 {isVehicleDrivingPrompt(swapPrompt) ? (
                   <p className="via-voice-blocked-note">
                     Véhicule détecté (<strong>toutes marques</strong>) : swap
-                    complet voiture + <strong>clés / badges OEM</strong>, modèle
-                    exact demandé, compteur calé sur la source, logique réelle —
-                    écran off au parking, tout s&apos;allume à l&apos;ouverture
-                    porte, P / D cohérents.
+                    complet voiture + <strong>clé OEM du modèle demandé</strong>{" "}
+                    (Purosangue → clé Ferrari, G-Class → clé Mercedes…),
+                    compteur calé, logique réelle P / D / écrans.
                   </p>
                 ) : null}
                 <div className="via-chips">

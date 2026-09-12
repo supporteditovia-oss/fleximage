@@ -80,14 +80,21 @@ export const VIDEO_V2V_PRESETS: V2VScenePreset[] = [
     label: "Urus",
     emoji: "🏎️",
     prompt:
-      "Remplace ma voiture par une Lamborghini Urus noire mat — habitacle Urus OEM exact, plafond étoilé starlight, compteur identique à la vidéo source.",
+      "Remplace ma voiture et ma clé par une Lamborghini Urus noire mat — clé Lamborghini OEM, habitacle Urus exact, plafond étoilé, compteur identique à la source.",
   },
   {
     id: "purosangue",
     label: "Purosangue",
     emoji: "🐎",
     prompt:
-      "Remplace ma voiture par une Ferrari Purosangue rouge — intérieur Ferrari Purosangue OEM exact, même vitesse au compteur que la vidéo source.",
+      "Remplace ma voiture et ma clé par une Ferrari Purosangue rouge — clé Ferrari OEM, intérieur Purosangue exact, compteur identique à la source.",
+  },
+  {
+    id: "gclass",
+    label: "G-Class",
+    emoji: "🚙",
+    prompt:
+      "Remplace ma voiture et ma clé par une Mercedes G-Class — clé Mercedes OEM, intérieur G-Class exact, compteur identique à la source.",
   },
   {
     id: "celebrity",
