@@ -79,11 +79,11 @@ function buildV2VSceneLockSuffix() {
   return " Garde le décor, le sol, les reflets et les mouvements de caméra identiques.";
 }
 
-const VEHICLE_DRIVING_PATTERN =
-  /\b(voiture|car|auto|v[ée]hicule|vehicle|moto|scooter|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|amg|volant|steering|wheel|habitacle|cockpit|interieur|interior|dashboard|compteur|speedometer|tachometer|condui|driv|au volant|behind the wheel|acc[ée]l|rpm|km\/h|kmh)\b/i;
+const VEHICLE_CONTEXT_PATTERN =
+  /\b(voiture|voitures|car|cars|auto|autos|v[ée]hicule|v[ée]hicules|vehicle|vehicles|moto|scooter|cl[ée]|clef|key\s*fob|keyfob|telecommande|remote|badge|volant|steering|wheel|habitacle|cockpit|interieur|interior|dashboard|compteur|speedometer|tachometer|condui|driv|au volant|behind the wheel|acc[ée]l|rpm|km\/h|kmh|remplace|remplacer|swap|change|transforme|twingo|clio|renault|peugeot|citro[eë]n|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|amg|audi|bentley|rolls|maserati|tesla|mustang|supercar|suv|berline|4x4)\b/i;
 
 function isVehicleDrivingPrompt(text) {
-  return VEHICLE_DRIVING_PATTERN.test(String(text || ""));
+  return VEHICLE_CONTEXT_PATTERN.test(String(text || ""));
 }
 
 function extractMentionedSpeedKmh(text) {
@@ -177,20 +177,32 @@ function buildV2VCockpitIntelligenceLock(userPrompt) {
   const speed = extractMentionedSpeedKmh(source);
   const customFeatures = extractCustomInteriorFeatures(source);
 
-  const parts = [" CRITICAL vehicle realism lock:"];
+  const targetModel = vehicle?.model || "the exact target vehicle model named in the prompt";
+
+  const parts = [
+    " CRITICAL vehicle realism lock (applies to ALL car brands and models — every swap must behave like real automotive footage):",
+  ];
+
+  parts.push(
+    ` Complete vehicle swap: replace EVERY visible trace of the source car (body, interior, steering wheel badge, keys, remotes, badges) with the authentic OEM ${targetModel} — exterior AND interior. Never leave source-brand keys or parts visible.`,
+  );
 
   if (vehicle) {
     parts.push(
-      ` Use the exact authentic ${vehicle.model} — interior AND exterior must match this specific model (${vehicle.interior}). Never substitute another brand or a generic luxury car.`,
+      ` ${vehicle.interior} Never substitute another brand or a generic car.`,
     );
-  } else if (isVehicleDrivingPrompt(source)) {
+  } else {
     parts.push(
-      " Match the exact vehicle model named in the prompt — authentic OEM interior layout, steering wheel badge, screen UI and materials for that specific brand and model only.",
+      " Match authentic OEM interior layout, steering wheel badge, screen UI, keys and materials for the specific brand and model requested — valid for any car from city hatchback swap to supercar.",
     );
   }
 
   parts.push(
-    " INTELLIGENT STATE — mirror source video logic frame-by-frame (do not apply dumb static rules):",
+    " KEY & ACCESSORY SWAP: if car keys, key fobs, remotes or brand badges of the source vehicle appear on camera, replace them with the correct OEM keys/accessories of the target vehicle (e.g. Twingo key → Lamborghini key) with the same hand motion and timing as the source clip.",
+  );
+
+  parts.push(
+    " INTELLIGENT STATE (all vehicles) — mirror source video logic frame-by-frame:",
   );
   parts.push(
     " • Parked with doors closed: screens off or dim, gear in Park (P), engine realistically idle/off, cabin static.",
@@ -239,7 +251,9 @@ function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt
 
   if (
     isVehicleDrivingPrompt(source) &&
-    !/INTELLIGENT STATE|vehicle realism lock|CRITICAL vehicle/i.test(result)
+    !/KEY & ACCESSORY SWAP|INTELLIGENT STATE|vehicle realism lock|CRITICAL vehicle/i.test(
+      result,
+    )
   ) {
     result += buildV2VCockpitIntelligenceLock(source);
   }

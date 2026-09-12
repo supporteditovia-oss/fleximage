@@ -104,7 +104,7 @@ function extractKlingMotionVideoUrl(data) {
 function buildKlingMotionPrompt(userPrompt) {
   const base = String(userPrompt || "").trim();
   const lock =
-    " No distortion. Keep camera movement, background, ground and reflections consistent with the reference video. Match exact vehicle model interior. Mirror source logic: screens off when parked, wake on door open, correct gear P/D, speedometer matches source when driving.";
+    " No distortion. Keep camera movement, background, ground and reflections consistent with the reference video. Full vehicle swap: body, interior, keys and badges must match target model OEM. All cars: screens off when parked, wake on door open, correct gear P/D, speedometer matches source when driving.";
   if (!base) {
     return "No distortion, the character's movements are consistent with the video.";
   }
