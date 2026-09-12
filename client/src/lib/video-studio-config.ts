@@ -1,13 +1,14 @@
+import {
+  VIDEO_FLAT_CREDIT_COST,
+  VIDEO_VOICE_EXTRA_CREDIT,
+} from "@shared/credit-costs";
+
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
 /** Plafond rentable Kling Motion Control 720p — prix fixe 60 crédits / vidéo. */
 export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 /** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
 export const VIDEO_V2V_MAX_DURATION_SLACK_SEC = 0.5;
-import {
-  VIDEO_FLAT_CREDIT_COST,
-  VIDEO_VOICE_EXTRA_CREDIT,
-} from "@shared/credit-costs";
 
 export { VIDEO_FLAT_CREDIT_COST, VIDEO_VOICE_EXTRA_CREDIT };
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
