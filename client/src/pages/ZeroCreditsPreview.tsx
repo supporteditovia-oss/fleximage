@@ -71,7 +71,7 @@ function buildPreviewPlan(
     subscriptionStatus: "active",
     isSubscriber: true,
     creditsPerCycle:
-      variant === "discovery" ? 220 : variant === "essential" ? 900 : 2000,
+      variant === "discovery" ? 240 : variant === "essential" ? 840 : 1920,
     billingInterval: "month",
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
@@ -88,26 +88,26 @@ function buildPreviewPlan(
         plan: "essential",
         headline: isEn ? "Upgrade to Essential" : "Passe en Essential",
         pitch: isEn
-          ? "900 credits / month (75 images or 15 videos) — much better value than packs."
-          : "900 crédits / mois (75 images ou 15 vidéos) — bien plus rentable que les packs.",
+          ? "840 credits / month (70 images or 14 videos) — much better value than packs."
+          : "840 crédits / mois (70 images ou 14 vidéos) — bien plus rentable que les packs.",
         cta: isEn
           ? "Upgrade to Essential — $22.99/month"
           : "Passer à Essential — 22,90 €/mois",
         priceLabel: isEn ? "22.99" : "22,90",
-        creditsLabel: isEn ? "900 credits" : "900 crédits",
+        creditsLabel: isEn ? "840 credits" : "840 crédits",
         recommended: true,
       },
       {
         plan: "ultimate",
         headline: isEn ? "Upgrade to Ultimate" : "Passe en Ultimate",
         pitch: isEn
-          ? "2,000 credits / month (166 images or 33 videos). Maximum volume, lowest cost per image."
-          : "2 000 crédits / mois (166 images ou 33 vidéos). Le max de volume, moins cher à l’image.",
+          ? "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image."
+          : "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
         cta: isEn
           ? "Upgrade to Ultimate — $44.99/month"
           : "Passer à Ultimate — 44,90 €/mois",
         priceLabel: isEn ? "44.99" : "44,90",
-        creditsLabel: isEn ? "2,000 credits" : "2 000 crédits",
+        creditsLabel: isEn ? "1,920 credits" : "1 920 crédits",
         recommended: false,
       },
     ];
@@ -118,13 +118,13 @@ function buildPreviewPlan(
         plan: "ultimate",
         headline: isEn ? "Upgrade to Ultimate" : "Passe en Ultimate",
         pitch: isEn
-          ? "2,000 credits / month (166 images or 33 videos). Maximum volume, lowest cost per image."
-          : "2 000 crédits / mois (166 images ou 33 vidéos). Le max de volume, moins cher à l’image.",
+          ? "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image."
+          : "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
         cta: isEn
           ? "Upgrade to Ultimate — $44.99/month"
           : "Passer à Ultimate — 44,90 €/mois",
         priceLabel: isEn ? "44.99" : "44,90",
-        creditsLabel: isEn ? "2,000 credits" : "2 000 crédits",
+        creditsLabel: isEn ? "1,920 credits" : "1 920 crédits",
         recommended: true,
       },
     ];

@@ -43,11 +43,11 @@ const CREDIT_PACKS_EUR = [
   {
     id: "mini",
     envKey: "STRIPE_PACK_MINI_PRICE_ID",
-    credits: 50,
+    credits: 60,
     amountCents: 690,
     label: "Boost Mini",
     priceLabel: "6,90 €",
-    images: 4,
+    images: 5,
   },
   {
     id: "standard",
@@ -61,7 +61,7 @@ const CREDIT_PACKS_EUR = [
   {
     id: "plus",
     envKey: "STRIPE_PACK_PLUS_PRICE_ID",
-    credits: 250,
+    credits: 240,
     amountCents: 3290,
     label: "Boost Plus",
     priceLabel: "32,90 €",
@@ -73,11 +73,11 @@ const CREDIT_PACKS_USD = [
   {
     id: "mini",
     envKey: "STRIPE_PACK_MINI_PRICE_ID_USD",
-    credits: 50,
+    credits: 60,
     amountCents: 699,
     label: "Boost Mini",
     priceLabel: "$6.99",
-    images: 4,
+    images: 5,
   },
   {
     id: "standard",
@@ -91,7 +91,7 @@ const CREDIT_PACKS_USD = [
   {
     id: "plus",
     envKey: "STRIPE_PACK_PLUS_PRICE_ID_USD",
-    credits: 250,
+    credits: 240,
     amountCents: 3299,
     label: "Boost Plus",
     priceLabel: "$32.99",
@@ -104,20 +104,20 @@ const UPGRADE_COPY_EUR = {
     plan: "essential",
     priceLabel: PLAN_PRICES_EUR.essential,
     credits: PLAN_CREDITS.essential,
-    creditsLabel: "900 crédits",
+    creditsLabel: "840 crédits",
     headline: "Passe en Essential",
     pitch:
-      "900 crédits / mois (75 images ou 15 vidéos) — bien plus rentable que les packs.",
+      "840 crédits / mois (70 images ou 14 vidéos) — bien plus rentable que les packs.",
     cta: "Passer à Essential — 22,90 €/mois",
   },
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_EUR.ultimate,
     credits: PLAN_CREDITS.ultimate,
-    creditsLabel: "2 000 crédits",
+    creditsLabel: "1 920 crédits",
     headline: "Passe en Ultimate",
     pitch:
-      "2 000 crédits / mois (166 images ou 33 vidéos). Le max de volume, moins cher à l’image.",
+      "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l’image.",
     cta: "Passer à Ultimate — 44,90 €/mois",
   },
 };
@@ -127,20 +127,20 @@ const UPGRADE_COPY_USD = {
     plan: "essential",
     priceLabel: PLAN_PRICES_USD.essential,
     credits: PLAN_CREDITS.essential,
-    creditsLabel: "900 credits",
+    creditsLabel: "840 credits",
     headline: "Upgrade to Essential",
     pitch:
-      "900 credits / month (75 images or 15 videos) — much better value than one-off packs.",
+      "840 credits / month (70 images or 14 videos) — much better value than one-off packs.",
     cta: "Upgrade to Essential — $22.99/mo",
   },
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_USD.ultimate,
     credits: PLAN_CREDITS.ultimate,
-    creditsLabel: "2,000 credits",
+    creditsLabel: "1,920 credits",
     headline: "Upgrade to Ultimate",
     pitch:
-      "2,000 credits / month (166 images or 33 videos). Maximum volume, lowest cost per image.",
+      "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image.",
     cta: "Upgrade to Ultimate — $44.99/mo",
   },
 };
