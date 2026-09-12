@@ -18,9 +18,15 @@ const PLAN_CREDITS = {
 };
 
 const PLAN_MONTHLY_AMOUNTS_CENTS = {
-  discovery: 990,
-  essential: 2290,
-  ultimate: 4490,
+  discovery: 1000,
+  essential: 2500,
+  ultimate: 4900,
+};
+
+const CREDIT_PACK_AMOUNTS = {
+  mini: 60,
+  standard: 120,
+  plus: 240,
 };
 
 function planImageAllowance(plan) {
@@ -29,6 +35,14 @@ function planImageAllowance(plan) {
 
 function planVideoAllowance(plan) {
   return PLAN_CREDITS[plan] / VIDEO_FLAT_CREDIT_COST;
+}
+
+function planVoiceAllowance(plan) {
+  return PLAN_CREDITS[plan] / VOICE_CREDIT_COST;
+}
+
+function planCloneAllowance(plan) {
+  return PLAN_CREDITS[plan] / VOICE_CLONE_CREDIT_COST;
 }
 
 module.exports = {
@@ -40,6 +54,9 @@ module.exports = {
   CREDIT_CYCLE_UNIT,
   PLAN_CREDITS,
   PLAN_MONTHLY_AMOUNTS_CENTS,
+  CREDIT_PACK_AMOUNTS,
   planImageAllowance,
   planVideoAllowance,
+  planVoiceAllowance,
+  planCloneAllowance,
 };

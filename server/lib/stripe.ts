@@ -28,7 +28,7 @@ const PLAN_DEFINITIONS: Record<
 > = {
   discovery: {
     name: "Abonnement LuxeFlexIA Discovery",
-    monthlyAmount: 990,
+    monthlyAmount: 1000,
     creditsPerCycle: 240,
     envKeys: ["STRIPE_DISCOVERY_PRICE_ID"],
     legacyEnvKeys: [
@@ -39,14 +39,14 @@ const PLAN_DEFINITIONS: Record<
   },
   essential: {
     name: "Abonnement LuxeFlexIA Essential",
-    monthlyAmount: 2290,
+    monthlyAmount: 2500,
     creditsPerCycle: 840,
     envKeys: ["STRIPE_ESSENTIAL_PRICE_ID"],
     legacyEnvKeys: ["STRIPE_MONTHLY_PRICE_ID", "STRIPE_VIDEO_PRICE_ID"],
   },
   ultimate: {
     name: "Abonnement LuxeFlexIA Ultimate",
-    monthlyAmount: 4490,
+    monthlyAmount: 4900,
     creditsPerCycle: 1920,
     envKeys: ["STRIPE_ULTIMATE_PRICE_ID"],
   },

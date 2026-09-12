@@ -329,7 +329,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Prix",
             paragraphs: [
               "Les prix affiches dans l'application et lors du paiement font foi au moment de la commande.",
-              "A titre indicatif, les offres actuellement proposees sont 9,90 EUR, 22,90 EUR et 44,90 EUR par mois.",
+              "A titre indicatif, les offres actuellement proposees sont 10 EUR, 25 EUR et 49 EUR par mois.",
               "TVA non applicable, article 293 B du Code general des impots, sauf changement de statut fiscal ou indication contraire au moment du paiement.",
               "LuxeFlexIA peut modifier ses prix. Une modification s'applique au prochain cycle de facturation ou a toute nouvelle commande, jamais retroactivement sur une periode deja payee.",
             ],
@@ -733,7 +733,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Prices",
             paragraphs: [
               "Prices shown in the app and at checkout are authoritative at the time of order.",
-              "For information, current offers are EUR 9.90, EUR 22.90, and EUR 44.90 per month.",
+              "For information, current offers are EUR 10, EUR 25, and EUR 49 per month.",
               "VAT not applicable under article 293 B of the French General Tax Code, unless tax status changes or checkout states otherwise.",
               "Prices may change. Changes apply to the next billing cycle or new orders, never retroactively to an already paid period.",
             ],
@@ -1133,7 +1133,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Precios",
             paragraphs: [
               "Los precios mostrados en la app y en checkout prevalecen en el momento del pedido.",
-              "A titulo informativo, las ofertas actuales son 9,90 EUR, 22,90 EUR y 44,90 EUR por mes.",
+              "A titulo informativo, las ofertas actuales son 10 EUR, 25 EUR y 49 EUR por mes.",
               "IVA no aplicable segun el articulo 293 B del Codigo General de Impuestos frances, salvo cambio fiscal o indicacion contraria en checkout.",
               "Los precios pueden cambiar. Los cambios se aplican al siguiente ciclo o nuevos pedidos, nunca retroactivamente a un periodo ya pagado.",
             ],
@@ -1529,7 +1529,7 @@ const LEGAL_CONTENT: Record<AppLocale, LegalLocaleContent> = {
             title: "3. Preise",
             paragraphs: [
               "Massgeblich sind die Preise, die in der App und beim Checkout zum Zeitpunkt der Bestellung angezeigt werden.",
-              "Zur Information betragen die aktuellen Angebote 9,90 EUR, 22,90 EUR und 44,90 EUR pro Monat.",
+              "Zur Information betragen die aktuellen Angebote 10 EUR, 25 EUR und 49 EUR pro Monat.",
               "Mehrwertsteuer nicht anwendbar gemass Artikel 293 B des franzosischen Steuergesetzbuchs, sofern sich der Steuerstatus nicht andert oder Checkout anderes angibt.",
               "Preise konnen geandert werden. Anderungen gelten fur den nachsten Abrechnungszyklus oder neue Bestellungen, nicht ruckwirkend fur bereits bezahlte Zeitraume.",
             ],

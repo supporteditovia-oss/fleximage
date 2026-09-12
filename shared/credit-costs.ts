@@ -19,9 +19,9 @@ export const PLAN_CREDITS = {
 } as const;
 
 export const PLAN_MONTHLY_AMOUNTS_CENTS = {
-  discovery: 990,
-  essential: 2290,
-  ultimate: 4490,
+  discovery: 1000,
+  essential: 2500,
+  ultimate: 4900,
 } as const;
 
 /** Images indicatives au paywall (crédits ÷ IMAGE_CREDIT_COST). */
@@ -33,3 +33,19 @@ export function planImageAllowance(plan: keyof typeof PLAN_CREDITS): number {
 export function planVideoAllowance(plan: keyof typeof PLAN_CREDITS): number {
   return PLAN_CREDITS[plan] / VIDEO_FLAT_CREDIT_COST;
 }
+
+/** Voix TTS indicatives au paywall (crédits ÷ VOICE_CREDIT_COST). */
+export function planVoiceAllowance(plan: keyof typeof PLAN_CREDITS): number {
+  return PLAN_CREDITS[plan] / VOICE_CREDIT_COST;
+}
+
+/** Clones voix indicatifs au paywall (crédits ÷ VOICE_CLONE_CREDIT_COST). */
+export function planCloneAllowance(plan: keyof typeof PLAN_CREDITS): number {
+  return PLAN_CREDITS[plan] / VOICE_CLONE_CREDIT_COST;
+}
+
+export const CREDIT_PACK_AMOUNTS = {
+  mini: 60,
+  standard: 120,
+  plus: 240,
+} as const;

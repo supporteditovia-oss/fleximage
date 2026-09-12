@@ -30,7 +30,7 @@ const plans: PlanDefinition[] = [
     description:
       "Monthly subscription: 240 credits for AI lifestyle image and video generations on LarpKing.",
     lookupKey: "larpking_discovery_monthly_eur_v2",
-    amount: 990,
+    amount: 1000,
     credits: 240,
     displayCredits: 240,
     bonusCredits: 0,
@@ -43,7 +43,7 @@ const plans: PlanDefinition[] = [
     description:
       "Monthly subscription: 720 credits per month plus 120 bonus credits for regular creators (images and video on LarpKing).",
     lookupKey: "larpking_essential_monthly_eur_v2",
-    amount: 2290,
+    amount: 2500,
     credits: 840,
     displayCredits: 720,
     bonusCredits: 120,
@@ -56,7 +56,7 @@ const plans: PlanDefinition[] = [
     description:
       "Monthly subscription: 1,920 credits per month for high-volume AI lifestyle image and video creation on LarpKing.",
     lookupKey: "larpking_ultimate_monthly_eur_v2",
-    amount: 4490,
+    amount: 4900,
     credits: 1920,
     displayCredits: 1920,
     bonusCredits: 0,

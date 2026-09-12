@@ -500,14 +500,16 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / mois",
       replacePlan:
         "Ton abonnement actuel est annulé automatiquement, puis remplacé par la nouvelle formule.",
-      subscribeEssential: "Essential — 22,90 €/mois · 840 crédits",
-      subscribeDiscovery: "Discovery — 9,90 €/mois · 240 crédits",
+      subscribeUltimate: "Ultimate — 49 €/mois · 1920 crédits (tout inclus)",
+      subscribeDiscovery: "Discovery — 10 €/mois · 240 crédits",
       alreadyUltimate:
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
-      packsTitle: "Ou recharger sans changer de plan",
+      packsTitle: "Ou recharger (crédits universels)",
       packLine: "{{credits}} crédits · ~{{images}} images",
+      packLineUniversal:
+        "{{credits}} cr · ~{{images}} img · {{videos}} vid · {{voices}} voix",
       packsNote:
-        "Les packs coûtent plus cher à l'image qu'un abonnement — utiles en dépannage seulement.",
+        "Les packs coûtent ~3× plus cher au crédit qu'Ultimate — l'abo reste le meilleur choix.",
       paymentUnavailableTitle: "Paiement indisponible",
       paymentUnavailableDescription:
         "Impossible d'ouvrir Stripe pour le moment.",
@@ -519,15 +521,15 @@ export const extraResources = {
         essential: {
           headline: "Passe en Essential",
           pitch:
-            "840 crédits / mois (70 images ou 14 vidéos) — bien plus rentable que les packs.",
-          cta: "Passer à Essential — 22,90 €/mois",
+            "840 cr / mois — images, vidéos, voix & clones. Bien plus rentable que les packs.",
+          cta: "Passer à Essential — 25 €/mois",
           creditsLabel: "840 crédits",
         },
         ultimate: {
           headline: "Passe en Ultimate",
           pitch:
-            "1 920 crédits / mois (160 images ou 32 vidéos). Le max de volume, moins cher à l'image.",
-          cta: "Passer à Ultimate — 44,90 €/mois",
+            "1 920 cr / mois — 160 images, 32 vidéos, voix & clones. Meilleur rapport.",
+          cta: "Passer à Ultimate — 49 €/mois",
           creditsLabel: "1 920 crédits",
         },
       },
@@ -1031,14 +1033,16 @@ export const extraResources = {
       perMonth: "{{credits}} · ${{price}} / month",
       replacePlan:
         "Your current subscription is canceled automatically, then replaced by the new plan.",
-      subscribeEssential: "Essential — $22.99/month · 840 credits",
+      subscribeUltimate: "Ultimate — $49.99/month · 1920 credits (all included)",
       subscribeDiscovery: "Discovery — $10.99/month · 240 credits",
       alreadyUltimate:
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
       packLine: "{{credits}} credits · ~{{images}} images",
+      packLineUniversal:
+        "{{credits}} cr · ~{{images}} img · {{videos}} vid · {{voices}} voice",
       packsNote:
-        "Packs cost more per image than a subscription — useful as a backup only.",
+        "Packs cost ~3× more per credit than Ultimate — subscription is the best deal.",
       paymentUnavailableTitle: "Payment unavailable",
       paymentUnavailableDescription: "Couldn't open Stripe right now.",
       upgradeFailed: "Upgrade failed",
@@ -1049,15 +1053,15 @@ export const extraResources = {
         essential: {
           headline: "Upgrade to Essential",
           pitch:
-            "840 credits / month (70 images or 14 videos) — much better value than packs.",
-          cta: "Switch to Essential — $22.99/month",
+            "840 cr / month — images, videos, voice & clones. Much better than packs.",
+          cta: "Switch to Essential — $25.99/month",
           creditsLabel: "840 credits",
         },
         ultimate: {
           headline: "Upgrade to Ultimate",
           pitch:
-            "1,920 credits / month (160 images or 32 videos). Maximum volume, lowest cost per image.",
-          cta: "Switch to Ultimate — $44.99/month",
+            "1,920 cr / month — 160 images, 32 videos, voice & clones. Best value.",
+          cta: "Switch to Ultimate — $49.99/month",
           creditsLabel: "1,920 credits",
         },
       },

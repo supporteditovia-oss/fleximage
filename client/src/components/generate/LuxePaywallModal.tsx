@@ -31,7 +31,7 @@ export function LuxePaywallModal({
   onOpenChange,
   imageUrl,
   prompt = null,
-  defaultPlan = "essential",
+  defaultPlan = "ultimate",
 }: LuxePaywallModalProps) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();

@@ -16,12 +16,14 @@ const PLAN_CARD_META: Record<
   },
   essential: {
     bonusKey: "essentialBonus",
-    popular: true,
-    featureKeys: ["photo", "marketRealism", "details", "prioritySupport"],
+    featureKeys: ["photo", "marketRealism", "details", "video", "prioritySupport"],
   },
   ultimate: {
+    popular: true,
     featureKeys: [
       "photo",
+      "video",
+      "voiceIncluded",
       "indistinguishable",
       "ulDetails",
       "immersion",
