@@ -7,6 +7,40 @@ const {
   LANDING_VOICE_DEFAULT_SLUG,
 } = require("../landing-voice-demo");
 
+async function getLandingDemoBuffer(rapper) {
+  const cacheKey = landingVoiceR2Key(rapper.slug);
+  const { publicUrl } = getR2Config();
+  const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
+
+  try {
+    const cached = await fetch(cachedUrl);
+    if (cached.ok) {
+      const buffer = Buffer.from(await cached.arrayBuffer());
+      if (buffer.length >= 512) {
+        return { buffer, cached: true, cacheKey };
+      }
+    }
+  } catch {
+    /* cache miss */
+  }
+
+  const buffer = await synthesizeSpeech({
+    text: buildLandingVoiceScript(rapper.name),
+    referenceId: rapper.fishId,
+    format: "mp3",
+  });
+
+  if (!buffer || buffer.length < 512) {
+    throw Object.assign(new Error("Démo vocale landing indisponible."), {
+      status: 502,
+      code: "landing_demo_empty",
+    });
+  }
+
+  await uploadToR2(cacheKey, buffer, "audio/mpeg");
+  return { buffer, cached: false, cacheKey };
+}
+
 module.exports = async function landingVoiceDemoHandler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -26,44 +60,26 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     return;
   }
 
+  const streamMedia =
+    req.query?.media === "1" ||
+    req.query?.stream === "1" ||
+    String(req.headers.accept || "").includes("audio/");
+
   try {
-    const cacheKey = landingVoiceR2Key(rapper.slug);
-    const { publicUrl } = getR2Config();
-    const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
+    const { buffer, cached } = await getLandingDemoBuffer(rapper);
 
-    try {
-      const head = await fetch(cachedUrl, { method: "HEAD" });
-      if (head.ok) {
-        res.status(200).json({
-          audioUrl: cachedUrl,
-          cached: true,
-          slug: rapper.slug,
-          name: rapper.name,
-        });
-        return;
-      }
-    } catch {
-      /* cache miss */
-    }
-
-    const buffer = await synthesizeSpeech({
-      text: buildLandingVoiceScript(rapper.name),
-      referenceId: rapper.fishId,
-      format: "mp3",
-    });
-
-    if (!buffer || buffer.length < 512) {
-      res.status(502).json({
-        code: "landing_demo_empty",
-        message: "Démo vocale landing indisponible.",
-      });
+    if (streamMedia) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.status(200).send(buffer);
       return;
     }
 
-    const audioUrl = await uploadToR2(cacheKey, buffer, "audio/mpeg");
+    const { publicUrl } = getR2Config();
+    const audioUrl = `${publicUrl.replace(/\/$/, "")}/${landingVoiceR2Key(rapper.slug)}`;
     res.status(200).json({
       audioUrl,
-      cached: false,
+      cached,
       slug: rapper.slug,
       name: rapper.name,
     });

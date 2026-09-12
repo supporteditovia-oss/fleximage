@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   LANDING_VOICE_DEFAULT_SLUG,
   LANDING_VOICE_RAPPERS,
   buildLandingVoiceScript,
   formatVoiceClock,
-  resolveLandingVoiceDemoSrc,
+  landingVoiceDemoSrc,
   splitSubtitleWords,
   spokenWordCount,
 } from "@/lib/landing-voice-demo";
@@ -47,25 +48,76 @@ function VoicePicker({
   onSelect: (slug: string) => void;
   compact?: boolean;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    updateScrollState();
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      ro.disconnect();
+    };
+  }, []);
+
+  const scrollBy = (delta: number) => {
+    scrollerRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
   return (
     <div
-      className={`landing-voice-picker ${compact ? "landing-voice-picker--compact" : ""}`}
-      role="listbox"
-      aria-label="Choisir une voix du catalogue"
+      className={`landing-voice-picker-wrap ${compact ? "landing-voice-picker-wrap--compact" : ""}`}
     >
-      {LANDING_VOICE_RAPPERS.map((rapper) => (
-        <button
-          key={rapper.slug}
-          type="button"
-          role="option"
-          aria-selected={activeSlug === rapper.slug}
-          className={`landing-voice-picker__chip ${activeSlug === rapper.slug ? "is-active" : ""}`}
-          onClick={() => onSelect(rapper.slug)}
-        >
-          <img src={rapper.photo} alt="" loading="lazy" />
-          <span>{rapper.name}</span>
-        </button>
-      ))}
+      <button
+        type="button"
+        className="landing-voice-picker__nav"
+        aria-label="Voix précédentes"
+        disabled={!canScrollLeft}
+        onClick={() => scrollBy(-160)}
+      >
+        <ChevronLeft aria-hidden />
+      </button>
+      <div
+        ref={scrollerRef}
+        className={`landing-voice-picker ${compact ? "landing-voice-picker--compact" : ""}`}
+        role="listbox"
+        aria-label="Choisir une voix du catalogue"
+      >
+        {LANDING_VOICE_RAPPERS.map((rapper) => (
+          <button
+            key={rapper.slug}
+            type="button"
+            role="option"
+            aria-selected={activeSlug === rapper.slug}
+            className={`landing-voice-picker__chip ${activeSlug === rapper.slug ? "is-active" : ""}`}
+            onClick={() => onSelect(rapper.slug)}
+          >
+            <img src={rapper.photo} alt="" loading="lazy" />
+            <span>{rapper.name}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="landing-voice-picker__nav"
+        aria-label="Voix suivantes"
+        disabled={!canScrollRight}
+        onClick={() => scrollBy(160)}
+      >
+        <ChevronRight aria-hidden />
+      </button>
     </div>
   );
 }
@@ -76,7 +128,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const [playing, setPlaying] = useState(false);
   const [currentSec, setCurrentSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
 
   const rapper = LANDING_VOICE_RAPPERS.find((item) => item.slug === activeSlug) ?? LANDING_VOICE_RAPPERS[0];
   const script = useMemo(() => buildLandingVoiceScript(rapper.name), [rapper.name]);
@@ -85,12 +139,25 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
   useEffect(() => {
     let cancelled = false;
-    const audio = audioRef.current ?? new Audio();
-    audio.preload = "metadata";
+    const audio = new Audio();
+    audio.preload = "auto";
     audioRef.current = audio;
 
     const onTime = () => setCurrentSec(audio.currentTime);
     const onMeta = () => setDurationSec(audio.duration || 0);
+    const onCanPlay = () => {
+      if (cancelled) return;
+      setReady(true);
+      setLoading(false);
+      setError(false);
+    };
+    const onError = () => {
+      if (cancelled) return;
+      setReady(false);
+      setLoading(false);
+      setError(true);
+      setPlaying(false);
+    };
     const onEnded = () => {
       setPlaying(false);
       setCurrentSec(0);
@@ -98,28 +165,29 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("canplaythrough", onCanPlay);
+    audio.addEventListener("error", onError);
     audio.addEventListener("ended", onEnded);
 
     setPlaying(false);
     setCurrentSec(0);
     setDurationSec(0);
     setLoading(true);
+    setReady(false);
+    setError(false);
 
-    void (async () => {
-      const src = await resolveLandingVoiceDemoSrc(activeSlug);
-      if (cancelled) return;
-      audio.pause();
-      audio.src = src;
-      audio.load();
-      setLoading(false);
-    })();
+    audio.src = landingVoiceDemoSrc(activeSlug);
+    audio.load();
 
     return () => {
       cancelled = true;
       audio.pause();
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("canplaythrough", onCanPlay);
+      audio.removeEventListener("error", onError);
       audio.removeEventListener("ended", onEnded);
+      audioRef.current = null;
     };
   }, [activeSlug]);
 
@@ -132,7 +200,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
   const toggle = async () => {
     const audio = audioRef.current;
-    if (!audio || loading) return;
+    if (!audio || loading || !ready || error) return;
     if (playing) {
       audio.pause();
       setPlaying(false);
@@ -147,8 +215,11 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
       setPlaying(true);
     } catch {
       setPlaying(false);
+      setError(true);
     }
   };
+
+  const playDisabled = loading || !ready || error;
 
   if (variant === "section") {
     return (
@@ -170,10 +241,10 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
             type="button"
             aria-label={playing ? "Mettre en pause" : "Écouter la démo vocale"}
             aria-pressed={playing}
-            disabled={loading}
+            disabled={playDisabled}
             onClick={() => void toggle()}
           >
-            {playing ? "❚❚" : "▶"}
+            {loading ? "…" : playing ? "❚❚" : "▶"}
           </button>
           <div className="voice-wave" aria-hidden>
             {WAVE.map((h, i) => (
@@ -184,6 +255,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
             {formatVoiceClock(currentSec)} / {formatVoiceClock(durationSec || 5)}
           </span>
         </div>
+        {error ? (
+          <p className="landing-voice-demo__error">Aperçu indisponible — réessayez dans un instant.</p>
+        ) : null}
         <div className="voice-card-footer voice-card-footer--premium">
           <span>Clonage IA</span>
           <i />
@@ -213,10 +287,10 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
           className="landing-voice-demo__play"
           aria-label={playing ? "Pause" : "Écouter un exemple de voix IA"}
           aria-pressed={playing}
-          disabled={loading}
+          disabled={playDisabled}
           onClick={() => void toggle()}
         >
-          {playing ? "❚❚" : "▶"}
+          {loading ? "…" : playing ? "❚❚" : "▶"}
         </button>
         <div className="landing-voice-demo__wave" aria-hidden>
           {WAVE.map((h, i) => (
@@ -227,6 +301,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
           {formatVoiceClock(currentSec)} / {formatVoiceClock(durationSec || 5)}
         </span>
       </div>
+      {error ? (
+        <p className="landing-voice-demo__error">Aperçu indisponible — réessayez dans un instant.</p>
+      ) : null}
       <p className="landing-voice-demo__note">Voix générée par intelligence artificielle · Catalogue rap FR</p>
     </div>
   );

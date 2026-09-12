@@ -27,33 +27,9 @@ export function buildLandingVoiceScript(name: string): string {
   return `Salut, je me présente, c'est ${name} — j'ai été généré par LuxeFlexIA.`;
 }
 
-/** Fichier statique généré au build Vercel (Gims par défaut). */
-export const LANDING_VOICE_DEMO_STATIC: Partial<Record<string, string>> = {
-  gims: "/assets/landing-v2/gims-voice-demo.mp3",
-};
-
-/** Synthèse Fish + cache R2 côté API. */
-export const LANDING_VOICE_DEMO_API = "/api/larps/voice/landing-demo";
-
-export function landingVoiceDemoApiUrl(slug: string): string {
-  return `${LANDING_VOICE_DEMO_API}?slug=${encodeURIComponent(slug)}`;
-}
-
-export async function resolveLandingVoiceDemoSrc(slug: string): Promise<string> {
-  const staticSrc = LANDING_VOICE_DEMO_STATIC[slug];
-  if (staticSrc) {
-    try {
-      const head = await fetch(staticSrc, { method: "HEAD" });
-      if (head.ok) return staticSrc;
-    } catch {
-      /* fallback API */
-    }
-  }
-
-  const res = await fetch(landingVoiceDemoApiUrl(slug));
-  if (!res.ok) return staticSrc ?? landingVoiceDemoApiUrl(slug);
-  const data = (await res.json()) as { audioUrl?: string };
-  return data.audioUrl?.trim() || staticSrc || landingVoiceDemoApiUrl(slug);
+/** MP3 same-origin — évite les blocages cross-origin R2 sur mobile. */
+export function landingVoiceDemoSrc(slug: string): string {
+  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1`;
 }
 
 export function splitSubtitleWords(text: string): string[] {
