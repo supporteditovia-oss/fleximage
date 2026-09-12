@@ -54,27 +54,83 @@ const EDITORIAL = [
 const FAQ = [
   {
     q: "Qu’est-ce que LuxeFlexIA ?",
-    a: "LuxeFlexIA est un studio créatif basé sur l’IA. Transforme une photo en scène ultra-réaliste, anime une image en vidéo (Image → Vidéo), transforme une vidéo smartphone (Vidéo → Vidéo), ou génère un vocal IA à partir d’un court extrait audio.",
+    a: "LuxeFlexIA est un studio créatif tout-en-un propulsé par l’intelligence artificielle. Il permet de transformer des photos en scènes lifestyle ultra-réalistes, d’animer des images en clips cinématiques, de réinventer des vidéos filmées au smartphone et de générer des voix synthétiques naturelles — le tout depuis une interface unique, pensée pour la création mobile et les réseaux sociaux.",
   },
   {
-    q: "Comment fonctionne la vidéo IA ?",
-    a: "Deux ateliers : Cinématique photo (Image → Vidéo) — une image fixe devient un plan en mouvement de 5 secondes ; Séquence transformée (Vidéo → Vidéo) — votre clip smartphone est réinventé (personnage, objet, véhicule) sans perdre l’angle caméra. Format vertical 9:16, rendu premium.",
+    q: "Pour qui est conçu LuxeFlexIA ?",
+    a: "LuxeFlexIA s’adresse aux créateurs de contenu, influenceurs, entrepreneurs, marques personnelles et passionnés de lifestyle qui souhaitent produire des visuels et des vocaux premium sans équipe technique, sans studio photo et sans compétences en montage.",
   },
   {
-    q: "Comment fonctionne la création d’image ?",
-    a: "Importe une photo, décris la scène que tu veux créer, choisis ton format puis lance la génération. LuxeFlexIA transforme le décor et l’ambiance tout en préservant ton identité.",
+    q: "Comment démarrer sur LuxeFlexIA ?",
+    a: "Créez un compte gratuit, choisissez votre atelier (Image, Voix ou Vidéo), importez votre fichier source, décrivez ce que vous imaginez en une phrase, puis lancez la génération. Aucune installation, aucun logiciel externe : tout se fait depuis votre navigateur ou votre téléphone.",
   },
   {
-    q: "Comment fonctionne la création de voix IA ?",
-    a: "Ajoute un court extrait de ta voix, écris ton message et LuxeFlexIA génère un nouveau vocal avec cette voix.",
+    q: "Comment fonctionne l’Image IA ?",
+    a: "Importez une photo de vous (ou d’un sujet), décrivez la scène souhaitée — décor, tenue, véhicule, ambiance — et LuxeFlexIA génère un rendu photoréaliste. Votre identité et vos traits sont préservés ; seul l’univers visuel est transformé selon votre intention créative.",
   },
   {
-    q: "De combien de secondes d’audio ai-je besoin ?",
-    a: "Quelques secondes d’audio clair permettent de commencer. Un extrait propre, sans musique ni bruit de fond, donnera un résultat plus fidèle.",
+    q: "Puis-je remplacer un objet ou un véhicule sur ma photo ?",
+    a: "Oui. LuxeFlexIA comprend les demandes de remplacement d’objets (voiture, moto, accessoire…) et adapte la scène en conséquence. Décrivez simplement ce que vous voulez changer : par exemple « remplace ma voiture par une Lamborghini Urus noire » ou « mets-moi sur une moto en pleine route côtière ».",
   },
   {
-    q: "Mes images et mes voix restent-elles privées ?",
-    a: "Oui. Tes fichiers, tes voix et tes créations restent associés à ton espace personnel LuxeFlexIA.",
+    q: "Quels formats d’image sont disponibles ?",
+    a: "LuxeFlexIA prend en charge les formats portrait (9:16), idéal pour TikTok, Reels et Shorts, ainsi que le format paysage (16:9) pour un rendu plus cinématographique. Les images sources acceptées incluent JPG et PNG.",
+  },
+  {
+    q: "Comment fonctionne la Vidéo IA ?",
+    a: "Deux ateliers complémentaires : Cinématique photo (Image → Vidéo) transforme une image fixe en plan animé de 5 secondes avec mouvement de caméra et profondeur ; Séquence transformée (Vidéo → Vidéo) réinvente un clip filmé au smartphone — personnage, objet ou décor — tout en conservant votre geste caméra d’origine.",
+  },
+  {
+    q: "Quelle vidéo puis-je importer pour la transformation ?",
+    a: "Un clip filmé au smartphone, en format vertical de préférence, d’une durée maximale de 8 secondes. LuxeFlexIA préserve l’angle, le mouvement et le rythme de votre prise de vue pour un résultat naturel et cohérent.",
+  },
+  {
+    q: "Mes vidéos sont-elles adaptées aux réseaux sociaux ?",
+    a: "Oui. Les clips générés sont optimisés pour le format vertical 9:16, prêts à publier sur TikTok, Instagram Reels et YouTube Shorts. Le rendu est conçu pour un aspect cinématique premium, avec lumière, profondeur et mouvement soignés.",
+  },
+  {
+    q: "Comment fonctionne la Voix IA ?",
+    a: "Deux options : clonez votre propre voix à partir d’un court extrait audio (10 à 30 secondes), ou choisissez une voix du catalogue — rappeurs FR, personnalités et voix premium. Écrivez ensuite votre texte et LuxeFlexIA génère un vocal naturel, prêt à intégrer dans vos contenus.",
+  },
+  {
+    q: "Puis-je essayer différentes voix du catalogue ?",
+    a: "Oui. LuxeFlexIA propose un catalogue de voix pré-entraînées — Maître Gims, Maes, Niska, Booba, Jul, Damso et bien d’autres. Chaque voix peut être pré-écoutée directement sur la landing et dans le studio avant génération.",
+  },
+  {
+    q: "De combien de secondes d’audio ai-je besoin pour cloner ma voix ?",
+    a: "Quelques secondes suffisent pour démarrer, mais un extrait de 10 à 30 secondes, enregistré dans un environnement calme, sans musique ni bruit de fond, produira un clone nettement plus fidèle et naturel.",
+  },
+  {
+    q: "Le rendu est-il vraiment réaliste ?",
+    a: "LuxeFlexIA s’appuie sur des modèles de génération de dernière génération, entraînés pour produire des textures, des lumières et des détails crédibles. L’objectif est un rendu lifestyle premium — indiscernable d’une production soignée — adapté aux standards des créateurs exigeants.",
+  },
+  {
+    q: "Combien de temps prend une génération ?",
+    a: "La durée varie selon le type de création et la charge du serveur. En moyenne, une image est prête en quelques dizaines de secondes, un vocal en moins d’une minute, et une vidéo en quelques minutes. Vous êtes notifié dès que votre rendu est disponible.",
+  },
+  {
+    q: "Comment fonctionnent les crédits ?",
+    a: "Chaque génération consomme des crédits selon le type de création (image, voix ou vidéo). Un pack de crédits est offert à l’inscription ; des formules d’abonnement permettent ensuite de créer en continu selon vos besoins.",
+  },
+  {
+    q: "Mes fichiers et créations sont-ils privés ?",
+    a: "Oui. Vos photos, vidéos, enregistrements vocaux et créations générées sont associés à votre espace personnel LuxeFlexIA. Ils ne sont ni publics ni partagés avec d’autres utilisateurs sans votre action explicite.",
+  },
+  {
+    q: "Puis-je utiliser LuxeFlexIA sur mobile ?",
+    a: "Absolument. LuxeFlexIA est conçu mobile-first : importez une photo ou une vidéo directement depuis votre galerie, décrivez votre idée et récupérez votre création sur votre téléphone, prête à être publiée.",
+  },
+  {
+    q: "LuxeFlexIA fonctionne-t-il en français et en anglais ?",
+    a: "Oui. L’interface est disponible en français et en anglais. Les prompts de génération d’image et de vidéo acceptent les deux langues ; la voix IA prend en charge le français et de nombreuses autres langues selon le modèle choisi.",
+  },
+  {
+    q: "Puis-je annuler ou modifier une génération en cours ?",
+    a: "Une génération lancée ne peut pas être modifiée en cours de route, mais vous pouvez en démarrer une nouvelle avec un prompt différent à tout moment. Vos créations précédentes restent accessibles dans votre historique.",
+  },
+  {
+    q: "Comment contacter le support LuxeFlexIA ?",
+    a: "Pour toute question, demande technique ou suggestion, écrivez à support.luxeflexia@gmail.com. L’équipe LuxeFlexIA répond aux créateurs et accompagne la montée en compétence sur la plateforme.",
   },
 ] as const;
 
@@ -156,12 +212,6 @@ export default function LandingV2() {
           Photographies lifestyle, clips verticaux cinématiques et voix synthétique — le studio
           LuxeFlexIA, tel qu’à l’intérieur de l’application.
         </p>
-
-        <div className="hero-mode-strip" aria-label="Modes du studio">
-          <span className="hero-mode-pill">Image</span>
-          <span className="hero-mode-pill">Voix</span>
-          <span className="hero-mode-pill hero-mode-pill--accent">Vidéo</span>
-        </div>
 
         <LandingStudioWidget />
 

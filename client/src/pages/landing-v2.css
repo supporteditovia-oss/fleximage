@@ -1147,6 +1147,58 @@
   background: rgba(183, 139, 50, 0.08);
 }
 
+.landing-v2 .landing-voice-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.landing-v2 .landing-voice-picker::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-v2 .landing-voice-picker__chip {
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(211, 189, 139, 0.18);
+  border-radius: 999px;
+  flex-shrink: 0;
+  padding: 4px 12px 4px 4px;
+  font: inherit;
+  color: rgb(170, 166, 156);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+  display: inline-flex;
+}
+
+.landing-v2 .landing-voice-picker__chip img {
+  object-fit: cover;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(211, 189, 139, 0.25);
+  border-radius: 50%;
+  display: block;
+}
+
+.landing-v2 .landing-voice-picker__chip span {
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.landing-v2 .landing-voice-picker__chip.is-active {
+  color: rgb(245, 241, 232);
+  background: rgba(183, 139, 50, 0.12);
+  border-color: rgba(211, 189, 139, 0.45);
+}
+
 .landing-v2 .landing-voice-subtitles {
   border: 1px solid rgba(211, 189, 139, 0.18);
   background: rgba(0, 0, 0, 0.22);

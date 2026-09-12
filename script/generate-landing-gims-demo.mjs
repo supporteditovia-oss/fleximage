@@ -13,22 +13,22 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { synthesizeSpeech } = require("../api/_lib/fish-audio.js");
 const {
-  LANDING_VOICE_DEMO_SCRIPT,
-  LANDING_VOICE_GIMS_FISH_ID,
-  LANDING_VOICE_DEMO_PUBLIC_PATH,
+  buildLandingVoiceScript,
+  resolveLandingVoiceRapper,
+  LANDING_VOICE_DEFAULT_SLUG,
 } = require("../api/_lib/landing-voice-demo.js");
 
+const rapper = resolveLandingVoiceRapper(LANDING_VOICE_DEFAULT_SLUG);
 const outPath = path.join(
   process.cwd(),
-  "client/public",
-  LANDING_VOICE_DEMO_PUBLIC_PATH.replace(/^\//, ""),
+  "client/public/assets/landing-v2/gims-voice-demo.mp3",
 );
 
 let buffer;
 try {
   buffer = await synthesizeSpeech({
-    text: LANDING_VOICE_DEMO_SCRIPT,
-    referenceId: LANDING_VOICE_GIMS_FISH_ID,
+    text: buildLandingVoiceScript(rapper.name),
+    referenceId: rapper.fishId,
     format: "mp3",
   });
 } catch (err) {

@@ -139,6 +139,62 @@
   display: none;
 }
 
+.landing-voice-picker {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  scrollbar-width: none;
+}
+
+.landing-voice-picker::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-voice-picker__chip {
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(23, 23, 19, 0.1);
+  border-radius: 999px;
+  flex-shrink: 0;
+  padding: 0.2rem 0.65rem 0.2rem 0.2rem;
+  font: inherit;
+  color: var(--landing-ink, #171713);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+  display: inline-flex;
+}
+
+.landing-voice-picker__chip img {
+  object-fit: cover;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: block;
+}
+
+.landing-voice-picker__chip span {
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.landing-voice-picker__chip.is-active {
+  background: rgba(232, 226, 213, 0.92);
+  border-color: rgba(183, 139, 50, 0.45);
+  box-shadow: 0 4px 14px rgba(183, 139, 50, 0.12);
+}
+
+.landing-voice-picker--compact {
+  margin-bottom: 0.75rem;
+}
+
 .landing-voice-demo {
   border: 1px solid rgba(23, 23, 19, 0.1);
   background: rgba(232, 226, 213, 0.48);

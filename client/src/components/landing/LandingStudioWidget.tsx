@@ -13,15 +13,6 @@ import "@/pages/create-page.css";
 import "@/pages/generate-page.css";
 import "./landing-studio-widget.css";
 
-const MODE_CAPTIONS: Record<StudioMode, string> = {
-  image:
-    "Atelier Image — une photographie, une intention, un rendu lifestyle photoréaliste.",
-  voice:
-    "Atelier Voix — quelques secondes d’audio suffisent pour créer votre signature vocale.",
-  video:
-    "Atelier Vidéo — cinématique photo ou séquence transformée. Format vertical 9:16.",
-};
-
 export function LandingStudioWidget() {
   const [mode, setMode] = useState<StudioMode>(() => readStudioMode());
 
@@ -61,7 +52,6 @@ export function LandingStudioWidget() {
   return (
     <div className="landing-studio-widget">
       <StudioModeSwitch mode={mode} onChange={handleMode} className="landing-studio-widget__tabs" />
-      <p className="landing-studio-widget__caption">{MODE_CAPTIONS[mode]}</p>
       <div className="landing-studio-widget__panel" key={mode}>
         {mode === "image" ? (
           <LandingImagePanel />

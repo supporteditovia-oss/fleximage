@@ -1,15 +1,60 @@
-/** Démo voix landing — Maître Gims (même modèle Fish que le catalogue). */
-export const LANDING_VOICE_DEMO_SCRIPT =
-  "Salut, je me présente, c'est Maître Gims — j'ai été généré par LuxeFlexIA.";
+/** Démo voix landing — catalogue rappeurs (même modèles Fish que le studio). */
 
-/** Fichier statique généré au build Vercel (script/generate-landing-gims-demo.mjs). */
-export const LANDING_VOICE_DEMO_SRC = "/assets/landing-v2/gims-voice-demo.mp3";
+export type LandingVoiceRapper = {
+  slug: string;
+  name: string;
+  photo: string;
+};
 
-/** Secours : synthèse Fish + cache R2 côté API. */
+export const LANDING_VOICE_RAPPERS: LandingVoiceRapper[] = [
+  { slug: "gims", name: "Maître Gims", photo: "/assets/voice-catalog/gims.jpg" },
+  { slug: "maes", name: "Maes", photo: "/assets/voice-catalog/maes.jpg" },
+  { slug: "niska", name: "Niska", photo: "/assets/voice-catalog/niska.jpg" },
+  { slug: "booba", name: "Booba", photo: "/assets/voice-catalog/booba.jpg" },
+  { slug: "jul", name: "Jul", photo: "/assets/voice-catalog/jul.jpg" },
+  { slug: "damso", name: "Damso", photo: "/assets/voice-catalog/damso.jpg" },
+  { slug: "ninho", name: "Ninho", photo: "/assets/voice-catalog/ninho.jpg" },
+  { slug: "sch", name: "SCH", photo: "/assets/voice-catalog/sch.jpg" },
+  { slug: "gazo", name: "Gazo", photo: "/assets/voice-catalog/gazo.jpg" },
+  { slug: "plk", name: "PLK", photo: "/assets/voice-catalog/plk.jpg" },
+  { slug: "sdm", name: "SDM", photo: "/assets/voice-catalog/sdm.jpg" },
+  { slug: "tiakola", name: "Tiakola", photo: "/assets/voice-catalog/tiakola.jpg" },
+];
+
+export const LANDING_VOICE_DEFAULT_SLUG = "gims";
+
+export function buildLandingVoiceScript(name: string): string {
+  return `Salut, je me présente, c'est ${name} — j'ai été généré par LuxeFlexIA.`;
+}
+
+/** Fichier statique généré au build Vercel (Gims par défaut). */
+export const LANDING_VOICE_DEMO_STATIC: Partial<Record<string, string>> = {
+  gims: "/assets/landing-v2/gims-voice-demo.mp3",
+};
+
+/** Synthèse Fish + cache R2 côté API. */
 export const LANDING_VOICE_DEMO_API = "/api/larps/voice/landing-demo";
 
-export const LANDING_VOICE_DEMO_PHOTO = "/assets/voice-catalog/gims.jpg";
-export const LANDING_VOICE_DEMO_NAME = "Maître Gims";
+export function landingVoiceDemoApiUrl(slug: string): string {
+  return `${LANDING_VOICE_DEMO_API}?slug=${encodeURIComponent(slug)}`;
+}
+
+export async function resolveLandingVoiceDemoSrc(slug: string): Promise<string> {
+  const staticSrc = LANDING_VOICE_DEMO_STATIC[slug];
+  if (staticSrc) {
+    try {
+      const head = await fetch(staticSrc, { method: "HEAD" });
+      if (head.ok) return staticSrc;
+    } catch {
+      /* fallback API */
+    }
+  }
+
+  const res = await fetch(landingVoiceDemoApiUrl(slug));
+  if (!res.ok) return staticSrc ?? landingVoiceDemoApiUrl(slug);
+  const data = (await res.json()) as { audioUrl?: string };
+  return data.audioUrl?.trim() || staticSrc || landingVoiceDemoApiUrl(slug);
+}
 
 export function splitSubtitleWords(text: string): string[] {
   return text
