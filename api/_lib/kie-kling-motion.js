@@ -104,11 +104,12 @@ function extractKlingMotionVideoUrl(data) {
 function buildKlingMotionPrompt(userPrompt) {
   const base = String(userPrompt || "").trim();
   const lock =
-    " No distortion. Keep camera movement, background, ground and reflections consistent with the reference video.";
+    " No distortion. Keep camera movement, background, ground and reflections consistent with the reference video. If dashboard visible, preserve exact speedometer readings from source.";
   if (!base) {
     return "No distortion, the character's movements are consistent with the video.";
   }
-  return base.length + lock.length <= 2500 ? `${base}.${lock}` : base.slice(0, 2500);
+  const combined = `${base}.${lock}`;
+  return combined.length <= 2500 ? combined : base.slice(0, 2500);
 }
 
 module.exports = {

@@ -80,7 +80,7 @@ export const VIDEO_V2V_PRESETS: V2VScenePreset[] = [
     label: "Supercar",
     emoji: "🏎️",
     prompt:
-      "Remplace l'objet ou le véhicule par une Lamborghini Urus noire mat, reflets crédibles.",
+      "Remplace ma voiture par une Lamborghini Urus noire mat, habitacle Urus photoréaliste, compteur identique à la vidéo source (même vitesse affichée), portes fermées, reflets crédibles.",
   },
   {
     id: "celebrity",

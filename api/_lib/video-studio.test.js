@@ -7,6 +7,8 @@ const {
   buildCarSwapPrompt,
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
+  isVehicleDrivingPrompt,
+  buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   VIDEO_FLAT_CREDIT_COST,
 } = require("./video-studio");
@@ -120,5 +122,27 @@ describe("video-studio", () => {
     );
     assert.doesNotMatch(prompt, /completely silent/i);
     assert.match(prompt, /Dubai/i);
+  });
+
+  it("isVehicleDrivingPrompt detects cockpit swaps", () => {
+    assert.equal(
+      isVehicleDrivingPrompt("Remplace ma Twingo par une Urus au volant"),
+      true,
+    );
+    assert.equal(isVehicleDrivingPrompt("Transporte-moi à Dubai"), false);
+  });
+
+  it("buildV2VProviderPrompt locks dashboard speed for vehicle prompts", () => {
+    const prompt = buildV2VProviderPrompt(
+      "Remplace ma voiture par une Lamborghini Urus, je roule à 120 km/h au volant.",
+      { preserveSourceAudio: false },
+    );
+    assert.match(prompt, /120 km\/h/i);
+    assert.match(prompt, /speedometer|compteur|cockpit lock/i);
+  });
+
+  it("buildV2VDashboardLockSuffix uses explicit speed when mentioned", () => {
+    const suffix = buildV2VDashboardLockSuffix("conduis à 120 km/h");
+    assert.match(suffix, /exactly 120 km\/h/i);
   });
 });

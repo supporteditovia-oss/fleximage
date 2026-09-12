@@ -35,7 +35,10 @@ import {
   type VideoAspectRatio,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
-import { finalizeV2VPromptForSubmit } from "@/lib/v2v-prompt";
+import {
+  finalizeV2VPromptForSubmit,
+  isVehicleDrivingPrompt,
+} from "@/lib/v2v-prompt";
 import {
   formatVideoDurationLabel,
   readVideoDurationSec,
@@ -638,6 +641,13 @@ export default function VideoIA() {
                   <p className="via-voice-blocked-note">
                     Sans l&apos;option voix (+5 cr), les demandes de voix ou de
                     son dans le prompt sont ignorées — sortie 100 % muette.
+                  </p>
+                ) : null}
+                {isVehicleDrivingPrompt(swapPrompt) ? (
+                  <p className="via-voice-blocked-note">
+                    Conduite / véhicule détecté : l&apos;IA est forcée à
+                    conserver le <strong>compteur et la vitesse affichée</strong>{" "}
+                    de ta vidéo (ex. 120 km/h reste 120 km/h).
                   </p>
                 ) : null}
                 <div className="via-chips">

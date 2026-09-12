@@ -79,6 +79,45 @@ function buildV2VSceneLockSuffix() {
   return " Garde le décor, le sol, les reflets et les mouvements de caméra identiques.";
 }
 
+const VEHICLE_DRIVING_PATTERN =
+  /\b(voiture|car|auto|v[ée]hicule|vehicle|moto|scooter|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|amg|volant|steering|wheel|habitacle|cockpit|interieur|interior|dashboard|compteur|speedometer|tachometer|condui|driv|au volant|behind the wheel|acc[ée]l|rpm|km\/h|kmh)\b/i;
+
+function isVehicleDrivingPrompt(text) {
+  return VEHICLE_DRIVING_PATTERN.test(String(text || ""));
+}
+
+function extractMentionedSpeedKmh(text) {
+  const match = String(text || "").match(/\b(\d{2,3})\s*(?:km\/h|kmh|km\/h)\b/i);
+  if (match) return match[1];
+  const loose = String(text || "").match(/\b(?:à|a|at)\s+(\d{2,3})\b/i);
+  return loose ? loose[1] : null;
+}
+
+function buildV2VDashboardLockSuffix(userPrompt) {
+  const speed = extractMentionedSpeedKmh(userPrompt);
+  const speedLine = speed
+    ? ` Speedometer and all gauges must read exactly ${speed} km/h at every frame — never a different speed.`
+    : " Preserve the exact same speedometer/tachometer digits and needle positions as the source video at every frame (if source shows 120 km/h, output must show 120 km/h).";
+
+  return [
+    " CRITICAL cockpit lock:",
+    speedLine,
+    " Keep dashboard screens lit, doors closed, seatbelt and hand positions unchanged.",
+    " Only swap the vehicle interior/exterior styling — never alter visible speed readings.",
+  ].join("");
+}
+
+function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt = "" } = {}) {
+  let result = String(prompt || "").trim();
+  const source = userPrompt || result;
+
+  if (isVehicleDrivingPrompt(source) && !/speedometer|compteur|dashboard lock|CRITICAL cockpit/i.test(result)) {
+    result += buildV2VDashboardLockSuffix(source);
+  }
+
+  return preserveSourceAudio ? result : `${result}${V2V_SILENT_OUTPUT_LOCK}`;
+}
+
 function buildV2VProviderPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
   let prompt = String(userPrompt || "").trim();
 
@@ -92,13 +131,13 @@ function buildV2VProviderPrompt(userPrompt, { preserveSourceAudio = false } = {}
         prompt,
       );
     const locked = hasSceneLock ? prompt : `${prompt}${buildV2VSceneLockSuffix()}`;
-    return preserveSourceAudio ? locked : `${locked}${V2V_SILENT_OUTPUT_LOCK}`;
+    return appendV2VRealismLocks(locked, { preserveSourceAudio, userPrompt: prompt });
   }
 
   const fallback = buildV2VTransformPrompt(
     prompt || "Transform the scene while keeping camera motion identical.",
   );
-  return preserveSourceAudio ? fallback : `${fallback}${V2V_SILENT_OUTPUT_LOCK}`;
+  return appendV2VRealismLocks(fallback, { preserveSourceAudio, userPrompt: prompt });
 }
 
 function buildV2VTransformPrompt(description) {
@@ -208,6 +247,8 @@ module.exports = {
   buildV2VTransformPrompt,
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
+  isVehicleDrivingPrompt,
+  buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   validateVoiceText,
   mapStudioStage,
