@@ -16,8 +16,10 @@ function buildLandingVoiceScript(entry) {
   return `Salut, je me présente, c'est ${entry.name} — j'ai été généré par LuxeFlexIA.`;
 }
 
+const LANDING_VOICE_DEMO_VERSION = 2;
+
 function landingVoiceR2Key(slug) {
-  return `landing-voice-demo/${slug}.mp3`;
+  return `landing-voice-demo/v${LANDING_VOICE_DEMO_VERSION}/${slug}.mp3`;
 }
 
 function resolveLandingVoiceEntry(slug) {
@@ -30,6 +32,7 @@ function resolveLandingVoiceEntry(slug) {
 module.exports = {
   LANDING_VOICE_CATALOG: catalog.entries,
   LANDING_VOICE_DEFAULT_SLUG,
+  LANDING_VOICE_DEMO_VERSION,
   buildLandingVoiceScript,
   landingVoiceR2Key,
   resolveLandingVoiceEntry,
