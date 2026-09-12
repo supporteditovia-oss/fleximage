@@ -51,6 +51,8 @@ export interface CurrentPlanSummary {
     credits: number;
     priceLabel: string;
     images: number;
+    videos?: number;
+    voices?: number;
     available?: boolean;
   }>;
 }

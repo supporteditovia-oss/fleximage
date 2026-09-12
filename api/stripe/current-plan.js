@@ -126,6 +126,8 @@ module.exports = async function handler(req, res) {
           credits: p.credits,
           priceLabel: p.priceLabel,
           images: p.images,
+          videos: p.videos,
+          voices: p.voices,
           available: Boolean(process.env[p.envKey]),
         }))
       : [];
@@ -141,7 +143,7 @@ module.exports = async function handler(req, res) {
       currentPeriodEnd: subscription?.current_period_end ?? null,
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
       canManageSubscription: Boolean(profile.stripe_customer_id),
-      outOfCredits: !isAdmin && credits < 10,
+      outOfCredits: !isAdmin && credits < 12,
       // Primary offer kept for older clients
       upgradeOffer: upgradeOffers[0] || null,
       upgradeOffers,

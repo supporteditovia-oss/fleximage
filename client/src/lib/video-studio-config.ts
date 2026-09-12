@@ -1,11 +1,16 @@
+import {
+  VIDEO_FLAT_CREDIT_COST,
+  VIDEO_VOICE_EXTRA_CREDIT,
+} from "@shared/credit-costs";
+
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
-/** Plafond rentable Kling Motion Control 720p — prix fixe 50 crédits / vidéo. */
+/** Plafond rentable Kling Motion Control 720p — prix fixe 60 crédits / vidéo. */
 export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 /** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
 export const VIDEO_V2V_MAX_DURATION_SLACK_SEC = 0.5;
-export const VIDEO_FLAT_CREDIT_COST = 50;
-export const VIDEO_VOICE_EXTRA_CREDIT = 5;
+
+export { VIDEO_FLAT_CREDIT_COST, VIDEO_VOICE_EXTRA_CREDIT };
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
 /** Upload direct R2 — les vidéos smartphone 8s dépassent souvent 20 Mo. */
 export const VIDEO_V2V_MAX_SIZE_MB = 100;
@@ -143,7 +148,7 @@ export function computeV2VCreditCost(
   return VIDEO_FLAT_CREDIT_COST;
 }
 
-/** 1 vidéo = 50 crédits (max 8s, 720p) ; +5 si voix IA (I2V) ou voix filmée (V2V). */
+/** 1 vidéo = 60 crédits (max 8s, 720p) ; +5 si voix IA (I2V) ou voix filmée (V2V). */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;

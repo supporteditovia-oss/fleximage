@@ -33,14 +33,14 @@ const PLAN_CARD_PRICES: Record<
   Record<BillingPlan, PlanCardPrice>
 > = {
   eur: {
-    discovery: { prefix: "", major: "8", minor: "90", showCurrencyCode: true },
-    essential: { prefix: "", major: "19", minor: "90", showCurrencyCode: true },
-    ultimate: { prefix: "", major: "39", minor: "90", showCurrencyCode: true },
+    discovery: { prefix: "", major: "10", minor: "", showCurrencyCode: true },
+    essential: { prefix: "", major: "25", minor: "", showCurrencyCode: true },
+    ultimate: { prefix: "", major: "49", minor: "", showCurrencyCode: true },
   },
   usd: {
-    discovery: { prefix: "$", major: "9", minor: "99", showCurrencyCode: false },
-    essential: { prefix: "$", major: "19", minor: "99", showCurrencyCode: false },
-    ultimate: { prefix: "$", major: "39", minor: "99", showCurrencyCode: false },
+    discovery: { prefix: "$", major: "10", minor: "99", showCurrencyCode: false },
+    essential: { prefix: "$", major: "25", minor: "99", showCurrencyCode: false },
+    ultimate: { prefix: "$", major: "49", minor: "99", showCurrencyCode: false },
   },
 };
 
@@ -65,6 +65,9 @@ export function formatPlanPriceInline(
   const p = getPlanCardPrice(plan, currency);
   if (currency === "usd") {
     return `${p.prefix}${p.major}.${p.minor}`;
+  }
+  if (!p.minor) {
+    return `${p.major} €`;
   }
   return `${p.major},${p.minor} €`;
 }

@@ -47,7 +47,7 @@ import { ModelesCatalogGrid } from "@/components/modeles/ModelesCatalogGrid";
 import "@/pages/modeles-page.css";
 import "@/components/modeles/modeles-catalog.css";
 
-const IMAGE_CREDIT_COST = 10;
+import { IMAGE_CREDIT_COST } from "@shared/credit-costs";
 
 type SlideDirection = "next" | "prev" | "none";
 

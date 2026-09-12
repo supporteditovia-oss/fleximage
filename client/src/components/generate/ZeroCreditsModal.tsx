@@ -202,13 +202,13 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
               <button
                 type="button"
                 disabled={loading !== null}
-                onClick={() => void onSubscribeFresh("essential")}
+                onClick={() => void onSubscribeFresh("ultimate")}
                 className="lx-btn-gold flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold"
               >
-                {loading === "essential" ? (
+                {loading === "ultimate" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
-                {t("zeroCredits.subscribeEssential")}
+                {t("zeroCredits.subscribeUltimate")}
               </button>
               <button
                 type="button"
@@ -246,9 +246,11 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
                           {pack.label}
                         </span>
                         <span className="block text-xs text-[var(--lx-ink-muted)]">
-                          {t("zeroCredits.packLine", {
+                          {t("zeroCredits.packLineUniversal", {
                             credits: pack.credits,
                             images: pack.images,
+                            videos: pack.videos ?? Math.floor(pack.credits / 60),
+                            voices: pack.voices ?? Math.floor(pack.credits / 10),
                           })}
                         </span>
                       </span>

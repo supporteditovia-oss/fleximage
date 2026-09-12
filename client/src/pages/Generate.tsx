@@ -78,8 +78,12 @@ import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
-const IMAGE_CREDIT_COST = 10;
-const VIDEO_CREDIT_COST = 25;
+import {
+  IMAGE_CREDIT_COST,
+  VIDEO_FLAT_CREDIT_COST,
+} from "@shared/credit-costs";
+
+const VIDEO_CREDIT_COST = VIDEO_FLAT_CREDIT_COST;
 type FakePaywallReason = "onboarding" | "insufficientCredits";
 type GenerationMode = "image" | "video";
 

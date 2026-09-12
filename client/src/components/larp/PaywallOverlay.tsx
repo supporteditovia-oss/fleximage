@@ -52,7 +52,7 @@ interface PaywallOverlayProps {
 export function PaywallOverlay({
   imageUrl,
   isFake,
-  defaultPlan = "essential",
+  defaultPlan = "ultimate",
   initialChoosingPlan = false,
   presentation = "overlay",
   variant = "default",
@@ -337,11 +337,11 @@ export function PaywallOverlay({
               <div className="grid shrink-0 grid-cols-3 items-stretch gap-2.5 md:gap-4">
                 {planCards.map((plan) => {
                   const isSelected = selectedPlan === plan.id;
-                  const isEssential = plan.id === "essential";
+                  const isUltimate = plan.id === "ultimate";
 
                   return (
                     <div key={plan.id} className="relative pt-3">
-                      {isEssential && (
+                      {isUltimate && (
                         <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-[var(--lx-gold)]/55 bg-[linear-gradient(135deg,#1a1408_0%,#2a2214_100%)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--lx-gold-soft)] shadow-[0_4px_14px_rgba(18,16,14,0.25)] md:px-3 md:text-[10px]">
                           {t("paywall.planBadges.recommended")}
                         </span>
@@ -351,7 +351,7 @@ export function PaywallOverlay({
                         onClick={() => setSelectedPlan(plan.id)}
                         whileTap={{ scale: 0.98 }}
                         className={`relative flex h-full min-h-[8.25rem] w-full flex-col justify-between overflow-hidden rounded-2xl p-3 text-left transition-all md:min-h-[10.5rem] md:p-5 ${
-                          isEssential ? "paywall-essential-card-border isolate" : ""
+                          isUltimate ? "paywall-essential-card-border isolate" : ""
                         } ${
                           isSelected
                             ? "border border-[var(--lx-gold)] bg-white shadow-[0_16px_40px_rgba(18,16,14,0.12),0_0_0_1px_rgba(201,162,39,0.2)]"

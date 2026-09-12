@@ -215,6 +215,20 @@ export const extraResources = {
       enterValue: "Entrer {{label}}...",
       enterValueFallback: "Entrer une valeur...",
     },
+    voiceStudio: {
+      creditTariff:
+        "Tarifs : voix {{voice}} cr · clone {{clone}} cr · image 10 cr · vidéo 60 cr",
+      creditBalance: "Ton solde : {{balance}} crédits",
+      creditActionGenerate: "Cette action : {{count}} crédits (génération vocale)",
+      creditActionCloneAndGenerate:
+        "Cette action : jusqu'à {{total}} cr (clone {{clone}} + génération {{generate}})",
+      firstCloneFreeNote:
+        "1er clone du mois offert — tu peux n'être débité que de {{generate}} cr.",
+      creditRemainingAfter: "Reste ~{{count}} crédits après cette génération.",
+      creditInsufficient: "Crédits insuffisants — il te manque {{need}} crédit(s).",
+      generateWithCredits: "Générer la voix · {{count}} cr",
+      generateWithCreditsMax: "Générer la voix · jusqu'à {{count}} cr",
+    },
     templateGallery: {
       title: "Choisis parmi les mod\u00e8les existants",
       searchPlaceholder: "Rechercher un mod\u00e8le...",
@@ -500,14 +514,16 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / mois",
       replacePlan:
         "Ton abonnement actuel est annulé automatiquement, puis remplacé par la nouvelle formule.",
-      subscribeEssential: "Essential — 19,90 €/mois · 1 100 crédits",
-      subscribeDiscovery: "Discovery — 8,90 €/mois · 250 crédits",
+      subscribeUltimate: "Ultimate — 49 €/mois · 1920 crédits (tout inclus)",
+      subscribeDiscovery: "Discovery — 10 €/mois · 240 crédits",
       alreadyUltimate:
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
-      packsTitle: "Ou recharger sans changer de plan",
+      packsTitle: "Ou recharger (crédits universels)",
       packLine: "{{credits}} crédits · ~{{images}} images",
+      packLineUniversal:
+        "{{credits}} cr · ~{{images}} img · {{videos}} vid · {{voices}} voix",
       packsNote:
-        "Les packs coûtent plus cher à l'image qu'un abonnement — utiles en dépannage seulement.",
+        "Les packs coûtent ~3× plus cher au crédit qu'Ultimate — l'abo reste le meilleur choix.",
       paymentUnavailableTitle: "Paiement indisponible",
       paymentUnavailableDescription:
         "Impossible d'ouvrir Stripe pour le moment.",
@@ -519,16 +535,16 @@ export const extraResources = {
         essential: {
           headline: "Passe en Essential",
           pitch:
-            "1 100 crédits / mois (110 images) — bien plus rentable que les packs.",
-          cta: "Passer à Essential — 19,90 €/mois",
-          creditsLabel: "1 100 crédits",
+            "840 cr / mois — images, vidéos, voix & clones. Bien plus rentable que les packs.",
+          cta: "Passer à Essential — 25 €/mois",
+          creditsLabel: "840 crédits",
         },
         ultimate: {
           headline: "Passe en Ultimate",
           pitch:
-            "2 500 crédits / mois (250 images). Le max de volume, moins cher à l'image.",
-          cta: "Passer à Ultimate — 39,90 €/mois",
-          creditsLabel: "2 500 crédits",
+            "1 920 cr / mois — 192 images, 32 vidéos, voix & clones. Meilleur rapport.",
+          cta: "Passer à Ultimate — 49 €/mois",
+          creditsLabel: "1 920 crédits",
         },
       },
     },
@@ -745,6 +761,20 @@ export const extraResources = {
       textFallbackLabel: "Text {{index}}",
       enterValue: "Enter {{label}}...",
       enterValueFallback: "Enter a value...",
+    },
+    voiceStudio: {
+      creditTariff:
+        "Pricing: voice {{voice}} cr · clone {{clone}} cr · image 10 cr · video 60 cr",
+      creditBalance: "Your balance: {{balance}} credits",
+      creditActionGenerate: "This action: {{count}} credits (voice generation)",
+      creditActionCloneAndGenerate:
+        "This action: up to {{total}} cr (clone {{clone}} + generation {{generate}})",
+      firstCloneFreeNote:
+        "First clone each month is free — you may only pay {{generate}} cr.",
+      creditRemainingAfter: "~{{count}} credits left after this generation.",
+      creditInsufficient: "Not enough credits — you need {{need}} more.",
+      generateWithCredits: "Generate voice · {{count}} cr",
+      generateWithCreditsMax: "Generate voice · up to {{count}} cr",
     },
     templateGallery: {
       title: "Choose from existing templates",
@@ -1031,14 +1061,16 @@ export const extraResources = {
       perMonth: "{{credits}} · ${{price}} / month",
       replacePlan:
         "Your current subscription is canceled automatically, then replaced by the new plan.",
-      subscribeEssential: "Essential — $19.99/month · 1,100 credits",
-      subscribeDiscovery: "Discovery — $9.99/month · 250 credits",
+      subscribeUltimate: "Ultimate — $49.99/month · 1920 credits (all included)",
+      subscribeDiscovery: "Discovery — $10.99/month · 240 credits",
       alreadyUltimate:
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
       packLine: "{{credits}} credits · ~{{images}} images",
+      packLineUniversal:
+        "{{credits}} cr · ~{{images}} img · {{videos}} vid · {{voices}} voice",
       packsNote:
-        "Packs cost more per image than a subscription — useful as a backup only.",
+        "Packs cost ~3× more per credit than Ultimate — subscription is the best deal.",
       paymentUnavailableTitle: "Payment unavailable",
       paymentUnavailableDescription: "Couldn't open Stripe right now.",
       upgradeFailed: "Upgrade failed",
@@ -1049,16 +1081,16 @@ export const extraResources = {
         essential: {
           headline: "Upgrade to Essential",
           pitch:
-            "1,100 credits / month (110 images) — much better value than packs.",
-          cta: "Switch to Essential — $19.99/month",
-          creditsLabel: "1,100 credits",
+            "840 cr / month — images, videos, voice & clones. Much better than packs.",
+          cta: "Switch to Essential — $25.99/month",
+          creditsLabel: "840 credits",
         },
         ultimate: {
           headline: "Upgrade to Ultimate",
           pitch:
-            "2,500 credits / month (250 images). Maximum volume, lowest cost per image.",
-          cta: "Switch to Ultimate — $39.99/month",
-          creditsLabel: "2,500 credits",
+            "1,920 cr / month — 192 images, 32 videos, voice & clones. Best value.",
+          cta: "Switch to Ultimate — $49.99/month",
+          creditsLabel: "1,920 credits",
         },
       },
     },
@@ -1224,6 +1256,20 @@ export const extraResources = {
       textFallbackLabel: "Texto {{index}}",
       enterValue: "Introduce {{label}}...",
       enterValueFallback: "Introduce un valor...",
+    },
+    voiceStudio: {
+      creditTariff:
+        "Tarifas: voz {{voice}} cr · clon {{clone}} cr · imagen 10 cr · video 60 cr",
+      creditBalance: "Tu saldo: {{balance}} creditos",
+      creditActionGenerate: "Esta accion: {{count}} creditos (generacion de voz)",
+      creditActionCloneAndGenerate:
+        "Esta accion: hasta {{total}} cr (clon {{clone}} + generacion {{generate}})",
+      firstCloneFreeNote:
+        "1er clon del mes gratis — puedes pagar solo {{generate}} cr.",
+      creditRemainingAfter: "Quedan ~{{count}} creditos tras esta generacion.",
+      creditInsufficient: "Creditos insuficientes — te faltan {{need}}.",
+      generateWithCredits: "Generar voz · {{count}} cr",
+      generateWithCreditsMax: "Generar voz · hasta {{count}} cr",
     },
     templateGallery: {
       title: "Elige entre LARPs existentes",
@@ -1468,8 +1514,8 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / mes",
       replacePlan:
         "Tu suscripcion actual se cancela automaticamente y se sustituye por el nuevo plan.",
-      subscribeEssential: "Essential — 19,90 €/mes · 1 100 creditos",
-      subscribeDiscovery: "Discovery — 8,90 €/mes · 250 creditos",
+      subscribeEssential: "Essential — 22,90 €/mes · 840 creditos",
+      subscribeDiscovery: "Discovery — 9,90 €/mes · 240 creditos",
       alreadyUltimate:
         "Ya estas en Ultimate: recarga un pack para continuar.",
       packsTitle: "O recargar sin cambiar de plan",
@@ -1486,16 +1532,16 @@ export const extraResources = {
         essential: {
           headline: "Pasa a Essential",
           pitch:
-            "1 100 creditos / mes (110 imagenes): mucho mas rentable que los packs.",
-          cta: "Pasar a Essential — 19,90 €/mes",
-          creditsLabel: "1 100 creditos",
+            "840 creditos / mes (84 imagenes o 14 videos): mucho mas rentable que los packs.",
+          cta: "Pasar a Essential — 22,90 €/mes",
+          creditsLabel: "840 creditos",
         },
         ultimate: {
           headline: "Pasa a Ultimate",
           pitch:
-            "2 500 creditos / mes (250 imagenes). Maximo volumen, menor coste por imagen.",
-          cta: "Pasar a Ultimate — 39,90 €/mes",
-          creditsLabel: "2 500 creditos",
+            "1 920 creditos / mes (192 imagenes o 32 videos). Maximo volumen, menor coste por imagen.",
+          cta: "Pasar a Ultimate — 44,90 €/mes",
+          creditsLabel: "1 920 creditos",
         },
       },
     },
@@ -1663,6 +1709,20 @@ export const extraResources = {
       textFallbackLabel: "Text {{index}}",
       enterValue: "{{label}} eingeben...",
       enterValueFallback: "Wert eingeben...",
+    },
+    voiceStudio: {
+      creditTariff:
+        "Preise: Stimme {{voice}} cr · Klon {{clone}} cr · Bild 10 cr · Video 60 cr",
+      creditBalance: "Dein Guthaben: {{balance}} Credits",
+      creditActionGenerate: "Diese Aktion: {{count}} Credits (Sprachgenerierung)",
+      creditActionCloneAndGenerate:
+        "Diese Aktion: bis zu {{total}} cr (Klon {{clone}} + Generierung {{generate}})",
+      firstCloneFreeNote:
+        "1. Klon pro Monat gratis — du zahlst ggf. nur {{generate}} cr.",
+      creditRemainingAfter: "~{{count}} Credits nach dieser Generierung.",
+      creditInsufficient: "Nicht genug Credits — dir fehlen {{need}}.",
+      generateWithCredits: "Stimme generieren · {{count}} cr",
+      generateWithCreditsMax: "Stimme generieren · bis zu {{count}} cr",
     },
     templateGallery: {
       title: "Waehle aus bestehenden LARPsn",
@@ -1907,8 +1967,8 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / Monat",
       replacePlan:
         "Dein aktuelles Abo wird automatisch gekuendigt und durch den neuen Plan ersetzt.",
-      subscribeEssential: "Essential — 19,90 €/Monat · 1.100 Credits",
-      subscribeDiscovery: "Discovery — 8,90 €/Monat · 250 Credits",
+      subscribeEssential: "Essential — 22,90 €/Monat · 840 Credits",
+      subscribeDiscovery: "Discovery — 9,90 €/Monat · 240 Credits",
       alreadyUltimate:
         "Du bist bereits auf Ultimate — lade ein Pack nach, um weiterzumachen.",
       packsTitle: "Oder aufladen ohne Planwechsel",
@@ -1925,16 +1985,16 @@ export const extraResources = {
         essential: {
           headline: "Wechsel zu Essential",
           pitch:
-            "1.100 Credits / Monat (110 Bilder) — deutlich besserer Preis als Packs.",
-          cta: "Zu Essential — 19,90 €/Monat",
-          creditsLabel: "1.100 Credits",
+            "840 Credits / Monat (84 Bilder oder 14 Videos) — deutlich besserer Preis als Packs.",
+          cta: "Zu Essential — 22,90 €/Monat",
+          creditsLabel: "840 Credits",
         },
         ultimate: {
           headline: "Wechsel zu Ultimate",
           pitch:
-            "2.500 Credits / Monat (250 Bilder). Maximales Volumen, niedrigster Preis pro Bild.",
-          cta: "Zu Ultimate — 39,90 €/Monat",
-          creditsLabel: "2.500 Credits",
+            "1.920 Credits / Monat (192 Bilder oder 32 Videos). Maximales Volumen, niedrigster Preis pro Bild.",
+          cta: "Zu Ultimate — 44,90 €/Monat",
+          creditsLabel: "1.920 Credits",
         },
       },
     },
