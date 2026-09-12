@@ -26,6 +26,7 @@ const {
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
 const { analyzeSubjectContext } = require("../subject-analysis");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
+const { detectObjectReplacement } = require("../object-replacement-prompt");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -493,6 +494,7 @@ module.exports = async function handler(req, res) {
         : buildIdentityPreservingPrompt(effectivePrompt, {
             referenceImageCount: imageUrls.length,
             subjectPoseBlock,
+            subjectAnalysis,
           });
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
@@ -502,6 +504,11 @@ module.exports = async function handler(req, res) {
 
     const prevMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    const objectReplacementIntent = detectObjectReplacement(effectivePrompt, {
+      referenceImageCount: imageUrls.length,
+      subjectAnalysis,
+    });
+
     const generationMetadata = {
       ...prevMeta,
       oneshot_model_variant: oneshotModelVariant,
@@ -509,6 +516,9 @@ module.exports = async function handler(req, res) {
       subject_analysis: subjectAnalysis,
       subject_type: subject,
       pose_style: poseStyle,
+      object_replacement_mode: objectReplacementIntent
+        ? objectReplacementIntent.kind
+        : null,
       server_prompt_ready_at: new Date().toISOString(),
       ...(templateReferenceId
         ? {
