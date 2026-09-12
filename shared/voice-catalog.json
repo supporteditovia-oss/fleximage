@@ -1,7 +1,7 @@
 {
   "entries": [
     { "slug": "gims", "name": "Maître Gims", "gender": "homme", "category": "Rap", "description": "Pop urbaine", "fishId": "d986afc13e7346ada353a747bce8a811", "photo": "gims.jpg", "pitch": 0.88, "rate": 1.0, "demoKind": "artist" },
-    { "slug": "maes", "name": "Maes", "gender": "homme", "category": "Rap", "description": "Rap FR — street", "fishId": "22b7c6809d5d405aa6a5ae2402272b53", "photo": "maes.jpg", "pitch": 0.78, "rate": 0.95, "demoKind": "artist" },
+    { "slug": "maes", "name": "Maes", "gender": "homme", "category": "Rap", "description": "Rap FR — street", "fishId": "22b7c6809d5d405aa6a5ae2402272b53", "photo": "maes.jpg", "pitch": 0.78, "rate": 0.84, "demoKind": "artist" },
     { "slug": "niska", "name": "Niska", "gender": "homme", "category": "Rap", "description": "Trap Paris", "fishId": "6be490a175744894826dd464cf3a5004", "photo": "niska.jpg", "pitch": 0.74, "rate": 1.0, "demoKind": "artist" },
     { "slug": "booba", "name": "Booba", "gender": "homme", "category": "Rap", "description": "Légende du rap FR", "fishId": "82ec8e836aaf47aaae8bfb52f3d744b2", "photo": "booba.jpg", "pitch": 0.7, "rate": 0.9, "demoKind": "artist" },
     { "slug": "jul", "name": "Jul", "gender": "homme", "category": "Rap", "description": "Marseille — énergie", "fishId": "66754cdcb9554e62bdff1ab6446dc78d", "photo": "jul.jpg", "pitch": 0.82, "rate": 1.06, "demoKind": "artist" },

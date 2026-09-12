@@ -16,6 +16,7 @@ const {
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
+const { resolveCatalogTtsSpeed } = require("../voice-catalog");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -286,6 +287,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     const ttsText = script.fishText;
+    const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
     let audioBuffer;
     if (resolvedFishId) {
@@ -294,6 +296,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         audioBuffer = await synthesizeSpeech({
           text: ttsText,
           referenceId: resolvedFishId,
+          speed: catalogTtsSpeed,
         });
       } catch (refErr) {
         console.warn("voice-generate reference_id failed, fallback inline", refErr);
@@ -308,6 +311,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
           text: ttsText,
           audioBuffer: referenceAudio,
           referenceText,
+          speed: catalogTtsSpeed,
         });
       }
     } else if (referenceAudio) {
