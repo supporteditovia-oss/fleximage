@@ -40,15 +40,15 @@ import {
 } from "@/lib/cloned-voices-storage";
 import { queryClient } from "@/lib/queryClient";
 import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
+import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
 import { resetPaywallExpiry } from "@/lib/paywall-expiry";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
-import "@/components/larp/generation-loader.css";
+import "@/components/v2/voice-generation-loader.css";
 import {
   fetchVoiceBlob,
   shareVoiceAudio,
@@ -1399,25 +1399,19 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
       </div>
 
       {showOnboardingFakeLoader ? (
-        <FakeOnboardingLoader
-          inputImageUrl={undefined}
-          onComplete={finishFakeLoader}
-        />
+        <FakeOnboardingLoader variant="voice" onComplete={finishFakeLoader} />
       ) : null}
 
-      {isGenerating && !showOnboardingFakeLoader
-        ? createPortal(
-            <GenerationLoader
-              taskId="voice-generating"
-              status="waiting"
-              estimatedSeconds={
-                hasPaidAccess ? VOICE_GEN_ESTIMATE_SEC : Math.ceil(FAKE_GEN_MS / 1000)
-              }
-              startedAtMs={voiceGenStartedAtRef.current}
-            />,
-            document.body,
-          )
-        : null}
+      {isGenerating && !showOnboardingFakeLoader ? (
+        <VoiceGenerationLoader
+          taskId="voice-generating"
+          status="waiting"
+          estimatedSeconds={
+            hasPaidAccess ? VOICE_GEN_ESTIMATE_SEC : Math.ceil(FAKE_GEN_MS / 1000)
+          }
+          startedAtMs={voiceGenStartedAtRef.current}
+        />
+      ) : null}
 
       <LuxePaywallModal
         open={showPaywall}

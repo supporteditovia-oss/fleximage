@@ -251,6 +251,15 @@ export const extraResources = {
       stepEditing: "Modification en cours...",
       stepFinishing: "Finalisation du rendu...",
     },
+    voiceProgress: {
+      badge: "Clonage IA",
+      overrun: "Synthèse en cours — ne quitte pas l'écran…",
+      stepAnalyze: "Analyse de ta voix…",
+      stepClone: "Clonage vocal en cours…",
+      stepSynthesis: "Synthèse audio…",
+      stepEffects: "Effets et mixage…",
+      stepFinishing: "Finalisation du vocal…",
+    },
     history: {
       pageTitle: "Historique",
       emptyTitle: "Aucune création pour le moment",
@@ -781,6 +790,15 @@ export const extraResources = {
       stepEditing: "Editing in progress...",
       stepFinishing: "Finishing the render...",
     },
+    voiceProgress: {
+      badge: "AI Voice Clone",
+      overrun: "Synthesis in progress — stay on this screen…",
+      stepAnalyze: "Analyzing your voice…",
+      stepClone: "Voice cloning in progress…",
+      stepSynthesis: "Audio synthesis…",
+      stepEffects: "Effects and mixing…",
+      stepFinishing: "Finalizing your vocal…",
+    },
     history: {
       pageTitle: "History",
       emptyTitle: "No creations yet",
@@ -1259,6 +1277,15 @@ export const extraResources = {
       stepEditing: "Edicion en curso...",
       stepFinishing: "Finalizando el render...",
     },
+    voiceProgress: {
+      badge: "Clon IA de voz",
+      overrun: "Síntesis en curso — no cierres la pantalla…",
+      stepAnalyze: "Analizando tu voz…",
+      stepClone: "Clonación vocal en curso…",
+      stepSynthesis: "Síntesis de audio…",
+      stepEffects: "Efectos y mezcla…",
+      stepFinishing: "Finalizando el vocal…",
+    },
     history: {
       pageTitle: "Historial de LARPs",
       emptyTitle: "Aun no tienes LARPs",
@@ -1697,6 +1724,15 @@ export const extraResources = {
       stepUnderstood: "Anfrage verstanden...",
       stepEditing: "Bearbeitung laeuft...",
       stepFinishing: "Render wird fertiggestellt...",
+    },
+    voiceProgress: {
+      badge: "KI-Stimmklon",
+      overrun: "Synthese läuft — Bildschirm nicht verlassen…",
+      stepAnalyze: "Deine Stimme wird analysiert…",
+      stepClone: "Stimmklonung läuft…",
+      stepSynthesis: "Audio-Synthese…",
+      stepEffects: "Effekte und Mix…",
+      stepFinishing: "Vocal wird fertiggestellt…",
     },
     history: {
       pageTitle: "LARP-Verlauf",
