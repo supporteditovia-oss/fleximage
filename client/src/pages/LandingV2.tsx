@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -50,6 +51,16 @@ const EDITORIAL = [
 
 const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
 
+/** Extrait vocal IA (catalogue) — démo landing uniquement. */
+const LANDING_VOICE_DEMO_SRC = "/assets/voice-catalog/samples/gims.mp3";
+
+function formatVoiceTime(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
 const FAQ = [
   {
     q: "Qu’est-ce que LuxeFlexIA ?",
@@ -82,7 +93,7 @@ function BrandLink({ className = "" }: { className?: string }) {
   return (
     <a className={`brand ${className}`.trim()} href="#top" aria-label="LuxeFlexIA, accueil">
       <span className="brand-mark" aria-hidden>
-        ◇
+        <Gem className="brand-mark__gem" strokeWidth={1.75} />
       </span>
       <span>
         LuxeFlex<span>IA</span>
@@ -95,11 +106,12 @@ export default function LandingV2() {
   const { user } = useAuth();
   const { i18n } = useTranslation();
   const loggedIn = Boolean(user);
-  const startHref = loggedIn ? "/create" : "/register";
-  const loginHref = loggedIn ? "/create" : "/login";
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [voicePlaying, setVoicePlaying] = useState(false);
+  const [voiceCurrentSec, setVoiceCurrentSec] = useState(0);
+  const [voiceDurationSec, setVoiceDurationSec] = useState(0);
+  const voiceDemoRef = useRef<HTMLAudioElement | null>(null);
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
 
@@ -121,6 +133,44 @@ export default function LandingV2() {
     setRevealed((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  useEffect(() => {
+    const audio = new Audio(LANDING_VOICE_DEMO_SRC);
+    audio.preload = "metadata";
+    voiceDemoRef.current = audio;
+
+    const onTime = () => setVoiceCurrentSec(audio.currentTime);
+    const onMeta = () => setVoiceDurationSec(audio.duration || 0);
+    const onEnded = () => setVoicePlaying(false);
+
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("ended", onEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("ended", onEnded);
+      voiceDemoRef.current = null;
+    };
+  }, []);
+
+  const toggleVoiceDemo = async () => {
+    const audio = voiceDemoRef.current;
+    if (!audio) return;
+    if (voicePlaying) {
+      audio.pause();
+      setVoicePlaying(false);
+      return;
+    }
+    try {
+      await audio.play();
+      setVoicePlaying(true);
+    } catch {
+      setVoicePlaying(false);
+    }
+  };
+
   return (
     <div className="landing-v2">
       <header className="site-header">
@@ -135,10 +185,15 @@ export default function LandingV2() {
         </button>
         <BrandLink />
         <nav className="header-actions" aria-label="Compte">
-          <Link href={loginHref}>{loggedIn ? "Studio" : "Se connecter"}</Link>
-          <Link className="header-cta" href={startHref}>
-            {loggedIn ? "Ouvrir le studio" : "Créer un compte"}
-          </Link>
+          {loggedIn ? (
+            <Link className="header-cta" href="/create">
+              Ouvrir le studio
+            </Link>
+          ) : (
+            <Link className="header-cta" href="/register">
+              S&apos;inscrire
+            </Link>
+          )}
         </nav>
       </header>
 
@@ -361,15 +416,15 @@ export default function LandingV2() {
           </div>
           <div className={`voice-card ${voicePlaying ? "is-playing" : ""}`}>
             <div className="voice-card-top">
-              <div className="voice-avatar">LF</div>
+              <div className="voice-avatar">IA</div>
               <div>
-                <strong>Ma voix</strong>
-                <span>Clonage privé · Français</span>
+                <strong>Voix générée</strong>
+                <span>Démo · Clonage IA · Français</span>
               </div>
-              <span className="voice-badge">Prête</span>
+              <span className="voice-badge">Exemple</span>
             </div>
             <div className="voice-steps" aria-label="Fonctionnement de la voix IA">
-              <span>01 Importer</span>
+              <span>01 Capturer</span>
               <i />
               <span>02 Écrire</span>
               <i />
@@ -379,8 +434,9 @@ export default function LandingV2() {
             <div className="voice-player">
               <button
                 type="button"
-                aria-label="Lire la voix"
-                onClick={() => setVoicePlaying((p) => !p)}
+                aria-label={voicePlaying ? "Mettre en pause" : "Écouter la démo vocale"}
+                aria-pressed={voicePlaying}
+                onClick={() => void toggleVoiceDemo()}
               >
                 {voicePlaying ? "❚❚" : "▶"}
               </button>
@@ -389,7 +445,10 @@ export default function LandingV2() {
                   <i key={i} style={{ height: `${h}px` }} />
                 ))}
               </div>
-              <span>0:00 / 0:12</span>
+              <span>
+                {formatVoiceTime(voiceCurrentSec)} /{" "}
+                {formatVoiceTime(voiceDurationSec || 12)}
+              </span>
             </div>
             <div className="voice-card-footer">
               <span>Naturelle</span>
@@ -427,7 +486,7 @@ export default function LandingV2() {
           <br />
           que tu imagines&nbsp;?
         </h2>
-        <Link className="gold-button" href={startHref}>
+        <Link className="gold-button" href={loggedIn ? "/create" : "/register"}>
           Commencer <span>↗</span>
         </Link>
       </section>

@@ -1,18 +1,10 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
-import {
-  Clapperboard,
-  Film,
-  ImageIcon,
-  Loader2,
-  Upload,
-  Video,
-} from "lucide-react";
+import { Film, ImageIcon, Loader2, Upload, Video } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import {
-  VIDEO_FLAT_CREDIT_COST,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   type VideoAspectRatio,
@@ -120,17 +112,6 @@ export function LandingVideoPanel() {
 
   return (
     <div className="via-studio landing-video-panel pb-4">
-      <header className="landing-video-panel__header text-center">
-        <div className="via-hero__badge">
-          <Clapperboard className="h-3.5 w-3.5" />
-          Atelier Vidéo
-        </div>
-        <h2 className="via-hero__title">Studio cinématique</h2>
-        <p className="via-hero__sub">
-          Format vertical 9:16 — rendu premium, prêt à publier.
-        </p>
-      </header>
-
       <div className="via-mode-grid">
         {WORKFLOW_OPTIONS.map((option) => (
           <button
@@ -157,8 +138,8 @@ export function LandingVideoPanel() {
             </p>
             <h3 className="via-step-title">Votre référence visuelle</h3>
             <p className="via-step-desc">
-              Portrait ou scène lifestyle — plan animé de <strong>5 secondes</strong> ·{" "}
-              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong>.
+              Portrait ou scène lifestyle — plan animé de <strong>5 secondes</strong>, format
+              vertical.
             </p>
             <input
               ref={imageFileRef}
@@ -208,8 +189,8 @@ export function LandingVideoPanel() {
             </p>
             <h3 className="via-step-title">Votre séquence source</h3>
             <p className="via-step-desc">
-              Plan filmé au smartphone — max <strong>{VIDEO_V2V_MAX_DURATION_SEC} s</strong> ·{" "}
-              {VIDEO_FLAT_CREDIT_COST} crédits.
+              Plan filmé au smartphone — max <strong>{VIDEO_V2V_MAX_DURATION_SEC} s</strong>, angle
+              et mouvement préservés.
             </p>
             <input
               ref={videoFileRef}
@@ -291,7 +272,7 @@ export function LandingVideoPanel() {
           ) : (
             <>
               <Film className="h-4 w-4" />
-              Générer ma vidéo · {VIDEO_FLAT_CREDIT_COST} crédits
+              Créer ma vidéo
             </>
           )}
         </button>

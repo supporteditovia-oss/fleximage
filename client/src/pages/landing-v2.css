@@ -79,9 +79,16 @@
 }
 
 .landing-v2 .brand-mark {
-  font-family: Georgia, serif;
-  font-size: 18px;
-  transform: rotate(45deg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.landing-v2 .brand-mark__gem {
+  width: 20px;
+  height: 20px;
+  color: var(--gold);
 }
 
 .landing-v2 .header-actions {
