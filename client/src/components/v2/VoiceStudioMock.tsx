@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   Check,
   CloudUpload,
@@ -48,6 +47,11 @@ import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
 import { resetPaywallExpiry } from "@/lib/paywall-expiry";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
+import {
+  VOICE_FAKE_GEN_MS,
+  VOICE_GEN_ESTIMATE_SEC,
+  voiceFakeEstimateSeconds,
+} from "@/lib/voice-generation-timing";
 import "@/components/v2/voice-generation-loader.css";
 import {
   fetchVoiceBlob,
@@ -75,8 +79,7 @@ import {
 type CaptureMode = "record" | "import";
 type RecordState = "idle" | "recording" | "ready";
 
-const FAKE_GEN_MS = 3200;
-const VOICE_GEN_ESTIMATE_SEC = 40;
+const FAKE_GEN_MS = VOICE_FAKE_GEN_MS;
 
 function formatTimer(ms: number) {
   const s = Math.min(MAX_CLIP_SEC, Math.floor(ms / 1000));
@@ -1399,7 +1402,11 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
       </div>
 
       {showOnboardingFakeLoader ? (
-        <FakeOnboardingLoader variant="voice" onComplete={finishFakeLoader} />
+        <FakeOnboardingLoader
+          variant="voice"
+          durationMs={VOICE_FAKE_GEN_MS}
+          onComplete={finishFakeLoader}
+        />
       ) : null}
 
       {isGenerating && !showOnboardingFakeLoader ? (
@@ -1407,7 +1414,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           taskId="voice-generating"
           status="waiting"
           estimatedSeconds={
-            hasPaidAccess ? VOICE_GEN_ESTIMATE_SEC : Math.ceil(FAKE_GEN_MS / 1000)
+            hasPaidAccess
+              ? VOICE_GEN_ESTIMATE_SEC
+              : voiceFakeEstimateSeconds(FAKE_GEN_MS)
           }
           startedAtMs={voiceGenStartedAtRef.current}
         />

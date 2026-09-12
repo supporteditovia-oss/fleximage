@@ -54,12 +54,12 @@ export function VoiceGenerationLoader({
 
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
-  const lockedEstimate = useRef(Math.max(20, Math.round(estimatedSeconds)));
+  const lockedEstimate = useRef(Math.max(1, Math.round(estimatedSeconds)));
 
   useEffect(() => {
     lockedEstimate.current = Math.max(
       lockedEstimate.current,
-      Math.max(20, Math.round(estimatedSeconds)),
+      Math.max(1, Math.round(estimatedSeconds)),
     );
   }, [estimatedSeconds]);
 
