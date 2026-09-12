@@ -99,48 +99,95 @@ const VEHICLE_MODEL_CATALOG = [
     model: "Lamborghini Urus",
     interior:
       "authentic Lamborghini Urus OEM cabin: Urus steering wheel with Lamborghini badge, dual digital screens with Urus UI, Urus center console and air vents — not a generic SUV.",
+    key: "Lamborghini hexagonal key fob with bull logo and Urus-appropriate remote design",
   },
   {
     pattern: /\b(purosangue|puro[\s-]?sangue)\b/i,
     model: "Ferrari Purosangue",
     interior:
       "authentic Ferrari Purosangue OEM cabin: Ferrari dashboard design, Purosangue-specific steering wheel, dual screens with Ferrari UI — not a generic SUV.",
+    key: "Ferrari red rectangular key with prancing horse emblem — Purosangue OEM remote",
   },
   {
     pattern: /\b(cullinan)\b/i,
     model: "Rolls-Royce Cullinan",
     interior:
       "authentic Rolls-Royce Cullinan OEM cabin: Spirit of Ecstasy details, Rolls-Royce infotainment, luxury rear/front layout.",
+    key: "Rolls-Royce heavy rectangular key fob with Spirit of Ecstasy badge",
   },
   {
     pattern: /\b(g[\s-]?wagon|g[\s-]?class|g63)\b/i,
     model: "Mercedes-AMG G-Class",
     interior:
       "authentic Mercedes G-Class OEM cabin: G-Class dashboard, physical buttons, Mercedes MBUX screens.",
+    key: "Mercedes-Benz key fob with three-pointed star — G-Class OEM remote",
   },
   {
     pattern: /\b(cayenne|turbo\s*gt)\b/i,
     model: "Porsche Cayenne",
     interior:
       "authentic Porsche Cayenne OEM cabin: Porsche PCM screens, Porsche steering wheel, center tachometer layout if visible.",
+    key: "Porsche crest key fob — Cayenne OEM remote shape and finish",
   },
   {
     pattern: /\b(911|gt3|turbo\s*s)\b/i,
     model: "Porsche 911",
     interior:
       "authentic Porsche 911 OEM cabin: classic Porsche dashboard, sport steering wheel, Porsche PCM.",
+    key: "Porsche crest key fob — 911 OEM remote shape and finish",
+  },
+  {
+    pattern: /\b(bmw|m[23458]\b|x[567m]\b|i[478]\b)/i,
+    model: "BMW",
+    interior:
+      "authentic BMW OEM cabin matching the requested BMW model — iDrive screens, BMW steering wheel with roundel.",
+    key: "BMW blade-style key fob with BMW roundel — exact OEM for the requested model",
+  },
+  {
+    pattern: /\b(audi|rs[3567]|r8|q[3788]|e[\s-]?tron)\b/i,
+    model: "Audi",
+    interior:
+      "authentic Audi OEM cabin matching the requested Audi model — Virtual Cockpit, Audi MMI.",
+    key: "Audi flip key or smart fob with four-ring logo — exact OEM for the requested model",
+  },
+  {
+    pattern: /\b(mercedes|amg|classe\s*[cs]|eqs|eqe|maybach)\b/i,
+    model: "Mercedes-Benz",
+    interior:
+      "authentic Mercedes-Benz OEM cabin — MBUX screens, Mercedes steering wheel with star badge.",
+    key: "Mercedes-Benz key fob with three-pointed star — exact OEM for the requested model",
+  },
+  {
+    pattern: /\b(bentley|continental|bentayga|flying\s*spur)\b/i,
+    model: "Bentley",
+    interior: "authentic Bentley OEM cabin — Bentley rotating display, winged B details.",
+    key: "Bentley winged-B key fob — exact OEM remote for the requested model",
   },
   {
     pattern: /\b(ferrari|sf90|296|812|f8|roma)\b/i,
     model: "Ferrari",
     interior:
       "authentic Ferrari OEM cabin matching the requested Ferrari model — Ferrari steering wheel, dual screens, Ferrari UI.",
+    key: "Ferrari red rectangular key with prancing horse — exact OEM for the requested Ferrari model",
   },
   {
     pattern: /\b(lamborghini|lambo|aventador|hurac[aá]n|revuelto)\b/i,
     model: "Lamborghini",
     interior:
       "authentic Lamborghini OEM cabin matching the requested model — Lamborghini hexagonal details, digital cluster.",
+    key: "Lamborghini hexagonal key fob with bull logo — exact OEM for the requested Lamborghini model",
+  },
+  {
+    pattern: /\b(tesla|model\s*[3sxy])\b/i,
+    model: "Tesla",
+    interior: "authentic Tesla OEM cabin — central touchscreen, minimalist Tesla UI.",
+    key: "Tesla card key or minimalist Tesla key fob — exact OEM for the requested model",
+  },
+  {
+    pattern: /\b(maserati|levante|mc20|ghibli)\b/i,
+    model: "Maserati",
+    interior: "authentic Maserati OEM cabin — Maserati trident steering wheel and infotainment.",
+    key: "Maserati trident key fob — exact OEM for the requested model",
   },
 ];
 
@@ -150,6 +197,20 @@ function extractRequestedVehicleModel(text) {
     if (entry.pattern.test(source)) return entry;
   }
   return null;
+}
+
+function buildKeySwapInstruction(vehicle) {
+  const targetModel =
+    vehicle?.model || "the exact target vehicle model named in the prompt";
+  const keyDesc =
+    vehicle?.key ||
+    `authentic OEM key fob, remote and brand badges exactly matching real ${targetModel} factory design — never a generic or wrong-brand key`;
+
+  return [
+    " KEY & ACCESSORY SWAP (mandatory for every vehicle model — not Urus-only):",
+    ` Any source car keys, key fobs, remotes or badges visible on camera must be replaced with ${keyDesc}.`,
+    ` The replacement key must belong to ${targetModel} only — same hand motion and timing as the source clip, zero trace of the original brand.`,
+  ].join("");
 }
 
 function extractCustomInteriorFeatures(text) {
@@ -197,9 +258,7 @@ function buildV2VCockpitIntelligenceLock(userPrompt) {
     );
   }
 
-  parts.push(
-    " KEY & ACCESSORY SWAP: if car keys, key fobs, remotes or brand badges of the source vehicle appear on camera, replace them with the correct OEM keys/accessories of the target vehicle (e.g. Twingo key → Lamborghini key) with the same hand motion and timing as the source clip.",
-  );
+  parts.push(buildKeySwapInstruction(vehicle));
 
   parts.push(
     " INTELLIGENT STATE (all vehicles) — mirror source video logic frame-by-frame:",
@@ -392,6 +451,7 @@ module.exports = {
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
   extractRequestedVehicleModel,
+  buildKeySwapInstruction,
   buildV2VCockpitIntelligenceLock,
   buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,

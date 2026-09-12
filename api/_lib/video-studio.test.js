@@ -10,6 +10,7 @@ const {
   isVehicleDrivingPrompt,
   buildV2VCockpitIntelligenceLock,
   extractRequestedVehicleModel,
+  buildKeySwapInstruction,
   buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   VIDEO_FLAT_CREDIT_COST,
@@ -174,12 +175,28 @@ describe("video-studio", () => {
     );
   });
 
-  it("buildV2VCockpitIntelligenceLock includes key swap for Twingo to Urus", () => {
+  it("buildKeySwapInstruction matches model-specific OEM keys", () => {
+    const urus = buildKeySwapInstruction(extractRequestedVehicleModel("Urus"));
+    const puro = buildKeySwapInstruction(
+      extractRequestedVehicleModel("Ferrari Purosangue"),
+    );
+    assert.match(urus, /Lamborghini hexagonal key/i);
+    assert.match(puro, /Ferrari red rectangular key/i);
+    assert.doesNotMatch(puro, /Lamborghini/i);
+  });
+
+  it("buildKeySwapInstruction falls back for any unnamed model", () => {
+    const generic = buildKeySwapInstruction(null);
+    assert.match(generic, /exact target vehicle model/i);
+    assert.match(generic, /OEM key fob/i);
+  });
+
+  it("buildV2VCockpitIntelligenceLock includes dynamic key swap", () => {
     const suffix = buildV2VCockpitIntelligenceLock(
-      "Remplace ma Twingo et ma clé par une Urus",
+      "Remplace ma Clio et ma clé par une BMW M4",
     );
     assert.match(suffix, /KEY & ACCESSORY SWAP/i);
-    assert.match(suffix, /Twingo key/i);
+    assert.match(suffix, /BMW blade-style key/i);
     assert.match(suffix, /ALL car brands/i);
   });
 });
