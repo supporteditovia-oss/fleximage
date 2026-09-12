@@ -8,7 +8,7 @@
     "save": "node script/save.mjs",
     "kill-port": "bun run script/kill-port.ts",
     "build": "bun run script/build.ts",
-    "vercel-build": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs && npx vite build",
+    "vercel-build": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs && node script/generate-landing-gims-demo.mjs && npx vite build",
     "seo:static": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs",
     "seo:brand": "node script/inject-brand-seo.mjs",
     "seo:indexnow": "node script/ping-indexnow.mjs",

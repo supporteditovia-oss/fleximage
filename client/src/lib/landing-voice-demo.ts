@@ -1,10 +1,15 @@
-/** Démo voix landing — Maître Gims (extrait catalogue). */
-export const LANDING_VOICE_DEMO_SRC = "/assets/voice-catalog/samples/gims.mp3";
-export const LANDING_VOICE_DEMO_PHOTO = "/assets/voice-catalog/gims.jpg";
-export const LANDING_VOICE_DEMO_NAME = "Maître Gims";
-
+/** Démo voix landing — Maître Gims (même modèle Fish que le catalogue). */
 export const LANDING_VOICE_DEMO_SCRIPT =
   "Salut, je me présente, c'est Maître Gims — j'ai été généré par LuxeFlexIA.";
+
+/** Fichier statique généré au build Vercel (script/generate-landing-gims-demo.mjs). */
+export const LANDING_VOICE_DEMO_SRC = "/assets/landing-v2/gims-voice-demo.mp3";
+
+/** Secours : synthèse Fish + cache R2 côté API. */
+export const LANDING_VOICE_DEMO_API = "/api/larps/voice/landing-demo";
+
+export const LANDING_VOICE_DEMO_PHOTO = "/assets/voice-catalog/gims.jpg";
+export const LANDING_VOICE_DEMO_NAME = "Maître Gims";
 
 export function splitSubtitleWords(text: string): string[] {
   return text

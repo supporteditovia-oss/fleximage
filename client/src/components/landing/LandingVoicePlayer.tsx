@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  LANDING_VOICE_DEMO_API,
   LANDING_VOICE_DEMO_NAME,
   LANDING_VOICE_DEMO_PHOTO,
   LANDING_VOICE_DEMO_SCRIPT,
@@ -8,6 +9,20 @@ import {
   splitSubtitleWords,
   spokenWordCount,
 } from "@/lib/landing-voice-demo";
+
+async function resolveLandingVoiceDemoSrc(): Promise<string> {
+  try {
+    const head = await fetch(LANDING_VOICE_DEMO_SRC, { method: "HEAD" });
+    if (head.ok) return LANDING_VOICE_DEMO_SRC;
+  } catch {
+    /* fallback API */
+  }
+
+  const res = await fetch(LANDING_VOICE_DEMO_API);
+  if (!res.ok) return LANDING_VOICE_DEMO_SRC;
+  const data = (await res.json()) as { audioUrl?: string };
+  return data.audioUrl?.trim() || LANDING_VOICE_DEMO_SRC;
+}
 
 const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
 
@@ -48,9 +63,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const visibleWords = spokenWordCount(currentSec, durationSec, words.length);
 
   useEffect(() => {
-    const audio = new Audio(LANDING_VOICE_DEMO_SRC);
+    let cancelled = false;
+    const audio = new Audio();
     audio.preload = "metadata";
-    audioRef.current = audio;
 
     const onTime = () => setCurrentSec(audio.currentTime);
     const onMeta = () => setDurationSec(audio.duration || 0);
@@ -62,12 +77,22 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
     audio.addEventListener("ended", onEnded);
+    audioRef.current = audio;
+
+    void (async () => {
+      const src = await resolveLandingVoiceDemoSrc();
+      if (cancelled) return;
+      audio.src = src;
+      audio.load();
+    })();
 
     return () => {
+      cancelled = true;
       audio.pause();
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
       audio.removeEventListener("ended", onEnded);
+      audioRef.current = null;
     };
   }, []);
 

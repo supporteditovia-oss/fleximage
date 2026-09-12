@@ -12,6 +12,7 @@ const voiceHistory = require("./_lib/handlers/voice-history");
 const voiceDelete = require("./_lib/handlers/voice-delete");
 const voiceDownload = require("./_lib/handlers/voice-download");
 const voiceCatalogPreview = require("./_lib/handlers/voice-catalog-preview");
+const landingVoiceDemo = require("./_lib/handlers/landing-voice-demo");
 const templatesHandler = require("./_lib/handlers/templates");
 
 function pathParts(req) {
@@ -95,6 +96,10 @@ module.exports = async function handler(req, res) {
 
   if (parts[0] === "voice" && parts[1] === "catalog-preview") {
     return voiceCatalogPreview(req, res);
+  }
+
+  if (parts[0] === "voice" && parts[1] === "landing-demo") {
+    return landingVoiceDemo(req, res);
   }
 
   if (parts.length === 2 && parts[1] === "status") {
