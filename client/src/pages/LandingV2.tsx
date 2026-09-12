@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
@@ -8,6 +8,8 @@ import { setDocumentMeta } from "@/lib/document-meta";
 import { setAppLanguage } from "@/i18n";
 import { resolvePreferredLocale, type AppLocale } from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
+import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
+import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
 import "./landing-v2.css";
 
 const EDITORIAL = [
@@ -48,18 +50,6 @@ const EDITORIAL = [
     generatedAlt: "Portrait transformé en scène au volant à Dubaï",
   },
 ] as const;
-
-const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
-
-/** Extrait vocal IA (catalogue) — démo landing uniquement. */
-const LANDING_VOICE_DEMO_SRC = "/assets/voice-catalog/samples/gims.mp3";
-
-function formatVoiceTime(sec: number) {
-  const s = Math.max(0, Math.floor(sec));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
-}
 
 const FAQ = [
   {
@@ -108,10 +98,6 @@ export default function LandingV2() {
   const loggedIn = Boolean(user);
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const [voicePlaying, setVoicePlaying] = useState(false);
-  const [voiceCurrentSec, setVoiceCurrentSec] = useState(0);
-  const [voiceDurationSec, setVoiceDurationSec] = useState(0);
-  const voiceDemoRef = useRef<HTMLAudioElement | null>(null);
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
 
@@ -131,44 +117,6 @@ export default function LandingV2() {
 
   const toggleReveal = (id: string) => {
     setRevealed((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  useEffect(() => {
-    const audio = new Audio(LANDING_VOICE_DEMO_SRC);
-    audio.preload = "metadata";
-    voiceDemoRef.current = audio;
-
-    const onTime = () => setVoiceCurrentSec(audio.currentTime);
-    const onMeta = () => setVoiceDurationSec(audio.duration || 0);
-    const onEnded = () => setVoicePlaying(false);
-
-    audio.addEventListener("timeupdate", onTime);
-    audio.addEventListener("loadedmetadata", onMeta);
-    audio.addEventListener("ended", onEnded);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", onTime);
-      audio.removeEventListener("loadedmetadata", onMeta);
-      audio.removeEventListener("ended", onEnded);
-      voiceDemoRef.current = null;
-    };
-  }, []);
-
-  const toggleVoiceDemo = async () => {
-    const audio = voiceDemoRef.current;
-    if (!audio) return;
-    if (voicePlaying) {
-      audio.pause();
-      setVoicePlaying(false);
-      return;
-    }
-    try {
-      await audio.play();
-      setVoicePlaying(true);
-    } catch {
-      setVoicePlaying(false);
-    }
   };
 
   return (
@@ -326,50 +274,7 @@ export default function LandingV2() {
             </p>
           </div>
 
-          <div className="video-cinema-stage">
-            <div className="video-cinema-phone" aria-hidden>
-              <div className="video-cinema-phone__bezel">
-                <img
-                  src="/assets/landing-v2/dubai-generated.jpg"
-                  alt=""
-                  loading="lazy"
-                />
-                <div className="video-cinema-phone__overlay">
-                  <span className="video-cinema-phone__play" aria-hidden>
-                    ▶
-                  </span>
-                  <span className="video-cinema-phone__time">00:05</span>
-                </div>
-                <div className="video-cinema-phone__grain" aria-hidden />
-              </div>
-              <span className="video-cinema-phone__caption">Rendu cinématique · 9:16</span>
-            </div>
-
-            <div className="video-cinema-lanes" aria-label="Ateliers vidéo">
-              <article className="video-cinema-lane">
-                <span className="video-cinema-lane__index">01</span>
-                <div className="video-cinema-lane__body">
-                  <h3>Cinématique photo</h3>
-                  <p className="video-cinema-lane__tech">Image → Vidéo</p>
-                  <p className="video-cinema-lane__desc">
-                    Une image fixe devient un plan vivant — lumière, profondeur et mouvement de
-                    caméra en cinq secondes.
-                  </p>
-                </div>
-              </article>
-              <article className="video-cinema-lane video-cinema-lane--accent">
-                <span className="video-cinema-lane__index">02</span>
-                <div className="video-cinema-lane__body">
-                  <h3>Séquence transformée</h3>
-                  <p className="video-cinema-lane__tech">Vidéo → Vidéo</p>
-                  <p className="video-cinema-lane__desc">
-                    Votre plan filmé au smartphone, réinventé — personnage, objet ou véhicule — le
-                    geste caméra et l’angle restent les vôtres.
-                  </p>
-                </div>
-              </article>
-            </div>
-          </div>
+          <LandingVideoShowcase />
 
           <div className="video-cinema-footer">
             <span className="video-cinema-specs">9:16 · 5 s · Rendu premium</span>
@@ -414,48 +319,7 @@ export default function LandingV2() {
               Créer une voix <span>↗</span>
             </a>
           </div>
-          <div className={`voice-card ${voicePlaying ? "is-playing" : ""}`}>
-            <div className="voice-card-top">
-              <div className="voice-avatar">IA</div>
-              <div>
-                <strong>Voix générée</strong>
-                <span>Démo · Clonage IA · Français</span>
-              </div>
-              <span className="voice-badge">Exemple</span>
-            </div>
-            <div className="voice-steps" aria-label="Fonctionnement de la voix IA">
-              <span>01 Capturer</span>
-              <i />
-              <span>02 Écrire</span>
-              <i />
-              <span>03 Générer</span>
-            </div>
-            <p className="voice-quote">« Bienvenue dans mon univers. »</p>
-            <div className="voice-player">
-              <button
-                type="button"
-                aria-label={voicePlaying ? "Mettre en pause" : "Écouter la démo vocale"}
-                aria-pressed={voicePlaying}
-                onClick={() => void toggleVoiceDemo()}
-              >
-                {voicePlaying ? "❚❚" : "▶"}
-              </button>
-              <div className="voice-wave" aria-hidden>
-                {WAVE.map((h, i) => (
-                  <i key={i} style={{ height: `${h}px` }} />
-                ))}
-              </div>
-              <span>
-                {formatVoiceTime(voiceCurrentSec)} /{" "}
-                {formatVoiceTime(voiceDurationSec || 12)}
-              </span>
-            </div>
-            <div className="voice-card-footer">
-              <span>Naturelle</span>
-              <i /> <span>Claire</span>
-              <i /> <span>À toi</span>
-            </div>
-          </div>
+          <LandingVoicePlayer variant="section" />
         </div>
       </section>
 
