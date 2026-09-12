@@ -1,9 +1,46 @@
+const { randomUUID } = require("crypto");
 const { requireUser, readBody, sendError } = require("../user-auth");
 const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require("../fish-audio");
 const { uploadToR2 } = require("../r2");
 const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
+const { applyCreditDelta } = require("../generation");
+const { VOICE_CLONE_CREDIT_COST } = require("../credit-costs");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
+
+function monthStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+async function resolveCloneCreditCost(supabase, userId, profile) {
+  if (profile?.role === "admin") {
+    return { creditCost: 0, isFirstFree: false };
+  }
+
+  const { count, error } = await supabase
+    .from("voice_clones")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", monthStartIso());
+
+  if (error) {
+    const missingTable =
+      error.code === "42P01" ||
+      error.code === "PGRST205" ||
+      /voice_clones/i.test(String(error.message || ""));
+    if (missingTable) {
+      return { creditCost: VOICE_CLONE_CREDIT_COST, isFirstFree: false };
+    }
+    throw error;
+  }
+
+  if ((count || 0) === 0) {
+    return { creditCost: 0, isFirstFree: true };
+  }
+
+  return { creditCost: VOICE_CLONE_CREDIT_COST, isFirstFree: false };
+}
 
 function parseDataUrl(dataUrl) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
@@ -59,9 +96,37 @@ module.exports = async function voiceCloneHandler(req, res) {
     return;
   }
 
+  let cloneChargeId = null;
+  let creditCost = 0;
+
   try {
     const { supabase, userId } = await requireUser(req);
     const body = readBody(req);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, credits, is_subscriber")
+      .eq("id", userId)
+      .single();
+
+    if (!profile) {
+      res.status(404).json({ message: "Profil introuvable", code: "profile_not_found" });
+      return;
+    }
+
+    const billing = await resolveCloneCreditCost(supabase, userId, profile);
+    creditCost = billing.creditCost;
+
+    if (creditCost > 0 && (profile.credits || 0) < creditCost) {
+      res.status(402).json({
+        message: profile.is_subscriber
+          ? "Plus assez de jetons sur ton abonnement."
+          : "Plus assez de jetons pour cloner une voix.",
+        code: "insufficient_credits",
+        credit_cost: creditCost,
+      });
+      return;
+    }
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) {
@@ -136,9 +201,28 @@ module.exports = async function voiceCloneHandler(req, res) {
       },
     });
 
+    cloneChargeId = randomUUID();
+    if (creditCost > 0) {
+      const { error: chargeError } = await applyCreditDelta(supabase, {
+        userId,
+        delta: -creditCost,
+        reason: "voice_clone_charge",
+        generationId: null,
+        idempotencyKey: `voice-clone:${cloneChargeId}:charge`,
+        metadata: {
+          type: "voice_clone",
+          voice_clone_id: row.id,
+          fish_reference_id: fishVoice.id,
+        },
+      });
+      if (chargeError) throw chargeError;
+    }
+
     res.status(201).json({
       clone: row,
       fishReferenceId: fishVoice.id,
+      credit_cost: creditCost,
+      first_clone_free: billing.isFirstFree,
     });
   } catch (error) {
     console.error("voice-clone error", error);

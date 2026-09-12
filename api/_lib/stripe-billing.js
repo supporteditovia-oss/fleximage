@@ -1,16 +1,8 @@
-const PLAN_CREDITS = {
-  discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
-};
+const { PLAN_CREDITS, PLAN_MONTHLY_AMOUNTS_CENTS } = require("./credit-costs");
 
 const { getPackById } = require("./billing-offers");
 
-const PLAN_MRR_CENTS = {
-  discovery: 890,
-  essential: 1990,
-  ultimate: 3990,
-};
+const PLAN_MRR_CENTS = PLAN_MONTHLY_AMOUNTS_CENTS;
 
 function normalizePlan(plan) {
   if (plan === "ultimate") return "ultimate";

@@ -33,14 +33,14 @@ const PLAN_CARD_PRICES: Record<
   Record<BillingPlan, PlanCardPrice>
 > = {
   eur: {
-    discovery: { prefix: "", major: "8", minor: "90", showCurrencyCode: true },
-    essential: { prefix: "", major: "19", minor: "90", showCurrencyCode: true },
-    ultimate: { prefix: "", major: "39", minor: "90", showCurrencyCode: true },
+    discovery: { prefix: "", major: "9", minor: "90", showCurrencyCode: true },
+    essential: { prefix: "", major: "22", minor: "90", showCurrencyCode: true },
+    ultimate: { prefix: "", major: "44", minor: "90", showCurrencyCode: true },
   },
   usd: {
-    discovery: { prefix: "$", major: "9", minor: "99", showCurrencyCode: false },
-    essential: { prefix: "$", major: "19", minor: "99", showCurrencyCode: false },
-    ultimate: { prefix: "$", major: "39", minor: "99", showCurrencyCode: false },
+    discovery: { prefix: "$", major: "10", minor: "99", showCurrencyCode: false },
+    essential: { prefix: "$", major: "22", minor: "99", showCurrencyCode: false },
+    ultimate: { prefix: "$", major: "44", minor: "99", showCurrencyCode: false },
   },
 };
 

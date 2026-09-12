@@ -64,8 +64,8 @@ import {
 } from "./lib/i18n";
 import { registerStripeRoutes } from "./stripe-routes";
 
-const IMAGE_CREDIT_COST = 10;
-const VIDEO_CREDIT_COST = 25;
+const IMAGE_CREDIT_COST = 12;
+const VIDEO_CREDIT_COST = 60;
 // While polling a generation, a transient provider/network error within this
 // window is treated as "still running" instead of a permanent failure.
 const PROVIDER_POLL_HARD_TIMEOUT_MS = 12 * 60 * 1000;

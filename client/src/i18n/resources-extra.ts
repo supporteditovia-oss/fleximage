@@ -500,8 +500,8 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / mois",
       replacePlan:
         "Ton abonnement actuel est annulé automatiquement, puis remplacé par la nouvelle formule.",
-      subscribeEssential: "Essential — 19,90 €/mois · 1 100 crédits",
-      subscribeDiscovery: "Discovery — 8,90 €/mois · 250 crédits",
+      subscribeEssential: "Essential — 22,90 €/mois · 900 crédits",
+      subscribeDiscovery: "Discovery — 9,90 €/mois · 220 crédits",
       alreadyUltimate:
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
       packsTitle: "Ou recharger sans changer de plan",
@@ -519,16 +519,16 @@ export const extraResources = {
         essential: {
           headline: "Passe en Essential",
           pitch:
-            "1 100 crédits / mois (110 images) — bien plus rentable que les packs.",
-          cta: "Passer à Essential — 19,90 €/mois",
-          creditsLabel: "1 100 crédits",
+            "900 crédits / mois (75 images ou 15 vidéos) — bien plus rentable que les packs.",
+          cta: "Passer à Essential — 22,90 €/mois",
+          creditsLabel: "900 crédits",
         },
         ultimate: {
           headline: "Passe en Ultimate",
           pitch:
-            "2 500 crédits / mois (250 images). Le max de volume, moins cher à l'image.",
-          cta: "Passer à Ultimate — 39,90 €/mois",
-          creditsLabel: "2 500 crédits",
+            "2 000 crédits / mois (166 images ou 33 vidéos). Le max de volume, moins cher à l'image.",
+          cta: "Passer à Ultimate — 44,90 €/mois",
+          creditsLabel: "2 000 crédits",
         },
       },
     },
@@ -1031,8 +1031,8 @@ export const extraResources = {
       perMonth: "{{credits}} · ${{price}} / month",
       replacePlan:
         "Your current subscription is canceled automatically, then replaced by the new plan.",
-      subscribeEssential: "Essential — $19.99/month · 1,100 credits",
-      subscribeDiscovery: "Discovery — $9.99/month · 250 credits",
+      subscribeEssential: "Essential — $22.99/month · 900 credits",
+      subscribeDiscovery: "Discovery — $10.99/month · 220 credits",
       alreadyUltimate:
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
@@ -1049,16 +1049,16 @@ export const extraResources = {
         essential: {
           headline: "Upgrade to Essential",
           pitch:
-            "1,100 credits / month (110 images) — much better value than packs.",
-          cta: "Switch to Essential — $19.99/month",
-          creditsLabel: "1,100 credits",
+            "900 credits / month (75 images or 15 videos) — much better value than packs.",
+          cta: "Switch to Essential — $22.99/month",
+          creditsLabel: "900 credits",
         },
         ultimate: {
           headline: "Upgrade to Ultimate",
           pitch:
-            "2,500 credits / month (250 images). Maximum volume, lowest cost per image.",
-          cta: "Switch to Ultimate — $39.99/month",
-          creditsLabel: "2,500 credits",
+            "2,000 credits / month (166 images or 33 videos). Maximum volume, lowest cost per image.",
+          cta: "Switch to Ultimate — $44.99/month",
+          creditsLabel: "2,000 credits",
         },
       },
     },
@@ -1468,8 +1468,8 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / mes",
       replacePlan:
         "Tu suscripcion actual se cancela automaticamente y se sustituye por el nuevo plan.",
-      subscribeEssential: "Essential — 19,90 €/mes · 1 100 creditos",
-      subscribeDiscovery: "Discovery — 8,90 €/mes · 250 creditos",
+      subscribeEssential: "Essential — 22,90 €/mes · 900 creditos",
+      subscribeDiscovery: "Discovery — 9,90 €/mes · 220 creditos",
       alreadyUltimate:
         "Ya estas en Ultimate: recarga un pack para continuar.",
       packsTitle: "O recargar sin cambiar de plan",
@@ -1486,16 +1486,16 @@ export const extraResources = {
         essential: {
           headline: "Pasa a Essential",
           pitch:
-            "1 100 creditos / mes (110 imagenes): mucho mas rentable que los packs.",
-          cta: "Pasar a Essential — 19,90 €/mes",
-          creditsLabel: "1 100 creditos",
+            "900 creditos / mes (75 imagenes o 15 videos): mucho mas rentable que los packs.",
+          cta: "Pasar a Essential — 22,90 €/mes",
+          creditsLabel: "900 creditos",
         },
         ultimate: {
           headline: "Pasa a Ultimate",
           pitch:
-            "2 500 creditos / mes (250 imagenes). Maximo volumen, menor coste por imagen.",
-          cta: "Pasar a Ultimate — 39,90 €/mes",
-          creditsLabel: "2 500 creditos",
+            "2 000 creditos / mes (166 imagenes o 33 videos). Maximo volumen, menor coste por imagen.",
+          cta: "Pasar a Ultimate — 44,90 €/mes",
+          creditsLabel: "2 000 creditos",
         },
       },
     },
@@ -1907,8 +1907,8 @@ export const extraResources = {
       perMonth: "{{credits}} · {{price}} € / Monat",
       replacePlan:
         "Dein aktuelles Abo wird automatisch gekuendigt und durch den neuen Plan ersetzt.",
-      subscribeEssential: "Essential — 19,90 €/Monat · 1.100 Credits",
-      subscribeDiscovery: "Discovery — 8,90 €/Monat · 250 Credits",
+      subscribeEssential: "Essential — 22,90 €/Monat · 900 Credits",
+      subscribeDiscovery: "Discovery — 9,90 €/Monat · 220 Credits",
       alreadyUltimate:
         "Du bist bereits auf Ultimate — lade ein Pack nach, um weiterzumachen.",
       packsTitle: "Oder aufladen ohne Planwechsel",
@@ -1925,16 +1925,16 @@ export const extraResources = {
         essential: {
           headline: "Wechsel zu Essential",
           pitch:
-            "1.100 Credits / Monat (110 Bilder) — deutlich besserer Preis als Packs.",
-          cta: "Zu Essential — 19,90 €/Monat",
-          creditsLabel: "1.100 Credits",
+            "900 Credits / Monat (75 Bilder oder 15 Videos) — deutlich besserer Preis als Packs.",
+          cta: "Zu Essential — 22,90 €/Monat",
+          creditsLabel: "900 Credits",
         },
         ultimate: {
           headline: "Wechsel zu Ultimate",
           pitch:
-            "2.500 Credits / Monat (250 Bilder). Maximales Volumen, niedrigster Preis pro Bild.",
-          cta: "Zu Ultimate — 39,90 €/Monat",
-          creditsLabel: "2.500 Credits",
+            "2.000 Credits / Monat (166 Bilder oder 33 Videos). Maximales Volumen, niedrigster Preis pro Bild.",
+          cta: "Zu Ultimate — 44,90 €/Monat",
+          creditsLabel: "2.000 Credits",
         },
       },
     },

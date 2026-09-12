@@ -17,7 +17,7 @@ const {
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
 
-const VOICE_CREDIT_COST = 8;
+const { VOICE_CREDIT_COST } = require("../credit-costs");
 
 async function checkVoiceCredits(supabase, userId) {
   const { data: profile } = await supabase

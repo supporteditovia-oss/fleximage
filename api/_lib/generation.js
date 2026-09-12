@@ -1,4 +1,4 @@
-const IMAGE_CREDIT_COST = 10;
+const { IMAGE_CREDIT_COST } = require("./credit-costs");
 const OUTPUT_ASPECT_RATIO = "9:16";
 /** Base wall-clock budget before hard-fail. Vision-QA retries get extra time (see status.js). */
 const PROVIDER_POLL_HARD_TIMEOUT_MS = 3.5 * 60 * 1000;
