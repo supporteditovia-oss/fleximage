@@ -26,7 +26,7 @@ export function stripVoiceInstructionsFromPrompt(text: string): string {
 }
 
 const VEHICLE_DRIVING_PATTERN =
-  /\b(voiture|car|auto|v[ée]hicule|vehicle|moto|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|volant|habitacle|cockpit|interieur|interior|dashboard|compteur|condui|driv|au volant|acc[ée]l|km\/h|kmh)\b/i;
+  /\b(voiture|car|auto|v[ée]hicule|vehicle|moto|cl[ée]|clef|key|volant|habitacle|cockpit|interieur|interior|dashboard|compteur|condui|driv|au volant|acc[ée]l|km\/h|kmh|remplace|swap|twingo|clio|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|supercar|suv)\b/i;
 
 export function isVehicleDrivingPrompt(text: string): boolean {
   return VEHICLE_DRIVING_PATTERN.test(text);

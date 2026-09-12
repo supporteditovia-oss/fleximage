@@ -162,4 +162,24 @@ describe("video-studio", () => {
       "Ferrari Purosangue",
     );
   });
+
+  it("isVehicleDrivingPrompt detects keys and generic car swaps", () => {
+    assert.equal(
+      isVehicleDrivingPrompt("Je montre ma clé Twingo puis je monte dans la voiture"),
+      true,
+    );
+    assert.equal(
+      isVehicleDrivingPrompt("Remplace ma Clio par une Audi RS6"),
+      true,
+    );
+  });
+
+  it("buildV2VCockpitIntelligenceLock includes key swap for Twingo to Urus", () => {
+    const suffix = buildV2VCockpitIntelligenceLock(
+      "Remplace ma Twingo et ma clé par une Urus",
+    );
+    assert.match(suffix, /KEY & ACCESSORY SWAP/i);
+    assert.match(suffix, /Twingo key/i);
+    assert.match(suffix, /ALL car brands/i);
+  });
 });
