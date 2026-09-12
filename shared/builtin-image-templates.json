@@ -81,6 +81,36 @@
     "categoryName": "Supercars"
   },
   {
+    "id": "builtin-urus-mansory-dubai-sunset",
+    "slug": "urus-mansory-dubai-sunset",
+    "name": "Urus Mansory Dubaï sunset",
+    "description": "De la rue de nuit au Urus Mansory devant Burj Khalifa au golden hour.",
+    "imagePath": "/models/modele-urus-mansory-dubai-sunset-avant.webp",
+    "readyImagePath": "/models/modele-urus-mansory-dubai-sunset-apres.webp",
+    "demoAfterPath": "/models/modele-urus-mansory-dubai-sunset-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa coiffure et sa carnation. Garde exactement la pose assise conducteur dans le Lamborghini Urus Mansory noir, la main droite sur le volant Lamborghini, le t-shirt blanc, les lunettes de soleil miroir violet/argent sans monture, l'intérieur carbone et cuir noir avec surpiqûres jaunes, le logo Mansory sur le rétroviseur, la portière ouverte, la skyline de Dubaï avec Burj Khalifa et Address Downtown au coucher du soleil, la foule floue en arrière-plan, la plaque Dubaï, le cadrage vertical 9:16 et la lumière dorée de la seconde image. Photographie supercar luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde le Urus Mansory et Dubaï identiques.",
+    "category": "supercars",
+    "categoryName": "Supercars"
+  },
+  {
+    "id": "builtin-urus-mansory-dubai-lv",
+    "slug": "urus-mansory-dubai-lv",
+    "name": "Urus Mansory Dubaï LV",
+    "description": "Du selfie aux toilettes au Urus Mansory avec veste Louis Vuitton devant Burj Khalifa.",
+    "imagePath": "/models/modele-urus-mansory-dubai-lv-avant.webp",
+    "readyImagePath": "/models/modele-urus-mansory-dubai-lv-apres.webp",
+    "demoAfterPath": "/models/modele-urus-mansory-dubai-lv-apres.webp",
+    "generationMode": "face-swap",
+    "requiresUserPhoto": true,
+    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, son visage, sa barbe, sa moustache, sa coiffure et sa carnation. Garde exactement la pose assise conducteur dans le Lamborghini Urus Mansory noir, la main gauche sur le volant Lamborghini, la veste varsity Louis Vuitton vert menthe avec broderies LV et patch perroquet sur les manches, le sac bandoulière LV gris, le pantalon blanc, les baskets blanches chunky, l'intérieur carbone et cuir noir, la plaque Mansory sur le seuil de portière, la portière ouverte, Burj Khalifa et la skyline de Dubaï en plein jour, les passants flous en arrière-plan, le cadrage vertical 9:16 et la lumière naturelle de la seconde image. Photographie supercar luxe photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
+    "prompt": "Remplace uniquement la personne, garde le Urus Mansory et Dubaï identiques.",
+    "category": "supercars",
+    "categoryName": "Supercars"
+  },
+  {
     "id": "builtin-quad-dubai-canam",
     "slug": "quad-dubai-canam",
     "name": "Can-Am Outlander Dubaï",
