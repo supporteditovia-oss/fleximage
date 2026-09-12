@@ -35,6 +35,8 @@ interface PromptInputBarProps {
   goldCta?: boolean;
   /** Coût affiché (ex. 10 crédits / image) */
   creditCost?: number;
+  /** Masque le bandeau crédits (landing invité) */
+  hideCreditHint?: boolean;
   aspectRatio?: GenerationAspectRatio;
   onAspectRatioChange?: (value: GenerationAspectRatio) => void;
 }
@@ -60,6 +62,7 @@ export function PromptInputBar({
   canGenerate = true,
   goldCta = false,
   creditCost,
+  hideCreditHint = false,
   aspectRatio = OUTPUT_ASPECT_RATIO,
   onAspectRatioChange,
 }: PromptInputBarProps) {
@@ -119,7 +122,8 @@ export function PromptInputBar({
     });
   }, [dictationError, toast]);
 
-  const showCreditCost = typeof creditCost === "number" && creditCost > 0;
+  const showCreditCost =
+    !hideCreditHint && typeof creditCost === "number" && creditCost > 0;
   const isLandscape = aspectRatio === LANDSCAPE_ASPECT_RATIO;
 
   const toggleAspectRatio = () => {

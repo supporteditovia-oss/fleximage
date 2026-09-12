@@ -104,9 +104,7 @@
 }
 
 .landing-studio-widget [role="note"] {
-  border-color: rgba(183, 139, 50, 0.28) !important;
-  background: rgba(232, 226, 213, 0.55) !important;
-  box-shadow: none !important;
+  display: none !important;
 }
 
 /* ── Voix IA ── */
@@ -135,8 +133,112 @@
   text-align: left;
 }
 
-.landing-studio-widget .landing-video-panel__header {
+.landing-studio-widget .voice-studio-page__eyebrow,
+.landing-studio-widget .voice-studio-page__title,
+.landing-studio-widget .voice-studio-page__hint {
   display: none;
+}
+
+.landing-voice-demo {
+  border: 1px solid rgba(23, 23, 19, 0.1);
+  background: rgba(232, 226, 213, 0.48);
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.landing-voice-demo__head {
+  margin-bottom: 0.75rem;
+}
+
+.landing-voice-demo__badge {
+  color: var(--landing-gold, #b78b32);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 8px;
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 0.35rem;
+}
+
+.landing-voice-demo__quote {
+  color: var(--landing-ink, #171713);
+  font-family: var(--font-cormorant, "Cormorant Garamond", Georgia, serif);
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.landing-voice-demo__player {
+  align-items: center;
+  gap: 0.65rem;
+  display: flex;
+}
+
+.landing-voice-demo__play {
+  color: var(--landing-ink, #171713);
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(23, 23, 19, 0.12);
+  border-radius: 50%;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 11px;
+  display: grid;
+}
+
+.landing-voice-demo__wave {
+  align-items: flex-end;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  display: flex;
+}
+
+.landing-voice-demo__wave i {
+  background: rgba(183, 139, 50, 0.55);
+  border-radius: 999px;
+  flex: 1;
+  min-width: 2px;
+  display: block;
+  transition: height 0.2s ease;
+}
+
+.landing-voice-demo.is-playing .landing-voice-demo__wave i {
+  animation: landing-voice-wave 0.9s ease-in-out infinite alternate;
+}
+
+.landing-voice-demo.is-playing .landing-voice-demo__wave i:nth-child(odd) {
+  animation-delay: 0.12s;
+}
+
+@keyframes landing-voice-wave {
+  from {
+    transform: scaleY(0.65);
+    opacity: 0.65;
+  }
+  to {
+    transform: scaleY(1.15);
+    opacity: 1;
+  }
+}
+
+.landing-voice-demo__time {
+  color: var(--landing-muted, #716d63);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  font-size: 9px;
+}
+
+.landing-voice-demo__note {
+  color: var(--landing-muted, #716d63);
+  letter-spacing: 0.06em;
+  margin: 0.55rem 0 0;
+  font-size: 9px;
 }
 
 .landing-studio-widget .via-mode-card {

@@ -3,6 +3,7 @@ import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
 import { LandingVideoPanel } from "@/components/landing/LandingVideoPanel";
+import { LandingVoiceDemo } from "@/components/landing/LandingVoiceDemo";
 import {
   readStudioMode,
   writeStudioMode,
@@ -18,7 +19,7 @@ const MODE_CAPTIONS: Record<StudioMode, string> = {
   voice:
     "Atelier Voix — quelques secondes d’audio suffisent pour créer votre signature vocale.",
   video:
-    "Atelier Vidéo — cinématique photo ou séquence transformée. Format vertical 9:16, rendu premium.",
+    "Atelier Vidéo — cinématique photo ou séquence transformée. Format vertical 9:16.",
 };
 
 export function LandingStudioWidget() {
@@ -65,7 +66,10 @@ export function LandingStudioWidget() {
         {mode === "image" ? (
           <LandingImagePanel />
         ) : mode === "voice" ? (
-          <VoiceStudioMock guestFunnel />
+          <>
+            <LandingVoiceDemo />
+            <VoiceStudioMock guestFunnel />
+          </>
         ) : (
           <LandingVideoPanel />
         )}

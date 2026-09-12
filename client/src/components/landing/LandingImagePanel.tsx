@@ -6,8 +6,6 @@ import { PromptInputBar } from "@/components/generate/PromptInputBar";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { OUTPUT_ASPECT_RATIO, type GenerationAspectRatio } from "@shared/schema";
 
-const IMAGE_CREDIT_COST = 10;
-
 export function LandingImagePanel() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -67,7 +65,7 @@ export function LandingImagePanel() {
         onGenerate={() => void handleGenerate()}
         isGenerating={busy}
         goldCta
-        creditCost={IMAGE_CREDIT_COST}
+        hideCreditHint
         canGenerate={images.some((img) => img !== null)}
         aspectRatio={aspectRatio}
         onAspectRatioChange={setAspectRatio}
