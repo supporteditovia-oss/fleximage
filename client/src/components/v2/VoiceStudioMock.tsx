@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   Check,
   CloudUpload,
@@ -40,15 +39,20 @@ import {
 } from "@/lib/cloned-voices-storage";
 import { queryClient } from "@/lib/queryClient";
 import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-api";
-import { GenerationLoader } from "@/components/larp/GenerationLoader";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
+import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
 import { resetPaywallExpiry } from "@/lib/paywall-expiry";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
-import "@/components/larp/generation-loader.css";
+import {
+  VOICE_FAKE_GEN_MS,
+  VOICE_GEN_ESTIMATE_SEC,
+  voiceFakeEstimateSeconds,
+} from "@/lib/voice-generation-timing";
+import "@/components/v2/voice-generation-loader.css";
 import {
   fetchVoiceBlob,
   shareVoiceAudio,
@@ -75,8 +79,7 @@ import {
 type CaptureMode = "record" | "import";
 type RecordState = "idle" | "recording" | "ready";
 
-const FAKE_GEN_MS = 3200;
-const VOICE_GEN_ESTIMATE_SEC = 40;
+const FAKE_GEN_MS = VOICE_FAKE_GEN_MS;
 
 function formatTimer(ms: number) {
   const s = Math.min(MAX_CLIP_SEC, Math.floor(ms / 1000));
@@ -1400,24 +1403,24 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
       {showOnboardingFakeLoader ? (
         <FakeOnboardingLoader
-          inputImageUrl={undefined}
+          variant="voice"
+          durationMs={VOICE_FAKE_GEN_MS}
           onComplete={finishFakeLoader}
         />
       ) : null}
 
-      {isGenerating && !showOnboardingFakeLoader
-        ? createPortal(
-            <GenerationLoader
-              taskId="voice-generating"
-              status="waiting"
-              estimatedSeconds={
-                hasPaidAccess ? VOICE_GEN_ESTIMATE_SEC : Math.ceil(FAKE_GEN_MS / 1000)
-              }
-              startedAtMs={voiceGenStartedAtRef.current}
-            />,
-            document.body,
-          )
-        : null}
+      {isGenerating && !showOnboardingFakeLoader ? (
+        <VoiceGenerationLoader
+          taskId="voice-generating"
+          status="waiting"
+          estimatedSeconds={
+            hasPaidAccess
+              ? VOICE_GEN_ESTIMATE_SEC
+              : voiceFakeEstimateSeconds(FAKE_GEN_MS)
+          }
+          startedAtMs={voiceGenStartedAtRef.current}
+        />
+      ) : null}
 
       <LuxePaywallModal
         open={showPaywall}

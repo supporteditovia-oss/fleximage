@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GenerationLoader } from "./GenerationLoader";
+import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import "./generation-loader.css";
+import "@/components/v2/voice-generation-loader.css";
 
 /** Durée crédible pour l'essai gratuit — même UX que les abonnés. */
 const DEFAULT_DURATION_MS = 14_000;
@@ -9,12 +11,14 @@ const DEFAULT_DURATION_MS = 14_000;
 interface FakeOnboardingLoaderProps {
   inputImageUrl?: string | null;
   durationMs?: number;
+  variant?: "image" | "voice";
   onComplete: () => void;
 }
 
 export function FakeOnboardingLoader({
   inputImageUrl,
   durationMs = DEFAULT_DURATION_MS,
+  variant = "image",
   onComplete,
 }: FakeOnboardingLoaderProps) {
   const startedAtMs = useRef(Date.now());
@@ -38,6 +42,17 @@ export function FakeOnboardingLoader({
       window.$crisp?.push(["do", "chat:show"]);
     };
   }, [durationMs]);
+
+  if (variant === "voice") {
+    return (
+      <VoiceGenerationLoader
+        taskId="onboarding-voice-fake"
+        status="waiting"
+        estimatedSeconds={estimateSec}
+        startedAtMs={startedAtMs.current}
+      />
+    );
+  }
 
   return createPortal(
     <GenerationLoader
