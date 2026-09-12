@@ -107,7 +107,7 @@ export default function LandingV2() {
     setDocumentMeta({
       title: "LuxeFlexIA — Crée ce que tu imagines",
       description:
-        "Image IA, Vidéo IA (Image→Vidéo & Vidéo→Vidéo) et Clonage vocal — le studio créatif tout-en-un.",
+        "Image IA, Vidéo IA (Image→Vidéo & Vidéo→Vidéo) et clonage vocal — studio créatif tout-en-un pour photos et clips verticaux.",
       canonicalPath: "/",
     });
   }, []);
@@ -143,17 +143,23 @@ export default function LandingV2() {
       </header>
 
       <section className="hero" id="top">
-        <p className="eyebrow">Le studio créatif, réinventé</p>
+        <p className="eyebrow">Image · Voix · Vidéo IA</p>
         <h1>
           Crée ce que
           <br />
           tu imagines.
         </h1>
         <p className="hero-copy">
-          Image IA, Clonage vocal et Vidéo IA — Image→Vidéo ou Vidéo→Vidéo.
-          <br />
-          Le même studio que dans l’app, directement depuis la page d’accueil.
+          Le studio tout-en-un LuxeFlexIA : photos lifestyle ultra-réalistes, clips verticaux animés
+          (Image→Vidéo), transformations vidéo (Vidéo→Vidéo) et clonage vocal — le même outil que
+          dans l’app, directement sur la page d’accueil.
         </p>
+
+        <div className="hero-mode-strip" aria-label="Modes du studio">
+          <span className="hero-mode-pill">🖼️ Image IA</span>
+          <span className="hero-mode-pill">🎙️ Clonage vocal</span>
+          <span className="hero-mode-pill hero-mode-pill--accent">🎬 Vidéo IA</span>
+        </div>
 
         <LandingStudioWidget />
 
@@ -249,6 +255,61 @@ export default function LandingV2() {
           <i />
           Décor réinventé
         </p>
+      </section>
+
+      <section className="video-section" id="video-ia" aria-labelledby="video-title">
+        <div className="video-inner">
+          <div className="video-copy">
+            <p className="section-kicker">Vidéo IA</p>
+            <h2 id="video-title">
+              Anime tes photos.
+              <br />
+              Transforme tes vidéos.
+            </h2>
+            <p className="video-lead">
+              Deux workflows pensés pour TikTok, Reels et Shorts — rendu cinématique, prêt à publier.
+            </p>
+            <ol className="video-explanation">
+              <li>
+                <strong>Image→Vidéo</strong> — importe une photo, décris le mouvement, LuxeFlexIA
+                génère un clip vertical de 5 secondes.
+              </li>
+              <li>
+                <strong>Vidéo→Vidéo</strong> — filme avec ton smartphone, remplace un personnage,
+                un objet ou un véhicule tout en gardant le mouvement d’origine.
+              </li>
+            </ol>
+            <a
+              className="video-cta"
+              href="#top"
+              onClick={(e) => {
+                e.preventDefault();
+                writeStudioMode("video");
+                document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              Essayer la Vidéo IA <span>↗</span>
+            </a>
+          </div>
+          <div className="video-showcase" aria-label="Workflows Vidéo IA">
+            <article className="video-workflow-card">
+              <span className="video-workflow-card__tag">Image → Vidéo</span>
+              <h3>Ta photo prend vie</h3>
+              <p>
+                Selfie, portrait ou scène lifestyle — l’IA ajoute mouvement, lumière et profondeur
+                pour un clip vertical prêt à poster.
+              </p>
+            </article>
+            <article className="video-workflow-card video-workflow-card--accent">
+              <span className="video-workflow-card__tag">Vidéo → Vidéo</span>
+              <h3>Remplace sans refilmer</h3>
+              <p>
+                Voiture, personnage, objet — transforme ce qui apparaît dans ta vidéo smartphone
+                sans perdre l’angle ni le rythme du plan original.
+              </p>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section className="voice-section" aria-labelledby="voice-title">

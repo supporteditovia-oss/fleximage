@@ -1,19 +1,115 @@
+/* Landing hero studio — intégré au fond crème, sans boîte blanche */
+
 .landing-studio-widget {
-  width: min(100%, 720px);
-  margin: 0 auto;
+  --landing-cream: #f3f0e8;
+  --landing-cream-deep: #e8e2d5;
+  --landing-ink: #171713;
+  --landing-muted: #716d63;
+  --landing-gold: #b78b32;
+  width: min(100%, 680px);
+  margin: 2rem auto 0;
+  position: relative;
+}
+
+.landing-studio-widget::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -18px -12px -24px;
+  border-radius: 2rem;
+  background: radial-gradient(
+    ellipse 85% 70% at 50% 38%,
+    rgba(201, 162, 39, 0.07),
+    transparent 68%
+  );
+  z-index: 0;
+}
+
+.landing-studio-widget > * {
+  position: relative;
+  z-index: 1;
 }
 
 .landing-studio-widget__tabs {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.35rem;
+}
+
+.landing-studio-widget__tabs.lx-studio-switch,
+.landing-studio-widget .lx-studio-switch {
+  width: auto;
+  max-width: min(100%, 520px);
+  margin-inline: auto;
+  display: flex;
+  background: rgba(232, 226, 213, 0.55);
+  border: 1px solid rgba(23, 23, 19, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(10px);
 }
 
 .landing-studio-widget__panel {
-  border-radius: 1.25rem;
-  border: 1px solid rgba(23, 23, 19, 0.08);
-  background: rgba(255, 253, 250, 0.92);
-  box-shadow: 0 24px 60px rgba(18, 16, 14, 0.08);
-  padding: clamp(1rem, 3vw, 1.5rem);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
+
+/* ── Image IA : upload + prompt ── */
+
+.landing-studio-widget .lx-upload-wrap {
+  margin-bottom: 0.35rem;
+}
+
+.landing-studio-widget .lx-upload-scroller {
+  --lx-upload-slot-h: min(44vh, 380px);
+}
+
+.landing-studio-widget .lx-upload-slot button {
+  border: 1.5px dashed rgba(113, 109, 99, 0.38) !important;
+  background: rgba(232, 226, 213, 0.42) !important;
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition:
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.landing-studio-widget .lx-upload-slot button:hover {
+  border-color: rgba(183, 139, 50, 0.55) !important;
+  background: rgba(232, 226, 213, 0.62) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 28px rgba(18, 16, 14, 0.06);
+}
+
+.landing-studio-widget .lx-upload-slot button .bg-primary\/10 {
+  background: rgba(183, 139, 50, 0.12) !important;
+}
+
+.landing-studio-widget .lx-prompt-composer {
+  border-color: rgba(23, 23, 19, 0.1) !important;
+  background: rgba(232, 226, 213, 0.48) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 10px 32px rgba(18, 16, 14, 0.05) !important;
+  backdrop-filter: blur(8px);
+}
+
+.landing-studio-widget .lx-prompt-composer:focus-within {
+  border-color: rgba(183, 139, 50, 0.38) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 36px rgba(201, 162, 39, 0.1) !important;
+}
+
+.landing-studio-widget [role="note"] {
+  border-color: rgba(183, 139, 50, 0.28) !important;
+  background: rgba(232, 226, 213, 0.55) !important;
+  box-shadow: none !important;
+}
+
+/* ── Voix IA ── */
 
 .landing-studio-widget .voice-studio-page__inner--wide {
   max-width: none;
@@ -25,12 +121,72 @@
   text-align: center;
 }
 
-.landing-video-panel .via-hero__title {
-  font-size: clamp(1.5rem, 4vw, 2rem);
+.landing-studio-widget .vs-card,
+.landing-studio-widget .vs-upload-zone,
+.landing-studio-widget .vs-prompt-box {
+  border-color: rgba(23, 23, 19, 0.1);
+  background: rgba(232, 226, 213, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-.landing-image-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+/* ── Vidéo IA ── */
+
+.landing-studio-widget .landing-video-panel {
+  text-align: left;
+}
+
+.landing-studio-widget .via-mode-card {
+  background: rgba(232, 226, 213, 0.45) !important;
+  border-color: rgba(23, 23, 19, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.landing-studio-widget .via-mode-card.is-active {
+  background: rgba(232, 226, 213, 0.72) !important;
+  border-color: rgba(183, 139, 50, 0.42) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 8px 24px rgba(201, 162, 39, 0.1);
+}
+
+.landing-studio-widget .via-upload-zone {
+  background: rgba(232, 226, 213, 0.42) !important;
+  border-color: rgba(113, 109, 99, 0.32) !important;
+}
+
+.landing-studio-widget .via-upload-zone:hover,
+.landing-studio-widget .via-upload-zone.has-file {
+  background: rgba(232, 226, 213, 0.58) !important;
+  border-color: rgba(183, 139, 50, 0.45) !important;
+}
+
+.landing-studio-widget .via-prompt-field,
+.landing-studio-widget .via-preview-frame {
+  background: rgba(232, 226, 213, 0.48) !important;
+  border-color: rgba(23, 23, 19, 0.1) !important;
+}
+
+.landing-studio-widget .via-generate-btn {
+  box-shadow: 0 8px 28px rgba(201, 162, 39, 0.22);
+}
+
+.landing-studio-widget__caption {
+  margin: 0.85rem auto 0;
+  max-width: 34rem;
+  text-align: center;
+  font-family: var(--font-cormorant, "Cormorant Garamond", Georgia, serif);
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.45;
+  color: var(--landing-muted, #716d63);
+}
+
+.landing-studio-widget__caption strong {
+  color: var(--landing-ink, #171713);
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .landing-studio-widget .lx-upload-scroller {
+    --lx-upload-slot-h: min(46vh, 420px);
+  }
 }
