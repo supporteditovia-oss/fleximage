@@ -77,10 +77,17 @@ export const VIDEO_V2V_PRESETS: V2VScenePreset[] = [
   },
   {
     id: "supercar",
-    label: "Supercar",
+    label: "Urus",
     emoji: "🏎️",
     prompt:
-      "Remplace ma voiture par une Lamborghini Urus noire mat, habitacle Urus photoréaliste, compteur identique à la vidéo source (même vitesse affichée), portes fermées, reflets crédibles.",
+      "Remplace ma voiture par une Lamborghini Urus noire mat — habitacle Urus OEM exact, plafond étoilé starlight, compteur identique à la vidéo source.",
+  },
+  {
+    id: "purosangue",
+    label: "Purosangue",
+    emoji: "🐎",
+    prompt:
+      "Remplace ma voiture par une Ferrari Purosangue rouge — intérieur Ferrari Purosangue OEM exact, même vitesse au compteur que la vidéo source.",
   },
   {
     id: "celebrity",

@@ -645,9 +645,11 @@ export default function VideoIA() {
                 ) : null}
                 {isVehicleDrivingPrompt(swapPrompt) ? (
                   <p className="via-voice-blocked-note">
-                    Conduite / véhicule détecté : l&apos;IA est forcée à
-                    conserver le <strong>compteur et la vitesse affichée</strong>{" "}
-                    de ta vidéo (ex. 120 km/h reste 120 km/h).
+                    Véhicule détecté : l&apos;IA force le <strong>modèle exact</strong>{" "}
+                    (Urus ≠ Purosangue), le <strong>compteur</strong> (120 → 120)
+                    et la <strong>logique intelligente</strong> — écran éteint
+                    au parking, allumé à l&apos;ouverture porte, P au point mort,
+                    D en conduite.
                   </p>
                 ) : null}
                 <div className="via-chips">

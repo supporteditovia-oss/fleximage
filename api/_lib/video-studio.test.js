@@ -8,6 +8,8 @@ const {
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
+  buildV2VCockpitIntelligenceLock,
+  extractRequestedVehicleModel,
   buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   VIDEO_FLAT_CREDIT_COST,
@@ -138,11 +140,26 @@ describe("video-studio", () => {
       { preserveSourceAudio: false },
     );
     assert.match(prompt, /120 km\/h/i);
-    assert.match(prompt, /speedometer|compteur|cockpit lock/i);
+    assert.match(prompt, /INTELLIGENT STATE|vehicle realism lock/i);
+    assert.match(prompt, /Lamborghini Urus/i);
   });
 
-  it("buildV2VDashboardLockSuffix uses explicit speed when mentioned", () => {
-    const suffix = buildV2VDashboardLockSuffix("conduis à 120 km/h");
+  it("buildV2VCockpitIntelligenceLock uses explicit speed and model fidelity", () => {
+    const suffix = buildV2VCockpitIntelligenceLock(
+      "Purosangue, conduis à 120 km/h, plafond étoilé",
+    );
     assert.match(suffix, /exactly 120 km\/h/i);
+    assert.match(suffix, /Ferrari Purosangue/i);
+    assert.match(suffix, /starlight|star/i);
+    assert.match(suffix, /Park \(P\)/i);
+    assert.match(suffix, /Door opening/i);
+  });
+
+  it("extractRequestedVehicleModel distinguishes Urus vs Purosangue", () => {
+    assert.equal(extractRequestedVehicleModel("Urus noir")?.model, "Lamborghini Urus");
+    assert.equal(
+      extractRequestedVehicleModel("Ferrari Purosangue")?.model,
+      "Ferrari Purosangue",
+    );
   });
 });
