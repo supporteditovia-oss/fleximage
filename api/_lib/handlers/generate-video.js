@@ -20,7 +20,7 @@ const {
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
-  buildCarSwapPrompt,
+  buildV2VProviderPrompt,
   validateVoiceText,
 } = require("../video-studio");
 const {
@@ -189,20 +189,6 @@ function resolveVehicleDescription(body) {
   return "";
 }
 
-function buildV2VProviderPrompt(body, vehicleDescription) {
-  const custom =
-    typeof body.vehicle_prompt === "string" ? body.vehicle_prompt.trim() : "";
-  if (custom.length >= 10) {
-    const hasSceneLock =
-      /d[ée]cor|cam[ée]ra|reflet|background|ground|reflection|unchanged|identique/i.test(
-        custom,
-      );
-    return hasSceneLock
-      ? custom
-      : `${custom} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`;
-  }
-  return buildCarSwapPrompt(vehicleDescription);
-}
 
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
@@ -448,7 +434,9 @@ module.exports = async function handler(req, res) {
           body,
         );
         v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
-        providerPrompt = buildV2VProviderPrompt(body, vehicleDescription);
+        providerPrompt = buildV2VProviderPrompt(vehicleDescription, {
+          preserveSourceAudio,
+        });
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({

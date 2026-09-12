@@ -59,38 +59,61 @@ export const VIDEO_MOTION_PRESETS: VideoMotionPreset[] = [
   },
 ];
 
-export type VehiclePreset = {
+export type V2VScenePreset = {
   id: string;
   label: string;
+  emoji: string;
   prompt: string;
 };
 
-export const VIDEO_VEHICLE_PRESETS: VehiclePreset[] = [
+/** Presets rapides Vidéo → Vidéo — scènes, personnages, objets, lieux. */
+export const VIDEO_V2V_PRESETS: V2VScenePreset[] = [
   {
-    id: "lamborghini_urus",
-    label: "Lamborghini Urus",
+    id: "dubai",
+    label: "Dubai",
+    emoji: "🏙️",
     prompt:
-      "Lamborghini Urus noir mat, proportions réalistes, jantes d'origine, reflets crédibles.",
+      "Transporte-moi à Dubai Marina la nuit, skyline illuminé en arrière-plan, ambiance luxe.",
   },
   {
-    id: "porsche_gt3_rs",
-    label: "Porsche GT3 RS",
+    id: "supercar",
+    label: "Supercar",
+    emoji: "🏎️",
     prompt:
-      "Porsche 911 GT3 RS, aileron arrière, couleur sport, détails carrosserie fidèles.",
+      "Remplace l'objet ou le véhicule par une Lamborghini Urus noire mat, reflets crédibles.",
   },
   {
-    id: "ferrari",
-    label: "Ferrari",
+    id: "celebrity",
+    label: "Célébrité",
+    emoji: "⭐",
     prompt:
-      "Ferrari rouge Rosso Corsa, supercar italienne, lignes agressives, rendu photoréaliste.",
+      "Remplace la personne par une célébrité photoréaliste, même pose et mouvements de caméra.",
   },
   {
-    id: "g_wagon",
-    label: "G-Wagon",
+    id: "outfit",
+    label: "Tenue luxe",
+    emoji: "👔",
     prompt:
-      "Mercedes-Benz G-Class G-Wagon noir, carrosserie cubique iconique, finitions luxe.",
+      "Change ma tenue pour un costume ou une robe de créateur haut de gamme, même corps et gestes.",
+  },
+  {
+    id: "yacht",
+    label: "Yacht",
+    emoji: "🛥️",
+    prompt:
+      "Place-moi sur le pont d'un yacht de luxe en Méditerranée, mer calme, lumière dorée.",
+  },
+  {
+    id: "jet",
+    label: "Jet privé",
+    emoji: "✈️",
+    prompt:
+      "Déplace la scène sur un tarmac avec jet privé en arrière-plan, lumière de fin de journée.",
   },
 ];
+
+/** @deprecated use VIDEO_V2V_PRESETS */
+export const VIDEO_VEHICLE_PRESETS = VIDEO_V2V_PRESETS;
 
 export const VIDEO_VOICE_SCRIPT_PRESETS = [
   "Personne ne croyait en moi, alors j'ai arrêté d'expliquer.",
