@@ -215,6 +215,20 @@ export const extraResources = {
       enterValue: "Entrer {{label}}...",
       enterValueFallback: "Entrer une valeur...",
     },
+    voiceStudio: {
+      creditTariff:
+        "Tarifs : voix {{voice}} cr · clone {{clone}} cr · image 10 cr · vidéo 60 cr",
+      creditBalance: "Ton solde : {{balance}} crédits",
+      creditActionGenerate: "Cette action : {{count}} crédits (génération vocale)",
+      creditActionCloneAndGenerate:
+        "Cette action : jusqu'à {{total}} cr (clone {{clone}} + génération {{generate}})",
+      firstCloneFreeNote:
+        "1er clone du mois offert — tu peux n'être débité que de {{generate}} cr.",
+      creditRemainingAfter: "Reste ~{{count}} crédits après cette génération.",
+      creditInsufficient: "Crédits insuffisants — il te manque {{need}} crédit(s).",
+      generateWithCredits: "Générer la voix · {{count}} cr",
+      generateWithCreditsMax: "Générer la voix · jusqu'à {{count}} cr",
+    },
     templateGallery: {
       title: "Choisis parmi les mod\u00e8les existants",
       searchPlaceholder: "Rechercher un mod\u00e8le...",
@@ -748,6 +762,20 @@ export const extraResources = {
       enterValue: "Enter {{label}}...",
       enterValueFallback: "Enter a value...",
     },
+    voiceStudio: {
+      creditTariff:
+        "Pricing: voice {{voice}} cr · clone {{clone}} cr · image 10 cr · video 60 cr",
+      creditBalance: "Your balance: {{balance}} credits",
+      creditActionGenerate: "This action: {{count}} credits (voice generation)",
+      creditActionCloneAndGenerate:
+        "This action: up to {{total}} cr (clone {{clone}} + generation {{generate}})",
+      firstCloneFreeNote:
+        "First clone each month is free — you may only pay {{generate}} cr.",
+      creditRemainingAfter: "~{{count}} credits left after this generation.",
+      creditInsufficient: "Not enough credits — you need {{need}} more.",
+      generateWithCredits: "Generate voice · {{count}} cr",
+      generateWithCreditsMax: "Generate voice · up to {{count}} cr",
+    },
     templateGallery: {
       title: "Choose from existing templates",
       searchPlaceholder: "Search a template...",
@@ -1229,6 +1257,20 @@ export const extraResources = {
       enterValue: "Introduce {{label}}...",
       enterValueFallback: "Introduce un valor...",
     },
+    voiceStudio: {
+      creditTariff:
+        "Tarifas: voz {{voice}} cr · clon {{clone}} cr · imagen 10 cr · video 60 cr",
+      creditBalance: "Tu saldo: {{balance}} creditos",
+      creditActionGenerate: "Esta accion: {{count}} creditos (generacion de voz)",
+      creditActionCloneAndGenerate:
+        "Esta accion: hasta {{total}} cr (clon {{clone}} + generacion {{generate}})",
+      firstCloneFreeNote:
+        "1er clon del mes gratis — puedes pagar solo {{generate}} cr.",
+      creditRemainingAfter: "Quedan ~{{count}} creditos tras esta generacion.",
+      creditInsufficient: "Creditos insuficientes — te faltan {{need}}.",
+      generateWithCredits: "Generar voz · {{count}} cr",
+      generateWithCreditsMax: "Generar voz · hasta {{count}} cr",
+    },
     templateGallery: {
       title: "Elige entre LARPs existentes",
       searchPlaceholder: "Buscar un LARP...",
@@ -1667,6 +1709,20 @@ export const extraResources = {
       textFallbackLabel: "Text {{index}}",
       enterValue: "{{label}} eingeben...",
       enterValueFallback: "Wert eingeben...",
+    },
+    voiceStudio: {
+      creditTariff:
+        "Preise: Stimme {{voice}} cr · Klon {{clone}} cr · Bild 10 cr · Video 60 cr",
+      creditBalance: "Dein Guthaben: {{balance}} Credits",
+      creditActionGenerate: "Diese Aktion: {{count}} Credits (Sprachgenerierung)",
+      creditActionCloneAndGenerate:
+        "Diese Aktion: bis zu {{total}} cr (Klon {{clone}} + Generierung {{generate}})",
+      firstCloneFreeNote:
+        "1. Klon pro Monat gratis — du zahlst ggf. nur {{generate}} cr.",
+      creditRemainingAfter: "~{{count}} Credits nach dieser Generierung.",
+      creditInsufficient: "Nicht genug Credits — dir fehlen {{need}}.",
+      generateWithCredits: "Stimme generieren · {{count}} cr",
+      generateWithCreditsMax: "Stimme generieren · bis zu {{count}} cr",
     },
     templateGallery: {
       title: "Waehle aus bestehenden LARPsn",

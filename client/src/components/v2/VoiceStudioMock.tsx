@@ -15,6 +15,12 @@ import { VoiceHistorySection } from "@/components/v2/VoiceHistorySection";
 import { VoiceShareSheet } from "@/components/v2/VoiceShareSheet";
 import { voiceHistoryQueryKey } from "@/hooks/use-voice-history";
 import { VoiceSelectedHero } from "@/components/v2/VoiceSelectedHero";
+import { VoiceCreditSummary } from "@/components/v2/VoiceCreditSummary";
+import {
+  VOICE_CLONE_CREDIT_COST,
+  VOICE_CREDIT_COST,
+} from "@shared/credit-costs";
+import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
@@ -139,6 +145,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const rebuildDebounceRef = useRef<number | null>(null);
 
   const [, navigate] = useLocation();
+  const { t } = useTranslation();
   const { user, isAdmin, profile } = useAuth();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan();
@@ -248,6 +255,10 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const canGenerate = Boolean(
     text.trim() && !isGenerating && (hasPendingCapture || (activeVoice && !creatingOwnVoice)),
   );
+
+  const includesCloneCharge = Boolean(hasPendingCapture && voiceClip);
+  const estimatedVoiceCredits =
+    VOICE_CREDIT_COST + (includesCloneCharge ? VOICE_CLONE_CREDIT_COST : 0);
 
   const setClip = useCallback((next: VoiceClip | null) => {
     setVoiceClip((prev) => {
@@ -1013,6 +1024,11 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           </p>
         )}
 
+        <VoiceCreditSummary
+          includesClone={includesCloneCharge}
+          guestFunnel={guestFunnel}
+        />
+
         <section className="vs-card" aria-labelledby="vs-clone-title">
           <div className="vs-card__head-row">
             <div>
@@ -1314,7 +1330,13 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            Générer la voix
+            {includesCloneCharge
+              ? t("voiceStudio.generateWithCreditsMax", {
+                  count: estimatedVoiceCredits,
+                })
+              : t("voiceStudio.generateWithCredits", {
+                  count: estimatedVoiceCredits,
+                })}
           </button>
           {generateBlockReason ? (
             <p className="vs-help vs-help--block" role="status">
