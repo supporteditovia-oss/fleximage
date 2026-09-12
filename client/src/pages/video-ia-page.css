@@ -1,25 +1,22 @@
 html.luxeflexia-video-page {
-  --lx-page-bg: #f3ece2;
+  --lx-page-bg: #f5f0e8;
   --via-gold: #c9a227;
   --via-gold-light: #f0d875;
   --via-gold-glow: rgba(201, 162, 39, 0.35);
   background: var(--lx-page-bg) !important;
+  background-image: none !important;
 }
 
 html.luxeflexia-video-page body,
 html.luxeflexia-video-page .luxeflexia-app,
 html.luxeflexia-video-page .luxeflexia-app-scroll {
   background: var(--lx-page-bg) !important;
+  background-image: none !important;
 }
 
+/* Header = même fond que la page (défini aussi dans index.css) */
 html.luxeflexia-video-page .floating-header::before {
-  background: linear-gradient(
-    180deg,
-    #f3ece2 0%,
-    #f3ece2 70%,
-    rgba(243, 236, 226, 0.92) 88%,
-    transparent 100%
-  );
+  background: var(--lx-page-bg) !important;
 }
 
 .luxeflexia-app[data-route="video-ia"] {
