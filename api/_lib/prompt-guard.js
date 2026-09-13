@@ -3379,44 +3379,120 @@ function qualitySuffix(includeCelebrityGuard) {
   return parts.filter(Boolean).join(" ");
 }
 
+/** Text-to-image — scène entière inventée depuis le prompt (aucune photo uploadée). */
+const TEXT_TO_IMAGE_SCENE_GUARD =
+  "PURE TEXT-TO-IMAGE — invent the entire photograph from scratch from the user description. " +
+  "No reference photo exists. Do NOT assume an uploaded person or a selfie to edit. " +
+  "Render EVERY subject, outfit, accessory, prop, pose, spatial relationship, and mood EXACTLY as written — nothing omitted, nothing substituted.";
+
+const TEXT_TO_IMAGE_MULTI_SUBJECT_CLARIFIER =
+  " (MULTI-SUBJECT LOCK: when several people are described, each is a fully separate complete human at believable scale, " +
+  "with correct sitting/standing relationship, real contact shadows, and every outfit/prop detail named by the user.)";
+
+const TEXT_TO_IMAGE_REALISM_GUARD =
+  "Ultra-photorealistic candid smartphone-style photograph (mandatory): natural skin pores, micro-imperfections, slight asymmetry, " +
+  "real fabric folds, authentic material textures, believable anatomy, natural ambient light and contact shadows. " +
+  "FORBIDDEN: CGI, illustration, anime, sticker collage, plastic/waxy skin, beauty-filter glow, AI smoothness, watermark, text overlay.";
+
+const TEXT_TO_IMAGE_NEGATIVE_CLAUSE =
+  "Negative prompt: fused bodies, duplicated clones, missing subjects user named, wrong outfits, missing props, " +
+  "extra limbs, deformed faces, floating people, cutout collage, CGI, illustration, plastic skin, generic mannequin faces.";
+
+/** Typos produit uniquement — sans clarifiers image-edit (évite de polluer le texte utilisateur). */
+function sanitizeTextToImageUserPrompt(prompt) {
+  return String(prompt || "")
+    .trim()
+    .replace(/tanas?|92i/gi, "jolies filles")
+    .replace(/\bwrenoi\b/gi, "Werenoi")
+    .replace(/\bwaranoi\b/gi, "Werenoi")
+    .replace(/\bmahes\b/gi, "Maes")
+    .replace(/\bmontessori\b/gi, "Mansory")
+    .replace(/\blampar\b/gi, "Lamborghini")
+    .replace(/\bmontesori\b/gi, "Mansory")
+    .replace(/\bmontsouris\b/gi, "Mansory")
+    .replace(/\bmansori\b/gi, "Mansory")
+    .replace(/\bmansorry\b/gi, "Mansory")
+    .replace(/\bclag[eé]\b/gi, "Clio")
+    .replace(/\btmag\b/gi, "TMAX")
+    .replace(/\bt\s*max\b/gi, "TMAX");
+}
+
+/** Retire les préfixes « crée-moi / génère-moi » — l'utilisateur décrit la scène à inventer. */
+function normalizeTextToImageUserRequest(prompt) {
+  let cleaned = sanitizeTextToImageUserPrompt(prompt);
+  if (!cleaned) return "";
+
+  cleaned = cleaned
+    .replace(
+      /^(?:crée(?:r)?(?:[\s-]moi)?|génère(?:r)?(?:[\s-]moi)?|genere(?:r)?(?:[\s-]moi)?|fais(?:[\s-]moi)?|create(?:\s+me)?|generate(?:\s+me)?|make(?:\s+me)?)\s+/i,
+      "",
+    )
+    .replace(
+      /^(?:une?\s+)?(?:image|photo|scene|scène)\s+(?:de|avec|where|of|with)\s+/i,
+      "",
+    )
+    .trim();
+
+  return cleaned || sanitizeTextToImageUserPrompt(prompt);
+}
+
+function textToImageQualitySuffix(namedFigure) {
+  return [
+    namedFigure ? CURRENT_CELEBRITY_LIKENESS_GUARD : null,
+    TEXT_TO_IMAGE_REALISM_GUARD,
+    TEXT_TO_IMAGE_NEGATIVE_CLAUSE,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
  * Text-to-image (prompt seul, sans photo de référence).
+ * Priorité absolue au texte utilisateur — jamais tronqué si le prompt tient en ~2000 car.
  */
 function buildTextToImagePrompt(userPrompt, options = {}) {
-  const cleaned = sanitizeUserPrompt(userPrompt);
-  if (!cleaned) return cleaned;
+  const sceneDescription = normalizeTextToImageUserRequest(userPrompt);
+  if (!sceneDescription) return "";
 
   const celebInject = buildCelebrityAppearanceInjection(userPrompt);
   const namedFigure =
     Boolean(celebInject) || looksLikeNamedPublicFigurePrompt(userPrompt);
   const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
-  const lifestyle = isLifestyleRelocatePrompt(userPrompt);
-  const vehicle =
-    isVehicleDriverPrompt(userPrompt) ||
-    isNamedVehiclePrompt(userPrompt) ||
-    isLifestyleRelocatePrompt(userPrompt);
+  const userBlock = `Scene to generate exactly as described: ${sceneDescription}`;
 
-  const sceneHint = lifestyle
-    ? `${LIFESTYLE_RELOCATE_GUARD} `
-    : vehicle
-      ? `${VEHICLE_SCENE_GUARD} `
-      : "";
-
-  const core = [
-    "Generate a brand-new ultra-photorealistic photograph from scratch based on the user description (no reference photo uploaded).",
-    HUMAN_PHOTOREAL_CLARIFIER,
-    sceneHint,
+  let head = [
+    TEXT_TO_IMAGE_SCENE_GUARD,
+    "Execute the user's scene LITERALLY — every person, outfit, prop and pose exactly as written.",
+    TEXT_TO_IMAGE_MULTI_SUBJECT_CLARIFIER,
     celebInject,
     subjectPoseBlock,
-    `User request: ${cleaned}`,
-    qualitySuffix(namedFigure || vehicle || lifestyle),
   ]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
 
-  return core.length > MAX_FINAL_PROMPT ? core.slice(0, MAX_FINAL_PROMPT) : core;
+  let tail = textToImageQualitySuffix(namedFigure);
+
+  const fitLength = () => head.length + 1 + userBlock.length + 1 + tail.length;
+
+  while (fitLength() > MAX_FINAL_PROMPT && tail.length > 160) {
+    tail = `${tail.slice(0, tail.length - 100).trim()}…`;
+  }
+  while (fitLength() > MAX_FINAL_PROMPT && head.length > 160) {
+    head = `${head.slice(0, head.length - 100).trim()}…`;
+  }
+
+  let userFinal = userBlock;
+  if (fitLength() > MAX_FINAL_PROMPT) {
+    const userBudget = Math.max(
+      200,
+      MAX_FINAL_PROMPT - head.length - tail.length - 4,
+    );
+    userFinal = userBlock.slice(0, userBudget).trim();
+  }
+
+  return `${head} ${userFinal} ${tail}`.slice(0, MAX_FINAL_PROMPT);
 }
 
 /**

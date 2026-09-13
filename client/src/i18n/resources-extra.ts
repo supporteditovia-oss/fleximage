@@ -202,7 +202,8 @@ export const extraResources = {
       createAnother: "Nouvelle création",
     },
     promptInput: {
-      describePlaceholder: "Décris ton LARP...",
+      describePlaceholder:
+        "Décris ta scène en détail (photo optionnelle) — ex. un homme cagoulé en noir avec un enfant en maillot Real Madrid…",
       randomIdea: "Idée aléatoire",
       create: "Créer",
       creating: "Création...",
@@ -734,7 +735,8 @@ export const extraResources = {
       createAnother: "Create another",
     },
     promptInput: {
-      describePlaceholder: "Describe your scene... Put me in a Lamborghini in Monaco...",
+      describePlaceholder:
+        "Describe your scene in detail (photo optional) — e.g. a hooded man in black with a child in a Real Madrid jersey…",
       randomIdea: "Random idea",
       create: "Create",
       creating: "Creating...",
