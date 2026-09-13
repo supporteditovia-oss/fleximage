@@ -169,7 +169,7 @@ export type LandingEditorialGridItem = LandingEditorialPair & {
 };
 
 /** Intervalle entre deux rotations synchronisées de la grille. */
-export const LANDING_EDITORIAL_ROTATE_MS = 4500;
+export const LANDING_EDITORIAL_ROTATE_MS = 9000;
 
 export function pickLandingEditorialGrid(
   count = 4,

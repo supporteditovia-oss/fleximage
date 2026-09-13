@@ -572,20 +572,16 @@
 .landing-v2 .editorial-figure__frame {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(165deg, #1c1b18 0%, #0f0f0d 100%);
+  overflow: hidden;
+  background: var(--cream-deep);
 }
 
 .landing-v2 .editorial-figure__photo {
-  position: relative;
-  flex: none;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center center;
   transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
