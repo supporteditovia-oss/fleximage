@@ -198,9 +198,6 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
   useEffect(() => {
     getAudio(activeSlugRef.current);
-    for (const voice of LANDING_VOICE_CATALOG) {
-      getAudio(voice.slug);
-    }
   }, [getAudio]);
 
   useEffect(() => {

@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const { synthesizeSpeech } = require("../fish-audio");
 const { uploadToR2, getR2Config } = require("../r2");
 const {
@@ -6,6 +8,24 @@ const {
   resolveLandingVoiceEntry,
   LANDING_VOICE_DEFAULT_SLUG,
 } = require("../landing-voice-demo");
+
+function readBundledCatalogSample(slug) {
+  const fileName = `${slug}.mp3`;
+  const candidates = [
+    path.join(process.cwd(), "dist/public/assets/voice-catalog/samples", fileName),
+    path.join(process.cwd(), "client/public/assets/voice-catalog/samples", fileName),
+  ];
+  for (const filePath of candidates) {
+    try {
+      if (!fs.existsSync(filePath)) continue;
+      const buffer = fs.readFileSync(filePath);
+      if (buffer.length >= 512) return buffer;
+    } catch {
+      /* try next path */
+    }
+  }
+  return null;
+}
 
 async function getLandingDemoBuffer(entry) {
   const cacheKey = landingVoiceR2Key(entry.slug);
@@ -84,6 +104,13 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
       name: entry.name,
     });
   } catch (error) {
+    const fallback = readBundledCatalogSample(entry.slug);
+    if (fallback && streamMedia) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.status(200).send(fallback);
+      return;
+    }
     console.error("[landing-voice-demo]", error);
     res.status(error.status || 502).json({
       code: error.code || "landing_demo_failed",

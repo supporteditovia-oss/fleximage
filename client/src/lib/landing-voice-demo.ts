@@ -17,8 +17,12 @@ export type LandingVoiceEntry = {
   accent?: string;
 };
 
-/** Incrémenter pour invalider le cache landing + R2 après changement de voix Fish. */
+/** Incrémenter pour invalider le cache navigateur des MP3 statiques. */
 export const LANDING_VOICE_DEMO_VERSION = 2;
+
+/** Aligné sur les extraits `/assets/voice-catalog/samples/*.mp3`. */
+export const LANDING_CATALOG_SAMPLE_LINE =
+  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
@@ -45,9 +49,9 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
   return `/assets/voice-catalog/${entry.photo}`;
 }
 
-/** MP3 same-origin — évite les blocages cross-origin R2 sur mobile. */
+/** MP3 statiques — fiables sur mobile, même source que le studio catalogue. */
 export function landingVoiceDemoSrc(slug: string): string {
-  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
+  return `/assets/voice-catalog/samples/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 
 export function isAudioReady(audio: HTMLAudioElement): boolean {
