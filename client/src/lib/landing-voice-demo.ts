@@ -18,11 +18,7 @@ export type LandingVoiceEntry = {
 };
 
 /** Incrémenter pour invalider le cache navigateur des MP3 statiques. */
-export const LANDING_VOICE_DEMO_VERSION = 2;
-
-/** Aligné sur les extraits `/assets/voice-catalog/samples/*.mp3`. */
-export const LANDING_CATALOG_SAMPLE_LINE =
-  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
+export const LANDING_VOICE_DEMO_VERSION = 3;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
@@ -49,9 +45,14 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
   return `/assets/voice-catalog/${entry.photo}`;
 }
 
-/** MP3 statiques — fiables sur mobile, même source que le studio catalogue. */
+/** MP3 statiques — intro personnalisée par voix (alignée sur les sous-titres). */
 export function landingVoiceDemoSrc(slug: string): string {
-  return `/assets/voice-catalog/samples/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+  return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
+/** Fallback API si un extrait statique manque encore. */
+export function landingVoiceDemoApiSrc(slug: string): string {
+  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 
 export function isAudioReady(audio: HTMLAudioElement): boolean {

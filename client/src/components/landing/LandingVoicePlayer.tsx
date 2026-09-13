@@ -6,6 +6,7 @@ import {
   buildLandingVoiceScript,
   formatVoiceClock,
   isAudioReady,
+  landingVoiceDemoApiSrc,
   landingVoiceDemoSrc,
   landingVoicePhoto,
   pickRandomLandingVoiceSlug,
@@ -166,6 +167,12 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     if (!audio) {
       audio = new Audio(landingVoiceDemoSrc(slug));
       audio.preload = "auto";
+      audio.addEventListener("error", () => {
+        if (audio?.dataset.fallbackApplied === "1") return;
+        audio.dataset.fallbackApplied = "1";
+        audio.src = landingVoiceDemoApiSrc(slug);
+        audio.load();
+      });
       cache.set(slug, audio);
     }
     return audio;
