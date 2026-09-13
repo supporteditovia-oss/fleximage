@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { setDocumentMeta } from "@/lib/document-meta";
-import { setAppLanguage } from "@/i18n";
+import { applyLocaleFromSearch, setAppLanguage } from "@/i18n";
 import {
   resolvePreferredLocale,
   type AppLocale,
