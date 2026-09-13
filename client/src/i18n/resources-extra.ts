@@ -131,8 +131,9 @@ export const extraResources = {
       limitReachedTitle: "Limite atteinte",
       limitReachedDescription:
         "Tu as atteint ta limite de générations gratuites. Abonne-toi pour continuer !",
-      emptyPromptTitle: "Erreur",
-      emptyPromptDescription: "Ajoute au moins une image pour lancer la génération.",
+      emptyPromptTitle: "Description vide",
+      emptyPromptDescription:
+        "Écris une description pour créer ton image (photo optionnelle).",
       referenceImageRequiredTitle: "Image requise",
       referenceImageRequiredDescription:
         "Ajoute au moins une image de référence pour lancer la génération.",
@@ -174,7 +175,7 @@ export const extraResources = {
       },
       emptyPromptTitle: "Description vide",
       emptyPromptDescription:
-        "Ajoute au moins une image de référence pour lancer la génération.",
+        "Écris une description pour créer ton image (photo optionnelle).",
       referenceImageRequiredTitle: "Image requise",
       referenceImageRequiredDescription:
         "Ajoute au moins une image de référence pour lancer la génération.",
@@ -201,7 +202,8 @@ export const extraResources = {
       createAnother: "Nouvelle création",
     },
     promptInput: {
-      describePlaceholder: "Décris ton LARP...",
+      describePlaceholder:
+        "Décris ta scène en détail (photo optionnelle) — ex. un homme cagoulé en noir avec un enfant en maillot Real Madrid…",
       randomIdea: "Idée aléatoire",
       create: "Créer",
       creating: "Création...",
@@ -672,8 +674,9 @@ export const extraResources = {
       limitReachedTitle: "Limit reached",
       limitReachedDescription:
         "You reached your free generation limit. Subscribe to continue!",
-      emptyPromptTitle: "Error",
-      emptyPromptDescription: "Add at least one image to start generating.",
+      emptyPromptTitle: "Empty prompt",
+      emptyPromptDescription:
+        "Write a description to create your image (photo optional).",
       referenceImageRequiredTitle: "Image required",
       referenceImageRequiredDescription:
         "Add at least one reference image to start generation.",
@@ -715,7 +718,7 @@ export const extraResources = {
       },
       emptyPromptTitle: "Empty prompt",
       emptyPromptDescription:
-        "Add at least one reference image to start generation.",
+        "Write a description to create your image (photo optional).",
       referenceImageRequiredTitle: "Image required",
       referenceImageRequiredDescription:
         "Add at least one reference image to start generation.",
@@ -741,7 +744,8 @@ export const extraResources = {
       createAnother: "Create another",
     },
     promptInput: {
-      describePlaceholder: "Describe your scene... Put me in a Lamborghini in Monaco...",
+      describePlaceholder:
+        "Describe your scene in detail (photo optional) — e.g. a hooded man in black with a child in a Real Madrid jersey…",
       randomIdea: "Random idea",
       create: "Create",
       creating: "Creating...",
@@ -1208,7 +1212,7 @@ export const extraResources = {
       },
       emptyPromptTitle: "Prompt vacio",
       emptyPromptDescription:
-        "Agrega al menos una imagen de referencia para iniciar la generacion.",
+        "Escribe una descripcion para crear tu imagen (foto opcional).",
       referenceImageRequiredTitle: "Imagen requerida",
       referenceImageRequiredDescription:
         "Agrega al menos una imagen de referencia para iniciar la generacion.",
@@ -1656,7 +1660,7 @@ export const extraResources = {
       },
       emptyPromptTitle: "Leerer Prompt",
       emptyPromptDescription:
-        "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",
+        "Schreibe eine Beschreibung fuer dein Bild (Foto optional).",
       referenceImageRequiredTitle: "Bild erforderlich",
       referenceImageRequiredDescription:
         "Fuege mindestens ein Referenzbild hinzu, um die Generierung zu starten.",

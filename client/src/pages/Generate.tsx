@@ -888,17 +888,37 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         setIsStartingGeneration(false);
         return;
       }
-    } else if (filesForGeneration.length === 0) {
+    } else if (generationMode === "video" && filesForGeneration.length === 0) {
       toast({
         variant: "destructive",
-        title:
-          generationMode === "video"
-            ? t("generate.referenceVideoRequiredTitle")
-            : t("generate.referenceImageRequiredTitle"),
-        description:
-          generationMode === "video"
-            ? t("generate.referenceVideoRequiredDescription")
-            : t("generate.referenceImageRequiredDescription"),
+        title: t("generate.referenceVideoRequiredTitle"),
+        description: t("generate.referenceVideoRequiredDescription"),
+      });
+      isGeneratingRef.current = false;
+      setIsStartingGeneration(false);
+      return;
+    } else if (
+      generationMode === "image" &&
+      !isTemplateGeneration &&
+      !prompt.trim()
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("generate.emptyPromptTitle"),
+        description: t("generate.emptyPromptDescription"),
+      });
+      isGeneratingRef.current = false;
+      setIsStartingGeneration(false);
+      return;
+    } else if (
+      generationMode === "image" &&
+      isTemplateGeneration &&
+      filesForGeneration.length === 0
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("generate.referenceImageRequiredTitle"),
+        description: t("generate.referenceImageRequiredDescription"),
       });
       isGeneratingRef.current = false;
       setIsStartingGeneration(false);
@@ -962,17 +982,30 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       profile.credits < requiredCredits;
 
     if (shouldUseOnboardingPaywall) {
-      if (!filesForGeneration[0] && !getPaywallImage()) {
+      if (
+        generationMode === "video" &&
+        !filesForGeneration[0] &&
+        !getPaywallImage()
+      ) {
         toast({
           variant: "destructive",
-          title:
-            generationMode === "video"
-              ? t("generate.referenceVideoRequiredTitle")
-              : t("generate.referenceImageRequiredTitle"),
-          description:
-            generationMode === "video"
-              ? t("generate.referenceVideoRequiredDescription")
-              : t("generate.referenceImageRequiredDescription"),
+          title: t("generate.referenceVideoRequiredTitle"),
+          description: t("generate.referenceVideoRequiredDescription"),
+        });
+        setPendingLoading(false);
+        return;
+      }
+      if (
+        generationMode === "image" &&
+        !isTemplateGeneration &&
+        !serverPrompt.trim() &&
+        !filesForGeneration[0] &&
+        !getPaywallImage()
+      ) {
+        toast({
+          variant: "destructive",
+          title: t("generate.emptyPromptTitle"),
+          description: t("generate.emptyPromptDescription"),
         });
         setPendingLoading(false);
         return;
@@ -1398,10 +1431,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
         reshuffleOutfitCatalog();
       }}
       resultType={generationMode}
-      referenceImageCount={Math.max(
-        1,
-        images.filter((img) => img !== null).length,
-      )}
+      referenceImageCount={images.filter((img) => img !== null).length}
       initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
     />
   ) : null;
@@ -1557,7 +1587,11 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
                 isGenerating={isSubmittingGeneration}
                 goldCta
                 creditCost={IMAGE_CREDIT_COST}
-                canGenerate={images.some((img) => img !== null)}
+                canGenerate={
+                  selectedTemplate || pendingTemplateId
+                    ? images.some((img) => img !== null)
+                    : prompt.trim().length > 0
+                }
                 aspectRatio={aspectRatio}
                 onAspectRatioChange={setAspectRatio}
               />
