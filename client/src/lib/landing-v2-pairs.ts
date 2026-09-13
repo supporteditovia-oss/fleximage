@@ -129,14 +129,41 @@ export type LandingEditorialGridItem = LandingEditorialTile & {
   n: string;
 };
 
-/** Mélange le pool et pioche N tuiles — photos différentes à chaque visite. */
+function countIdDiff(nextIds: string[], previousIds: string[]): number {
+  if (previousIds.length === 0) return nextIds.length;
+  return nextIds.filter((id) => !previousIds.includes(id)).length;
+}
+
+/** Mélange le pool et pioche N tuiles — évite de répéter le même set si possible. */
 export function pickLandingEditorialGrid(
   count = 4,
+  previousIds: string[] = [],
 ): LandingEditorialGridItem[] {
-  const shuffled = shuffleInPlace([...LANDING_EDITORIAL_POOL]);
-  return shuffled.slice(0, Math.min(count, shuffled.length)).map((item, i) => ({
+  const limit = Math.min(count, LANDING_EDITORIAL_POOL.length);
+  let picked = shuffleInPlace([...LANDING_EDITORIAL_POOL]).slice(0, limit);
+  let bestDiff = countIdDiff(
+    picked.map((item) => item.id),
+    previousIds,
+  );
+
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    const candidate = shuffleInPlace([...LANDING_EDITORIAL_POOL]).slice(0, limit);
+    const diff = countIdDiff(
+      candidate.map((item) => item.id),
+      previousIds,
+    );
+    if (diff > bestDiff) {
+      picked = candidate;
+      bestDiff = diff;
+    }
+    if (bestDiff >= Math.min(2, limit)) break;
+  }
+
+  return picked.map((item, i) => ({
     ...item,
     position: EDITORIAL_GRID_POSITIONS[i] ?? EDITORIAL_GRID_POSITIONS[0],
     n: String(i + 1).padStart(2, "0"),
   }));
 }
+
+export const LANDING_EDITORIAL_ROTATE_MS = 5500;

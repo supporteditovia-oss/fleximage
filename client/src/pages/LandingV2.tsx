@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
@@ -9,8 +9,8 @@ import { setAppLanguage } from "@/i18n";
 import { resolvePreferredLocale, type AppLocale } from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
+import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
-import { pickLandingEditorialGrid } from "@/lib/landing-v2-pairs";
 import "./landing-v2.css";
 
 const FAQ = [
@@ -115,9 +115,6 @@ export default function LandingV2() {
   const { i18n } = useTranslation();
   const loggedIn = Boolean(user);
 
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const editorialGrid = useMemo(() => pickLandingEditorialGrid(4), []);
-
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
 
   useEffect(() => {
@@ -132,10 +129,6 @@ export default function LandingV2() {
   const setLocale = (locale: AppLocale) => {
     if (locale === currentLocale) return;
     setAppLanguage(locale, { trackSignupLocale: !user });
-  };
-
-  const toggleReveal = (id: string) => {
-    setRevealed((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
@@ -194,40 +187,7 @@ export default function LandingV2() {
             <span>Image · Vidéo · Voix · Lifestyle</span>
           </div>
         </div>
-        <div className="editorial-grid">
-          {editorialGrid.map((item) => (
-            <figure
-              key={item.id}
-              className={`editorial-figure ${item.position} ${revealed[item.id] ? "show-original" : ""}`}
-            >
-              <img
-                className="example-image example-generated"
-                src={item.generated}
-                alt={item.generatedAlt}
-                loading="lazy"
-              />
-              <img
-                className="example-image example-original"
-                src={item.original}
-                alt="Photo originale avant transformation"
-                loading="lazy"
-              />
-              <button
-                type="button"
-                className="reveal-original"
-                aria-pressed={Boolean(revealed[item.id])}
-                onClick={() => toggleReveal(item.id)}
-              >
-                {revealed[item.id] ? "Voir le rendu" : "Voir l’original"}
-              </button>
-              <figcaption>
-                <span>{item.n}</span>
-                <strong>{item.label}</strong>
-                <small>Créé avec LuxeFlexIA</small>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
+        <LandingEditorialGrid />
       </section>
 
       <section className="transformation-section" aria-labelledby="transform-title">

@@ -546,6 +546,21 @@
   overflow: hidden;
 }
 
+.landing-v2 .editorial-figure--swap {
+  animation: editorial-tile-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes editorial-tile-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .landing-v2 .editorial-position-1 {
   grid-row: 1 / 3;
 }

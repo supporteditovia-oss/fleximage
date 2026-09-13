@@ -28,6 +28,21 @@ describe("pickLandingEditorialGrid", () => {
     expect(seen.has("portrait-car")).toBe(true);
   });
 
+  it("prefers a different set when previous ids are provided", () => {
+    const first = pickLandingEditorialGrid(4);
+    const firstIds = first.map((item) => item.id);
+    let changed = false;
+    for (let i = 0; i < 20; i += 1) {
+      const next = pickLandingEditorialGrid(4, firstIds);
+      const nextIds = next.map((item) => item.id).sort().join(",");
+      if (nextIds !== [...firstIds].sort().join(",")) {
+        changed = true;
+        break;
+      }
+    }
+    expect(changed).toBe(true);
+  });
+
   it("keeps compare pairs pool size stable", () => {
     expect(LANDING_V2_COMPARE_PAIRS.length).toBeGreaterThanOrEqual(5);
   });
