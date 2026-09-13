@@ -14,6 +14,7 @@ import { VoiceHistorySection } from "@/components/v2/VoiceHistorySection";
 import { VoiceShareSheet } from "@/components/v2/VoiceShareSheet";
 import { voiceHistoryQueryKey } from "@/hooks/use-voice-history";
 import { VoiceSelectedHero } from "@/components/v2/VoiceSelectedHero";
+import { VoiceCatalogPicker } from "@/components/v2/VoiceCatalogPicker";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
@@ -1010,12 +1011,43 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             kind={activeVoice.kind}
             onRemove={clearActiveVoice}
           />
+        ) : guestFunnel ? (
+          <p className="voice-studio-page__hint">
+            Choisis une voix du catalogue, ou enregistre la tienne ci-dessous.
+          </p>
         ) : (
           <p className="voice-studio-page__hint">
             Choisis une voix dans Catalogue (menu du bas), ou enregistre la tienne
             ci-dessous puis génère.
           </p>
         )}
+
+        {guestFunnel ? (
+          <section className="vs-card vs-card--catalog" aria-labelledby="vs-landing-catalog">
+            <h3 id="vs-landing-catalog" className="vs-card__title">
+              Catalogue voix
+            </h3>
+            <p className="vs-card__sub vs-card__sub--tight">
+              Rappeurs FR et voix premium — clique pour choisir, ▶ pour écouter.
+            </p>
+            <VoiceCatalogPicker
+              selectedId={activeVoice?.kind === "catalog" ? activeVoice.id : null}
+              defaultFilter="Rap"
+              onSelect={(voice) => {
+                stopPreview();
+                setActiveVoice({
+                  id: voice.id,
+                  name: voice.name,
+                  kind: "catalog",
+                  profile: voice,
+                });
+                writeSelectedCatalogVoiceId(voice.id);
+                writeSelectedClonedVoiceId(null);
+                setReadyToPlay(false);
+              }}
+            />
+          </section>
+        ) : null}
 
         <section className="vs-card" aria-labelledby="vs-clone-title">
           <div className="vs-card__head-row">
