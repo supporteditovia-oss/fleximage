@@ -62,3 +62,81 @@ export function pickLandingCompareLayout(): {
     gallery: shuffled.slice(1, 3),
   };
 }
+
+/** Tuile « Univers » landing — label éditorial + paire avant/après. */
+export type LandingEditorialTile = {
+  id: string;
+  label: string;
+  original: string;
+  generated: string;
+  generatedAlt: string;
+};
+
+const LANDING_EDITORIAL_POOL: LandingEditorialTile[] = [
+  {
+    id: "driveway",
+    label: "Automobile",
+    original: "/assets/v2-compare/driveway-before.jpg",
+    generated: "/assets/v2-compare/driveway-after.jpg",
+    generatedAlt: "Berline de luxe créée à partir d’une voiture sur une allée",
+  },
+  {
+    id: "garage",
+    label: "Lifestyle",
+    original: "/assets/v2-compare/garage-before.jpg",
+    generated: "/assets/v2-compare/garage-after.jpg",
+    generatedAlt: "Garage transformé avec des voitures de prestige",
+  },
+  {
+    id: "pump",
+    label: "Automobile",
+    original: "/assets/v2-compare/pump-before.jpg",
+    generated: "/assets/v2-compare/pump-after.jpg",
+    generatedAlt: "Berline sportive à la station-service",
+  },
+  {
+    id: "esso",
+    label: "Automobile",
+    original: "/assets/v2-compare/esso-before.jpg",
+    generated: "/assets/v2-compare/esso-after.jpg",
+    generatedAlt: "SUV de luxe — transformation nocturne à la station",
+  },
+  {
+    id: "dubai",
+    label: "Voyage",
+    original: "/assets/v2-compare/dubai-before.jpg",
+    generated: "/assets/v2-compare/dubai-after.jpg",
+    generatedAlt: "Portrait transformé en scène au volant à Dubaï",
+  },
+  {
+    id: "portrait-car",
+    label: "Lifestyle",
+    original: "/assets/landing-v2/portrait-car-original.jpg",
+    generated: "/assets/landing-v2/portrait-car-generated.jpg",
+    generatedAlt: "Homme devant une supercar — scène lifestyle premium",
+  },
+];
+
+const EDITORIAL_GRID_POSITIONS = [
+  "editorial-position-1",
+  "editorial-position-2",
+  "editorial-position-3",
+  "editorial-position-4",
+] as const;
+
+export type LandingEditorialGridItem = LandingEditorialTile & {
+  position: (typeof EDITORIAL_GRID_POSITIONS)[number];
+  n: string;
+};
+
+/** Mélange le pool et pioche N tuiles — photos différentes à chaque visite. */
+export function pickLandingEditorialGrid(
+  count = 4,
+): LandingEditorialGridItem[] {
+  const shuffled = shuffleInPlace([...LANDING_EDITORIAL_POOL]);
+  return shuffled.slice(0, Math.min(count, shuffled.length)).map((item, i) => ({
+    ...item,
+    position: EDITORIAL_GRID_POSITIONS[i] ?? EDITORIAL_GRID_POSITIONS[0],
+    n: String(i + 1).padStart(2, "0"),
+  }));
+}

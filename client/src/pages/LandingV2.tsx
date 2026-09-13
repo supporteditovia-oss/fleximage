@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
@@ -10,46 +10,8 @@ import { resolvePreferredLocale, type AppLocale } from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
+import { pickLandingEditorialGrid } from "@/lib/landing-v2-pairs";
 import "./landing-v2.css";
-
-const EDITORIAL = [
-  {
-    id: "automobile",
-    position: "editorial-position-1",
-    n: "01",
-    label: "Automobile",
-    generated: "/assets/landing-v2/automobile-generated.jpg",
-    original: "/assets/landing-v2/automobile-original.jpg",
-    generatedAlt: "BMW grise créée à partir de la photo d’une Volkswagen",
-  },
-  {
-    id: "lifestyle",
-    position: "editorial-position-2",
-    n: "02",
-    label: "Lifestyle",
-    generated: "/assets/landing-v2/garage-generated.jpg",
-    original: "/assets/landing-v2/garage-original.jpg",
-    generatedAlt: "Garage transformé avec deux voitures de prestige roses",
-  },
-  {
-    id: "station",
-    position: "editorial-position-3",
-    n: "03",
-    label: "Automobile",
-    generated: "/assets/landing-v2/station-generated.jpg",
-    original: "/assets/landing-v2/station-original.jpg",
-    generatedAlt: "Renault transformée en BMW noire à une station-service",
-  },
-  {
-    id: "dubai",
-    position: "editorial-position-4",
-    n: "04",
-    label: "Voyage",
-    generated: "/assets/landing-v2/dubai-generated.jpg",
-    original: "/assets/landing-v2/dubai-original.jpg",
-    generatedAlt: "Portrait transformé en scène au volant à Dubaï",
-  },
-] as const;
 
 const FAQ = [
   {
@@ -154,6 +116,7 @@ export default function LandingV2() {
   const loggedIn = Boolean(user);
 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const editorialGrid = useMemo(() => pickLandingEditorialGrid(4), []);
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
 
@@ -232,7 +195,7 @@ export default function LandingV2() {
           </div>
         </div>
         <div className="editorial-grid">
-          {EDITORIAL.map((item) => (
+          {editorialGrid.map((item) => (
             <figure
               key={item.id}
               className={`editorial-figure ${item.position} ${revealed[item.id] ? "show-original" : ""}`}
