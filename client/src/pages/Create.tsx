@@ -108,7 +108,7 @@ export default function Create() {
     <>
       {/* Generate reste monté en mode voix pour éviter les crashs portal/DOM au switch. */}
       <div className={mode === "image" ? undefined : "hidden"} aria-hidden={mode !== "image"}>
-        <Generate basePath="/create" />
+        <Generate basePath="/create" overlayActive={mode === "image"} />
       </div>
       {mode === "voice" ? <VoiceStudioMock /> : null}
     </>

@@ -86,9 +86,14 @@ type GenerationMode = "image" | "video";
 type GenerateProps = {
   /** Route used for history.replaceState cleanup — defaults to legacy /generate. */
   basePath?: string;
+  /** Désactive les overlays plein écran (loader / paywall) quand Image IA n'est pas l'onglet actif. */
+  overlayActive?: boolean;
 };
 
-export default function Generate({ basePath = "/generate" }: GenerateProps) {
+export default function Generate({
+  basePath = "/generate",
+  overlayActive = true,
+}: GenerateProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [isReturningFromCheckout] = useState(() => {
@@ -324,12 +329,13 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   const hasSavedPaywall = !!savedPaywall && !profile?.is_subscriber;
   const isPaywallOverlayActive = hasSavedPaywall;
   const isFullscreenOverlayActive =
-    showFakeOnboardingLoader ||
-    pendingLoading ||
-    isStartingGeneration ||
-    (!!taskId && !generationResultVisible) ||
-    isPaywallOverlayActive ||
-    unlockingLarp;
+    overlayActive &&
+    (showFakeOnboardingLoader ||
+      pendingLoading ||
+      isStartingGeneration ||
+      (!!taskId && !generationResultVisible) ||
+      isPaywallOverlayActive ||
+      unlockingLarp);
 
   useEffect(() => {
     if (taskId) {
@@ -350,7 +356,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       setCrispOverlaySuppressed(false);
     }
 
-    if (isPaywallOverlayActive) {
+    if (overlayActive && isPaywallOverlayActive) {
       document.body.setAttribute("data-paywall-overlay", "true");
     } else {
       document.body.removeAttribute("data-paywall-overlay");
@@ -362,7 +368,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
       document.body.removeAttribute("data-paywall-overlay");
       setCrispOverlaySuppressed(false);
     };
-  }, [isFullscreenOverlayActive, isPaywallOverlayActive]);
+  }, [isFullscreenOverlayActive, isPaywallOverlayActive, overlayActive]);
 
   // ── Fresh visit: keep landing onboarding draft / valid lock, else blank form ─
   useEffect(() => {
@@ -1374,8 +1380,9 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   } as const;
 
   const generationBackdropActive =
-    Boolean(taskId) ||
-    ((pendingLoading || isStartingGeneration) && !showFakeOnboardingLoader);
+    overlayActive &&
+    (Boolean(taskId) ||
+      ((pendingLoading || isStartingGeneration) && !showFakeOnboardingLoader));
 
   // ── Debug logging ───────────────────────────────────────────
   console.log("[Generate] Render:", {
@@ -1387,7 +1394,8 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   });
 
   // ── Portal overlays ─────────────────────────────────────────
-  const generationProgress = taskId ? (
+  const generationProgress =
+    overlayActive && taskId ? (
     <GenerationProgress
       key={taskId}
       taskId={taskId}
@@ -1407,7 +1415,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   ) : null;
 
   const portalOverlay =
-    (pendingLoading || isStartingGeneration) && !taskId && !showFakeOnboardingLoader ? (
+    overlayActive &&
+    (pendingLoading || isStartingGeneration) &&
+    !taskId &&
+    !showFakeOnboardingLoader ? (
       createPortal(
         <GenerationLoader
           taskId="pending"
@@ -1436,7 +1447,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   // ════════════════════════════════════════════════════════════
 
   // -- Fake onboarding "generation" loader (no API)
-  if (showFakeOnboardingLoader) {
+  if (overlayActive && showFakeOnboardingLoader) {
     return (
       <FakeOnboardingLoader
         inputImageUrl={fakeLoaderImageUrl}
@@ -1446,7 +1457,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Generation in progress
-  if (taskId) {
+  if (overlayActive && taskId) {
     return (
       <>
         {generationBackdropActive ? <GenerationLoaderBackdrop zIndex={99} /> : null}
@@ -1456,7 +1467,10 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Loading pending LARP from hero flow
-  if (pendingLoading || (isStartingGeneration && !taskId && !showFakeOnboardingLoader)) {
+  if (
+    overlayActive &&
+    (pendingLoading || (isStartingGeneration && !taskId && !showFakeOnboardingLoader))
+  ) {
     return (
       <>
         {generationBackdropActive ? <GenerationLoaderBackdrop zIndex={99} /> : null}
@@ -1466,7 +1480,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Loading unlocked LARP after payment
-  if (unlockingLarp) {
+  if (overlayActive && unlockingLarp) {
     return (
       <div className="flex flex-col items-center justify-center gap-5 min-h-[calc(100svh-12rem)] animate-in fade-in duration-300">
         <div className="h-7 w-48 rounded-full bg-muted animate-pulse" />
@@ -1477,7 +1491,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Unlocked LARP after successful payment
-  if (unlockedLarp) {
+  if (overlayActive && unlockedLarp) {
     return (
       <UnlockedLarpView
         resultUrls={unlockedLarp.resultUrls}
@@ -1495,7 +1509,7 @@ export default function Generate({ basePath = "/generate" }: GenerateProps) {
   }
 
   // -- Persistent paywall for non-subscribers with a previous generation
-  if (hasSavedPaywall && savedPaywall?.resultUrls?.[0]) {
+  if (overlayActive && hasSavedPaywall && savedPaywall?.resultUrls?.[0]) {
     return createPortal(
       <div className={paywallOverlayClassName} style={lxCreamBgStyle}>
         <div className={paywallOverlayInnerClassName}>
