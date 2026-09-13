@@ -1,5 +1,10 @@
 /* Loader Clonage IA — ambiance studio audio / waveform */
 
+html[data-voice-loader="true"],
+body[data-voice-loader="true"] {
+  overflow: hidden;
+}
+
 .lx-voice-loader {
   --lx-voice-accent: #a78bfa;
   --lx-voice-accent-soft: #c4b5fd;

@@ -89,9 +89,18 @@ export function VoiceGenerationLoader({
     return () => clearInterval(id);
   }, [progressMessages.length]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-voice-loader", "true");
+    document.body.setAttribute("data-voice-loader", "true");
+    return () => {
+      document.documentElement.removeAttribute("data-voice-loader");
+      document.body.removeAttribute("data-voice-loader");
+    };
+  }, []);
+
   const loaderTree = (
     <motion.div
-      className="lx-voice-loader fixed inset-0 z-[101] overflow-hidden"
+      className="lx-voice-loader fixed inset-0 z-[9999] overflow-hidden"
       initial={false}
       animate={{ opacity: 1 }}
       role="status"
