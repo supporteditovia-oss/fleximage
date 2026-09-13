@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  advanceEditorialPoolIndex,
+  createLandingEditorialSlots,
+  editorialTileAt,
+  LANDING_EDITORIAL_POOL,
   LANDING_V2_COMPARE_PAIRS,
   pickLandingEditorialGrid,
 } from "./landing-v2-pairs";
@@ -45,5 +49,28 @@ describe("pickLandingEditorialGrid", () => {
 
   it("keeps compare pairs pool size stable", () => {
     expect(LANDING_V2_COMPARE_PAIRS.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe("landing editorial slot rotation", () => {
+  it("creates four slots with staggered pool indices", () => {
+    const slots = createLandingEditorialSlots();
+    expect(slots).toHaveLength(4);
+  });
+
+  it("cycles pool index through the full catalog", () => {
+    let index = 0;
+    const seen = new Set<number>([index]);
+    for (let step = 0; step < LANDING_EDITORIAL_POOL.length; step += 1) {
+      index = advanceEditorialPoolIndex(index);
+      seen.add(index);
+    }
+    expect(seen.size).toBe(LANDING_EDITORIAL_POOL.length);
+  });
+
+  it("returns a tile for every pool index", () => {
+    for (let i = 0; i < LANDING_EDITORIAL_POOL.length; i += 1) {
+      expect(editorialTileAt(i).id).toBeTruthy();
+    }
   });
 });

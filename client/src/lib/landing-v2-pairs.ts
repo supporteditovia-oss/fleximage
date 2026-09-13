@@ -72,7 +72,7 @@ export type LandingEditorialTile = {
   generatedAlt: string;
 };
 
-const LANDING_EDITORIAL_POOL: LandingEditorialTile[] = [
+export const LANDING_EDITORIAL_POOL: LandingEditorialTile[] = [
   {
     id: "driveway",
     label: "Automobile",
@@ -117,12 +117,40 @@ const LANDING_EDITORIAL_POOL: LandingEditorialTile[] = [
   },
 ];
 
-const EDITORIAL_GRID_POSITIONS = [
+export const EDITORIAL_GRID_POSITIONS = [
   "editorial-position-1",
   "editorial-position-2",
   "editorial-position-3",
   "editorial-position-4",
 ] as const;
+
+export type LandingEditorialSlot = {
+  position: (typeof EDITORIAL_GRID_POSITIONS)[number];
+  poolIndex: number;
+  n: string;
+};
+
+export function createLandingEditorialSlots(): LandingEditorialSlot[] {
+  return EDITORIAL_GRID_POSITIONS.map((position, index) => ({
+    position,
+    poolIndex:
+      (index * 2 + Math.floor(Math.random() * LANDING_EDITORIAL_POOL.length)) %
+      LANDING_EDITORIAL_POOL.length,
+    n: String(index + 1).padStart(2, "0"),
+  }));
+}
+
+export function advanceEditorialPoolIndex(poolIndex: number): number {
+  return (poolIndex + 1) % LANDING_EDITORIAL_POOL.length;
+}
+
+export function editorialTileAt(poolIndex: number): LandingEditorialTile {
+  const safe =
+    ((poolIndex % LANDING_EDITORIAL_POOL.length) +
+      LANDING_EDITORIAL_POOL.length) %
+    LANDING_EDITORIAL_POOL.length;
+  return LANDING_EDITORIAL_POOL[safe]!;
+}
 
 export type LandingEditorialGridItem = LandingEditorialTile & {
   position: (typeof EDITORIAL_GRID_POSITIONS)[number];
@@ -166,4 +194,5 @@ export function pickLandingEditorialGrid(
   }));
 }
 
-export const LANDING_EDITORIAL_ROTATE_MS = 5500;
+/** Intervalle entre deux changements de tuile (rotation en round-robin). */
+export const LANDING_EDITORIAL_ROTATE_MS = 2800;
