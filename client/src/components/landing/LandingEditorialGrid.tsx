@@ -38,44 +38,56 @@ export function LandingEditorialGrid() {
   };
 
   return (
-    <div className="editorial-grid" data-generation={generation}>
-      {slots.map((slot) => {
-        const pair = editorialPairAt(slot.pairIndex);
-        const isOriginal = Boolean(showOriginal[slot.position]);
-        const activeSrc = isOriginal ? pair.original : pair.generated;
-        const activeAlt = isOriginal ? pair.originalAlt : pair.generatedAlt;
+    <div className="editorial-showcase">
+      <div className="editorial-showcase__glow" aria-hidden="true" />
+      <div className="editorial-showcase__fade editorial-showcase__fade--left" aria-hidden="true" />
+      <div className="editorial-showcase__fade editorial-showcase__fade--right" aria-hidden="true" />
+      <div className="editorial-grid" data-generation={generation}>
+        {slots.map((slot) => {
+          const pair = editorialPairAt(slot.pairIndex);
+          const isOriginal = Boolean(showOriginal[slot.position]);
+          const activeSrc = isOriginal ? pair.original : pair.generated;
+          const activeAlt = isOriginal ? pair.originalAlt : pair.generatedAlt;
 
-        return (
-          <figure
-            key={slot.position}
-            className={`editorial-figure ${slot.position}`}
-          >
-            <div className="editorial-figure__frame">
-              <img
-                key={`${pair.id}-${generation}-${isOriginal ? "before" : "after"}`}
-                className="editorial-figure__photo editorial-photo-swap"
-                src={activeSrc}
-                alt={activeAlt}
-                loading="eager"
-                decoding="async"
-              />
-            </div>
-            <button
-              type="button"
-              className="reveal-original"
-              aria-pressed={isOriginal}
-              onClick={() => toggleOriginal(slot.position)}
+          return (
+            <figure
+              key={slot.position}
+              className={`editorial-figure ${slot.position}`}
             >
-              {isOriginal ? "Voir le rendu" : "Voir l’original"}
-            </button>
-            <figcaption>
-              <span>{slot.n}</span>
-              <strong>{pair.label}</strong>
-              <small>Créé avec LuxeFlexIA</small>
-            </figcaption>
-          </figure>
-        );
-      })}
+              <div className="editorial-figure__mat">
+                <div className="editorial-figure__frame">
+                  <img
+                    key={`${pair.id}-${generation}-${isOriginal ? "before" : "after"}`}
+                    className="editorial-figure__photo editorial-photo-swap"
+                    src={activeSrc}
+                    alt={activeAlt}
+                    loading="eager"
+                    decoding="async"
+                  />
+                  <div
+                    key={`sheen-${generation}-${isOriginal ? "before" : "after"}`}
+                    className="editorial-figure__sheen"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                className="reveal-original"
+                aria-pressed={isOriginal}
+                onClick={() => toggleOriginal(slot.position)}
+              >
+                {isOriginal ? "Voir le rendu" : "Voir l’original"}
+              </button>
+              <figcaption>
+                <span>{slot.n}</span>
+                <strong>{pair.label}</strong>
+                <small>Créé avec LuxeFlexIA</small>
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
     </div>
   );
 }
