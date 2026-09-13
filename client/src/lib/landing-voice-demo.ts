@@ -18,7 +18,7 @@ export type LandingVoiceEntry = {
 };
 
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
-export const LANDING_VOICE_DEMO_VERSION = 4;
+export const LANDING_VOICE_DEMO_VERSION = 5;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
@@ -45,24 +45,23 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
   return `/assets/voice-catalog/${entry.photo}`;
 }
 
-/** Source principale — intro personnalisée générée côté serveur (alignée sous-titres). */
-export function landingVoiceDemoPrimarySrc(slug: string): string {
+/** MP3 statiques — intro personnalisée par voix (alignée sous-titres). */
+export function landingVoiceDemoStaticSrc(slug: string): string {
+  return `/assets/voice-catalog/samples/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
+/** Repli API si le MP3 statique est absent. */
+export function landingVoiceDemoApiSrc(slug: string): string {
   return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 
-/** MP3 statiques embarqués — repli si l’API est indisponible. */
-export function landingVoiceDemoStaticSrc(slug: string): string {
-  return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+/** @deprecated alias */
+export function landingVoiceDemoPrimarySrc(slug: string): string {
+  return landingVoiceDemoStaticSrc(slug);
 }
 
-/** @deprecated alias */
 export function landingVoiceDemoSrc(slug: string): string {
-  return landingVoiceDemoPrimarySrc(slug);
-}
-
-/** @deprecated alias */
-export function landingVoiceDemoApiSrc(slug: string): string {
-  return landingVoiceDemoPrimarySrc(slug);
+  return landingVoiceDemoStaticSrc(slug);
 }
 
 export function isAudioReady(audio: HTMLAudioElement): boolean {

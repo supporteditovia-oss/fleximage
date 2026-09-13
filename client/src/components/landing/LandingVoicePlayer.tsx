@@ -252,7 +252,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
     if (
       audio.readyState === HTMLMediaElement.HAVE_NOTHING &&
-      getLandingVoiceAudioStage(audio) === "api"
+      getLandingVoiceAudioStage(audio) === "static"
     ) {
       audio.load();
     }

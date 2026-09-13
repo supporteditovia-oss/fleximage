@@ -1,33 +1,33 @@
 import {
-  landingVoiceDemoPrimarySrc,
+  landingVoiceDemoApiSrc,
   landingVoiceDemoStaticSrc,
 } from "@/lib/landing-voice-demo";
 
-export type LandingVoiceAudioStage = "api" | "static" | "failed";
+export type LandingVoiceAudioStage = "static" | "api" | "failed";
 
 const STAGE_KEY = "landingVoiceStage";
 
 export function getLandingVoiceAudioStage(audio: HTMLAudioElement): LandingVoiceAudioStage {
   const stage = audio.dataset[STAGE_KEY];
-  if (stage === "static" || stage === "failed") return stage;
-  return "api";
+  if (stage === "api" || stage === "failed") return stage;
+  return "static";
 }
 
-/** Crée un lecteur avec repli API → MP3 statique embarqué. */
+/** MP3 statique d’abord (intro = sous-titres), puis API en repli. */
 export function createLandingVoiceAudio(slug: string): HTMLAudioElement {
-  const audio = new Audio(landingVoiceDemoPrimarySrc(slug));
+  const audio = new Audio(landingVoiceDemoStaticSrc(slug));
   audio.preload = "auto";
-  audio.dataset[STAGE_KEY] = "api";
+  audio.dataset[STAGE_KEY] = "static";
 
   audio.addEventListener("error", () => {
     const stage = getLandingVoiceAudioStage(audio);
-    if (stage === "api") {
-      audio.dataset[STAGE_KEY] = "static";
-      audio.src = landingVoiceDemoStaticSrc(slug);
+    if (stage === "static") {
+      audio.dataset[STAGE_KEY] = "api";
+      audio.src = landingVoiceDemoApiSrc(slug);
       audio.load();
       return;
     }
-    if (stage === "static") {
+    if (stage === "api") {
       audio.dataset[STAGE_KEY] = "failed";
     }
   });
