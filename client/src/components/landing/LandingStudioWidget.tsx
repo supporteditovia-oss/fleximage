@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
-import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
 import { LandingVideoPanel } from "@/components/landing/LandingVideoPanel";
-import { LandingVoiceDemo } from "@/components/landing/LandingVoiceDemo";
-import {
-  readStudioMode,
-  writeStudioMode,
-  type StudioMode,
-} from "@/lib/v2-experience";
+import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 import "@/pages/create-page.css";
 import "@/pages/generate-page.css";
 import "./landing-studio-widget.css";
@@ -44,22 +38,13 @@ export function LandingStudioWidget() {
     };
   }, [mode]);
 
-  const handleMode = (next: StudioMode) => {
-    setMode(next);
-    writeStudioMode(next);
-  };
-
   return (
     <div className="landing-studio-widget">
-      <StudioModeSwitch mode={mode} onChange={handleMode} className="landing-studio-widget__tabs" />
       <div className="landing-studio-widget__panel" key={mode}>
         {mode === "image" ? (
           <LandingImagePanel />
         ) : mode === "voice" ? (
-          <>
-            <LandingVoiceDemo />
-            <VoiceStudioMock guestFunnel />
-          </>
+          <VoiceStudioMock guestFunnel />
         ) : (
           <LandingVideoPanel />
         )}
