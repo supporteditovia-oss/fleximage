@@ -6,6 +6,7 @@ script/*
 !script/build-seo-niches-en.mjs
 !script/inject-brand-seo.mjs
 !script/generate-landing-gims-demo.mjs
+!script/sync-landing-voice-samples.mjs
 dist/index.js
 .env
 .cursor
