@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  createLandingVoiceAudio,
+  getLandingVoiceAudioStage,
+  isLandingVoiceAudioFailed,
+} from "@/lib/landing-voice-audio";
+import {
   LANDING_VOICE_CATALOG,
   type LandingVoiceEntry,
   buildLandingVoiceScript,
   formatVoiceClock,
   isAudioReady,
-  landingVoiceDemoApiSrc,
-  landingVoiceDemoSrc,
   landingVoicePhoto,
   pickRandomLandingVoiceSlug,
   splitSubtitleWords,
@@ -165,14 +168,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     const cache = audioCacheRef.current;
     let audio = cache.get(slug);
     if (!audio) {
-      audio = new Audio(landingVoiceDemoSrc(slug));
-      audio.preload = "auto";
-      audio.addEventListener("error", () => {
-        if (audio?.dataset.fallbackApplied === "1") return;
-        audio.dataset.fallbackApplied = "1";
-        audio.src = landingVoiceDemoApiSrc(slug);
-        audio.load();
-      });
+      audio = createLandingVoiceAudio(slug);
       cache.set(slug, audio);
     }
     return audio;
@@ -236,6 +232,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     const onReady = () => syncReady();
     const onError = () => {
       if (activeSlugRef.current !== activeSlug) return;
+      if (!isLandingVoiceAudioFailed(audio)) return;
       setLoading(false);
       setError(true);
       setPlaying(false);
@@ -250,10 +247,13 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     setPlaying(false);
     setCurrentSec(audio.currentTime || 0);
     setDurationSec(audio.duration || 0);
-    setError(false);
+    setError(isLandingVoiceAudioFailed(audio));
     setLoading(!isAudioReady(audio) && pendingPlayRef.current);
 
-    if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+    if (
+      audio.readyState === HTMLMediaElement.HAVE_NOTHING &&
+      getLandingVoiceAudioStage(audio) === "api"
+    ) {
       audio.load();
     }
 
