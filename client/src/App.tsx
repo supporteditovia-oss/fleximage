@@ -21,6 +21,7 @@ import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
 import WelcomeLoader from "@/pages/WelcomeLoader";
+import OnboardingResumePage from "@/pages/OnboardingResumePage";
 import ImagePrete from "@/pages/ImagePrete";
 import VoixPrete from "@/pages/VoixPrete";
 import VideoPrete from "@/pages/VideoPrete";
@@ -243,6 +244,10 @@ function ProtectedAppRoutes() {
 
   if (pathname === "/welcome") {
     return <WelcomeLoader />;
+  }
+
+  if (pathname === "/onboarding-resume") {
+    return <OnboardingResumePage />;
   }
 
   return (

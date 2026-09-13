@@ -14,6 +14,7 @@ import {
 } from "@/lib/fake-paywall-state";
 import { clearPaywallImage } from "@/lib/paywall-image";
 import { clearPaywallPrompt } from "@/lib/paywall-prompt";
+import { clearPaywallVoiceLabel } from "@/lib/paywall-voice-meta";
 import { clearPaywallExpiry, resetPaywallExpiry } from "@/lib/paywall-expiry";
 import { previewPathForMode, type LandingFunnelMode } from "@/lib/landing-funnel";
 
@@ -58,6 +59,7 @@ export function useOnboardingFakeLoader({
       clearFakePaywallReached();
       clearPaywallImage();
       clearPaywallPrompt();
+      clearPaywallVoiceLabel();
       clearPaywallExpiry();
       clearOnboardingResume();
       return;

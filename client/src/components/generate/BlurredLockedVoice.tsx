@@ -6,6 +6,7 @@ const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 
 
 type BlurredLockedVoiceProps = {
   prompt?: string | null;
+  voiceLabel?: string | null;
   className?: string;
   size?: "page" | "modal";
 };
@@ -13,6 +14,7 @@ type BlurredLockedVoiceProps = {
 /** Aperçu vocal flouté + cadenas — funnel marketing voix. */
 export function BlurredLockedVoice({
   prompt = null,
+  voiceLabel = null,
   className = "",
   size = "page",
 }: BlurredLockedVoiceProps) {
@@ -61,6 +63,12 @@ export function BlurredLockedVoice({
             {t("paywall.lockedVoiceLabel", { defaultValue: "Vocal IA prêt" })}
           </p>
         </div>
+
+        {voiceLabel?.trim() ? (
+          <p className="relative z-[1] text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--lx-gold-soft)]">
+            Voix · {voiceLabel.trim()}
+          </p>
+        ) : null}
 
         {promptPreview ? (
           <div className="relative z-[1] w-full rounded-xl border border-white/15 bg-black/45 px-3 py-2.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.28)] backdrop-blur-md">

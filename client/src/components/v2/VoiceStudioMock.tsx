@@ -846,6 +846,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         await startLandingGuestFunnel({
           mode: "voice",
           prompt: text.trim(),
+          voiceLabel: activeVoice?.name ?? (voiceName.trim() || undefined),
         });
         if (!user) {
           navigate("/register");

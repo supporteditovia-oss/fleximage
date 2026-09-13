@@ -5,12 +5,10 @@ import {
   getMobileCompatibleLandingImages,
   LANDING_MARQUEE_IMAGES,
 } from "@/lib/landing-marquee-images";
-import { getOnboardingResume } from "@/lib/onboarding-resume";
-import { getPaywallImage } from "@/lib/paywall-image";
 import { BrandMark } from "@/components/BrandMark";
 import { useTranslation } from "react-i18next";
 import { applyLocaleFromSearch } from "@/i18n";
-import { createPathForUser } from "@/lib/v2-experience";
+import { hasPendingOnboardingFunnel, pathAfterWelcome } from "@/lib/landing-funnel";
 import { useV2Access } from "@/hooks/use-v2-access";
 import "./welcome.css";
 
@@ -44,14 +42,13 @@ export default function WelcomeLoader() {
     const ready = !gateLoading || gateTimedOut;
     if (!ready) return;
 
-    const hasOnboardingDraft =
-      Boolean(getOnboardingResume()) && Boolean(getPaywallImage());
+    const hasOnboardingDraft = hasPendingOnboardingFunnel();
     const duration = hasOnboardingDraft
       ? WELCOME_ONBOARDING_DURATION_MS
       : WELCOME_DURATION_MS;
 
     const timer = window.setTimeout(() => {
-      navigate(createPathForUser(gateTimedOut ? false : v2Enabled), {
+      navigate(pathAfterWelcome(gateTimedOut ? false : v2Enabled), {
         replace: true,
       });
     }, duration);

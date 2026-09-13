@@ -14,6 +14,7 @@ export default function VoixPrete() {
   const { t, i18n } = useTranslation();
   const {
     userPrompt,
+    voiceLabel,
     expired,
     hydrated,
     paywallOpen,
@@ -112,7 +113,12 @@ export default function VoixPrete() {
               <span className="tabular-nums">{t("paywall.previewDeleteIn", { time: countdownLabel })}</span>
             </div>
 
-            <BlurredLockedVoice prompt={userPrompt} size="page" className="w-full max-w-[280px]" />
+            <BlurredLockedVoice
+              prompt={userPrompt}
+              voiceLabel={voiceLabel}
+              size="page"
+              className="w-full max-w-[280px]"
+            />
 
             <button
               type="button"

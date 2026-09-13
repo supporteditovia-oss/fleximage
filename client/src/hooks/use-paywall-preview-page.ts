@@ -2,6 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { getPaywallImage, clearPaywallImage } from "@/lib/paywall-image";
 import { getPaywallPrompt, clearPaywallPrompt } from "@/lib/paywall-prompt";
 import {
+  getPaywallVoiceLabel,
+  clearPaywallVoiceLabel,
+} from "@/lib/paywall-voice-meta";
+import {
   clearPaywallExpiry,
   ensurePaywallExpiry,
   formatPaywallCountdown,
@@ -16,6 +20,7 @@ import type { PaywallGenerationMode } from "@/lib/fake-paywall-state";
 function purgeExpiredPreview() {
   clearPaywallImage();
   clearPaywallPrompt();
+  clearPaywallVoiceLabel();
   clearPaywallExpiry();
   clearFakePaywallReached();
 }
@@ -26,6 +31,7 @@ export function usePaywallPreviewPage(
 ) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userPrompt, setUserPrompt] = useState<string | null>(null);
+  const [voiceLabel, setVoiceLabel] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [msRemaining, setMsRemaining] = useState(0);
   const [expired, setExpired] = useState(true);
@@ -40,12 +46,14 @@ export function usePaywallPreviewPage(
   useEffect(() => {
     const image = getPaywallImage();
     const prompt = getPaywallPrompt();
+    const voice = mode === "voice" ? getPaywallVoiceLabel() : null;
     const existingExpiry = getPaywallExpiresAt();
     const now = Date.now();
 
     if (requiresImage && !image && !(mode === "video" && prompt?.trim())) {
       setImageUrl(null);
       setUserPrompt(prompt);
+      setVoiceLabel(voice);
       setExpiresAt(null);
       setMsRemaining(0);
       setExpired(true);
@@ -57,6 +65,7 @@ export function usePaywallPreviewPage(
     if (!requiresImage && !prompt?.trim()) {
       setImageUrl(null);
       setUserPrompt(null);
+      setVoiceLabel(null);
       setExpiresAt(null);
       setMsRemaining(0);
       setExpired(true);
@@ -69,6 +78,7 @@ export function usePaywallPreviewPage(
       purgeExpiredPreview();
       setImageUrl(null);
       setUserPrompt(null);
+      setVoiceLabel(null);
       setExpiresAt(null);
       setMsRemaining(0);
       setExpired(true);
@@ -79,6 +89,7 @@ export function usePaywallPreviewPage(
     const deadline = ensurePaywallExpiry(now);
     setImageUrl(image);
     setUserPrompt(prompt);
+    setVoiceLabel(voice);
     setExpiresAt(deadline);
     setMsRemaining(getPaywallMsRemaining(deadline, now));
     setExpired(false);
@@ -147,6 +158,7 @@ export function usePaywallPreviewPage(
   return {
     imageUrl,
     userPrompt,
+    voiceLabel,
     expired,
     hydrated,
     paywallOpen,
