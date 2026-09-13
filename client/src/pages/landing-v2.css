@@ -531,19 +531,25 @@
 }
 
 .landing-v2 .editorial-grid {
-  grid-template-rows: 390px 270px;
-  grid-template-columns: 1.1fr 0.72fr 0.92fr;
-  gap: clamp(16px, 2vw, 30px);
-  width: min(1180px, 100%);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: clamp(16px, 2vw, 28px);
+  width: min(920px, 100%);
   margin: 0 auto;
   display: grid;
 }
 
 .landing-v2 .editorial-figure {
+  --editorial-max-h: min(68vh, 620px);
+  aspect-ratio: 9 / 16;
   background: var(--cream-deep);
   margin: 0;
   position: relative;
   overflow: hidden;
+  width: min(100%, calc(var(--editorial-max-h) * 9 / 16));
+  max-height: var(--editorial-max-h);
+  height: auto;
+  justify-self: center;
 }
 
 .landing-v2 .editorial-photo-swap {
@@ -561,14 +567,6 @@
   }
 }
 
-.landing-v2 .editorial-position-1 {
-  grid-row: 1 / 3;
-}
-
-.landing-v2 .editorial-position-2 {
-  grid-column: 2 / 4;
-}
-
 .landing-v2 .editorial-figure__frame {
   position: absolute;
   inset: 0;
@@ -581,13 +579,9 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center center;
   transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.landing-v2 .editorial-figure:hover .editorial-figure__photo {
-  transform: scale(1.02);
 }
 
 .landing-v2 .example-image {
@@ -1701,16 +1695,11 @@
 
 @media (max-width: 920px) {
   .landing-v2 .editorial-grid {
-    grid-template-rows: 390px 270px 300px;
-    grid-template-columns: 1fr 1fr;
+    width: min(720px, 100%);
   }
 
-  .landing-v2 .editorial-position-1 {
-    grid-row: 1 / 2;
-  }
-
-  .landing-v2 .editorial-position-2 {
-    grid-column: 2;
+  .landing-v2 .editorial-figure {
+    --editorial-max-h: min(62vh, 540px);
   }
 
   .landing-v2 .voice-inner {
@@ -1807,17 +1796,13 @@
   }
 
   .landing-v2 .editorial-grid {
-    grid-template-rows: 315px 230px 240px;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: min(360px, 100%);
   }
 
-  .landing-v2 .editorial-position-1 {
-    grid-column: 1 / -1;
-  }
-
-  .landing-v2 .editorial-position-2 {
-    grid-area: 2 / 1 / auto / -1;
+  .landing-v2 .editorial-figure {
+    --editorial-max-h: min(72vh, 520px);
   }
 
   .landing-v2 .editorial-figure figcaption small {
