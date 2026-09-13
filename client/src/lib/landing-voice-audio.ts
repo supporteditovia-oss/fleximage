@@ -13,21 +13,21 @@ export function getLandingVoiceAudioStage(audio: HTMLAudioElement): LandingVoice
   return "static";
 }
 
-/** MP3 statique d’abord (intro = sous-titres), puis API en repli. */
+/** API d’abord (intro = sous-titres, toujours à jour), puis MP3 statique en repli. */
 export function createLandingVoiceAudio(slug: string): HTMLAudioElement {
-  const audio = new Audio(landingVoiceDemoStaticSrc(slug));
+  const audio = new Audio(landingVoiceDemoApiSrc(slug));
   audio.preload = "auto";
-  audio.dataset[STAGE_KEY] = "static";
+  audio.dataset[STAGE_KEY] = "api";
 
   audio.addEventListener("error", () => {
     const stage = getLandingVoiceAudioStage(audio);
-    if (stage === "static") {
-      audio.dataset[STAGE_KEY] = "api";
-      audio.src = landingVoiceDemoApiSrc(slug);
+    if (stage === "api") {
+      audio.dataset[STAGE_KEY] = "static";
+      audio.src = landingVoiceDemoStaticSrc(slug);
       audio.load();
       return;
     }
-    if (stage === "api") {
+    if (stage === "static") {
       audio.dataset[STAGE_KEY] = "failed";
     }
   });
