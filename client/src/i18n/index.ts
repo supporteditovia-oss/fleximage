@@ -14,6 +14,7 @@ import {
 } from "@shared/locales";
 import { resources as baseResources } from "./resources";
 import { extraResources } from "./resources-extra";
+import { landingV2Resources } from "./landing-v2";
 
 export const LOCALE_CHOSEN_KEY = "luxeflexia:locale_chosen";
 
@@ -42,6 +43,10 @@ const resources = SUPPORTED_LOCALES.reduce((acc, locale) => {
   const localeResources = {
     ...baseResources[key],
     ...extraResources[key],
+    landing: {
+      ...(extraResources[key]?.landing ?? {}),
+      ...(landingV2Resources[key as keyof typeof landingV2Resources] ?? {}),
+    },
   };
 
   // Compatibility layer: many screens call t("settings.title") / t("common.actions.save")
@@ -157,7 +162,12 @@ i18n.on("languageChanged", (lng) => {
     document.documentElement.lang = normalized;
     const ogLocale = document.querySelector('meta[property="og:locale"]');
     if (ogLocale instanceof HTMLMetaElement) {
-      ogLocale.content = normalized === "en" ? "en_US" : "fr_FR";
+      ogLocale.content =
+        normalized === "en"
+          ? "en_US"
+          : normalized === "es"
+            ? "es_ES"
+            : "fr_FR";
     }
   }
 

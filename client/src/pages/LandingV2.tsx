@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
@@ -6,100 +6,28 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { setDocumentMeta } from "@/lib/document-meta";
 import { setAppLanguage } from "@/i18n";
-import { resolvePreferredLocale, type AppLocale } from "@shared/locales";
+import {
+  resolvePreferredLocale,
+  type AppLocale,
+  type UiLocale,
+} from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
 import "./landing-v2.css";
 
-const FAQ = [
-  {
-    q: "Qu’est-ce que LuxeFlexIA ?",
-    a: "LuxeFlexIA est un studio créatif tout-en-un propulsé par l’intelligence artificielle. Il permet de transformer des photos en scènes lifestyle ultra-réalistes, d’animer des images en clips cinématiques, de réinventer des vidéos filmées au smartphone et de générer des voix synthétiques naturelles — le tout depuis une interface unique, pensée pour la création mobile et les réseaux sociaux.",
-  },
-  {
-    q: "Pour qui est conçu LuxeFlexIA ?",
-    a: "LuxeFlexIA s’adresse aux créateurs de contenu, influenceurs, entrepreneurs, marques personnelles et passionnés de lifestyle qui souhaitent produire des visuels et des vocaux premium sans équipe technique, sans studio photo et sans compétences en montage.",
-  },
-  {
-    q: "Comment démarrer sur LuxeFlexIA ?",
-    a: "Créez un compte gratuit, choisissez votre atelier (Image, Voix ou Vidéo), importez votre fichier source, décrivez ce que vous imaginez en une phrase, puis lancez la génération. Aucune installation, aucun logiciel externe : tout se fait depuis votre navigateur ou votre téléphone.",
-  },
-  {
-    q: "Comment fonctionne l’Image IA ?",
-    a: "Importez une photo de vous (ou d’un sujet), décrivez la scène souhaitée — décor, tenue, véhicule, ambiance — et LuxeFlexIA génère un rendu photoréaliste. Votre identité et vos traits sont préservés ; seul l’univers visuel est transformé selon votre intention créative.",
-  },
-  {
-    q: "Puis-je remplacer un objet ou un véhicule sur ma photo ?",
-    a: "Oui. LuxeFlexIA comprend les demandes de remplacement d’objets (voiture, moto, accessoire…) et adapte la scène en conséquence. Décrivez simplement ce que vous voulez changer : par exemple « remplace ma voiture par une Lamborghini Urus noire » ou « mets-moi sur une moto en pleine route côtière ».",
-  },
-  {
-    q: "Quels formats d’image sont disponibles ?",
-    a: "LuxeFlexIA prend en charge les formats portrait (9:16), idéal pour TikTok, Reels et Shorts, ainsi que le format paysage (16:9) pour un rendu plus cinématographique. Les images sources acceptées incluent JPG et PNG.",
-  },
-  {
-    q: "Comment fonctionne la Vidéo IA ?",
-    a: "Deux ateliers complémentaires : Cinématique photo (Image → Vidéo) transforme une image fixe en plan animé de 5 secondes avec mouvement de caméra et profondeur ; Séquence transformée (Vidéo → Vidéo) réinvente un clip filmé au smartphone — personnage, objet ou décor — tout en conservant votre geste caméra d’origine.",
-  },
-  {
-    q: "Quelle vidéo puis-je importer pour la transformation ?",
-    a: "Un clip filmé au smartphone, en format vertical de préférence, d’une durée maximale de 8 secondes. LuxeFlexIA préserve l’angle, le mouvement et le rythme de votre prise de vue pour un résultat naturel et cohérent.",
-  },
-  {
-    q: "Mes vidéos sont-elles adaptées aux réseaux sociaux ?",
-    a: "Oui. Les clips générés sont optimisés pour le format vertical 9:16, prêts à publier sur TikTok, Instagram Reels et YouTube Shorts. Le rendu est conçu pour un aspect cinématique premium, avec lumière, profondeur et mouvement soignés.",
-  },
-  {
-    q: "Comment fonctionne la Voix IA ?",
-    a: "Deux options : clonez votre propre voix à partir d’un court extrait audio (10 à 30 secondes), ou choisissez une voix du catalogue — rappeurs FR, personnalités et voix premium. Écrivez ensuite votre texte et LuxeFlexIA génère un vocal naturel, prêt à intégrer dans vos contenus.",
-  },
-  {
-    q: "Puis-je essayer différentes voix du catalogue ?",
-    a: "Oui. LuxeFlexIA propose un catalogue de voix pré-entraînées — Maître Gims, Maes, Niska, Booba, Jul, Damso et bien d’autres. Chaque voix peut être pré-écoutée directement sur la landing et dans le studio avant génération.",
-  },
-  {
-    q: "De combien de secondes d’audio ai-je besoin pour cloner ma voix ?",
-    a: "Quelques secondes suffisent pour démarrer, mais un extrait de 10 à 30 secondes, enregistré dans un environnement calme, sans musique ni bruit de fond, produira un clone nettement plus fidèle et naturel.",
-  },
-  {
-    q: "Le rendu est-il vraiment réaliste ?",
-    a: "LuxeFlexIA s’appuie sur des modèles de génération de dernière génération, entraînés pour produire des textures, des lumières et des détails crédibles. L’objectif est un rendu lifestyle premium — indiscernable d’une production soignée — adapté aux standards des créateurs exigeants.",
-  },
-  {
-    q: "Combien de temps prend une génération ?",
-    a: "La durée varie selon le type de création et la charge du serveur. En moyenne, une image est prête en quelques dizaines de secondes, un vocal en moins d’une minute, et une vidéo en quelques minutes. Vous êtes notifié dès que votre rendu est disponible.",
-  },
-  {
-    q: "Comment fonctionnent les crédits ?",
-    a: "Chaque génération consomme des crédits selon le type de création (image, voix ou vidéo). Un pack de crédits est offert à l’inscription ; des formules d’abonnement permettent ensuite de créer en continu selon vos besoins.",
-  },
-  {
-    q: "Mes fichiers et créations sont-ils privés ?",
-    a: "Oui. Vos photos, vidéos, enregistrements vocaux et créations générées sont associés à votre espace personnel LuxeFlexIA. Ils ne sont ni publics ni partagés avec d’autres utilisateurs sans votre action explicite.",
-  },
-  {
-    q: "Puis-je utiliser LuxeFlexIA sur mobile ?",
-    a: "Absolument. LuxeFlexIA est conçu mobile-first : importez une photo ou une vidéo directement depuis votre galerie, décrivez votre idée et récupérez votre création sur votre téléphone, prête à être publiée.",
-  },
-  {
-    q: "LuxeFlexIA fonctionne-t-il en français et en anglais ?",
-    a: "Oui. L’interface est disponible en français et en anglais. Les prompts de génération d’image et de vidéo acceptent les deux langues ; la voix IA prend en charge le français et de nombreuses autres langues selon le modèle choisi.",
-  },
-  {
-    q: "Puis-je annuler ou modifier une génération en cours ?",
-    a: "Une génération lancée ne peut pas être modifiée en cours de route, mais vous pouvez en démarrer une nouvelle avec un prompt différent à tout moment. Vos créations précédentes restent accessibles dans votre historique.",
-  },
-  {
-    q: "Comment contacter le support LuxeFlexIA ?",
-    a: "Pour toute question, demande technique ou suggestion, écrivez à support.luxeflexia@gmail.com. L’équipe LuxeFlexIA répond aux créateurs et accompagne la montée en compétence sur la plateforme.",
-  },
-] as const;
-
+const FAQ_KEYS = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"] as const;
+const LANDING_LOCALES: UiLocale[] = ["fr", "en", "es"];
 
 function BrandLink({ className = "" }: { className?: string }) {
+  const { t } = useTranslation();
   return (
-    <a className={`brand ${className}`.trim()} href="#top" aria-label="LuxeFlexIA, accueil">
+    <a
+      className={`brand ${className}`.trim()}
+      href="#top"
+      aria-label={t("landing:header.homeAria")}
+    >
       <span className="brand-mark" aria-hidden>
         <Gem className="brand-mark__gem" strokeWidth={1.75} />
       </span>
@@ -112,51 +40,63 @@ function BrandLink({ className = "" }: { className?: string }) {
 
 export default function LandingV2() {
   const { user } = useAuth();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const loggedIn = Boolean(user);
 
-  const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
+  const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr") as UiLocale;
 
   useEffect(() => {
     setDocumentMeta({
-      title: "LuxeFlexIA — Crée ce que tu imagines",
-      description:
-        "Image IA, Vidéo IA (Image→Vidéo & Vidéo→Vidéo) et clonage vocal — studio créatif tout-en-un pour photos et clips verticaux.",
+      title: t("landing:meta.title"),
+      description: t("landing:meta.description"),
       canonicalPath: "/",
     });
-  }, []);
+  }, [t, i18n.resolvedLanguage]);
 
   const setLocale = (locale: AppLocale) => {
     if (locale === currentLocale) return;
     setAppLanguage(locale, { trackSignupLocale: !user });
   };
 
+  const faqItems = FAQ_KEYS.map((key) => ({
+    q: t(`landing:faq.${key}`),
+    a: t(`landing:faq.a${key.slice(1)}`),
+  }));
+
   return (
     <div className="landing-v2">
       <header className="site-header">
-        <button
-          className="locale"
-          type="button"
-          aria-label={`Langue : ${currentLocale === "fr" ? "français" : "anglais"}`}
-          onClick={() => setLocale(currentLocale === "fr" ? "en" : "fr")}
+        <div
+          className="locale locale--triple"
+          role="group"
+          aria-label={t("landing:header.localeAria")}
         >
-          <span className={currentLocale === "fr" ? "locale-active" : undefined}>FR</span>
-          <span className={currentLocale === "en" ? "locale-active" : undefined}>EN</span>
-        </button>
+          {LANDING_LOCALES.map((locale) => (
+            <button
+              key={locale}
+              type="button"
+              className={currentLocale === locale ? "locale-active" : undefined}
+              aria-pressed={currentLocale === locale}
+              onClick={() => setLocale(locale)}
+            >
+              {locale.toUpperCase()}
+            </button>
+          ))}
+        </div>
         <BrandLink />
         <nav className="header-actions" aria-label="Compte">
           {loggedIn ? (
             <Link className="header-cta" href="/create">
-              <span className="header-cta__long">Ouvrir le studio</span>
-              <span className="header-cta__short">Studio</span>
+              <span className="header-cta__long">{t("landing:header.openStudio")}</span>
+              <span className="header-cta__short">{t("landing:header.studioShort")}</span>
             </Link>
           ) : (
             <>
               <Link className="header-link" href="/login">
-                Connexion
+                {t("landing:header.login")}
               </Link>
               <Link className="header-cta" href="/register">
-                S&apos;inscrire
+                {t("landing:header.register")}
               </Link>
             </>
           )}
@@ -164,33 +104,30 @@ export default function LandingV2() {
       </header>
 
       <section className="hero" id="top">
-        <p className="eyebrow">Studio · Image · Voix · Vidéo</p>
+        <p className="eyebrow">{t("landing:hero.eyebrow")}</p>
         <h1>
-          Crée ce que
+          {t("landing:hero.titleLine1")}
           <br />
-          tu imagines.
+          {t("landing:hero.titleLine2")}
         </h1>
-        <p className="hero-copy">
-          Photographies lifestyle, clips verticaux cinématiques et voix synthétique — le studio
-          LuxeFlexIA, tel qu’à l’intérieur de l’application.
-        </p>
+        <p className="hero-copy">{t("landing:hero.copy")}</p>
 
         <LandingStudioWidget />
 
-        <p className="hero-note">Aucune compétence technique. Seulement ton imagination.</p>
+        <p className="hero-note">{t("landing:hero.note")}</p>
       </section>
 
       <section className="editorial-section" aria-labelledby="univers-title">
         <div className="section-heading">
-          <p className="section-kicker">Univers</p>
+          <p className="section-kicker">{t("landing:editorial.kicker")}</p>
           <h2 id="univers-title">
-            Tout ce que
+            {t("landing:editorial.titleLine1")}
             <br />
-            tu imagines.
+            {t("landing:editorial.titleLine2")}
           </h2>
           <div className="section-intro">
-            <p>Photo, vidéo ou voix — décris ce que tu imagines et LuxeFlexIA crée le reste.</p>
-            <span>Image · Vidéo · Voix · Lifestyle</span>
+            <p>{t("landing:editorial.intro")}</p>
+            <span>{t("landing:editorial.tags")}</span>
           </div>
         </div>
         <LandingEditorialGrid />
@@ -198,24 +135,25 @@ export default function LandingV2() {
 
       <section className="transformation-section" aria-labelledby="transform-title">
         <div className="transform-copy">
-          <p className="section-kicker">Image IA</p>
+          <p className="section-kicker">{t("landing:transform.kicker")}</p>
           <h2 id="transform-title">
-            D’une simple photo
-            <br />à ton univers.
+            {t("landing:transform.titleLine1")}
+            <br />
+            {t("landing:transform.titleLine2")}
           </h2>
-          <p>
-            Une photo suffit. LuxeFlexIA préserve ton identité et transforme le décor, la tenue et
-            l’ambiance selon ta demande.
-          </p>
+          <p>{t("landing:transform.copy")}</p>
         </div>
-        <div className="transform-card" aria-label="Exemple de transformation d’image">
+        <div
+          className="transform-card"
+          aria-label={t("landing:transform.cardAria")}
+        >
           <div className="transform-image transform-before">
             <img
               src="/assets/landing-v2/portrait-car-original.jpg"
-              alt="Photo originale d’un homme devant une voiture"
+              alt={t("landing:transform.beforeAlt")}
               loading="lazy"
             />
-            <span>Photo originale</span>
+            <span>{t("landing:transform.before")}</span>
           </div>
           <div className="transform-arrow" aria-hidden>
             →
@@ -223,40 +161,37 @@ export default function LandingV2() {
           <div className="transform-image transform-after">
             <img
               src="/assets/landing-v2/portrait-car-generated.jpg"
-              alt="Scène LuxeFlexIA avec le même homme devant une voiture de prestige"
+              alt={t("landing:transform.afterAlt")}
               loading="lazy"
             />
-            <span>Créé avec LuxeFlexIA</span>
+            <span>{t("landing:transform.after")}</span>
           </div>
         </div>
         <p className="transform-caption">
-          <span>Une photo</span>
+          <span>{t("landing:transform.captionPhoto")}</span>
           <i />
-          Identité préservée
+          {t("landing:transform.captionIdentity")}
           <i />
-          Décor réinventé
+          {t("landing:transform.captionDecor")}
         </p>
       </section>
 
       <section className="video-cinema-section" id="video-ia" aria-labelledby="video-title">
         <div className="video-cinema-inner">
           <div className="video-cinema-header">
-            <p className="section-kicker">Studio Vidéo</p>
+            <p className="section-kicker">{t("landing:video.kicker")}</p>
             <h2 id="video-title">
-              Le mouvement,
+              {t("landing:video.titleLine1")}
               <br />
-              en cinq secondes.
+              {t("landing:video.titleLine2")}
             </h2>
-            <p className="video-cinema-lead">
-              Deux ateliers de création pour le format vertical — esthétique cinéma, prêt à publier
-              sur TikTok, Reels et Shorts.
-            </p>
+            <p className="video-cinema-lead">{t("landing:video.lead")}</p>
           </div>
 
           <LandingVideoShowcase />
 
           <div className="video-cinema-footer">
-            <span className="video-cinema-specs">9:16 · 5 s · Rendu premium</span>
+            <span className="video-cinema-specs">{t("landing:video.specs")}</span>
             <a
               className="light-button"
               href="#top"
@@ -266,7 +201,7 @@ export default function LandingV2() {
                 document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Ouvrir le studio vidéo <span>↗</span>
+              {t("landing:video.cta")} <span>↗</span>
             </a>
           </div>
         </div>
@@ -275,16 +210,16 @@ export default function LandingV2() {
       <section className="voice-section" aria-labelledby="voice-title">
         <div className="voice-inner">
           <div className="voice-copy">
-            <p className="section-kicker">Voix IA</p>
+            <p className="section-kicker">{t("landing:voice.kicker")}</p>
             <h2 id="voice-title">
-              Et maintenant,
+              {t("landing:voice.titleLine1")}
               <br />
-              donne-lui une voix.
+              {t("landing:voice.titleLine2")}
             </h2>
             <ol className="voice-explanation">
-              <li>Importe quelques secondes d’audio.</li>
-              <li>Écris ce que tu veux lui faire dire.</li>
-              <li>LuxeFlexIA génère le vocal.</li>
+              <li>{t("landing:voice.step1")}</li>
+              <li>{t("landing:voice.step2")}</li>
+              <li>{t("landing:voice.step3")}</li>
             </ol>
             <a
               className="light-button"
@@ -295,56 +230,56 @@ export default function LandingV2() {
                 document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Créer une voix <span>↗</span>
+              {t("landing:voice.cta")} <span>↗</span>
             </a>
           </div>
           <LandingVoicePlayer variant="section" />
         </div>
       </section>
 
-      <section className="proof-section" aria-label="Avantages LuxeFlexIA">
+      <section className="proof-section" aria-label={t("landing:proof.aria")}>
         <div className="proof-item">
           <span>01</span>
-          <h3>Ultra réaliste</h3>
-          <p>Des détails, des textures et une lumière qui semblent vrais.</p>
+          <h3>{t("landing:proof.item1Title")}</h3>
+          <p>{t("landing:proof.item1Body")}</p>
         </div>
         <i className="proof-dot" />
         <div className="proof-item">
           <span>02</span>
-          <h3>Rapide</h3>
-          <p>De ton idée à un rendu prêt à partager, sans complexité.</p>
+          <h3>{t("landing:proof.item2Title")}</h3>
+          <p>{t("landing:proof.item2Body")}</p>
         </div>
         <i className="proof-dot" />
         <div className="proof-item">
           <span>03</span>
-          <h3>Privé</h3>
-          <p>Tes images, ta voix et tes créations restent ton espace.</p>
+          <h3>{t("landing:proof.item3Title")}</h3>
+          <p>{t("landing:proof.item3Body")}</p>
         </div>
       </section>
 
       <section className="cta-section" id="commencer" aria-labelledby="cta-title">
-        <p className="section-kicker">Ton prochain univers commence ici</p>
+        <p className="section-kicker">{t("landing:cta.kicker")}</p>
         <h2 id="cta-title">
-          Prêt à créer ce
+          {t("landing:cta.titleLine1")}
           <br />
-          que tu imagines&nbsp;?
+          {t("landing:cta.titleLine2")}
         </h2>
         <Link className="gold-button" href={loggedIn ? "/create" : "/register"}>
-          Commencer <span>↗</span>
+          {t("landing:cta.button")} <span>↗</span>
         </Link>
       </section>
 
       <section className="faq-section" aria-labelledby="faq-title">
         <div className="faq-heading">
-          <p className="section-kicker">Questions</p>
+          <p className="section-kicker">{t("landing:faq.kicker")}</p>
           <h2 id="faq-title">
-            L’essentiel,
+            {t("landing:faq.titleLine1")}
             <br />
-            simplement.
+            {t("landing:faq.titleLine2")}
           </h2>
         </div>
         <div className="faq-list">
-          {FAQ.map((item) => (
+          {faqItems.map((item) => (
             <details key={item.q}>
               <summary>
                 {item.q}
@@ -358,11 +293,11 @@ export default function LandingV2() {
 
       <footer className="site-footer" id="connexion">
         <BrandLink className="footer-brand" />
-        <p>Crée ce que tu imagines.</p>
-        <nav aria-label="Liens légaux">
-          <a href="/confidentialite">Confidentialité</a>
-          <a href="/cgu">Conditions</a>
-          <a href="mailto:support.luxeflexia@gmail.com">Contact</a>
+        <p>{t("landing:footer.tagline")}</p>
+        <nav aria-label={t("landing:footer.legalAria")}>
+          <a href="/confidentialite">{t("landing:footer.privacy")}</a>
+          <a href="/cgu">{t("landing:footer.terms")}</a>
+          <a href="mailto:support.luxeflexia@gmail.com">{t("landing:footer.contact")}</a>
         </nav>
         <small>© {new Date().getFullYear()} LuxeFlexIA</small>
       </footer>

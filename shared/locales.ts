@@ -1,5 +1,5 @@
 export const SUPPORTED_LOCALES = ["fr", "en", "es", "de"] as const;
-export const UI_LOCALES = ["fr", "en"] as const;
+export const UI_LOCALES = ["fr", "en", "es"] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 export type UiLocale = (typeof UI_LOCALES)[number];
@@ -17,10 +17,12 @@ export function isUiLocale(value: string): value is UiLocale {
 }
 
 export function toUiLocale(value: string | null | undefined): UiLocale {
-  return value === "en" ? "en" : "fr";
+  if (value === "en") return "en";
+  if (value === "es") return "es";
+  return "fr";
 }
 
-/** First visit: English phones / US timezones → EN, French phones → FR. */
+/** First visit: browser language + timezone → FR / EN / ES. */
 export function detectVisitorUiLocale(): UiLocale {
   if (typeof navigator === "undefined") return "fr";
 
@@ -29,13 +31,21 @@ export function detectVisitorUiLocale(): UiLocale {
     .filter(Boolean);
 
   const primary = langs[0] || "";
+  if (primary.startsWith("es")) return "es";
   if (primary.startsWith("fr")) return "fr";
   if (primary.startsWith("en")) return "en";
+  if (langs.some((value) => value.startsWith("es"))) return "es";
   if (langs.some((value) => value.startsWith("fr"))) return "fr";
   if (langs.some((value) => value.startsWith("en"))) return "en";
 
   try {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    if (
+      timeZone.startsWith("Europe/Madrid") ||
+      timeZone.startsWith("Atlantic/Canary")
+    ) {
+      return "es";
+    }
     if (
       timeZone.startsWith("America/") ||
       timeZone.startsWith("US/") ||

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Loader2, Pause, Play } from "lucide-react";
 import {
   createLandingVoiceAudio,
@@ -51,10 +52,18 @@ function VoiceAvatar({ entry, className }: { entry: LandingVoiceEntry; className
   );
 }
 
-function SubtitleBlock({ words, visibleWords }: { words: string[]; visibleWords: number }) {
+function SubtitleBlock({
+  words,
+  visibleWords,
+  label,
+}: {
+  words: string[];
+  visibleWords: number;
+  label: string;
+}) {
   return (
     <div className="landing-voice-subtitles" aria-live="polite">
-      <p className="landing-voice-subtitles__label">Sous-titres</p>
+      <p className="landing-voice-subtitles__label">{label}</p>
       <p className="landing-voice-subtitles__text">
         {words.map((word, i) => (
           <span
@@ -158,6 +167,7 @@ function VoicePicker({
 }
 
 export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerProps) {
+  const { t, i18n } = useTranslation();
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const pendingPlayRef = useRef(false);
   const playFromStartRef = useRef(false);
@@ -173,7 +183,10 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const entry =
     LANDING_VOICE_CATALOG.find((item) => item.slug === activeSlug) ?? LANDING_VOICE_CATALOG[0];
 
-  const script = useMemo(() => buildLandingVoiceScript(entry), [entry]);
+  const script = useMemo(
+    () => buildLandingVoiceScript(entry),
+    [entry, i18n.resolvedLanguage],
+  );
   const words = useMemo(() => splitSubtitleWords(script), [script]);
   const visibleWords = spokenWordCount(currentSec, durationSec, words.length);
 
@@ -419,10 +432,14 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
           </div>
           <span className="voice-badge voice-badge--live">Exemple</span>
         </div>
-        <SubtitleBlock words={words} visibleWords={visibleWords} />
+        <SubtitleBlock
+          words={words}
+          visibleWords={visibleWords}
+          label={t("landing:voice.subtitles")}
+        />
         <div className="voice-player voice-player--premium">{playerControls}</div>
         {error ? (
-          <p className="landing-voice-demo__error">Aperçu indisponible — réessayez dans un instant.</p>
+          <p className="landing-voice-demo__error">{t("landing:voice.previewError")}</p>
         ) : null}
         <div className="voice-card-footer voice-card-footer--premium">
           <span>Clonage IA</span>
@@ -446,10 +463,14 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
           <span className="landing-voice-demo__meta">Généré par LuxeFlexIA</span>
         </div>
       </div>
-      <SubtitleBlock words={words} visibleWords={visibleWords} />
+      <SubtitleBlock
+        words={words}
+        visibleWords={visibleWords}
+        label={t("landing:voice.subtitles")}
+      />
       <div className="landing-voice-demo__player">{playerControls}</div>
       {error ? (
-        <p className="landing-voice-demo__error">Aperçu indisponible — réessayez dans un instant.</p>
+        <p className="landing-voice-demo__error">{t("landing:voice.previewError")}</p>
       ) : null}
       <p className="landing-voice-demo__note">
         Voix générée par intelligence artificielle · Catalogue complet

@@ -7,6 +7,7 @@ import { setAppLanguage } from "@/i18n";
 import {
   resolvePreferredLocale,
   type AppLocale,
+  type UiLocale,
 } from "@shared/locales";
 import { cn } from "@/lib/utils";
 
@@ -45,11 +46,21 @@ function UsFlag({ className }: { className?: string }) {
   );
 }
 
-const SWITCH_LOCALES: { locale: "fr" | "en"; Flag: typeof FranceFlag; labelKey: string }[] =
-  [
-    { locale: "fr", Flag: FranceFlag, labelKey: "layout.language.fr" },
-    { locale: "en", Flag: UsFlag, labelKey: "layout.language.en" },
-  ];
+function SpainFlag({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 3 2" className={className} aria-hidden focusable="false">
+      <rect width="3" height="0.5" fill="#c60b1e" />
+      <rect y="0.5" width="3" height="1" fill="#ffc400" />
+      <rect y="1.5" width="3" height="0.5" fill="#c60b1e" />
+    </svg>
+  );
+}
+
+const SWITCH_LOCALES: { locale: UiLocale; Flag: typeof FranceFlag; labelKey: string }[] = [
+  { locale: "fr", Flag: FranceFlag, labelKey: "layout.language.fr" },
+  { locale: "en", Flag: UsFlag, labelKey: "layout.language.en" },
+  { locale: "es", Flag: SpainFlag, labelKey: "layout.language.es" },
+];
 
 function writeLangToUrl(locale: AppLocale) {
   if (typeof window === "undefined") return;
@@ -69,7 +80,7 @@ export function LanguageSwitch({ className, compact = false }: LanguageSwitchPro
   const current = resolvePreferredLocale(i18n.resolvedLanguage, "fr");
 
   const select = React.useCallback(
-    (locale: "fr" | "en") => {
+    (locale: UiLocale) => {
       if (locale === current) return;
       setAppLanguage(locale, { trackSignupLocale: !user });
       writeLangToUrl(locale);

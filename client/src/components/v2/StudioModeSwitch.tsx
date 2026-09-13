@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { StudioMode } from "@/lib/v2-experience";
+import { useTranslation } from "react-i18next";
 import "./studio-mode-switch.css";
 
 type StudioModeSwitchProps = {
@@ -9,10 +10,10 @@ type StudioModeSwitchProps = {
   size?: "default" | "compact";
 };
 
-const STUDIO_MODES: { id: StudioMode; label: string; emoji: string }[] = [
-  { id: "image", label: "Image IA", emoji: "🖼️" },
-  { id: "voice", label: "Clonage IA", emoji: "🎙️" },
-  { id: "video", label: "Vidéo IA", emoji: "🎬" },
+const STUDIO_MODES: { id: StudioMode; labelKey: string; emoji: string }[] = [
+  { id: "image", labelKey: "landing:studio.image", emoji: "🖼️" },
+  { id: "voice", labelKey: "landing:studio.voice", emoji: "🎙️" },
+  { id: "video", labelKey: "landing:studio.video", emoji: "🎬" },
 ];
 
 export function StudioModeSwitch({
@@ -21,6 +22,7 @@ export function StudioModeSwitch({
   className,
   size = "default",
 }: StudioModeSwitchProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -29,7 +31,7 @@ export function StudioModeSwitch({
         className,
       )}
       role="tablist"
-      aria-label="Mode du studio"
+      aria-label={t("landing:studio.modesAria")}
     >
       <div className="lx-studio-switch__indicator" data-mode={mode} aria-hidden />
       {STUDIO_MODES.map((item) => {
@@ -51,7 +53,7 @@ export function StudioModeSwitch({
             <span className="lx-studio-switch__emoji" aria-hidden>
               {item.emoji}
             </span>
-            {item.label}
+            {t(item.labelKey)}
           </button>
         );
       })}

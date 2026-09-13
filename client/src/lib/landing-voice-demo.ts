@@ -1,4 +1,5 @@
 import catalog from "@shared/voice-catalog.json";
+import i18n from "@/i18n";
 
 export type LandingVoiceGender = "homme" | "femme";
 
@@ -32,12 +33,12 @@ export function pickRandomLandingVoiceSlug(): string {
 
 export function buildLandingVoiceScript(entry: Pick<LandingVoiceEntry, "name" | "demoKind">): string {
   if (entry.demoKind === "natural-male") {
-    return "Bonjour, voici une voix masculine naturelle — générée par LuxeFlexIA.";
+    return i18n.t("landing:voiceScript.naturalMale");
   }
   if (entry.demoKind === "natural-female") {
-    return "Bonjour, voici une voix féminine naturelle — générée par LuxeFlexIA.";
+    return i18n.t("landing:voiceScript.naturalFemale");
   }
-  return `Salut, je me présente, c'est ${entry.name} — j'ai été généré par LuxeFlexIA.`;
+  return i18n.t("landing:voiceScript.artist", { name: entry.name });
 }
 
 export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {

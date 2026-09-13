@@ -13,6 +13,7 @@ export const extraResources = {
         switchAria: "Choisir la langue",
         fr: "Français",
         en: "English",
+        es: "Español",
       },
       dock: {
         history: "Historique",
@@ -558,6 +559,7 @@ export const extraResources = {
         switchAria: "Choose language",
         fr: "French",
         en: "English",
+        es: "Spanish",
       },
       dock: {
         history: "History",
@@ -1095,8 +1097,9 @@ export const extraResources = {
       },
       language: {
         switchAria: "Elegir idioma",
-        fr: "Frances",
-        en: "Ingles",
+        fr: "Francés",
+        en: "Inglés",
+        es: "Español",
       },
       dock: {
         history: "Historial",
