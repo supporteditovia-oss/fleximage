@@ -11,7 +11,8 @@ export function LandingEditorialGrid() {
   const [slots, setSlots] = useState<LandingEditorialSlot[]>(() =>
     createLandingEditorialSlots(),
   );
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  /** true = affiche la photo avant (originale) ; false = rendu IA (après). */
+  const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const [generation, setGeneration] = useState(0);
 
   useEffect(() => {
@@ -25,40 +26,36 @@ export function LandingEditorialGrid() {
           pairIndex: nextIndices[index] ?? slot.pairIndex,
         }));
       });
-      setRevealed({});
+      setShowOriginal({});
       setGeneration((value) => value + 1);
     }, LANDING_EDITORIAL_ROTATE_MS);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  const toggleReveal = (position: string) => {
-    setRevealed((prev) => ({ ...prev, [position]: !prev[position] }));
+  const toggleOriginal = (position: string) => {
+    setShowOriginal((prev) => ({ ...prev, [position]: !prev[position] }));
   };
 
   return (
     <div className="editorial-grid" data-generation={generation}>
       {slots.map((slot) => {
         const pair = editorialPairAt(slot.pairIndex);
+        const isOriginal = Boolean(showOriginal[slot.position]);
+        const activeSrc = isOriginal ? pair.original : pair.generated;
+        const activeAlt = isOriginal ? pair.originalAlt : pair.generatedAlt;
+
         return (
           <figure
             key={slot.position}
-            className={`editorial-figure ${slot.position} ${revealed[slot.position] ? "show-original" : ""}`}
+            className={`editorial-figure ${slot.position}`}
           >
             <div className="editorial-figure__frame">
               <img
-                key={`gen-${pair.id}-${generation}`}
-                className="example-image example-generated editorial-photo-swap"
-                src={pair.generated}
-                alt={pair.generatedAlt}
-                loading="eager"
-                decoding="async"
-              />
-              <img
-                key={`orig-${pair.id}-${generation}`}
-                className="example-image example-original editorial-photo-swap"
-                src={pair.original}
-                alt={pair.originalAlt}
+                key={`${pair.id}-${generation}-${isOriginal ? "before" : "after"}`}
+                className="editorial-figure__photo editorial-photo-swap"
+                src={activeSrc}
+                alt={activeAlt}
                 loading="eager"
                 decoding="async"
               />
@@ -66,10 +63,10 @@ export function LandingEditorialGrid() {
             <button
               type="button"
               className="reveal-original"
-              aria-pressed={Boolean(revealed[slot.position])}
-              onClick={() => toggleReveal(slot.position)}
+              aria-pressed={isOriginal}
+              onClick={() => toggleOriginal(slot.position)}
             >
-              {revealed[slot.position] ? "Voir le rendu" : "Voir l’original"}
+              {isOriginal ? "Voir le rendu" : "Voir l’original"}
             </button>
             <figcaption>
               <span>{slot.n}</span>
