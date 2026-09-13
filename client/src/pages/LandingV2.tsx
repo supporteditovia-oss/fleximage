@@ -147,12 +147,18 @@ export default function LandingV2() {
         <nav className="header-actions" aria-label="Compte">
           {loggedIn ? (
             <Link className="header-cta" href="/create">
-              Ouvrir le studio
+              <span className="header-cta__long">Ouvrir le studio</span>
+              <span className="header-cta__short">Studio</span>
             </Link>
           ) : (
-            <Link className="header-cta" href="/register">
-              S&apos;inscrire
-            </Link>
+            <>
+              <Link className="header-link" href="/login">
+                Connexion
+              </Link>
+              <Link className="header-cta" href="/register">
+                S&apos;inscrire
+              </Link>
+            </>
           )}
         </nav>
       </header>
