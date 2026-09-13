@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
+import { StudioModeSwitch } from "@/components/v2/StudioModeSwitch";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
 import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
 import { LandingVideoPanel } from "@/components/landing/LandingVideoPanel";
-import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
+import {
+  readStudioMode,
+  writeStudioMode,
+  type StudioMode,
+} from "@/lib/v2-experience";
 import "@/pages/create-page.css";
 import "@/pages/generate-page.css";
 import "./landing-studio-widget.css";
@@ -38,8 +43,19 @@ export function LandingStudioWidget() {
     };
   }, [mode]);
 
+  const handleMode = (next: StudioMode) => {
+    setMode(next);
+    writeStudioMode(next);
+  };
+
   return (
     <div className="landing-studio-widget">
+      <StudioModeSwitch
+        mode={mode}
+        onChange={handleMode}
+        size="compact"
+        className="landing-studio-widget__tabs"
+      />
       <div className="landing-studio-widget__panel" key={mode}>
         {mode === "image" ? (
           <LandingImagePanel />
