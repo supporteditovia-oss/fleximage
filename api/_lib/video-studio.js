@@ -1,8 +1,8 @@
+const { computeV2VCreditCost } = require("./video-limits");
 const {
   VIDEO_FLAT_CREDIT_COST,
-  computeV2VCreditCost,
-} = require("./video-limits");
-const VIDEO_VOICE_EXTRA_CREDIT = 5;
+  VIDEO_VOICE_EXTRA_CREDIT,
+} = require("./credit-costs");
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",

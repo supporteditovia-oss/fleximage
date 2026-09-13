@@ -396,15 +396,18 @@ export default function VideoIA() {
 
   return (
     <div className="via-studio pb-28 md:pb-10">
-      <div className="via-studio__mesh" aria-hidden />
-
-      <header className="via-hero">
+      <header className="via-hero via-hero--premium">
+        <div className="via-hero__shine" aria-hidden />
+        <p className="via-hero__eyebrow">
+          <Film className="h-3.5 w-3.5" aria-hidden />
+          Studio cinéma
+        </p>
         <h1 className="via-hero__title">Vidéo IA</h1>
         <p className="via-hero__sub">
           Anime ta photo ou transforme ta vidéo smartphone — décor, personnage,
           objet, lieu. Rendu cinématique prêt pour TikTok &amp; Reels.
         </p>
-        <div className="via-capabilities" aria-hidden>
+        <div className="via-capabilities">
           <span className="via-capability">Dubai · Yacht · Jet</span>
           <span className="via-capability">Personnage · Tenue</span>
           <span className="via-capability">Objet · Véhicule</span>

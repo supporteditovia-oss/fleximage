@@ -36,51 +36,7 @@ html.luxeflexia-video-page .floating-header::before {
   padding-inline: 0.15rem;
 }
 
-.via-studio__mesh {
-  position: absolute;
-  inset: -4rem -1.5rem auto;
-  height: 18rem;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.via-studio__mesh::before,
-.via-studio__mesh::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(48px);
-  animation: via-mesh-drift 14s ease-in-out infinite alternate;
-}
-
-.via-studio__mesh::before {
-  top: 0;
-  left: 10%;
-  width: 14rem;
-  height: 14rem;
-  background: rgba(201, 162, 39, 0.22);
-}
-
-.via-studio__mesh::after {
-  top: 2rem;
-  right: 5%;
-  width: 11rem;
-  height: 11rem;
-  background: rgba(232, 197, 71, 0.16);
-  animation-delay: -6s;
-}
-
-@keyframes via-mesh-drift {
-  from {
-    transform: translate(0, 0) scale(1);
-  }
-  to {
-    transform: translate(12px, 18px) scale(1.08);
-  }
-}
-
-.via-studio > *:not(.via-studio__mesh) {
+.via-studio > * {
   position: relative;
   z-index: 1;
 }
@@ -90,28 +46,100 @@ html.luxeflexia-video-page .floating-header::before {
   margin-bottom: 1.5rem;
 }
 
+.via-hero--premium {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.65rem;
+  padding: 1.35rem 1.15rem 1.25rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background:
+    linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(255, 252, 246, 0.92) 52%,
+      rgba(248, 242, 230, 0.88) 100%
+    );
+  box-shadow:
+    0 18px 44px rgba(18, 16, 14, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
+    0 1px 0 rgba(201, 162, 39, 0.18) inset;
+}
+
+.via-hero--premium::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 162, 39, 0.35) 18%,
+    rgba(240, 216, 117, 0.95) 50%,
+    rgba(201, 162, 39, 0.35) 82%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.via-hero__shine {
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 70%;
+  background: radial-gradient(
+    ellipse 55% 45% at 50% 0%,
+    rgba(240, 216, 117, 0.14) 0%,
+    transparent 72%
+  );
+  pointer-events: none;
+}
+
+.via-hero__eyebrow {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+  padding: 0.32rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lx-bronze);
+}
+
 .via-hero__title {
+  position: relative;
+  z-index: 1;
   margin: 0;
   font-family: var(--lx-display);
-  font-size: clamp(1.85rem, 5.5vw, 2.35rem);
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-  color: var(--lx-ink);
-  background: linear-gradient(135deg, #1a1408 0%, #4a3f2a 55%, #1a1408 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: clamp(1.95rem, 5.8vw, 2.45rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: #14110a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .via-hero__sub {
-  margin: 0.65rem auto 0;
-  max-width: 24rem;
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: var(--lx-muted);
+  position: relative;
+  z-index: 1;
+  margin: 0.7rem auto 0;
+  max-width: 24.5rem;
+  font-size: 0.875rem;
+  line-height: 1.58;
+  color: #5c564e;
 }
 
 .via-capabilities {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -123,15 +151,15 @@ html.luxeflexia-video-page .floating-header::before {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.38rem 0.72rem;
   border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.22);
-  background: rgba(255, 255, 255, 0.55);
-  font-size: 0.65rem;
+  border: 1px solid rgba(201, 162, 39, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--lx-bronze);
+  color: #6b5a32;
 }
 
 .via-mode-grid {
