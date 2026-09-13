@@ -69,12 +69,6 @@ for (const entry of entries) {
     }
 
     await fs.writeFile(outPath, buffer);
-    const samplePath = path.join(
-      process.cwd(),
-      "client/public/assets/voice-catalog/samples",
-      `${entry.slug}.mp3`,
-    );
-    await fs.copyFile(outPath, samplePath);
     console.log(`OK ${entry.slug} → ${outPath} (${buffer.length} bytes)`);
   } catch (err) {
     if (err?.code === "missing_fish_env") {

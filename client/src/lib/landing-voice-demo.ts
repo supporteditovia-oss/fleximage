@@ -18,7 +18,7 @@ export type LandingVoiceEntry = {
 };
 
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
-export const LANDING_VOICE_DEMO_VERSION = 5;
+export const LANDING_VOICE_DEMO_VERSION = 6;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
@@ -45,8 +45,13 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
   return `/assets/voice-catalog/${entry.photo}`;
 }
 
-/** MP3 statiques — intro personnalisée par voix (alignée sous-titres). */
+/** MP3 statiques landing — intro personnalisée (alignée sous-titres). */
 export function landingVoiceDemoStaticSrc(slug: string): string {
+  return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
+/** Ancien chemin prod — réécrit vers l’API landing (vercel.json). */
+export function landingVoiceDemoLegacySampleSrc(slug: string): string {
   return `/assets/voice-catalog/samples/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 

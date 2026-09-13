@@ -116,7 +116,6 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
     sampleText: CATALOG_SAMPLE_LINE,
     pitch: seed.pitch,
     rate: seed.rate,
-    sampleUrl: `/assets/voice-catalog/samples/${seed.slug}.mp3`,
     fishReferenceId: seed.fishId,
   }),
 );

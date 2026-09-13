@@ -50,6 +50,14 @@
   ],
   "rewrites": [
     {
+      "source": "/assets/voice-catalog/samples/:slug.mp3",
+      "destination": "/api/larps/voice/landing-demo?slug=:slug&media=1"
+    },
+    {
+      "source": "/assets/landing-voice-demos/:slug.mp3",
+      "destination": "/api/larps/voice/landing-demo?slug=:slug&media=1"
+    },
+    {
       "source": "/api/larps/(.*)",
       "destination": "/api/larps-router?__larpsPath=$1"
     },
