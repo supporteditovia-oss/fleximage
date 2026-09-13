@@ -3380,12 +3380,55 @@ function qualitySuffix(includeCelebrityGuard) {
 }
 
 /**
+ * Text-to-image (prompt seul, sans photo de référence).
+ */
+function buildTextToImagePrompt(userPrompt, options = {}) {
+  const cleaned = sanitizeUserPrompt(userPrompt);
+  if (!cleaned) return cleaned;
+
+  const celebInject = buildCelebrityAppearanceInjection(userPrompt);
+  const namedFigure =
+    Boolean(celebInject) || looksLikeNamedPublicFigurePrompt(userPrompt);
+  const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
+  const lifestyle = isLifestyleRelocatePrompt(userPrompt);
+  const vehicle =
+    isVehicleDriverPrompt(userPrompt) ||
+    isNamedVehiclePrompt(userPrompt) ||
+    isLifestyleRelocatePrompt(userPrompt);
+
+  const sceneHint = lifestyle
+    ? `${LIFESTYLE_RELOCATE_GUARD} `
+    : vehicle
+      ? `${VEHICLE_SCENE_GUARD} `
+      : "";
+
+  const core = [
+    "Generate a brand-new ultra-photorealistic photograph from scratch based on the user description (no reference photo uploaded).",
+    HUMAN_PHOTOREAL_CLARIFIER,
+    sceneHint,
+    celebInject,
+    subjectPoseBlock,
+    `User request: ${cleaned}`,
+    qualitySuffix(namedFigure || vehicle || lifestyle),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return core.length > MAX_FINAL_PROMPT ? core.slice(0, MAX_FINAL_PROMPT) : core;
+}
+
+/**
  * Build final provider prompt.
  * Priority: scene guard + celebrity cards + user request (never truncated first).
  * Drop optional suffix/literal if needed to stay under OneShot's 3000-char limit.
  */
 function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const referenceImageCount = Math.max(0, Number(options.referenceImageCount) || 0);
+  if (referenceImageCount === 0) {
+    return buildTextToImagePrompt(userPrompt, options);
+  }
   // Detect facial-hair intent on the RAW user text (before clarifiers add "replace", etc.).
   const rawFacialHair = isFacialHairPrompt(userPrompt);
   const rawAddVehicles = isAddVehiclesToScenePrompt(userPrompt);
@@ -4032,6 +4075,7 @@ function buildFacialHairHardRetryPrompt(finalPrompt) {
 }
 
 module.exports = {
+  buildTextToImagePrompt,
   buildIdentityPreservingPrompt,
   buildBuiltinTemplateFaceSwapPrompt,
   buildBuiltinTemplateFaceSwapWithOutfitPrompt,

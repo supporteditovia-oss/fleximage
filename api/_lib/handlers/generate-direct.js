@@ -415,27 +415,13 @@ module.exports = async function handler(req, res) {
             resolvedTemplate.referenceUrl,
           ];
     } else {
-      if (images.length === 0) {
-        await failAndRefund(supabase, {
-          userId,
-          generationId: larp.id,
-          failMessage: "Image de référence requise",
-          source: "reference_required",
-        });
-        res.status(422).json({
-          code: "REFERENCE_IMAGE_REQUIRED",
-          message: copy(
-            uiLocale,
-            "Une image de référence est requise.",
-            "A reference image is required.",
-          ),
-        });
-        return;
-      }
-      imageUrls = withShopifyTrophyReference(prompt, uploadedUrls);
+      imageUrls =
+        uploadedUrls.length > 0
+          ? withShopifyTrophyReference(prompt, uploadedUrls)
+          : [];
     }
 
-    if (imageUrls.length === 0) {
+    if (imageUrls.length === 0 && templateId) {
       await failAndRefund(supabase, {
         userId,
         generationId: larp.id,
@@ -462,15 +448,22 @@ module.exports = async function handler(req, res) {
 
     const { subject, poseStyle } = parseSubjectPoseFromBody(body);
 
-    const referenceImageUrl = imageUrls[0];
+    const referenceImageUrl = imageUrls[0] || null;
     const sceneContext = resolvedTemplate?.ok
       ? String(resolvedTemplate.prompt || effectivePrompt || "")
       : "";
-    const subjectAnalysis = await analyzeSubjectContext({
-      imageUrl: referenceImageUrl,
-      userPrompt: effectivePrompt,
-      sceneContext,
-    });
+    const subjectAnalysis = await analyzeSubjectContext(
+      referenceImageUrl
+        ? {
+            imageUrl: referenceImageUrl,
+            userPrompt: effectivePrompt,
+            sceneContext,
+          }
+        : {
+            userPrompt: effectivePrompt,
+            sceneContext,
+          },
+    );
 
     const subjectPoseBlock = buildSubjectPosePromptBlock({
       subject,
