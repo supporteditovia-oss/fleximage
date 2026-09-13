@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Pause, Play } from "lucide-react";
 import {
   createLandingVoiceAudio,
-  getLandingVoiceAudioStage,
   isLandingVoiceAudioFailed,
 } from "@/lib/landing-voice-audio";
 import {
@@ -22,6 +21,19 @@ const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 
 type LandingVoicePlayerProps = {
   variant?: "widget" | "section";
 };
+
+function resetAudioPosition(audio: HTMLAudioElement) {
+  audio.pause();
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    audio.currentTime = 0;
+  } else {
+    try {
+      audio.currentTime = 0;
+    } catch {
+      /* metadata not loaded yet */
+    }
+  }
+}
 
 function VoiceAvatar({ entry, className }: { entry: LandingVoiceEntry; className?: string }) {
   const photo = landingVoicePhoto(entry);
@@ -148,6 +160,7 @@ function VoicePicker({
 export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerProps) {
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const pendingPlayRef = useRef(false);
+  const playFromStartRef = useRef(false);
   const activeSlugRef = useRef(pickRandomLandingVoiceSlug());
 
   const [activeSlug, setActiveSlug] = useState(activeSlugRef.current);
@@ -164,8 +177,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const words = useMemo(() => splitSubtitleWords(script), [script]);
   const visibleWords = spokenWordCount(currentSec, durationSec, words.length);
 
-  const getAudio = useCallback((slug: string) => {
+  const getAudio = useCallback((slug: string, recreate = false) => {
     const cache = audioCacheRef.current;
+    if (recreate) cache.delete(slug);
     let audio = cache.get(slug);
     if (!audio) {
       audio = createLandingVoiceAudio(slug);
@@ -177,8 +191,9 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const tryPlay = useCallback(async (audio: HTMLAudioElement, slug: string) => {
     if (activeSlugRef.current !== slug) return;
     try {
-      if (audio.currentTime >= (audio.duration || 0) - 0.05) {
+      if (playFromStartRef.current || audio.currentTime >= (audio.duration || 0) - 0.05) {
         audio.currentTime = 0;
+        playFromStartRef.current = false;
       }
       await audio.play();
       if (activeSlugRef.current !== slug) {
@@ -196,18 +211,44 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
         setLoading(false);
       }
       pendingPlayRef.current = false;
+      playFromStartRef.current = false;
     }
   }, []);
 
+  const requestPlay = useCallback(
+    (slug: string, fromStart: boolean, recreateOnFailure = false) => {
+      if (recreateOnFailure) getAudio(slug, true);
+      const audio = getAudio(slug);
+      playFromStartRef.current = fromStart;
+      pendingPlayRef.current = true;
+      setPlaying(false);
+      setError(false);
+      setCurrentSec(0);
+      setLoading(!isAudioReady(audio));
+
+      if (isAudioReady(audio)) {
+        void tryPlay(audio, slug);
+        return;
+      }
+
+      if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+        audio.load();
+      }
+    },
+    [getAudio, tryPlay],
+  );
+
   useEffect(() => {
-    getAudio(activeSlugRef.current);
+    for (const voice of LANDING_VOICE_CATALOG) {
+      getAudio(voice.slug);
+    }
   }, [getAudio]);
 
   useEffect(() => {
     activeSlugRef.current = activeSlug;
 
     for (const [slug, audio] of audioCacheRef.current.entries()) {
-      if (slug !== activeSlug) audio.pause();
+      if (slug !== activeSlug) resetAudioPosition(audio);
     }
 
     const audio = getAudio(activeSlug);
@@ -225,9 +266,11 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
       if (activeSlugRef.current !== activeSlug) return;
       setCurrentSec(audio.currentTime);
     };
-    const onMeta = () => {
+    const syncDuration = () => {
       if (activeSlugRef.current !== activeSlug) return;
-      setDurationSec(audio.duration || 0);
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setDurationSec(audio.duration);
+      }
     };
     const onReady = () => syncReady();
     const onError = () => {
@@ -237,28 +280,29 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
       setError(true);
       setPlaying(false);
       pendingPlayRef.current = false;
+      playFromStartRef.current = false;
     };
     const onEnded = () => {
       if (activeSlugRef.current !== activeSlug) return;
       setPlaying(false);
       setCurrentSec(0);
+      resetAudioPosition(audio);
     };
 
+    resetAudioPosition(audio);
     setPlaying(false);
-    setCurrentSec(audio.currentTime || 0);
-    setDurationSec(audio.duration || 0);
+    setCurrentSec(0);
+    syncDuration();
     setError(isLandingVoiceAudioFailed(audio));
     setLoading(!isAudioReady(audio) && pendingPlayRef.current);
 
-    if (
-      audio.readyState === HTMLMediaElement.HAVE_NOTHING &&
-      getLandingVoiceAudioStage(audio) === "static"
-    ) {
+    if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
       audio.load();
     }
 
     audio.addEventListener("timeupdate", onTime);
-    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("loadedmetadata", syncDuration);
+    audio.addEventListener("durationchange", syncDuration);
     audio.addEventListener("loadeddata", onReady);
     audio.addEventListener("canplay", onReady);
     audio.addEventListener("error", onError);
@@ -268,7 +312,8 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
     return () => {
       audio.removeEventListener("timeupdate", onTime);
-      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("loadedmetadata", syncDuration);
+      audio.removeEventListener("durationchange", syncDuration);
       audio.removeEventListener("loadeddata", onReady);
       audio.removeEventListener("canplay", onReady);
       audio.removeEventListener("error", onError);
@@ -277,50 +322,77 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   }, [activeSlug, getAudio, tryPlay]);
 
   const selectVoice = (slug: string) => {
-    if (slug === activeSlug) return;
-    const shouldAutoPlay = playing;
-    audioCacheRef.current.get(activeSlug)?.pause();
+    if (slug === activeSlug) {
+      requestPlay(slug, true, error);
+      return;
+    }
+
+    for (const [cachedSlug, audio] of audioCacheRef.current.entries()) {
+      if (cachedSlug !== slug) resetAudioPosition(audio);
+    }
+
+    playFromStartRef.current = true;
+    pendingPlayRef.current = true;
+    activeSlugRef.current = slug;
     setPlaying(false);
-    pendingPlayRef.current = shouldAutoPlay;
-    setLoading(shouldAutoPlay && !isAudioReady(getAudio(slug)));
+    setCurrentSec(0);
+    setError(false);
     setActiveSlug(slug);
   };
 
   const toggle = () => {
-    if (error) return;
     const audio = getAudio(activeSlug);
 
     if (playing) {
       audio.pause();
       setPlaying(false);
       pendingPlayRef.current = false;
+      playFromStartRef.current = false;
       setLoading(false);
       return;
     }
+
+    if (error) {
+      requestPlay(activeSlug, true, true);
+      return;
+    }
+
+    playFromStartRef.current = false;
+    pendingPlayRef.current = true;
 
     if (isAudioReady(audio)) {
       void tryPlay(audio, activeSlug);
       return;
     }
 
-    pendingPlayRef.current = true;
     setLoading(true);
     if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
       audio.load();
     }
   };
 
+  const playButtonClass =
+    variant === "widget"
+      ? "landing-voice-demo__play landing-voice-demo__play--icon"
+      : "landing-voice-demo__play landing-voice-demo__play--icon voice-player__play";
+
   const playerControls = (
     <>
       <button
         type="button"
-        className={variant === "widget" ? "landing-voice-demo__play" : undefined}
+        className={playButtonClass}
         aria-label={playing ? "Mettre en pause" : "Écouter la démo vocale"}
         aria-pressed={playing}
-        disabled={error}
+        disabled={loading && !error}
         onClick={toggle}
       >
-        {loading ? "…" : playing ? "❚❚" : "▶"}
+        {loading ? (
+          <Loader2 className="landing-voice-demo__play-icon is-spinning" aria-hidden />
+        ) : playing ? (
+          <Pause className="landing-voice-demo__play-icon" aria-hidden />
+        ) : (
+          <Play className="landing-voice-demo__play-icon" aria-hidden />
+        )}
       </button>
       <div className="voice-wave landing-voice-demo__wave" aria-hidden>
         {WAVE.map((h, i) => (
@@ -328,7 +400,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
         ))}
       </div>
       <span className="landing-voice-demo__time">
-        {formatVoiceClock(currentSec)} / {formatVoiceClock(durationSec || 5)}
+        {formatVoiceClock(currentSec)} / {formatVoiceClock(durationSec)}
       </span>
     </>
   );
