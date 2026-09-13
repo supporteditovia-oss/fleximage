@@ -1,4 +1,9 @@
 const { encode } = require("@msgpack/msgpack");
+const {
+  DEFAULT_TTS_SPEED,
+  clampTtsSpeed,
+  resolveCatalogTtsSpeed,
+} = require("./voice-catalog");
 
 const FISH_API_BASE = "https://api.fish.audio";
 
@@ -24,8 +29,18 @@ const FIDELITY_TTS = {
  * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
  * Plus long → chunks liés pour garder la cohérence.
  */
-function buildTtsOptions(text) {
+function resolveTtsSpeed(text, speedOverride) {
+  if (typeof speedOverride === "number" && Number.isFinite(speedOverride)) {
+    return clampTtsSpeed(speedOverride);
+  }
+
   const len = String(text || "").trim().length;
+  return len <= 200 ? DEFAULT_TTS_SPEED : 1;
+}
+
+function buildTtsOptions(text, options = {}) {
+  const len = String(text || "").trim().length;
+  const speed = resolveTtsSpeed(text, options.speed);
 
   if (len <= 200) {
     return {
@@ -36,7 +51,7 @@ function buildTtsOptions(text) {
       temperature: 0.6,
       top_p: 0.78,
       repetition_penalty: 1.06,
-      prosody: { speed: 1.02, volume: 0, normalize_loudness: false },
+      prosody: { speed, volume: 0, normalize_loudness: false },
     };
   }
 
@@ -48,7 +63,11 @@ function buildTtsOptions(text) {
     top_p: 0.74,
     repetition_penalty: 1.1,
     condition_on_previous_chunks: true,
-    prosody: { speed: 1, volume: 0, normalize_loudness: false },
+    prosody: {
+      speed: Math.min(speed, 1),
+      volume: 0,
+      normalize_loudness: false,
+    },
   };
 }
 
@@ -263,6 +282,7 @@ async function synthesizeWithReferenceMsgpack({
   text,
   audioBuffer,
   referenceText,
+  speed,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -288,7 +308,7 @@ async function synthesizeWithReferenceMsgpack({
       },
     ],
     format: "mp3",
-    ...buildTtsOptions(trimmed),
+    ...buildTtsOptions(trimmed, { speed }),
   };
 
   const body = encode(payload);
@@ -321,6 +341,7 @@ async function synthesizeSpeech({
   text,
   referenceId,
   format = "mp3",
+  speed,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -336,6 +357,10 @@ async function synthesizeSpeech({
     });
   }
 
+  const catalogSpeed = resolveCatalogTtsSpeed(referenceId);
+  const resolvedSpeed =
+    typeof speed === "number" && Number.isFinite(speed) ? speed : catalogSpeed;
+
   const response = await fetch(`${FISH_API_BASE}/v1/tts`, {
     method: "POST",
     headers: fishHeaders({
@@ -346,7 +371,7 @@ async function synthesizeSpeech({
       text: trimmed.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed),
+      ...buildTtsOptions(trimmed, { speed: resolvedSpeed }),
     }),
   });
 
