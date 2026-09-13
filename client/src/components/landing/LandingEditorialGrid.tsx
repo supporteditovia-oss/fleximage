@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  advanceEditorialPoolIndex,
   createLandingEditorialSlots,
-  editorialTileAt,
+  editorialPairAt,
   LANDING_EDITORIAL_ROTATE_MS,
+  rotateEditorialPairIndices,
   type LandingEditorialSlot,
 } from "@/lib/landing-v2-pairs";
 
@@ -12,67 +12,57 @@ export function LandingEditorialGrid() {
     createLandingEditorialSlots(),
   );
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const slotCursorRef = useRef(0);
+  const [generation, setGeneration] = useState(0);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      const slotIndex = slotCursorRef.current;
-      slotCursorRef.current = (slotCursorRef.current + 1) % slots.length;
-
       setSlots((previous) => {
-        const rotatedPosition = previous[slotIndex]?.position;
-        if (rotatedPosition) {
-          setRevealed((revealed) => {
-            if (!revealed[rotatedPosition]) return revealed;
-            const next = { ...revealed };
-            delete next[rotatedPosition];
-            return next;
-          });
-        }
-
-        return previous.map((slot, index) =>
-          index === slotIndex
-            ? {
-                ...slot,
-                poolIndex: advanceEditorialPoolIndex(slot.poolIndex),
-              }
-            : slot,
+        const nextIndices = rotateEditorialPairIndices(
+          previous.map((slot) => slot.pairIndex),
         );
+        return previous.map((slot, index) => ({
+          ...slot,
+          pairIndex: nextIndices[index] ?? slot.pairIndex,
+        }));
       });
+      setRevealed({});
+      setGeneration((value) => value + 1);
     }, LANDING_EDITORIAL_ROTATE_MS);
 
     return () => window.clearInterval(timer);
-  }, [slots.length]);
+  }, []);
 
   const toggleReveal = (position: string) => {
     setRevealed((prev) => ({ ...prev, [position]: !prev[position] }));
   };
 
   return (
-    <div className="editorial-grid">
+    <div className="editorial-grid" data-generation={generation}>
       {slots.map((slot) => {
-        const tile = editorialTileAt(slot.poolIndex);
+        const pair = editorialPairAt(slot.pairIndex);
         return (
           <figure
             key={slot.position}
             className={`editorial-figure ${slot.position} ${revealed[slot.position] ? "show-original" : ""}`}
           >
-            <img
-              key={`gen-${tile.id}-${slot.poolIndex}`}
-              className="example-image example-generated editorial-photo-swap"
-              src={tile.generated}
-              alt={tile.generatedAlt}
-              loading="eager"
-              decoding="async"
-            />
-            <img
-              key={`orig-${tile.id}-${slot.poolIndex}`}
-              className="example-image example-original editorial-photo-swap"
-              src={tile.original}
-              alt="Photo originale avant transformation"
-              loading="eager"
-              decoding="async"
-            />
+            <div className="editorial-figure__frame">
+              <img
+                key={`gen-${pair.id}-${generation}`}
+                className="example-image example-generated editorial-photo-swap"
+                src={pair.generated}
+                alt={pair.generatedAlt}
+                loading="eager"
+                decoding="async"
+              />
+              <img
+                key={`orig-${pair.id}-${generation}`}
+                className="example-image example-original editorial-photo-swap"
+                src={pair.original}
+                alt={pair.originalAlt}
+                loading="eager"
+                decoding="async"
+              />
+            </div>
             <button
               type="button"
               className="reveal-original"
@@ -83,7 +73,7 @@ export function LandingEditorialGrid() {
             </button>
             <figcaption>
               <span>{slot.n}</span>
-              <strong>{tile.label}</strong>
+              <strong>{pair.label}</strong>
               <small>Créé avec LuxeFlexIA</small>
             </figcaption>
           </figure>

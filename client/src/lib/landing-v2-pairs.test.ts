@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  advanceEditorialPoolIndex,
   createLandingEditorialSlots,
-  editorialTileAt,
-  LANDING_EDITORIAL_POOL,
+  editorialPairAt,
+  LANDING_EDITORIAL_PAIRS,
   LANDING_V2_COMPARE_PAIRS,
   pickLandingEditorialGrid,
+  rotateEditorialPairIndices,
 } from "./landing-v2-pairs";
 
 describe("pickLandingEditorialGrid", () => {
-  it("returns 4 unique tiles from the pool", () => {
+  it("returns 4 unique pairs", () => {
     const grid = pickLandingEditorialGrid(4);
     expect(grid).toHaveLength(4);
     const ids = grid.map((item) => item.id);
@@ -23,28 +23,16 @@ describe("pickLandingEditorialGrid", () => {
     expect(grid[3]?.position).toBe("editorial-position-4");
   });
 
-  it("can surface pairs beyond the old static four", () => {
-    const seen = new Set<string>();
-    for (let i = 0; i < 40; i += 1) {
-      pickLandingEditorialGrid(4).forEach((item) => seen.add(item.id));
+  it("uses the new landing editorial assets", () => {
+    const ids = new Set(LANDING_EDITORIAL_PAIRS.map((pair) => pair.id));
+    expect(ids.has("resort-celebrity")).toBe(true);
+    expect(ids.has("ronaldo")).toBe(true);
+    expect(ids.has("maldives")).toBe(true);
+    expect(ids.has("paris")).toBe(true);
+    for (const pair of LANDING_EDITORIAL_PAIRS) {
+      expect(pair.original).toContain("/assets/landing-editorial/");
+      expect(pair.generated).toContain("/assets/landing-editorial/");
     }
-    expect(seen.has("esso")).toBe(true);
-    expect(seen.has("portrait-car")).toBe(true);
-  });
-
-  it("prefers a different set when previous ids are provided", () => {
-    const first = pickLandingEditorialGrid(4);
-    const firstIds = first.map((item) => item.id);
-    let changed = false;
-    for (let i = 0; i < 20; i += 1) {
-      const next = pickLandingEditorialGrid(4, firstIds);
-      const nextIds = next.map((item) => item.id).sort().join(",");
-      if (nextIds !== [...firstIds].sort().join(",")) {
-        changed = true;
-        break;
-      }
-    }
-    expect(changed).toBe(true);
   });
 
   it("keeps compare pairs pool size stable", () => {
@@ -52,25 +40,31 @@ describe("pickLandingEditorialGrid", () => {
   });
 });
 
-describe("landing editorial slot rotation", () => {
-  it("creates four slots with staggered pool indices", () => {
+describe("landing editorial synchronized rotation", () => {
+  it("creates four slots with unique pair indices", () => {
     const slots = createLandingEditorialSlots();
     expect(slots).toHaveLength(4);
+    const indices = slots.map((slot) => slot.pairIndex);
+    expect(new Set(indices).size).toBe(4);
   });
 
-  it("cycles pool index through the full catalog", () => {
-    let index = 0;
-    const seen = new Set<number>([index]);
-    for (let step = 0; step < LANDING_EDITORIAL_POOL.length; step += 1) {
-      index = advanceEditorialPoolIndex(index);
-      seen.add(index);
-    }
-    expect(seen.size).toBe(LANDING_EDITORIAL_POOL.length);
+  it("rotates all pair indices together without duplicates", () => {
+    const initial = [0, 1, 2, 3];
+    const rotated = rotateEditorialPairIndices(initial);
+    expect(rotated).toEqual([1, 2, 3, 0]);
+    expect(new Set(rotated).size).toBe(4);
   });
 
-  it("returns a tile for every pool index", () => {
-    for (let i = 0; i < LANDING_EDITORIAL_POOL.length; i += 1) {
-      expect(editorialTileAt(i).id).toBeTruthy();
+  it("changes assignment on each synchronized rotation", () => {
+    const initial = [0, 1, 2, 3];
+    const rotated = rotateEditorialPairIndices(initial);
+    expect(rotated.join(",")).not.toBe(initial.join(","));
+    expect(rotateEditorialPairIndices(rotated)).toEqual([2, 3, 0, 1]);
+  });
+
+  it("returns a pair for every index", () => {
+    for (let i = 0; i < LANDING_EDITORIAL_PAIRS.length; i += 1) {
+      expect(editorialPairAt(i).id).toBeTruthy();
     }
   });
 });

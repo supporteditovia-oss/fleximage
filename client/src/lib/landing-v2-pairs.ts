@@ -63,59 +63,56 @@ export function pickLandingCompareLayout(): {
   };
 }
 
-/** Tuile « Univers » landing — label éditorial + paire avant/après. */
-export type LandingEditorialTile = {
+/** Paire avant / après — une tuile de la grille Univers. */
+export type LandingEditorialPair = {
   id: string;
   label: string;
   original: string;
   generated: string;
   generatedAlt: string;
+  originalAlt: string;
 };
 
-export const LANDING_EDITORIAL_POOL: LandingEditorialTile[] = [
+/** 4 paires uniques — jamais de doublon dans la grille. */
+export const LANDING_EDITORIAL_PAIRS: LandingEditorialPair[] = [
   {
-    id: "driveway",
-    label: "Automobile",
-    original: "/assets/v2-compare/driveway-before.jpg",
-    generated: "/assets/v2-compare/driveway-after.jpg",
-    generatedAlt: "Berline de luxe créée à partir d’une voiture sur une allée",
+    id: "resort-celebrity",
+    label: "Célébrité",
+    original: "/assets/landing-editorial/pair-1-before.jpg",
+    generated: "/assets/landing-editorial/pair-1-after.jpg",
+    originalAlt: "Photo originale — resort piscine",
+    generatedAlt: "Scène backstage avec célébrité — généré par LuxeFlexIA",
   },
   {
-    id: "garage",
+    id: "ronaldo",
     label: "Lifestyle",
-    original: "/assets/v2-compare/garage-before.jpg",
-    generated: "/assets/v2-compare/garage-after.jpg",
-    generatedAlt: "Garage transformé avec des voitures de prestige",
+    original: "/assets/landing-editorial/pair-2-before.jpg",
+    generated: "/assets/landing-editorial/pair-2-after.jpg",
+    originalAlt: "Selfie original",
+    generatedAlt: "Portrait avec Cristiano Ronaldo — généré par LuxeFlexIA",
   },
   {
-    id: "pump",
-    label: "Automobile",
-    original: "/assets/v2-compare/pump-before.jpg",
-    generated: "/assets/v2-compare/pump-after.jpg",
-    generatedAlt: "Berline sportive à la station-service",
-  },
-  {
-    id: "esso",
-    label: "Automobile",
-    original: "/assets/v2-compare/esso-before.jpg",
-    generated: "/assets/v2-compare/esso-after.jpg",
-    generatedAlt: "SUV de luxe — transformation nocturne à la station",
-  },
-  {
-    id: "dubai",
+    id: "maldives",
     label: "Voyage",
-    original: "/assets/v2-compare/dubai-before.jpg",
-    generated: "/assets/v2-compare/dubai-after.jpg",
-    generatedAlt: "Portrait transformé en scène au volant à Dubaï",
+    original: "/assets/landing-editorial/pair-3-before.jpg",
+    generated: "/assets/landing-editorial/pair-3-after.jpg",
+    originalAlt: "Photo originale — soirée urbaine",
+    generatedAlt: "Maldives — ponton overwater — généré par LuxeFlexIA",
   },
   {
-    id: "portrait-car",
-    label: "Lifestyle",
-    original: "/assets/landing-v2/portrait-car-original.jpg",
-    generated: "/assets/landing-v2/portrait-car-generated.jpg",
-    generatedAlt: "Homme devant une supercar — scène lifestyle premium",
+    id: "paris",
+    label: "Voyage",
+    original: "/assets/landing-editorial/pair-4-before.jpg",
+    generated: "/assets/landing-editorial/pair-4-after.jpg",
+    originalAlt: "Selfie miroir original",
+    generatedAlt: "Paris, Tour Eiffel — généré par LuxeFlexIA",
   },
 ];
+
+/** @deprecated alias */
+export const LANDING_EDITORIAL_POOL = LANDING_EDITORIAL_PAIRS;
+
+export type LandingEditorialTile = LandingEditorialPair;
 
 export const EDITORIAL_GRID_POSITIONS = [
   "editorial-position-1",
@@ -126,73 +123,65 @@ export const EDITORIAL_GRID_POSITIONS = [
 
 export type LandingEditorialSlot = {
   position: (typeof EDITORIAL_GRID_POSITIONS)[number];
-  poolIndex: number;
+  /** Index dans LANDING_EDITORIAL_PAIRS — une paire par slot, jamais de doublon. */
+  pairIndex: number;
   n: string;
 };
 
 export function createLandingEditorialSlots(): LandingEditorialSlot[] {
+  const shuffledIndices = shuffleInPlace(
+    LANDING_EDITORIAL_PAIRS.map((_, index) => index),
+  );
   return EDITORIAL_GRID_POSITIONS.map((position, index) => ({
     position,
-    poolIndex:
-      (index * 2 + Math.floor(Math.random() * LANDING_EDITORIAL_POOL.length)) %
-      LANDING_EDITORIAL_POOL.length,
+    pairIndex: shuffledIndices[index] ?? index,
     n: String(index + 1).padStart(2, "0"),
   }));
 }
 
-export function advanceEditorialPoolIndex(poolIndex: number): number {
-  return (poolIndex + 1) % LANDING_EDITORIAL_POOL.length;
+/** Toutes les tuiles avancent d’une paire en même temps (permutation cyclique). */
+export function rotateEditorialPairIndices(indices: number[]): number[] {
+  const len = LANDING_EDITORIAL_PAIRS.length;
+  return indices.map((pairIndex) => (pairIndex + 1) % len);
 }
 
-export function editorialTileAt(poolIndex: number): LandingEditorialTile {
+export function editorialPairAt(pairIndex: number): LandingEditorialPair {
   const safe =
-    ((poolIndex % LANDING_EDITORIAL_POOL.length) +
-      LANDING_EDITORIAL_POOL.length) %
-    LANDING_EDITORIAL_POOL.length;
-  return LANDING_EDITORIAL_POOL[safe]!;
+    ((pairIndex % LANDING_EDITORIAL_PAIRS.length) +
+      LANDING_EDITORIAL_PAIRS.length) %
+    LANDING_EDITORIAL_PAIRS.length;
+  return LANDING_EDITORIAL_PAIRS[safe]!;
 }
 
-export type LandingEditorialGridItem = LandingEditorialTile & {
+/** @deprecated */
+export function advanceEditorialPoolIndex(poolIndex: number): number {
+  return rotateEditorialPairIndices([poolIndex])[0] ?? 0;
+}
+
+/** @deprecated */
+export function editorialTileAt(poolIndex: number): LandingEditorialPair {
+  return editorialPairAt(poolIndex);
+}
+
+export type LandingEditorialGridItem = LandingEditorialPair & {
   position: (typeof EDITORIAL_GRID_POSITIONS)[number];
   n: string;
 };
 
-function countIdDiff(nextIds: string[], previousIds: string[]): number {
-  if (previousIds.length === 0) return nextIds.length;
-  return nextIds.filter((id) => !previousIds.includes(id)).length;
-}
+/** Intervalle entre deux rotations synchronisées de la grille. */
+export const LANDING_EDITORIAL_ROTATE_MS = 4500;
 
-/** Mélange le pool et pioche N tuiles — évite de répéter le même set si possible. */
 export function pickLandingEditorialGrid(
   count = 4,
-  previousIds: string[] = [],
+  _previousIds: string[] = [],
 ): LandingEditorialGridItem[] {
-  const limit = Math.min(count, LANDING_EDITORIAL_POOL.length);
-  let picked = shuffleInPlace([...LANDING_EDITORIAL_POOL]).slice(0, limit);
-  let bestDiff = countIdDiff(
-    picked.map((item) => item.id),
-    previousIds,
-  );
-
-  for (let attempt = 0; attempt < 16; attempt += 1) {
-    const candidate = shuffleInPlace([...LANDING_EDITORIAL_POOL]).slice(0, limit);
-    const diff = countIdDiff(
-      candidate.map((item) => item.id),
-      previousIds,
-    );
-    if (diff > bestDiff) {
-      picked = candidate;
-      bestDiff = diff;
-    }
-    if (bestDiff >= Math.min(2, limit)) break;
-  }
-
-  return picked.map((item, i) => ({
-    ...item,
-    position: EDITORIAL_GRID_POSITIONS[i] ?? EDITORIAL_GRID_POSITIONS[0],
-    n: String(i + 1).padStart(2, "0"),
-  }));
+  const slots = createLandingEditorialSlots();
+  return slots.slice(0, count).map((slot) => {
+    const pair = editorialPairAt(slot.pairIndex);
+    return {
+      ...pair,
+      position: slot.position,
+      n: slot.n,
+    };
+  });
 }
-
-/** Intervalle entre deux changements de tuile (rotation en round-robin). */
-export const LANDING_EDITORIAL_ROTATE_MS = 2800;
