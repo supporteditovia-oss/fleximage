@@ -46,6 +46,10 @@ export default function LandingV2() {
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr") as UiLocale;
 
   useEffect(() => {
+    applyLocaleFromSearch(window.location.search);
+  }, []);
+
+  useEffect(() => {
     setDocumentMeta({
       title: t("landing:meta.title"),
       description: t("landing:meta.description"),

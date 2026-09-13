@@ -354,7 +354,7 @@ function Router() {
 
   React.useEffect(() => {
     applyLocaleFromSearch(window.location.search);
-  }, [pathname]);
+  }, [location]);
 
   React.useEffect(() => {
     if (!user || !profile) {
