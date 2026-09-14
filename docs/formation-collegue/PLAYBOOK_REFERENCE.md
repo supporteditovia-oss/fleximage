@@ -87,7 +87,8 @@ Payment decoupling · Mental accounting · Commitment & consistency · Endowment
 | Commitment (objectif choisi) | Questions quiz → presets |
 | Post-paiement fluide | Stripe → `/create?checkout=success` → restore draft → auto-gen HD |
 | Bouton ✨ TikTok | `/resultat` + `UnlockedLarpView` |
-| Preuve sociale **vraie** (DB) | `/api/public/trust-stats` + `SocialProofLine` (paywall + landing) |
+| Preuve sociale **vraie** (DB) | `/api/public/trust-stats` + `SocialProofLine` (paywall + landing + `/image-prete`) |
+| Reset funnel multi-compte | `funnel-account.ts` — quiz/paywall stale effacés à chaque nouveau compte |
 | Emails relance preview expirée | Cron `/api/cron/preview-expiry-reminders` + Resend (`RESEND_API_KEY`) |
 | Fluidité editorial + loader | PR #121 cherry-picked (toggle editorial + loader blur) |
 

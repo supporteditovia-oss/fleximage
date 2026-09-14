@@ -15,6 +15,12 @@ function formatCount(value: number, locale?: string | null): string {
   return formatCredits(value, locale);
 }
 
+function fallbackKey(variant: SocialProofVariant): string | null {
+  if (variant === "paywall") return "paywall.socialProofFallback";
+  if (variant === "landing") return "landing:hero.trustFallback";
+  return null;
+}
+
 export function SocialProofLine({
   variant = "paywall",
   className,
@@ -51,12 +57,9 @@ export function SocialProofLine({
 
   if (silent) return null;
 
-  if (variant === "paywall") {
-    return <p className={className}>{t("paywall.socialProofFallback")}</p>;
-  }
-
-  if (variant === "landing") {
-    return <p className={className}>{t("landing:hero.trustFallback")}</p>;
+  const fallback = fallbackKey(variant);
+  if (fallback) {
+    return <p className={className}>{t(fallback)}</p>;
   }
 
   return null;

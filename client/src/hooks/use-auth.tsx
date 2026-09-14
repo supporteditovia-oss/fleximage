@@ -32,6 +32,8 @@ type AuthContextType = {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  /** Funnel localStorage réconcilié avec le compte courant (quiz serveur, reset multi-compte). */
+  funnelHydrated: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
 };
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [funnelHydrated, setFunnelHydrated] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -179,10 +182,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
   useEffect(() => {
-    if (!user?.id) return;
-    void import("@/lib/onboarding-quiz-sync").then(({ hydrateOnboardingQuizFromServer }) =>
-      hydrateOnboardingQuizFromServer(),
-    );
+    if (!user?.id) {
+      setFunnelHydrated(true);
+      return;
+    }
+
+    let cancelled = false;
+    setFunnelHydrated(false);
+
+    void (async () => {
+      const { handleAuthUserChange } = await import("@/lib/funnel-account");
+      const { hydrateOnboardingQuizFromServer } = await import(
+        "@/lib/onboarding-quiz-sync"
+      );
+
+      handleAuthUserChange(user.id);
+      await hydrateOnboardingQuizFromServer();
+
+      if (!cancelled) {
+        setFunnelHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   const signOut = async () => {
@@ -206,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     profile: resolvedProfile,
     isLoading: isLoadingSession || (!!user && isLoadingProfile && !profile),
+    funnelHydrated,
     isAdmin,
     signOut,
   };

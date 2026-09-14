@@ -31,26 +31,13 @@ export async function hydrateOnboardingQuizFromServer(): Promise<void> {
     const res = await authFetch("/api/profile/onboarding-quiz");
     const remote = (await res.json()) as OnboardingQuizAnswers | null;
 
-    let local: OnboardingQuizAnswers | null = null;
-    try {
-      const raw = localStorage.getItem(QUIZ_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as OnboardingQuizAnswers;
-        if (isValidQuiz(parsed)) local = parsed;
-      }
-    } catch {
-      /* ignore */
+    if (remote && isValidQuiz(remote)) {
+      localStorage.setItem(QUIZ_KEY, JSON.stringify(remote));
+      return;
     }
 
-    if (remote && isValidQuiz(remote)) {
-      if (!local || remote.completedAt >= local.completedAt) {
-        localStorage.setItem(QUIZ_KEY, JSON.stringify(remote));
-      } else if (local) {
-        await syncOnboardingQuizToServer(local);
-      }
-    } else if (local) {
-      await syncOnboardingQuizToServer(local);
-    }
+    // Compte sans quiz serveur : ne jamais réutiliser le localStorage d'un autre compte.
+    localStorage.removeItem(QUIZ_KEY);
   } catch {
     /* ignore */
   }

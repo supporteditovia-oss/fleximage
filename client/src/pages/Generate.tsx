@@ -171,7 +171,13 @@ export default function Generate({
   const topRef = useRef<HTMLDivElement>(null);
   const { data: eligibility, refetch: refetchEligibility } =
     useGenerationEligibility();
-  const { profile, user, isLoading: isAuthLoading, isAdmin } = useAuth();
+  const {
+    profile,
+    user,
+    isLoading: isAuthLoading,
+    funnelHydrated,
+    isAdmin,
+  } = useAuth();
   const adminPreview = useAdminPreviewFeatures();
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
@@ -543,7 +549,7 @@ export default function Generate({
 
   // Resume landing → auth → fake loader → blurred lock paywall.
   useEffect(() => {
-    if (isReturningFromCheckout || isAuthLoading) return;
+    if (isReturningFromCheckout || isAuthLoading || !funnelHydrated) return;
     if (showFakeOnboardingLoader || taskId || pendingLoading || unlockingLarp) {
       return;
     }
@@ -621,6 +627,7 @@ export default function Generate({
     showFakeOnboardingLoader,
     taskId,
     unlockingLarp,
+    funnelHydrated,
   ]);
 
   useEffect(() => {

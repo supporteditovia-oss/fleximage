@@ -20,6 +20,7 @@ import { markFakePaywallReached, clearFakePaywallReached } from "@/lib/fake-payw
 import { useAuth } from "@/hooks/use-auth";
 import { formatCredits } from "@/lib/format-locale";
 import { registerPreviewLock } from "@/lib/preview-lock-sync";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 
 function purgeExpiredPreview() {
   clearPaywallImage();
@@ -265,6 +266,10 @@ export default function ImagePrete() {
                   ? t("paywall.previewReadyHintPrompt")
                   : t("paywall.previewReadyHint")}
               </p>
+              <SocialProofLine
+                variant="paywall"
+                className="mx-auto mt-2 max-w-sm text-[11px] font-semibold text-[var(--lx-gold)] md:text-xs"
+              />
             </header>
 
             <div
