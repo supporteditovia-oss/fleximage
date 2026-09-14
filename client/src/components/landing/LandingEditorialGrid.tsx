@@ -4,6 +4,7 @@ import {
   createLandingEditorialSlots,
   editorialPairAt,
   LANDING_EDITORIAL_ROTATE_MS,
+  preloadLandingEditorialImages,
   rotateEditorialPairIndices,
   type LandingEditorialSlot,
 } from "@/lib/landing-v2-pairs";
@@ -15,6 +16,17 @@ export function LandingEditorialGrid() {
   );
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const [generation, setGeneration] = useState(0);
+  const [rotateAnimating, setRotateAnimating] = useState(false);
+
+  useEffect(() => {
+    preloadLandingEditorialImages();
+  }, []);
+
+  useEffect(() => {
+    preloadLandingEditorialImages(
+      slots.map((slot) => editorialPairAt(slot.pairIndex)),
+    );
+  }, [slots]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -29,10 +41,17 @@ export function LandingEditorialGrid() {
       });
       setShowOriginal({});
       setGeneration((value) => value + 1);
+      setRotateAnimating(true);
     }, LANDING_EDITORIAL_ROTATE_MS);
 
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!rotateAnimating) return;
+    const timer = window.setTimeout(() => setRotateAnimating(false), 1000);
+    return () => window.clearTimeout(timer);
+  }, [rotateAnimating, generation]);
 
   const toggleOriginal = (position: string) => {
     setShowOriginal((prev) => ({ ...prev, [position]: !prev[position] }));
@@ -48,6 +67,8 @@ export function LandingEditorialGrid() {
           const pair = editorialPairAt(slot.pairIndex);
           const isOriginal = Boolean(showOriginal[slot.position]);
           const pairKey = `landing:editorial.pairs.${pair.id}` as const;
+          const animateGenerated =
+            rotateAnimating && !isOriginal && generation > 0;
 
           return (
             <figure
@@ -57,22 +78,32 @@ export function LandingEditorialGrid() {
               <div className="editorial-figure__mat">
                 <div className="editorial-figure__frame">
                   <img
-                    key={`${pair.id}-${generation}-${isOriginal ? "before" : "after"}`}
-                    className="editorial-figure__photo editorial-photo-swap"
-                    src={isOriginal ? pair.original : pair.generated}
-                    alt={
-                      isOriginal
-                        ? t(`${pairKey}.originalAlt`)
-                        : t(`${pairKey}.generatedAlt`)
-                    }
+                    className={`editorial-figure__photo editorial-figure__photo--generated${
+                      animateGenerated ? " editorial-photo-swap" : ""
+                    }`}
+                    src={pair.generated}
+                    alt={t(`${pairKey}.generatedAlt`)}
                     loading="eager"
                     decoding="async"
+                    fetchPriority="high"
+                    data-active={!isOriginal}
+                    aria-hidden={isOriginal}
                   />
-                  <div
-                    key={`sheen-${generation}-${isOriginal ? "before" : "after"}`}
-                    className="editorial-figure__sheen"
-                    aria-hidden="true"
+                  <img
+                    className="editorial-figure__photo editorial-figure__photo--original"
+                    src={pair.original}
+                    alt={t(`${pairKey}.originalAlt`)}
+                    loading="eager"
+                    decoding="async"
+                    data-active={isOriginal}
+                    aria-hidden={!isOriginal}
                   />
+                  {animateGenerated ? (
+                    <div
+                      className="editorial-figure__sheen editorial-figure__sheen--auto"
+                      aria-hidden="true"
+                    />
+                  ) : null}
                 </div>
               </div>
               <button
