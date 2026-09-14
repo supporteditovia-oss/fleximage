@@ -73,7 +73,7 @@ export type LandingEditorialPair = {
   originalAlt: string;
 };
 
-/** 4 paires uniques — jamais de doublon dans la grille. */
+/** 4 paires premium landing-editorial. */
 export const LANDING_EDITORIAL_PAIRS: LandingEditorialPair[] = [
   {
     id: "resort-celebrity",
@@ -109,8 +109,38 @@ export const LANDING_EDITORIAL_PAIRS: LandingEditorialPair[] = [
   },
 ];
 
-/** @deprecated alias */
-export const LANDING_EDITORIAL_POOL = LANDING_EDITORIAL_PAIRS;
+function compareToEditorial(pair: LandingComparePair): LandingEditorialPair {
+  return {
+    id: pair.id,
+    label: "Lifestyle",
+    original: pair.beforeSrc,
+    generated: pair.afterSrc,
+    originalAlt: pair.beforeAlt,
+    generatedAlt: pair.afterAlt,
+  };
+}
+
+/** Pool complet — editorial + transformations v2-compare (9 paires). */
+export const LANDING_EDITORIAL_POOL: LandingEditorialPair[] = [
+  ...LANDING_EDITORIAL_PAIRS,
+  ...LANDING_V2_COMPARE_PAIRS.map(compareToEditorial),
+];
+
+function pickUniquePoolIndices(
+  count: number,
+  exclude: ReadonlySet<number> = new Set(),
+): number[] {
+  const poolSize = LANDING_EDITORIAL_POOL.length;
+  const candidates: number[] = [];
+  for (let i = 0; i < poolSize; i += 1) {
+    if (!exclude.has(i)) candidates.push(i);
+  }
+  const source =
+    candidates.length >= count
+      ? candidates
+      : Array.from({ length: poolSize }, (_, i) => i);
+  return shuffleInPlace([...source]).slice(0, count);
+}
 
 export type LandingEditorialTile = LandingEditorialPair;
 
@@ -129,9 +159,7 @@ export type LandingEditorialSlot = {
 };
 
 export function createLandingEditorialSlots(): LandingEditorialSlot[] {
-  const shuffledIndices = shuffleInPlace(
-    LANDING_EDITORIAL_PAIRS.map((_, index) => index),
-  );
+  const shuffledIndices = pickUniquePoolIndices(EDITORIAL_GRID_POSITIONS.length);
   return EDITORIAL_GRID_POSITIONS.map((position, index) => ({
     position,
     pairIndex: shuffledIndices[index] ?? index,
@@ -139,18 +167,23 @@ export function createLandingEditorialSlots(): LandingEditorialSlot[] {
   }));
 }
 
-/** Toutes les tuiles avancent d’une paire en même temps (permutation cyclique). */
+/** Nouvelles paires aléatoires — évite de répéter le même set à chaque rotation. */
 export function rotateEditorialPairIndices(indices: number[]): number[] {
-  const len = LANDING_EDITORIAL_PAIRS.length;
-  return indices.map((pairIndex) => (pairIndex + 1) % len);
+  const exclude = new Set(indices);
+  const next = pickUniquePoolIndices(indices.length, exclude);
+  const unchanged =
+    next.length === indices.length &&
+    next.every((value, index) => value === indices[index]);
+  if (!unchanged && new Set(next).size === next.length) {
+    return next;
+  }
+  return pickUniquePoolIndices(indices.length);
 }
 
 export function editorialPairAt(pairIndex: number): LandingEditorialPair {
-  const safe =
-    ((pairIndex % LANDING_EDITORIAL_PAIRS.length) +
-      LANDING_EDITORIAL_PAIRS.length) %
-    LANDING_EDITORIAL_PAIRS.length;
-  return LANDING_EDITORIAL_PAIRS[safe]!;
+  const len = LANDING_EDITORIAL_POOL.length;
+  const safe = ((pairIndex % len) + len) % len;
+  return LANDING_EDITORIAL_POOL[safe]!;
 }
 
 /** @deprecated */
