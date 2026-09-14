@@ -4,7 +4,9 @@
   "installCommand": "npm install",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
-  "ignoreCommand": "bash -c 'echo \"Auto-deploy Git désactivé — npm run vercel:deploy quand c\\047est prêt\"; exit 1'",
+  "git": {
+    "deploymentEnabled": false
+  },
   "headers": [
     {
       "source": "/(.*)",
