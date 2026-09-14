@@ -3,6 +3,7 @@ import {
   createLandingEditorialSlots,
   editorialPairAt,
   LANDING_EDITORIAL_PAIRS,
+  LANDING_EDITORIAL_POOL,
   LANDING_V2_COMPARE_PAIRS,
   pickLandingEditorialGrid,
   rotateEditorialPairIndices,
@@ -48,22 +49,31 @@ describe("landing editorial synchronized rotation", () => {
     expect(new Set(indices).size).toBe(4);
   });
 
-  it("rotates all pair indices together without duplicates", () => {
+  it("rotates to new random indices without duplicates", () => {
     const initial = [0, 1, 2, 3];
     const rotated = rotateEditorialPairIndices(initial);
-    expect(rotated).toEqual([1, 2, 3, 0]);
+    expect(rotated).toHaveLength(4);
     expect(new Set(rotated).size).toBe(4);
   });
 
-  it("changes assignment on each synchronized rotation", () => {
+  it("can pick indices outside the initial editorial set", () => {
     const initial = [0, 1, 2, 3];
-    const rotated = rotateEditorialPairIndices(initial);
-    expect(rotated.join(",")).not.toBe(initial.join(","));
-    expect(rotateEditorialPairIndices(rotated)).toEqual([2, 3, 0, 1]);
+    let sawExtended = false;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const rotated = rotateEditorialPairIndices(initial);
+      if (rotated.some((index) => index >= LANDING_EDITORIAL_PAIRS.length)) {
+        sawExtended = true;
+        break;
+      }
+    }
+    expect(sawExtended).toBe(true);
   });
 
-  it("returns a pair for every index", () => {
-    for (let i = 0; i < LANDING_EDITORIAL_PAIRS.length; i += 1) {
+  it("returns a pair for every pool index", () => {
+    expect(LANDING_EDITORIAL_POOL.length).toBeGreaterThan(
+      LANDING_EDITORIAL_PAIRS.length,
+    );
+    for (let i = 0; i < LANDING_EDITORIAL_POOL.length; i += 1) {
       expect(editorialPairAt(i).id).toBeTruthy();
     }
   });
