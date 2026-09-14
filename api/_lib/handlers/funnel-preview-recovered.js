@@ -1,4 +1,4 @@
-const { requireUser, sendError } = require("../_lib/user-auth");
+const { requireUser, sendError } = require("../user-auth");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {

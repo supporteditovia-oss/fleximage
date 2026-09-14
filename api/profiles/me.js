@@ -1,4 +1,5 @@
 const { createClient } = require("@supabase/supabase-js");
+const profileOnboardingQuiz = require("../_lib/handlers/profile-onboarding-quiz");
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -42,6 +43,14 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;
+  }
+
+  const profileRoute =
+    req.query?.__profile === "onboarding-quiz" ||
+    String(req.url || "").includes("onboarding-quiz");
+
+  if (profileRoute) {
+    return profileOnboardingQuiz(req, res);
   }
 
   try {

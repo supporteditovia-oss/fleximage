@@ -4,6 +4,7 @@ const creditsHandler = require("./admin/credits");
 const settingsHandler = require("./admin/settings");
 const funnelHandler = require("./_lib/handlers/admin-funnel");
 const commandCenterHandler = require("./_lib/handlers/admin-command-center");
+const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__adminPath;
@@ -68,6 +69,11 @@ module.exports = async function handler(req, res) {
   // GET /api/admin/command-center
   if (parts[0] === "command-center" && !parts[1]) {
     return commandCenterHandler(req, res);
+  }
+
+  // GET|POST /api/cron/preview-expiry-reminders (routé via rewrite Hobby ≤12 fonctions)
+  if (parts[0] === "cron" && parts[1] === "preview-expiry-reminders" && !parts[2]) {
+    return cronPreviewExpiryReminders(req, res);
   }
 
   res.status(404).json({

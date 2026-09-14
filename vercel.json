@@ -59,6 +59,22 @@
       "destination": "/api/larps/voice/landing-demo?slug=:slug&media=1"
     },
     {
+      "source": "/api/funnel/(.*)",
+      "destination": "/api/funnel-router?__funnelPath=$1"
+    },
+    {
+      "source": "/api/public/trust-stats",
+      "destination": "/api/v2-access?__public=trust-stats"
+    },
+    {
+      "source": "/api/profile/onboarding-quiz",
+      "destination": "/api/profiles/me?__profile=onboarding-quiz"
+    },
+    {
+      "source": "/api/cron/preview-expiry-reminders",
+      "destination": "/api/admin-router?__adminPath=cron/preview-expiry-reminders"
+    },
+    {
       "source": "/api/larps/(.*)",
       "destination": "/api/larps-router?__larpsPath=$1"
     },

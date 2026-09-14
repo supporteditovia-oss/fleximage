@@ -1,4 +1,4 @@
-const { getTrustStatsPayload } = require("../_lib/trust-stats");
+const { getTrustStatsPayload } = require("../trust-stats");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {

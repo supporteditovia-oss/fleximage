@@ -1,5 +1,5 @@
-const { getSupabaseAdmin } = require("../_lib/user-auth");
-const { sendPreviewExpiryEmail } = require("../_lib/preview-expiry-email");
+const { getSupabaseAdmin } = require("../user-auth");
+const { sendPreviewExpiryEmail } = require("../preview-expiry-email");
 
 function assertCronAuth(req) {
   const secret = process.env.CRON_SECRET?.trim();

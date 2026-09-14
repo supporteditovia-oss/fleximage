@@ -3,7 +3,7 @@ const {
   isValidSessionId,
   isValidStep,
   recordFunnelEvent,
-} = require("../_lib/funnel");
+} = require("../funnel");
 
 function readBody(req) {
   if (!req.body) return {};

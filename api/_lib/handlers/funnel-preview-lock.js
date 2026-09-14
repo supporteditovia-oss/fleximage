@@ -1,4 +1,4 @@
-const { requireUser, readBody, sendError } = require("../_lib/user-auth");
+const { requireUser, readBody, sendError } = require("../user-auth");
 
 const PAYWALL_TTL_MS = 15 * 60 * 1000;
 

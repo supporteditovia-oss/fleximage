@@ -4640,7 +4640,7 @@ export async function registerRoutes(
   // Dev parity with Vercel serverless handlers
   app.post("/api/funnel/preview-lock", requireAuth, async (req, res) => {
     try {
-      const handler = (await import("../../api/funnel/preview-lock.js")).default;
+      const handler = (await import("../../api/_lib/handlers/funnel-preview-lock.js")).default;
       await handler(req, res);
     } catch (error: any) {
       logger.error({ err: error }, "funnel preview-lock error");
@@ -4650,7 +4650,7 @@ export async function registerRoutes(
 
   app.post("/api/funnel/preview-recovered", requireAuth, async (req, res) => {
     try {
-      const handler = (await import("../../api/funnel/preview-recovered.js")).default;
+      const handler = (await import("../../api/_lib/handlers/funnel-preview-recovered.js")).default;
       await handler(req, res);
     } catch (error: any) {
       logger.error({ err: error }, "funnel preview-recovered error");
@@ -4660,7 +4660,7 @@ export async function registerRoutes(
 
   app.all("/api/profile/onboarding-quiz", requireAuth, async (req, res) => {
     try {
-      const handler = (await import("../../api/profile/onboarding-quiz.js")).default;
+      const handler = (await import("../../api/_lib/handlers/profile-onboarding-quiz.js")).default;
       await handler(req, res);
     } catch (error: any) {
       logger.error({ err: error }, "profile onboarding-quiz error");
@@ -4670,7 +4670,7 @@ export async function registerRoutes(
 
   app.all("/api/cron/preview-expiry-reminders", async (req, res) => {
     try {
-      const handler = (await import("../../api/cron/preview-expiry-reminders.js")).default;
+      const handler = (await import("../../api/_lib/handlers/cron-preview-expiry-reminders.js")).default;
       await handler(req, res);
     } catch (error: any) {
       logger.error({ err: error }, "preview-expiry-reminders cron error");

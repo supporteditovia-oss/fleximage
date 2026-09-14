@@ -1,4 +1,4 @@
-const { requireUser, readBody, sendError } = require("../_lib/user-auth");
+const { requireUser, readBody, sendError } = require("../user-auth");
 
 const GOALS = new Set(["social", "fun", "pro"]);
 const VIBES = new Set([

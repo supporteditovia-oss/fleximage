@@ -1,6 +1,7 @@
 const { getClientIp } = require("./_lib/client-ip");
 const { isIpAllowedForV2 } = require("./_lib/v2-gate");
 const { requireUser, sendError } = require("./_lib/user-auth");
+const publicTrustStats = require("./_lib/handlers/public-trust-stats");
 
 /**
  * GET /api/v2-access
@@ -11,6 +12,14 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;
+  }
+
+  const publicRoute =
+    req.query?.__public === "trust-stats" ||
+    String(req.url || "").includes("trust-stats");
+
+  if (publicRoute) {
+    return publicTrustStats(req, res);
   }
 
   if (req.method !== "GET") {
