@@ -33,21 +33,27 @@
           var q = (params.get("lang") || params.get("locale") || "").toLowerCase();
           var stored = localStorage.getItem("app_locale");
           var lang = "fr";
-          if (q.indexOf("en") === 0) lang = "en";
+          if (q.indexOf("es") === 0) lang = "es";
+          else if (q.indexOf("en") === 0) lang = "en";
           else if (q.indexOf("fr") === 0) lang = "fr";
-          else if (stored === "en" || stored === "fr") lang = stored;
+          else if (stored === "es" || stored === "en" || stored === "fr") lang = stored;
           else {
             var nav = String(navigator.language || "").toLowerCase();
-            if (nav.indexOf("fr") === 0) lang = "fr";
+            if (nav.indexOf("es") === 0) lang = "es";
+            else if (nav.indexOf("fr") === 0) lang = "fr";
             else if (nav.indexOf("en") === 0) lang = "en";
             else {
               var tz = "";
               try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
-              if (tz.indexOf("America/") === 0) lang = "en";
+              if (tz.indexOf("Europe/Madrid") === 0 || tz.indexOf("Atlantic/Canary") === 0) lang = "es";
+              else if (tz.indexOf("America/") === 0) lang = "en";
             }
           }
           document.documentElement.lang = lang;
-          try { localStorage.setItem("app_locale", lang); } catch (e) {}
+          try {
+            localStorage.setItem("app_locale", lang);
+            if (q) localStorage.setItem("luxeflexia:locale_chosen", "1");
+          } catch (e) {}
           window.$crisp = window.$crisp || [];
           window.$crisp.push(["set", "session:locale", lang]);
           window.$crisp.push(["set", "user:language", lang]);
