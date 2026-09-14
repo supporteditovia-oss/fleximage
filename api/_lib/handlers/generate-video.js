@@ -15,8 +15,10 @@ const {
 const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
+  VIDEO_I2V_OUTPUT_DURATION_SEC,
   validateSourceVideoDuration,
 } = require("../video-limits");
+const { resolveI2VVoice } = require("../video-voice-resolve");
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
@@ -210,10 +212,11 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
 
   const voiceDurationSec =
     body.source_video_duration_sec != null
-      ? Math.min(8, Math.max(3, Number(body.source_video_duration_sec) || 5))
-      : body.duration_sec === 10
-        ? 10
-        : 5;
+      ? Math.min(
+          VIDEO_V2V_MAX_DURATION_SEC,
+          Math.max(3, Number(body.source_video_duration_sec) || 5),
+        )
+      : VIDEO_I2V_OUTPUT_DURATION_SEC;
   const voiceTextCheck = validateVoiceText(body.voice_text, voiceDurationSec);
   if (!voiceTextCheck.ok) {
     throw Object.assign(new Error(voiceTextCheck.reason), {
@@ -316,7 +319,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const durationSec = body.duration_sec === 10 ? 10 : 5;
+    const durationSec = VIDEO_I2V_OUTPUT_DURATION_SEC;
     const aspectRatio =
       body.aspect_ratio === "16:9" || body.aspect_ratio === "1:1"
         ? body.aspect_ratio
@@ -421,6 +424,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    let resolvedI2VVoice = null;
     let sourceAssetUrl;
     let referenceImageUrl = null;
     let v2vProvider = null;
@@ -439,6 +443,13 @@ module.exports = async function handler(req, res) {
         });
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
+        if (voiceEnabled) {
+          resolvedI2VVoice = await resolveI2VVoice({
+            imageUrl: sourceAssetUrl,
+            motionPrompt,
+            voiceText: body.voice_text,
+          });
+        }
         providerPrompt = buildRunwayPrompt({
           motionPrompt,
           cameraMovement: body.camera_movement,
@@ -474,6 +485,9 @@ module.exports = async function handler(req, res) {
       voice_enabled: voiceEnabled,
       voice_mode: voiceEnabled ? body.voice_mode || "catalog" : "none",
       voice_clone_id: voiceClone?.id || null,
+      fish_reference_id: resolvedI2VVoice?.fishReferenceId || null,
+      voice_catalog_name: resolvedI2VVoice?.voiceName || null,
+      voice_gender: resolvedI2VVoice?.gender || null,
       voice_text: voiceEnabled
         ? String(body.voice_text || "").trim()
         : null,
@@ -493,8 +507,7 @@ module.exports = async function handler(req, res) {
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
-      estimated_seconds:
-        workflow === "video_to_video" ? 240 : durationSec === 10 ? 180 : 120,
+      estimated_seconds: workflow === "video_to_video" ? 240 : 120,
     };
 
     const userPrompt =

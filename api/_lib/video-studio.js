@@ -25,7 +25,7 @@ const STYLE_PROMPTS = {
   luxury_ad: "Publicité luxe, éclairage premium, rendu haut de gamme.",
 };
 
-/** 1 vidéo Kling (max 8s, 720p) = prix fixe ; voix IA (I2V) ou voix filmée (V2V) en supplément. */
+/** 1 vidéo Kling (max 5s, 720p) = prix fixe ; voix IA (I2V) ou voix filmée (V2V) en supplément. */
 function computeVideoCreditCost(options) {
   if (options.isAdmin) return 0;
 
