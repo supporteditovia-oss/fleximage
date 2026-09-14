@@ -36,6 +36,7 @@ import { pickVideoPosterUrl } from "@/lib/video-poster";
 import { useTranslation } from "react-i18next";
 import { useStudioPath } from "@/hooks/use-studio-path";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { GenerationExpiryBadge } from "@/components/larp/GenerationExpiryBadge";
 
 function getAssetUrls(assets: string[] | string | null | undefined): string[] {
   if (!assets) return [];
@@ -652,11 +653,19 @@ export default function Historique() {
                 </div>
               ) : null}
 
-              {/* Date — always visible */}
+              {/* Date + rétention 7j */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-3 pb-3 pt-14">
-                <p className="text-xs font-medium text-white/90">
-                  {formatCreatedAt(larp.createdAt, i18n.resolvedLanguage || "fr")}
-                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-xs font-medium text-white/90">
+                    {formatCreatedAt(larp.createdAt, i18n.resolvedLanguage || "fr")}
+                  </p>
+                  <GenerationExpiryBadge
+                    expiresAt={larp.expiresAt}
+                    completedAt={larp.completedAt}
+                    createdAt={larp.createdAt}
+                    locale={i18n.resolvedLanguage || "fr"}
+                  />
+                </div>
               </div>
 
               {!selectionMode ? (

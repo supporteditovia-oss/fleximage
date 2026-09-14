@@ -1,4 +1,5 @@
-const { requireUser, sendError } = require("../user-auth");
+const { requireUser, sendError, getSupabaseAdmin } = require("../user-auth");
+const { purgeGenerationRow } = require("../purge-generation");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -20,16 +21,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Do not require a RETURNING row: PostgREST/RLS can delete successfully
-    // while returning no representation, which previously caused a false 404
-    // after the image was already removed.
-    const { error } = await supabase
+    const { data: row, error: fetchErr } = await supabase
       .from("generations")
-      .delete()
+      .select("id, user_id, input_assets, output_assets, watermarked_assets")
       .eq("id", larpId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (error) throw error;
+    if (fetchErr) throw fetchErr;
+    if (!row) {
+      res.status(200).json({ success: true });
+      return;
+    }
+
+    const admin = getSupabaseAdmin();
+    await purgeGenerationRow(admin, row);
 
     // Idempotent: already-deleted ids still count as success for the client UX.
     res.status(200).json({ success: true });

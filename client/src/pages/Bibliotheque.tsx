@@ -19,6 +19,7 @@ import {
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useLarpHistory } from "@/hooks/use-larps";
+import { GenerationExpiryBadge } from "@/components/larp/GenerationExpiryBadge";
 import { cn } from "@/lib/utils";
 import "./bibliotheque-page.css";
 
@@ -60,6 +61,8 @@ function ImageLibrary() {
           id: item.id,
           url: urls[0],
           createdAt: item.createdAt,
+          completedAt: item.completedAt,
+          expiresAt: item.expiresAt,
           label: item.template?.name ?? "Image IA",
         };
       })
@@ -67,6 +70,8 @@ function ImageLibrary() {
       id: string;
       url: string;
       createdAt: string;
+      completedAt: string | null;
+      expiresAt: string | null;
       label: string;
     }>;
   }, [larps]);
@@ -101,6 +106,12 @@ function ImageLibrary() {
             <p className="bibliotheque-v2__meta-sub">
               {formatCreatedAt(item.createdAt)}
             </p>
+            <GenerationExpiryBadge
+              expiresAt={item.expiresAt}
+              completedAt={item.completedAt}
+              createdAt={item.createdAt}
+              className="mt-1.5 normal-case"
+            />
           </div>
         </article>
       ))}

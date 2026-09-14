@@ -102,6 +102,18 @@ function normalizeHistoryItem(raw: Record<string, unknown>): LarpHistoryItem {
           : null,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
     updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ""),
+    completedAt:
+      raw.completedAt != null
+        ? String(raw.completedAt)
+        : raw.completed_at != null
+          ? String(raw.completed_at)
+          : null,
+    expiresAt:
+      raw.expiresAt != null
+        ? String(raw.expiresAt)
+        : raw.expires_at != null
+          ? String(raw.expires_at)
+          : null,
     template,
   };
 }
@@ -179,6 +191,8 @@ interface LarpHistoryItem {
   aspectRatio: string | null;
   createdAt: string;
   updatedAt: string;
+  completedAt: string | null;
+  expiresAt: string | null;
   template: { name: string; nameEn?: string | null; category: string | null } | null;
 }
 

@@ -259,6 +259,7 @@ export const generations = pgTable("generations", {
     .defaultNow()
     .notNull(),
   completed_at: timestamp("completed_at", { withTimezone: true }),
+  expires_at: timestamp("expires_at", { withTimezone: true }),
 });
 
 export type Generation = typeof generations.$inferSelect;
