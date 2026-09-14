@@ -82,7 +82,7 @@
   "crons": [
     {
       "path": "/api/cron/preview-expiry-reminders",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 9 * * *"
     }
   ],
   "redirects": [
