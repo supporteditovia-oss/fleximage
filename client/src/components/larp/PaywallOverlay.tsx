@@ -18,6 +18,10 @@ import { useProfile } from "@/hooks/use-supabase";
 import { useToast } from "@/hooks/use-toast";
 import { usePaywallPlanCards } from "@/lib/paywall-plans";
 import {
+  persistFunnelDraftBeforeCheckout,
+  resolveCheckoutSuccessPath,
+} from "@/lib/funnel-checkout";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -103,11 +107,16 @@ export function PaywallOverlay({
         source: "paywall_overlay",
         plan: selectedPlan,
       });
+      await persistFunnelDraftBeforeCheckout({
+        imageUrl,
+        generationMode,
+      });
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
         body: JSON.stringify({
           plan: selectedPlan,
           funnel_session_id: getFunnelSessionId(),
+          success_path: resolveCheckoutSuccessPath(),
           locale: billingLocaleParam(i18n.language),
         }),
       });

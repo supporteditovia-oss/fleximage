@@ -19,6 +19,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { useStudioPath } from "@/hooks/use-studio-path";
 import { VideoResultPlayer } from "@/components/larp/VideoResultPlayer";
+import { BeforeAfterShareButton } from "@/components/larp/BeforeAfterShareButton";
+import { getPaywallImage } from "@/lib/paywall-image";
+import {
+  hasFunnelDraftForPostPayment,
+  resolveCheckoutSuccessPath,
+} from "@/lib/funnel-checkout";
+import { getPendingLarp } from "@/lib/pending-larp";
 import "./postpay-pages.css";
 
 interface ResultPayload {
@@ -209,6 +216,18 @@ export default function Resultat() {
             void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
               trackFunnelStep("subscribed", { source: "resultat_checkout" });
             });
+
+            const pending = await getPendingLarp();
+            if (
+              !cancelled &&
+              (hasFunnelDraftForPostPayment() || pending)
+            ) {
+              const studioPath = resolveCheckoutSuccessPath();
+              window.location.replace(
+                `${studioPath}?checkout=success&session_id=${encodeURIComponent(sessionId)}`,
+              );
+              return;
+            }
           }
           await queryClient.invalidateQueries({ queryKey: ["profile"] });
           await queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
@@ -371,6 +390,7 @@ export default function Resultat() {
   }
 
   const mediaUrl = result.resultUrls[0];
+  const beforeUrl = getPaywallImage();
 
   return (
     <div className="lx-postpay mx-auto flex w-full max-w-xl flex-col items-center gap-6 py-4 md:py-8">
@@ -406,27 +426,41 @@ export default function Resultat() {
         </div>
       </div>
 
-      <div className="flex w-full max-w-[min(92vw,420px)] flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => void handleDownload()}
-          disabled={downloading}
-          className="lx-postpay__btn-gold inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm disabled:opacity-70"
-        >
-          {downloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4" />
-          )}
-          {t("result.downloadImage")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setLocation(studioPath)}
-          className="lx-postpay__btn-outline inline-flex h-12 flex-1 items-center justify-center rounded-lg px-4 text-sm"
-        >
-          {t("welcome.createAnother")}
-        </button>
+      <div className="flex w-full max-w-[min(92vw,420px)] flex-col gap-3">
+        {result.resultType === "image" && beforeUrl ? (
+          <div className="flex items-center justify-center gap-3">
+            <BeforeAfterShareButton
+              beforeUrl={beforeUrl}
+              afterUrl={mediaUrl}
+              larpId={result.larpId}
+            />
+            <p className="max-w-[14rem] text-center text-xs font-medium text-[var(--lx-muted)]">
+              {t("result.beforeAfterShareHint")}
+            </p>
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={downloading}
+            className="lx-postpay__btn-gold inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm disabled:opacity-70"
+          >
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {t("result.downloadImage")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLocation(studioPath)}
+            className="lx-postpay__btn-outline inline-flex h-12 flex-1 items-center justify-center rounded-lg px-4 text-sm"
+          >
+            {t("welcome.createAnother")}
+          </button>
+        </div>
       </div>
     </div>
   );

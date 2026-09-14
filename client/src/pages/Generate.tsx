@@ -85,6 +85,10 @@ import {
   isOnboardingQuizComplete,
   saveOnboardingQuiz,
 } from "@/lib/onboarding-quiz";
+import {
+  clearFunnelDraftAfterPayment,
+  resolveFunnelPromptForGeneration,
+} from "@/lib/funnel-checkout";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -215,9 +219,7 @@ export default function Generate({
       clearPaywalledResult();
       setSavedPaywall(null);
       clearFakePaywallReached();
-      clearPaywallImage();
-      clearPaywallPrompt();
-      clearPaywallExpiry();
+      // Conserve image/prompt paywall jusqu'à la génération HD réussie.
     }
     if (isPackSuccess) {
       setPendingLoading(true);
@@ -225,8 +227,72 @@ export default function Generate({
     zeroCreditsDismissedRef.current = false;
     setShowZeroCreditsModal(false);
 
+    let cancelled = false;
+
+    const restoreDraftForAutoGenerate = async (): Promise<boolean> => {
+      try {
+        const pending = await getPendingLarp();
+        if (pending) {
+          console.log("[Checkout] Restoring pending LARP draft:", {
+            prompt: pending.prompt?.slice(0, 40),
+            images: pending.images.length,
+            templateId: pending.templateId,
+          });
+          setGenerationMode(
+            pending.generationMode === "video" ? "video" : "image",
+          );
+          setPendingTemplateId(pending.templateId ?? null);
+          if (pending.prompt) {
+            setPrompt(pending.prompt);
+            savePaywallPrompt(pending.prompt);
+          }
+          if (!pending.templateId) {
+            if (pending.images.length > 0) {
+              const restored = pending.images.map((file) => ({
+                url: URL.createObjectURL(file),
+                file,
+              }));
+              setImages(restored);
+              void savePaywallImage(pending.images[0]);
+            } else {
+              const paywallPreview = getPaywallImage();
+              const file = paywallPreview
+                ? dataUrlToFile(paywallPreview)
+                : null;
+              if (file && paywallPreview) {
+                setImages([{ url: paywallPreview, file }]);
+              }
+            }
+          }
+          return true;
+        }
+
+        const paywallPreview = getPaywallImage();
+        if (!paywallPreview) {
+          console.log("[Checkout] No funnel draft to restore");
+          return false;
+        }
+
+        const effectivePrompt = resolveFunnelPromptForGeneration();
+        setGenerationMode("image");
+        if (effectivePrompt) {
+          setPrompt(effectivePrompt);
+          savePaywallPrompt(effectivePrompt);
+        }
+        const file = dataUrlToFile(paywallPreview);
+        if (file) {
+          setImages([{ url: paywallPreview, file }]);
+        }
+        return true;
+      } catch (err) {
+        console.error("[Checkout] Failed to restore funnel draft:", err);
+        return false;
+      }
+    };
+
     const waitForWebhookActivation = async () => {
       for (let attempt = 0; attempt < 10; attempt += 1) {
+        if (cancelled) return { ok: false, credits: 0 };
         const res = await authFetch("/api/stripe/verify-session", {
           method: "POST",
           body: checkoutSessionId
@@ -236,7 +302,6 @@ export default function Generate({
         const data = await res.json();
         console.log("[Checkout] verify-session result:", data);
         if (isPackSuccess) {
-          // Pack: credits granted (webhook or reconcile). Don't require new sub.
           if (
             data.packGranted ||
             data.reconcile?.ok ||
@@ -252,7 +317,15 @@ export default function Generate({
       return { ok: false, credits: 0 };
     };
 
-    const onVerified = async (result: { ok: boolean; credits: number }) => {
+    const run = async () => {
+      if (isSubSuccess && !paywalled) {
+        setPendingLoading(true);
+        await restoreDraftForAutoGenerate();
+      }
+
+      const result = await waitForWebhookActivation();
+      if (cancelled) return;
+
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
       await refetchEligibility();
@@ -282,48 +355,52 @@ export default function Generate({
 
       if (paywalled) {
         setUnlockingLarp(true);
-        authFetch(
-          `/api/larps/${encodeURIComponent(paywalled.taskId)}/status`,
-        )
-          .then((r) => r.json())
-          .then((statusData) => {
-            if (
-              statusData.status === "success" &&
-              statusData.resultUrls?.length
-            ) {
-              setUnlockedLarp({
-                resultUrls: statusData.resultUrls,
-                larpId: statusData.larpId,
-                resultType:
-                  statusData.resultType === "video" ? "video" : generationMode,
-              });
-            } else {
-              toast({
-                title: t("settings.subscription.title"),
-                description: t("settings.subscription.manage"),
-              });
-            }
-          })
-          .catch(() => {
+        try {
+          const statusRes = await authFetch(
+            `/api/larps/${encodeURIComponent(paywalled.taskId)}/status`,
+          );
+          const statusData = await statusRes.json();
+          if (
+            statusData.status === "success" &&
+            statusData.resultUrls?.length
+          ) {
+            clearFunnelDraftAfterPayment();
+            setUnlockedLarp({
+              resultUrls: statusData.resultUrls,
+              larpId: statusData.larpId,
+              resultType:
+                statusData.resultType === "video" ? "video" : generationMode,
+            });
+          } else {
             toast({
               title: t("settings.subscription.title"),
               description: t("settings.subscription.manage"),
             });
-          })
-          .finally(() => setUnlockingLarp(false));
-      } else {
-        console.log("[Checkout] Credits verified, triggering auto-generate");
-        setAutoGenerateReady(true);
+          }
+        } catch {
+          toast({
+            title: t("settings.subscription.title"),
+            description: t("settings.subscription.manage"),
+          });
+        } finally {
+          setUnlockingLarp(false);
+        }
+        return;
       }
+
+      console.log("[Checkout] Subscription active — triggering auto-generate");
+      setAutoGenerateReady(true);
     };
 
-    waitForWebhookActivation()
-      .then((result) => onVerified(result))
-      .catch((err) => {
-        console.error("[Checkout] verify-session error:", err);
-        onVerified({ ok: false, credits: 0 });
-      });
-  }, []);
+    void run().catch((err) => {
+      console.error("[Checkout] post-payment flow error:", err);
+      setPendingLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [basePath, queryClient, refetchEligibility, t, toast, generationMode]);
 
   // ── Re-show saved paywall for non-subscribers ───────────────
   useEffect(() => {
@@ -545,95 +622,6 @@ export default function Generate({
     taskId,
     unlockingLarp,
   ]);
-
-  // ── Restore pending LARP only after Stripe checkout return ─
-  useEffect(() => {
-    if (!isReturningFromCheckout) return;
-
-    let cancelled = false;
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        console.warn("[Generate] Pending LARP timeout — forcing pendingLoading=false");
-        setPendingLoading(false);
-      }
-    }, 5000);
-
-    const resumeFromLocalStorage = () => {
-      const resume = getOnboardingResume();
-      const paywallPreview = getPaywallImage();
-      if (!resume || resume.generationMode !== "image" || !paywallPreview) {
-        console.log("[Generate] No pending LARP / onboarding resume found");
-        setPendingLoading(false);
-        return;
-      }
-
-      console.log("[Generate] Resuming onboarding from localStorage (checkout)");
-      setPendingLoading(true);
-      setGenerationMode("image");
-      if (resume.prompt) {
-        setPrompt(resume.prompt);
-        savePaywallPrompt(resume.prompt);
-      }
-
-      const file = dataUrlToFile(paywallPreview);
-      if (file) {
-        setImages([{ url: paywallPreview, file }]);
-      }
-      setAutoGenerateReady(true);
-    };
-
-    getPendingLarp()
-      .then((pending) => {
-        if (cancelled) return;
-        if (!pending) {
-          resumeFromLocalStorage();
-          return;
-        }
-        console.log("[Generate] Pending LARP found for checkout:", {
-          prompt: pending.prompt,
-          images: pending.images.length,
-          generationMode: pending.generationMode ?? "image",
-          templateId: pending.templateId ?? null,
-        });
-        setPendingLoading(true);
-        setGenerationMode("image");
-        setPendingTemplateId(pending.templateId ?? null);
-        if (pending.prompt) setPrompt(pending.prompt);
-        if (!pending.templateId) {
-          if (pending.images.length > 0) {
-            const restored = pending.images.map((file) => ({
-              url: URL.createObjectURL(file),
-              file,
-            }));
-            setImages(restored);
-            void savePaywallImage(pending.images[0]);
-          } else {
-            const paywallPreview = getPaywallImage();
-            const file = paywallPreview ? dataUrlToFile(paywallPreview) : null;
-            if (file && paywallPreview) {
-              setImages([{ url: paywallPreview, file }]);
-            }
-          }
-        }
-        markOnboardingResume({
-          prompt: pending.prompt || "",
-          generationMode: pending.generationMode === "video" ? "video" : "image",
-        });
-        if (pending.prompt) {
-          savePaywallPrompt(pending.prompt);
-        }
-        console.log("[Generate] Returning from checkout, keeping loader while waiting for verify-session");
-      })
-      .catch((err) => {
-        console.error("[Generate] getPendingLarp error:", err);
-        if (!cancelled) resumeFromLocalStorage();
-      });
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [isReturningFromCheckout]);
 
   useEffect(() => {
     if (!pendingTemplateId || selectedTemplate || !templatesList) return;
@@ -1396,7 +1384,8 @@ export default function Generate({
       Boolean(pendingTemplateId || selectedTemplate) ||
       prompt.trim().length > 0 ||
       images.some((img) => img !== null) ||
-      Boolean(getPaywallImage());
+      Boolean(getPaywallImage()) ||
+      Boolean(getPaywallPrompt()?.trim());
     if (!canAutoGenerate) {
       console.log("[Generate] Nothing to auto-generate, skipping");
       setPendingLoading(false);
@@ -1466,6 +1455,9 @@ export default function Generate({
       onResultVisible={() => {
         setGenerationResultVisible(true);
         reshuffleOutfitCatalog();
+        if (isReturningFromCheckout) {
+          clearFunnelDraftAfterPayment();
+        }
       }}
       resultType={generationMode}
       referenceImageCount={images.filter((img) => img !== null).length}
