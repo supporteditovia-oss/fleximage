@@ -129,6 +129,11 @@ type VoiceStudioMockProps = {
 
 export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const { t, i18n } = useTranslation();
+  const vsg = useCallback(
+    (key: string, fallback: string, options?: Record<string, unknown>) =>
+      guestFunnel ? t(`landing:voiceStudioGuest.${key}`, options) : fallback,
+    [guestFunnel, t],
+  );
   const fileInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const recordTimerRef = useRef<number | null>(null);
@@ -238,26 +243,47 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
   const generateBlockReason = (() => {
     if (isGenerating) return null;
-    if (!text.trim()) return "Écris un texte à faire dire.";
+    if (!text.trim()) {
+      return vsg("blockNoText", "Écris un texte à faire dire.");
+    }
     if (activeVoice && !creatingOwnVoice) return null;
     if (hasPendingCapture) return null;
     if (voiceName.trim().length < 2) {
-      return "Donne un nom à ta voix (2 lettres minimum).";
+      return vsg("blockVoiceName", "Donne un nom à ta voix (2 lettres minimum).");
     }
-    if (isDecoding) return "Préparation de l'extrait audio…";
+    if (isDecoding) {
+      return vsg("blockDecoding", "Préparation de l'extrait audio…");
+    }
     if (importLabel && !voiceClip) {
-      return "Fichier en cours de lecture — patiente quelques secondes.";
+      return vsg(
+        "blockFilePlaying",
+        "Fichier en cours de lecture — patiente quelques secondes.",
+      );
     }
     if (voiceClip && voiceClip.durationSec < MIN_CLIP_SEC) {
-      return `Extrait trop court : minimum ${MIN_CLIP_SEC} secondes. Élargis la sélection.`;
+      return vsg(
+        "blockClipTooShort",
+        `Extrait trop court : minimum ${MIN_CLIP_SEC} secondes. Élargis la sélection.`,
+        { min: MIN_CLIP_SEC },
+      );
     }
     if (voiceClip && voiceClip.durationSec > MAX_CLIP_SEC + 0.25) {
-      return `Extrait trop long : maximum ${MAX_CLIP_SEC} secondes. Resserre les bandes blanches.`;
+      return vsg(
+        "blockClipTooLong",
+        `Extrait trop long : maximum ${MAX_CLIP_SEC} secondes. Resserre les bandes blanches.`,
+        { max: MAX_CLIP_SEC },
+      );
     }
     if (!importLabel && recordState !== "ready") {
-      return "Enregistre ou importe un extrait vocal (~20 s idéal, max 25 s).";
+      return vsg(
+        "blockNeedCapture",
+        "Enregistre ou importe un extrait vocal (~20 s idéal, max 25 s).",
+      );
     }
-    return "Importe ~20 s de voix seule (max 25 s, sans musique) pour un clone réaliste.";
+    return vsg(
+      "blockNeedImport",
+      "Importe ~20 s de voix seule (max 25 s, sans musique) pour un clone réaliste.",
+    );
   })();
 
   const canGenerate = Boolean(
@@ -1102,22 +1128,28 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
           {showLockedVoiceName ? (
             <ol className="vs-steps" aria-hidden>
-              <li className="is-done">Voix</li>
-              <li className={text.trim() ? "is-done" : undefined}>Générer</li>
+              <li className="is-done">{vsg("stepVoice", "Voix")}</li>
+              <li className={text.trim() ? "is-done" : undefined}>
+                {vsg("stepGenerate", "Générer")}
+              </li>
             </ol>
           ) : (
             <ol className="vs-steps" aria-hidden>
               <li className={voiceName.trim() ? "is-done" : undefined}>
-                Nommer
+                {vsg("stepName", "Nommer")}
               </li>
-              <li className={clipReady ? "is-done" : undefined}>Capturer</li>
-              <li className={text.trim() ? "is-done" : undefined}>Générer</li>
+              <li className={clipReady ? "is-done" : undefined}>
+                {vsg("stepCapture", "Capturer")}
+              </li>
+              <li className={text.trim() ? "is-done" : undefined}>
+                {vsg("stepGenerate", "Générer")}
+              </li>
             </ol>
           )}
 
           {showLockedVoiceName && activeVoice ? (
             <>
-              <span className="vs-label">Voix sélectionnée</span>
+              <span className="vs-label">{vsg("selectedVoice", "Voix sélectionnée")}</span>
               <div className="vs-input vs-input--locked" aria-readonly="true">
                 {activeVoice.name}
               </div>
@@ -1125,14 +1157,14 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           ) : (
             <>
               <label className="vs-label" htmlFor="vs-voice-name">
-                Nom de ta voix
+                {vsg("voiceNameLabel", "Nom de ta voix")}
               </label>
               <input
                 id="vs-voice-name"
                 className="vs-input"
                 type="text"
                 maxLength={40}
-                placeholder="Ex. Voix soirée, Voix stories…"
+                placeholder={vsg("voiceNamePlaceholder", "Ex. Voix soirée, Voix stories…")}
                 value={voiceName}
                 onChange={(e) => setVoiceName(e.target.value)}
               />
@@ -1141,7 +1173,11 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
           {!showLockedVoiceName ? (
             <>
-              <div className="vs-mode-toggle" role="tablist" aria-label="Source audio">
+              <div
+                className="vs-mode-toggle"
+                role="tablist"
+                aria-label={vsg("audioSourceAria", "Source audio")}
+              >
             <button
               type="button"
               role="tab"
@@ -1153,7 +1189,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               }}
             >
               <Mic className="h-3.5 w-3.5" aria-hidden />
-              Micro
+              {vsg("micro", "Micro")}
             </button>
             <button
               type="button"
@@ -1167,7 +1203,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               }}
             >
               <CloudUpload className="h-3.5 w-3.5" aria-hidden />
-              Fichier
+              {vsg("file", "Fichier")}
             </button>
           </div>
 
@@ -1180,7 +1216,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   onClick={() => void startRecording()}
                 >
                   <Mic className="h-5 w-5" aria-hidden />
-                  Lancer l’enregistrement
+                  {vsg("startRecording", "Lancer l'enregistrement")}
                 </button>
               )}
               {recordState === "recording" && (
@@ -1190,7 +1226,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   onClick={stopRecording}
                 >
                   <Square className="h-4 w-4" aria-hidden />
-                  Stop · {formatTimer(recordMs)} / 0:25
+                  {vsg("stopRecording", `Stop · ${formatTimer(recordMs)} / 0:25`, {
+                    timer: formatTimer(recordMs),
+                  })}
                 </button>
               )}
               {recordState === "ready" && voiceClip && (
@@ -1198,22 +1236,19 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   <div className="vs-capture__ready-main">
                     <Check className="h-4 w-4" aria-hidden />
                     <div>
-                      <strong>Enregistrement prêt</strong>
+                      <strong>{vsg("recordingReady", "Enregistrement prêt")}</strong>
                       <span>{formatClipTime(voiceClip.durationSec)} max</span>
                     </div>
                   </div>
                   <button type="button" className="vs-link" onClick={resetCapture}>
-                    Refaire
+                    {vsg("redo", "Refaire")}
                   </button>
                 </div>
               )}
               {recordState === "ready" && voiceClip ? (
                 <VoiceClipPreview clip={voiceClip} />
               ) : null}
-              <p className="vs-help">
-                Interview idéale : <strong>15–20 s</strong> où il parle seul, sans musique.
-                Évite le débruitage agressif — garde le grain naturel de la voix.
-              </p>
+              <p className="vs-help">{vsg("recordHelp", "Interview idéale : 15–20 s où il parle seul, sans musique. Évite le débruitage agressif — garde le grain naturel de la voix.")}</p>
             </div>
           ) : (
             <div className="vs-capture">
@@ -1230,7 +1265,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   {isDecoding ? (
                     <div className="vs-capture__decoding" role="status">
                       <div className="vs-gen-overlay__spinner" aria-hidden />
-                      <span>Analyse du fichier…</span>
+                      <span>{vsg("analyzingFile", "Analyse du fichier…")}</span>
                     </div>
                   ) : (
                     <button
@@ -1239,7 +1274,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                       onClick={() => fileRef.current?.click()}
                     >
                       <CloudUpload className="h-5 w-5" aria-hidden />
-                      Choisir audio ou vidéo
+                      {vsg("chooseAudioVideo", "Choisir audio ou vidéo")}
                     </button>
                   )}
                 </>
@@ -1249,12 +1284,12 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                     <div className="vs-capture__ready-main">
                       <Check className="h-4 w-4" aria-hidden />
                       <div>
-                        <strong>{voiceName.trim() || "Fichier prêt"}</strong>
+                        <strong>{voiceName.trim() || vsg("fileReady", "Fichier prêt")}</strong>
                         <span className="vs-capture__filename">{importLabel}</span>
                       </div>
                     </div>
                     <button type="button" className="vs-link" onClick={resetCapture}>
-                      Changer
+                      {vsg("change", "Changer")}
                     </button>
                   </div>
                   {needsTrim && importTotalSec > 0 ? (
@@ -1274,14 +1309,17 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   ) : isDecoding || (importIsVideo && importTotalSec <= 0) ? (
                     <div className="vs-capture__decoding" role="status">
                       <div className="vs-gen-overlay__spinner" aria-hidden />
-                      <span>Analyse de la vidéo…</span>
+                      <span>{vsg("analyzingVideo", "Analyse de la vidéo…")}</span>
                     </div>
                   ) : null}
                 </>
               )}
               <p className="vs-help">
-                MP3, WAV, M4A ou MP4 · max {MAX_CLIP_SEC} s · glisse les bandes
-                blanches si c’est plus long.
+                {vsg(
+                  "importHelp",
+                  `MP3, WAV, M4A ou MP4 · max ${MAX_CLIP_SEC} s · glisse les bandes blanches si c'est plus long.`,
+                  { max: MAX_CLIP_SEC },
+                )}
               </p>
             </div>
           )}
@@ -1290,7 +1328,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           ) : null}
 
           <label className="vs-label" htmlFor="vs-script">
-            Ton texte
+            {vsg("textLabel", "Ton texte")}
           </label>
           <textarea
             id="vs-script"
@@ -1298,16 +1336,17 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             rows={4}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={
-              guestFunnel
-                ? t("landing:voiceStudioGuest.textPlaceholder")
-                : "Écris ce que tu veux faire dire à la voix…"
-            }
+            placeholder={vsg(
+              "textPlaceholder",
+              "Écris ce que tu veux faire dire à la voix…",
+            )}
           />
 
           <p className="vs-help vs-help--tight">
-            Prénoms et noms de rappeurs : écris « Kaaris », « Damso », etc. — la
-            prononciation est corrigée automatiquement.
+            {vsg(
+              "rapperNamesHint",
+              "Prénoms et noms de rappeurs : écris « Kaaris », « Damso », etc. — la prononciation est corrigée automatiquement.",
+            )}
           </p>
 
           {captureError ? (
@@ -1328,7 +1367,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                 }
                 playUnlocked();
               }}
-              aria-label={playing ? "Pause" : "Lecture"}
+              aria-label={playing ? vsg("pauseAria", "Pause") : vsg("playAria", "Lecture")}
               disabled={!readyToPlay}
             >
               {playing ? (
@@ -1341,7 +1380,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               type="button"
               className="voice-studio-mock__share"
               onClick={() => setShareOpen(true)}
-              aria-label="Partager le vocal"
+              aria-label={vsg("shareVocalAria", "Partager le vocal")}
               disabled={!readyToPlay || !resultAudioUrl || isSharing}
             >
               <Share2 className="h-3.5 w-3.5" aria-hidden />
@@ -1363,12 +1402,12 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               </div>
               <span className="voice-studio-mock__time">
                 {!readyToPlay
-                  ? "Aperçu après génération"
+                  ? vsg("previewAfterGenerate", "Aperçu après génération")
                   : playbackDurationSec > 0
                     ? `${formatPlaybackClock(playbackCurrentSec)} / ${formatPlaybackClock(playbackDurationSec)}`
                     : playing
-                      ? "Lecture…"
-                      : "Prêt — appuie lecture"}
+                      ? vsg("playbackPlaying", "Lecture…")
+                      : vsg("readyToPlay", "Prêt — appuie lecture")}
               </span>
             </div>
           </div>
@@ -1381,7 +1420,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               onClick={() => setShareOpen(true)}
             >
               <Share2 className="h-4 w-4" aria-hidden />
-              Partager (WhatsApp, Telegram…)
+              {vsg("shareCta", "Partager (WhatsApp, Telegram…)")}
             </button>
           ) : null}
 
