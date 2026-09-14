@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { setDocumentMeta } from "@/lib/document-meta";
@@ -119,6 +120,10 @@ export default function LandingV2() {
         <LandingStudioWidget />
 
         <p className="hero-note">{t("landing:hero.note")}</p>
+        <SocialProofLine
+          variant="landing"
+          className="hero-trust-line"
+        />
       </section>
 
       <section className="editorial-section" aria-labelledby="univers-title">

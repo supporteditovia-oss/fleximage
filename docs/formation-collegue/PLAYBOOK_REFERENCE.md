@@ -87,7 +87,7 @@ Payment decoupling · Mental accounting · Commitment & consistency · Endowment
 | Commitment (objectif choisi) | Questions quiz → presets |
 | Post-paiement fluide | Stripe → `/create?checkout=success` → restore draft → auto-gen HD |
 | Bouton ✨ TikTok | `/resultat` + `UnlockedLarpView` |
-| Preuve sociale paywall | `paywall.socialProof` dans `LuxePaywallModal` |
+| Preuve sociale **vraie** (DB) | `/api/public/trust-stats` + `SocialProofLine` (paywall + landing) |
 | Emails relance preview expirée | Cron `/api/cron/preview-expiry-reminders` + Resend (`RESEND_API_KEY`) |
 | Fluidité editorial + loader | PR #121 cherry-picked (toggle editorial + loader blur) |
 
@@ -128,6 +128,7 @@ Landing → Quiz/action sans compte → 1re valeur (preview) → Compte → Payw
 - [x] Onboarding → première valeur (preview floutée)
 - [ ] Compte **après** valeur (inverser register/quiz) — seul gap funnel majeur
 - [x] Paywall continuité de valeur
+- [x] Preuve sociale vérifiable (compteur DB, pas de chiffre inventé)
 - [ ] Funnel instrumenté de bout en bout (pub → renouvellement)
 - [x] Résultat partageable (export avant/après codé)
 - [ ] Plusieurs cohortes LTV > CAC

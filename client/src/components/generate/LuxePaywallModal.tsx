@@ -22,6 +22,7 @@ import {
   persistFunnelDraftBeforeCheckout,
   resolveCheckoutSuccessPath,
 } from "@/lib/funnel-checkout";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 
 const COMMON_FEATURE_KEYS = ["instantCredits", "monthlyRenewal"] as const;
 
@@ -189,9 +190,10 @@ export function LuxePaywallModal({
             <DialogDescription className="mx-auto mt-1.5 max-w-sm text-center text-sm font-medium leading-snug text-[var(--lx-muted)]">
               {modalSubtitle}
             </DialogDescription>
-            <p className="mx-auto mt-2 max-w-sm text-center text-[11px] font-semibold text-[var(--lx-gold)]">
-              {t("paywall.socialProof")}
-            </p>
+            <SocialProofLine
+              variant="paywall"
+              className="mx-auto mt-2 max-w-sm text-center text-[11px] font-semibold text-[var(--lx-gold)]"
+            />
 
             {imageUrl ? (
               <BlurredLockedImage

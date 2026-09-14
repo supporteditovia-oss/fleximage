@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import ScrollReveal from "@/components/marketing/ScrollReveal";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 
 export default function CtaSection() {
   const { t } = useTranslation();
@@ -27,6 +28,10 @@ export default function CtaSection() {
         <h2 className="lx-display text-3xl font-semibold text-white md:text-4xl">
           {t("cta.title")}
         </h2>
+        <SocialProofLine
+          variant="landing"
+          className="mx-auto mt-4 max-w-lg text-sm font-medium text-white/75"
+        />
         <div className="mt-8 flex justify-center">
           <Link
             href="/register"

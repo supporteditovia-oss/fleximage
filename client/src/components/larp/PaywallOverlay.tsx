@@ -21,6 +21,7 @@ import {
   persistFunnelDraftBeforeCheckout,
   resolveCheckoutSuccessPath,
 } from "@/lib/funnel-checkout";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -345,6 +346,10 @@ export function PaywallOverlay({
                   { price: t("paywall.plans.discovery.price") },
                 )}
               </p>
+              <SocialProofLine
+                variant="paywall"
+                className="mx-auto mt-2 max-w-md text-[11px] font-semibold text-[var(--lx-gold)] md:text-xs"
+              />
             </header>
 
             {/* Plan cards */}
