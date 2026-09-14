@@ -136,6 +136,7 @@ export default function VideoPrete() {
               imageUrl={imageUrl}
               prompt={userPrompt}
               defaultPlan="essential"
+              generationMode="video"
             />
           </>
         )}

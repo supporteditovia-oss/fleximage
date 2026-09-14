@@ -11,7 +11,10 @@ import {
 import { authFetch } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
-import type { PaywallPlan } from "@/components/larp/PaywallOverlay";
+import type {
+  PaywallGenerationMode,
+  PaywallPlan,
+} from "@/components/larp/PaywallOverlay";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { useToast } from "@/hooks/use-toast";
 import { usePaywallPlanCards } from "@/lib/paywall-plans";
@@ -24,6 +27,7 @@ interface LuxePaywallModalProps {
   imageUrl?: string | null;
   prompt?: string | null;
   defaultPlan?: PaywallPlan;
+  generationMode?: PaywallGenerationMode;
 }
 
 export function LuxePaywallModal({
@@ -32,6 +36,7 @@ export function LuxePaywallModal({
   imageUrl,
   prompt = null,
   defaultPlan = "essential",
+  generationMode = "image",
 }: LuxePaywallModalProps) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -50,6 +55,20 @@ export function LuxePaywallModal({
 
   const selectedPlanCard =
     planCards.find((plan) => plan.id === selectedPlan) ?? planCards[0];
+  const isVideo = generationMode === "video";
+  const modalTitle = t(
+    isVideo ? "paywall.modalTitleVideo" : "paywall.modalTitle",
+  );
+  const modalSubtitle = t(
+    isVideo ? "paywall.modalSubtitleVideo" : "paywall.modalSubtitle",
+  );
+  const checkoutLabel = t(
+    isVideo ? "paywall.recoverCtaVideo" : "paywall.recoverCtaImage",
+  );
+  const priceAnchor = t(
+    isVideo ? "paywall.priceAnchorVideo" : "paywall.priceAnchor",
+    { price: t("paywall.plans.discovery.price") },
+  );
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -154,10 +173,10 @@ export function LuxePaywallModal({
 
           <div className="relative z-10">
             <DialogTitle className="lx-display pr-8 text-center text-2xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-[1.7rem]">
-              {t("paywall.modalTitle")}
+              {modalTitle}
             </DialogTitle>
-            <DialogDescription className="mx-auto mt-1.5 max-w-xs text-center text-sm font-medium text-[var(--lx-muted)]">
-              {t("paywall.modalSubtitle")}
+            <DialogDescription className="mx-auto mt-1.5 max-w-sm text-center text-sm font-medium leading-snug text-[var(--lx-muted)]">
+              {modalSubtitle}
             </DialogDescription>
 
             {imageUrl ? (
@@ -165,7 +184,7 @@ export function LuxePaywallModal({
                 imageUrl={imageUrl}
                 prompt={prompt}
                 size="modal"
-                className="mx-auto mt-4 w-24 sm:w-28"
+                className="mx-auto mt-4 w-[min(72vw,11rem)] sm:w-44"
               />
             ) : null}
 
@@ -268,6 +287,9 @@ export function LuxePaywallModal({
 
         {/* Sticky CTA — always visible on iPhone / TikTok webview without scrolling */}
         <div className="relative z-20 shrink-0 border-t border-black/6 bg-[var(--lx-surface)] px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 md:px-6">
+          <p className="mb-2.5 text-center text-[11px] font-medium leading-snug text-[var(--lx-muted)]">
+            {priceAnchor}
+          </p>
           <button
             type="button"
             onClick={() => void handleSubscribe()}
@@ -280,7 +302,7 @@ export function LuxePaywallModal({
                 {t("common.actions.redirecting")}
               </span>
             ) : (
-              t("paywall.checkoutCta")
+              checkoutLabel
             )}
           </button>
 

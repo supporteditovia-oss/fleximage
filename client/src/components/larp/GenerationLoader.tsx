@@ -31,6 +31,8 @@ interface GenerationLoaderProps {
   taskId?: string;
   inputImageUrl?: string;
   resultUrls?: string[];
+  /** Remplace les messages de progression par défaut (ex. scène onboarding). */
+  statusMessages?: string[];
   onRevealStart?: () => void;
   onRevealComplete?: () => void;
 }
@@ -58,18 +60,22 @@ export function GenerationLoader({
   taskId = "loader",
   inputImageUrl,
   resultUrls,
+  statusMessages,
   onRevealStart,
   onRevealComplete,
 }: GenerationLoaderProps) {
   const { t } = useTranslation();
   const progressMessages = useMemo(
-    () => [
-      t("progress.stepAnalyze"),
-      t("progress.stepUnderstood"),
-      t("progress.stepEditing"),
-      t("progress.stepFinishing"),
-    ],
-    [t],
+    () =>
+      statusMessages?.length
+        ? statusMessages
+        : [
+            t("progress.stepAnalyze"),
+            t("progress.stepUnderstood"),
+            t("progress.stepEditing"),
+            t("progress.stepFinishing"),
+          ],
+    [statusMessages, t],
   );
   const themeBundleRef = useRef(acquireGenerationLoaderTheme(taskId));
   const { theme, isContinuation } = themeBundleRef.current;

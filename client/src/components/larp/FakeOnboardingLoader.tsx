@@ -12,6 +12,7 @@ interface FakeOnboardingLoaderProps {
   inputImageUrl?: string | null;
   durationMs?: number;
   variant?: "image" | "voice";
+  statusMessages?: string[];
   onComplete: () => void;
 }
 
@@ -19,6 +20,7 @@ export function FakeOnboardingLoader({
   inputImageUrl,
   durationMs = DEFAULT_DURATION_MS,
   variant = "image",
+  statusMessages,
   onComplete,
 }: FakeOnboardingLoaderProps) {
   const startedAtMs = useRef(Date.now());
@@ -61,6 +63,7 @@ export function FakeOnboardingLoader({
       estimatedSeconds={estimateSec}
       startedAtMs={startedAtMs.current}
       inputImageUrl={inputImageUrl ?? undefined}
+      statusMessages={statusMessages}
     />,
     document.body,
   );

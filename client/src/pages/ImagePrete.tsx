@@ -14,6 +14,7 @@ import {
   PAYWALL_PREVIEW_TTL_MS,
 } from "@/lib/paywall-expiry";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
+import { FunnelProgressBar } from "@/components/funnel/FunnelProgressBar";
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { markFakePaywallReached, clearFakePaywallReached } from "@/lib/fake-paywall-state";
 import { useAuth } from "@/hooks/use-auth";
@@ -247,6 +248,12 @@ export default function ImagePrete() {
           </>
         ) : (
           <>
+            <FunnelProgressBar
+              current={4}
+              total={4}
+              labelKey="paywall.funnelStepRecover"
+            />
+
             <header className="w-full text-center">
               <h1 className="lx-display text-balance text-3xl font-semibold tracking-tight text-[var(--lx-ink)] md:text-4xl">
                 {t("paywall.previewReadyTitle")}
@@ -301,6 +308,7 @@ export default function ImagePrete() {
               imageUrl={imageUrl}
               prompt={userPrompt}
               defaultPlan="essential"
+              generationMode="image"
             />
           </>
         )}

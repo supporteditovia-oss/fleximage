@@ -30,6 +30,7 @@ import {
   randomLarpDownloadName,
   saveMediaBlob,
 } from "@/lib/download-media";
+import { BeforeAfterShareButton } from "@/components/larp/BeforeAfterShareButton";
 import { ShareSheet } from "@/components/larp/ShareSheet";
 import {
   cleanupShareUiLocks,
@@ -299,6 +300,13 @@ export function LarpResult({
                   />
                   {!hideActions && (
                     <div className={RESULT_ACTIONS_CLASS}>
+                      {posterUrl ? (
+                        <BeforeAfterShareButton
+                          beforeUrl={posterUrl}
+                          afterUrl={url}
+                          larpId={larpId}
+                        />
+                      ) : null}
                       {adminPreview ? (
                         <button
                           onClick={() =>

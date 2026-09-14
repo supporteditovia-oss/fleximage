@@ -19,6 +19,7 @@ import {
 } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
+import { FunnelOnboardingQuiz } from "@/components/funnel/FunnelOnboardingQuiz";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
 import { ImageUploadGrid } from "../components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
@@ -77,6 +78,13 @@ import {
 import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import {
+  buildPromptFromQuiz,
+  getOnboardingQuiz,
+  getVibeLabelKey,
+  isOnboardingQuizComplete,
+  saveOnboardingQuiz,
+} from "@/lib/onboarding-quiz";
 
 const IMAGE_CREDIT_COST = 10;
 const VIDEO_CREDIT_COST = 25;
@@ -122,8 +130,12 @@ export default function Generate({
   const [generationResultVisible, setGenerationResultVisible] = useState(false);
 
   // ── Fake generation / paywall state ─────────────────────────
+  const [showOnboardingQuiz, setShowOnboardingQuiz] = useState(false);
   const [showFakeOnboardingLoader, setShowFakeOnboardingLoader] = useState(false);
   const [fakeLoaderImageUrl, setFakeLoaderImageUrl] = useState<string | null>(null);
+  const [fakeLoaderStatusMessages, setFakeLoaderStatusMessages] = useState<
+    string[] | undefined
+  >(undefined);
   const [showLuxePaywall, setShowLuxePaywall] = useState(false);
   const [showZeroCreditsModal, setShowZeroCreditsModal] = useState(false);
   const [fakePaywallReason, setFakePaywallReason] =
@@ -490,7 +502,6 @@ export default function Generate({
     // Need an onboarding intent (landing CTA) to auto-start the fake flow.
     if (!resume || resume.generationMode !== "image") return;
 
-    console.log("[Generate] Starting onboarding fake loader → image-prete");
     if (resume.prompt) {
       setPrompt(resume.prompt);
       savePaywallPrompt(resume.prompt);
@@ -503,6 +514,24 @@ export default function Generate({
     setFakePaywallReason("onboarding");
     setShowLuxePaywall(false);
     setFakeLoaderImageUrl(paywallPreview);
+
+    if (!isOnboardingQuizComplete()) {
+      setShowOnboardingQuiz(true);
+      return;
+    }
+
+    console.log("[Generate] Starting onboarding fake loader → image-prete");
+    const quiz = getOnboardingQuiz();
+    if (quiz) {
+      setFakeLoaderStatusMessages([
+        t("onboardingQuiz.loaderIntro", {
+          vibe: t(getVibeLabelKey(quiz.vibe)),
+        }),
+        t("progress.stepAnalyze"),
+        t("progress.stepEditing"),
+        t("progress.stepFinishing"),
+      ]);
+    }
     setShowFakeOnboardingLoader(true);
   }, [
     isAuthLoading,
@@ -1476,11 +1505,39 @@ export default function Generate({
   // RENDER
   // ════════════════════════════════════════════════════════════
 
+  // -- Personalization quiz (landing funnel)
+  if (overlayActive && showOnboardingQuiz) {
+    return (
+      <FunnelOnboardingQuiz
+        inputImageUrl={fakeLoaderImageUrl || getPaywallImage()}
+        onComplete={(answers) => {
+          saveOnboardingQuiz(answers);
+          const basePrompt = getPaywallPrompt() || prompt;
+          const merged = buildPromptFromQuiz(basePrompt, answers);
+          savePaywallPrompt(merged);
+          setPrompt(merged);
+          markOnboardingResume({ prompt: merged, generationMode: "image" });
+          setFakeLoaderStatusMessages([
+            t("onboardingQuiz.loaderIntro", {
+              vibe: t(getVibeLabelKey(answers.vibe)),
+            }),
+            t("progress.stepAnalyze"),
+            t("progress.stepEditing"),
+            t("progress.stepFinishing"),
+          ]);
+          setShowOnboardingQuiz(false);
+          setShowFakeOnboardingLoader(true);
+        }}
+      />
+    );
+  }
+
   // -- Fake onboarding "generation" loader (no API)
   if (overlayActive && showFakeOnboardingLoader) {
     return (
       <FakeOnboardingLoader
         inputImageUrl={fakeLoaderImageUrl}
+        statusMessages={fakeLoaderStatusMessages}
         onComplete={finishFakeOnboardingLoader}
       />
     );

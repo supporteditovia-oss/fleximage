@@ -147,6 +147,7 @@ if (!i18n.isInitialized) {
         "landing",
         "zeroCredits",
         "welcome",
+        "onboardingQuiz",
       ],
       detection: {
         order: ["localStorage"],

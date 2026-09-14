@@ -330,6 +330,12 @@ export function PaywallOverlay({
               <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-snug text-[var(--lx-muted)] md:text-base">
                 {t("paywall.pricingSubtitle")}
               </p>
+              <p className="mx-auto mt-3 max-w-md text-[11px] font-medium leading-snug text-[var(--lx-muted)] md:text-xs">
+                {t(
+                  isVideo ? "paywall.priceAnchorVideo" : "paywall.priceAnchor",
+                  { price: t("paywall.plans.discovery.price") },
+                )}
+              </p>
             </header>
 
             {/* Plan cards */}
@@ -451,7 +457,11 @@ export function PaywallOverlay({
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    {t("paywall.checkoutCta")}
+                    {t(
+                      isVideo
+                        ? "paywall.recoverCtaVideo"
+                        : "paywall.recoverCtaImage",
+                    )}
                     <ArrowRight
                       className="h-4 w-4 transition-transform group-hover:translate-x-1"
                       strokeWidth={2.75}
