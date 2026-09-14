@@ -258,6 +258,18 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   }, [getAudio]);
 
   useEffect(() => {
+    audioCacheRef.current.clear();
+    setPlaying(false);
+    setCurrentSec(0);
+    setDurationSec(0);
+    setError(false);
+    pendingPlayRef.current = false;
+    for (const voice of LANDING_VOICE_CATALOG) {
+      getAudio(voice.slug, true);
+    }
+  }, [getAudio, i18n.resolvedLanguage]);
+
+  useEffect(() => {
     activeSlugRef.current = activeSlug;
 
     for (const [slug, audio] of audioCacheRef.current.entries()) {

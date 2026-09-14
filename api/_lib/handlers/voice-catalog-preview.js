@@ -1,7 +1,7 @@
 const { synthesizeSpeech } = require("../fish-audio");
 const { uploadToR2, getR2Config } = require("../r2");
 const {
-  CATALOG_SAMPLE_LINE,
+  getCatalogSampleLine,
   isValidFishReferenceId,
   unifiedPreviewCacheKey,
 } = require("../voice-catalog");
@@ -17,6 +17,7 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
   }
 
   const fishReferenceId = String(req.query?.fish_id || req.query?.fishId || "").trim();
+  const locale = req.query?.lang || req.query?.locale || "fr";
   if (!isValidFishReferenceId(fishReferenceId)) {
     res.status(400).json({
       code: "invalid_fish_id",
@@ -26,7 +27,7 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
   }
 
   try {
-    const cacheKey = unifiedPreviewCacheKey(fishReferenceId);
+    const cacheKey = unifiedPreviewCacheKey(fishReferenceId, locale);
     const { publicUrl } = getR2Config();
     const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
 
@@ -41,7 +42,7 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     }
 
     const buffer = await synthesizeSpeech({
-      text: CATALOG_SAMPLE_LINE,
+      text: getCatalogSampleLine(locale),
       referenceId: fishReferenceId,
       format: "mp3",
     });

@@ -1,4 +1,10 @@
 import catalog from "@shared/voice-catalog.json";
+import {
+  getCatalogSampleLine,
+  normalizeVoiceLocale,
+  speechSynthesisLang,
+} from "@shared/voice-locale-scripts";
+import { APP_LOCALE_STORAGE_KEY } from "@shared/locales";
 
 export type VoiceCategory =
   | "Rap"
@@ -56,9 +62,20 @@ export type ClonedVoice = {
   createdAt: string;
 };
 
-/** Phrase unique pour tous les aperçus catalogue (identique côté Fish TTS). */
-export const CATALOG_SAMPLE_LINE =
-  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
+function readActiveVoiceLocale(): string {
+  if (typeof window === "undefined") return "fr";
+  const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+  const htmlLang = document.documentElement.lang;
+  return normalizeVoiceLocale(stored || htmlLang || "fr");
+}
+
+/** Phrase d’aperçu catalogue selon la locale UI active. */
+export function catalogSampleLine(): string {
+  return getCatalogSampleLine(readActiveVoiceLocale());
+}
+
+/** @deprecated utiliser catalogSampleLine() */
+export const CATALOG_SAMPLE_LINE = getCatalogSampleLine("fr");
 
 export type CatalogPreviewCallbacks = {
   onLoading?: () => void;
@@ -113,7 +130,7 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
     initials: initialsFrom(seed.name, seed.initials),
     accent: seed.accent ?? ACCENTS[index % ACCENTS.length],
     photoUrl: seed.photo ? `/assets/voice-catalog/${seed.photo}` : undefined,
-    sampleText: CATALOG_SAMPLE_LINE,
+    sampleText: getCatalogSampleLine("fr"),
     pitch: seed.pitch,
     rate: seed.rate,
     fishReferenceId: seed.fishId,
@@ -228,18 +245,24 @@ export function stopCatalogSample(): void {
   if (typeof window !== "undefined") window.speechSynthesis?.cancel();
 }
 
+function previewCacheKey(fishReferenceId: string): string {
+  return `${fishReferenceId}:${readActiveVoiceLocale()}`;
+}
+
 async function fetchUnifiedCatalogPreviewUrl(
   fishReferenceId: string,
 ): Promise<string | null> {
-  const cached = previewUrlCache.get(fishReferenceId);
+  const cacheKey = previewCacheKey(fishReferenceId);
+  const cached = previewUrlCache.get(cacheKey);
   if (cached) return cached;
 
-  const inflight = previewUrlInflight.get(fishReferenceId);
+  const inflight = previewUrlInflight.get(cacheKey);
   if (inflight) return inflight;
 
   const request = (async () => {
     try {
-      const params = new URLSearchParams({ fish_id: fishReferenceId });
+      const lang = readActiveVoiceLocale();
+      const params = new URLSearchParams({ fish_id: fishReferenceId, lang });
       const res = await fetch(`/api/larps/voice/catalog-preview?${params}`, {
         credentials: "include",
       });
@@ -247,16 +270,16 @@ async function fetchUnifiedCatalogPreviewUrl(
       const json = (await res.json()) as { audioUrl?: string };
       const audioUrl =
         typeof json.audioUrl === "string" && json.audioUrl ? json.audioUrl : null;
-      if (audioUrl) previewUrlCache.set(fishReferenceId, audioUrl);
+      if (audioUrl) previewUrlCache.set(cacheKey, audioUrl);
       return audioUrl;
     } catch {
       return null;
     } finally {
-      previewUrlInflight.delete(fishReferenceId);
+      previewUrlInflight.delete(cacheKey);
     }
   })();
 
-  previewUrlInflight.set(fishReferenceId, request);
+  previewUrlInflight.set(cacheKey, request);
   return request;
 }
 
@@ -457,7 +480,7 @@ export function speakCatalogSample(
       callbacks.onPlaying?.();
       speakRaw(
         {
-          text: CATALOG_SAMPLE_LINE,
+          text: catalogSampleLine(),
           pitch: profile.pitch ?? 1,
           rate: profile.rate ?? 1,
         },
@@ -469,7 +492,7 @@ export function speakCatalogSample(
   callbacks.onPlaying?.();
   return speakRaw(
     {
-      text: CATALOG_SAMPLE_LINE,
+      text: catalogSampleLine(),
       pitch: profile.pitch ?? 1,
       rate: profile.rate ?? 1,
     },
@@ -509,7 +532,7 @@ function speakRaw(
   }
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(opts.text);
-  utterance.lang = "fr-FR";
+  utterance.lang = speechSynthesisLang(readActiveVoiceLocale());
   utterance.pitch = opts.pitch;
   utterance.rate = opts.rate;
   utterance.onend = () => onEnd?.();

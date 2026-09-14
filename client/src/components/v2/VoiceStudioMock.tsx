@@ -43,6 +43,8 @@ import { cloneVoice, generateVoice, type VoiceDeliveryStyle } from "@/lib/voice-
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
+import { getCatalogSampleLine } from "@shared/voice-locale-scripts";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
@@ -126,6 +128,7 @@ type VoiceStudioMockProps = {
 };
 
 export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
+  const { t, i18n } = useTranslation();
   const fileInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const recordTimerRef = useRef<number | null>(null);
@@ -176,9 +179,12 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     profile?: MockVoiceProfile;
   } | null>(() => resolveActiveFromStorage());
 
-  const [text, setText] = useState(
-    "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.",
-  );
+  const [text, setText] = useState(() => getCatalogSampleLine("fr"));
+
+  useEffect(() => {
+    if (!guestFunnel) return;
+    setText(getCatalogSampleLine(i18n.resolvedLanguage));
+  }, [guestFunnel, i18n.resolvedLanguage]);
 
   const { showFakeLoader: showOnboardingFakeLoader, finishFakeLoader } =
     useOnboardingFakeLoader({
@@ -999,8 +1005,12 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   return (
     <div className="voice-studio-page">
       <div className="voice-studio-page__inner voice-studio-page__inner--wide">
-        <p className="voice-studio-page__eyebrow">Studio</p>
-        <h2 className="voice-studio-page__title">Clonage IA</h2>
+        <p className="voice-studio-page__eyebrow">
+          {guestFunnel ? t("landing:voiceStudioGuest.eyebrow") : "Studio"}
+        </p>
+        <h2 className="voice-studio-page__title">
+          {guestFunnel ? t("landing:voiceStudioGuest.title") : "Clonage IA"}
+        </h2>
 
         {activeVoice ? (
           <VoiceSelectedHero
@@ -1012,9 +1022,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             onRemove={clearActiveVoice}
           />
         ) : guestFunnel ? (
-          <p className="voice-studio-page__hint">
-            Choisis une voix du catalogue, ou enregistre la tienne ci-dessous.
-          </p>
+          <p className="voice-studio-page__hint">{t("landing:voiceStudioGuest.hint")}</p>
         ) : (
           <p className="voice-studio-page__hint">
             Choisis une voix dans Catalogue (menu du bas), ou enregistre la tienne
@@ -1025,10 +1033,10 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         {guestFunnel ? (
           <section className="vs-card vs-card--catalog" aria-labelledby="vs-landing-catalog">
             <h3 id="vs-landing-catalog" className="vs-card__title">
-              Catalogue voix
+              {t("landing:voiceStudioGuest.catalogTitle")}
             </h3>
             <p className="vs-card__sub vs-card__sub--tight">
-              Rappeurs FR et voix premium — clique pour choisir, ▶ pour écouter.
+              {t("landing:voiceStudioGuest.catalogSub")}
             </p>
             <VoiceCatalogPicker
               selectedId={activeVoice?.kind === "catalog" ? activeVoice.id : null}
@@ -1053,12 +1061,22 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           <div className="vs-card__head-row">
             <div>
               <h3 id="vs-clone-title" className="vs-card__title">
-                {showLockedVoiceName ? "Générer la voix" : "Créer ma voix"}
+                {guestFunnel
+                  ? showLockedVoiceName
+                    ? t("landing:voiceStudioGuest.generateTitle")
+                    : t("landing:voiceStudioGuest.createTitle")
+                  : showLockedVoiceName
+                    ? "Générer la voix"
+                    : "Créer ma voix"}
               </h3>
               <p className="vs-card__sub">
-                {showLockedVoiceName
-                  ? "Écris ton texte puis génère."
-                  : "Enregistre ou importe un extrait, écris ton texte, puis génère."}
+                {guestFunnel
+                  ? showLockedVoiceName
+                    ? t("landing:voiceStudioGuest.generateSub")
+                    : t("landing:voiceStudioGuest.createSub")
+                  : showLockedVoiceName
+                    ? "Écris ton texte puis génère."
+                    : "Enregistre ou importe un extrait, écris ton texte, puis génère."}
               </p>
             </div>
           </div>
@@ -1261,7 +1279,11 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             rows={4}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Écris ce que tu veux faire dire à la voix…"
+            placeholder={
+              guestFunnel
+                ? t("landing:voiceStudioGuest.textPlaceholder")
+                : "Écris ce que tu veux faire dire à la voix…"
+            }
           />
 
           <p className="vs-help vs-help--tight">
@@ -1350,7 +1372,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            Générer la voix
+            {guestFunnel ? t("landing:voiceStudioGuest.generateCta") : "Générer la voix"}
           </button>
           {generateBlockReason ? (
             <p className="vs-help vs-help--block" role="status">

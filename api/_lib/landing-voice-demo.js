@@ -1,4 +1,8 @@
 const catalog = require("../../shared/voice-catalog.json");
+const {
+  normalizeVoiceLocale,
+  buildLandingVoiceScript,
+} = require("../../shared/voice-locale-scripts.cjs");
 
 const LANDING_VOICE_DEFAULT_SLUG = "gims";
 
@@ -6,20 +10,12 @@ const LANDING_VOICE_BY_SLUG = Object.fromEntries(
   catalog.entries.map((entry) => [entry.slug, entry]),
 );
 
-function buildLandingVoiceScript(entry) {
-  if (entry.demoKind === "natural-male") {
-    return "Bonjour, voici une voix masculine naturelle — générée par LuxeFlexIA.";
-  }
-  if (entry.demoKind === "natural-female") {
-    return "Bonjour, voici une voix féminine naturelle — générée par LuxeFlexIA.";
-  }
-  return `Salut, je me présente, c'est ${entry.name} — j'ai été généré par LuxeFlexIA.`;
-}
+/** v3 — cache séparé par locale (FR / EN / ES). */
+const LANDING_VOICE_DEMO_VERSION = 3;
 
-const LANDING_VOICE_DEMO_VERSION = 2;
-
-function landingVoiceR2Key(slug) {
-  return `landing-voice-demo/v${LANDING_VOICE_DEMO_VERSION}/${slug}.mp3`;
+function landingVoiceR2Key(slug, localeLike) {
+  const locale = normalizeVoiceLocale(localeLike);
+  return `landing-voice-demo/v${LANDING_VOICE_DEMO_VERSION}/${locale}/${slug}.mp3`;
 }
 
 function resolveLandingVoiceEntry(slug) {
@@ -34,6 +30,7 @@ module.exports = {
   LANDING_VOICE_DEFAULT_SLUG,
   LANDING_VOICE_DEMO_VERSION,
   buildLandingVoiceScript,
+  normalizeVoiceLocale,
   landingVoiceR2Key,
   resolveLandingVoiceEntry,
   /** @deprecated */

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   createLandingEditorialSlots,
   editorialPairAt,
@@ -8,10 +9,10 @@ import {
 } from "@/lib/landing-v2-pairs";
 
 export function LandingEditorialGrid() {
+  const { t } = useTranslation();
   const [slots, setSlots] = useState<LandingEditorialSlot[]>(() =>
     createLandingEditorialSlots(),
   );
-  /** true = affiche la photo avant (originale) ; false = rendu IA (après). */
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const [generation, setGeneration] = useState(0);
 
@@ -46,8 +47,7 @@ export function LandingEditorialGrid() {
         {slots.map((slot) => {
           const pair = editorialPairAt(slot.pairIndex);
           const isOriginal = Boolean(showOriginal[slot.position]);
-          const activeSrc = isOriginal ? pair.original : pair.generated;
-          const activeAlt = isOriginal ? pair.originalAlt : pair.generatedAlt;
+          const pairKey = `landing:editorial.pairs.${pair.id}` as const;
 
           return (
             <figure
@@ -59,8 +59,12 @@ export function LandingEditorialGrid() {
                   <img
                     key={`${pair.id}-${generation}-${isOriginal ? "before" : "after"}`}
                     className="editorial-figure__photo editorial-photo-swap"
-                    src={activeSrc}
-                    alt={activeAlt}
+                    src={isOriginal ? pair.original : pair.generated}
+                    alt={
+                      isOriginal
+                        ? t(`${pairKey}.originalAlt`)
+                        : t(`${pairKey}.generatedAlt`)
+                    }
                     loading="eager"
                     decoding="async"
                   />
@@ -77,12 +81,14 @@ export function LandingEditorialGrid() {
                 aria-pressed={isOriginal}
                 onClick={() => toggleOriginal(slot.position)}
               >
-                {isOriginal ? "Voir le rendu" : "Voir l’original"}
+                {isOriginal
+                  ? t("landing:editorial.showRender")
+                  : t("landing:editorial.showOriginal")}
               </button>
               <figcaption>
                 <span>{slot.n}</span>
-                <strong>{pair.label}</strong>
-                <small>Créé avec LuxeFlexIA</small>
+                <strong>{t(`${pairKey}.label`)}</strong>
+                <small>{t("landing:editorial.createdWith")}</small>
               </figcaption>
             </figure>
           );

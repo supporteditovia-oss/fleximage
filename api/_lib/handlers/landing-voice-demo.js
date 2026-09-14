@@ -28,8 +28,8 @@ function readBundledLandingDemo(slug) {
   return null;
 }
 
-async function getLandingDemoBuffer(entry) {
-  const cacheKey = landingVoiceR2Key(entry.slug);
+async function getLandingDemoBuffer(entry, localeLike) {
+  const cacheKey = landingVoiceR2Key(entry.slug, localeLike);
   const { publicUrl } = getR2Config();
   const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
 
@@ -45,7 +45,7 @@ async function getLandingDemoBuffer(entry) {
     /* cache miss */
   }
 
-  const script = buildLandingVoiceScript(entry);
+  const script = buildLandingVoiceScript(entry, localeLike);
   const { fishText } = humanizeVoiceScript(script, { voiceName: entry.name });
   const buffer = await synthesizeSpeech({
     text: fishText,
@@ -76,6 +76,7 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
   }
 
   const entry = resolveLandingVoiceEntry(req.query?.slug || LANDING_VOICE_DEFAULT_SLUG);
+  const locale = req.query?.lang || req.query?.locale || "fr";
   if (!entry) {
     res.status(400).json({
       code: "invalid_slug",
@@ -90,7 +91,7 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     String(req.headers.accept || "").includes("audio/");
 
   try {
-    const { buffer, cached } = await getLandingDemoBuffer(entry);
+    const { buffer, cached } = await getLandingDemoBuffer(entry, locale);
 
     if (streamMedia) {
       res.setHeader("Content-Type", "audio/mpeg");
@@ -100,7 +101,7 @@ module.exports = async function landingVoiceDemoHandler(req, res) {
     }
 
     const { publicUrl } = getR2Config();
-    const audioUrl = `${publicUrl.replace(/\/$/, "")}/${landingVoiceR2Key(entry.slug)}`;
+    const audioUrl = `${publicUrl.replace(/\/$/, "")}/${landingVoiceR2Key(entry.slug, locale)}`;
     res.status(200).json({
       audioUrl,
       cached,

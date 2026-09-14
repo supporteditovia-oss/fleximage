@@ -15,6 +15,7 @@ import {
 import { resources as baseResources } from "./resources";
 import { extraResources } from "./resources-extra";
 import { landingV2Resources } from "./landing-v2";
+import { landingWidgetResources } from "./landing-widget";
 
 export const LOCALE_CHOSEN_KEY = "luxeflexia:locale_chosen";
 
@@ -46,6 +47,7 @@ const resources = SUPPORTED_LOCALES.reduce((acc, locale) => {
     landing: {
       ...(extraResources[key]?.landing ?? {}),
       ...(landingV2Resources[key as keyof typeof landingV2Resources] ?? {}),
+      ...(landingWidgetResources[key as keyof typeof landingWidgetResources] ?? {}),
     },
   };
 

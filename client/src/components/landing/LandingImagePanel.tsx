@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { ImageUploadGrid } from "@/components/generate/ImageUploadGrid";
 import { PromptInputBar } from "@/components/generate/PromptInputBar";
@@ -9,12 +10,15 @@ import { OUTPUT_ASPECT_RATIO, type GenerationAspectRatio } from "@shared/schema"
 export function LandingImagePanel() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { t, i18n } = useTranslation();
   const [images, setImages] = useState<({ url: string; file: File } | null)[]>([null]);
-  const [prompt, setPrompt] = useState(
-    "Mets-moi au volant d'une supercar à Monaco au coucher du soleil.",
-  );
+  const [prompt, setPrompt] = useState(() => t("landing:imagePanel.defaultPrompt"));
   const [aspectRatio, setAspectRatio] = useState<GenerationAspectRatio>(OUTPUT_ASPECT_RATIO);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setPrompt(t("landing:imagePanel.defaultPrompt"));
+  }, [i18n.resolvedLanguage, t]);
 
   const handleImageSelect = (index: number, file: File) => {
     const url = URL.createObjectURL(file);
@@ -42,7 +46,7 @@ export function LandingImagePanel() {
     try {
       await startLandingGuestFunnel({
         mode: "image",
-        prompt: prompt.trim() || "Ma scène LuxeFlexIA",
+        prompt: prompt.trim() || t("landing:imagePanel.fallbackPrompt"),
         imageFile: file,
       });
       navigate(user ? "/create" : "/register");

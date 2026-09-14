@@ -1,5 +1,9 @@
 import catalog from "@shared/voice-catalog.json";
-import i18n from "@/i18n";
+import {
+  buildLandingVoiceScript as buildSharedLandingVoiceScript,
+  normalizeVoiceLocale,
+} from "@shared/voice-locale-scripts";
+import { APP_LOCALE_STORAGE_KEY } from "@shared/locales";
 
 export type LandingVoiceGender = "homme" | "femme";
 
@@ -19,7 +23,7 @@ export type LandingVoiceEntry = {
 };
 
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
-export const LANDING_VOICE_DEMO_VERSION = 7;
+export const LANDING_VOICE_DEMO_VERSION = 8;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
@@ -31,14 +35,19 @@ export function pickRandomLandingVoiceSlug(): string {
   return LANDING_VOICE_CATALOG[index]?.slug ?? LANDING_VOICE_DEFAULT_SLUG;
 }
 
+function readActiveVoiceLocale(): string {
+  if (typeof window === "undefined") return "fr";
+  const stored = window.localStorage.getItem(APP_LOCALE_STORAGE_KEY);
+  const htmlLang = document.documentElement.lang;
+  return normalizeVoiceLocale(stored || htmlLang || "fr");
+}
+
 export function buildLandingVoiceScript(entry: Pick<LandingVoiceEntry, "name" | "demoKind">): string {
-  if (entry.demoKind === "natural-male") {
-    return i18n.t("landing:voiceScript.naturalMale");
-  }
-  if (entry.demoKind === "natural-female") {
-    return i18n.t("landing:voiceScript.naturalFemale");
-  }
-  return i18n.t("landing:voiceScript.artist", { name: entry.name });
+  return buildSharedLandingVoiceScript(entry, readActiveVoiceLocale());
+}
+
+function currentVoiceLocaleParam(): string {
+  return readActiveVoiceLocale();
 }
 
 export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
@@ -58,7 +67,8 @@ export function landingVoiceDemoLegacySampleSrc(slug: string): string {
 
 /** Repli API si le MP3 statique est absent. */
 export function landingVoiceDemoApiSrc(slug: string): string {
-  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
+  const lang = currentVoiceLocaleParam();
+  return `/api/larps/voice/landing-demo?slug=${encodeURIComponent(slug)}&lang=${lang}&media=1&v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 
 /** @deprecated alias */

@@ -1,6 +1,7 @@
-/** Phrase unique pour tous les aperçus catalogue — identique à la génération Fish. */
-const CATALOG_SAMPLE_LINE =
-  "Ce soir, direction Dubai Marina. La suite est réservée, la soirée aussi.";
+const {
+  getCatalogSampleLine,
+  normalizeVoiceLocale,
+} = require("../../shared/voice-locale-scripts.cjs");
 
 const catalog = require("../../shared/voice-catalog.json");
 
@@ -13,10 +14,11 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 2;
+const UNIFIED_PREVIEW_VERSION = 3;
 
-function unifiedPreviewCacheKey(fishReferenceId) {
-  return `voice-catalog/unified/v${UNIFIED_PREVIEW_VERSION}/${String(fishReferenceId).toLowerCase()}.mp3`;
+function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
+  const locale = normalizeVoiceLocale(localeLike);
+  return `voice-catalog/unified/v${UNIFIED_PREVIEW_VERSION}/${locale}/${String(fishReferenceId).toLowerCase()}.mp3`;
 }
 
 function clampTtsSpeed(speed) {
@@ -53,7 +55,8 @@ function resolveCatalogTtsSpeed(fishReferenceId) {
 }
 
 module.exports = {
-  CATALOG_SAMPLE_LINE,
+  getCatalogSampleLine,
+  normalizeVoiceLocale,
   DEFAULT_TTS_SPEED,
   MIN_TTS_SPEED,
   MAX_TTS_SPEED,

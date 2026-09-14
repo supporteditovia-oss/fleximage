@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Film, ImageIcon, Loader2, Upload, Video } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
@@ -15,32 +16,12 @@ import {
   readVideoDurationSec,
   validateVideoDurationForUpload,
 } from "@/lib/video-duration";
-import { formatVideoSizeMb } from "@/lib/upload-video";
 import "@/pages/video-ia-page.css";
-
-const WORKFLOW_OPTIONS: {
-  id: VideoWorkflow;
-  label: string;
-  emoji: string;
-  hint: string;
-}[] = [
-  {
-    id: "image_to_video",
-    label: "Cinématique photo",
-    emoji: "◈",
-    hint: "Image → Vidéo · 5 s",
-  },
-  {
-    id: "video_to_video",
-    label: "Séquence transformée",
-    emoji: "◈",
-    hint: "Vidéo → Vidéo · smartphone",
-  },
-];
 
 export function LandingVideoPanel() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { t, i18n } = useTranslation();
   const imageFileRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
 
@@ -50,14 +31,32 @@ export function LandingVideoPanel() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
-  const [motionPrompt, setMotionPrompt] = useState(
-    "Je veux qu'il tombe dans l'eau en souriant, caméra lente…",
-  );
-  const [swapPrompt, setSwapPrompt] = useState(
-    "Remplace la voiture par une Lamborghini Urus noire.",
-  );
+  const [motionPrompt, setMotionPrompt] = useState(() => t("landing:videoPanel.motionDefault"));
+  const [swapPrompt, setSwapPrompt] = useState(() => t("landing:videoPanel.swapDefault"));
   const [busy, setBusy] = useState(false);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
+
+  useEffect(() => {
+    setMotionPrompt(t("landing:videoPanel.motionDefault"));
+    setSwapPrompt(t("landing:videoPanel.swapDefault"));
+  }, [i18n.resolvedLanguage, t]);
+
+  const workflowOptions = useMemo(
+    () =>
+      [
+        {
+          id: "image_to_video" as const,
+          label: t("landing:videoPanel.i2vLabel"),
+          hint: t("landing:videoPanel.i2vHint"),
+        },
+        {
+          id: "video_to_video" as const,
+          label: t("landing:videoPanel.v2vLabel"),
+          hint: t("landing:videoPanel.v2vHint"),
+        },
+      ] as const,
+    [t],
+  );
 
   const canGenerateI2V = Boolean(imageFile);
   const canGenerateV2V = Boolean(videoPreview);
@@ -101,7 +100,7 @@ export function LandingVideoPanel() {
         workflow === "image_to_video" ? motionPrompt.trim() : swapPrompt.trim();
       await startLandingGuestFunnel({
         mode: "video",
-        prompt: prompt || "Ma vidéo LuxeFlexIA",
+        prompt: prompt || t("landing:videoPanel.fallbackPrompt"),
         imageFile: workflow === "image_to_video" ? imageFile : undefined,
       });
       navigate(user ? "/video-ia" : "/register");
@@ -113,7 +112,7 @@ export function LandingVideoPanel() {
   return (
     <div className="via-studio landing-video-panel pb-4">
       <div className="via-mode-grid">
-        {WORKFLOW_OPTIONS.map((option) => (
+        {workflowOptions.map((option) => (
           <button
             key={option.id}
             type="button"
@@ -121,7 +120,7 @@ export function LandingVideoPanel() {
             className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
           >
             <span className="via-mode-card__emoji" aria-hidden>
-              {option.emoji}
+              ◈
             </span>
             <span className="via-mode-card__label">{option.label}</span>
             <span className="via-mode-card__hint">{option.hint}</span>
@@ -134,13 +133,10 @@ export function LandingVideoPanel() {
           <>
             <p className="via-step-label">
               <ImageIcon className="h-3.5 w-3.5" />
-              Étape 1
+              {t("landing:videoPanel.step1")}
             </p>
-            <h3 className="via-step-title">Votre référence visuelle</h3>
-            <p className="via-step-desc">
-              Portrait ou scène lifestyle — plan animé de <strong>5 secondes</strong>, format
-              vertical.
-            </p>
+            <h3 className="via-step-title">{t("landing:videoPanel.i2vTitle")}</h3>
+            <p className="via-step-desc">{t("landing:videoPanel.i2vDesc")}</p>
             <input
               ref={imageFileRef}
               type="file"
@@ -157,19 +153,21 @@ export function LandingVideoPanel() {
                 <Upload className="h-4 w-4" />
               </span>
               <span className="via-upload-zone__text">
-                {imagePreviewUrl ? "Changer l'image" : "Choisir une image"}
+                {imagePreviewUrl
+                  ? t("landing:videoPanel.changeImage")
+                  : t("landing:videoPanel.chooseImage")}
               </span>
-              <span className="via-upload-zone__meta">JPG · PNG · max 10 Mo</span>
+              <span className="via-upload-zone__meta">{t("landing:videoPanel.imageMeta")}</span>
             </button>
             {imagePreviewUrl ? (
               <div className={`via-preview-frame ${aspectRatio === "16:9" ? "is-landscape" : ""}`}>
-                <img src={imagePreviewUrl} alt="Aperçu" />
+                <img src={imagePreviewUrl} alt={t("landing:videoPanel.previewAlt")} />
               </div>
             ) : null}
             {imagePreviewUrl ? (
               <>
                 <label className="via-step-label" style={{ marginTop: "1.25rem" }}>
-                  Étape 2 — Prompt
+                  {t("landing:videoPanel.step2Prompt")}
                 </label>
                 <textarea
                   value={motionPrompt}
@@ -185,12 +183,11 @@ export function LandingVideoPanel() {
           <>
             <p className="via-step-label">
               <Video className="h-3.5 w-3.5" />
-              Étape 1
+              {t("landing:videoPanel.step1")}
             </p>
-            <h3 className="via-step-title">Votre séquence source</h3>
+            <h3 className="via-step-title">{t("landing:videoPanel.v2vTitle")}</h3>
             <p className="via-step-desc">
-              Plan filmé au smartphone — max <strong>{VIDEO_V2V_MAX_DURATION_SEC} s</strong>, angle
-              et mouvement préservés.
+              {t("landing:videoPanel.v2vDesc", { maxSec: VIDEO_V2V_MAX_DURATION_SEC })}
             </p>
             <input
               ref={videoFileRef}
@@ -213,10 +210,12 @@ export function LandingVideoPanel() {
                 )}
               </span>
               <span className="via-upload-zone__text">
-                {videoPreview ? "Changer la vidéo" : "Choisir une vidéo"}
+                {videoPreview
+                  ? t("landing:videoPanel.changeVideo")
+                  : t("landing:videoPanel.chooseVideo")}
               </span>
               <span className="via-upload-zone__meta">
-                MP4 · max {VIDEO_V2V_MAX_SIZE_MB} Mo
+                {t("landing:videoPanel.videoMeta", { maxMb: VIDEO_V2V_MAX_SIZE_MB })}
                 {videoDurationSec ? ` · ${videoDurationSec}s` : ""}
               </span>
             </button>
@@ -238,20 +237,24 @@ export function LandingVideoPanel() {
           </>
         )}
 
-        <div className="via-orient-toggle" role="group" aria-label="Orientation">
+        <div
+          className="via-orient-toggle"
+          role="group"
+          aria-label={t("landing:videoPanel.orientationAria")}
+        >
           <button
             type="button"
             className={`via-orient-toggle__btn ${aspectRatio === "9:16" ? "is-active" : ""}`}
             onClick={() => setAspectRatio("9:16")}
           >
-            Vertical
+            {t("landing:videoPanel.vertical")}
           </button>
           <button
             type="button"
             className={`via-orient-toggle__btn ${aspectRatio === "16:9" ? "is-active" : ""}`}
             onClick={() => setAspectRatio("16:9")}
           >
-            Paysage
+            {t("landing:videoPanel.landscape")}
           </button>
         </div>
 
@@ -267,12 +270,12 @@ export function LandingVideoPanel() {
           {busy ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Préparation…
+              {t("landing:videoPanel.preparing")}
             </>
           ) : (
             <>
               <Film className="h-4 w-4" />
-              Créer ma vidéo
+              {t("landing:videoPanel.cta")}
             </>
           )}
         </button>

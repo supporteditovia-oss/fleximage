@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2, Pause, Play, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +28,7 @@ export function VoiceCatalogPicker({
   showSearch = true,
   intro,
 }: VoiceCatalogPickerProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<VoiceCatalogFilter>(defaultFilter);
   const [query, setQuery] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export function VoiceCatalogPicker({
     <div className="biblio-catalog voice-catalog-picker">
       <p className="biblio-catalog__intro">
         {intro ??
-          `${MOCK_VOICE_CATALOG.length} voix prêtes — écoute un extrait, puis sélectionne.`}
+          t("landing:voiceCatalog.intro", { count: MOCK_VOICE_CATALOG.length })}
       </p>
 
       <div className="biblio-catalog__toolbar">
@@ -116,15 +118,15 @@ export function VoiceCatalogPicker({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Chercher Maes, Niska, Gims…"
-              aria-label="Chercher dans le catalogue"
+              placeholder={t("landing:voiceCatalog.searchPlaceholder")}
+              aria-label={t("landing:voiceCatalog.searchAria")}
             />
           </label>
         ) : null}
         <div
           className="biblio-catalog__filters"
           role="tablist"
-          aria-label="Filtres catalogue"
+          aria-label={t("landing:voiceCatalog.filtersAria")}
         >
           {VOICE_CATALOG_FILTERS.map((f) => (
             <button
@@ -135,7 +137,7 @@ export function VoiceCatalogPicker({
               className={cn("biblio-catalog__chip", filter === f && "is-active")}
               onClick={() => setFilter(f)}
             >
-              {f}
+              {t(`landing:voiceCatalog.filters.${f}`)}
               <span>{categoryCount(f)}</span>
             </button>
           ))}

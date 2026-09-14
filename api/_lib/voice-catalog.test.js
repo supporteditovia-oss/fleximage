@@ -1,7 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  CATALOG_SAMPLE_LINE,
+  getCatalogSampleLine,
   clampTtsSpeed,
   isValidFishReferenceId,
   resolveCatalogTtsSpeed,
@@ -10,7 +10,9 @@ const {
 
 describe("voice-catalog", () => {
   it("uses a unified sample line", () => {
-    assert.match(CATALOG_SAMPLE_LINE, /Dubai Marina/i);
+    assert.match(getCatalogSampleLine("fr"), /Dubai Marina/i);
+    assert.match(getCatalogSampleLine("en"), /Dubai Marina/i);
+    assert.match(getCatalogSampleLine("es"), /Dubai Marina/i);
   });
 
   it("validates fish reference ids", () => {
@@ -23,8 +25,8 @@ describe("voice-catalog", () => {
 
   it("builds stable cache keys", () => {
     assert.equal(
-      unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004"),
-      "voice-catalog/unified/v2/6be490a175744894826dd464cf3a5004.mp3",
+      unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004", "fr"),
+      "voice-catalog/unified/v3/fr/6be490a175744894826dd464cf3a5004.mp3",
     );
   });
 
