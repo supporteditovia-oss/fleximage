@@ -7,7 +7,10 @@ import { useLarpStatus } from "@/hooks/use-larps";
 import { useToast } from "@/hooks/use-toast";
 import { LarpResult } from "./LarpResult";
 import { GenerationLoader, GenerationLoaderBackdrop } from "./GenerationLoader";
-import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
+import {
+  peekGenerationLoaderTiming,
+  releaseGenerationLoaderTheme,
+} from "@/lib/generation-loader-theme";
 import { useTranslation } from "react-i18next";
 import { saveLastGeneration, getLastGeneration } from "@/lib/last-generation";
 import { BrandMark } from "@/components/BrandMark";
@@ -58,7 +61,9 @@ export function GenerationProgress({
   const [showResult, setShowResult] = useState(restoredReady);
   const [fatalConnectionError, setFatalConnectionError] = useState(false);
   const hasHandledFailure = useRef(false);
-  const timingLockRef = useRef<GenerationTimingLock | null>(null);
+  const timingLockRef = useRef<GenerationTimingLock | null>(
+    mergeGenerationTimingLock(null, peekGenerationLoaderTiming() ?? {}),
+  );
   const inflightSnapshot = getInFlightGeneration();
   const hasPersistedResult = useRef(false);
   // Grace window before a sustained, unrecoverable connection failure is

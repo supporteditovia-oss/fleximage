@@ -37,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import { OUTPUT_ASPECT_RATIO } from "@shared/schema";
 import { toGenerationImageFile } from "@/lib/video-frame";
 import { createGenerationRequestId } from "@/lib/generation-request-id";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -327,6 +328,10 @@ export default function HeroSection() {
           <p className="lx-hero-subtitle mt-3 max-w-xl text-sm font-medium leading-snug text-[var(--lx-muted)] md:mt-4 md:text-lg">
             {t("hero.homeSubtitle")}
           </p>
+          <SocialProofLine
+            variant="landing"
+            className="mt-3 max-w-md text-[11px] font-semibold text-[var(--lx-gold)] md:mt-4 md:text-xs"
+          />
         </motion.div>
 
         {/* Bottom group: drop zone + input */}

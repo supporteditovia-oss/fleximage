@@ -18,6 +18,11 @@ import type {
 import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { useToast } from "@/hooks/use-toast";
 import { usePaywallPlanCards } from "@/lib/paywall-plans";
+import {
+  persistFunnelDraftBeforeCheckout,
+  resolveCheckoutSuccessPath,
+} from "@/lib/funnel-checkout";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 
 const COMMON_FEATURE_KEYS = ["instantCredits", "monthlyRenewal"] as const;
 
@@ -92,11 +97,18 @@ export function LuxePaywallModal({
         plan: selectedPlan,
       });
 
+      await persistFunnelDraftBeforeCheckout({
+        imageUrl,
+        prompt,
+        generationMode,
+      });
+
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
         body: JSON.stringify({
           plan: selectedPlan,
           funnel_session_id: getFunnelSessionId(),
+          success_path: resolveCheckoutSuccessPath(),
           locale: billingLocaleParam(i18n.language),
         }),
       });
@@ -178,6 +190,10 @@ export function LuxePaywallModal({
             <DialogDescription className="mx-auto mt-1.5 max-w-sm text-center text-sm font-medium leading-snug text-[var(--lx-muted)]">
               {modalSubtitle}
             </DialogDescription>
+            <SocialProofLine
+              variant="paywall"
+              className="mx-auto mt-2 max-w-sm text-center text-[11px] font-semibold text-[var(--lx-gold)]"
+            />
 
             {imageUrl ? (
               <BlurredLockedImage

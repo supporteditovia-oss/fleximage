@@ -18,6 +18,11 @@ import { useProfile } from "@/hooks/use-supabase";
 import { useToast } from "@/hooks/use-toast";
 import { usePaywallPlanCards } from "@/lib/paywall-plans";
 import {
+  persistFunnelDraftBeforeCheckout,
+  resolveCheckoutSuccessPath,
+} from "@/lib/funnel-checkout";
+import { SocialProofLine } from "@/components/marketing/SocialProofLine";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -103,11 +108,16 @@ export function PaywallOverlay({
         source: "paywall_overlay",
         plan: selectedPlan,
       });
+      await persistFunnelDraftBeforeCheckout({
+        imageUrl,
+        generationMode,
+      });
       const res = await authFetch("/api/stripe/create-checkout", {
         method: "POST",
         body: JSON.stringify({
           plan: selectedPlan,
           funnel_session_id: getFunnelSessionId(),
+          success_path: resolveCheckoutSuccessPath(),
           locale: billingLocaleParam(i18n.language),
         }),
       });
@@ -336,6 +346,10 @@ export function PaywallOverlay({
                   { price: t("paywall.plans.discovery.price") },
                 )}
               </p>
+              <SocialProofLine
+                variant="paywall"
+                className="mx-auto mt-2 max-w-md text-[11px] font-semibold text-[var(--lx-gold)] md:text-xs"
+              />
             </header>
 
             {/* Plan cards */}

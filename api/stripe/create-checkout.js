@@ -67,6 +67,24 @@ function funnelMeta(body) {
   return {};
 }
 
+const CHECKOUT_SUCCESS_PATHS = new Set([
+  "/create",
+  "/generate",
+  "/resultat",
+  "/settings",
+]);
+
+function resolveCheckoutSuccessPath(body) {
+  if (
+    typeof body.success_path === "string" &&
+    CHECKOUT_SUCCESS_PATHS.has(body.success_path)
+  ) {
+    return body.success_path;
+  }
+  if (body.funnel_session_id) return "/create";
+  return "/resultat";
+}
+
 /** Cancel active subs so the user can start a higher plan (Discovery → Essential, etc.). */
 async function cancelActiveSubscriptionsForUpgrade(stripe, customerId) {
   if (!customerId) return [];
@@ -403,7 +421,7 @@ module.exports = async function handler(req, res) {
       locale: uiLocale,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: withLang(
-        `/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        `${resolveCheckoutSuccessPath(body)}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         uiLocale,
       ),
       cancel_url: withLang(`/generate?paywall=1&checkout=cancel`, uiLocale),

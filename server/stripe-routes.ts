@@ -23,12 +23,21 @@ import {
 } from "./lib/stripe-webhooks";
 import { resolvePublicAppUrl } from "@shared/site-seo";
 
+const checkoutSuccessPathSchema = z.enum([
+  "/create",
+  "/generate",
+  "/resultat",
+  "/settings",
+]);
+
 const createCheckoutBodySchema = z.object({
   plan: z
     .enum(["discovery", "essential", "ultimate", "weekly", "monthly", "image", "video"])
     .optional()
     .default("essential"),
   funnel_session_id: z.string().min(8).max(128).optional(),
+  /** Post-paiement : /create ou /generate pour auto-gen HD (playbook funnel). */
+  success_path: checkoutSuccessPathSchema.optional(),
 });
 
 const verifySessionBodySchema = z
@@ -166,11 +175,17 @@ export function registerStripeRoutes(app: Express): void {
         }
       }
 
-      const appOrigin = "https://www.luxeflexia.com";
+      const appOrigin = resolvePublicAppUrl(
+        process.env.SITE_URL,
+        process.env.APP_URL,
+      );
+      const successPath =
+        req.body.success_path ??
+        (req.body.funnel_session_id ? "/create" : "/resultat");
       const sessionParams: Record<string, any> = {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appOrigin}/resultat?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${appOrigin}${successPath}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appOrigin}/image-prete?paywall=1&checkout=cancel`,
         branding_settings: {
           display_name: "LuxeFlexIA",

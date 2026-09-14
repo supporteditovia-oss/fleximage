@@ -28,6 +28,9 @@ export function saveOnboardingQuiz(
       completedAt: Date.now(),
     };
     localStorage.setItem(QUIZ_KEY, JSON.stringify(payload));
+    void import("@/lib/onboarding-quiz-sync").then(({ syncOnboardingQuizToServer }) =>
+      syncOnboardingQuizToServer(answers),
+    );
   } catch {
     /* quota / private mode */
   }

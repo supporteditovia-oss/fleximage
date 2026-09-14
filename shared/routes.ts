@@ -280,6 +280,20 @@ export const api = {
       method: "POST" as const,
       path: "/api/funnel/track",
     },
+    previewLock: {
+      method: "POST" as const,
+      path: "/api/funnel/preview-lock",
+    },
+    previewRecovered: {
+      method: "POST" as const,
+      path: "/api/funnel/preview-recovered",
+    },
+  },
+  profile: {
+    onboardingQuiz: {
+      method: "PUT" as const,
+      path: "/api/profile/onboarding-quiz",
+    },
   },
   favorites: {
     list: {

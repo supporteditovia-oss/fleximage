@@ -38,11 +38,16 @@ export function markFakePaywallReached(
 
 export function hasReachedFakePaywall(userId?: string | null): boolean {
   try {
+    const data = readStoredState();
+
     if (sessionStorage.getItem(SESSION_KEY) === "true") {
+      if (!data) return false;
+      if (userId && data.userId && data.userId !== userId) {
+        return false;
+      }
       return true;
     }
 
-    const data = readStoredState();
     if (!data) return false;
     if (userId && data.userId && data.userId !== userId) {
       return false;

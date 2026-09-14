@@ -204,6 +204,25 @@ export type LandingEditorialGridItem = LandingEditorialPair & {
 /** Intervalle entre deux rotations synchronisées de la grille. */
 export const LANDING_EDITORIAL_ROTATE_MS = 9000;
 
+const preloadedEditorialUrls = new Set<string>();
+
+/** Précharge les JPEG editorial pour un swap avant/après instantané. */
+export function preloadLandingEditorialImages(
+  pairs: LandingEditorialPair[] = LANDING_EDITORIAL_POOL,
+): void {
+  if (typeof Image === "undefined") return;
+
+  for (const pair of pairs) {
+    for (const src of [pair.original, pair.generated]) {
+      if (preloadedEditorialUrls.has(src)) continue;
+      preloadedEditorialUrls.add(src);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = src;
+    }
+  }
+}
+
 export function pickLandingEditorialGrid(
   count = 4,
   _previousIds: string[] = [],
