@@ -4,9 +4,7 @@
   "installCommand": "npm install",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
-  "git": {
-    "deploymentEnabled": false
-  },
+  "ignoreCommand": "bash -c '[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]'",
   "headers": [
     {
       "source": "/(.*)",
