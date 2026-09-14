@@ -1,0 +1,30 @@
+---
+description: Playbook Fondateur formation collègue — référence permanente LuxeFlexIA funnel/onboarding/acquisition
+alwaysApply: true
+---
+
+# Playbook Fondateur (formation collègue)
+
+Le fondateur renvoie régulièrement le pack formation (modules 00–07, STRATÉGIE USA, SAAS). **C'est la source de vérité produit/funnel.**
+
+## Où lire
+
+- Synthèse + état LuxeFlexIA : `docs/formation-collegue/PLAYBOOK_REFERENCE.md`
+- Texte intégral searchable : `docs/formation-collegue/_EXTRACT_COMPLET.txt`
+
+## Règles à appliquer
+
+1. **Ordre Duolingo** : valeur → action → résultat → compte → paywall (jamais compte en premier).
+2. Avant toute modif funnel/onboarding/paywall : croiser avec modules 02 et 03.
+3. Avant scale ads : checklist module 07 (LTV > CAC, rétention, funnel instrumenté).
+4. Prioriser la **plus grosse fuite du funnel**, pas la feature la plus visible.
+5. Les 16 concepts psychologiques : choisir ceux qui clarifient, jamais tromper (fausse urgence, faux prix barré).
+
+## Gaps LuxeFlexIA connus (mettre à jour après chaque implémentation)
+
+- Post-paiement : auto-gen + export ✨ après Stripe
+- Register après première valeur (pas avant quiz)
+- Preuve sociale paywall, emails expiration preview
+- Quiz en DB par compte (au-delà localStorage)
+
+Communiquer avec l'utilisateur en **français**.
