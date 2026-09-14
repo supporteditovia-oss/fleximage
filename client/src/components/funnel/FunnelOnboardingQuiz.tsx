@@ -20,39 +20,41 @@ const VIBES: OnboardingVibe[] = [
   "celebrity",
   "outfit",
 ];
-const FORMATS: OnboardingFormat[] = ["image", "video"];
+
+const QUIZ_STEPS = 2;
 
 type FunnelOnboardingQuizProps = {
   inputImageUrl?: string | null;
+  /** Déjà choisi sur la landing (image / voix / vidéo) — pas re-demandé. */
+  format?: OnboardingFormat;
   onComplete: (answers: Omit<OnboardingQuizAnswers, "completedAt">) => void;
 };
 
 export function FunnelOnboardingQuiz({
   inputImageUrl,
+  format = "image",
   onComplete,
 }: FunnelOnboardingQuizProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const [goal, setGoal] = useState<OnboardingGoal | null>(null);
   const [vibe, setVibe] = useState<OnboardingVibe | null>(null);
-  const [format, setFormat] = useState<OnboardingFormat | null>(null);
 
-  const stepLabelKey = useMemo(() => {
-    if (step === 0) return "onboardingQuiz.step1Label";
-    if (step === 1) return "onboardingQuiz.step2Label";
-    return "onboardingQuiz.step3Label";
-  }, [step]);
+  const stepLabelKey = useMemo(
+    () => (step === 0 ? "onboardingQuiz.step1Label" : "onboardingQuiz.step2Label"),
+    [step],
+  );
 
-  const canContinue =
-    (step === 0 && goal) || (step === 1 && vibe) || (step === 2 && format);
+  const canContinue = (step === 0 && goal) || (step === 1 && vibe);
 
   const handleContinue = () => {
-    if (step < 2) {
-      setStep((s) => s + 1);
+    if (step === 0 && goal) {
+      setStep(1);
       return;
     }
-    if (!goal || !vibe || !format) return;
-    onComplete({ goal, vibe, format });
+    if (step === 1 && goal && vibe) {
+      onComplete({ goal, vibe, format });
+    }
   };
 
   return createPortal(
@@ -73,7 +75,11 @@ export function FunnelOnboardingQuiz({
       />
 
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-6">
-        <FunnelProgressBar current={step + 1} total={3} labelKey={stepLabelKey} />
+        <FunnelProgressBar
+          current={step + 1}
+          total={QUIZ_STEPS}
+          labelKey={stepLabelKey}
+        />
 
         {inputImageUrl ? (
           <div className="relative aspect-[3/4] w-24 overflow-hidden rounded-2xl border border-[var(--lx-gold)]/35 shadow-lg sm:w-28">
@@ -150,33 +156,6 @@ export function FunnelOnboardingQuiz({
                 </div>
               </>
             ) : null}
-
-            {step === 2 ? (
-              <>
-                <h1 className="lx-display text-2xl font-semibold tracking-tight text-[var(--lx-ink)]">
-                  {t("onboardingQuiz.step3Title")}
-                </h1>
-                <p className="text-sm font-medium text-[var(--lx-muted)]">
-                  {t("onboardingQuiz.step3Subtitle")}
-                </p>
-                <div className="grid gap-2 pt-1">
-                  {FORMATS.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setFormat(id)}
-                      className={`rounded-2xl border px-4 py-3.5 text-left text-sm font-semibold transition-all ${
-                        format === id
-                          ? "border-[var(--lx-gold)] bg-white shadow-md"
-                          : "border-black/8 bg-[var(--lx-surface-2)]/90 hover:border-[var(--lx-gold)]/40"
-                      }`}
-                    >
-                      {t(`onboardingQuiz.formats.${id}`)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
           </motion.div>
         </AnimatePresence>
 
@@ -186,7 +165,9 @@ export function FunnelOnboardingQuiz({
           onClick={handleContinue}
           className="lx-btn-gold flex min-h-12 w-full max-w-md items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {step < 2 ? t("onboardingQuiz.continue") : t("onboardingQuiz.finish")}
+          {step === 0
+            ? t("onboardingQuiz.continue")
+            : t("onboardingQuiz.finish")}
           <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
         </button>
       </div>

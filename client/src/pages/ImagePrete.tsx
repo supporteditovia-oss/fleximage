@@ -249,8 +249,8 @@ export default function ImagePrete() {
         ) : (
           <>
             <FunnelProgressBar
-              current={4}
-              total={4}
+              current={3}
+              total={3}
               labelKey="paywall.funnelStepRecover"
             />
 
