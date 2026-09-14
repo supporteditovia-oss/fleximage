@@ -79,6 +79,12 @@
       "destination": "/index.html"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/preview-expiry-reminders",
+      "schedule": "*/10 * * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/assets/larpking.png",

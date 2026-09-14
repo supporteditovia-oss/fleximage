@@ -19,6 +19,7 @@ import { BlurredLockedImage } from "@/components/generate/BlurredLockedImage";
 import { markFakePaywallReached, clearFakePaywallReached } from "@/lib/fake-paywall-state";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCredits } from "@/lib/format-locale";
+import { registerPreviewLock } from "@/lib/preview-lock-sync";
 
 function purgeExpiredPreview() {
   clearPaywallImage();
@@ -88,6 +89,7 @@ export default function ImagePrete() {
     void import("@/lib/funnel-tracker").then(({ trackFunnelStep }) => {
       trackFunnelStep("preview", { source: "image_prete" });
     });
+    void registerPreviewLock(deadline);
   }, []);
 
   useEffect(() => {

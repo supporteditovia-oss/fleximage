@@ -83,11 +83,13 @@ Payment decoupling · Mental accounting · Commitment & consistency · Endowment
 | Paywall récupération + urgence | « Débloque ta photo », compteur 15 min, ancrage prix |
 | Endowment / IKEA (résultat perso) | Photo utilisateur dans le funnel |
 | Export UGC TikTok 9:16 | `before-after-export.ts`, `BeforeAfterShareButton` |
-| Quiz mémorisé 1× | `localStorage` clé `luxeflexia_onboarding_quiz` |
+| Quiz mémorisé 1× | `localStorage` + sync `profiles.onboarding_quiz` |
 | Commitment (objectif choisi) | Questions quiz → presets |
 | Post-paiement fluide | Stripe → `/create?checkout=success` → restore draft → auto-gen HD |
 | Bouton ✨ TikTok | `/resultat` + `UnlockedLarpView` |
 | Preuve sociale paywall | `paywall.socialProof` dans `LuxePaywallModal` |
+| Emails relance preview expirée | Cron `/api/cron/preview-expiry-reminders` + Resend (`RESEND_API_KEY`) |
+| Fluidité editorial + loader | PR #121 cherry-picked (toggle editorial + loader blur) |
 
 ### ⚠️ Partiel
 
@@ -99,11 +101,9 @@ Payment decoupling · Mental accounting · Commitment & consistency · Endowment
 
 | Recommandation | Priorité suggérée |
 |----------------|-------------------|
-| Emails relance preview expirée | Moyenne |
-| Quiz sauvegardé par compte (Supabase) | Basse |
 | Pledge / streak / notifs | Non pertinent pour ce produit |
 | Distribution USA (module 06) | Ops marketing, pas code |
-| PR fluidité site (#121) | Haute (editorial + loader) |
+| Register avant valeur → inverser | Haute (ordre Duolingo complet) |
 
 ---
 
@@ -126,7 +126,7 @@ Landing → Quiz/action sans compte → 1re valeur (preview) → Compte → Payw
 - [x] Promesse claire (transformation lifestyle/luxe)
 - [x] MVP monétisé (Stripe, crédits)
 - [x] Onboarding → première valeur (preview floutée)
-- [ ] Compte **après** valeur (inverser register/quiz)
+- [ ] Compte **après** valeur (inverser register/quiz) — seul gap funnel majeur
 - [x] Paywall continuité de valeur
 - [ ] Funnel instrumenté de bout en bout (pub → renouvellement)
 - [x] Résultat partageable (export avant/après codé)
@@ -155,4 +155,6 @@ Landing → Quiz/action sans compte → 1re valeur (preview) → Compte → Payw
 3. **Acquisition US** → module 06 + STRATÉGIE 🇺🇸.
 4. **Après chaque test** → noter résultat ici ou dans le playbook utilisateur.
 
-*Dernière mise à jour playbook : 2026-09-14*
+*Dernière mise à jour playbook : 2026-09-14 (post-paiement, emails, quiz DB, fluidité)*
+
+**Env emails preview** : `RESEND_API_KEY`, `RESEND_FROM`, `CRON_SECRET` (Vercel cron toutes les 10 min).

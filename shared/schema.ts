@@ -31,6 +31,7 @@ export const profiles = pgTable("profiles", {
   has_accepted_terms: boolean("has_accepted_terms").default(false).notNull(),
   credits: integer("credits").default(0).notNull(),
   generation_count: integer("generation_count").default(0).notNull(),
+  onboarding_quiz: jsonb("onboarding_quiz"),
   last_active_at: timestamp("last_active_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

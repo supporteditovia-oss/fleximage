@@ -10,6 +10,7 @@ import { clearPendingLarp, savePendingLarp } from "@/lib/pending-larp";
 import { clearFakePaywallReached } from "@/lib/fake-paywall-state";
 import { clearOnboardingResume } from "@/lib/onboarding-resume";
 import { studioHomePath } from "@/lib/v2-experience";
+import { markPreviewRecovered } from "@/lib/preview-lock-sync";
 
 export type CheckoutSuccessPath = "/create" | "/generate" | "/resultat";
 
@@ -64,4 +65,5 @@ export function clearFunnelDraftAfterPayment(): void {
   clearPaywallExpiry();
   clearOnboardingResume();
   clearFakePaywallReached();
+  void markPreviewRecovered();
 }

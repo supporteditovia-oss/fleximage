@@ -178,6 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refetchOnWindowFocus: false,
     });
 
+  useEffect(() => {
+    if (!user?.id) return;
+    void import("@/lib/onboarding-quiz-sync").then(({ hydrateOnboardingQuizFromServer }) =>
+      hydrateOnboardingQuizFromServer(),
+    );
+  }, [user?.id]);
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
