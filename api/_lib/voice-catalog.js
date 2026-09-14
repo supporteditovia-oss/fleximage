@@ -1,5 +1,5 @@
 const {
-  getCatalogSampleLine,
+  buildCatalogSampleLine,
   normalizeVoiceLocale,
 } = require("../../shared/voice-locale-scripts.cjs");
 
@@ -14,7 +14,7 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 3;
+const UNIFIED_PREVIEW_VERSION = 4;
 
 function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
   const locale = normalizeVoiceLocale(localeLike);
@@ -55,7 +55,7 @@ function resolveCatalogTtsSpeed(fishReferenceId) {
 }
 
 module.exports = {
-  getCatalogSampleLine,
+  buildCatalogSampleLine,
   normalizeVoiceLocale,
   DEFAULT_TTS_SPEED,
   MIN_TTS_SPEED,

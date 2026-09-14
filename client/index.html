@@ -25,6 +25,7 @@
     <meta property="og:image:alt" content="LuxeFlexIA — créateur de photos lifestyle par IA" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="es_ES" />
     <meta property="og:site_name" content="LuxeFlexIA" />
     <script>
       (function () {
@@ -60,13 +61,25 @@
           var seoFr = document.getElementById("seo-fallback");
           var seoEn = document.getElementById("seo-fallback-en");
           if (seoFr && seoEn) {
-            seoFr.hidden = lang === "en";
+            seoFr.hidden = lang !== "fr";
             seoEn.hidden = lang !== "en";
           }
-          if (lang !== "en") return;
-          var title = "LuxeFlexIA — Create hyper-realistic lifestyle photos with AI";
-          var desc = "Turn a simple photo into a stunning, realistic luxury visual with AI.";
-          var ogImage = "https://www.luxeflexia.com/assets/og-image-en.png?v=20260820";
+          var title = document.title;
+          var desc = "";
+          var ogImage = "https://www.luxeflexia.com/assets/og-image.png?v=20260725";
+          var ogLocale = "fr_FR";
+          if (lang === "en") {
+            title = "LuxeFlexIA — Create hyper-realistic lifestyle photos with AI";
+            desc = "Turn a simple photo into a stunning, realistic luxury visual with AI.";
+            ogImage = "https://www.luxeflexia.com/assets/og-image-en.png?v=20260820";
+            ogLocale = "en_US";
+          } else if (lang === "es") {
+            title = "LuxeFlexIA — Crea fotos lifestyle hiperrealistas con IA";
+            desc = "Transforma una simple foto en un visual de lujo realista con inteligencia artificial.";
+            ogLocale = "es_ES";
+          } else {
+            return;
+          }
           document.title = title;
           var d = document.querySelector('meta[name="description"]');
           if (d) d.setAttribute("content", desc);
@@ -75,11 +88,11 @@
           var ogd = document.querySelector('meta[property="og:description"]');
           if (ogd) ogd.setAttribute("content", desc);
           var ogl = document.querySelector('meta[property="og:locale"]');
-          if (ogl) ogl.setAttribute("content", "en_US");
+          if (ogl) ogl.setAttribute("content", ogLocale);
           var ogi = document.querySelector('meta[property="og:image"]');
           if (ogi) ogi.setAttribute("content", ogImage);
           var ogia = document.querySelector('meta[property="og:image:alt"]');
-          if (ogia) ogia.setAttribute("content", "LuxeFlexIA — hyper-realistic AI lifestyle photos");
+          if (ogia) ogia.setAttribute("content", title);
           var twt = document.querySelector('meta[name="twitter:title"]');
           if (twt) twt.setAttribute("content", title);
           var twd = document.querySelector('meta[name="twitter:description"]');
