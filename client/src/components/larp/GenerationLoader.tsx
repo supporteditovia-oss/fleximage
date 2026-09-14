@@ -77,11 +77,21 @@ export function GenerationLoader({
           ],
     [statusMessages, t],
   );
-  const themeBundleRef = useRef(acquireGenerationLoaderTheme(taskId));
-  const { theme, isContinuation } = themeBundleRef.current;
-  const [phase, setPhase] = useState<"dissolve" | "blur" | "logo">(
-    isContinuation ? "logo" : "dissolve",
-  );
+  const themeBundleRef = useRef<ReturnType<
+    typeof acquireGenerationLoaderTheme
+  > | null>(null);
+  if (themeBundleRef.current === null) {
+    themeBundleRef.current = acquireGenerationLoaderTheme(
+      taskId,
+      estimatedSeconds,
+    );
+  }
+  const {
+    theme,
+    isContinuation,
+    countdownSessionId,
+    countdownStartedAtMs,
+  } = themeBundleRef.current;
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageKey, setMessageKey] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -96,34 +106,24 @@ export function GenerationLoader({
     );
   }, [estimatedSeconds]);
 
+  const effectiveStartedAtMs = startedAtMs ?? countdownStartedAtMs;
+
   const remaining = useGenerationCountdown(
-    taskId,
-    startedAtMs,
+    countdownSessionId,
+    effectiveStartedAtMs,
     lockedEstimate.current,
     status === "success",
     serverRemainingSeconds,
   );
 
   const progress = useGenerationProgress(
-    taskId,
-    startedAtMs,
+    countdownSessionId,
+    effectiveStartedAtMs,
     lockedEstimate.current,
     status === "success",
   );
 
   const isOvertime = remaining <= 0 && status !== "success";
-
-  useEffect(() => {
-    if (phase !== "dissolve") return;
-    const timer = setTimeout(() => setPhase("blur"), 700);
-    return () => clearTimeout(timer);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== "blur") return;
-    const timer = setTimeout(() => setPhase("logo"), 900);
-    return () => clearTimeout(timer);
-  }, [phase]);
 
   const resultUrl = resultUrls?.[0] ?? null;
 
@@ -175,8 +175,9 @@ export function GenerationLoader({
     return () => clearInterval(id);
   }, [progressMessages.length]);
 
-  const isBlurring = phase === "blur" || phase === "logo";
   const progressDash = Math.max(8, progress * FRAME_PERIMETER);
+  const blurredPhotoFilter = "blur(22px) brightness(0.38) saturate(0.8)";
+  const sharpPhotoFilter = "blur(0px) brightness(1) saturate(1.05)";
   const progressPct = Math.round(progress * 100);
 
   const themeStyle = {
@@ -194,17 +195,25 @@ export function GenerationLoader({
         src={imageSrc}
         alt={alt}
         className="lx-gen-loader__photo"
+        initial={false}
         animate={
           isResult
-            ? { filter: "blur(0px) brightness(1) saturate(1.05)", scale: 1 }
+            ? { filter: sharpPhotoFilter, scale: 1 }
             : {
-                filter: isBlurring
-                  ? "blur(22px) brightness(0.38) saturate(0.8)"
-                  : "blur(0px) brightness(1) saturate(1)",
-                scale: isBlurring ? 1.06 : 1,
+                filter: blurredPhotoFilter,
+                scale: 1.06,
               }
         }
-        transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
+        transition={{
+          filter: {
+            duration: isResult ? 0.85 : 0,
+            ease: [0.4, 0, 0.2, 1],
+          },
+          scale: {
+            duration: isResult ? 0.85 : 0,
+            ease: [0.4, 0, 0.2, 1],
+          },
+        }}
       />
       <div className="lx-gen-loader__photo-shade" aria-hidden />
       {!isResult && !isExiting ? (

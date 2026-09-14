@@ -45,18 +45,61 @@ function pickTheme(taskId: string): GenerationLoaderTheme {
 
 /** Thème verrouillé pour toute la durée d'une génération (pending → taskId). */
 let lockedTheme: GenerationLoaderTheme | null = null;
+let countdownSessionId: string | null = null;
+let countdownStartedAtMs: number | null = null;
+let countdownEstimateSeconds: number | null = null;
 
-export function acquireGenerationLoaderTheme(taskId: string): {
+export function acquireGenerationLoaderTheme(
+  taskId: string,
+  estimatedSeconds?: number,
+): {
   theme: GenerationLoaderTheme;
   isContinuation: boolean;
+  countdownSessionId: string;
+  countdownStartedAtMs: number;
+  countdownEstimateSeconds: number;
 } {
   const isContinuation = lockedTheme !== null;
   if (!lockedTheme) {
     lockedTheme = pickTheme(taskId);
   }
-  return { theme: lockedTheme, isContinuation };
+  if (!countdownSessionId) {
+    countdownSessionId = `gen-${Date.now()}`;
+  }
+  if (countdownStartedAtMs === null) {
+    countdownStartedAtMs = Date.now();
+  }
+  if (
+    countdownEstimateSeconds === null &&
+    estimatedSeconds != null &&
+    Number.isFinite(estimatedSeconds)
+  ) {
+    countdownEstimateSeconds = Math.max(25, Math.round(estimatedSeconds));
+  }
+  return {
+    theme: lockedTheme,
+    isContinuation,
+    countdownSessionId,
+    countdownStartedAtMs,
+    countdownEstimateSeconds: countdownEstimateSeconds ?? 50,
+  };
+}
+
+/** Timing client verrouillé pendant pending → polling (évite reset du compteur). */
+export function peekGenerationLoaderTiming(): {
+  estimate: number;
+  startedAtMs: number;
+} | null {
+  if (countdownStartedAtMs === null) return null;
+  return {
+    estimate: countdownEstimateSeconds ?? 50,
+    startedAtMs: countdownStartedAtMs,
+  };
 }
 
 export function releaseGenerationLoaderTheme() {
   lockedTheme = null;
+  countdownSessionId = null;
+  countdownStartedAtMs = null;
+  countdownEstimateSeconds = null;
 }
