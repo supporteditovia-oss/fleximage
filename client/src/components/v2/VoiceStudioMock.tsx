@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import {
   MOCK_VOICE_CATALOG,
+  findCatalogProfileByName,
   type ClonedVoice,
   type MockVoiceProfile,
 } from "@/lib/v2-mock-voice";
@@ -1175,6 +1176,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   const isActive =
                     activeVoice?.kind === "cloned" && activeVoice.id === v.id;
                   const isReplaying = replayCloneId === v.id;
+                  const catalogPhoto = findCatalogProfileByName(v.name)?.photoUrl;
                   return (
                     <li key={v.id} className="vs-cloned-item">
                       <button
@@ -1182,8 +1184,15 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                         className={`vs-cloned-row${isActive ? " is-active" : ""}`}
                         onClick={() => selectClonedVoice(v)}
                       >
-                        <span className="vs-cloned-row__avatar" aria-hidden>
-                          {v.name.slice(0, 2).toUpperCase()}
+                        <span
+                          className={`vs-cloned-row__avatar${catalogPhoto ? " vs-cloned-row__avatar--photo" : ""}`}
+                          aria-hidden
+                        >
+                          {catalogPhoto ? (
+                            <img src={catalogPhoto} alt="" loading="lazy" decoding="async" />
+                          ) : (
+                            v.name.slice(0, 2).toUpperCase()
+                          )}
                         </span>
                         <span className="vs-cloned-row__copy">
                           <strong>{v.name}</strong>

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Mic, X } from "lucide-react";
 import {
   catalogPhotoForSlug,
+  findCatalogProfileByName,
   slugFromCatalogVoiceId,
   type MockVoiceProfile,
 } from "@/lib/v2-mock-voice";
@@ -20,10 +21,16 @@ function resolvePhotoUrl(
   profile: MockVoiceProfile | undefined,
   kind: "catalog" | "cloned",
   voiceId: string,
+  name: string,
 ): string | undefined {
   if (profile?.photoUrl) return profile.photoUrl;
-  if (kind !== "catalog") return undefined;
-  const slug = slugFromCatalogVoiceId(profile?.id ?? voiceId);
+  if (kind === "catalog") {
+    const slug = slugFromCatalogVoiceId(profile?.id ?? voiceId);
+    return slug ? catalogPhotoForSlug(slug) : undefined;
+  }
+  const catalogMatch = findCatalogProfileByName(name);
+  if (catalogMatch?.photoUrl) return catalogMatch.photoUrl;
+  const slug = catalogMatch ? slugFromCatalogVoiceId(catalogMatch.id) : null;
   return slug ? catalogPhotoForSlug(slug) : undefined;
 }
 
@@ -36,8 +43,12 @@ export function VoiceSelectedHero({
   kind,
   onRemove,
 }: VoiceSelectedHeroProps) {
+  const catalogMatch =
+    kind === "cloned" && !profile ? findCatalogProfileByName(name) : undefined;
+  const displayProfile = profile ?? catalogMatch;
+
   const photoCandidates = useMemo(() => {
-    const primary = resolvePhotoUrl(profile, kind, voiceId);
+    const primary = resolvePhotoUrl(displayProfile, kind, voiceId, name);
     if (!primary) return [];
     const list = [primary];
     if (primary.endsWith(".jpg")) {
@@ -46,13 +57,13 @@ export function VoiceSelectedHero({
       list.push(primary.replace(/\.webp$/i, ".jpg"));
     }
     return list;
-  }, [profile, kind, voiceId]);
+  }, [displayProfile, kind, voiceId, name]);
 
   const [photoIndex, setPhotoIndex] = useState(0);
   const photoUrl = photoCandidates[photoIndex];
 
   const initials =
-    profile?.initials ??
+    displayProfile?.initials ??
     name
       .split(/\s+/)
       .map((p) => p[0])
@@ -61,7 +72,7 @@ export function VoiceSelectedHero({
       .toUpperCase();
 
   const accent =
-    profile?.accent ??
+    displayProfile?.accent ??
     "linear-gradient(145deg, #1a1a1a 0%, #5c4a2a 55%, #c9a227 100%)";
 
   const handlePhotoError = () => {
@@ -103,8 +114,10 @@ export function VoiceSelectedHero({
 
         <div className="vs-voice-hero__identity">
           <h3 className="vs-voice-hero__name">{name}</h3>
-          {category ? (
-            <span className="vs-voice-hero__tag">{category}</span>
+          {category || displayProfile?.category ? (
+            <span className="vs-voice-hero__tag">
+              {category ?? displayProfile?.category}
+            </span>
           ) : kind === "cloned" ? (
             <span className="vs-voice-hero__tag">Ma voix</span>
           ) : null}

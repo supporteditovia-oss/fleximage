@@ -109,6 +109,27 @@ export function slugFromCatalogVoiceId(voiceId: string): string | null {
   return match?.[1] ?? null;
 }
 
+function normalizeCatalogName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+/** Associe un nom de voix clonée à une entrée catalogue (ex. « maes » → Maes). */
+export function findCatalogProfileByName(name: string): MockVoiceProfile | undefined {
+  const needle = normalizeCatalogName(name);
+  if (!needle) return undefined;
+  return MOCK_VOICE_CATALOG.find((voice) => {
+    const byName = normalizeCatalogName(voice.name);
+    const slug = slugFromCatalogVoiceId(voice.id);
+    const bySlug = slug ? normalizeCatalogName(slug) : "";
+    return byName === needle || bySlug === needle;
+  });
+}
+
 function initialsFrom(name: string, override?: string): string {
   if (override) return override;
   const parts = name.replace(/\./g, "").split(/\s+/).filter(Boolean);
