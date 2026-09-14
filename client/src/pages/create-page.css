@@ -1333,6 +1333,18 @@ html.luxeflexia-create-page::before {
   color: var(--lx-muted);
 }
 
+.vs-saved-voices {
+  margin: 0.85rem 0 0.35rem;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid rgba(18, 16, 14, 0.07);
+}
+
+.vs-saved-voices__or-new {
+  margin-top: 0.55rem;
+  text-align: center;
+  font-style: italic;
+}
+
 .vs-cloned-list {
   list-style: none;
   margin: 0;
@@ -1459,6 +1471,11 @@ html.luxeflexia-create-page::before {
   font-weight: 500;
   color: var(--lx-ink);
   line-height: 1.25;
+}
+
+.vs-active-voice__change {
+  align-self: flex-start;
+  margin-top: 0.15rem;
 }
 
 .vs-active-voice__meta {

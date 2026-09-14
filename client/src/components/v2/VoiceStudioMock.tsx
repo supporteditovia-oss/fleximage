@@ -112,15 +112,25 @@ function resolveActiveFromStorage(): {
   }
 
   const id = readSelectedCatalogVoiceId();
-  if (!id) return null;
-  const profile = MOCK_VOICE_CATALOG.find((v) => v.id === id);
-  if (!profile) return null;
-  return {
-    id: profile.id,
-    name: profile.name,
-    kind: "catalog",
-    profile,
-  };
+  if (id) {
+    const profile = MOCK_VOICE_CATALOG.find((v) => v.id === id);
+    if (profile) {
+      return {
+        id: profile.id,
+        name: profile.name,
+        kind: "catalog",
+        profile,
+      };
+    }
+  }
+
+  const savedClones = readClonedVoices();
+  if (savedClones.length > 0) {
+    const latest = savedClones[0];
+    return { id: latest.id, name: latest.name, kind: "cloned" };
+  }
+
+  return null;
 }
 
 type VoiceStudioMockProps = {
@@ -874,6 +884,31 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     clearSelectedVoice();
   }, [playResultAudio]);
 
+  const selectClonedVoice = useCallback(
+    (voice: StoredClonedVoice) => {
+      stopPreview();
+      setReplayCloneId(null);
+      cloneReplayRef.current?.pause();
+      setActiveVoice({
+        id: voice.id,
+        name: voice.name,
+        kind: "cloned",
+      });
+      writeSelectedClonedVoiceId(voice.id);
+      writeSelectedCatalogVoiceId(null);
+      setReadyToPlay(false);
+      resetCapture();
+      setVoiceName("");
+    },
+    [resetCapture],
+  );
+
+  useEffect(() => {
+    if (activeVoice?.kind === "cloned") {
+      writeSelectedClonedVoiceId(activeVoice.id);
+    }
+  }, [activeVoice?.id, activeVoice?.kind]);
+
   const handleGenerate = () => {
     if (!canGenerate) return;
     stopPreview();
@@ -1126,6 +1161,72 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             </div>
           ) : null}
 
+          {cloned.length > 0 ? (
+            <div className="vs-saved-voices">
+              <p className="vs-label">{vsg("savedVoicesTitle", "Mes voix enregistrées")}</p>
+              <p className="vs-help vs-help--tight">
+                {vsg(
+                  "savedVoicesSub",
+                  "Réutilise une voix déjà capturée — pas besoin de réenregistrer à chaque fois.",
+                )}
+              </p>
+              <ul className="vs-cloned-list">
+                {cloned.map((v) => {
+                  const isActive =
+                    activeVoice?.kind === "cloned" && activeVoice.id === v.id;
+                  const isReplaying = replayCloneId === v.id;
+                  return (
+                    <li key={v.id} className="vs-cloned-item">
+                      <button
+                        type="button"
+                        className={`vs-cloned-row${isActive ? " is-active" : ""}`}
+                        onClick={() => selectClonedVoice(v)}
+                      >
+                        <span className="vs-cloned-row__avatar" aria-hidden>
+                          {v.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="vs-cloned-row__copy">
+                          <strong>{v.name}</strong>
+                          <span>
+                            {v.sourceLabel} · {formatClipTime(v.durationSec)}
+                          </span>
+                        </span>
+                        {isActive ? (
+                          <span className="vs-cloned-row__badge">
+                            {vsg("activeVoiceBadge", "Active")}
+                          </span>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        className={`vs-cloned-row__replay${isReplaying ? " is-playing" : ""}`}
+                        aria-label={
+                          isReplaying
+                            ? vsg("pauseVoiceAria", `Pause ${v.name}`, { name: v.name })
+                            : vsg("replayVoiceAria", `Réécouter l'extrait de ${v.name}`, {
+                                name: v.name,
+                              })
+                        }
+                        onClick={() => toggleCloneReplay(v)}
+                      >
+                        {isReplaying ? (
+                          <Pause className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {!showLockedVoiceName ? (
+                <p className="vs-help vs-help--tight vs-saved-voices__or-new">
+                  {vsg("orRecordNew", "— ou enregistre une nouvelle voix ci-dessous —")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {showLockedVoiceName ? (
             <ol className="vs-steps" aria-hidden>
               <li className="is-done">{vsg("stepVoice", "Voix")}</li>
@@ -1149,9 +1250,21 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
           {showLockedVoiceName && activeVoice ? (
             <>
-              <span className="vs-label">{vsg("selectedVoice", "Voix sélectionnée")}</span>
-              <div className="vs-input vs-input--locked" aria-readonly="true">
-                {activeVoice.name}
+              <div className="vs-active-voice">
+                <span className="vs-label">{vsg("selectedVoice", "Voix sélectionnée")}</span>
+                <div className="vs-input vs-input--locked" aria-readonly="true">
+                  {activeVoice.name}
+                </div>
+                <button
+                  type="button"
+                  className="vs-link vs-active-voice__change"
+                  onClick={() => {
+                    clearActiveVoice();
+                    resetCapture();
+                  }}
+                >
+                  {vsg("changeVoice", "Changer de voix")}
+                </button>
               </div>
             </>
           ) : (
@@ -1438,72 +1551,6 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             </p>
           ) : null}
         </section>
-
-        {!guestFunnel && cloned.length > 0 ? (
-          <section className="vs-card vs-card--list" aria-labelledby="vs-cloned-title">
-            <h3 id="vs-cloned-title" className="vs-card__title">
-              Mes voix
-            </h3>
-            <p className="vs-card__sub vs-card__sub--tight">
-              Tes clones restent ici — réécoute l’extrait quand tu veux.
-            </p>
-            <ul className="vs-cloned-list">
-              {cloned.map((v) => {
-                const isActive =
-                  activeVoice?.kind === "cloned" && activeVoice.id === v.id;
-                const isReplaying = replayCloneId === v.id;
-                return (
-                  <li key={v.id} className="vs-cloned-item">
-                    <button
-                      type="button"
-                      className={`vs-cloned-row${isActive ? " is-active" : ""}`}
-                      onClick={() => {
-                        stopPreview();
-                        setActiveVoice({
-                          id: v.id,
-                          name: v.name,
-                          kind: "cloned",
-                        });
-                        writeSelectedClonedVoiceId(v.id);
-                        writeSelectedCatalogVoiceId(null);
-                        setReadyToPlay(false);
-                      }}
-                    >
-                      <span className="vs-cloned-row__avatar" aria-hidden>
-                        {v.name.slice(0, 2).toUpperCase()}
-                      </span>
-                      <span className="vs-cloned-row__copy">
-                        <strong>{v.name}</strong>
-                        <span>
-                          {v.sourceLabel} · {formatClipTime(v.durationSec)}
-                        </span>
-                      </span>
-                      {isActive ? (
-                        <span className="vs-cloned-row__badge">Active</span>
-                      ) : null}
-                    </button>
-                    <button
-                      type="button"
-                      className={`vs-cloned-row__replay${isReplaying ? " is-playing" : ""}`}
-                      aria-label={
-                        isReplaying
-                          ? `Pause ${v.name}`
-                          : `Réécouter l’extrait de ${v.name}`
-                      }
-                      onClick={() => toggleCloneReplay(v)}
-                    >
-                      {isReplaying ? (
-                        <Pause className="h-3.5 w-3.5" aria-hidden />
-                      ) : (
-                        <Play className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
 
         {guestFunnel ? null : (
           <VoiceHistorySection

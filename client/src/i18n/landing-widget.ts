@@ -153,6 +153,14 @@ export const landingWidgetResources = {
         "Enregistre ou importe un extrait vocal (~20 s idéal, max 25 s).",
       blockNeedImport:
         "Importe ~20 s de voix seule (max 25 s, sans musique) pour un clone réaliste.",
+      savedVoicesTitle: "Mes voix enregistrées",
+      savedVoicesSub:
+        "Réutilise une voix déjà capturée — pas besoin de réenregistrer à chaque fois.",
+      orRecordNew: "— ou enregistre une nouvelle voix ci-dessous —",
+      changeVoice: "Changer de voix",
+      activeVoiceBadge: "Active",
+      replayVoiceAria: "Réécouter l'extrait de {{name}}",
+      pauseVoiceAria: "Pause {{name}}",
     },
   },
   en: {
@@ -306,6 +314,14 @@ export const landingWidgetResources = {
       blockNeedCapture: "Record or import a vocal clip (~20 s ideal, 25 s max).",
       blockNeedImport:
         "Import ~20 s of solo voice (25 s max, no music) for a realistic clone.",
+      savedVoicesTitle: "My saved voices",
+      savedVoicesSub:
+        "Reuse a voice you already captured — no need to record again every time.",
+      orRecordNew: "— or record a new voice below —",
+      changeVoice: "Change voice",
+      activeVoiceBadge: "Active",
+      replayVoiceAria: "Replay clip for {{name}}",
+      pauseVoiceAria: "Pause {{name}}",
     },
   },
   es: {
@@ -460,6 +476,14 @@ export const landingWidgetResources = {
         "Graba o importa un extracto vocal (~20 s ideal, máx. 25 s).",
       blockNeedImport:
         "Importa ~20 s de voz sola (máx. 25 s, sin música) para un clon realista.",
+      savedVoicesTitle: "Mis voces guardadas",
+      savedVoicesSub:
+        "Reutiliza una voz ya capturada — no hace falta volver a grabar cada vez.",
+      orRecordNew: "— o graba una voz nueva abajo —",
+      changeVoice: "Cambiar de voz",
+      activeVoiceBadge: "Activa",
+      replayVoiceAria: "Reescuchar extracto de {{name}}",
+      pauseVoiceAria: "Pausa {{name}}",
     },
   },
 } as const;

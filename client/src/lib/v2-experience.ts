@@ -51,18 +51,21 @@ export function writeStudioMode(mode: StudioMode): void {
 const SELECTED_VOICE_KEY = "luxeflexia:selected-catalog-voice";
 const SELECTED_CLONED_VOICE_KEY = "luxeflexia:selected-cloned-voice";
 
-/** Sélection voix — session SPA uniquement (effacée au refresh). */
-let selectedCatalogVoiceId: string | null = null;
-let selectedClonedVoiceId: string | null = null;
-
-if (typeof window !== "undefined") {
+/** Sélection voix — persistée en localStorage pour réutiliser après refresh. */
+function readPersistedVoiceId(key: string): string | null {
+  if (typeof window === "undefined") return null;
   try {
-    window.localStorage.removeItem(SELECTED_VOICE_KEY);
-    window.localStorage.removeItem(SELECTED_CLONED_VOICE_KEY);
+    const value = window.localStorage.getItem(key);
+    return value && value.trim() ? value : null;
   } catch {
-    /* ignore */
+    return null;
   }
 }
+
+let selectedCatalogVoiceId: string | null = readPersistedVoiceId(SELECTED_VOICE_KEY);
+let selectedClonedVoiceId: string | null = readPersistedVoiceId(
+  SELECTED_CLONED_VOICE_KEY,
+);
 
 export function readSelectedCatalogVoiceId(): string | null {
   return selectedCatalogVoiceId;
@@ -73,6 +76,12 @@ export function writeSelectedCatalogVoiceId(id: string | null): void {
   selectedCatalogVoiceId = id;
   if (id) selectedClonedVoiceId = null;
   try {
+    if (id) {
+      window.localStorage.setItem(SELECTED_VOICE_KEY, id);
+      window.localStorage.removeItem(SELECTED_CLONED_VOICE_KEY);
+    } else {
+      window.localStorage.removeItem(SELECTED_VOICE_KEY);
+    }
     window.dispatchEvent(
       new CustomEvent("luxeflexia:selected-voice", { detail: { id } }),
     );
@@ -90,6 +99,12 @@ export function writeSelectedClonedVoiceId(id: string | null): void {
   selectedClonedVoiceId = id;
   if (id) selectedCatalogVoiceId = null;
   try {
+    if (id) {
+      window.localStorage.setItem(SELECTED_CLONED_VOICE_KEY, id);
+      window.localStorage.removeItem(SELECTED_VOICE_KEY);
+    } else {
+      window.localStorage.removeItem(SELECTED_CLONED_VOICE_KEY);
+    }
     window.dispatchEvent(
       new CustomEvent("luxeflexia:selected-voice", { detail: { id } }),
     );
