@@ -1,6 +1,6 @@
 import catalog from "@shared/voice-catalog.json";
 import {
-  getCatalogSampleLine,
+  buildCatalogSampleLine,
   normalizeVoiceLocale,
   speechSynthesisLang,
 } from "@shared/voice-locale-scripts";
@@ -69,13 +69,13 @@ function readActiveVoiceLocale(): string {
   return normalizeVoiceLocale(stored || htmlLang || "fr");
 }
 
-/** Phrase d’aperçu catalogue selon la locale UI active. */
-export function catalogSampleLine(): string {
-  return getCatalogSampleLine(readActiveVoiceLocale());
+/** Intro catalogue pour une voix — « Salut, c'est Maes — généré par LuxeFlexIA ». */
+export function catalogSampleLine(name = "LuxeFlexIA"): string {
+  return buildCatalogSampleLine(name, readActiveVoiceLocale());
 }
 
-/** @deprecated utiliser catalogSampleLine() */
-export const CATALOG_SAMPLE_LINE = getCatalogSampleLine("fr");
+/** @deprecated utiliser catalogSampleLine(name) */
+export const CATALOG_SAMPLE_LINE = buildCatalogSampleLine("LuxeFlexIA", "fr");
 
 export type CatalogPreviewCallbacks = {
   onLoading?: () => void;
@@ -130,7 +130,7 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
     initials: initialsFrom(seed.name, seed.initials),
     accent: seed.accent ?? ACCENTS[index % ACCENTS.length],
     photoUrl: seed.photo ? `/assets/voice-catalog/${seed.photo}` : undefined,
-    sampleText: getCatalogSampleLine("fr"),
+    sampleText: buildCatalogSampleLine(seed.name, "fr"),
     pitch: seed.pitch,
     rate: seed.rate,
     fishReferenceId: seed.fishId,
@@ -480,7 +480,7 @@ export function speakCatalogSample(
       callbacks.onPlaying?.();
       speakRaw(
         {
-          text: catalogSampleLine(),
+          text: catalogSampleLine(profile.name),
           pitch: profile.pitch ?? 1,
           rate: profile.rate ?? 1,
         },
@@ -492,7 +492,7 @@ export function speakCatalogSample(
   callbacks.onPlaying?.();
   return speakRaw(
     {
-      text: catalogSampleLine(),
+      text: catalogSampleLine(profile.name),
       pitch: profile.pitch ?? 1,
       rate: profile.rate ?? 1,
     },

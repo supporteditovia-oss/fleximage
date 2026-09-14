@@ -44,7 +44,7 @@ import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { getCatalogSampleLine } from "@shared/voice-locale-scripts";
+import { buildCatalogSampleLine } from "@shared/voice-locale-scripts";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
@@ -179,12 +179,17 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     profile?: MockVoiceProfile;
   } | null>(() => resolveActiveFromStorage());
 
-  const [text, setText] = useState(() => getCatalogSampleLine("fr"));
+  const [text, setText] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   useEffect(() => {
     if (!guestFunnel) return;
-    setText(getCatalogSampleLine(i18n.resolvedLanguage));
-  }, [guestFunnel, i18n.resolvedLanguage]);
+    if (activeVoice?.kind === "catalog" && activeVoice.name) {
+      setText(buildCatalogSampleLine(activeVoice.name, i18n.resolvedLanguage));
+      return;
+    }
+    setText(t("landing:voiceStudioGuest.defaultText"));
+  }, [guestFunnel, i18n.resolvedLanguage, activeVoice?.kind, activeVoice?.name, t]);
 
   const { showFakeLoader: showOnboardingFakeLoader, finishFakeLoader } =
     useOnboardingFakeLoader({
@@ -1030,33 +1035,6 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           </p>
         )}
 
-        {guestFunnel ? (
-          <section className="vs-card vs-card--catalog" aria-labelledby="vs-landing-catalog">
-            <h3 id="vs-landing-catalog" className="vs-card__title">
-              {t("landing:voiceStudioGuest.catalogTitle")}
-            </h3>
-            <p className="vs-card__sub vs-card__sub--tight">
-              {t("landing:voiceStudioGuest.catalogSub")}
-            </p>
-            <VoiceCatalogPicker
-              selectedId={activeVoice?.kind === "catalog" ? activeVoice.id : null}
-              defaultFilter="Rap"
-              onSelect={(voice) => {
-                stopPreview();
-                setActiveVoice({
-                  id: voice.id,
-                  name: voice.name,
-                  kind: "catalog",
-                  profile: voice,
-                });
-                writeSelectedCatalogVoiceId(voice.id);
-                writeSelectedClonedVoiceId(null);
-                setReadyToPlay(false);
-              }}
-            />
-          </section>
-        ) : null}
-
         <section className="vs-card" aria-labelledby="vs-clone-title">
           <div className="vs-card__head-row">
             <div>
@@ -1079,7 +1057,48 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                     : "Enregistre ou importe un extrait, écris ton texte, puis génère."}
               </p>
             </div>
+            {guestFunnel ? (
+              <button
+                type="button"
+                className={`vs-catalog-toggle${catalogOpen ? " is-open" : ""}`}
+                aria-expanded={catalogOpen}
+                onClick={() => setCatalogOpen((open) => !open)}
+              >
+                {catalogOpen
+                  ? t("landing:voiceStudioGuest.catalogClose")
+                  : t("landing:voiceStudioGuest.catalogOpen")}
+              </button>
+            ) : null}
           </div>
+
+          {guestFunnel && catalogOpen ? (
+            <div className="vs-card--catalog vs-card--catalog-popover" aria-labelledby="vs-landing-catalog">
+              <h3 id="vs-landing-catalog" className="vs-card__title">
+                {t("landing:voiceStudioGuest.catalogTitle")}
+              </h3>
+              <p className="vs-card__sub vs-card__sub--tight">
+                {t("landing:voiceStudioGuest.catalogSub")}
+              </p>
+              <VoiceCatalogPicker
+                selectedId={activeVoice?.kind === "catalog" ? activeVoice.id : null}
+                defaultFilter="Rap"
+                onSelect={(voice) => {
+                  stopPreview();
+                  setActiveVoice({
+                    id: voice.id,
+                    name: voice.name,
+                    kind: "catalog",
+                    profile: voice,
+                  });
+                  writeSelectedCatalogVoiceId(voice.id);
+                  writeSelectedClonedVoiceId(null);
+                  setReadyToPlay(false);
+                  setText(buildCatalogSampleLine(voice.name, i18n.resolvedLanguage));
+                  setCatalogOpen(false);
+                }}
+              />
+            </div>
+          ) : null}
 
           {showLockedVoiceName ? (
             <ol className="vs-steps" aria-hidden>

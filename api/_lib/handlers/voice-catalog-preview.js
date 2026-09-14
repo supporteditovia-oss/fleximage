@@ -1,8 +1,9 @@
 const { synthesizeSpeech } = require("../fish-audio");
 const { uploadToR2, getR2Config } = require("../r2");
 const {
-  getCatalogSampleLine,
+  buildCatalogSampleLine,
   isValidFishReferenceId,
+  lookupCatalogEntryByFishId,
   unifiedPreviewCacheKey,
 } = require("../voice-catalog");
 
@@ -41,8 +42,9 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
       /* cache miss — synthèse Fish */
     }
 
+    const entry = lookupCatalogEntryByFishId(fishReferenceId);
     const buffer = await synthesizeSpeech({
-      text: getCatalogSampleLine(locale),
+      text: buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale),
       referenceId: fishReferenceId,
       format: "mp3",
     });
