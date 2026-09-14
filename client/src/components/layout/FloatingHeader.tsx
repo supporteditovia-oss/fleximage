@@ -238,7 +238,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`floating-header-credits pointer-events-auto relative z-20 ml-auto flex max-w-[46%] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-none sm:gap-1.5 sm:px-3 ${
+                className={`floating-header-credits pointer-events-auto relative z-20 ml-auto flex w-auto max-w-[min(calc(100vw-7rem),11.5rem)] shrink-0 items-center gap-1 rounded-lg border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/90 px-2.5 py-1.5 text-sm font-semibold text-[var(--lx-ink)] shadow-sm backdrop-blur-xl transition hover:bg-white sm:max-w-[12.5rem] sm:gap-1.5 sm:px-3 ${
                   isCreditBalanceEmpty ? "credits-zero-attention" : ""
                 }`}
                 aria-label={t("billing.openCreditsMenu")}
@@ -256,21 +256,23 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             </PopoverTrigger>
             <PopoverContent
               align="end"
+              side="bottom"
               sideOffset={8}
-              className="w-[min(calc(100vw-2rem),15.5rem)] overflow-hidden rounded-lg border-border/80 bg-white/95 p-0 shadow-xl shadow-black/10 backdrop-blur-xl"
+              collisionPadding={20}
+              className="z-[70] w-[min(calc(100vw-2.5rem),15.5rem)] max-w-[calc(100vw-2.5rem)] rounded-lg border-border/80 bg-white/95 p-0 shadow-xl shadow-black/10 backdrop-blur-xl"
             >
               <div className="border-b border-border/60 px-3 py-2.5">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                   {t("billing.creditsTitle")}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
                     <Gem
                       className="h-6 w-6 shrink-0 text-[var(--lx-gold)]"
                       strokeWidth={1.75}
                       aria-hidden
                     />
-                    <span className="lx-display truncate text-2xl font-bold leading-none tabular-nums">
+                    <span className="lx-display min-w-0 truncate text-2xl font-bold leading-none tabular-nums">
                       {formatCredits(displayedCredits, i18n.resolvedLanguage)}
                     </span>
                   </div>
@@ -283,9 +285,13 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
               <div className="space-y-2 px-3 py-2.5">
                 <div className="flex items-start gap-2.5">
                   <Crown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold leading-tight">{planLabels[planType]}</p>
-                    <p className="text-[11px] leading-tight text-muted-foreground">{statusLabel}</p>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="break-words text-[13px] font-semibold leading-tight">
+                      {planLabels[planType]}
+                    </p>
+                    <p className="break-words text-[11px] leading-tight text-muted-foreground">
+                      {statusLabel}
+                    </p>
                   </div>
                 </div>
 
