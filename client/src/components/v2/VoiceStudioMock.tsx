@@ -35,6 +35,7 @@ import {
   getStoredClonedVoice,
   persistClonedVoice,
   readClonedVoices,
+  removeClonedVoice,
   updateClonedVoiceServerIds,
   voiceClipToDataUrl,
   type StoredClonedVoice,
@@ -125,13 +126,15 @@ function resolveActiveFromStorage(): {
     }
   }
 
-  const savedClones = readClonedVoices();
-  if (savedClones.length > 0) {
-    const latest = savedClones[0];
-    return { id: latest.id, name: latest.name, kind: "cloned" };
-  }
-
   return null;
+}
+
+function clonedVoiceSubtitle(voice: StoredClonedVoice): string {
+  const label =
+    voice.source === "record"
+      ? "Enregistrement"
+      : "Fichier importé";
+  return `${label} · ${formatClipTime(voice.durationSec)}`;
 }
 
 type VoiceStudioMockProps = {
@@ -878,12 +881,24 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
   const clearActiveVoice = useCallback(() => {
     stopPreview();
+    setReplayCloneId(null);
+    cloneReplayRef.current?.pause();
     setReadyToPlay(false);
     setResultAudioUrl(null);
     setResultGenerationId(null);
     setActiveVoice(null);
     clearSelectedVoice();
-  }, [playResultAudio]);
+    resetCapture();
+    setVoiceName("");
+  }, [resetCapture]);
+
+  const handleRemoveActiveVoice = useCallback(() => {
+    if (activeVoice?.kind === "cloned") {
+      removeClonedVoice(activeVoice.id);
+      setCloned(readClonedVoices());
+    }
+    clearActiveVoice();
+  }, [activeVoice, clearActiveVoice]);
 
   const selectClonedVoice = useCallback(
     (voice: StoredClonedVoice) => {
@@ -904,11 +919,22 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     [resetCapture],
   );
 
+  const bootstrappedCloneRef = useRef(false);
+
   useEffect(() => {
     if (activeVoice?.kind === "cloned") {
       writeSelectedClonedVoiceId(activeVoice.id);
     }
   }, [activeVoice?.id, activeVoice?.kind]);
+
+  useEffect(() => {
+    if (bootstrappedCloneRef.current || activeVoice) return;
+    bootstrappedCloneRef.current = true;
+    if (readSelectedClonedVoiceId() || readSelectedCatalogVoiceId()) return;
+    const voices = readClonedVoices();
+    if (voices.length === 0) return;
+    selectClonedVoice(voices[0]);
+  }, [activeVoice, selectClonedVoice]);
 
   const handleGenerate = () => {
     if (!canGenerate) return;
@@ -985,9 +1011,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             audioDataUrl,
             sourceType: voiceClip.source,
             sourceLabel:
-              voiceClip.source === "record"
-                ? `Enregistrement ${formatClipTime(voiceClip.durationSec)}`
-                : voiceClip.fileName ?? "Import audio",
+              voiceClip.source === "record" ? "Enregistrement" : "Fichier importé",
             durationSec: voiceClip.durationSec,
           });
 
@@ -1000,9 +1024,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             name,
             source: voiceClip.source,
             sourceLabel:
-              voiceClip.source === "record"
-                ? `Enregistrement ${formatClipTime(voiceClip.durationSec)}`
-                : voiceClip.fileName ?? "Import audio",
+              voiceClip.source === "record" ? "Enregistrement" : "Fichier importé",
             createdAt: new Date().toISOString(),
           };
           await persistClonedVoice(entry, voiceClip);
@@ -1086,7 +1108,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             category={activeVoice.profile?.category}
             profile={activeVoice.profile}
             kind={activeVoice.kind}
-            onRemove={clearActiveVoice}
+            onRemove={handleRemoveActiveVoice}
           />
         ) : guestFunnel ? (
           <p className="voice-studio-page__hint">{t("landing:voiceStudioGuest.hint")}</p>
@@ -1196,9 +1218,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                         </span>
                         <span className="vs-cloned-row__copy">
                           <strong>{v.name}</strong>
-                          <span>
-                            {v.sourceLabel} · {formatClipTime(v.durationSec)}
-                          </span>
+                          <span>{clonedVoiceSubtitle(v)}</span>
                         </span>
                         {isActive ? (
                           <span className="vs-cloned-row__badge">
@@ -1267,10 +1287,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                 <button
                   type="button"
                   className="vs-link vs-active-voice__change"
-                  onClick={() => {
-                    clearActiveVoice();
-                    resetCapture();
-                  }}
+                  onClick={clearActiveVoice}
                 >
                   {vsg("changeVoice", "Changer de voix")}
                 </button>
