@@ -39,6 +39,7 @@ import DebugGenerate from "@/pages/DebugGenerate";
 import SeoNicheLanding from "@/pages/SeoNicheLanding";
 import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
 import ZeroCreditsPreview from "@/pages/ZeroCreditsPreview";
+import UnlockedResultPreview from "@/pages/UnlockedResultPreview";
 import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { supabase } from "@/lib/supabase";
@@ -492,6 +493,7 @@ function Router() {
       <Route path="/cgv" component={CGV} />
       <Route path="/confidentialite" component={Confidentialite} />
       <Route path="/preview/zero-credits" component={ZeroCreditsPreview} />
+      <Route path="/preview/unlocked-result" component={UnlockedResultPreview} />
 
       <Route path="/reset-password" component={ResetPassword} />
 
