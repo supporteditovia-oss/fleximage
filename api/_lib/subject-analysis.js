@@ -3,17 +3,28 @@
  * Gemini/OpenAI vision si clé dispo, sinon heuristiques texte.
  */
 
+const {
+  enrichAnalysisWithContextPose,
+  buildContextPosePromptBlock,
+  matchContextPosePlan,
+  POSE_FORBIDDEN_GLOBAL,
+  COMFORT_RULE,
+} = require("./context-pose-library");
+
 const ANALYSIS_TIMEOUT_MS = 14_000;
 
 const ANALYSIS_SCHEMA_HINT = `Return ONLY valid JSON with these keys (strings, concise English values):
 subject_presentation, apparent_age, outfit_style, pose_direction, mood, activity, location_context, camera_style
 
 Rules:
-- Infer from the reference photo AND scene/prompt context.
+- Choose pose from OUTFIT + ACTIVITY + FURNITURE + LOCATION CONTEXT — NOT from apparent gender alone.
+- Infer from the reference photo AND scene/prompt context (yacht, restaurant, street, sport field, beach, hotel, etc.).
+- Pose must look comfortable, stable, natural and occupied — believable interaction with seats, railings, tables, bags.
+- NEVER fashion-campaign mannequin poses: no rigid frontal stance, legs too wide, arms without purpose, props like ads.
 - Describe presentation, styling, attitude and pose direction only.
 - NEVER instruct to change identity, face, skin tone, hair, apparent age or body proportions.
 - Avoid stereotypes, caricature and sexualization.
-- camera_style should imply friend-taken smartphone: slight grain, imperfect framing, natural perspective.`;
+- camera_style: friend-taken smartphone — slight grain, imperfect framing, natural perspective, candid not studio.`;
 
 function getVisionApiKey() {
   return (
@@ -164,17 +175,32 @@ function normalizeAnalysis(raw = {}) {
     outfit_style: pick("outfit_style", "casual everyday"),
     pose_direction: pick(
       "pose_direction",
-      "natural believable posture adapted to the scene",
+      "natural believable posture adapted to outfit, furniture and scene",
     ),
     mood: pick("mood", "confident and authentic"),
     activity: pick("activity", "lifestyle moment in scene"),
     location_context: pick("location_context", "matches user scene or prompt"),
+    furniture_context: pick("furniture_context", "use visible seating, railing or props naturally"),
+    pose_scenario: pick("pose_scenario", ""),
+    pose_forbidden: pick("pose_forbidden", POSE_FORBIDDEN_GLOBAL),
     camera_style: pick(
       "camera_style",
-      "friend-taken smartphone photo, slight grain, imperfect framing, natural skin pores",
+      "friend-taken smartphone photo, slight grain, imperfect framing, natural skin pores, candid not campaign",
     ),
     source: raw.source || "heuristic",
   };
+}
+
+function finalizeAnalysis(analysis, userPrompt = "", sceneContext = "") {
+  const enriched = enrichAnalysisWithContextPose(
+    normalizeAnalysis(analysis),
+    userPrompt,
+    sceneContext,
+  );
+  if (!enriched.pose_forbidden) {
+    enriched.pose_forbidden = POSE_FORBIDDEN_GLOBAL;
+  }
+  return enriched;
 }
 
 function heuristicAnalysis(userPrompt = "", sceneContext = "") {
@@ -222,29 +248,37 @@ function heuristicAnalysis(userPrompt = "", sceneContext = "") {
     analysis.location_context = `${analysis.location_context}; weather-aware scene`;
   }
 
-  return analysis;
+  return finalizeAnalysis(analysis, userPrompt, sceneContext);
 }
 
-function buildAnalysisPromptBlock(analysis) {
-  const a = normalizeAnalysis(analysis);
+function buildAnalysisPromptBlock(analysis, userPrompt = "", sceneContext = "") {
+  const a = finalizeAnalysis(analysis, userPrompt, sceneContext);
+  const contextPlan = matchContextPosePlan(userPrompt, sceneContext);
+  const contextBlock = buildContextPosePromptBlock(contextPlan);
+
   return (
-    "AUTO SUBJECT & POSE ANALYSIS (mandatory guidance — identity unchanged). " +
-    "Analyze reference image 1 and scene context; adapt ONLY pose, attitude, styling coherence and body language. " +
+    "AUTO SUBJECT & POSE ANALYSIS (mandatory — identity unchanged). " +
+    "POSE PRIORITY ORDER: (1) reference identity locked, (2) outfit + activity + furniture + location, (3) gender presentation only if it affects natural gesture — never stereotype. " +
+    "Analyze reference image 1 and scene context; adapt ONLY pose, attitude, and body-language coherence. " +
     "IDENTITY LOCK: never alter face, skin tone, hair, apparent age, ethnicity or body proportions from reference image 1. " +
+    `${contextBlock} ` +
     `subject_presentation: ${a.subject_presentation}. ` +
     `apparent_age: keep ${a.apparent_age}. ` +
-    `outfit_style: ${a.outfit_style} — keep clothing level consistent with reference unless user explicitly requests outfit change. ` +
+    `outfit_style: ${a.outfit_style}. ` +
     `pose_direction: ${a.pose_direction}. ` +
     `mood: ${a.mood}. ` +
     `activity: ${a.activity}. ` +
     `location_context: ${a.location_context}. ` +
+    `furniture_context: ${a.furniture_context}. ` +
     `camera_style: ${a.camera_style}. ` +
-    "Elegant or well-dressed subject → charismatic assured refined natural attitude. " +
-    "Streetwear/urban → relaxed credible confident authentic, no caricature. " +
-    "Sportswear → dynamic activity-appropriate posture. " +
-    "Casual → spontaneous simple pose. " +
-    "Match pose to full context: place, time, weather, clothes, accessories and activity — a suited person at a luxury hotel must not share the same pose as someone in sportswear on a field. " +
-    "Render like a real friend-taken smartphone photo: natural skin with pores, correct hands, coherent light, realistic clothing folds, plausible background, slight grain and imperfect framing."
+    `${a.pose_forbidden}. ` +
+    `${COMFORT_RULE} ` +
+    "Yacht + elegant dress/gown: three-quarter banquette seat, legs same side, dress folds natural, hands on cushion/seat/bag strap, gaze to sea or friend — NEVER catalog mannequin. " +
+    "Evening + restaurant: seated relaxed at table, hands on glass or table edge. " +
+    "Streetwear + city: walk or light lean, hands in pockets or phone. " +
+    "Sport + field: active equipment-appropriate stance. " +
+    "Beach + boat: casual seated, legs naturally bent, look to water. " +
+    "Render like a real friend-taken smartphone photo: natural skin pores, correct hands, coherent light, realistic clothing folds, plausible background, slight grain, imperfect candid framing."
   );
 }
 
@@ -294,7 +328,7 @@ async function analyzeSubjectContext({
     }
     const promptText =
       `${ANALYSIS_SCHEMA_HINT}\n\nScene/prompt context:\n${contextText || "(none)"}\n\n` +
-      "Look at the reference photo. Infer presentation, outfit elegance, accessories, and the most coherent pose direction for the requested scene.";
+      "Look at the reference photo. Infer outfit elegance, accessories, furniture (seats, railing, table), activity and the most physically credible candid pose for this scene — not a fashion campaign.";
 
     const raw =
       provider === "gemini"
@@ -304,7 +338,7 @@ async function analyzeSubjectContext({
     if (!raw || typeof raw !== "object") {
       return heuristicAnalysis(userPrompt, sceneContext);
     }
-    return normalizeAnalysis({ ...raw, source: provider });
+    return finalizeAnalysis({ ...raw, source: provider }, userPrompt, sceneContext);
   } catch (err) {
     console.warn("[subject-analysis] vision failed, using heuristic:", err?.message || err);
     return heuristicAnalysis(userPrompt, sceneContext);
