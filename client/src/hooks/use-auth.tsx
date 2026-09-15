@@ -210,6 +210,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const signOut = async () => {
+    const { clearV2ExperienceSession } = await import("@/lib/v2-experience");
+    clearV2ExperienceSession();
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({

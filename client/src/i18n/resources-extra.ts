@@ -240,17 +240,6 @@ export const extraResources = {
       packCreditsAdded: "Tes crédits ont été ajoutés. Tu peux générer.",
       resultTitle: "Voici ton LARP !",
       createAnother: "Nouvelle création",
-      outfitAdd: "Ajouter un outfit",
-      outfitLoading: "Chargement…",
-      outfitCatalogTitle: "Catalogue tenues",
-      outfitCatalogSubtitle:
-        "Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après.",
-      outfitPhotoRequiredTitle: "Photo requise",
-      outfitPhotoRequiredDescription: "Ajoute d'abord ta photo en image 1.",
-      outfitAddedTitle: "Tenue ajoutée",
-      outfitAddedDescription: "{{name}} — le prompt a été mis à jour (image 2).",
-      outfitNotFoundTitle: "Tenue introuvable",
-      outfitRetryDescription: "Réessaie dans un instant.",
     },
     promptInput: {
       describePlaceholder:
@@ -839,17 +828,6 @@ export const extraResources = {
       packCreditsAdded: "Your credits were added. You can generate.",
       resultTitle: "Your photo is ready!",
       createAnother: "Create another",
-      outfitAdd: "Add an outfit",
-      outfitLoading: "Loading…",
-      outfitCatalogTitle: "Outfit catalog",
-      outfitCatalogSubtitle:
-        "Image 1 = you · Image 2 = chosen outfit. You can refine the text after.",
-      outfitPhotoRequiredTitle: "Photo required",
-      outfitPhotoRequiredDescription: "Add your photo as image 1 first.",
-      outfitAddedTitle: "Outfit added",
-      outfitAddedDescription: "{{name}} — prompt updated (image 2).",
-      outfitNotFoundTitle: "Outfit not found",
-      outfitRetryDescription: "Try again in a moment.",
     },
     promptInput: {
       describePlaceholder:
@@ -1428,17 +1406,6 @@ export const extraResources = {
       packCreditsAdded: "Tus créditos se han añadido. Ya puedes generar.",
       resultTitle: "Tu LARP esta listo",
       createAnother: "Crear otro LARP",
-      outfitAdd: "Añadir outfit",
-      outfitLoading: "Cargando…",
-      outfitCatalogTitle: "Catálogo de outfits",
-      outfitCatalogSubtitle:
-        "Imagen 1 = tú · Imagen 2 = outfit elegido. Puedes completar el texto después.",
-      outfitPhotoRequiredTitle: "Foto requerida",
-      outfitPhotoRequiredDescription: "Añade primero tu foto en la imagen 1.",
-      outfitAddedTitle: "Outfit añadido",
-      outfitAddedDescription: "{{name}} — el prompt se actualizó (imagen 2).",
-      outfitNotFoundTitle: "Outfit no encontrado",
-      outfitRetryDescription: "Inténtalo de nuevo en un momento.",
     },
     promptInput: {
       describePlaceholder: "Describe tu LARP...",

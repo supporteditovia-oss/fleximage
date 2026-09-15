@@ -32,6 +32,17 @@ export function markV2ExperienceEnabled(enabled: boolean): void {
   }
 }
 
+/** À la déconnexion — évite qu'une session admin V2 ne fuit vers un client sur le même onglet. */
+export function clearV2ExperienceSession(): void {
+  markV2ExperienceEnabled(false);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STUDIO_MODE_KEY, "image");
+  } catch {
+    /* ignore */
+  }
+}
+
 export function readStudioMode(): StudioMode {
   if (typeof window === "undefined") return "image";
   const raw = window.localStorage.getItem(STUDIO_MODE_KEY);

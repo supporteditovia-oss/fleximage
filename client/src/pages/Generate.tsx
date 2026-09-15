@@ -709,8 +709,8 @@ export default function Generate({
     if (!images[0]) {
       toast({
         variant: "destructive",
-        title: t("generate.outfitPhotoRequiredTitle"),
-        description: t("generate.outfitPhotoRequiredDescription"),
+        title: "Photo requise",
+        description: "Ajoute d’abord ta photo en image 1.",
       });
       return;
     }
@@ -736,14 +736,14 @@ export default function Generate({
       setPrompt((current) => replaceOutfitPrompt(current));
       setShowOutfitPicker(false);
       toast({
-        title: t("generate.outfitAddedTitle"),
-        description: t("generate.outfitAddedDescription", { name: outfit.name }),
+        title: "Tenue ajoutée",
+        description: `${outfit.name} — le prompt a été mis à jour (image 2).`,
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: t("generate.outfitNotFoundTitle"),
-        description: error?.message || t("generate.outfitRetryDescription"),
+        title: "Tenue introuvable",
+        description: error?.message || "Réessaie dans un instant.",
       });
     } finally {
       setOutfitPickerBusy(false);
@@ -754,8 +754,8 @@ export default function Generate({
     if (!images[0]) {
       toast({
         variant: "destructive",
-        title: t("generate.outfitPhotoRequiredTitle"),
-        description: t("generate.outfitPhotoRequiredDescription"),
+        title: "Photo requise",
+        description: "Ajoute d’abord ta photo en image 1.",
       });
       return;
     }
@@ -1645,9 +1645,7 @@ export default function Generate({
                     onClick={openOutfitPicker}
                     disabled={outfitPickerBusy || isSubmittingGeneration}
                   >
-                    {outfitPickerBusy
-                      ? t("generate.outfitLoading")
-                      : t("generate.outfitAdd")}
+                    {outfitPickerBusy ? "Chargement…" : "Ajouter un outfit"}
                   </button>
                 ) : null}
               </div>
@@ -1693,8 +1691,8 @@ export default function Generate({
       {adminPreview ? (
         <OutfitPickerModal
           open={showOutfitPicker}
-          title={t("generate.outfitCatalogTitle")}
-          subtitle={t("generate.outfitCatalogSubtitle")}
+          title="Catalogue tenues"
+          subtitle="Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après."
           onClose={() => setShowOutfitPicker(false)}
           onSelect={(outfit) => void handleOutfitSelect(outfit)}
         />
