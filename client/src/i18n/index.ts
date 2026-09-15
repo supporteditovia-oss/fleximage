@@ -55,6 +55,10 @@ const resources = SUPPORTED_LOCALES.reduce((acc, locale) => {
         ...(landingWidgetResources[key as keyof typeof landingWidgetResources]
           ?.editorial ?? {}),
       },
+      faq: {
+        ...(extraResources[key]?.landing?.faq ?? {}),
+        ...(landingV2Resources[key as keyof typeof landingV2Resources]?.faq ?? {}),
+      },
     },
   };
 
