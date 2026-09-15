@@ -240,6 +240,17 @@ export const extraResources = {
       packCreditsAdded: "Tes crédits ont été ajoutés. Tu peux générer.",
       resultTitle: "Voici ton LARP !",
       createAnother: "Nouvelle création",
+      outfitAdd: "Ajouter un outfit",
+      outfitLoading: "Chargement…",
+      outfitCatalogTitle: "Catalogue tenues",
+      outfitCatalogSubtitle:
+        "Image 1 = toi · Image 2 = tenue choisie. Tu peux compléter le texte après.",
+      outfitPhotoRequiredTitle: "Photo requise",
+      outfitPhotoRequiredDescription: "Ajoute d'abord ta photo en image 1.",
+      outfitAddedTitle: "Tenue ajoutée",
+      outfitAddedDescription: "{{name}} — le prompt a été mis à jour (image 2).",
+      outfitNotFoundTitle: "Tenue introuvable",
+      outfitRetryDescription: "Réessaie dans un instant.",
     },
     promptInput: {
       describePlaceholder:
@@ -828,6 +839,17 @@ export const extraResources = {
       packCreditsAdded: "Your credits were added. You can generate.",
       resultTitle: "Your photo is ready!",
       createAnother: "Create another",
+      outfitAdd: "Add an outfit",
+      outfitLoading: "Loading…",
+      outfitCatalogTitle: "Outfit catalog",
+      outfitCatalogSubtitle:
+        "Image 1 = you · Image 2 = chosen outfit. You can refine the text after.",
+      outfitPhotoRequiredTitle: "Photo required",
+      outfitPhotoRequiredDescription: "Add your photo as image 1 first.",
+      outfitAddedTitle: "Outfit added",
+      outfitAddedDescription: "{{name}} — prompt updated (image 2).",
+      outfitNotFoundTitle: "Outfit not found",
+      outfitRetryDescription: "Try again in a moment.",
     },
     promptInput: {
       describePlaceholder:
@@ -1243,6 +1265,34 @@ export const extraResources = {
         video: "🎬 Vídeo IA",
       },
     },
+    welcome: {
+      preparingSpace: "Preparando tu espacio…",
+      loaderAnalyze: "Analizando tu imagen...",
+      loaderRender: "Preparando el render HD...",
+      loaderDetails: "Afinando los detalles...",
+      loaderFinish: "Finalizando...",
+      eyebrow: "Bienvenido a LuxeFlexIA",
+      congratulations: "Enhorabuena",
+      congratulationsName: "Enhorabuena, {{name}}",
+      lede:
+        "Tu suscripción está confirmada. Tus créditos están listos — crea tu primera imagen.",
+      cta: "Crear una imagen",
+      viewPlan: "Ver mi suscripción",
+      emptyTitle: "Aún no hay resultado",
+      emptyLede: "Crea una imagen para encontrarla aquí, lista para descargar.",
+      subscriptionActive: "Suscripción activada",
+      imageReady: "Tu imagen está lista",
+      imageReadyName: "Enhorabuena {{name}}, tu imagen está lista",
+      createAnother: "Crear otra imagen",
+      generatedAlt: "Imagen generada",
+      paymentReceived: "Pago recibido",
+      paymentReceivedHint:
+        "Tu suscripción se está activando. Ya puedes crear una imagen — actualiza si los créditos tardan un segundo.",
+      reconnect: "Vuelve a iniciar sesión para ver tu resultado",
+      reconnectDevice:
+        "Vuelve a iniciar sesión para activar tu suscripción en este dispositivo (sobre todo tras TikTok → Safari).",
+      loadFailed: "No se pudo cargar tu resultado",
+    },
     support: {
       badge: "Soporte para suscriptores",
       title: "Necesitas ayuda?",
@@ -1321,6 +1371,15 @@ export const extraResources = {
       surprisePrompt: "Sorprendeme",
       serverRetry: "Error del servidor. Intentalo de nuevo.",
     },
+    templateSelected: {
+      label: "Plantilla",
+      deselect: "Cambiar plantilla",
+      generate: "Generar",
+      modeImage: "Generación de imagen",
+      modeVideo: "Generación de vídeo",
+      noReferenceImages:
+        "Esta plantilla aún no tiene imágenes de referencia. Elige otra.",
+    },
     generate: {
       modeImage: "Imagen",
       modeVideo: "Video",
@@ -1361,8 +1420,25 @@ export const extraResources = {
       imageFallbackLabel: "Imagen {{index}}",
       textFallbackLabel: "Texto {{index}}",
       serverRetry: "Error del servidor. Intentalo de nuevo.",
+      packPaidTitle: "Pago recibido",
+      packPaidHint:
+        "Tus créditos llegarán en unos segundos — actualiza si hace falta.",
+      packActivated: "Pack activado",
+      packCreditsNow: "Ahora tienes {{count}} créditos. Ya puedes generar.",
+      packCreditsAdded: "Tus créditos se han añadido. Ya puedes generar.",
       resultTitle: "Tu LARP esta listo",
       createAnother: "Crear otro LARP",
+      outfitAdd: "Añadir outfit",
+      outfitLoading: "Cargando…",
+      outfitCatalogTitle: "Catálogo de outfits",
+      outfitCatalogSubtitle:
+        "Imagen 1 = tú · Imagen 2 = outfit elegido. Puedes completar el texto después.",
+      outfitPhotoRequiredTitle: "Foto requerida",
+      outfitPhotoRequiredDescription: "Añade primero tu foto en la imagen 1.",
+      outfitAddedTitle: "Outfit añadido",
+      outfitAddedDescription: "{{name}} — el prompt se actualizó (imagen 2).",
+      outfitNotFoundTitle: "Outfit no encontrado",
+      outfitRetryDescription: "Inténtalo de nuevo en un momento.",
     },
     promptInput: {
       describePlaceholder: "Describe tu LARP...",

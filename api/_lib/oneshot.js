@@ -50,11 +50,63 @@ function isGoogleAiPromptFlagged(input) {
   );
 }
 
+function normalizeUploadContentType(contentType, filename) {
+  const raw = String(contentType || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (raw && raw !== "application/octet-stream") return raw;
+
+  const ext = String(filename || "")
+    .split(".")
+    .pop()
+    ?.toLowerCase();
+  const byExt = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+  return (ext && byExt[ext]) || "image/jpeg";
+}
+
+function buildSignedPutHeaders(signData, contentType, sizeBytes) {
+  const headers = {
+    "Content-Type": contentType,
+    "Content-Length": String(sizeBytes),
+  };
+  const extra =
+    signData?.requiredHeaders ||
+    signData?.headers ||
+    signData?.uploadHeaders;
+  if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value != null && value !== "") {
+        headers[key] = String(value);
+      }
+    }
+  }
+  // Sign response may pin Content-Type — always match what was declared at sign time.
+  if (signData?.contentType) {
+    headers["Content-Type"] = String(signData.contentType);
+  }
+  return headers;
+}
+
 async function uploadToOneshotApi(imageBuffer, filename, contentType) {
   const config = getOneshotApiConfig();
   if (!config.url || !config.key) {
     throw new Error("Missing ONESHOT_API_URL or ONESHOT_API_KEY");
   }
+
+  const safeFilename = String(filename || "image.jpg").replace(/[^\w.\-]+/g, "_");
+  const normalizedType = normalizeUploadContentType(contentType, safeFilename);
+  const bodyBytes =
+    imageBuffer instanceof Uint8Array ? imageBuffer : new Uint8Array(imageBuffer);
+  const sizeBytes = bodyBytes.byteLength;
 
   const signResponse = await fetch(`${config.url}/v1/uploads/sign`, {
     method: "POST",
@@ -63,22 +115,36 @@ async function uploadToOneshotApi(imageBuffer, filename, contentType) {
       "x-api-key": config.key,
     },
     body: JSON.stringify({
-      filename,
-      contentType,
-      sizeBytes: imageBuffer.length,
+      filename: safeFilename,
+      contentType: normalizedType,
+      sizeBytes,
     }),
   });
   if (!signResponse.ok) {
-    throw new Error(`OneshotAPI upload/sign error: ${signResponse.status}`);
+    const signText = await signResponse.text().catch(() => "");
+    throw new Error(
+      `OneshotAPI upload/sign error: ${signResponse.status}${signText ? `: ${signText.slice(0, 120)}` : ""}`,
+    );
   }
   const signData = await signResponse.json();
+  if (!signData?.uploadUrl || !signData?.fileId) {
+    throw new Error("OneshotAPI upload/sign returned invalid payload");
+  }
 
+  const putHeaders = buildSignedPutHeaders(signData, normalizedType, sizeBytes);
   const putResponse = await fetch(signData.uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: imageBuffer,
+    headers: putHeaders,
+    body: bodyBytes,
   });
   if (!putResponse.ok) {
+    const putText = await putResponse.text().catch(() => "");
+    console.error("[oneshot] file PUT failed", {
+      status: putResponse.status,
+      contentType: putHeaders["Content-Type"],
+      sizeBytes,
+      body: putText.slice(0, 240),
+    });
     throw new Error(`OneshotAPI file PUT error: ${putResponse.status}`);
   }
 
@@ -98,6 +164,7 @@ async function uploadToOneshotApi(imageBuffer, filename, contentType) {
 }
 
 async function uploadImageUrlsToOneshot(imageUrls) {
+  let lastError = null;
   const ids = await Promise.all(
     imageUrls.map(async (publicUrl) => {
       try {
@@ -105,15 +172,23 @@ async function uploadImageUrlsToOneshot(imageUrls) {
         if (!imgResp.ok) throw new Error(`Failed to download ${publicUrl}`);
         const contentType = imgResp.headers.get("content-type") || "image/jpeg";
         const buffer = Buffer.from(await imgResp.arrayBuffer());
-        const filename = publicUrl.split("/").pop() || "image.jpg";
-        return uploadToOneshotApi(buffer, filename, contentType);
+        const filename = publicUrl.split("/").pop()?.split("?")[0] || "image.jpg";
+        return await uploadToOneshotApi(buffer, filename, contentType);
       } catch (err) {
+        lastError = err;
         console.error("Failed to upload image to OneshotAPI", err);
         return null;
       }
     }),
   );
-  return ids.filter((id) => typeof id === "string");
+  const fileIds = ids.filter((id) => typeof id === "string");
+  if (fileIds.length !== imageUrls.length) {
+    throw (
+      lastError ||
+      new Error("OneshotAPI reference upload failed for one or more images")
+    );
+  }
+  return fileIds;
 }
 
 /** Nano Banana 2 only — never Pro (`default` / `pro` are blocked). */

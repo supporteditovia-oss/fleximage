@@ -1,8 +1,10 @@
 const {
   uploadImageUrlsToOneshot,
   createOneshotJob,
+  getAppSettings,
   ONESHOT_MODEL_VARIANT,
 } = require("./oneshot");
+const { createKieTask, isKieConfigured } = require("./kie");
 const { readApiCallCount } = require("./generation-idempotency");
 
 function extractOneshotExternalTaskId(providerTaskId) {
@@ -183,81 +185,176 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
-  const referenceFileIds =
-    Array.isArray(imageUrls) && imageUrls.length > 0
-      ? await uploadImageUrlsToOneshot(imageUrls)
-      : [];
-
-  const oneshotResponse = await createOneshotJob(finalPrompt, {
-    generationId,
-    caller: "generateImageOnce",
-    aspectRatio,
-    modelVariant,
-    ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-  });
-
-  if (!oneshotResponse || !oneshotResponse.id) {
-    throw new Error("Invalid response from OneshotAPI");
-  }
-
-  enforceSingleImageResult(oneshotResponse);
-
-  const externalTaskId = `custom_${oneshotResponse.id}`;
-  const durationMs = Date.now() - startedAt;
+  const appSettings = await getAppSettings(supabase);
   const prevAttempts = Array.isArray(claim.generation.provider_attempts)
     ? claim.generation.provider_attempts
     : [];
-  const attemptRecord = {
-    provider: "oneshot",
-    jobId: oneshotResponse.id,
+  const durationMs = Date.now() - startedAt;
+
+  async function persistProviderResult({
+    provider,
     externalTaskId,
-    modelVariant,
-    requestedAt: claim.generation.metadata?.provider_call_started_at || null,
-    completedAt: new Date().toISOString(),
-    durationMs,
-    autoRetry: false,
-  };
+    attemptRecord,
+    nextMeta,
+  }) {
+    await supabase
+      .from("generations")
+      .update({
+        provider,
+        provider_task_id: externalTaskId,
+        metadata: nextMeta,
+        provider_attempts: [...prevAttempts, attemptRecord],
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", generationId);
+  }
 
-  const nextMeta = {
-    ...(claim.generation.metadata || {}),
-    api_call_count: 1,
-    provider_call_completed_at: new Date().toISOString(),
-    oneshot_job_id: oneshotResponse.id,
-    provider_duration_ms: durationMs,
-    provider_auto_retries: 0,
-  };
+  async function runOneshot() {
+    const referenceFileIds =
+      Array.isArray(imageUrls) && imageUrls.length > 0
+        ? await uploadImageUrlsToOneshot(imageUrls)
+        : [];
 
-  await supabase
-    .from("generations")
-    .update({
+    const oneshotResponse = await createOneshotJob(finalPrompt, {
+      generationId,
+      caller: "generateImageOnce",
+      aspectRatio,
+      modelVariant,
+      ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
+    });
+
+    if (!oneshotResponse || !oneshotResponse.id) {
+      throw new Error("Invalid response from OneshotAPI");
+    }
+
+    enforceSingleImageResult(oneshotResponse);
+
+    const externalTaskId = `custom_${oneshotResponse.id}`;
+    const attemptRecord = {
       provider: "oneshot",
-      provider_task_id: externalTaskId,
-      metadata: nextMeta,
-      provider_attempts: [...prevAttempts, attemptRecord],
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", generationId);
+      jobId: oneshotResponse.id,
+      externalTaskId,
+      modelVariant,
+      requestedAt: claim.generation.metadata?.provider_call_started_at || null,
+      completedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+      autoRetry: false,
+    };
+    const nextMeta = {
+      ...(claim.generation.metadata || {}),
+      api_call_count: 1,
+      provider_call_completed_at: new Date().toISOString(),
+      oneshot_job_id: oneshotResponse.id,
+      provider_duration_ms: Date.now() - startedAt,
+      provider_auto_retries: 0,
+    };
 
-  console.info("[generate-image-once] provider call completed", {
-    generationId,
-    generationRequestId: nextMeta.generation_request_id || null,
-    oneshotJobId: oneshotResponse.id,
-    externalTaskId,
-    durationMs,
-    apiCallCount: 1,
-    autoRetries: 0,
-    ...logContext,
-  });
+    await persistProviderResult({
+      provider: "oneshot",
+      externalTaskId,
+      attemptRecord,
+      nextMeta,
+    });
 
-  return {
-    ok: true,
-    deduplicated: false,
-    externalTaskId,
-    apiCallCount: 1,
-    provider: "oneshot",
-    oneshotJobId: oneshotResponse.id,
-    durationMs,
-  };
+    console.info("[generate-image-once] provider call completed", {
+      generationId,
+      generationRequestId: nextMeta.generation_request_id || null,
+      oneshotJobId: oneshotResponse.id,
+      externalTaskId,
+      durationMs: Date.now() - startedAt,
+      apiCallCount: 1,
+      autoRetries: 0,
+      ...logContext,
+    });
+
+    return {
+      ok: true,
+      deduplicated: false,
+      externalTaskId,
+      apiCallCount: 1,
+      provider: "oneshot",
+      oneshotJobId: oneshotResponse.id,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  async function runKieFallback(reason) {
+    if (!isKieConfigured()) {
+      throw reason;
+    }
+
+    console.warn("[generate-image-once] falling back to Kie AI", {
+      generationId,
+      reason: reason instanceof Error ? reason.message : String(reason),
+      ...logContext,
+    });
+
+    const kieResponse = await createKieTask({
+      prompt: finalPrompt,
+      aspect_ratio: aspectRatio,
+      ...(Array.isArray(imageUrls) && imageUrls.length > 0
+        ? { image_input: imageUrls }
+        : {}),
+    });
+
+    if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
+      throw reason;
+    }
+
+    const externalTaskId = kieResponse.data.taskId;
+    const attemptRecord = {
+      provider: "kie",
+      jobId: externalTaskId,
+      externalTaskId,
+      modelVariant,
+      requestedAt: claim.generation.metadata?.provider_call_started_at || null,
+      completedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+      autoRetry: false,
+      fallbackFrom: "oneshot",
+    };
+    const nextMeta = {
+      ...(claim.generation.metadata || {}),
+      api_call_count: 1,
+      provider_call_completed_at: new Date().toISOString(),
+      provider_duration_ms: Date.now() - startedAt,
+      provider_auto_retries: 0,
+      kie_fallback_reason:
+        reason instanceof Error ? reason.message : String(reason),
+    };
+
+    await persistProviderResult({
+      provider: "kie",
+      externalTaskId,
+      attemptRecord,
+      nextMeta,
+    });
+
+    console.info("[generate-image-once] Kie fallback started", {
+      generationId,
+      externalTaskId,
+      durationMs: Date.now() - startedAt,
+      ...logContext,
+    });
+
+    return {
+      ok: true,
+      deduplicated: false,
+      externalTaskId,
+      apiCallCount: 1,
+      provider: "kie",
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  try {
+    if (appSettings.forceKieAi) {
+      return await runKieFallback(new Error("force_kie_ai"));
+    }
+    return await runOneshot();
+  } catch (oneshotErr) {
+    return await runKieFallback(oneshotErr);
+  }
 }
 
 module.exports = {

@@ -144,6 +144,56 @@ export interface OneshotJobPayload {
   };
 }
 
+function normalizeUploadContentType(contentType: string, filename: string): string {
+  const raw = String(contentType || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (raw && raw !== "application/octet-stream") return raw;
+
+  const ext = String(filename || "")
+    .split(".")
+    .pop()
+    ?.toLowerCase();
+  const byExt: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+  return (ext && byExt[ext]) || "image/jpeg";
+}
+
+function buildSignedPutHeaders(
+  signData: {
+    contentType?: string;
+    requiredHeaders?: Record<string, string>;
+    headers?: Record<string, string>;
+    uploadHeaders?: Record<string, string>;
+  },
+  contentType: string,
+  sizeBytes: number,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Content-Length": String(sizeBytes),
+  };
+  const extra =
+    signData.requiredHeaders || signData.headers || signData.uploadHeaders;
+  if (extra && typeof extra === "object") {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value != null && value !== "") headers[key] = String(value);
+    }
+  }
+  if (signData.contentType) {
+    headers["Content-Type"] = String(signData.contentType);
+  }
+  return headers;
+}
+
 // ─── Image upload (2-step signed upload) ─────────────────────────
 export async function uploadToOneshotApi(
   imageBuffer: Buffer,
@@ -155,6 +205,11 @@ export async function uploadToOneshotApi(
     throw new Error("Missing ONESHOT_API_URL or ONESHOT_API_KEY");
   }
 
+  const safeFilename = String(filename || "image.jpg").replace(/[^\w.\-]+/g, "_");
+  const normalizedType = normalizeUploadContentType(contentType, safeFilename);
+  const bodyBytes = new Uint8Array(imageBuffer);
+  const sizeBytes = bodyBytes.byteLength;
+
   // Step 1: Get signed upload URL
   const signResponse = await fetch(`${config.url}/v1/uploads/sign`, {
     method: "POST",
@@ -163,9 +218,9 @@ export async function uploadToOneshotApi(
       "x-api-key": config.key,
     },
     body: JSON.stringify({
-      filename,
-      contentType,
-      sizeBytes: imageBuffer.length,
+      filename: safeFilename,
+      contentType: normalizedType,
+      sizeBytes,
     }),
   });
 
@@ -185,10 +240,11 @@ export async function uploadToOneshotApi(
   }
 
   // Step 2: PUT the raw file to the signed URL
+  const putHeaders = buildSignedPutHeaders(signData, normalizedType, sizeBytes);
   const putResponse = await fetch(signData.uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: new Uint8Array(imageBuffer),
+    headers: putHeaders,
+    body: bodyBytes,
   });
 
   if (!putResponse.ok) {
