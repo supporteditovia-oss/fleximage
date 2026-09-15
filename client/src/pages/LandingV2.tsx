@@ -13,7 +13,9 @@ import {
   type UiLocale,
 } from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
+import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
 import "./landing-v2.css";
@@ -42,7 +44,9 @@ function BrandLink({ className = "" }: { className?: string }) {
 export default function LandingV2() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
+  const adminPreview = useAdminPreviewFeatures();
   const loggedIn = Boolean(user);
+  const appHref = loggedIn ? (adminPreview ? "/create" : "/generate") : "/register";
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr") as UiLocale;
 
@@ -91,7 +95,7 @@ export default function LandingV2() {
         <BrandLink />
         <nav className="header-actions" aria-label="Compte">
           {loggedIn ? (
-            <Link className="header-cta" href="/create">
+            <Link className="header-cta" href={appHref}>
               <span className="header-cta__long">{t("landing:header.openStudio")}</span>
               <span className="header-cta__short">{t("landing:header.studioShort")}</span>
             </Link>
@@ -109,15 +113,21 @@ export default function LandingV2() {
       </header>
 
       <section className="hero" id="top">
-        <p className="eyebrow">{t("landing:hero.eyebrow")}</p>
+        <p className="eyebrow">
+          {t(
+            adminPreview ? "landing:hero.eyebrow" : "landing:hero.clientEyebrow",
+          )}
+        </p>
         <h1>
           {t("landing:hero.titleLine1")}
           <br />
           {t("landing:hero.titleLine2")}
         </h1>
-        <p className="hero-copy">{t("landing:hero.copy")}</p>
+        <p className="hero-copy">
+          {t(adminPreview ? "landing:hero.copy" : "landing:hero.clientCopy")}
+        </p>
 
-        <LandingStudioWidget />
+        {adminPreview ? <LandingStudioWidget /> : <LandingImagePanel />}
 
         <p className="hero-note">{t("landing:hero.note")}</p>
         <SocialProofLine
@@ -185,6 +195,7 @@ export default function LandingV2() {
         </p>
       </section>
 
+      {adminPreview ? (
       <section className="video-cinema-section" id="video-ia" aria-labelledby="video-title">
         <div className="video-cinema-inner">
           <div className="video-cinema-header">
@@ -215,7 +226,9 @@ export default function LandingV2() {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {adminPreview ? (
       <section className="voice-section" aria-labelledby="voice-title">
         <div className="voice-inner">
           <div className="voice-copy">
@@ -245,6 +258,7 @@ export default function LandingV2() {
           <LandingVoicePlayer variant="section" />
         </div>
       </section>
+      ) : null}
 
       <section className="proof-section" aria-label={t("landing:proof.aria")}>
         <div className="proof-item">
@@ -273,7 +287,7 @@ export default function LandingV2() {
           <br />
           {t("landing:cta.titleLine2")}
         </h2>
-        <Link className="gold-button" href={loggedIn ? "/create" : "/register"}>
+        <Link className="gold-button" href={appHref}>
           {t("landing:cta.button")} <span>↗</span>
         </Link>
       </section>
