@@ -13,7 +13,7 @@ import {
   type UiLocale,
 } from "@shared/locales";
 import { LandingStudioWidget } from "@/components/landing/LandingStudioWidget";
-import { LandingImagePanel } from "@/components/landing/LandingImagePanel";
+import { LandingClientHeroWidget } from "@/components/landing/LandingClientHeroWidget";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
@@ -127,7 +127,7 @@ export default function LandingV2() {
           {t(adminPreview ? "landing:hero.copy" : "landing:hero.clientCopy")}
         </p>
 
-        {adminPreview ? <LandingStudioWidget /> : <LandingImagePanel />}
+        {adminPreview ? <LandingStudioWidget /> : <LandingClientHeroWidget />}
 
         <p className="hero-note">{t("landing:hero.note")}</p>
         <SocialProofLine
