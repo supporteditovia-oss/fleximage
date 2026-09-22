@@ -31,3 +31,13 @@ export function releaseGenerationSubmitLock(): void {
 export function releaseGenerationSubmitLockOnError(): void {
   releaseGenerationSubmitLock();
 }
+
+/** Libère un verrou périmé (génération terminée, plus de job in-flight). */
+export function tryAcquireGenerationSubmitLockOrRecover(
+  hasActiveInFlight: boolean,
+): boolean {
+  if (tryAcquireGenerationSubmitLock()) return true;
+  if (hasActiveInFlight) return false;
+  releaseGenerationSubmitLock();
+  return tryAcquireGenerationSubmitLock();
+}

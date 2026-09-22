@@ -18,6 +18,7 @@ import {
   GenerationLoaderBackdrop,
 } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
+import { clearInFlightGeneration } from "@/lib/in-flight-generation";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { FunnelOnboardingQuiz } from "@/components/funnel/FunnelOnboardingQuiz";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
@@ -1267,6 +1268,7 @@ export default function Generate({
 
   const handleReset = useCallback(() => {
     releaseGenerationLoaderTheme();
+    clearInFlightGeneration();
     isGeneratingRef.current = false;
     autoGenerateFiredRef.current = false;
     reshuffleOutfitCatalog();

@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import {
+  releaseGenerationSubmitLock,
   releaseGenerationSubmitLockOnError,
-  tryAcquireGenerationSubmitLock,
+  tryAcquireGenerationSubmitLockOrRecover,
 } from "@/lib/generation-submit-lock";
+import { getInFlightGeneration } from "@/lib/in-flight-generation";
 import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type {
   SubtitlePosition,
@@ -66,7 +68,10 @@ export function useVideoStudioGenerate() {
   const queryClient = useQueryClient();
   return useMutation<VideoStudioGenerateResponse, Error, VideoStudioGenerateInput>({
     mutationFn: async (data) => {
-      if (!tryAcquireGenerationSubmitLock()) {
+      const activeInFlight = getInFlightGeneration();
+      if (
+        !tryAcquireGenerationSubmitLockOrRecover(Boolean(activeInFlight?.taskId))
+      ) {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
 
@@ -85,6 +90,9 @@ export function useVideoStudioGenerate() {
           body: JSON.stringify(payload),
         });
         const json = (await res.json()) as VideoStudioGenerateResponse;
+        if (json?.taskId) {
+          releaseGenerationSubmitLock();
+        }
         return { ...json, videoRequestId };
       } catch (err) {
         releaseGenerationSubmitLockOnError();

@@ -1,3 +1,5 @@
+import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
+
 const IN_FLIGHT_GENERATION_KEY = "luxeflexia:in-flight-generation";
 export const GENERATION_IN_FLIGHT_EVENT = "luxeflexia:generation-in-flight";
 
@@ -73,6 +75,7 @@ export function clearInFlightGeneration(): void {
   } catch {
     /* ignore */
   }
+  releaseGenerationSubmitLock();
 }
 
 export function parseApiCreatedAtMs(createdAt: unknown): number | null {

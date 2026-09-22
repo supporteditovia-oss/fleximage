@@ -8,8 +8,9 @@ import {
   persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
 import {
+  releaseGenerationSubmitLock,
   releaseGenerationSubmitLockOnError,
-  tryAcquireGenerationSubmitLock,
+  tryAcquireGenerationSubmitLockOrRecover,
 } from "@/lib/generation-submit-lock";
 import type { PoseStyle, SubjectType } from "@/lib/subject-pose-prompt";
 
@@ -229,18 +230,10 @@ export function useGenerateDirectLarp() {
         };
       }
 
-      if (!tryAcquireGenerationSubmitLock()) {
-        const retryInflight = getInFlightGeneration();
-        if (retryInflight?.taskId) {
-          return {
-            id: retryInflight.taskId,
-            taskId: retryInflight.taskId,
-            status: "processing",
-            estimatedSeconds: retryInflight.estimatedSeconds,
-            createdAt: new Date(retryInflight.startedAtMs).toISOString(),
-            deduplicated: true,
-          };
-        }
+      const activeInFlight = getInFlightGeneration();
+      if (
+        !tryAcquireGenerationSubmitLockOrRecover(Boolean(activeInFlight?.taskId))
+      ) {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
 
@@ -273,6 +266,7 @@ export function useGenerateDirectLarp() {
                 : "generate",
             "image",
           );
+          releaseGenerationSubmitLock();
         }
         return {
           ...json,
