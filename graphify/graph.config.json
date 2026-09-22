@@ -1,0 +1,16 @@
+{
+  "project": "Luxeflexia",
+  "engine": "graphify",
+  "version": "0.9.65",
+  "officialOutput": "graphify-out",
+  "domains": [
+    "Frontend",
+    "Dashboard",
+    "Supabase",
+    "AI",
+    "Billing",
+    "Components",
+    "Routes",
+    "Shared"
+  ]
+}
