@@ -4,6 +4,7 @@ const {
   getSourceVideoUrlFromLarp,
   muxSourceAudioOntoVideo,
 } = require("../mux-source-audio");
+const { applyI2VGeneratedVoice } = require("../video-i2v-voice");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -503,6 +504,30 @@ module.exports = async function handler(req, res) {
               larp.metadata && typeof larp.metadata === "object"
                 ? larp.metadata
                 : {};
+            const shouldApplyI2VVoice =
+              meta.workflow === "image_to_video" &&
+              meta.voice_enabled === true &&
+              typeof meta.voice_text === "string" &&
+              meta.voice_text.trim().length > 0 &&
+              typeof meta.fish_reference_id === "string" &&
+              meta.fish_reference_id.trim().length > 0;
+            if (shouldApplyI2VVoice && resultUrls[0]) {
+              const muxedUrl = await withTimeout(
+                applyI2VGeneratedVoice({
+                  larpId: larp.id,
+                  generatedVideoUrl: resultUrls[0],
+                  voiceText: meta.voice_text,
+                  fishReferenceId: meta.fish_reference_id,
+                }),
+                120_000,
+                null,
+              );
+              if (muxedUrl) {
+                resultUrls = [muxedUrl];
+                metadataPatch.voice_muxed = true;
+              }
+            }
+
             const shouldPreserveSourceAudio =
               meta.workflow === "video_to_video" &&
               meta.preserve_source_audio === true;

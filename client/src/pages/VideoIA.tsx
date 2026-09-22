@@ -24,11 +24,13 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_V2V_PRESETS,
@@ -445,7 +447,8 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
+              JPG ou PNG — ta propre image. Clip{" "}
+              <strong>{VIDEO_I2V_OUTPUT_DURATION_SEC} s max</strong> ·{" "}
               <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
             </p>
 
@@ -491,8 +494,18 @@ export default function VideoIA() {
                   onChange={(e) => setMotionPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Je veux qu'il tombe dans l'eau en souriant, caméra lente…"
+                  placeholder="Ex. : La femme tombe dans l'eau et crie « Ahhh ! », caméra lente…"
                   className="via-prompt-field"
+                />
+
+                <VideoVoiceAddon
+                  enabled={voiceEnabled}
+                  onEnabledChange={setVoiceEnabled}
+                  text={voiceText}
+                  onTextChange={setVoiceText}
+                  consent={voiceConsent}
+                  onConsentChange={setVoiceConsent}
+                  maxChars={voiceMaxChars}
                 />
               </>
             )}

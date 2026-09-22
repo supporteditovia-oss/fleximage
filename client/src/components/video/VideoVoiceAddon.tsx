@@ -55,7 +55,8 @@ export function VideoVoiceAddon({
             className="via-prompt-field"
           />
           <p className="via-voice-addon__hint">
-            {text.trim().length}/{maxChars} caractères · voix catalogue
+            {text.trim().length}/{maxChars} caractères · voix auto (homme/femme
+            selon la photo et le prompt)
           </p>
           <div className="via-chips">
             {VIDEO_VOICE_SCRIPT_PRESETS.slice(0, 3).map((preset) => (

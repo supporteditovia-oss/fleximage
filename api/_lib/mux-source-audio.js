@@ -141,8 +141,76 @@ async function muxSourceAudioOntoVideo({
   }
 }
 
+/**
+ * Colle une piste audio synthétique (TTS) sur la vidéo générée.
+ */
+async function muxAudioBufferOntoVideo({
+  generatedVideoUrl,
+  audioBuffer,
+  larpId,
+  audioExt = "mp3",
+}) {
+  if (!ffmpegPath) {
+    console.warn("[mux-source-audio] ffmpeg-static indisponible");
+    return null;
+  }
+  if (!generatedVideoUrl || !audioBuffer || !larpId) return null;
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-voice-"));
+  const genPath = path.join(tmpDir, "generated.mp4");
+  const audioPath = path.join(tmpDir, `voice.${audioExt}`);
+  const outPath = path.join(tmpDir, "output.mp4");
+
+  try {
+    await Promise.all([
+      downloadToFile(generatedVideoUrl, genPath),
+      fs.writeFile(audioPath, audioBuffer),
+    ]);
+
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-y",
+        "-i",
+        genPath,
+        "-i",
+        audioPath,
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-shortest",
+        "-movflags",
+        "+faststart",
+        outPath,
+      ],
+      { timeout: 90_000, maxBuffer: 10 * 1024 * 1024 },
+    );
+
+    const outBuffer = await fs.readFile(outPath);
+    if (outBuffer.length < 2048) return null;
+
+    const { uploadToR2 } = require("./r2");
+    const key = `larps/${larpId}/video.mp4`;
+    return await uploadToR2(key, outBuffer, "video/mp4");
+  } catch (err) {
+    console.error("[mux-source-audio] tts mux failed", { larpId, err });
+    return null;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 module.exports = {
   getSourceVideoUrlFromLarp,
   isLikelyVideoAssetUrl,
   muxSourceAudioOntoVideo,
+  muxAudioBufferOntoVideo,
 };
+
