@@ -66,6 +66,8 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+const ADMIN_VIDEO_BURN = ADMIN_PRICING_REFERENCE.creditBurn;
+
 const WORKFLOW_OPTIONS: {
   id: VideoWorkflow;
   label: string;
@@ -75,13 +77,13 @@ const WORKFLOW_OPTIONS: {
   {
     id: "image_to_video",
     label: "Image → Vidéo",
-    hint: "Anime ta photo en clip",
+    hint: `${ADMIN_VIDEO_BURN.videoI2V} cr / génération · 5 s`,
     icon: ImageIcon,
   },
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: "Transforme tout : lieu, look, objet…",
+    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr / clip · max 8 s`,
     icon: Wand2,
   },
 ];
