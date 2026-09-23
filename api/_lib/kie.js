@@ -2,14 +2,22 @@ const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 const IMAGE_OUTPUT_RESOLUTION = "4K";
 const IMAGE_OUTPUT_FORMAT = "png";
 
+function getKieApiKeyRaw() {
+  return (
+    process.env.KIEAI_API_KEY ||
+    process.env.KIE_AI_API_KEY ||
+    ""
+  ).trim();
+}
+
 function isKieConfigured() {
-  return Boolean(process.env.KIE_AI_API_KEY && process.env.KIE_AI_API_KEY.trim());
+  return Boolean(getKieApiKeyRaw());
 }
 
 function getApiKey() {
-  const key = process.env.KIE_AI_API_KEY;
-  if (!key || !key.trim()) {
-    throw new Error("KIE_AI_API_KEY environment variable is not set");
+  const key = getKieApiKeyRaw();
+  if (!key) {
+    throw new Error("KIEAI_API_KEY / KIE_AI_API_KEY environment variable is not set");
   }
   return key;
 }

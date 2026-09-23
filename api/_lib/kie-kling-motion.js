@@ -1,11 +1,31 @@
 const KIE_JOBS_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 
-const KLING_MOTION_MODEL = "kling-3.0/motion-control";
+const DEFAULT_KLING_MOTION_MODEL = "kling-v3-motion-control";
+
+function resolveKlingMotionModel() {
+  const raw = (
+    process.env.KIEAI_MODEL ||
+    process.env.KIE_AI_MODEL ||
+    DEFAULT_KLING_MOTION_MODEL
+  ).trim();
+  if (!raw) return DEFAULT_KLING_MOTION_MODEL;
+  if (raw.includes("/")) return raw;
+  if (raw === "kling-v3-motion-control") {
+    return "kling-3.0/motion-control";
+  }
+  return raw;
+}
 
 function getApiKey() {
-  const key = process.env.KIE_AI_API_KEY;
+  const key = (
+    process.env.KIEAI_API_KEY ||
+    process.env.KIE_AI_API_KEY ||
+    ""
+  ).trim();
   if (!key) {
-    throw Object.assign(new Error("KIE_AI_API_KEY manquant"), { status: 503 });
+    throw Object.assign(new Error("KIEAI_API_KEY / KIE_AI_API_KEY manquant"), {
+      status: 503,
+    });
   }
   return key;
 }
@@ -24,7 +44,7 @@ function parseJsonResponse(text, status, context) {
  */
 async function createKlingMotionTask(input) {
   const body = {
-    model: KLING_MOTION_MODEL,
+    model: resolveKlingMotionModel(),
     input: {
       prompt: String(
         input.prompt ||

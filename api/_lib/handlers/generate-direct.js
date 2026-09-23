@@ -40,6 +40,9 @@ const {
   findRecentInFlightGeneration,
   SESSION_BURST_WINDOW_MS,
 } = require("../generation-dedup");
+const { enrichPromptForGeneration } = require("../prompt-intelligence");
+const { isDeepInfraConfigured } = require("../deepinfra");
+const { isKieConfigured } = require("../kie");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -104,7 +107,7 @@ module.exports = async function handler(req, res) {
     const admin = await isUserAdmin(supabase, userId);
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
-    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const images = Array.isArray(body.images) ? body.images : [];
     const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
     const templateId =
@@ -127,6 +130,19 @@ module.exports = async function handler(req, res) {
     if (isDisallowedAdultPrompt(prompt)) {
       res.status(422).json(contentPolicyResponse(uiLocale));
       return;
+    }
+
+    if (!templateId) {
+      const enriched = await enrichPromptForGeneration(prompt, {
+        locale: uiLocale,
+      });
+      if (enriched && enriched !== prompt) {
+        prompt = enriched.slice(0, 2000);
+        console.info("[generate-direct] prompt-intelligence applied", {
+          userId,
+          length: prompt.length,
+        });
+      }
     }
 
     // 2) Credit check — before AI.
@@ -259,10 +275,14 @@ module.exports = async function handler(req, res) {
     }
 
     const oneshotConfig = getOneshotApiConfig();
-    if (!oneshotConfig.url || !oneshotConfig.key) {
+    const hasImageProvider =
+      (oneshotConfig.url && oneshotConfig.key) ||
+      isDeepInfraConfigured() ||
+      isKieConfigured();
+    if (!hasImageProvider) {
       res.status(503).json({
         message:
-          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
+          "Aucun moteur d'image configuré (OneShot, DeepInfra ou Kie).",
       });
       return;
     }

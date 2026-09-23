@@ -7,9 +7,13 @@ import { logger } from "./logger";
 const KIE_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 
 function getApiKey(): string {
-  const key = process.env.KIE_AI_API_KEY;
+  const key = (
+    process.env.KIEAI_API_KEY ||
+    process.env.KIE_AI_API_KEY ||
+    ""
+  ).trim();
   if (!key) {
-    throw new Error("KIE_AI_API_KEY environment variable is not set");
+    throw new Error("KIEAI_API_KEY / KIE_AI_API_KEY environment variable is not set");
   }
   return key;
 }
