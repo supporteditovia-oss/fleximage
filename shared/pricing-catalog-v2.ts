@@ -58,8 +58,8 @@ export const PRICING_CATALOG_V2 = {
   ],
 
   /**
-   * 3 recharges universelles (crédits libres : image, voix, vidéo).
-   * €/cr TTC cible : ~2,8–3,4× Essentiel (24,90 € / 1 200 cr ≈ 0,0208 €/cr).
+   * 3 recharges universelles (image 10 cr · clone 30 · I2V 60 · V2V 95 · voix 10/min).
+   * Mini ≥ 1 clip I2V + marge images — perçu « ok » sans égaler l’abo Essentiel (~0,021 €/cr).
    */
   creditPacks: {
     eur: [
@@ -67,7 +67,7 @@ export const PRICING_CATALOG_V2 = {
         id: "mini" as const,
         tier: "small" as const,
         envKey: "STRIPE_PACK_V2_MINI_PRICE_ID",
-        credits: 50,
+        credits: 90,
         amountCents: 349,
         label: "Boost Mini",
         priceLabel: "3,49 €",
@@ -76,16 +76,16 @@ export const PRICING_CATALOG_V2 = {
         id: "standard" as const,
         tier: "medium" as const,
         envKey: "STRIPE_PACK_V2_STANDARD_PRICE_ID",
-        credits: 120,
-        amountCents: 749,
+        credits: 210,
+        amountCents: 799,
         label: "Boost Standard",
-        priceLabel: "7,49 €",
+        priceLabel: "7,99 €",
       },
       {
         id: "plus" as const,
         tier: "large" as const,
         envKey: "STRIPE_PACK_V2_PLUS_PRICE_ID",
-        credits: 260,
+        credits: 450,
         amountCents: 1499,
         label: "Boost Plus",
         priceLabel: "14,99 €",
@@ -96,7 +96,7 @@ export const PRICING_CATALOG_V2 = {
         id: "mini" as const,
         tier: "small" as const,
         envKey: "STRIPE_PACK_V2_MINI_PRICE_ID_USD",
-        credits: 50,
+        credits: 90,
         amountCents: 399,
         label: "Boost Mini",
         priceLabel: "$3.99",
@@ -105,16 +105,16 @@ export const PRICING_CATALOG_V2 = {
         id: "standard" as const,
         tier: "medium" as const,
         envKey: "STRIPE_PACK_V2_STANDARD_PRICE_ID_USD",
-        credits: 120,
-        amountCents: 849,
+        credits: 210,
+        amountCents: 899,
         label: "Boost Standard",
-        priceLabel: "$8.49",
+        priceLabel: "$8.99",
       },
       {
         id: "plus" as const,
         tier: "large" as const,
         envKey: "STRIPE_PACK_V2_PLUS_PRICE_ID_USD",
-        credits: 260,
+        credits: 450,
         amountCents: 1699,
         label: "Boost Plus",
         priceLabel: "$16.99",

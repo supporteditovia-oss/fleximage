@@ -13,7 +13,7 @@ describe("pricing-catalog-v2", () => {
     for (const pack of PRICING_CATALOG_V2.creditPacks.eur) {
       const rate = packEurPerCredit(pack.amountCents, pack.credits);
       assert.ok(
-        rate > floor * 1.15,
+        rate > floor * 1.35,
         `${pack.id} should stay above subscription €/cr`,
       );
     }

@@ -65,6 +65,7 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
             {t("zeroCredits.packExamples", {
               images: hints.images,
               video: hints.videoI2v,
+              clones: hints.voiceClones,
             })}
           </span>
         </>
