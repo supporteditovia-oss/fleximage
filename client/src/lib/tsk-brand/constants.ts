@@ -8,14 +8,18 @@ export const TSK_BRAND = {
     ink: "#0B0B0C",
     white: "#FFFFFF",
     titanium: "#A7A7A7",
+    paper: "#FFFFFF",
+    rule: "#E8E8E8",
   },
   fonts: {
     primary: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
   },
-  /** Logo officiel fourni par le fondateur — ne pas régénérer pour les PDF. */
   assets: {
+    /** Logo officiel (fichier source fourni). */
     logoOfficial: "/brand/tsk/tsk-official-logo.png",
     logoOfficialHd: "/brand/tsk/tsk-official-logo-hd.png",
+    /** Variante dérivée pour impression fond blanc (même forme, encre #0B0B0C). */
+    logoOfficialPrint: "/brand/tsk/tsk-official-logo-print-hd.png",
   },
 } as const;
 

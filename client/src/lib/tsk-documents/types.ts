@@ -4,7 +4,7 @@ export type TskDocumentKind =
   | "facture_acompte"
   | "facture"
   | "bon_livraison"
-  | "attestation_maintenance";
+  | "cgv";
 
 export type TskLineItem = {
   id: string;
@@ -26,6 +26,7 @@ export type TskClient = {
 export type TskContractClauses = {
   object: string;
   scope: string;
+  deliverables: string;
   schedule: string;
   deliveryDelay: string;
   revisionsIncluded: string;
@@ -35,17 +36,24 @@ export type TskContractClauses = {
   latePayment: string;
   intellectualProperty: string;
   confidentiality: string;
+  maintenance: string;
   termination: string;
   forceMajeure: string;
   applicableLaw: string;
 };
 
-export type TskMaintenanceTerms = {
-  duration: string;
-  updatesIncluded: string;
-  support: string;
+export type TskCgvSections = {
+  scope: string;
+  payments: string;
+  deposit: string;
+  deadlines: string;
+  liability: string;
+  intellectualProperty: string;
   hosting: string;
-  renewal: string;
+  maintenance: string;
+  termination: string;
+  confidentiality: string;
+  applicableLaw: string;
 };
 
 export type TskOrgSettings = {
@@ -66,8 +74,10 @@ export type TskOrgSettings = {
   defaultDepositPercent: number;
   paymentConditionsText: string;
   signatureIssuerName: string;
+  signatureIssuerTitle: string;
   contractClauses: TskContractClauses;
-  maintenanceTerms: TskMaintenanceTerms;
+  cgvSections: TskCgvSections;
+  cgvNumber: string | null;
 };
 
 export type TskWorkflowStep =
@@ -80,7 +90,12 @@ export type TskWorkflowStep =
   | "delivered"
   | "closed";
 
-export type DepositMode = "percent_20" | "percent_30" | "percent_40" | "percent_custom" | "amount_custom";
+export type DepositMode =
+  | "percent_20"
+  | "percent_30"
+  | "percent_40"
+  | "percent_custom"
+  | "amount_custom";
 
 export type InvoicePaymentStatus = "pending" | "paid";
 
@@ -109,10 +124,9 @@ export type TskProject = {
   depositInvoiceNumber: string | null;
   finalInvoiceNumber: string | null;
   deliveryDocNumber: string | null;
-  maintenanceDocNumber: string | null;
   contractClauses: TskContractClauses;
-  maintenanceTerms: TskMaintenanceTerms;
   deliveryChecklist: string;
+  deliveryNotes: string;
   notes: string;
 };
 
@@ -123,11 +137,11 @@ export type TskDocumentCounters = {
   facture_acompte: number;
   facture: number;
   bon_livraison: number;
-  attestation_maintenance: number;
+  cgv: number;
 };
 
 export type TskDocumentsStore = {
-  version: 2;
+  version: 3;
   settings: TskOrgSettings;
   counters: TskDocumentCounters;
   projects: TskProject[];
@@ -138,22 +152,19 @@ export const TSK_DOCUMENT_LABELS: Record<TskDocumentKind, string> = {
   devis: "Devis",
   contrat: "Contrat de prestation",
   facture_acompte: "Facture d'acompte",
-  facture: "Facture",
+  facture: "Facture finale",
   bon_livraison: "Bon de livraison / Validation",
-  attestation_maintenance: "Attestation de maintenance",
+  cgv: "Conditions Générales de Vente",
 };
 
-export const TSK_DOCUMENT_PREFIX: Record<
-  keyof TskDocumentCounters,
-  string
-> = {
+export const TSK_DOCUMENT_PREFIX: Record<keyof TskDocumentCounters, string> = {
   year: "",
   devis: "DV",
   contrat: "CT",
   facture_acompte: "FA",
   facture: "FC",
   bon_livraison: "BL",
-  attestation_maintenance: "AM",
+  cgv: "CGV",
 };
 
 export const TSK_WORKFLOW_LABELS: Record<TskWorkflowStep, string> = {

@@ -9,7 +9,7 @@ const KIND_TO_COUNTER: Record<TskDocumentKind, CounterKey> = {
   facture_acompte: "facture_acompte",
   facture: "facture",
   bon_livraison: "bon_livraison",
-  attestation_maintenance: "attestation_maintenance",
+  cgv: "cgv",
 };
 
 export function syncCounterYear(counters: TskDocumentCounters): TskDocumentCounters {
@@ -22,7 +22,7 @@ export function syncCounterYear(counters: TskDocumentCounters): TskDocumentCount
     facture_acompte: 0,
     facture: 0,
     bon_livraison: 0,
-    attestation_maintenance: 0,
+    cgv: 0,
   };
 }
 

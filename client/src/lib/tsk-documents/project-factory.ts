@@ -1,9 +1,4 @@
-import { TSK_ISSUER_DEFAULTS } from "@/lib/tsk-brand/constants";
-import {
-  createDefaultOrgSettings,
-  DEFAULT_CONTRACT_CLAUSES,
-  DEFAULT_MAINTENANCE_TERMS,
-} from "./settings-defaults";
+import { createDefaultOrgSettings } from "./settings-defaults";
 import type { TskLineItem, TskOrgSettings, TskProject } from "./types";
 
 function uid(): string {
@@ -20,11 +15,12 @@ function addDaysIso(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function newLineItem(label = "Prestation"): TskLineItem {
-  return { id: uid(), label, quantity: 1, unitPriceHt: 0 };
+export function newLineItem(label: string, unitPriceHt: number, qty = 1): TskLineItem {
+  return { id: uid(), label, quantity: qty, unitPriceHt };
 }
 
-export function createProject(settings?: TskOrgSettings): TskProject {
+/** Projet démo réaliste — modifiable dans l'admin. */
+export function createDemoProject(settings?: TskOrgSettings): TskProject {
   const s = settings ?? createDefaultOrgSettings();
   const now = new Date().toISOString();
   return {
@@ -33,24 +29,29 @@ export function createProject(settings?: TskOrgSettings): TskProject {
     updatedAt: now,
     workflowStep: "quote_draft",
     client: {
-      company: "",
-      contactName: "",
-      addressLine1: "",
-      postalCode: "",
-      city: "",
-      email: "",
-      phone: "",
+      company: "Maison Dubois & Fils SAS",
+      contactName: "Émilie Dubois",
+      addressLine1: "12 avenue de la République",
+      postalCode: "69002",
+      city: "Lyon",
+      email: "e.dubois@maisondubois.fr",
+      phone: "06 12 34 56 78",
     },
-    projectTitle: "Projet digital",
+    projectTitle: "Site vitrine premium & espace client",
     projectDescription:
-      "Conception et développement d'une solution web premium (site, SaaS, automatisations ou intégrations IA).",
-    lineItems: [newLineItem("Conception & développement")],
+      "Refonte complète de l'identité digitale : site vitrine haut de gamme, performances Core Web Vitals, CMS sur mesure, intégration CRM et parcours de devis en ligne.",
+    lineItems: [
+      newLineItem("Cadrage, UX/UI premium & design system Figma", 3200),
+      newLineItem("Développement front-end (React) & CMS headless", 4800),
+      newLineItem("Back-end, API, automatisations & intégration CRM", 2900),
+      newLineItem("Recette, déploiement, SEO technique & formation", 1600),
+    ],
     vatRate: s.defaultVatRate,
     quoteValidityDays: s.defaultQuoteValidityDays,
     paymentTermsDays: s.defaultPaymentTermsDays,
     issueDate: todayIso(),
     dueDate: addDaysIso(s.defaultPaymentTermsDays),
-    deliveryDate: addDaysIso(45),
+    deliveryDate: addDaysIso(56),
     depositMode: "percent_30",
     depositPercent: s.defaultDepositPercent,
     depositCustomAmountHt: 0,
@@ -61,24 +62,28 @@ export function createProject(settings?: TskOrgSettings): TskProject {
     depositInvoiceNumber: null,
     finalInvoiceNumber: null,
     deliveryDocNumber: null,
-    maintenanceDocNumber: null,
     contractClauses: { ...s.contractClauses },
-    maintenanceTerms: { ...s.maintenanceTerms },
     deliveryChecklist:
-      "Réception du site / application en production\nConformité au périmètre validé\nRecette acceptée\nAccès et livrables transmis",
-    notes: "",
+      "Mise en production du site sur l'URL convenue\nTests de parcours utilisateur validés\nFormation administrateur réalisée (1 session)\nRemise des accès CMS, hébergement et documentation\nConformité au périmètre du devis signé",
+    deliveryNotes:
+      "Le client reconnaît la réception des livrables listés ci-dessus. Passé un délai de huit (8) jours sans réserve écrite, la livraison sera réputée acceptée.",
+    notes:
+      "Prestation réalisée par TSK Digital — agence spécialisée sites premium, SaaS et IA.",
   };
+}
+
+export function createProject(settings?: TskOrgSettings): TskProject {
+  return createDemoProject(settings);
 }
 
 export function touchProject(project: TskProject): TskProject {
   return { ...project, updatedAt: new Date().toISOString() };
 }
 
-/** Migration helper label for default deposit from settings. */
 export const DEPOSIT_PRESETS = [
   { id: "percent_20" as const, label: "20 %", percent: 20 },
   { id: "percent_30" as const, label: "30 %", percent: 30 },
   { id: "percent_40" as const, label: "40 %", percent: 40 },
-  { id: "percent_custom" as const, label: "% personnalisé", percent: TSK_ISSUER_DEFAULTS.defaultDepositPercent },
+  { id: "percent_custom" as const, label: "% personnalisé", percent: 30 },
   { id: "amount_custom" as const, label: "Montant HT personnalisé", percent: 0 },
 ];

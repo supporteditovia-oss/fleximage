@@ -38,7 +38,8 @@ import {
   vatAmount,
 } from "@/lib/tsk-documents/calc";
 import { DEPOSIT_PRESETS, newLineItem } from "@/lib/tsk-documents/project-factory";
-import { generateTskProjectPdf } from "@/lib/tsk-documents/pdf";
+import { nextDocumentNumber } from "@/lib/tsk-documents/numbering";
+import { generateTskCgvPdf, generateTskProjectPdf } from "@/lib/tsk-documents/pdf";
 import { canRunAction, workflowProgress } from "@/lib/tsk-documents/workflow";
 import {
   TSK_DOCUMENT_LABELS,
@@ -118,7 +119,7 @@ export default function AdminDocuments() {
     saveProject,
     createNewProject,
     runWorkflow,
-    ensureMaintenanceNumber,
+    ensureCgvNumber,
     deleteProject,
   } = useTskDocumentsStore();
   const [generating, setGenerating] = useState(false);
@@ -139,10 +140,42 @@ export default function AdminDocuments() {
     saveProject({ ...activeProject, ...patch });
   };
 
+  const assignNumber = (
+    project: TskProject,
+    kind: TskDocumentKind,
+  ): { project: TskProject; counters: typeof store.counters; settings: typeof store.settings } => {
+    let p = project;
+    let counters = store.counters;
+    let settings = store.settings;
+    const map: Partial<Record<TskDocumentKind, keyof TskProject>> = {
+      devis: "quoteNumber",
+      contrat: "contractNumber",
+      facture_acompte: "depositInvoiceNumber",
+      facture: "finalInvoiceNumber",
+      bon_livraison: "deliveryDocNumber",
+    };
+    const field = map[kind];
+    if (field && !p[field]) {
+      const next = nextDocumentNumber(kind, counters);
+      counters = next.counters;
+      p = { ...p, [field]: next.number };
+      saveProject(p);
+    }
+    if (kind === "cgv" && !settings.cgvNumber) {
+      settings = ensureCgvNumber();
+    }
+    return { project: p, counters, settings };
+  };
+
   const downloadPdf = async (project: TskProject, kind: TskDocumentKind) => {
     setGenerating(true);
     try {
-      await generateTskProjectPdf(project, store.settings, kind);
+      const prepared = assignNumber(project, kind);
+      if (kind === "cgv") {
+        await generateTskCgvPdf(prepared.settings);
+      } else {
+        await generateTskProjectPdf(prepared.project, prepared.settings, kind);
+      }
       toast({ title: "PDF téléchargé", description: TSK_DOCUMENT_LABELS[kind] });
     } catch (e) {
       toast({
@@ -180,19 +213,17 @@ export default function AdminDocuments() {
   }
 
   const s = store.settings;
-  const logoPreview = s.logoDataUrl || TSK_BRAND.assets.logoOfficial;
+  const logoPreview = s.logoDataUrl || undefined;
 
   return (
     <div className="container max-w-6xl space-y-6 py-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="space-y-2">
-          <div className="inline-flex rounded-xl bg-[#0B0B0C] px-4 py-3">
-            <TskLogo src={logoPreview} className="h-9" />
-          </div>
+          <TskLogo variant="print" src={logoPreview} className="h-10" />
           <h1 className="text-3xl font-bold tracking-tight">Documents TSK Digital</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Système B2B complet : devis → contrat → acompte → facture → livraison. Tout est
-            modifiable ici et réutilisé dans chaque PDF (logo officiel uniquement).
+            Fond blanc, mise en page premium, six PDF métier complets. Logo officiel uniquement.
+            Devis → contrat → acompte → facture → livraison · CGV séparées.
           </p>
         </div>
         <Button onClick={createNewProject} className="bg-[#0B0B0C] text-white hover:bg-[#0B0B0C]/90">
@@ -325,12 +356,9 @@ export default function AdminDocuments() {
                       size="sm"
                       variant="ghost"
                       disabled={generating}
-                      onClick={() => {
-                        const p = ensureMaintenanceNumber();
-                        if (p) void downloadPdf(p, "attestation_maintenance");
-                      }}
+                      onClick={() => activeProject && void downloadPdf(activeProject, "cgv")}
                     >
-                      Attestation maintenance
+                      CGV (PDF)
                     </Button>
                   </CardContent>
                 </Card>
@@ -508,13 +536,13 @@ export default function AdminDocuments() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-[#A7A7A7]/40 bg-white text-[#0B0B0C]">
+                <Card className="border-[#E8E8E8] bg-white text-[#0B0B0C] shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-sm">Aperçu en-tête document</CardTitle>
+                    <CardTitle className="text-sm">Aperçu en-tête (fond blanc)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-lg bg-[#0B0B0C] px-4 py-3">
-                      <TskLogo src={logoPreview} className="h-8" />
+                    <div className="rounded-lg border border-[#E8E8E8] bg-white px-4 py-4">
+                      <TskLogo variant="print" src={logoPreview} className="h-8" />
                     </div>
                     <p className="mt-3 text-xs text-[#A7A7A7]">
                       {activeProject.quoteNumber ?? "DV-…"} · {formatDateFr(activeProject.issueDate)}{" "}
@@ -568,9 +596,13 @@ export default function AdminDocuments() {
                     reader.readAsDataURL(file);
                   }}
                 />
-                <div className="rounded-lg bg-[#0B0B0C] inline-block px-4 py-3">
-                  <TskLogo src={logoPreview} className="h-8" />
+                <div className="rounded-lg border border-[#E8E8E8] bg-white inline-block px-4 py-3">
+                  <TskLogo variant="print" src={logoPreview} className="h-8" />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Les PDF utilisent fond blanc. Le fichier officiel est automatiquement adapté
+                  pour l&apos;impression (sans bandeau noir).
+                </p>
               </div>
               {(
                 [
@@ -613,6 +645,15 @@ export default function AdminDocuments() {
                   }
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Fonction / mention signature</Label>
+                <Input
+                  value={s.signatureIssuerTitle}
+                  onChange={(e) =>
+                    setSettings({ ...s, signatureIssuerTitle: e.target.value })
+                  }
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -620,77 +661,83 @@ export default function AdminDocuments() {
         <TabsContent value="templates" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Clauses du contrat</CardTitle>
-              <CardDescription>Texte juridique modifiable — repris dans le PDF contrat.</CardDescription>
+              <CardTitle>Conditions Générales de Vente (CGV)</CardTitle>
+              <CardDescription>
+                Document PDF séparé · n° {s.cgvNumber ?? "auto à la 1ère génération"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(
-                Object.keys(s.contractClauses) as (keyof typeof s.contractClauses)[]
-              ).map((key) => (
+              {(Object.keys(s.cgvSections) as (keyof typeof s.cgvSections)[]).map((key) => (
                 <div key={key} className="space-y-1">
                   <Label className="capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
                   <Textarea
-                    rows={2}
-                    value={s.contractClauses[key]}
+                    rows={3}
+                    value={s.cgvSections[key]}
                     onChange={(e) =>
                       setSettings({
                         ...s,
-                        contractClauses: { ...s.contractClauses, [key]: e.target.value },
+                        cgvSections: { ...s.cgvSections, [key]: e.target.value },
                       })
                     }
                   />
                 </div>
               ))}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={generating}
+                onClick={() => activeProject && void downloadPdf(activeProject, "cgv")}
+              >
+                <FileDown className="h-4 w-4" /> Télécharger les CGV
+              </Button>
             </CardContent>
           </Card>
           {activeProject && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Checklist bon de livraison (projet actif)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    rows={5}
-                    value={activeProject.deliveryChecklist}
-                    onChange={(e) => patchProject({ deliveryChecklist: e.target.value })}
-                  />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Attestation maintenance (projet actif)</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {(Object.keys(activeProject.maintenanceTerms) as (keyof typeof activeProject.maintenanceTerms)[]).map(
-                    (key) => (
-                      <div key={key} className="space-y-1">
-                        <Label>{key}</Label>
-                        <Textarea
-                          rows={2}
-                          value={activeProject.maintenanceTerms[key]}
-                          onChange={(e) =>
-                            patchProject({
-                              maintenanceTerms: {
-                                ...activeProject.maintenanceTerms,
-                                [key]: e.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    ),
-                  )}
-                </CardContent>
-              </Card>
-            </>
+            <Card>
+              <CardHeader>
+                <CardTitle>Contrat & livraison (projet actif)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(Object.keys(activeProject.contractClauses) as (keyof typeof activeProject.contractClauses)[]).map(
+                  (key) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
+                      <Textarea
+                        rows={2}
+                        value={activeProject.contractClauses[key]}
+                        onChange={(e) =>
+                          patchProject({
+                            contractClauses: {
+                              ...activeProject.contractClauses,
+                              [key]: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  ),
+                )}
+                <Label>Checklist bon de livraison</Label>
+                <Textarea
+                  rows={4}
+                  value={activeProject.deliveryChecklist}
+                  onChange={(e) => patchProject({ deliveryChecklist: e.target.value })}
+                />
+                <Label>Texte de validation client</Label>
+                <Textarea
+                  rows={2}
+                  value={activeProject.deliveryNotes}
+                  onChange={(e) => patchProject({ deliveryNotes: e.target.value })}
+                />
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Numérotation automatique · DV / CT / FA / FC / BL / AM — année {store.counters.year}
+        Numérotation automatique · DV / CT / FA / FC / BL / CGV — année {store.counters.year}
       </p>
     </div>
   );
