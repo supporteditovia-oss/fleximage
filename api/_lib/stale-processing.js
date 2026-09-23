@@ -14,7 +14,7 @@ async function failStaleProcessingGenerations(supabase, userId) {
     })
     .eq("user_id", userId)
     .eq("status", "processing")
-    .lt("updated_at", cutoff)
+    .lt("created_at", cutoff)
     .select("id");
 
   if (error) {
