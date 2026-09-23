@@ -24,6 +24,7 @@ import {
   type GenerationTimingLock,
 } from "@/lib/in-flight-generation";
 import { buildImagePipelineStatusMessages } from "@/lib/generation-pipeline-messages";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -50,6 +51,7 @@ export function GenerationProgress({
   initialEstimatedSeconds,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
+  const adminPreview = useAdminPreviewFeatures();
   const [, navigate] = useLocation();
   const studioPath = useStudioPath();
   const { toast } = useToast();
@@ -299,8 +301,10 @@ export function GenerationProgress({
 
   const pipelineStatusMessages = useMemo(() => {
     if (resultType === "video") return undefined;
-    return buildImagePipelineStatusMessages(t, data?.pipelinePhase);
-  }, [data?.pipelinePhase, resultType, t]);
+    return buildImagePipelineStatusMessages(t, data?.pipelinePhase, {
+      adminDetail: adminPreview,
+    });
+  }, [adminPreview, data?.pipelinePhase, resultType, t]);
 
   const isGenerating =
     loaderStatus === "connecting" ||

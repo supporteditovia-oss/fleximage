@@ -1495,7 +1495,9 @@ export default function Generate({
           startedAtMs={peekGenerationSubmitStartedAt() ?? undefined}
           statusMessages={
             generationMode === "image"
-              ? buildImagePipelineStatusMessages(t, "enriching_prompt")
+              ? buildImagePipelineStatusMessages(t, "enriching_prompt", {
+                  adminDetail: adminPreview,
+                })
               : undefined
           }
           inputImageUrl={loaderInputImageUrl}

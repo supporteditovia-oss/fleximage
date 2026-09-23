@@ -288,7 +288,7 @@ export const extraResources = {
       policyFailHint:
         "Le contenu demandé n'est pas autorisé. Aucun crédit n'est perdu.",
       seconds: "sec",
-      stepPromptIntel: "Optimisation de ta demande (IA)…",
+      stepPromptIntel: "Prompt intelligent — on affine ta demande…",
       stepAnalyze: "Analyse de ton image...",
       stepUnderstood: "Demande comprise...",
       stepEditing: "Modification en cours...",
@@ -888,7 +888,7 @@ export const extraResources = {
       policyFail: "Content not allowed",
       policyFailHint: "That request isn't allowed. No credits were used.",
       seconds: "sec",
-      stepPromptIntel: "Enhancing your request (AI)…",
+      stepPromptIntel: "Smart prompt — refining your request…",
       stepAnalyze: "Analyzing your image...",
       stepUnderstood: "Request understood...",
       stepEditing: "Editing in progress...",
