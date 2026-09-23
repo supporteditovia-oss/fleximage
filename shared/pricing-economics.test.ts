@@ -23,21 +23,19 @@ describe("pricing-economics", () => {
 
   it("profil createur stays within essentiel credits", () => {
     const pnl = estimatePackMonthPnl("essentiel", USAGE_PROFILES.createur);
-    assert.ok(pnl.creditsUsed <= 1100);
+    assert.ok(pnl.creditsUsed <= 1200);
     assert.ok(pnl.grossEur > 0);
   });
 
-  it("V2V at 60cr is below COGS on ultimate (needs quota or higher credits)", () => {
+  it("V2V at 95cr covers COGS on ultimate", () => {
     const m = actionGrossMarginEur("ultimate", "videoV2V_noAudio");
-    assert.ok(m.grossEur < 0);
+    assert.ok(m.grossEur > 0);
     const minCr = minCreditsToCoverCogs(1.01, creditEurRate("ultimate"));
-    assert.ok(minCr >= 64);
+    assert.ok(minCr <= 95);
   });
 
-  it("voice clone at 10cr loses on all subscription packs", () => {
-    for (const id of ["decouverte", "essentiel", "ultimate"] as const) {
-      const m = actionGrossMarginEur(id, "voiceClone");
-      assert.ok(m.grossEur < 0, id);
-    }
+  it("I2V at 85cr covers COGS on essentiel", () => {
+    const m = actionGrossMarginEur("essentiel", "videoI2V_noAudio");
+    assert.ok(m.grossEur > 0);
   });
 });

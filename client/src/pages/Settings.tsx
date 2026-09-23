@@ -1,9 +1,17 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-supabase";
-import { useCurrentPlan } from "@/hooks/use-billing";
+import { currentPlanQueryKey, useCurrentPlan } from "@/hooks/use-billing";
 import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
+import { AdminPricingReferenceCard } from "@/components/admin/AdminPricingReferenceCard";
 import { LanguageSwitch } from "@/components/layout/LanguageSwitch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,10 +39,12 @@ import {
   Languages,
   Headphones,
   MessageCircle,
+  Shield,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -50,17 +60,38 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 
+type AdminSelectablePlan =
+  | "admin"
+  | "free"
+  | "discovery"
+  | "essential"
+  | "ultimate";
+
+function resolveAdminSelectablePlan(
+  planType: string | undefined,
+): AdminSelectablePlan {
+  if (planType === "discovery") return "discovery";
+  if (planType === "essential") return "essential";
+  if (planType === "ultimate") return "ultimate";
+  if (planType === "free") return "free";
+  return "admin";
+}
+
 export default function Settings() {
-  const { user, profile, signOut } = useAuth();
-  const { updateOwnProfile, deleteProfile, isDeleting } = useProfile();
+  const { user, profile, signOut, isAdmin } = useAuth();
+  const { updateOwnProfile, updateProfile, deleteProfile, isDeleting, isUpdating } =
+    useProfile();
   const { toast } = useToast();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [adminPlanLoading, setAdminPlanLoading] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
+  const adminSelectedPlan = resolveAdminSelectablePlan(currentPlan?.planType);
 
   const subscriptionPrice = (() => {
     if (!currentPlan) return t("settings.subscription.price");
@@ -183,6 +214,34 @@ export default function Settings() {
 
     if (canOpenPaywall) {
       setPaywallOpen(true);
+    }
+  };
+
+  const handleAdminPlanChange = async (plan: AdminSelectablePlan) => {
+    if (!user) return;
+    setAdminPlanLoading(true);
+    try {
+      const adminPlan =
+        plan === "admin" || plan === "free" ? "free" : plan;
+      await updateProfile({
+        id: user.id,
+        updates: { admin_plan: adminPlan } as Record<string, unknown>,
+      });
+      await queryClient.invalidateQueries({ queryKey: currentPlanQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      toast({
+        title: t("settings.admin.planUpdatedTitle"),
+        description: t(`settings.admin.planLabels.${plan}`),
+      });
+    } catch (error: unknown) {
+      toast({
+        variant: "destructive",
+        title: t("common.messages.error"),
+        description:
+          error instanceof Error ? error.message : t("billing.loadError"),
+      });
+    } finally {
+      setAdminPlanLoading(false);
     }
   };
 
@@ -374,6 +433,61 @@ export default function Settings() {
           </button>
         </div>
       </section>
+
+      {isAdmin ? (
+        <section className="space-y-4">
+          <h2 className="px-1 text-sm font-semibold uppercase text-muted-foreground/70">
+            {t("settings.admin.sectionTitle")}
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <Shield className="h-4.5 w-4.5 shrink-0 text-muted-foreground/60" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">
+                  {t("settings.admin.planTitle")}
+                </p>
+                <p className="text-[11px] text-muted-foreground/50">
+                  {t("settings.admin.planDescription")}
+                </p>
+              </div>
+              {adminPlanLoading || isUpdating ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground/50" />
+              ) : null}
+            </div>
+            <div className="border-t border-[var(--lx-ink)]/8 px-4 py-3.5">
+              <Select
+                value={adminSelectedPlan}
+                onValueChange={(value) =>
+                  void handleAdminPlanChange(value as AdminSelectablePlan)
+                }
+                disabled={adminPlanLoading || isUpdating}
+              >
+                <SelectTrigger className="h-11 w-full rounded-xl border border-border/50 bg-background/50 px-3 text-sm font-medium">
+                  <SelectValue placeholder={t("settings.admin.planTitle")} />
+                </SelectTrigger>
+                <SelectContent align="start" className="rounded-xl">
+                  <SelectItem value="admin">
+                    {t("settings.admin.planLabels.admin")}
+                  </SelectItem>
+                  <SelectItem value="free">
+                    {t("settings.admin.planLabels.free")}
+                  </SelectItem>
+                  <SelectItem value="discovery">
+                    {t("settings.admin.planLabels.discovery")}
+                  </SelectItem>
+                  <SelectItem value="essential">
+                    {t("settings.admin.planLabels.essential")}
+                  </SelectItem>
+                  <SelectItem value="ultimate">
+                    {t("settings.admin.planLabels.ultimate")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <AdminPricingReferenceCard />
+        </section>
+      ) : null}
 
       {/* Support section */}
       <section className="space-y-4">

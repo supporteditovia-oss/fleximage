@@ -25,18 +25,20 @@ export const PRICING_ECONOMICS = {
 
   creditCosts: {
     image: 10,
-    videoI2V: 60,
-    videoV2V: 60,
+    /** Cible v2 (admin / PnL) — prod débite encore 60 cr via credit-costs.ts. */
+    videoI2V: 85,
+    videoV2V: 95,
+    /** Supplément voix sur clip vidéo (≈ 5 cr, pas €). */
     audioExtra: 5,
     voiceGenerate: 10,
-    voiceClone: 10,
+    voiceClone: 30,
   },
 
   subscriptionPacks: [
     {
       id: "decouverte",
       name: "Découverte",
-      priceTtcCents: 890,
+      priceTtcCents: 990,
       creditsPerMonth: 250,
       quotas: {
         images: 25,
@@ -49,8 +51,8 @@ export const PRICING_ECONOMICS = {
     {
       id: "essentiel",
       name: "Essentiel",
-      priceTtcCents: 1990,
-      creditsPerMonth: 1100,
+      priceTtcCents: 2490,
+      creditsPerMonth: 1200,
       quotas: {
         images: 70,
         videoI2V: 3,
@@ -63,8 +65,8 @@ export const PRICING_ECONOMICS = {
     {
       id: "ultimate",
       name: "Ultimate",
-      priceTtcCents: 3990,
-      creditsPerMonth: 2500,
+      priceTtcCents: 4990,
+      creditsPerMonth: 2850,
       quotas: {
         images: 150,
         videoI2V: 10,

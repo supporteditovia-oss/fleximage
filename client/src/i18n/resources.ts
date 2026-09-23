@@ -67,6 +67,35 @@ export const resources = {
       account: {
         deleteAccount: "Supprimer mon compte",
       },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Plan de test",
+        planDescription:
+          "Choisis le plan simulé pour tester l'app (mobile ou PC).",
+        planUpdatedTitle: "Plan mis à jour",
+        planLabels: {
+          admin: "Admin (accès illimité)",
+          free: "Gratuit",
+          discovery: "Découverte",
+          essential: "Essentiel",
+          ultimate: "Ultimate",
+        },
+        pricingTitle: "Grille tarifaire v2 (référence)",
+        pricingDescription:
+          "Chiffres cibles abos / packs / débit crédits — invisible pour les clients.",
+        pricingBurnTitle: "Débit crédits (cible)",
+        pricingSubsTitle: "Abonnements",
+        pricingPacksTitle: "Recharges universelles",
+        pricingBurn: {
+          image: "Image : {{credits}} cr",
+          videoI2V: "Vidéo I2V 5 s : {{credits}} cr",
+          videoVoiceExtra:
+            "Vidéo + voix : +{{extra}} cr (total {{total}} cr)",
+          videoV2V: "Vidéo V2V 8 s : {{credits}} cr",
+          voiceMinute: "Voix TTS : {{credits}} cr / min",
+          voiceClone: "Clone voix : {{credits}} cr",
+        },
+      },
       deleteDialog: {
         title: "Suppression définitive",
         description: "Cette action est irréversible",
@@ -490,6 +519,33 @@ export const resources = {
       account: {
         deleteAccount: "Delete my account",
       },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Test plan",
+        planDescription: "Pick a simulated plan to test the app.",
+        planUpdatedTitle: "Plan updated",
+        planLabels: {
+          admin: "Admin (unlimited)",
+          free: "Free",
+          discovery: "Discovery",
+          essential: "Essential",
+          ultimate: "Ultimate",
+        },
+        pricingTitle: "Pricing grid v2 (reference)",
+        pricingDescription:
+          "Target subs / packs / credit burn — hidden from clients.",
+        pricingBurnTitle: "Credit burn (target)",
+        pricingSubsTitle: "Subscriptions",
+        pricingPacksTitle: "Universal top-ups",
+        pricingBurn: {
+          image: "Image: {{credits}} cr",
+          videoI2V: "I2V video 5s: {{credits}} cr",
+          videoVoiceExtra: "Video + voice: +{{extra}} cr ({{total}} cr total)",
+          videoV2V: "V2V video 8s: {{credits}} cr",
+          voiceMinute: "TTS voice: {{credits}} cr / min",
+          voiceClone: "Voice clone: {{credits}} cr",
+        },
+      },
       deleteDialog: {
         title: "Permanent deletion",
         description: "This action is irreversible",
@@ -907,6 +963,34 @@ export const resources = {
       },
       account: {
         deleteAccount: "Eliminar mi cuenta",
+      },
+      admin: {
+        sectionTitle: "Administración",
+        planTitle: "Plan de prueba",
+        planDescription: "Elige un plan simulado para probar la app.",
+        planUpdatedTitle: "Plan actualizado",
+        planLabels: {
+          admin: "Admin (ilimitado)",
+          free: "Gratis",
+          discovery: "Descubrimiento",
+          essential: "Esencial",
+          ultimate: "Ultimate",
+        },
+        pricingTitle: "Tarifas v2 (referencia)",
+        pricingDescription:
+          "Objetivo abos / packs / créditos — invisible para clientes.",
+        pricingBurnTitle: "Consumo de créditos (objetivo)",
+        pricingSubsTitle: "Suscripciones",
+        pricingPacksTitle: "Recargas universales",
+        pricingBurn: {
+          image: "Imagen: {{credits}} cr",
+          videoI2V: "Vídeo I2V 5 s: {{credits}} cr",
+          videoVoiceExtra:
+            "Vídeo + voz: +{{extra}} cr ({{total}} cr total)",
+          videoV2V: "Vídeo V2V 8 s: {{credits}} cr",
+          voiceMinute: "Voz TTS: {{credits}} cr / min",
+          voiceClone: "Clon de voz: {{credits}} cr",
+        },
       },
       deleteDialog: {
         title: "Eliminación definitiva",
@@ -1329,6 +1413,34 @@ export const resources = {
       },
       account: {
         deleteAccount: "Mein Konto löschen",
+      },
+      admin: {
+        sectionTitle: "Administration",
+        planTitle: "Testplan",
+        planDescription: "Simulierten Plan zum Testen der App wählen.",
+        planUpdatedTitle: "Plan aktualisiert",
+        planLabels: {
+          admin: "Admin (unbegrenzt)",
+          free: "Kostenlos",
+          discovery: "Discovery",
+          essential: "Essentiel",
+          ultimate: "Ultimate",
+        },
+        pricingTitle: "Preisraster v2 (Referenz)",
+        pricingDescription:
+          "Ziel-Abos / Packs / Credits — für Kunden unsichtbar.",
+        pricingBurnTitle: "Credit-Verbrauch (Ziel)",
+        pricingSubsTitle: "Abonnements",
+        pricingPacksTitle: "Universelle Aufladungen",
+        pricingBurn: {
+          image: "Bild: {{credits}} Cr",
+          videoI2V: "I2V-Video 5 s: {{credits}} Cr",
+          videoVoiceExtra:
+            "Video + Stimme: +{{extra}} Cr ({{total}} Cr gesamt)",
+          videoV2V: "V2V-Video 8 s: {{credits}} Cr",
+          voiceMinute: "TTS-Stimme: {{credits}} Cr / Min",
+          voiceClone: "Stimmklon: {{credits}} Cr",
+        },
       },
       deleteDialog: {
         title: "Endgültige Löschung",
