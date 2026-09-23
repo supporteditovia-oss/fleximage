@@ -15,7 +15,10 @@ export type CurrentPlanType =
 export type BillingInterval = "week" | "month";
 export type BillingCurrency = "eur" | "usd";
 
+export type CreditPackUseCase = "any" | "image" | "voice" | "video";
+
 export interface CurrentPlanSummary {
+  pricingCatalogVersion?: "v1" | "v2";
   credits: number;
   planType: CurrentPlanType;
   subscriptionStatus: string;
@@ -51,6 +54,15 @@ export interface CurrentPlanSummary {
     credits: number;
     priceLabel: string;
     images: number;
+    useCase?: CreditPackUseCase;
+    badge?: string | null;
+    usageHints?: {
+      images: number;
+      videoI2v: number;
+      videoV2v: number;
+      voiceMinutes: number;
+      voiceClones: number;
+    } | null;
     available?: boolean;
   }>;
 }

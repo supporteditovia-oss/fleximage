@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, Lock, X } from "lucide-react";
-import { billingLocaleParam } from "@shared/billing";
+import { billingLocaleParam, getPlanCreditsPerMonth } from "@shared/billing";
+import { isPricingV2Enabled } from "@shared/pricing-flags";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -60,6 +61,15 @@ export function LuxePaywallModal({
 
   const selectedPlanCard =
     planCards.find((plan) => plan.id === selectedPlan) ?? planCards[0];
+  const pricingV2 = isPricingV2Enabled();
+  const creditsPerMonthLabel = (planId: typeof selectedPlan) =>
+    pricingV2
+      ? t("paywall.creditsPerMonthDynamic", {
+          count: getPlanCreditsPerMonth(planId).toLocaleString(
+            i18n.language.startsWith("en") ? "en-US" : "fr-FR",
+          ),
+        })
+      : t(`paywall.plans.${planId}.creditsPerMonth`);
   const isVideo = generationMode === "video";
   const modalTitle = t(
     isVideo ? "paywall.modalTitleVideo" : "paywall.modalTitle",
@@ -239,7 +249,7 @@ export function LuxePaywallModal({
                       </span>
                     </span>
                     <span className="mt-1.5 text-[10px] font-semibold leading-tight text-[var(--lx-muted)]">
-                      {t(`paywall.plans.${plan.id}.creditsPerMonth`)}
+                      {creditsPerMonthLabel(plan.id)}
                     </span>
                   </button>
                 );
@@ -260,7 +270,7 @@ export function LuxePaywallModal({
                     className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lx-gold)]"
                     strokeWidth={2.75}
                   />
-                  <span>{t(`paywall.plans.${selectedPlanCard.id}.creditsPerMonth`)}</span>
+                  <span>{creditsPerMonthLabel(selectedPlanCard.id)}</span>
                 </li>
                 <li className={bulletClassName}>
                   <Check

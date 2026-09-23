@@ -4,7 +4,8 @@ import { authFetch } from "./api";
 import { getFunnelSessionId, trackFunnelStep } from "@/lib/funnel-tracker";
 
 export type CheckoutPlan = "discovery" | "essential" | "ultimate";
-export type CreditPackId = "mini" | "standard" | "plus";
+import type { CreditPackId } from "@shared/billing";
+export type { CreditPackId };
 
 function checkoutLocalePayload() {
   return { locale: billingLocaleParam(i18n.language) };
