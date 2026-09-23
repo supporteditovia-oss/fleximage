@@ -129,8 +129,7 @@ module.exports = async function handler(req, res) {
           credits: p.credits,
           priceLabel: p.priceLabel,
           images: p.images,
-          useCase: p.useCase || "any",
-          badge: p.badge || null,
+          tier: p.tier || null,
           usageHints: p.usageHints || null,
           available: p.available !== false && Boolean(process.env[p.envKey]),
         }))

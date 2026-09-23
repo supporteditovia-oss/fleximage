@@ -563,16 +563,10 @@ export const extraResources = {
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
       packsTitle: "Ou recharger sans changer de plan",
       packLine: "{{credits}} crédits · ~{{images}} images",
-      packHintVideo: "{{count}} clip(s) vidéo 5 s (I2V)",
-      packHintVoice: "~{{count}} min de voix IA",
-      packHintVoiceClone: "{{count}} clone(s) voix inclus",
-      packFilters: {
-        all: "Tout",
-        image: "Images",
-        voice: "Voix",
-        video: "Vidéo",
-        any: "Mix",
-      },
+      packsUniversal:
+        "Crédits libres — tu dépenses comme tu veux (image, voix ou vidéo).",
+      packExamples:
+        "ex. ~{{images}} images ou ~{{video}} clip(s) 5 s — à toi de mixer",
       packsNote:
         "Les packs coûtent plus cher à l'image qu'un abonnement — utiles en dépannage seulement.",
       paymentUnavailableTitle: "Paiement indisponible",
@@ -1161,16 +1155,10 @@ export const extraResources = {
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
       packLine: "{{credits}} credits · ~{{images}} images",
-      packHintVideo: "{{count}} × 5 s video clip (I2V)",
-      packHintVoice: "~{{count}} min AI voice",
-      packHintVoiceClone: "{{count}} voice clone(s) included",
-      packFilters: {
-        all: "All",
-        image: "Images",
-        voice: "Voice",
-        video: "Video",
-        any: "Mix",
-      },
+      packsUniversal:
+        "Universal credits — spend them on images, voice, or video.",
+      packExamples:
+        "e.g. ~{{images}} images or ~{{video}} × 5 s clips — your mix",
       packsNote:
         "Packs cost more per image than a subscription — useful as a backup only.",
       paymentUnavailableTitle: "Payment unavailable",

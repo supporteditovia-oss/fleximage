@@ -4,15 +4,7 @@ import { PRICING_CATALOG_V2 } from "./pricing-catalog-v2";
 
 export type BillingCurrency = "eur" | "usd";
 export type BillingPlan = "discovery" | "essential" | "ultimate";
-export type CreditPackId =
-  | "mini"
-  | "standard"
-  | "plus"
-  | "flash"
-  | "creator"
-  | "studio"
-  | "clip"
-  | "voice";
+export type CreditPackId = "mini" | "standard" | "plus";
 
 export const DEFAULT_BILLING_CURRENCY: BillingCurrency = "eur";
 

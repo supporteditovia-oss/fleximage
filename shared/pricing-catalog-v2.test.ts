@@ -19,10 +19,13 @@ describe("pricing-catalog-v2", () => {
     }
   });
 
-  it("clip pack covers one I2V at catalog credit cost", () => {
-    const clip = PRICING_CATALOG_V2.creditPacks.eur.find((p) => p.id === "clip");
-    assert.ok(clip);
-    const hints = packUsageHints(clip!.credits);
+  it("exactly three universal credit packs in EUR", () => {
+    assert.equal(PRICING_CATALOG_V2.creditPacks.eur.length, 3);
+    const ids = PRICING_CATALOG_V2.creditPacks.eur.map((p) => p.id);
+    assert.deepEqual(ids, ["mini", "standard", "plus"]);
+    const plus = PRICING_CATALOG_V2.creditPacks.eur.find((p) => p.id === "plus");
+    assert.ok(plus);
+    const hints = packUsageHints(plus!.credits);
     assert.ok(hints.videoI2v >= 1);
   });
 

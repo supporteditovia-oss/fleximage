@@ -15,7 +15,7 @@ export type CurrentPlanType =
 export type BillingInterval = "week" | "month";
 export type BillingCurrency = "eur" | "usd";
 
-export type CreditPackUseCase = "any" | "image" | "voice" | "video";
+export type CreditPackTier = "small" | "medium" | "large";
 
 export interface CurrentPlanSummary {
   pricingCatalogVersion?: "v1" | "v2";
@@ -54,8 +54,7 @@ export interface CurrentPlanSummary {
     credits: number;
     priceLabel: string;
     images: number;
-    useCase?: CreditPackUseCase;
-    badge?: string | null;
+    tier?: CreditPackTier;
     usageHints?: {
       images: number;
       videoI2v: number;

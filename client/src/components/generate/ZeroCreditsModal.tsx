@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { Film, Gem, ImageIcon, Loader2, Mic, Sparkles, Zap } from "lucide-react";
-import type { CreditPackUseCase } from "@/hooks/use-billing";
+import { Gem, Loader2, Sparkles, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -37,7 +36,6 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
-  const [packFilter, setPackFilter] = useState<"all" | CreditPackUseCase>("all");
 
   const upgrades = useMemo((): UpgradeOffer[] => {
     if (plan?.upgradeOffers && plan.upgradeOffers.length > 0) {
@@ -52,38 +50,27 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
     [plan?.creditPacks],
   );
 
-  const filteredPacks = useMemo(() => {
-    if (packFilter === "all") return packs;
-    return packs.filter(
-      (p) => p.useCase === packFilter || p.useCase === "any" || !p.useCase,
-    );
-  }, [packFilter, packs]);
-
-  const packFilterOptions: Array<{
-    id: "all" | CreditPackUseCase;
-    icon: typeof Zap;
-  }> = [
-    { id: "all", icon: Zap },
-    { id: "image", icon: ImageIcon },
-    { id: "voice", icon: Mic },
-    { id: "video", icon: Film },
-  ];
-
   const packSubtitle = (pack: (typeof packs)[number]) => {
     const hints = pack.usageHints;
-    if (pack.useCase === "video" && hints?.videoI2v) {
-      return t("zeroCredits.packHintVideo", { count: hints.videoI2v });
-    }
-    if (pack.useCase === "voice" && hints) {
-      if (hints.voiceClones >= 1) {
-        return t("zeroCredits.packHintVoiceClone", { count: hints.voiceClones });
-      }
-      return t("zeroCredits.packHintVoice", { count: hints.voiceMinutes });
-    }
-    return t("zeroCredits.packLine", {
+    const images = pack.images ?? hints?.images ?? 0;
+    const line = t("zeroCredits.packLine", {
       credits: pack.credits,
-      images: pack.images ?? hints?.images ?? 0,
+      images,
     });
+    if (plan?.pricingCatalogVersion === "v2" && hints) {
+      return (
+        <>
+          <span className="block">{line}</span>
+          <span className="mt-0.5 block text-[10px] font-medium text-[var(--lx-ink-muted)]/90">
+            {t("zeroCredits.packExamples", {
+              images: hints.images,
+              video: hints.videoI2v,
+            })}
+          </span>
+        </>
+      );
+    }
+    return line;
   };
 
   const redirect = async (url: string | null) => {
@@ -263,33 +250,16 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
 
           {isSubscriber && packs.length > 0 && (
             <div className="mt-6">
-              <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--lx-ink-muted)]">
+              <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--lx-ink-muted)]">
                 {t("zeroCredits.packsTitle")}
               </p>
               {plan?.pricingCatalogVersion === "v2" ? (
-                <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-                  {packFilterOptions.map(({ id, icon: Icon }) => {
-                    const active = packFilter === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => setPackFilter(id)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-                          active
-                            ? "bg-[var(--lx-gold)]/20 text-[#8a6a12]"
-                            : "bg-black/5 text-[var(--lx-ink-muted)] hover:bg-black/8"
-                        }`}
-                      >
-                        <Icon className="h-3 w-3" />
-                        {t(`zeroCredits.packFilters.${id}`)}
-                      </button>
-                    );
-                  })}
-                </div>
+                <p className="mb-3 text-center text-[11px] leading-snug text-[var(--lx-ink-muted)]">
+                  {t("zeroCredits.packsUniversal")}
+                </p>
               ) : null}
               <div className="space-y-2">
-                {filteredPacks.map((pack) => (
+                {packs.map((pack) => (
                   <button
                     key={pack.id}
                     type="button"
