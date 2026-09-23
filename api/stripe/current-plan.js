@@ -1,9 +1,10 @@
 const { createClient } = require("@supabase/supabase-js");
 const {
-  PLAN_CREDITS,
+  getActivePlanCredits,
+  getPricingCatalogVersion,
   normalizePlan,
   getUpgradeOffers,
-  listConfiguredPacks,
+  listCreditPackCatalog,
   resolveBillingCurrency,
 } = require("../_lib/billing-offers");
 const { getPlanUsageSnapshot } = require("../_lib/plan-usage-limits");
@@ -94,8 +95,9 @@ module.exports = async function handler(req, res) {
     } else if (subscription) {
       const normalized = normalizePlan(subscription.plan_type);
       planType = normalized;
+      const planCredits = getActivePlanCredits();
       creditsPerCycle =
-        subscription.credits_per_cycle ?? PLAN_CREDITS[normalized] ?? null;
+        subscription.credits_per_cycle ?? planCredits[normalized] ?? null;
       billingInterval = subscription.billing_interval || "month";
       subscriptionStatus = subscription.status || subscriptionStatus;
     } else if (profile.is_subscriber) {
@@ -121,19 +123,22 @@ module.exports = async function handler(req, res) {
     // them to first-time / non-subscriber clients — they only see subscriptions.
     const showPacks = isSubscriber && !isAdmin;
     const packs = showPacks
-      ? listConfiguredPacks(billingCurrency).map((p) => ({
+      ? listCreditPackCatalog(billingCurrency).map((p) => ({
           id: p.id,
           label: p.label,
           credits: p.credits,
           priceLabel: p.priceLabel,
           images: p.images,
-          available: Boolean(process.env[p.envKey]),
+          tier: p.tier || null,
+          usageHints: p.usageHints || null,
+          available: p.available !== false && Boolean(process.env[p.envKey]),
         }))
       : [];
 
     const usageLimits = await getPlanUsageSnapshot(supabase, userId, planType);
 
     res.status(200).json({
+      pricingCatalogVersion: getPricingCatalogVersion(),
       planType,
       credits,
       isSubscriber,

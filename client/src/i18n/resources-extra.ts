@@ -563,6 +563,10 @@ export const extraResources = {
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
       packsTitle: "Ou recharger sans changer de plan",
       packLine: "{{credits}} crédits · ~{{images}} images",
+      packsUniversal:
+        "Crédits libres — tu dépenses comme tu veux (image, voix ou vidéo).",
+      packExamples:
+        "Jusqu'à {{images}} photos · {{video}} vidéo 5 s · {{clones}} clone(s) voix · tu mixes comme tu veux",
       packsNote:
         "Les packs coûtent plus cher à l'image qu'un abonnement — utiles en dépannage seulement.",
       paymentUnavailableTitle: "Paiement indisponible",
@@ -1151,6 +1155,10 @@ export const extraResources = {
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
       packLine: "{{credits}} credits · ~{{images}} images",
+      packsUniversal:
+        "Universal credits — spend them on images, voice, or video.",
+      packExamples:
+        "Up to {{images}} photos · {{video}} × 5 s videos · {{clones}} voice clone(s) — mix as you like",
       packsNote:
         "Packs cost more per image than a subscription — useful as a backup only.",
       paymentUnavailableTitle: "Payment unavailable",

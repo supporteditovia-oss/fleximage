@@ -301,6 +301,7 @@ export const resources = {
       socialProofFallback:
         "Rejoins la communauté LuxeFlexIA — des créateurs partagent déjà leurs LARPs.",
       securePayment: "Paiement sécurisé avec Stripe",
+      creditsPerMonthDynamic: "{{count}} crédits / mois",
       upgradeHelper: "Passe au mensuel pour plus de crédits.",
       unlockCta: "Débloquer mon LARP",
       unlockCtaImage: "Récupérer ma photo",
@@ -724,6 +725,7 @@ export const resources = {
       socialProofFallback:
         "Join the LuxeFlexIA community — creators are already sharing their photos.",
       securePayment: "Secure payment with Stripe",
+      creditsPerMonthDynamic: "{{count}} credits / month",
       upgradeHelper: "Switch to monthly for more credits.",
       unlockCta: "Unlock my photo",
       unlockCtaImage: "Get my photo",

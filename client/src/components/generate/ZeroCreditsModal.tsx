@@ -50,6 +50,30 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
     [plan?.creditPacks],
   );
 
+  const packSubtitle = (pack: (typeof packs)[number]) => {
+    const hints = pack.usageHints;
+    const images = pack.images ?? hints?.images ?? 0;
+    const line = t("zeroCredits.packLine", {
+      credits: pack.credits,
+      images,
+    });
+    if (plan?.pricingCatalogVersion === "v2" && hints) {
+      return (
+        <>
+          <span className="block">{line}</span>
+          <span className="mt-0.5 block text-[10px] font-medium text-[var(--lx-ink-muted)]/90">
+            {t("zeroCredits.packExamples", {
+              images: hints.images,
+              video: hints.videoI2v,
+              clones: hints.voiceClones,
+            })}
+          </span>
+        </>
+      );
+    }
+    return line;
+  };
+
   const redirect = async (url: string | null) => {
     if (!url) {
       toast({
@@ -227,9 +251,14 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
 
           {isSubscriber && packs.length > 0 && (
             <div className="mt-6">
-              <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--lx-ink-muted)]">
+              <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--lx-ink-muted)]">
                 {t("zeroCredits.packsTitle")}
               </p>
+              {plan?.pricingCatalogVersion === "v2" ? (
+                <p className="mb-3 text-center text-[11px] leading-snug text-[var(--lx-ink-muted)]">
+                  {t("zeroCredits.packsUniversal")}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 {packs.map((pack) => (
                   <button
@@ -246,10 +275,7 @@ export function ZeroCreditsModal({ open, onOpenChange, plan }: Props) {
                           {pack.label}
                         </span>
                         <span className="block text-xs text-[var(--lx-ink-muted)]">
-                          {t("zeroCredits.packLine", {
-                            credits: pack.credits,
-                            images: pack.images,
-                          })}
+                          {packSubtitle(pack)}
                         </span>
                       </span>
                     </span>
