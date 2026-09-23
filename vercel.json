@@ -67,6 +67,10 @@
       "destination": "/api/v2-access?__public=trust-stats"
     },
     {
+      "source": "/api/ai/prompt",
+      "destination": "/api/v2-access?__ai=prompt"
+    },
+    {
       "source": "/api/profile/onboarding-quiz",
       "destination": "/api/profiles/me?__profile=onboarding-quiz"
     },

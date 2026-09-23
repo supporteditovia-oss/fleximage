@@ -2686,6 +2686,37 @@ export async function registerRoutes(
     },
   );
 
+  // POST /api/ai/prompt — Gemini 2.5 Flash prompt optimization (no image generation)
+  app.post("/api/ai/prompt", requireAuth, async (req, res) => {
+    try {
+      const locale = resolveLocaleFromRequest(req);
+      const input =
+        typeof req.body?.input === "string" ? req.body.input.trim() : "";
+      if (!input || input.length > 2000) {
+        return res
+          .status(400)
+          .json({ message: "Invalid input (1-2000 characters)" });
+      }
+      if (isDisallowedAdultPrompt(input)) {
+        return res.status(422).json({
+          code: CONTENT_POLICY_CODE,
+          message: tBackend(locale, "larps.policyViolation"),
+        });
+      }
+      const { enrichPromptForGeneration } = await import(
+        "./services/prompt-intelligence.js"
+      );
+      const prompt = await enrichPromptForGeneration(input, { locale });
+      res.json({ prompt });
+    } catch (error) {
+      logger.error({ err: error }, "ai-prompt error");
+      const locale = resolveLocaleFromRequest(req);
+      res
+        .status(500)
+        .json({ message: tBackend(locale, "common.internalServerError") });
+    }
+  });
+
   // POST /api/larps/generate-direct (free prompt, no template)
   const generateDirectBodySchema = z.object({
     prompt: z.string().min(1).max(2000),
@@ -2796,8 +2827,14 @@ export async function registerRoutes(
           finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
           finalPrompt = appendProductionPromptRules(finalPrompt);
         } else {
+          const { enrichPromptForGeneration } = await import(
+            "./services/prompt-intelligence.js"
+          );
+          const optimizedPrompt = await enrichPromptForGeneration(prompt, {
+            locale,
+          });
           // Free prompt: hard identity + pose lock + photoreal + system/negative rules.
-          finalPrompt = buildIdentityPreservingPrompt(prompt);
+          finalPrompt = buildIdentityPreservingPrompt(optimizedPrompt);
         }
         let imageUrls: string[] = [];
         if (template_id) {

@@ -40,6 +40,7 @@ const {
   findRecentInFlightGeneration,
   SESSION_BURST_WINDOW_MS,
 } = require("../generation-dedup");
+const { enrichPromptForGeneration } = require("../prompt-intelligence");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -104,7 +105,7 @@ module.exports = async function handler(req, res) {
     const admin = await isUserAdmin(supabase, userId);
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
-    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const images = Array.isArray(body.images) ? body.images : [];
     const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
     const templateId =
@@ -127,6 +128,20 @@ module.exports = async function handler(req, res) {
     if (isDisallowedAdultPrompt(prompt)) {
       res.status(422).json(contentPolicyResponse(uiLocale));
       return;
+    }
+
+    // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
+    if (!templateId) {
+      const enriched = await enrichPromptForGeneration(prompt, {
+        locale: uiLocale,
+      });
+      if (enriched && enriched !== prompt) {
+        prompt = enriched.slice(0, 2000);
+        console.info("[generate-direct] prompt-intelligence applied", {
+          userId,
+          length: prompt.length,
+        });
+      }
     }
 
     // 2) Credit check — before AI.

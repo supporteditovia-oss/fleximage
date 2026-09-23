@@ -2,6 +2,7 @@ const { getClientIp } = require("./_lib/client-ip");
 const { isIpAllowedForV2 } = require("./_lib/v2-gate");
 const { requireUser, sendError } = require("./_lib/user-auth");
 const publicTrustStats = require("./_lib/handlers/public-trust-stats");
+const aiPromptHandler = require("./_lib/handlers/ai-prompt");
 
 /**
  * GET /api/v2-access
@@ -20,6 +21,14 @@ module.exports = async function handler(req, res) {
 
   if (publicRoute) {
     return publicTrustStats(req, res);
+  }
+
+  const aiPromptRoute =
+    req.query?.__ai === "prompt" ||
+    String(req.url || "").includes("/api/ai/prompt");
+
+  if (aiPromptRoute) {
+    return aiPromptHandler(req, res);
   }
 
   if (req.method !== "GET") {
