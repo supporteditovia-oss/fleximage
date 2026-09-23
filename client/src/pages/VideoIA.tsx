@@ -29,6 +29,7 @@ import {
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_V2V_PRESETS,
@@ -445,7 +446,8 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo verticale max 8 s ·{" "}
+              JPG ou PNG — ta propre image. Vidéo verticale max{" "}
+              {VIDEO_I2V_OUTPUT_DURATION_SEC} s ·{" "}
               <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
             </p>
 

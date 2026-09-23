@@ -5,6 +5,9 @@ import {
 
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
+/** Durée max clip généré Image → Vidéo (Kling I2V). */
+export const VIDEO_I2V_OUTPUT_DURATION_SEC = 5;
+
 /** Plafond rentable Kling Motion Control 720p — prix fixe 60 crédits / vidéo. */
 export const VIDEO_V2V_MAX_DURATION_SEC = 8;
 /** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
