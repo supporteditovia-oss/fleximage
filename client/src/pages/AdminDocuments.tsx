@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { TSK_BRAND, TSK_SAMPLE_PDF_FILES } from "@/lib/tsk-brand/constants";
+import { TSK_BRAND } from "@/lib/tsk-brand/constants";
 import {
   depositAmountHt,
   formatDateFr,
@@ -39,7 +39,12 @@ import {
 } from "@/lib/tsk-documents/calc";
 import { DEPOSIT_PRESETS, newLineItem } from "@/lib/tsk-documents/project-factory";
 import { nextDocumentNumber } from "@/lib/tsk-documents/numbering";
-import { generateTskCgvPdf, generateTskProjectPdf } from "@/lib/tsk-documents/pdf";
+import {
+  buildTskProjectPdf,
+  downloadPdfFile,
+  generateTskCgvPdf,
+  generateTskProjectPdf,
+} from "@/lib/tsk-documents/pdf";
 import { canRunAction, workflowProgress } from "@/lib/tsk-documents/workflow";
 import {
   TSK_DOCUMENT_LABELS,
@@ -194,6 +199,51 @@ export default function AdminDocuments() {
     void downloadPdf(result.project, result.docKind);
   };
 
+  const ALL_DOC_KINDS: TskDocumentKind[] = [
+    "devis",
+    "contrat",
+    "facture_acompte",
+    "facture",
+    "bon_livraison",
+    "cgv",
+  ];
+
+  const downloadAllSixPdfs = async () => {
+    if (!activeProject) {
+      toast({
+        variant: "destructive",
+        title: "Aucun projet",
+        description: "Créez ou sélectionnez un projet TSK Digital.",
+      });
+      return;
+    }
+    setGenerating(true);
+    try {
+      let project = activeProject;
+      let settings = store.settings;
+      for (const kind of ALL_DOC_KINDS) {
+        const prepared = assignNumber(project, kind);
+        project = prepared.project;
+        settings = prepared.settings;
+        const built = await buildTskProjectPdf(project, settings, kind);
+        downloadPdfFile(built.filename, built.buffer);
+        await new Promise((r) => window.setTimeout(r, 600));
+      }
+      toast({
+        title: "6 PDF TSK Digital",
+        description: "Téléchargements lancés sur votre appareil (dossier Téléchargements).",
+      });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Échec génération",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (!isAdmin && !isLoading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
@@ -233,27 +283,27 @@ export default function AdminDocuments() {
 
       <Card className="border-[#E8E8E8] bg-[#FAFAFA]">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Télécharger les 6 PDF d&apos;exemple</CardTitle>
+          <CardTitle className="text-base">Télécharger sur votre ordinateur</CardTitle>
           <CardDescription>
-            Liens directs (fichiers sur le site). Les liens « artifacts » du chat Cloud Agent ne
-            sont pas accessibles depuis votre téléphone ou PC — utilisez ceux-ci ou les boutons
-            PDF dans l&apos;onglet Workflow.
+            Les PDF <strong>TSK Digital</strong> ne sont pas publiés sur LuxeFlexIA. Ils sont
+            générés dans votre navigateur et enregistrés localement (aucune mise en ligne publique).
+            Autorisez les téléchargements multiples si le navigateur le demande.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {TSK_SAMPLE_PDF_FILES.map(({ label, file }) => (
-            <Button key={file} variant="outline" size="sm" asChild>
-              <a
-                href={`${TSK_BRAND.samplePdfBase}/${file}`}
-                download={file}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <FileDown className="h-3.5 w-3.5" />
-                {label}
-              </a>
-            </Button>
-          ))}
+          <Button
+            type="button"
+            className="bg-[#0B0B0C] text-white hover:bg-[#0B0B0C]/90"
+            disabled={generating || !activeProject}
+            onClick={() => void downloadAllSixPdfs()}
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4" />
+            )}
+            Télécharger les 6 PDF (projet actif)
+          </Button>
         </CardContent>
       </Card>
 

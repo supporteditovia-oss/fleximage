@@ -505,7 +505,7 @@ export async function buildTskProjectPdf(
   return { filename, buffer: doc.output("arraybuffer") };
 }
 
-function triggerBrowserDownload(filename: string, buffer: ArrayBuffer): void {
+export function downloadPdfFile(filename: string, buffer: ArrayBuffer): void {
   const blob = new Blob([buffer], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -525,7 +525,7 @@ export async function generateTskProjectPdf(
   kind: TskDocumentKind,
 ): Promise<void> {
   const built = await buildTskProjectPdf(project, settings, kind);
-  triggerBrowserDownload(built.filename, built.buffer);
+  downloadPdfFile(built.filename, built.buffer);
 }
 
 export async function generateTskCgvPdf(settings: TskOrgSettings): Promise<void> {
@@ -568,5 +568,5 @@ export async function generateTskCgvPdf(settings: TskOrgSettings): Promise<void>
     notes: "",
   };
   const built = await buildTskProjectPdf(stub, settings, "cgv");
-  triggerBrowserDownload(built.filename, built.buffer);
+  downloadPdfFile(built.filename, built.buffer);
 }
