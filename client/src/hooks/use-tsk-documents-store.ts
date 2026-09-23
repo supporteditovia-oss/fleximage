@@ -7,7 +7,6 @@ import {
   upsertProject,
 } from "@/lib/tsk-documents/storage";
 import { createProject, touchProject } from "@/lib/tsk-documents/project-factory";
-import { nextDocumentNumber } from "@/lib/tsk-documents/numbering";
 import { applyWorkflowAction, type WorkflowAction } from "@/lib/tsk-documents/workflow";
 import type {
   TskDocumentKind,
@@ -68,14 +67,6 @@ export function useTskDocumentsStore() {
     [activeProject, store.counters],
   );
 
-  const ensureCgvNumber = useCallback((): TskOrgSettings => {
-    if (store.settings.cgvNumber) return store.settings;
-    const { number, counters } = nextDocumentNumber("cgv", store.counters);
-    const settings = { ...store.settings, cgvNumber: number };
-    setStore((prev) => ({ ...prev, settings, counters }));
-    return settings;
-  }, [store.settings, store.counters]);
-
   const deleteProject = useCallback((id: string) => {
     setStore((prev) => {
       const projects = prev.projects.filter((p) => p.id !== id);
@@ -94,7 +85,6 @@ export function useTskDocumentsStore() {
     saveProject,
     createNewProject,
     runWorkflow,
-    ensureCgvNumber,
     deleteProject,
   };
 }

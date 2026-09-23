@@ -1,10 +1,13 @@
+/** Types documentaires TSK Digital — 7 PDF métier (cahier des charges agence FR). */
+
 export type TskDocumentKind =
   | "devis"
   | "contrat"
   | "facture_acompte"
-  | "facture"
+  | "facture_intermediaire"
+  | "facture_finale"
   | "bon_livraison"
-  | "cgv";
+  | "contrat_maintenance";
 
 export type TskLineItem = {
   id: string;
@@ -42,18 +45,15 @@ export type TskContractClauses = {
   applicableLaw: string;
 };
 
-export type TskCgvSections = {
-  scope: string;
-  payments: string;
-  deposit: string;
-  deadlines: string;
-  liability: string;
-  intellectualProperty: string;
+export type TskMaintenanceContract = {
+  duration: string;
+  support: string;
+  updatesIncluded: string;
   hosting: string;
-  maintenance: string;
-  termination: string;
-  confidentiality: string;
-  applicableLaw: string;
+  renewal: string;
+  pricingTerms: string;
+  scope: string;
+  sla: string;
 };
 
 export type TskOrgSettings = {
@@ -72,12 +72,12 @@ export type TskOrgSettings = {
   defaultPaymentTermsDays: number;
   defaultQuoteValidityDays: number;
   defaultDepositPercent: number;
+  defaultIntermediatePercent: number;
   paymentConditionsText: string;
   signatureIssuerName: string;
   signatureIssuerTitle: string;
   contractClauses: TskContractClauses;
-  cgvSections: TskCgvSections;
-  cgvNumber: string | null;
+  maintenanceContract: TskMaintenanceContract;
 };
 
 export type TskWorkflowStep =
@@ -86,8 +86,12 @@ export type TskWorkflowStep =
   | "contract_ready"
   | "deposit_invoiced"
   | "deposit_paid"
+  | "intermediate_invoiced"
+  | "intermediate_paid"
   | "final_invoiced"
+  | "final_paid"
   | "delivered"
+  | "maintenance_offered"
   | "closed";
 
 export type DepositMode =
@@ -118,13 +122,23 @@ export type TskProject = {
   depositPercent: number;
   depositCustomAmountHt: number;
   depositInvoiceStatus: InvoicePaymentStatus;
+  useIntermediatePayment: boolean;
+  intermediateMode: DepositMode;
+  intermediatePercent: number;
+  intermediateCustomAmountHt: number;
+  intermediateInvoiceStatus: InvoicePaymentStatus;
   finalInvoiceStatus: InvoicePaymentStatus;
   quoteNumber: string | null;
   contractNumber: string | null;
   depositInvoiceNumber: string | null;
+  intermediateInvoiceNumber: string | null;
   finalInvoiceNumber: string | null;
   deliveryDocNumber: string | null;
+  maintenanceContractNumber: string | null;
+  maintenancePriceHt: number;
+  maintenanceBilling: "monthly" | "annual";
   contractClauses: TskContractClauses;
+  maintenanceContract: TskMaintenanceContract;
   deliveryChecklist: string;
   deliveryNotes: string;
   notes: string;
@@ -135,13 +149,14 @@ export type TskDocumentCounters = {
   devis: number;
   contrat: number;
   facture_acompte: number;
-  facture: number;
+  facture_intermediaire: number;
+  facture_finale: number;
   bon_livraison: number;
-  cgv: number;
+  contrat_maintenance: number;
 };
 
 export type TskDocumentsStore = {
-  version: 3;
+  version: 4;
   settings: TskOrgSettings;
   counters: TskDocumentCounters;
   projects: TskProject[];
@@ -149,12 +164,13 @@ export type TskDocumentsStore = {
 };
 
 export const TSK_DOCUMENT_LABELS: Record<TskDocumentKind, string> = {
-  devis: "Devis",
-  contrat: "Contrat de prestation",
-  facture_acompte: "Facture d'acompte",
-  facture: "Facture finale",
-  bon_livraison: "Bon de livraison / Validation",
-  cgv: "Conditions Générales de Vente",
+  devis: "Devis (DV)",
+  contrat: "Contrat de prestation (CT)",
+  facture_acompte: "Facture d'acompte (FA)",
+  facture_intermediaire: "Facture intermédiaire (FI)",
+  facture_finale: "Facture finale / Solde (FS)",
+  bon_livraison: "Bon de livraison / PV réception",
+  contrat_maintenance: "Contrat de maintenance (CM)",
 };
 
 export const TSK_DOCUMENT_PREFIX: Record<keyof TskDocumentCounters, string> = {
@@ -162,9 +178,10 @@ export const TSK_DOCUMENT_PREFIX: Record<keyof TskDocumentCounters, string> = {
   devis: "DV",
   contrat: "CT",
   facture_acompte: "FA",
-  facture: "FC",
-  bon_livraison: "BL",
-  cgv: "CGV",
+  facture_intermediaire: "FI",
+  facture_finale: "FS",
+  bon_livraison: "PV",
+  contrat_maintenance: "CM",
 };
 
 export const TSK_WORKFLOW_LABELS: Record<TskWorkflowStep, string> = {
@@ -173,7 +190,11 @@ export const TSK_WORKFLOW_LABELS: Record<TskWorkflowStep, string> = {
   contract_ready: "Contrat prêt",
   deposit_invoiced: "Acompte facturé",
   deposit_paid: "Acompte reçu",
+  intermediate_invoiced: "Facture intermédiaire émise",
+  intermediate_paid: "Paiement intermédiaire reçu",
   final_invoiced: "Facture finale émise",
-  delivered: "Livraison validée",
+  final_paid: "Solde reçu",
+  delivered: "PV de réception signé",
+  maintenance_offered: "Maintenance proposée",
   closed: "Projet clôturé",
 };

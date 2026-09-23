@@ -17,32 +17,58 @@ export function totalTtc(subtotal: number, rate: number): number {
   return subtotal + vatAmount(subtotal, rate);
 }
 
-export function depositPercentForMode(project: TskProject): number {
-  if (project.depositMode === "percent_20") return 20;
-  if (project.depositMode === "percent_30") return 30;
-  if (project.depositMode === "percent_40") return 40;
-  if (project.depositMode === "percent_custom") return project.depositPercent;
+function percentForMode(mode: DepositMode, customPercent: number): number {
+  if (mode === "percent_20") return 20;
+  if (mode === "percent_30") return 30;
+  if (mode === "percent_40") return 40;
+  if (mode === "percent_custom") return customPercent;
   return 0;
 }
 
-export function depositAmountHt(project: TskProject): number {
-  const sub = subtotalHt(project.lineItems);
-  if (project.depositMode === "amount_custom") {
-    return Math.min(Math.max(project.depositCustomAmountHt, 0), sub);
+function amountFromMode(
+  sub: number,
+  mode: DepositMode,
+  customPercent: number,
+  customAmountHt: number,
+): number {
+  if (mode === "amount_custom") {
+    return Math.min(Math.max(customAmountHt, 0), sub);
   }
-  const pct = depositPercentForMode(project);
-  return (sub * pct) / 100;
+  return (sub * percentForMode(mode, customPercent)) / 100;
 }
 
-export function remainingBalanceHt(project: TskProject): number {
-  return Math.max(0, subtotalHt(project.lineItems) - depositAmountHt(project));
+export function depositAmountHt(project: TskProject): number {
+  return amountFromMode(
+    subtotalHt(project.lineItems),
+    project.depositMode,
+    project.depositPercent,
+    project.depositCustomAmountHt,
+  );
 }
 
-export function depositLabel(mode: DepositMode, project: TskProject): string {
-  if (mode === "amount_custom") return "Montant personnalisé";
+export function intermediateAmountHt(project: TskProject): number {
+  if (!project.useIntermediatePayment) return 0;
+  const sub = subtotalHt(project.lineItems);
+  const afterDeposit = sub - depositAmountHt(project);
+  const raw = amountFromMode(
+    sub,
+    project.intermediateMode,
+    project.intermediatePercent,
+    project.intermediateCustomAmountHt,
+  );
+  return Math.min(raw, Math.max(0, afterDeposit));
+}
+
+export function finalBalanceHt(project: TskProject): number {
+  const sub = subtotalHt(project.lineItems);
+  return Math.max(0, sub - depositAmountHt(project) - intermediateAmountHt(project));
+}
+
+export function depositLabel(mode: DepositMode, customPercent: number): string {
+  if (mode === "amount_custom") return "montant personnalisé";
   const preset = DEPOSIT_PRESETS.find((p) => p.id === mode);
-  if (mode === "percent_custom") return `${project.depositPercent} %`;
-  return preset?.label ?? `${depositPercentForMode(project)} %`;
+  if (mode === "percent_custom") return `${customPercent} %`;
+  return preset?.label ?? `${percentForMode(mode, customPercent)} %`;
 }
 
 export function formatMoney(value: number): string {

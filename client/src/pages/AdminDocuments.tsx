@@ -30,19 +30,18 @@ import { useToast } from "@/hooks/use-toast";
 import { TSK_BRAND } from "@/lib/tsk-brand/constants";
 import {
   depositAmountHt,
+  finalBalanceHt,
   formatDateFr,
   formatMoney,
-  remainingBalanceHt,
+  intermediateAmountHt,
   subtotalHt,
   totalTtc,
-  vatAmount,
 } from "@/lib/tsk-documents/calc";
 import { DEPOSIT_PRESETS, newLineItem } from "@/lib/tsk-documents/project-factory";
 import { nextDocumentNumber } from "@/lib/tsk-documents/numbering";
 import {
   buildTskProjectPdf,
   downloadPdfFile,
-  generateTskCgvPdf,
   generateTskProjectPdf,
 } from "@/lib/tsk-documents/pdf";
 import { canRunAction, workflowProgress } from "@/lib/tsk-documents/workflow";
@@ -104,7 +103,12 @@ function LineItemsEditor({
           </Button>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...items, newLineItem()])}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...items, newLineItem("Nouvelle prestation", 0)])}
+      >
         <Plus className="h-4 w-4" /> Ligne
       </Button>
     </div>
@@ -124,7 +128,6 @@ export default function AdminDocuments() {
     saveProject,
     createNewProject,
     runWorkflow,
-    ensureCgvNumber,
     deleteProject,
   } = useTskDocumentsStore();
   const [generating, setGenerating] = useState(false);
@@ -136,7 +139,8 @@ export default function AdminDocuments() {
       sub,
       ttc: totalTtc(sub, activeProject.vatRate),
       deposit: depositAmountHt(activeProject),
-      balance: remainingBalanceHt(activeProject),
+      intermediate: intermediateAmountHt(activeProject),
+      balance: finalBalanceHt(activeProject),
     };
   }, [activeProject]);
 
@@ -151,13 +155,15 @@ export default function AdminDocuments() {
   ): { project: TskProject; counters: typeof store.counters; settings: typeof store.settings } => {
     let p = project;
     let counters = store.counters;
-    let settings = store.settings;
+    const settings = store.settings;
     const map: Partial<Record<TskDocumentKind, keyof TskProject>> = {
       devis: "quoteNumber",
       contrat: "contractNumber",
       facture_acompte: "depositInvoiceNumber",
-      facture: "finalInvoiceNumber",
+      facture_intermediaire: "intermediateInvoiceNumber",
+      facture_finale: "finalInvoiceNumber",
       bon_livraison: "deliveryDocNumber",
+      contrat_maintenance: "maintenanceContractNumber",
     };
     const field = map[kind];
     if (field && !p[field]) {
@@ -166,9 +172,6 @@ export default function AdminDocuments() {
       p = { ...p, [field]: next.number };
       saveProject(p);
     }
-    if (kind === "cgv" && !settings.cgvNumber) {
-      settings = ensureCgvNumber();
-    }
     return { project: p, counters, settings };
   };
 
@@ -176,11 +179,7 @@ export default function AdminDocuments() {
     setGenerating(true);
     try {
       const prepared = assignNumber(project, kind);
-      if (kind === "cgv") {
-        await generateTskCgvPdf(prepared.settings);
-      } else {
-        await generateTskProjectPdf(prepared.project, prepared.settings, kind);
-      }
+      await generateTskProjectPdf(prepared.project, prepared.settings, kind);
       toast({ title: "PDF téléchargé", description: TSK_DOCUMENT_LABELS[kind] });
     } catch (e) {
       toast({
@@ -203,12 +202,13 @@ export default function AdminDocuments() {
     "devis",
     "contrat",
     "facture_acompte",
-    "facture",
+    "facture_intermediaire",
+    "facture_finale",
     "bon_livraison",
-    "cgv",
+    "contrat_maintenance",
   ];
 
-  const downloadAllSixPdfs = async () => {
+  const downloadAllSevenPdfs = async () => {
     if (!activeProject) {
       toast({
         variant: "destructive",
@@ -222,6 +222,7 @@ export default function AdminDocuments() {
       let project = activeProject;
       let settings = store.settings;
       for (const kind of ALL_DOC_KINDS) {
+        if (kind === "facture_intermediaire" && !project.useIntermediatePayment) continue;
         const prepared = assignNumber(project, kind);
         project = prepared.project;
         settings = prepared.settings;
@@ -230,7 +231,7 @@ export default function AdminDocuments() {
         await new Promise((r) => window.setTimeout(r, 600));
       }
       toast({
-        title: "6 PDF TSK Digital",
+        title: "7 PDF TSK Digital",
         description: "Téléchargements lancés sur votre appareil (dossier Téléchargements).",
       });
     } catch (e) {
@@ -272,8 +273,8 @@ export default function AdminDocuments() {
           <TskLogo variant="print" src={logoPreview} className="h-10" />
           <h1 className="text-3xl font-bold tracking-tight">Documents TSK Digital</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Fond blanc, mise en page premium, six PDF métier complets. Logo officiel uniquement.
-            Devis → contrat → acompte → facture → livraison · CGV séparées.
+            Fond blanc, typographie Inter, sept PDF métier complets. Logo officiel uniquement.
+            Devis → contrat → acompte → intermédiaire → solde → PV → maintenance.
           </p>
         </div>
         <Button onClick={createNewProject} className="bg-[#0B0B0C] text-white hover:bg-[#0B0B0C]/90">
@@ -295,14 +296,14 @@ export default function AdminDocuments() {
             type="button"
             className="bg-[#0B0B0C] text-white hover:bg-[#0B0B0C]/90"
             disabled={generating || !activeProject}
-            onClick={() => void downloadAllSixPdfs()}
+            onClick={() => void downloadAllSevenPdfs()}
           >
             {generating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <FileDown className="h-4 w-4" />
             )}
-            Télécharger les 6 PDF (projet actif)
+            Télécharger les 7 PDF (projet actif)
           </Button>
         </CardContent>
       </Card>
@@ -378,7 +379,7 @@ export default function AdminDocuments() {
                       disabled={!canRunAction(activeProject, "create_quote_number") || generating}
                       onClick={() => runAndDownload("create_quote_number")}
                     >
-                      1. Créer devis (PDF)
+                      1. Devis (PDF)
                     </Button>
                     <Button
                       size="sm"
@@ -402,7 +403,7 @@ export default function AdminDocuments() {
                       disabled={!canRunAction(activeProject, "issue_deposit_invoice") || generating}
                       onClick={() => runAndDownload("issue_deposit_invoice")}
                     >
-                      4. Facture acompte
+                      4. Facture acompte (FA)
                     </Button>
                     <Button
                       size="sm"
@@ -412,13 +413,51 @@ export default function AdminDocuments() {
                     >
                       5. Acompte reçu
                     </Button>
+                    {activeProject.useIntermediatePayment && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={
+                            !canRunAction(activeProject, "issue_intermediate_invoice") || generating
+                          }
+                          onClick={() => runAndDownload("issue_intermediate_invoice")}
+                        >
+                          6. Facture intermédiaire (FI)
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={!canRunAction(activeProject, "skip_intermediate")}
+                          onClick={() => runWorkflow("skip_intermediate")}
+                        >
+                          Sans FI
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!canRunAction(activeProject, "mark_intermediate_paid")}
+                          onClick={() => runWorkflow("mark_intermediate_paid")}
+                        >
+                          FI reçue
+                        </Button>
+                      </>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={!canRunAction(activeProject, "issue_final_invoice") || generating}
                       onClick={() => runAndDownload("issue_final_invoice")}
                     >
-                      6. Facture finale
+                      {activeProject.useIntermediatePayment ? "7." : "6."} Facture solde (FS)
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!canRunAction(activeProject, "mark_final_paid")}
+                      onClick={() => runWorkflow("mark_final_paid")}
+                    >
+                      Solde reçu
                     </Button>
                     <Button
                       size="sm"
@@ -426,25 +465,38 @@ export default function AdminDocuments() {
                       disabled={!canRunAction(activeProject, "issue_delivery_doc") || generating}
                       onClick={() => runAndDownload("issue_delivery_doc")}
                     >
-                      7. Bon de livraison
+                      PV réception
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        !canRunAction(activeProject, "issue_maintenance_contract") || generating
+                      }
+                      onClick={() => runAndDownload("issue_maintenance_contract")}
+                    >
+                      Contrat maintenance (CM)
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={generating}
-                      onClick={() => activeProject && void downloadPdf(activeProject, "cgv")}
+                      disabled={!canRunAction(activeProject, "close_project")}
+                      onClick={() => runWorkflow("close_project")}
                     >
-                      CGV (PDF)
+                      Clôturer
                     </Button>
                   </CardContent>
                 </Card>
 
                 {totals && (
-                  <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     {[
                       ["Total HT", formatMoney(totals.sub)],
                       ["Total TTC", formatMoney(totals.ttc)],
                       ["Acompte HT", formatMoney(totals.deposit)],
+                      ...(activeProject.useIntermediatePayment
+                        ? [["Intermédiaire HT", formatMoney(totals.intermediate)] as const]
+                        : []),
                       ["Solde HT", formatMoney(totals.balance)],
                     ].map(([k, v]) => (
                       <Card key={k}>
@@ -570,6 +622,80 @@ export default function AdminDocuments() {
                           }
                         />
                       </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>Paiement intermédiaire (FI)</Label>
+                      <Select
+                        value={activeProject.useIntermediatePayment ? "yes" : "no"}
+                        onValueChange={(v) =>
+                          patchProject({ useIntermediatePayment: v === "yes" })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Oui — plusieurs échéances</SelectItem>
+                          <SelectItem value="no">Non — acompte + solde uniquement</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {activeProject.useIntermediatePayment && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Échéance intermédiaire</Label>
+                          <Select
+                            value={activeProject.intermediateMode}
+                            onValueChange={(v) =>
+                              patchProject({ intermediateMode: v as DepositMode })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DEPOSIT_PRESETS.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {activeProject.intermediateMode === "percent_custom" && (
+                          <div className="space-y-2">
+                            <Label>% intermédiaire</Label>
+                            <Input
+                              type="number"
+                              value={activeProject.intermediatePercent}
+                              onChange={(e) =>
+                                patchProject({
+                                  intermediatePercent: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <Label>Statut facture intermédiaire</Label>
+                          <Select
+                            value={activeProject.intermediateInvoiceStatus}
+                            onValueChange={(v) =>
+                              patchProject({
+                                intermediateInvoiceStatus: v as "pending" | "paid",
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">En attente</SelectItem>
+                              <SelectItem value="paid">Payée</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     )}
                     <div className="space-y-2">
                       <Label>Statut facture acompte</Label>
@@ -737,35 +863,32 @@ export default function AdminDocuments() {
         <TabsContent value="templates" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Conditions Générales de Vente (CGV)</CardTitle>
+              <CardTitle>Modèle contrat de maintenance (CM)</CardTitle>
               <CardDescription>
-                Document PDF séparé · n° {s.cgvNumber ?? "auto à la 1ère génération"}
+                Variables : {"{{TARIF_HT}}"}, {"{{PERIODE}}"}, {"{{HEURES}}"} — réutilisées sur le PDF CM.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(Object.keys(s.cgvSections) as (keyof typeof s.cgvSections)[]).map((key) => (
-                <div key={key} className="space-y-1">
-                  <Label className="capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
-                  <Textarea
-                    rows={3}
-                    value={s.cgvSections[key]}
-                    onChange={(e) =>
-                      setSettings({
-                        ...s,
-                        cgvSections: { ...s.cgvSections, [key]: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                disabled={generating}
-                onClick={() => activeProject && void downloadPdf(activeProject, "cgv")}
-              >
-                <FileDown className="h-4 w-4" /> Télécharger les CGV
-              </Button>
+              {(Object.keys(s.maintenanceContract) as (keyof typeof s.maintenanceContract)[]).map(
+                (key) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
+                    <Textarea
+                      rows={3}
+                      value={s.maintenanceContract[key]}
+                      onChange={(e) =>
+                        setSettings({
+                          ...s,
+                          maintenanceContract: {
+                            ...s.maintenanceContract,
+                            [key]: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ),
+              )}
             </CardContent>
           </Card>
           {activeProject && (
@@ -805,6 +928,55 @@ export default function AdminDocuments() {
                   value={activeProject.deliveryNotes}
                   onChange={(e) => patchProject({ deliveryNotes: e.target.value })}
                 />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Tarif maintenance HT</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={activeProject.maintenancePriceHt}
+                      onChange={(e) =>
+                        patchProject({ maintenancePriceHt: Number(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Facturation</Label>
+                    <Select
+                      value={activeProject.maintenanceBilling}
+                      onValueChange={(v) =>
+                        patchProject({ maintenanceBilling: v as "monthly" | "annual" })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Mensuelle</SelectItem>
+                        <SelectItem value="annual">Annuelle</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(Object.keys(activeProject.maintenanceContract) as (keyof typeof activeProject.maintenanceContract)[]).map(
+                  (key) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="capitalize">CM — {key.replace(/([A-Z])/g, " $1")}</Label>
+                      <Textarea
+                        rows={2}
+                        value={activeProject.maintenanceContract[key]}
+                        onChange={(e) =>
+                          patchProject({
+                            maintenanceContract: {
+                              ...activeProject.maintenanceContract,
+                              [key]: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  ),
+                )}
               </CardContent>
             </Card>
           )}
@@ -813,7 +985,7 @@ export default function AdminDocuments() {
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Numérotation automatique · DV / CT / FA / FC / BL / CGV — année {store.counters.year}
+        Numérotation automatique · DV / CT / FA / FI / FS / PV / CM — année {store.counters.year}
       </p>
     </div>
   );

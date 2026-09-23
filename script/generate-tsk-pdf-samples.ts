@@ -1,5 +1,5 @@
 /**
- * Génère les 6 PDF TSK Digital (démo) dans /opt/cursor/artifacts/
+ * Génère les 7 PDF TSK Digital (démo) dans docs/tsk-digital/livrables/
  * Usage: npx tsx script/generate-tsk-pdf-samples.ts
  */
 import fs from "node:fs";
@@ -18,9 +18,12 @@ globalThis.fetch = (async (input: RequestInfo | URL) => {
   if (url.startsWith("/brand/")) {
     const filePath = path.join(publicDir, url.replace(/^\//, ""));
     const buf = fs.readFileSync(filePath);
-    return new Response(buf, {
-      headers: { "content-type": "image/png" },
-    });
+    const contentType = url.endsWith(".ttf")
+      ? "font/ttf"
+      : url.endsWith(".png")
+        ? "image/png"
+        : "application/octet-stream";
+    return new Response(buf, { headers: { "content-type": contentType } });
   }
   throw new Error(`fetch non mocké: ${url}`);
 }) as typeof fetch;
@@ -29,18 +32,17 @@ async function main() {
   const outDir = path.join(root, "docs/tsk-digital/livrables");
   fs.mkdirSync(outDir, { recursive: true });
 
-  const { buildTskProjectPdf } = await import(
-    "../client/src/lib/tsk-documents/pdf.ts"
-  );
+  const { buildTskProjectPdf } = await import("../client/src/lib/tsk-documents/pdf.ts");
 
   let counters = {
     year: 2026,
     devis: 0,
     contrat: 0,
     facture_acompte: 0,
-    facture: 0,
+    facture_intermediaire: 0,
+    facture_finale: 0,
     bon_livraison: 0,
-    cgv: 0,
+    contrat_maintenance: 0,
   };
   const settings = createDefaultOrgSettings();
   let project = createDemoProject(settings);
@@ -49,15 +51,19 @@ async function main() {
     "devis",
     "contrat",
     "facture_acompte",
-    "facture",
+    "facture_intermediaire",
+    "facture_finale",
     "bon_livraison",
+    "contrat_maintenance",
   ];
   const fields = [
     "quoteNumber",
     "contractNumber",
     "depositInvoiceNumber",
+    "intermediateInvoiceNumber",
     "finalInvoiceNumber",
     "deliveryDocNumber",
+    "maintenanceContractNumber",
   ] as const;
 
   for (let i = 0; i < kinds.length; i += 1) {
@@ -66,21 +72,13 @@ async function main() {
     counters = n.counters;
     project = { ...project, [fields[i]!]: n.number };
     project.depositInvoiceStatus = "paid";
-    project.finalInvoiceStatus = "pending";
+    project.intermediateInvoiceStatus = "paid";
+    project.finalInvoiceStatus = "paid";
   }
 
-  const cgvN = nextDocumentNumber("cgv", counters);
-  counters = cgvN.counters;
-  const settingsWithCgv = { ...settings, cgvNumber: cgvN.number };
-
-  for (const kind of [...kinds, "cgv" as const]) {
-    const built = await buildTskProjectPdf(
-      project,
-      settingsWithCgv,
-      kind as TskDocumentKind,
-    );
-    const buf = Buffer.from(built.buffer);
-    fs.writeFileSync(path.join(outDir, built.filename), buf);
+  for (const kind of kinds) {
+    const built = await buildTskProjectPdf(project, settings, kind);
+    fs.writeFileSync(path.join(outDir, built.filename), Buffer.from(built.buffer));
     console.log("wrote", built.filename, built.buffer.byteLength);
   }
 

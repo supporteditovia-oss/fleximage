@@ -1,40 +1,40 @@
 import { TSK_BRAND, TSK_ISSUER_DEFAULTS } from "@/lib/tsk-brand/constants";
-import { DEFAULT_CGV_SECTIONS } from "./cgv-defaults";
+import { DEFAULT_MAINTENANCE_CONTRACT } from "./maintenance-defaults";
 import type { TskContractClauses, TskOrgSettings } from "./types";
 
 export const DEFAULT_CONTRACT_CLAUSES: TskContractClauses = {
   object:
-    "Le présent contrat de prestation de services a pour objet la conception, le développement et la mise en ligne d'une solution digitale sur mesure pour le Client, conformément au devis n° {{DEVIS}} accepté et aux présentes conditions particulières.",
+    "Le présent contrat a pour objet la réalisation, pour le compte du Client, des prestations digitales décrites au devis n° {{DEVIS}} accepté et signé, incluant conception, développement, intégration et mise en ligne de la solution « {{PROJET}} ».",
   scope:
-    "Le périmètre comprend notamment : cadrage et atelier de lancement, architecture technique, design d'interface premium, développement front-end et back-end, intégration des contenus validés, configuration des environnements, recette, déploiement en production, passation et documentation. Les prestations détaillées et chiffrées figurent au devis. Toute évolution hors périmètre fera l'objet d'un avenant ou d'un devis complémentaire.",
+    "Périmètre : cadrage fonctionnel, design UI premium, développement front-end et back-end, intégration des contenus validés, recette, déploiement, passation et documentation. Les modules et fonctionnalités sont limités au devis. Toute extension fera l'objet d'un avenant chiffré.",
   deliverables:
-    "Livrables attendus : maquettes Figma validées, code source versionné (dépôt Git), site ou application déployée sur l'environnement convenu, guide d'administration, accès administrateur, exports de configuration. Les livrables sont remis au format numérique via lien sécurisé ou dépôt convenu avec le Client.",
+    "Livrables : maquettes Figma validées, code source (dépôt Git), application déployée, guide d'administration, comptes et accès, exports de configuration. Remise par lien sécurisé ou support convenu.",
   schedule:
-    "Phase 1 — Cadrage & design (semaines 1 à 2) : atelier, wireframes, maquettes UI.\nPhase 2 — Développement (semaines 3 à 6) : intégration, fonctionnalités, contenus.\nPhase 3 — Recette & mise en ligne (semaines 7 à 8) : tests, corrections, production.\nUn calendrier détaillé est communiqué par e-mail à la signature.",
+    "Phase 1 — Cadrage & design (S1–S2)\nPhase 2 — Développement (S3–S6)\nPhase 3 — Recette & mise en production (S7–S8)\nPlanning détaillé transmis par e-mail à la signature.",
   deliveryDelay:
-    "Le délai global estimé est de huit (8) semaines à compter de la réception de l'acompte, des accès techniques et des contenus nécessaires. Ce délai est indicatif et sera ajusté en cas de retard imputable au Client ou de modification du périmètre.",
+    "Délai indicatif : huit (8) semaines à compter de l'acompte et de la remise des éléments client (contenus, accès, validations). Tout retard imputable au Client reporte le délai à due concurrence.",
   revisionsIncluded:
-    "Sont incluses : deux (2) cycles de retours sur les maquettes, une (1) série de retours mineurs après recette (textes, ajustements visuels non structurels). Toute demande supplémentaire, refonte de parcours ou nouvelle fonctionnalité sera chiffrée séparément.",
+    "Deux (2) cycles de retours sur maquettes. Un (1) cycle de retours mineurs post-recette (textes, ajustements non structurels). Au-delà : facturation au taux journalier en vigueur.",
   clientObligations:
-    "Le Client fournit les contenus, accès (hébergement, API, comptes tiers) et validations dans un délai de cinq (5) jours ouvrés par défaut. Il désigne un interlocuteur unique habilité à valider les jalons. Il garantit la licéité des éléments transmis (textes, images, marques).",
+    "Fournir contenus, accès et validations sous cinq (5) jours ouvrés. Désigner un interlocuteur décisionnaire. Garantir la licéité des éléments transmis (textes, images, marques).",
   providerObligations:
-    `${TSK_BRAND.name} mobilise les compétences nécessaires, informe le Client de l'avancement, alerte sans délai en cas de blocage, respecte les bonnes pratiques de sécurité et documente les livrables. Elle n'est pas responsable des indisponibilités des services tiers (hébergeur, Stripe, etc.) hors périmètre de maintenance.`,
+    `${TSK_BRAND.name} réalise les prestations conformément aux règles de l'art, informe le Client de l'avancement, sécurise les environnements et documente les livrables.`,
   paymentTerms:
-    "Acompte à la commande selon devis, solde à la livraison ou selon l'échéancier convenu. Paiement par virement bancaire. Les factures sont payables sous {{DELAI}} jours à compter de leur émission.",
+    "Acompte à la commande, facture intermédiaire le cas échéant, solde à la livraison. Paiement par virement sous {{DELAI}} jours. Coordonnées bancaires sur chaque facture.",
   latePayment:
-    "Tout retard entraîne l'application de pénalités de retard au taux légal en vigueur, ainsi que l'indemnité forfaitaire de recouvrement de 40 € (art. L441-10 et D441-5 du Code de commerce). TSK Digital pourra suspendre les prestations jusqu'à régularisation.",
+    "Retard de paiement : pénalités au taux légal + indemnité forfaitaire de 40 € (L441-10 et D441-5 C. com.). Suspension possible des prestations jusqu'à régularisation.",
   intellectualProperty:
-    "Les créations spécifiques réalisées pour le Client (design, code métier, contenus produits par TSK Digital) lui sont cédés après paiement intégral. TSK Digital conserve la propriété de ses outils, frameworks et méthodes. Les bibliothèques open source restent soumises à leurs licences. Mention portfolio sauf opposition écrite.",
+    "Cession des droits patrimoniaux sur les créations spécifiques au Client après paiement intégral. Outils, frameworks et méthodes restent la propriété de TSK Digital. Mention portfolio sauf opposition écrite.",
   confidentiality:
-    "Chaque partie s'engage à ne pas divulguer les informations confidentielles de l'autre, pendant la durée du contrat et cinq (5) ans après son terme.",
+    "Confidentialité réciproque pendant la mission et cinq (5) ans après son terme.",
   maintenance:
-    "La maintenance corrective et évolutive n'est pas incluse au-delà de la période de garantie de trente (30) jours suivant la mise en production (correction de bugs de non-conformité au périmètre validé). Un contrat de maintenance annuel peut être proposé séparément.",
+    "Garantie de conformité : trente (30) jours après mise en production. Maintenance évolutive via contrat CM séparé.",
   termination:
-    "En cas de manquement grave non résolu sous quinze (15) jours après mise en demeure écrite, le contrat pourra être résilié. Les prestations réalisées et frais engagés restent dus. En cas de résiliation à l'initiative du Client sans faute de TSK Digital, les sommes dues au prorata des travaux réalisés seront facturées.",
+    "Résiliation pour manquement grave non réparé sous quinze (15) jours après mise en demeure. Travaux réalisés dus au prorata.",
   forceMajeure:
-    "Aucune partie ne pourra être tenue responsable d'un manquement dû à un événement de force majeure (catastrophe naturelle, panne généralisée, guerre, grève légale, décision gouvernementale, cyberattaque massive indépendante de la diligence habituelle).",
+    "Force majeure au sens de la jurisprudence française : aucune partie n'est responsable d'un manquement dû à un événement imprévisible et irrésistible.",
   applicableLaw:
-    "Le contrat est régi par le droit français. À défaut d'accord amiable, compétence exclusive des tribunaux du ressort de Roanne, sauf règle impérative contraire.",
+    "Droit français. Tribunaux compétents du ressort de Roanne, sauf règle impérative contraire.",
 };
 
 export function createDefaultOrgSettings(): TskOrgSettings {
@@ -54,13 +54,13 @@ export function createDefaultOrgSettings(): TskOrgSettings {
     defaultPaymentTermsDays: TSK_ISSUER_DEFAULTS.paymentTermsDays,
     defaultQuoteValidityDays: TSK_ISSUER_DEFAULTS.quoteValidityDays,
     defaultDepositPercent: TSK_ISSUER_DEFAULTS.defaultDepositPercent,
+    defaultIntermediatePercent: TSK_ISSUER_DEFAULTS.defaultIntermediatePercent,
     paymentConditionsText:
-      "Règlement par virement bancaire. Un acompte de 30 % est exigible à la commande pour lancer le planning. Le solde est dû à la livraison des livrables, sous {{DELAI}} jours à compter de la facture. Devis valable 30 jours.",
+      "Paiement par virement. Acompte {{ACOMPTE}} à la commande. Facture intermédiaire {{INTER}} si prévue au devis. Solde à la livraison. Devis valable {{VALIDITE}} jours.",
     signatureIssuerName: "Représentant TSK Digital",
     signatureIssuerTitle: "Direction — TSK Digital",
     contractClauses: { ...DEFAULT_CONTRACT_CLAUSES },
-    cgvSections: { ...DEFAULT_CGV_SECTIONS },
-    cgvNumber: null,
+    maintenanceContract: { ...DEFAULT_MAINTENANCE_CONTRACT },
   };
 }
 

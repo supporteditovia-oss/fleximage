@@ -13,12 +13,12 @@ export const TSK_BRAND = {
   },
   fonts: {
     primary: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
+    pdfRegular: "/brand/tsk/fonts/Inter-Regular.ttf",
+    pdfSemiBold: "/brand/tsk/fonts/Inter-SemiBold.ttf",
   },
   assets: {
-    /** Logo officiel (fichier source fourni). */
     logoOfficial: "/brand/tsk/tsk-official-logo.png",
     logoOfficialHd: "/brand/tsk/tsk-official-logo-hd.png",
-    /** Variante dérivée pour impression fond blanc (même forme, encre #0B0B0C). */
     logoOfficialPrint: "/brand/tsk/tsk-official-logo-print-hd.png",
   },
 } as const;
@@ -32,10 +32,11 @@ export const TSK_ISSUER_DEFAULTS = {
   phone: "07 49 43 46 98",
   siret: "10620038900018",
   vatNumber: "",
-  iban: "",
+  iban: "FR76 1695 8000 0119 3600 9748 873",
   bic: "",
   paymentTermsDays: 30,
   quoteValidityDays: 30,
   defaultVatRate: 20,
   defaultDepositPercent: 30,
+  defaultIntermediatePercent: 40,
 } as const;

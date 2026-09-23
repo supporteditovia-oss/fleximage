@@ -13,8 +13,13 @@ export type WorkflowAction =
   | "prepare_contract"
   | "issue_deposit_invoice"
   | "mark_deposit_paid"
+  | "issue_intermediate_invoice"
+  | "mark_intermediate_paid"
+  | "skip_intermediate"
   | "issue_final_invoice"
+  | "mark_final_paid"
   | "issue_delivery_doc"
+  | "issue_maintenance_contract"
   | "close_project";
 
 const STEP_ORDER: TskWorkflowStep[] = [
@@ -23,8 +28,12 @@ const STEP_ORDER: TskWorkflowStep[] = [
   "contract_ready",
   "deposit_invoiced",
   "deposit_paid",
+  "intermediate_invoiced",
+  "intermediate_paid",
   "final_invoiced",
+  "final_paid",
   "delivered",
+  "maintenance_offered",
   "closed",
 ];
 
@@ -35,18 +44,41 @@ export function canRunAction(project: TskProject, action: WorkflowAction): boole
     case "mark_quote_sent":
       return Boolean(project.quoteNumber) && project.workflowStep === "quote_draft";
     case "prepare_contract":
-      return (
-        project.workflowStep === "quote_sent" ||
-        project.workflowStep === "contract_ready"
-      );
+      return project.workflowStep === "quote_sent" || project.workflowStep === "contract_ready";
     case "issue_deposit_invoice":
       return Boolean(project.contractNumber) && !project.depositInvoiceNumber;
     case "mark_deposit_paid":
       return Boolean(project.depositInvoiceNumber) && project.depositInvoiceStatus === "pending";
+    case "issue_intermediate_invoice":
+      return (
+        project.depositInvoiceStatus === "paid" &&
+        project.useIntermediatePayment &&
+        !project.intermediateInvoiceNumber
+      );
+    case "mark_intermediate_paid":
+      return (
+        Boolean(project.intermediateInvoiceNumber) &&
+        project.intermediateInvoiceStatus === "pending"
+      );
+    case "skip_intermediate":
+      return (
+        project.depositInvoiceStatus === "paid" &&
+        project.useIntermediatePayment &&
+        !project.intermediateInvoiceNumber
+      );
     case "issue_final_invoice":
-      return project.depositInvoiceStatus === "paid" && !project.finalInvoiceNumber;
+      if (project.depositInvoiceStatus !== "paid" || project.finalInvoiceNumber) return false;
+      if (!project.useIntermediatePayment) return true;
+      if (project.intermediateInvoiceNumber) {
+        return project.intermediateInvoiceStatus === "paid";
+      }
+      return project.workflowStep === "intermediate_paid";
+    case "mark_final_paid":
+      return Boolean(project.finalInvoiceNumber) && project.finalInvoiceStatus === "pending";
     case "issue_delivery_doc":
-      return Boolean(project.finalInvoiceNumber) && !project.deliveryDocNumber;
+      return project.finalInvoiceStatus === "paid" && !project.deliveryDocNumber;
+    case "issue_maintenance_contract":
+      return Boolean(project.deliveryDocNumber) && !project.maintenanceContractNumber;
     case "close_project":
       return Boolean(project.deliveryDocNumber);
     default:
@@ -98,21 +130,49 @@ export function applyWorkflowAction(
       next.depositInvoiceStatus = "paid";
       next.workflowStep = "deposit_paid";
       break;
+    case "issue_intermediate_invoice": {
+      const { number, counters: c } = nextDocumentNumber("facture_intermediaire", nextCounters);
+      next.intermediateInvoiceNumber = number;
+      next.intermediateInvoiceStatus = "pending";
+      next.workflowStep = "intermediate_invoiced";
+      nextCounters = c;
+      docKind = "facture_intermediaire";
+      break;
+    }
+    case "mark_intermediate_paid":
+      next.intermediateInvoiceStatus = "paid";
+      next.workflowStep = "intermediate_paid";
+      break;
+    case "skip_intermediate":
+      next.workflowStep = "intermediate_paid";
+      break;
     case "issue_final_invoice": {
-      const { number, counters: c } = nextDocumentNumber("facture", nextCounters);
+      const { number, counters: c } = nextDocumentNumber("facture_finale", nextCounters);
       next.finalInvoiceNumber = number;
       next.finalInvoiceStatus = "pending";
       next.workflowStep = "final_invoiced";
       nextCounters = c;
-      docKind = "facture";
+      docKind = "facture_finale";
       break;
     }
+    case "mark_final_paid":
+      next.finalInvoiceStatus = "paid";
+      next.workflowStep = "final_paid";
+      break;
     case "issue_delivery_doc": {
       const { number, counters: c } = nextDocumentNumber("bon_livraison", nextCounters);
       next.deliveryDocNumber = number;
       next.workflowStep = "delivered";
       nextCounters = c;
       docKind = "bon_livraison";
+      break;
+    }
+    case "issue_maintenance_contract": {
+      const { number, counters: c } = nextDocumentNumber("contrat_maintenance", nextCounters);
+      next.maintenanceContractNumber = number;
+      next.workflowStep = "maintenance_offered";
+      nextCounters = c;
+      docKind = "contrat_maintenance";
       break;
     }
     case "close_project":
