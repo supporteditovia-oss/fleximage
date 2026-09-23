@@ -47,6 +47,7 @@ import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { buildCatalogSampleLine } from "@shared/voice-locale-scripts";
+import { adminPreviewVoiceGenerateCreditCost } from "@shared/pricing-admin-reference";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
@@ -303,6 +304,8 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const canGenerate = Boolean(
     text.trim() && !isGenerating && (hasPendingCapture || (activeVoice && !creatingOwnVoice)),
   );
+
+  const voiceGenerateCreditCost = adminPreviewVoiceGenerateCreditCost(hasPendingCapture);
 
   const setClip = useCallback((next: VoiceClip | null) => {
     setVoiceClip((prev) => {
@@ -1569,7 +1572,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             disabled={!canGenerate}
             onClick={handleGenerate}
           >
-            {guestFunnel ? t("landing:voiceStudioGuest.generateCta") : "Générer la voix"}
+            {guestFunnel
+              ? `${t("landing:voiceStudioGuest.generateCta")} · ${voiceGenerateCreditCost} crédits`
+              : `Générer la voix · ${voiceGenerateCreditCost} crédits`}
           </button>
           {generateBlockReason ? (
             <p className="vs-help vs-help--block" role="status">

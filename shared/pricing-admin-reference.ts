@@ -63,3 +63,9 @@ export function adminPreviewVideoCreditCost(params: {
   }
   return cost;
 }
+
+/** Coût affiché sur « Générer la voix » (grille v2 admin / studio voix). */
+export function adminPreviewVoiceGenerateCreditCost(includesNewClone: boolean): number {
+  const b = ADMIN_PRICING_REFERENCE.creditBurn;
+  return b.voicePerMinute + (includesNewClone ? b.voiceClone : 0);
+}
