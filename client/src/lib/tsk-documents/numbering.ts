@@ -11,6 +11,7 @@ const KIND_TO_COUNTER: Record<TskDocumentKind, CounterKey> = {
   facture_finale: "facture_finale",
   bon_livraison: "bon_livraison",
   contrat_maintenance: "contrat_maintenance",
+  facture_maintenance: "facture_maintenance",
 };
 
 export function syncCounterYear(counters: TskDocumentCounters): TskDocumentCounters {
@@ -25,6 +26,7 @@ export function syncCounterYear(counters: TskDocumentCounters): TskDocumentCount
     facture_finale: 0,
     bon_livraison: 0,
     contrat_maintenance: 0,
+    facture_maintenance: 0,
   };
 }
 

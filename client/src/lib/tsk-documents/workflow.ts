@@ -128,6 +128,7 @@ export function applyWorkflowAction(
     }
     case "mark_deposit_paid":
       next.depositInvoiceStatus = "paid";
+      next.depositPaidAt = next.depositPaidAt ?? new Date().toISOString().slice(0, 10);
       next.workflowStep = "deposit_paid";
       break;
     case "issue_intermediate_invoice": {
@@ -141,6 +142,8 @@ export function applyWorkflowAction(
     }
     case "mark_intermediate_paid":
       next.intermediateInvoiceStatus = "paid";
+      next.intermediatePaidAt =
+        next.intermediatePaidAt ?? new Date().toISOString().slice(0, 10);
       next.workflowStep = "intermediate_paid";
       break;
     case "skip_intermediate":
@@ -157,6 +160,7 @@ export function applyWorkflowAction(
     }
     case "mark_final_paid":
       next.finalInvoiceStatus = "paid";
+      next.finalPaidAt = next.finalPaidAt ?? new Date().toISOString().slice(0, 10);
       next.workflowStep = "final_paid";
       break;
     case "issue_delivery_doc": {

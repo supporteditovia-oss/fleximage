@@ -12,6 +12,14 @@ import {
   totalTtc,
   vatAmount,
 } from "./calc";
+import {
+  clientSiretDisplay,
+  formatBicDisplay,
+  formatVatLine,
+  INVOICE_LATE_PAYMENT_FOOTER,
+  invoiceStatusLabel,
+} from "./legal-format";
+import { documentDueDate, documentIssueDate } from "./project-schedule";
 import { interpolateLegalText, issuerAddressLine2 } from "./settings-defaults";
 import { registerInterFonts, setFontBold, setFontNormal } from "./pdf-fonts";
 import {
@@ -26,7 +34,7 @@ const PAGE_W = 210;
 const PAGE_H = 297;
 const MARGIN = 22;
 const FOOTER_Y = PAGE_H - 14;
-const CONTENT_BOTTOM = FOOTER_Y - 6;
+const CONTENT_BOTTOM = FOOTER_Y - 10;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const LOGO_ASPECT = 531 / 1269;
 
@@ -106,12 +114,13 @@ function drawRunningFooter(ctx: PdfContext): void {
   doc.setPage(page);
   doc.setDrawColor(...RULE);
   doc.setLineWidth(0.2);
-  doc.line(MARGIN, FOOTER_Y - 4, PAGE_W - MARGIN, FOOTER_Y - 4);
-  setFontNormal(doc, 7);
+  doc.line(MARGIN, FOOTER_Y - 5, PAGE_W - MARGIN, FOOTER_Y - 5);
+  setFontNormal(doc, 6.5);
   doc.setTextColor(...TITANIUM);
-  const iban = settings.iban ? ` · IBAN ${settings.iban}` : "";
-  const addr = `${settings.company} · ${settings.addressLine1} · ${issuerAddressLine2(settings)} · ${settings.phone} · ${settings.email} · SIRET ${settings.siret}${iban}`;
-  doc.text(addr, PAGE_W / 2, FOOTER_Y, { align: "center", maxWidth: CONTENT_W });
+  const line1 = `${settings.company} · ${settings.legalForm} · SIRET ${settings.siret}`;
+  const line2 = `${settings.addressLine1} · ${issuerAddressLine2(settings)} · ${settings.phone}`;
+  doc.text(line1, MARGIN, FOOTER_Y - 1);
+  doc.text(line2, MARGIN, FOOTER_Y + 2.5);
 }
 
 function finalizePdf(ctx: PdfContext): void {
@@ -121,7 +130,7 @@ function finalizePdf(ctx: PdfContext): void {
     drawRunningFooter(ctx);
     setFontNormal(ctx.doc, 7);
     ctx.doc.setTextColor(...TITANIUM);
-    ctx.doc.text(`Page ${i} / ${pages}`, PAGE_W - MARGIN, FOOTER_Y + 3, { align: "right" });
+    ctx.doc.text(`${i} / ${pages}`, PAGE_W - MARGIN, FOOTER_Y + 2.5, { align: "right" });
   }
 }
 
@@ -145,8 +154,9 @@ function drawMetaGrid(ctx: PdfContext, rows: [string, string][]): void {
     doc.text(label, MARGIN, ctx.y);
     setFontNormal(doc, 8.5);
     doc.setTextColor(...INK);
-    doc.text(value, MARGIN + 38, ctx.y);
-    ctx.y += 4.8;
+    const lines = doc.splitTextToSize(value, CONTENT_W - 40);
+    doc.text(lines, MARGIN + 38, ctx.y);
+    ctx.y += Math.max(4.8, lines.length * 4.2);
   }
   ctx.y += 3;
 }
@@ -173,26 +183,35 @@ function drawParagraph(ctx: PdfContext, text: string, size = 9): void {
   }
 }
 
-function drawParties(ctx: PdfContext, project: TskProject): void {
+function drawParties(ctx: PdfContext, project: TskProject, opts?: { invoice?: boolean }): void {
   drawSectionTitle(ctx, "Émetteur & client");
   const s = ctx.settings;
-  drawMetaGrid(ctx, [
+  const issuerRows: [string, string][] = [
     ["Émetteur", s.company],
+    ["Statut", s.legalForm || "Entrepreneur individuel (EI)"],
     ["Adresse", `${s.addressLine1}, ${issuerAddressLine2(s)}`],
-    ["Contact", `${s.phone} · ${s.email}`],
     ["SIRET", s.siret],
+    ["TVA", formatVatLine(s).replace(/^N° TVA intracommunautaire : /, "")],
+    ["Contact", `${s.phone} · ${s.email}`],
+  ];
+  const clientRows: [string, string][] = [
     ["Client", project.client.company],
     ["Contact client", `${project.client.contactName} · ${project.client.email}`],
     [
       "Adresse client",
       `${project.client.addressLine1}, ${project.client.postalCode} ${project.client.city}`,
     ],
-  ]);
+  ];
+  if (opts?.invoice) {
+    clientRows.push(["SIRET client", clientSiretDisplay(project)]);
+    if (project.client.vatNumber.trim()) {
+      clientRows.push(["TVA client", project.client.vatNumber.trim()]);
+    }
+  }
+  drawMetaGrid(ctx, [...issuerRows, ...clientRows]);
 }
 
-type TableMode = "full" | "deposit" | "intermediate" | "balance";
-
-function drawLineItemsTable(ctx: PdfContext, project: TskProject, mode: TableMode = "full"): void {
+function drawLineItemsTable(ctx: PdfContext, project: TskProject): void {
   drawSectionTitle(ctx, "Détail des prestations");
   const { doc } = ctx;
   ensureSpace(ctx, 14);
@@ -221,22 +240,13 @@ function drawLineItemsTable(ctx: PdfContext, project: TskProject, mode: TableMod
   }
 
   const subFull = subtotalHt(project.lineItems);
-  const base =
-    mode === "deposit"
-      ? depositAmountHt(project)
-      : mode === "intermediate"
-        ? intermediateAmountHt(project)
-        : mode === "balance"
-          ? finalBalanceHt(project)
-          : subFull;
-  const vat = vatAmount(base, project.vatRate);
-  const ttc = totalTtc(base, project.vatRate);
-
+  const vat = vatAmount(subFull, project.vatRate);
+  const ttc = totalTtc(subFull, project.vatRate);
   ensureSpace(ctx, 22);
   const xLabel = MARGIN + CONTENT_W * 0.58;
   setFontNormal(doc, 8.5);
   doc.text("Total HT", xLabel, ctx.y);
-  doc.text(formatMoney(base), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
+  doc.text(formatMoney(subFull), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
   ctx.y += 5;
   doc.text(`TVA (${project.vatRate} %)`, xLabel, ctx.y);
   doc.text(formatMoney(vat), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
@@ -247,30 +257,42 @@ function drawLineItemsTable(ctx: PdfContext, project: TskProject, mode: TableMod
   setFontNormal(doc, 8.5);
   ctx.y += 8;
 
-  if (mode === "full") {
-    const inter = project.useIntermediatePayment
-      ? ` · Paiement intermédiaire (${depositLabel(project.intermediateMode, project.intermediatePercent)}) : ${formatMoney(intermediateAmountHt(project))} HT`
-      : "";
-    drawParagraph(
-      ctx,
-      `Acompte à la commande (${depositLabel(project.depositMode, project.depositPercent)}) : ${formatMoney(depositAmountHt(project))} HT · ${formatMoney(totalTtc(depositAmountHt(project), project.vatRate))} TTC${inter}. Solde final HT : ${formatMoney(finalBalanceHt(project))}.`,
-      8.5,
-    );
-  }
-  if (mode === "deposit") {
-    drawParagraph(
-      ctx,
-      `Facture d'acompte — Solde restant HT après règlement : ${formatMoney(subFull - depositAmountHt(project))} · Total projet TTC : ${formatMoney(totalTtc(subFull, project.vatRate))}.`,
-      8.5,
-    );
-  }
-  if (mode === "intermediate") {
-    drawParagraph(
-      ctx,
-      `Facture intermédiaire — Solde final HT restant : ${formatMoney(finalBalanceHt(project))} · Total projet TTC : ${formatMoney(totalTtc(subFull, project.vatRate))}.`,
-      8.5,
-    );
-  }
+  const inter = project.useIntermediatePayment
+    ? ` · Paiement intermédiaire (${depositLabel(project.intermediateMode, project.intermediatePercent)}) : ${formatMoney(intermediateAmountHt(project))} HT`
+    : "";
+  drawParagraph(
+    ctx,
+    `Acompte à la commande (${depositLabel(project.depositMode, project.depositPercent)}) : ${formatMoney(depositAmountHt(project))} HT · ${formatMoney(totalTtc(depositAmountHt(project), project.vatRate))} TTC${inter}. Solde final HT : ${formatMoney(finalBalanceHt(project))}.`,
+    8.5,
+  );
+}
+
+function drawSingleLineInvoice(
+  ctx: PdfContext,
+  project: TskProject,
+  lineLabel: string,
+  amountHt: number,
+): void {
+  drawSectionTitle(ctx, "Désignation");
+  const { doc } = ctx;
+  ensureSpace(ctx, 28);
+  setFontNormal(doc, 9);
+  doc.text(lineLabel, MARGIN, ctx.y);
+  ctx.y += 8;
+  const vat = vatAmount(amountHt, project.vatRate);
+  const ttc = totalTtc(amountHt, project.vatRate);
+  const xLabel = MARGIN + CONTENT_W * 0.58;
+  doc.text("Montant HT", xLabel, ctx.y);
+  doc.text(formatMoney(amountHt), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
+  ctx.y += 5;
+  doc.text(`TVA (${project.vatRate} %)`, xLabel, ctx.y);
+  doc.text(formatMoney(vat), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
+  ctx.y += 5;
+  setFontBold(doc, 9);
+  doc.text("Total TTC", xLabel, ctx.y);
+  doc.text(formatMoney(ttc), PAGE_W - MARGIN - 2, ctx.y, { align: "right" });
+  setFontNormal(doc, 9);
+  ctx.y += 8;
 }
 
 function drawPaymentRecap(ctx: PdfContext, project: TskProject): void {
@@ -287,6 +309,17 @@ function drawPaymentRecap(ctx: PdfContext, project: TskProject): void {
   }
   rows.push(`Solde facturé HT : ${formatMoney(finalBalanceHt(project))}`);
   drawParagraph(ctx, rows.join("\n"), 8.5);
+}
+
+function drawBankAndPenalties(ctx: PdfContext): void {
+  drawSectionTitle(ctx, "Coordonnées bancaires");
+  drawParagraph(
+    ctx,
+    `IBAN : ${ctx.settings.iban}\nBIC : ${formatBicDisplay(ctx.settings.bic)}`,
+    8.5,
+  );
+  drawSectionTitle(ctx, "Conditions de règlement");
+  drawParagraph(ctx, INVOICE_LATE_PAYMENT_FOOTER, 8);
 }
 
 function drawSignatures(ctx: PdfContext, project: TskProject, clientCaption: string): void {
@@ -320,9 +353,11 @@ function legalVars(project: TskProject, settings: TskOrgSettings): Record<string
     ACOMPTE: depositLabel(project.depositMode, project.depositPercent),
     INTER: inter,
     VALIDITE: String(project.quoteValidityDays),
+    FS: project.finalInvoiceNumber ?? "—",
     TARIF_HT: formatMoney(project.maintenancePriceHt),
     PERIODE: project.maintenanceBilling === "monthly" ? "mois" : "an",
     HEURES: "2",
+    TAUX_HORAIRE: formatMoney(project.maintenanceHourlyRateHt),
   };
 }
 
@@ -347,28 +382,30 @@ function docRef(project: TskProject, kind: TskDocumentKind): string {
       return project.deliveryDocNumber ?? "—";
     case "contrat_maintenance":
       return project.maintenanceContractNumber ?? "—";
+    case "facture_maintenance":
+      return project.maintenanceInvoiceNumber ?? "—";
     default:
       return "—";
   }
 }
 
-function renderDevis(ctx: PdfContext, project: TskProject): void {
+function renderDevis(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
+  const issue = documentIssueDate(project, kind);
   drawMetaGrid(ctx, [
     ["Projet", project.projectTitle],
-    ["Date d'émission", formatDateFr(project.issueDate)],
+    ["Date d'émission", formatDateFr(issue)],
     ["Validité", `${project.quoteValidityDays} jours`],
     ["Échéance paiement", `${project.paymentTermsDays} jours`],
   ]);
   drawParagraph(ctx, project.projectDescription);
   drawParties(ctx, project);
-  drawLineItemsTable(ctx, project, "full");
+  drawLineItemsTable(ctx, project);
   drawSectionTitle(ctx, "Conditions de paiement");
   drawParagraph(
     ctx,
     interpolateLegalText(ctx.settings.paymentConditionsText, legalVars(project, ctx.settings)),
   );
-  drawSectionTitle(ctx, "Coordonnées bancaires");
-  drawParagraph(ctx, `IBAN : ${ctx.settings.iban}\nBIC : ${ctx.settings.bic || "—"}`);
+  drawBankAndPenalties(ctx);
   if (project.notes) {
     drawSectionTitle(ctx, "Notes");
     drawParagraph(ctx, project.notes);
@@ -376,107 +413,164 @@ function renderDevis(ctx: PdfContext, project: TskProject): void {
   drawSignatures(ctx, project, `Bon pour accord — ${project.client.company}`);
 }
 
-function renderContract(ctx: PdfContext, project: TskProject): void {
+function renderContract(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
   const c = project.contractClauses;
+  const issue = documentIssueDate(project, kind);
   drawMetaGrid(ctx, [
     ["Contrat", project.contractNumber ?? "—"],
     ["Devis de réf.", project.quoteNumber ?? "—"],
     ["Projet", project.projectTitle],
-    ["Date", formatDateFr(project.issueDate)],
+    ["Date", formatDateFr(issue)],
   ]);
   drawParties(ctx, project);
+  clause(ctx, project, "0. Hiérarchie des documents", c.documentHierarchy);
   clause(ctx, project, "1. Objet de la mission", c.object);
   clause(ctx, project, "2. Description des prestations", c.scope);
+  clause(ctx, project, "Annexe 1 — Cahier des charges", c.specificationsAnnex);
   clause(ctx, project, "3. Livrables", c.deliverables);
   clause(ctx, project, "4. Planning", c.schedule);
   clause(ctx, project, "5. Délais de livraison", c.deliveryDelay);
   clause(ctx, project, "6. Révisions incluses", c.revisionsIncluded);
-  clause(ctx, project, "7. Obligations du client", c.clientObligations);
-  clause(ctx, project, "8. Obligations de TSK Digital", c.providerObligations);
-  drawLineItemsTable(ctx, project, "full");
-  clause(ctx, project, "9. Modalités de paiement", c.paymentTerms);
-  clause(ctx, project, "10. Retard de paiement", c.latePayment);
-  clause(ctx, project, "11. Propriété intellectuelle", c.intellectualProperty);
-  clause(ctx, project, "12. Confidentialité", c.confidentiality);
-  clause(ctx, project, "13. Maintenance", c.maintenance);
-  clause(ctx, project, "14. Résiliation", c.termination);
-  clause(ctx, project, "15. Force majeure", c.forceMajeure);
-  clause(ctx, project, "16. Droit applicable", c.applicableLaw);
+  clause(ctx, project, "7. Recette & acceptation", c.acceptanceProcedure);
+  clause(ctx, project, "8. Obligations du client", c.clientObligations);
+  clause(ctx, project, "9. Obligations de TSK Digital", c.providerObligations);
+  drawLineItemsTable(ctx, project);
+  clause(ctx, project, "10. Modalités de paiement", c.paymentTerms);
+  clause(ctx, project, "11. Retard de paiement", c.latePayment);
+  clause(ctx, project, "12. Propriété intellectuelle", c.intellectualProperty);
+  clause(ctx, project, "13. RGPD — Sous-traitance", c.gdprArticle28);
+  clause(ctx, project, "14. Outils d'IA", c.aiToolsClause);
+  clause(ctx, project, "15. Comptes & licences", c.accountsAndLicenses);
+  clause(ctx, project, "16. Avenants", c.amendmentsProcedure);
+  clause(ctx, project, "17. Responsabilité", c.liabilityCap);
+  clause(ctx, project, "18. Réversibilité", c.reversibility);
+  clause(ctx, project, "19. Confidentialité", c.confidentiality);
+  clause(ctx, project, "20. Maintenance & garantie", c.maintenance);
+  clause(ctx, project, "21. Résiliation", c.termination);
+  clause(ctx, project, "22. Force majeure", c.forceMajeure);
+  clause(ctx, project, "23. Droit applicable", c.applicableLaw);
   drawSignatures(ctx, project, `Le Client — ${project.client.company}`);
 }
 
-function renderDepositInvoice(ctx: PdfContext, project: TskProject): void {
+function renderDepositInvoice(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
+  const issue = documentIssueDate(project, kind);
+  const due = documentDueDate(project, kind);
+  const ref = project.quoteNumber ?? "—";
+  const pct = depositLabel(project.depositMode, project.depositPercent);
   drawMetaGrid(ctx, [
     ["Facture d'acompte", project.depositInvoiceNumber ?? "—"],
-    ["Devis", project.quoteNumber ?? "—"],
+    ["Devis", ref],
     ["Contrat", project.contractNumber ?? "—"],
-    ["Date", formatDateFr(project.issueDate)],
-    ["Échéance", formatDateFr(project.dueDate)],
-    ["Statut", project.depositInvoiceStatus === "paid" ? "Payée" : "En attente"],
+    ["Date d'émission", formatDateFr(issue)],
+    ["Échéance", formatDateFr(due)],
+    [
+      "Statut",
+      invoiceStatusLabel(project.depositInvoiceStatus, project.depositPaidAt),
+    ],
   ]);
-  drawParties(ctx, project);
-  drawLineItemsTable(ctx, project, "deposit");
-  drawSectionTitle(ctx, "Coordonnées bancaires");
-  drawParagraph(ctx, `IBAN : ${ctx.settings.iban}\nBIC : ${ctx.settings.bic || "—"}`);
+  drawParties(ctx, project, { invoice: true });
+  drawSingleLineInvoice(
+    ctx,
+    project,
+    `Acompte ${pct} — Projet ${project.projectTitle} — Réf. ${ref}`,
+    depositAmountHt(project),
+  );
+  drawBankAndPenalties(ctx);
 }
 
-function renderIntermediateInvoice(ctx: PdfContext, project: TskProject): void {
+function renderIntermediateInvoice(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
+  const issue = documentIssueDate(project, kind);
+  const due = documentDueDate(project, kind);
+  const ref = project.quoteNumber ?? "—";
+  const pct = depositLabel(project.intermediateMode, project.intermediatePercent);
   drawMetaGrid(ctx, [
     ["Facture intermédiaire", project.intermediateInvoiceNumber ?? "—"],
-    ["Devis", project.quoteNumber ?? "—"],
+    ["Devis", ref],
     ["Acompte", project.depositInvoiceNumber ?? "—"],
-    ["Date", formatDateFr(project.issueDate)],
-    ["Échéance", formatDateFr(project.dueDate)],
-    ["Statut", project.intermediateInvoiceStatus === "paid" ? "Payée" : "En attente"],
+    ["Date d'émission", formatDateFr(issue)],
+    ["Échéance", formatDateFr(due)],
+    [
+      "Statut",
+      invoiceStatusLabel(project.intermediateInvoiceStatus, project.intermediatePaidAt),
+    ],
   ]);
-  drawParties(ctx, project);
-  drawParagraph(
+  drawParties(ctx, project, { invoice: true });
+  drawSingleLineInvoice(
     ctx,
-    "Facture intermédiaire conformément au devis signé — paiement partiel avant livraison finale.",
+    project,
+    `Facture intermédiaire ${pct} — Jalon ${project.intermediateMilestoneLabel} — Réf. ${ref}`,
+    intermediateAmountHt(project),
   );
-  drawLineItemsTable(ctx, project, "intermediate");
-  drawSectionTitle(ctx, "Coordonnées bancaires");
-  drawParagraph(ctx, `IBAN : ${ctx.settings.iban}\nBIC : ${ctx.settings.bic || "—"}`);
+  drawBankAndPenalties(ctx);
 }
 
-function renderFinalInvoice(ctx: PdfContext, project: TskProject): void {
+function renderFinalInvoice(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
+  const issue = documentIssueDate(project, kind);
+  const due = documentDueDate(project, kind);
+  const ref = project.quoteNumber ?? "—";
+  const sub = subtotalHt(project.lineItems);
+  const soldePct =
+    sub > 0 ? `${Math.round((finalBalanceHt(project) / sub) * 100)} %` : "solde";
   drawMetaGrid(ctx, [
     ["Facture de solde", project.finalInvoiceNumber ?? "—"],
-    ["Devis", project.quoteNumber ?? "—"],
+    ["Devis", ref],
     ["Acompte", project.depositInvoiceNumber ?? "—"],
     [
       "Facture interm.",
       project.intermediateInvoiceNumber ?? (project.useIntermediatePayment ? "—" : "N/A"),
     ],
-    ["Date", formatDateFr(project.issueDate)],
-    ["Échéance", formatDateFr(project.dueDate)],
-    ["Statut", project.finalInvoiceStatus === "paid" ? "Payée" : "En attente"],
+    ["Date d'émission", formatDateFr(issue)],
+    ["Échéance", formatDateFr(due)],
+    [
+      "Statut",
+      invoiceStatusLabel(project.finalInvoiceStatus, project.finalPaidAt),
+    ],
   ]);
-  drawParties(ctx, project);
+  drawParties(ctx, project, { invoice: true });
   drawPaymentRecap(ctx, project);
-  drawLineItemsTable(ctx, project, "balance");
-  drawSectionTitle(ctx, "Règlement");
-  drawParagraph(ctx, `IBAN : ${ctx.settings.iban}\nBIC : ${ctx.settings.bic || "—"}`);
+  drawSingleLineInvoice(
+    ctx,
+    project,
+    `Solde ${soldePct} — Projet ${project.projectTitle} — Réf. ${ref}`,
+    finalBalanceHt(project),
+  );
+  drawParagraph(
+    ctx,
+    `Solde sur commande totale ${formatMoney(totalTtc(sub, project.vatRate))} TTC — exigible après recette (PV ${project.deliveryDocNumber ?? "—"}).`,
+    8.5,
+  );
+  drawBankAndPenalties(ctx);
 }
 
-function renderDelivery(ctx: PdfContext, project: TskProject): void {
+function renderDelivery(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
   drawMetaGrid(ctx, [
     ["Procès-verbal", project.deliveryDocNumber ?? "—"],
     ["Projet livré", project.projectTitle],
-    ["Date de livraison", formatDateFr(project.deliveryDate)],
+    ["Date de livraison", formatDateFr(documentIssueDate(project, kind))],
     ["Devis", project.quoteNumber ?? "—"],
     ["Contrat", project.contractNumber ?? "—"],
   ]);
   drawParties(ctx, project);
+  drawSectionTitle(ctx, "Environnements & versions");
+  drawParagraph(
+    ctx,
+    `Production : ${project.deliveryUrlProduction || "(à compléter)"}\nStaging : ${project.deliveryUrlStaging || "(à compléter)"}\nRéférence technique : ${project.deliveryTechnicalRef || "(à compléter)"}`,
+  );
   drawSectionTitle(ctx, "Réception & conformité des livrables");
   for (const line of project.deliveryChecklist.split("\n").filter(Boolean)) {
     drawParagraph(ctx, `• ${line.trim()}`);
   }
   drawParagraph(
     ctx,
-    "Le Client reconnaît avoir reçu les livrables et valide leur conformité au périmètre contractuel, sous réserve des réserves écrites dans le délai convenu.",
+    "Le Client reconnaît la réception des livrables. Délai de recette : huit (8) jours ouvrés (cf. contrat CT).",
   );
   drawParagraph(ctx, project.deliveryNotes);
+  drawSectionTitle(ctx, "Réserves motivées");
+  drawParagraph(ctx, project.deliveryReservesTemplate);
+  drawParagraph(
+    ctx,
+    `Solde FS n° ${project.finalInvoiceNumber ?? "—"} exigible après recette ou expiration du délai de huit (8) jours ouvrés.`,
+  );
   drawSignatures(ctx, project, `Réception & validation — ${project.client.contactName}`);
 }
 
@@ -484,6 +578,7 @@ function renderMaintenanceContract(
   ctx: PdfContext,
   project: TskProject,
   template: TskMaintenanceContract,
+  kind: TskDocumentKind,
 ): void {
   const m = project.maintenanceContract;
   drawMetaGrid(ctx, [
@@ -495,7 +590,7 @@ function renderMaintenanceContract(
       "Tarif",
       `${formatMoney(project.maintenancePriceHt)} HT / ${project.maintenanceBilling === "monthly" ? "mois" : "an"}`,
     ],
-    ["Date", formatDateFr(project.issueDate)],
+    ["Date", formatDateFr(documentIssueDate(project, kind))],
   ]);
   drawParties(ctx, project);
   const blocks: [string, string][] = [
@@ -506,12 +601,40 @@ function renderMaintenanceContract(
     ["5. Renouvellement", m.renewal || template.renewal],
     ["6. Tarification", m.pricingTerms || template.pricingTerms],
     ["7. Périmètre", m.scope || template.scope],
-    ["8. SLA", m.sla || template.sla],
+    ["8. Tableau SLA", m.slaTable || template.slaTable],
+    ["9. Sauvegardes", m.backupsPolicy || template.backupsPolicy],
+    ["10. Sécurité", m.securityPolicy || template.securityPolicy],
+    ["11. Performance", m.performancePolicy || template.performancePolicy],
+    ["12. Exclusions", m.exclusions || template.exclusions],
+    ["13. Hors forfait", m.hourlyRateExtra || template.hourlyRateExtra],
+    ["14. Résiliation & restitution", m.terminationRestitution || template.terminationRestitution],
   ];
   for (const [title, body] of blocks) {
     clause(ctx, project, title, body);
   }
   drawSignatures(ctx, project, `Le Client — ${project.client.company}`);
+}
+
+function renderMaintenanceInvoice(ctx: PdfContext, project: TskProject, kind: TskDocumentKind): void {
+  const issue = documentIssueDate(project, kind);
+  const due = documentDueDate(project, kind);
+  const cm = project.maintenanceContractNumber ?? "—";
+  drawMetaGrid(ctx, [
+    ["Facture maintenance", project.maintenanceInvoiceNumber ?? "—"],
+    ["Contrat CM", cm],
+    ["Période", project.maintenanceBilling === "monthly" ? "Mensuelle" : "Annuelle"],
+    ["Date d'émission", formatDateFr(issue)],
+    ["Échéance", formatDateFr(due)],
+    ["Statut", "À payer"],
+  ]);
+  drawParties(ctx, project, { invoice: true });
+  drawSingleLineInvoice(
+    ctx,
+    project,
+    `Maintenance ${project.maintenanceBilling === "monthly" ? "mensuelle" : "annuelle"} — Contrat ${cm} — ${project.projectTitle}`,
+    project.maintenancePriceHt,
+  );
+  drawBankAndPenalties(ctx);
 }
 
 export async function buildTskProjectPdf(
@@ -536,25 +659,28 @@ export async function buildTskProjectPdf(
 
   switch (kind) {
     case "devis":
-      renderDevis(ctx, project);
+      renderDevis(ctx, project, kind);
       break;
     case "contrat":
-      renderContract(ctx, project);
+      renderContract(ctx, project, kind);
       break;
     case "facture_acompte":
-      renderDepositInvoice(ctx, project);
+      renderDepositInvoice(ctx, project, kind);
       break;
     case "facture_intermediaire":
-      renderIntermediateInvoice(ctx, project);
+      renderIntermediateInvoice(ctx, project, kind);
       break;
     case "facture_finale":
-      renderFinalInvoice(ctx, project);
+      renderFinalInvoice(ctx, project, kind);
       break;
     case "bon_livraison":
-      renderDelivery(ctx, project);
+      renderDelivery(ctx, project, kind);
       break;
     case "contrat_maintenance":
-      renderMaintenanceContract(ctx, project, settings.maintenanceContract);
+      renderMaintenanceContract(ctx, project, settings.maintenanceContract, kind);
+      break;
+    case "facture_maintenance":
+      renderMaintenanceInvoice(ctx, project, kind);
       break;
   }
 

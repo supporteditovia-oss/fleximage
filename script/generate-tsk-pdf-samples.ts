@@ -1,5 +1,5 @@
 /**
- * Génère les 7 PDF TSK Digital (démo) dans docs/tsk-digital/livrables/
+ * Génère les 8 PDF TSK Digital (démo audit) dans docs/tsk-digital/livrables/
  * Usage: npx tsx script/generate-tsk-pdf-samples.ts
  */
 import fs from "node:fs";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createDemoProject } from "../client/src/lib/tsk-documents/project-factory.ts";
 import { createDefaultOrgSettings } from "../client/src/lib/tsk-documents/settings-defaults.ts";
 import { nextDocumentNumber } from "../client/src/lib/tsk-documents/numbering.ts";
+import { applySignatureSchedule } from "../client/src/lib/tsk-documents/project-schedule.ts";
 import type { TskDocumentKind } from "../client/src/lib/tsk-documents/types.ts";
 
 const root = path.dirname(fileURLToPath(import.meta.url)) + "/..";
@@ -43,9 +44,26 @@ async function main() {
     facture_finale: 0,
     bon_livraison: 0,
     contrat_maintenance: 0,
+    facture_maintenance: 0,
   };
   const settings = createDefaultOrgSettings();
+  settings.legalForm = "Entrepreneur individuel (EI)";
+
+  const signatureDate = "2026-09-23";
+  const schedule = applySignatureSchedule(signatureDate, settings.defaultPaymentTermsDays);
+
   let project = createDemoProject(settings);
+  project = {
+    ...project,
+    ...schedule,
+    signatureDate,
+    depositInvoiceStatus: "pending",
+    intermediateInvoiceStatus: "pending",
+    finalInvoiceStatus: "pending",
+    depositPaidAt: null,
+    intermediatePaidAt: null,
+    finalPaidAt: null,
+  };
 
   const kinds: TskDocumentKind[] = [
     "devis",
@@ -55,6 +73,7 @@ async function main() {
     "facture_finale",
     "bon_livraison",
     "contrat_maintenance",
+    "facture_maintenance",
   ];
   const fields = [
     "quoteNumber",
@@ -64,6 +83,7 @@ async function main() {
     "finalInvoiceNumber",
     "deliveryDocNumber",
     "maintenanceContractNumber",
+    "maintenanceInvoiceNumber",
   ] as const;
 
   for (let i = 0; i < kinds.length; i += 1) {
@@ -71,18 +91,16 @@ async function main() {
     const n = nextDocumentNumber(kind, counters);
     counters = n.counters;
     project = { ...project, [fields[i]!]: n.number };
-    project.depositInvoiceStatus = "paid";
-    project.intermediateInvoiceStatus = "paid";
-    project.finalInvoiceStatus = "paid";
   }
 
   for (const kind of kinds) {
+    if (kind === "facture_intermediaire" && !project.useIntermediatePayment) continue;
     const built = await buildTskProjectPdf(project, settings, kind);
     fs.writeFileSync(path.join(outDir, built.filename), Buffer.from(built.buffer));
     console.log("wrote", built.filename, built.buffer.byteLength);
   }
 
-  console.log("Pack PDF (repo, hors site web):", outDir, fs.readdirSync(outDir));
+  console.log("Pack PDF:", outDir, fs.readdirSync(outDir));
 }
 
 main().catch((e) => {

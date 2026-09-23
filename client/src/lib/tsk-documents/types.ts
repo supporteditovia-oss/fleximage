@@ -1,4 +1,4 @@
-/** Types documentaires TSK Digital — 7 PDF métier (cahier des charges agence FR). */
+/** Types documentaires TSK Digital — PDF métier agence FR (v5). */
 
 export type TskDocumentKind =
   | "devis"
@@ -7,7 +7,8 @@ export type TskDocumentKind =
   | "facture_intermediaire"
   | "facture_finale"
   | "bon_livraison"
-  | "contrat_maintenance";
+  | "contrat_maintenance"
+  | "facture_maintenance";
 
 export type TskLineItem = {
   id: string;
@@ -24,20 +25,31 @@ export type TskClient = {
   city: string;
   email: string;
   phone: string;
+  siret: string;
+  vatNumber: string;
 };
 
 export type TskContractClauses = {
+  documentHierarchy: string;
   object: string;
   scope: string;
+  specificationsAnnex: string;
   deliverables: string;
   schedule: string;
   deliveryDelay: string;
   revisionsIncluded: string;
+  acceptanceProcedure: string;
   clientObligations: string;
   providerObligations: string;
   paymentTerms: string;
   latePayment: string;
   intellectualProperty: string;
+  gdprArticle28: string;
+  aiToolsClause: string;
+  accountsAndLicenses: string;
+  amendmentsProcedure: string;
+  liabilityCap: string;
+  reversibility: string;
   confidentiality: string;
   maintenance: string;
   termination: string;
@@ -53,12 +65,19 @@ export type TskMaintenanceContract = {
   renewal: string;
   pricingTerms: string;
   scope: string;
-  sla: string;
+  slaTable: string;
+  backupsPolicy: string;
+  securityPolicy: string;
+  performancePolicy: string;
+  exclusions: string;
+  hourlyRateExtra: string;
+  terminationRestitution: string;
 };
 
 export type TskOrgSettings = {
   logoDataUrl: string;
   company: string;
+  legalForm: string;
   addressLine1: string;
   postalCode: string;
   city: string;
@@ -66,6 +85,7 @@ export type TskOrgSettings = {
   phone: string;
   siret: string;
   vatNumber: string;
+  vatExempt293B: boolean;
   iban: string;
   bic: string;
   defaultVatRate: number;
@@ -115,19 +135,30 @@ export type TskProject = {
   vatRate: number;
   quoteValidityDays: number;
   paymentTermsDays: number;
+  /** Date signature devis / contrat / FA */
+  signatureDate: string;
+  intermediateInvoiceDate: string;
+  deliveryDate: string;
+  finalInvoiceDate: string;
+  maintenanceContractDate: string;
+  maintenanceInvoiceDate: string;
+  /** @deprecated utiliser signatureDate */
   issueDate: string;
   dueDate: string;
-  deliveryDate: string;
   depositMode: DepositMode;
   depositPercent: number;
   depositCustomAmountHt: number;
   depositInvoiceStatus: InvoicePaymentStatus;
+  depositPaidAt: string | null;
   useIntermediatePayment: boolean;
   intermediateMode: DepositMode;
   intermediatePercent: number;
   intermediateCustomAmountHt: number;
+  intermediateMilestoneLabel: string;
   intermediateInvoiceStatus: InvoicePaymentStatus;
+  intermediatePaidAt: string | null;
   finalInvoiceStatus: InvoicePaymentStatus;
+  finalPaidAt: string | null;
   quoteNumber: string | null;
   contractNumber: string | null;
   depositInvoiceNumber: string | null;
@@ -135,10 +166,16 @@ export type TskProject = {
   finalInvoiceNumber: string | null;
   deliveryDocNumber: string | null;
   maintenanceContractNumber: string | null;
+  maintenanceInvoiceNumber: string | null;
   maintenancePriceHt: number;
+  maintenanceHourlyRateHt: number;
   maintenanceBilling: "monthly" | "annual";
   contractClauses: TskContractClauses;
   maintenanceContract: TskMaintenanceContract;
+  deliveryUrlProduction: string;
+  deliveryUrlStaging: string;
+  deliveryTechnicalRef: string;
+  deliveryReservesTemplate: string;
   deliveryChecklist: string;
   deliveryNotes: string;
   notes: string;
@@ -153,10 +190,11 @@ export type TskDocumentCounters = {
   facture_finale: number;
   bon_livraison: number;
   contrat_maintenance: number;
+  facture_maintenance: number;
 };
 
 export type TskDocumentsStore = {
-  version: 4;
+  version: 5;
   settings: TskOrgSettings;
   counters: TskDocumentCounters;
   projects: TskProject[];
@@ -171,6 +209,7 @@ export const TSK_DOCUMENT_LABELS: Record<TskDocumentKind, string> = {
   facture_finale: "Facture finale / Solde (FS)",
   bon_livraison: "Bon de livraison / PV réception",
   contrat_maintenance: "Contrat de maintenance (CM)",
+  facture_maintenance: "Facture de maintenance (FM)",
 };
 
 export const TSK_DOCUMENT_PREFIX: Record<keyof TskDocumentCounters, string> = {
@@ -182,6 +221,7 @@ export const TSK_DOCUMENT_PREFIX: Record<keyof TskDocumentCounters, string> = {
   facture_finale: "FS",
   bon_livraison: "PV",
   contrat_maintenance: "CM",
+  facture_maintenance: "FM",
 };
 
 export const TSK_WORKFLOW_LABELS: Record<TskWorkflowStep, string> = {

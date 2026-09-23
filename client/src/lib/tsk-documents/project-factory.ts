@@ -1,4 +1,5 @@
 import { createDefaultOrgSettings } from "./settings-defaults";
+import { applySignatureSchedule } from "./project-schedule";
 import type { TskLineItem, TskOrgSettings, TskProject } from "./types";
 
 function uid(): string {
@@ -9,20 +10,17 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDaysIso(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 export function newLineItem(label: string, unitPriceHt: number, qty = 1): TskLineItem {
   return { id: uid(), label, quantity: qty, unitPriceHt };
 }
 
-/** Projet démo réaliste — modifiable dans l'admin. */
+/** Projet démo réaliste — dates workflow cohérentes, factures « À payer ». */
 export function createDemoProject(settings?: TskOrgSettings): TskProject {
   const s = settings ?? createDefaultOrgSettings();
   const now = new Date().toISOString();
+  const signatureDate = todayIso();
+  const schedule = applySignatureSchedule(signatureDate, s.defaultPaymentTermsDays);
+
   return {
     id: uid(),
     createdAt: now,
@@ -36,6 +34,8 @@ export function createDemoProject(settings?: TskOrgSettings): TskProject {
       city: "Lyon",
       email: "e.dubois@maisondubois.fr",
       phone: "06 12 34 56 78",
+      siret: "",
+      vatNumber: "",
     },
     projectTitle: "Site vitrine premium & espace client",
     projectDescription:
@@ -49,19 +49,21 @@ export function createDemoProject(settings?: TskOrgSettings): TskProject {
     vatRate: s.defaultVatRate,
     quoteValidityDays: s.defaultQuoteValidityDays,
     paymentTermsDays: s.defaultPaymentTermsDays,
-    issueDate: todayIso(),
-    dueDate: addDaysIso(s.defaultPaymentTermsDays),
-    deliveryDate: addDaysIso(56),
+    ...schedule,
     depositMode: "percent_30",
     depositPercent: s.defaultDepositPercent,
     depositCustomAmountHt: 0,
     depositInvoiceStatus: "pending",
+    depositPaidAt: null,
     useIntermediatePayment: true,
     intermediateMode: "percent_40",
     intermediatePercent: s.defaultIntermediatePercent,
     intermediateCustomAmountHt: 0,
+    intermediateMilestoneLabel: "Recette intermédiaire & MEP staging",
     intermediateInvoiceStatus: "pending",
+    intermediatePaidAt: null,
     finalInvoiceStatus: "pending",
+    finalPaidAt: null,
     quoteNumber: null,
     contractNumber: null,
     depositInvoiceNumber: null,
@@ -69,16 +71,23 @@ export function createDemoProject(settings?: TskOrgSettings): TskProject {
     finalInvoiceNumber: null,
     deliveryDocNumber: null,
     maintenanceContractNumber: null,
+    maintenanceInvoiceNumber: null,
     maintenancePriceHt: 290,
+    maintenanceHourlyRateHt: 95,
     maintenanceBilling: "monthly",
     contractClauses: { ...s.contractClauses },
     maintenanceContract: { ...s.maintenanceContract },
+    deliveryUrlProduction: "https://www.maisondubois.fr",
+    deliveryUrlStaging: "https://staging.maisondubois.fr",
+    deliveryTechnicalRef: "Git : main @ a1b2c3d · Build v1.0.0",
+    deliveryReservesTemplate:
+      "Réserves motivées (le cas échéant) :\n\n\n\nDate · Signature Client",
     deliveryChecklist:
       "Mise en production du site sur l'URL convenue\nTests de parcours utilisateur validés\nFormation administrateur réalisée (1 session)\nRemise des accès CMS, hébergement et documentation\nConformité au périmètre du devis signé",
     deliveryNotes:
-      "Le client reconnaît la réception des livrables listés ci-dessus. Passé un délai de huit (8) jours sans réserve écrite, la livraison sera réputée acceptée.",
+      "Passé un délai de huit (8) jours ouvrés sans réserve écrite, la livraison sera réputée acceptée (cf. contrat CT).",
     notes:
-      "Prestation réalisée par TSK Digital — agence spécialisée sites premium, SaaS et IA.",
+      "Prestation réalisée par TSK Digital — Entrepreneur individuel — sites premium, SaaS et IA.",
   };
 }
 

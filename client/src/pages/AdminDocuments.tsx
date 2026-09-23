@@ -38,6 +38,7 @@ import {
   totalTtc,
 } from "@/lib/tsk-documents/calc";
 import { DEPOSIT_PRESETS, newLineItem } from "@/lib/tsk-documents/project-factory";
+import { applySignatureSchedule } from "@/lib/tsk-documents/project-schedule";
 import { nextDocumentNumber } from "@/lib/tsk-documents/numbering";
 import {
   buildTskProjectPdf,
@@ -164,6 +165,7 @@ export default function AdminDocuments() {
       facture_finale: "finalInvoiceNumber",
       bon_livraison: "deliveryDocNumber",
       contrat_maintenance: "maintenanceContractNumber",
+      facture_maintenance: "maintenanceInvoiceNumber",
     };
     const field = map[kind];
     if (field && !p[field]) {
@@ -206,6 +208,7 @@ export default function AdminDocuments() {
     "facture_finale",
     "bon_livraison",
     "contrat_maintenance",
+    "facture_maintenance",
   ];
 
   const downloadAllSevenPdfs = async () => {
@@ -231,7 +234,7 @@ export default function AdminDocuments() {
         await new Promise((r) => window.setTimeout(r, 600));
       }
       toast({
-        title: "7 PDF TSK Digital",
+        title: "8 PDF TSK Digital",
         description: "Téléchargements lancés sur votre appareil (dossier Téléchargements).",
       });
     } catch (e) {
@@ -273,8 +276,8 @@ export default function AdminDocuments() {
           <TskLogo variant="print" src={logoPreview} className="h-10" />
           <h1 className="text-3xl font-bold tracking-tight">Documents TSK Digital</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Fond blanc, typographie Inter, sept PDF métier complets. Logo officiel uniquement.
-            Devis → contrat → acompte → intermédiaire → solde → PV → maintenance.
+            Fond blanc, typographie Inter, huit PDF métier (dont FM). Logo officiel uniquement.
+            Devis → contrat → acompte → intermédiaire → solde → PV → CM → FM.
           </p>
         </div>
         <Button onClick={createNewProject} className="bg-[#0B0B0C] text-white hover:bg-[#0B0B0C]/90">
@@ -303,7 +306,7 @@ export default function AdminDocuments() {
             ) : (
               <FileDown className="h-4 w-4" />
             )}
-            Télécharger les 7 PDF (projet actif)
+            Télécharger les 8 PDF (projet actif)
           </Button>
         </CardContent>
       </Card>
@@ -563,11 +566,77 @@ export default function AdminDocuments() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Date d&apos;émission</Label>
+                      <Label>SIRET client (B2B)</Label>
+                      <Input
+                        placeholder="14 chiffres"
+                        value={activeProject.client.siret}
+                        onChange={(e) =>
+                          patchProject({
+                            client: { ...activeProject.client, siret: e.target.value },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Libellé jalon (FI)</Label>
+                      <Input
+                        value={activeProject.intermediateMilestoneLabel}
+                        onChange={(e) =>
+                          patchProject({ intermediateMilestoneLabel: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date signature (DV / CT / FA)</Label>
                       <Input
                         type="date"
-                        value={activeProject.issueDate}
-                        onChange={(e) => patchProject({ issueDate: e.target.value })}
+                        value={activeProject.signatureDate}
+                        onChange={(e) => {
+                          const signatureDate = e.target.value;
+                          patchProject({
+                            signatureDate,
+                            ...applySignatureSchedule(
+                              signatureDate,
+                              activeProject.paymentTermsDays,
+                            ),
+                          });
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date FI (jalon)</Label>
+                      <Input
+                        type="date"
+                        value={activeProject.intermediateInvoiceDate}
+                        onChange={(e) =>
+                          patchProject({ intermediateInvoiceDate: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date livraison (PV)</Label>
+                      <Input
+                        type="date"
+                        value={activeProject.deliveryDate}
+                        onChange={(e) => patchProject({ deliveryDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date facture solde (FS)</Label>
+                      <Input
+                        type="date"
+                        value={activeProject.finalInvoiceDate}
+                        onChange={(e) => patchProject({ finalInvoiceDate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Date contrat maintenance (CM)</Label>
+                      <Input
+                        type="date"
+                        value={activeProject.maintenanceContractDate}
+                        onChange={(e) =>
+                          patchProject({ maintenanceContractDate: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
@@ -683,6 +752,11 @@ export default function AdminDocuments() {
                             onValueChange={(v) =>
                               patchProject({
                                 intermediateInvoiceStatus: v as "pending" | "paid",
+                                intermediatePaidAt:
+                                  v === "paid"
+                                    ? activeProject.intermediatePaidAt ??
+                                      new Date().toISOString().slice(0, 10)
+                                    : null,
                               })
                             }
                           >
@@ -704,6 +778,11 @@ export default function AdminDocuments() {
                         onValueChange={(v) =>
                           patchProject({
                             depositInvoiceStatus: v as "pending" | "paid",
+                            depositPaidAt:
+                              v === "paid"
+                                ? activeProject.depositPaidAt ??
+                                  new Date().toISOString().slice(0, 10)
+                                : null,
                           })
                         }
                       >
@@ -723,6 +802,11 @@ export default function AdminDocuments() {
                         onValueChange={(v) =>
                           patchProject({
                             finalInvoiceStatus: v as "pending" | "paid",
+                            finalPaidAt:
+                              v === "paid"
+                                ? activeProject.finalPaidAt ??
+                                  new Date().toISOString().slice(0, 10)
+                                : null,
                           })
                         }
                       >
@@ -747,7 +831,8 @@ export default function AdminDocuments() {
                       <TskLogo variant="print" src={logoPreview} className="h-8" />
                     </div>
                     <p className="mt-3 text-xs text-[#A7A7A7]">
-                      {activeProject.quoteNumber ?? "DV-…"} · {formatDateFr(activeProject.issueDate)}{" "}
+                      {activeProject.quoteNumber ?? "DV-…"} ·{" "}
+                      {formatDateFr(activeProject.signatureDate)}{" "}
                       · TVA {activeProject.vatRate} % · TTC {totals ? formatMoney(totals.ttc) : "—"}
                     </p>
                   </CardContent>
@@ -805,6 +890,22 @@ export default function AdminDocuments() {
                   Les PDF utilisent fond blanc. Le fichier officiel est automatiquement adapté
                   pour l&apos;impression (sans bandeau noir).
                 </p>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Forme juridique</Label>
+                <Input
+                  value={s.legalForm}
+                  onChange={(e) => setSettings({ ...s, legalForm: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-2 md:col-span-2">
+                <input
+                  type="checkbox"
+                  id="vat293"
+                  checked={s.vatExempt293B}
+                  onChange={(e) => setSettings({ ...s, vatExempt293B: e.target.checked })}
+                />
+                <Label htmlFor="vat293">Franchise TVA (art. 293 B CGI)</Label>
               </div>
               {(
                 [
@@ -916,6 +1017,21 @@ export default function AdminDocuments() {
                     </div>
                   ),
                 )}
+                <Label>URL production</Label>
+                <Input
+                  value={activeProject.deliveryUrlProduction}
+                  onChange={(e) => patchProject({ deliveryUrlProduction: e.target.value })}
+                />
+                <Label>URL staging</Label>
+                <Input
+                  value={activeProject.deliveryUrlStaging}
+                  onChange={(e) => patchProject({ deliveryUrlStaging: e.target.value })}
+                />
+                <Label>Réf. technique (Git / build)</Label>
+                <Input
+                  value={activeProject.deliveryTechnicalRef}
+                  onChange={(e) => patchProject({ deliveryTechnicalRef: e.target.value })}
+                />
                 <Label>Checklist bon de livraison</Label>
                 <Textarea
                   rows={4}
@@ -985,7 +1101,7 @@ export default function AdminDocuments() {
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Numérotation automatique · DV / CT / FA / FI / FS / PV / CM — année {store.counters.year}
+        Numérotation automatique · DV / CT / FA / FI / FS / PV / CM / FM — année {store.counters.year}
       </p>
     </div>
   );

@@ -1,25 +1,16 @@
 # Livrables PDF TSK Digital (hors LuxeFlexIA)
 
-Ces fichiers **ne sont pas exposés** sur le site LuxeFlexIA. Ils servent de référence dans le dépôt Git.
-
-## Les 7 documents
+Référence **post-audit juridique** : EI, statuts « À payer », factures en une ligne, dates workflow, clauses CT/CM enrichies.
 
 | Fichier | Type |
 |---------|------|
 | `TSK-Digital-devis-DV-*.pdf` | Devis (DV) |
-| `TSK-Digital-contrat-CT-*.pdf` | Contrat de prestation (CT) |
+| `TSK-Digital-contrat-CT-*.pdf` | Contrat (CT) |
 | `TSK-Digital-facture_acompte-FA-*.pdf` | Facture d'acompte (FA) |
 | `TSK-Digital-facture_intermediaire-FI-*.pdf` | Facture intermédiaire (FI) |
 | `TSK-Digital-facture_finale-FS-*.pdf` | Facture solde (FS) |
-| `TSK-Digital-bon_livraison-PV-*.pdf` | PV de réception (PV) |
-| `TSK-Digital-contrat_maintenance-CM-*.pdf` | Contrat de maintenance (CM) |
+| `TSK-Digital-bon_livraison-PV-*.pdf` | PV réception (PV) |
+| `TSK-Digital-contrat_maintenance-CM-*.pdf` | Contrat maintenance (CM) |
+| `TSK-Digital-facture_maintenance-FM-*.pdf` | Facture maintenance (FM) |
 
-## Téléchargement depuis GitHub
-
-Remplacez `BRANCH` par la branche contenant les PDF :
-
-`https://raw.githubusercontent.com/supporteditovia-oss/fleximage/BRANCH/docs/tsk-digital/livrables/NOM_DU_FICHIER.pdf`
-
-## Dans l’application (admin)
-
-`/admin/documents` → **Télécharger les 7 PDF (projet actif)** — génération locale dans le navigateur, fond blanc, logo officiel, typographie Inter.
+Admin : `/admin/documents` → **Télécharger les 8 PDF (projet actif)**.
