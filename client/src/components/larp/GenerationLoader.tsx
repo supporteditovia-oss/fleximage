@@ -70,9 +70,9 @@ export function GenerationLoader({
       statusMessages?.length
         ? statusMessages
         : [
+            t("progress.stepPromptIntel"),
             t("progress.stepAnalyze"),
-            t("progress.stepUnderstood"),
-            t("progress.stepEditing"),
+            t("progress.stepRendering"),
             t("progress.stepFinishing"),
           ],
     [statusMessages, t],

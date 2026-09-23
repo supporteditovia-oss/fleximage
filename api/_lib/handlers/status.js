@@ -62,15 +62,34 @@ function statusTimingFields(larp) {
       ? Number(estimatedRaw)
       : null;
   const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
+  const pipelinePhase =
+    typeof meta.pipeline_phase === "string" ? meta.pipeline_phase : null;
+  const pipelineStartedAt =
+    typeof meta.pipeline_started_at === "string"
+      ? meta.pipeline_started_at
+      : larp?.created_at || null;
   let remainingSeconds = null;
-  if (estimatedSeconds != null && larp && larp.created_at) {
+  if (estimatedSeconds != null && pipelineStartedAt) {
     const elapsed = Math.max(
       0,
-      Math.floor((Date.now() - new Date(larp.created_at).getTime()) / 1000),
+      Math.floor((Date.now() - new Date(pipelineStartedAt).getTime()) / 1000),
     );
     remainingSeconds = Math.max(0, estimatedSeconds - elapsed);
   }
-  return { estimatedSeconds, qaRetryCount, remainingSeconds, createdAt: larp.created_at || null };
+  return {
+    estimatedSeconds,
+    qaRetryCount,
+    remainingSeconds,
+    createdAt: pipelineStartedAt,
+    pipelinePhase,
+    pipelineStartedAt,
+    provider:
+      typeof meta.provider === "string"
+        ? meta.provider
+        : typeof larp?.provider === "string"
+          ? larp.provider
+          : null,
+  };
 }
 
 module.exports = async function handler(req, res) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { Gem } from "lucide-react";
@@ -20,8 +20,10 @@ import {
   getInFlightGeneration,
   mergeGenerationTimingLock,
   parseApiCreatedAtMs,
+  peekGenerationSubmitStartedAt,
   type GenerationTimingLock,
 } from "@/lib/in-flight-generation";
+import { buildImagePipelineStatusMessages } from "@/lib/generation-pipeline-messages";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -278,7 +280,8 @@ export function GenerationProgress({
     timingLockRef.current = mergeGenerationTimingLock(timingLockRef.current, {
       estimate: estimatedSeconds,
       startedAtMs:
-        parseApiCreatedAtMs(data?.createdAt) ??
+        parseApiCreatedAtMs(data?.pipelineStartedAt ?? data?.createdAt) ??
+        peekGenerationSubmitStartedAt() ??
         (inflightSnapshot?.taskId === taskId
           ? inflightSnapshot.startedAtMs
           : Date.now()),
@@ -293,6 +296,11 @@ export function GenerationProgress({
     data?.remainingSeconds != null && Number.isFinite(data.remainingSeconds)
       ? data.remainingSeconds
       : null;
+
+  const pipelineStatusMessages = useMemo(() => {
+    if (resultType === "video") return undefined;
+    return buildImagePipelineStatusMessages(t, data?.pipelinePhase);
+  }, [data?.pipelinePhase, resultType, t]);
 
   const isGenerating =
     loaderStatus === "connecting" ||
@@ -319,9 +327,13 @@ export function GenerationProgress({
           status={loaderStatus}
           estimatedSeconds={displayEstimate}
           serverRemainingSeconds={serverRemainingSeconds}
-          startedAtMs={startedAtMs}
+          startedAtMs={
+            parseApiCreatedAtMs(data?.pipelineStartedAt) ??
+            startedAtMs
+          }
           inputImageUrl={inputImageUrl}
           resultUrls={data?.resultUrls}
+          statusMessages={pipelineStatusMessages}
           onRevealStart={() => setRevealStarted(true)}
           onRevealComplete={() => setRevealDone(true)}
         />

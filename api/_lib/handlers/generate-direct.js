@@ -130,21 +130,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
-    if (!templateId) {
-      const enriched = await enrichPromptForGeneration(prompt, {
-        locale: uiLocale,
-      });
-      if (enriched && enriched !== prompt) {
-        prompt = enriched.slice(0, 2000);
-        console.info("[generate-direct] prompt-intelligence applied", {
-          userId,
-          length: prompt.length,
-        });
-      }
-    }
-
-    // 2) Credit check — before AI.
+    // 2) Credit check — before AI (prompt enrich after claim — inclus dans le timing serveur).
     const limitResult = await checkGenerationLimits(supabase, userId);
     if (!limitResult.allowed) {
       res.status(403).json({
@@ -341,6 +327,54 @@ module.exports = async function handler(req, res) {
 
     let larp = claim.generation;
 
+    const pipelineStartedAt = new Date().toISOString();
+    const baseMeta =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    await supabase
+      .from("generations")
+      .update({
+        metadata: {
+          ...baseMeta,
+          pipeline_started_at: pipelineStartedAt,
+          pipeline_phase: "started",
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", larp.id);
+
+    // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
+    let promptIntelligenceApplied = false;
+    if (!templateId) {
+      await supabase
+        .from("generations")
+        .update({
+          metadata: {
+            ...baseMeta,
+            pipeline_started_at: pipelineStartedAt,
+            pipeline_phase: "enriching_prompt",
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
+
+      const enrichStarted = Date.now();
+      const enriched = await enrichPromptForGeneration(prompt, {
+        locale: uiLocale,
+      });
+      const enrichMs = Date.now() - enrichStarted;
+      if (enriched && enriched !== prompt) {
+        prompt = enriched.slice(0, 2000);
+        promptIntelligenceApplied = true;
+        console.info("[generate-direct] prompt-intelligence applied", {
+          userId,
+          length: prompt.length,
+          enrichMs,
+        });
+      }
+      baseMeta.prompt_intelligence_ms = enrichMs;
+      baseMeta.prompt_intelligence_applied = promptIntelligenceApplied;
+    }
+
     const deductErr = await deductGenerationCredits(supabase, {
       userId,
       creditCost,
@@ -365,6 +399,18 @@ module.exports = async function handler(req, res) {
     }
 
     await recordGeneration(supabase, userId);
+
+    await supabase
+      .from("generations")
+      .update({
+        metadata: {
+          ...baseMeta,
+          pipeline_started_at: pipelineStartedAt,
+          pipeline_phase: "uploading_inputs",
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", larp.id);
 
     let uploadedUrls;
     try {
@@ -467,6 +513,18 @@ module.exports = async function handler(req, res) {
     const sceneContext = resolvedTemplate?.ok
       ? String(resolvedTemplate.prompt || effectivePrompt || "")
       : "";
+    await supabase
+      .from("generations")
+      .update({
+        metadata: {
+          ...baseMeta,
+          pipeline_started_at: pipelineStartedAt,
+          pipeline_phase: "analyzing_subject",
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", larp.id);
+
     const subjectAnalysis = await analyzeSubjectContext(
       referenceImageUrl
         ? {
@@ -503,15 +561,21 @@ module.exports = async function handler(req, res) {
             subjectPoseBlock,
           });
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
-    const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
-      referenceImageCount: imageUrls.length,
-      modelVariant: oneshotModelVariant,
-    });
+    const prepSeconds = templateId ? 0 : 10;
+    const estimatedSeconds =
+      estimateGenerationSeconds(effectivePrompt, {
+        referenceImageCount: imageUrls.length,
+        modelVariant: oneshotModelVariant,
+      }) + prepSeconds;
 
     const prevMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const generationMetadata = {
       ...prevMeta,
+      ...baseMeta,
+      pipeline_started_at: pipelineStartedAt,
+      pipeline_phase: "submitting_provider",
+      prep_seconds: prepSeconds,
       oneshot_model_variant: oneshotModelVariant,
       estimated_seconds: estimatedSeconds,
       subject_analysis: subjectAnalysis,
@@ -586,13 +650,26 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    await supabase
+      .from("generations")
+      .update({
+        metadata: {
+          ...generationMetadata,
+          pipeline_phase: "waiting_provider",
+          provider: providerResult.provider || "oneshot",
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", larp.id);
+
     res.status(201).json({
       id: larp.id,
       taskId: externalTaskId,
       status: "waiting",
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
-      createdAt: larp.created_at,
+      createdAt: pipelineStartedAt,
+      pipelineStartedAt,
       generationRequestId: claim.generationRequestId,
       deduplicated: Boolean(providerResult.deduplicated),
       apiCallCount: providerResult.apiCallCount,
