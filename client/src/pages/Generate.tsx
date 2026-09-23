@@ -19,6 +19,7 @@ import {
 } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import { clearInFlightGeneration } from "@/lib/in-flight-generation";
+import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { FunnelOnboardingQuiz } from "@/components/funnel/FunnelOnboardingQuiz";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
@@ -1154,6 +1155,10 @@ export default function Generate({
       }
 
       // ── Image mode (existing logic) ──────────────────────────
+      releaseGenerationSubmitLock();
+      clearInFlightGeneration();
+      setGenerationResultVisible(false);
+
       const base64Images = isTemplateGeneration
         ? undefined
         : await Promise.all(
@@ -1259,8 +1264,8 @@ export default function Generate({
       });
     } finally {
       setIsStartingGeneration(false);
+      isGeneratingRef.current = false;
       if (!generationCommitted) {
-        isGeneratingRef.current = false;
         setPendingLoading(false);
       }
     }
