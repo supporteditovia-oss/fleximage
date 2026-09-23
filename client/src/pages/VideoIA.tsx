@@ -25,11 +25,12 @@ import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import {
-  computeVideoCreditCost,
+  adminPreviewVideoCreditCost,
+  ADMIN_PRICING_REFERENCE,
+} from "@shared/pricing-admin-reference";
+import {
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
-  VIDEO_I2V_CREDIT_COST,
-  VIDEO_V2V_CREDIT_COST,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -156,13 +157,11 @@ export default function VideoIA() {
     !voiceEnabled ||
     (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
 
-  const creditCost = computeVideoCreditCost({
+  const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
+  const creditCost = adminPreviewVideoCreditCost({
     workflow,
-    durationSec,
-    quality: "standard",
     voiceEnabled,
     preserveSourceAudio: preserveSourceVoice,
-    sourceVideoDurationSec: videoDurationSec,
   });
 
   const buildVoicePayload = () =>
@@ -413,6 +412,9 @@ export default function VideoIA() {
           <span className="via-capability">Dubai · Yacht · Jet</span>
           <span className="via-capability">Personnage · Tenue</span>
           <span className="via-capability">Objet · Véhicule</span>
+          <span className="via-capability">
+            Admin · grille v2 · I2V {adminBurn.videoI2V} cr
+          </span>
         </div>
       </header>
 
@@ -449,7 +451,7 @@ export default function VideoIA() {
             <p className="via-step-desc">
               JPG ou PNG — ta propre image. Vidéo verticale max{" "}
               {VIDEO_I2V_OUTPUT_DURATION_SEC} s ·{" "}
-              <strong>{VIDEO_I2V_CREDIT_COST} crédits</strong> par génération.
+              <strong>{adminBurn.videoI2V} crédits</strong> par génération.
             </p>
 
             <input
@@ -546,10 +548,11 @@ export default function VideoIA() {
             <p className="via-step-desc">
               Filme avec ton smartphone — toi, un objet, une scène, un véhicule…{" "}
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
-              {VIDEO_V2V_CREDIT_COST} crédits par clip (Motion Control). L&apos;IA conserve ta
+              {adminBurn.videoV2V} crédits par clip (Motion Control). L&apos;IA conserve ta
               caméra et tous les mouvements. Change le décor (Dubai, yacht…),
               le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
-              <strong>muette</strong> — active l&apos;option voix (+5 crédits)
+              <strong>muette</strong> — active l&apos;option voix (+
+              {adminBurn.videoVoiceExtra} crédits)
               pour garder ta voix filmée.
             </p>
 
@@ -683,6 +686,7 @@ export default function VideoIA() {
               <VideoSourceVoiceAddon
                 enabled={preserveSourceVoice}
                 onEnabledChange={setPreserveSourceVoice}
+                voiceExtraCredit={adminBurn.videoVoiceExtra}
               />
             ) : null}
 

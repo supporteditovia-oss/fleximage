@@ -46,3 +46,20 @@ export const ADMIN_PRICING_REFERENCE = {
     { id: "plus", label: "Boost Plus", priceLabel: "14,99 €", credits: 450 },
   ],
 } as const;
+
+/** Coût vidéo affiché en preview admin (grille v2) — ne remplace pas l’API prod. */
+export function adminPreviewVideoCreditCost(params: {
+  workflow?: "image_to_video" | "video_to_video";
+  voiceEnabled?: boolean;
+  preserveSourceAudio?: boolean;
+}): number {
+  const b = ADMIN_PRICING_REFERENCE.creditBurn;
+  let cost =
+    params.workflow === "video_to_video" ? b.videoV2V : b.videoI2V;
+  if (params.workflow === "video_to_video") {
+    if (params.preserveSourceAudio) cost += b.videoVoiceExtra;
+  } else if (params.voiceEnabled) {
+    cost += b.videoVoiceExtra;
+  }
+  return cost;
+}

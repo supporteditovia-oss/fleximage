@@ -4,11 +4,14 @@ import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
 type VideoSourceVoiceAddonProps = {
   enabled: boolean;
   onEnabledChange: (value: boolean) => void;
+  /** Preview admin grille v2 ; défaut = facturation prod. */
+  voiceExtraCredit?: number;
 };
 
 export function VideoSourceVoiceAddon({
   enabled,
   onEnabledChange,
+  voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
 }: VideoSourceVoiceAddonProps) {
   return (
     <div className="via-voice-addon">
@@ -24,7 +27,7 @@ export function VideoSourceVoiceAddon({
         <span className="via-voice-addon__toggle-text">
           Intégrer ta voix filmée
           <span className="via-voice-addon__toggle-meta">
-            +{VIDEO_VOICE_EXTRA_CREDIT} crédits
+            +{voiceExtraCredit} crédits
           </span>
         </span>
       </button>
