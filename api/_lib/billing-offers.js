@@ -1,9 +1,16 @@
 /**
  * Billing offers for LuxeFlexIA — EUR + USD catalogs.
  * Packs are priced so monthly plans stay the better deal.
+ * Grille v2 (PRICING_V2_ENABLED=1) : shared/pricing-catalog-v2 — Stripe v2 séparé.
  */
 
-const PLAN_CREDITS = {
+const { isPricingV2Enabled } = require("./pricing-flags");
+const {
+  PRICING_CATALOG_V2,
+  packUsageHints,
+} = require("./pricing-catalog-v2");
+
+const PLAN_CREDITS_V1 = {
   discovery: 250,
   essential: 1100,
   ultimate: 2500,
@@ -107,7 +114,7 @@ const UPGRADE_COPY_EUR = {
   essential: {
     plan: "essential",
     priceLabel: PLAN_PRICES_EUR.essential,
-    credits: PLAN_CREDITS.essential,
+    credits: PLAN_CREDITS_V1.essential,
     creditsLabel: "1 100 crédits",
     headline: "Passe en Essential",
     pitch:
@@ -117,7 +124,7 @@ const UPGRADE_COPY_EUR = {
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_EUR.ultimate,
-    credits: PLAN_CREDITS.ultimate,
+    credits: PLAN_CREDITS_V1.ultimate,
     creditsLabel: "2 500 crédits",
     headline: "Passe en Ultimate",
     pitch:
@@ -130,7 +137,7 @@ const UPGRADE_COPY_USD = {
   essential: {
     plan: "essential",
     priceLabel: PLAN_PRICES_USD.essential,
-    credits: PLAN_CREDITS.essential,
+    credits: PLAN_CREDITS_V1.essential,
     creditsLabel: "1,100 credits",
     headline: "Upgrade to Essential",
     pitch:
@@ -140,7 +147,7 @@ const UPGRADE_COPY_USD = {
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_USD.ultimate,
-    credits: PLAN_CREDITS.ultimate,
+    credits: PLAN_CREDITS_V1.ultimate,
     creditsLabel: "2,500 credits",
     headline: "Upgrade to Ultimate",
     pitch:
@@ -148,6 +155,98 @@ const UPGRADE_COPY_USD = {
     cta: "Upgrade to Ultimate — $39.99/mo",
   },
 };
+
+const PLAN_PRICES_EUR_V2 = {
+  discovery: "9,90",
+  essential: "24,90",
+  ultimate: "49,90",
+};
+
+const PLAN_PRICES_USD_V2 = {
+  discovery: "10.99",
+  essential: "27.99",
+  ultimate: "54.99",
+};
+
+function formatCreditsLabel(n, currency) {
+  const s = String(n);
+  if (currency === "usd") {
+    return `${s.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} credits`;
+  }
+  return `${s.replace(/\B(?=(\d{3})+(?!\d))/g, " ")} crédits`;
+}
+
+function buildUpgradeCopyV2(currency) {
+  const prices =
+    currency === "usd" ? PLAN_PRICES_USD_V2 : PLAN_PRICES_EUR_V2;
+  const ess = PRICING_CATALOG_V2.subscriptions.find((s) => s.id === "essential");
+  const ult = PRICING_CATALOG_V2.subscriptions.find((s) => s.id === "ultimate");
+  const eurSuffix = currency === "usd" ? "/mo" : "/mois";
+  const money = (plan) =>
+    currency === "usd" ? `$${prices[plan]}` : `${prices[plan]} €`;
+
+  if (currency === "usd") {
+    return {
+      essential: {
+        plan: "essential",
+        priceLabel: prices.essential,
+        credits: ess.creditsPerMonth,
+        creditsLabel: formatCreditsLabel(ess.creditsPerMonth, currency),
+        headline: "Upgrade to Essential",
+        pitch: `${formatCreditsLabel(ess.creditsPerMonth, currency)} / month — images, voice & video in one plan.`,
+        cta: `Upgrade to Essential — ${money("essential")}${eurSuffix}`,
+      },
+      ultimate: {
+        plan: "ultimate",
+        priceLabel: prices.ultimate,
+        credits: ult.creditsPerMonth,
+        creditsLabel: formatCreditsLabel(ult.creditsPerMonth, currency),
+        headline: "Upgrade to Ultimate",
+        pitch: `${formatCreditsLabel(ult.creditsPerMonth, currency)} / month — max volume + V2V Motion.`,
+        cta: `Upgrade to Ultimate — ${money("ultimate")}${eurSuffix}`,
+      },
+    };
+  }
+
+  return {
+    essential: {
+      plan: "essential",
+      priceLabel: prices.essential,
+      credits: ess.creditsPerMonth,
+      creditsLabel: formatCreditsLabel(ess.creditsPerMonth, currency),
+      headline: "Passe en Essentiel",
+      pitch: `${formatCreditsLabel(ess.creditsPerMonth, currency)} / mois — images, voix & vidéo dans un seul plan.`,
+      cta: `Passer à Essentiel — ${money("essential")}${eurSuffix}`,
+    },
+    ultimate: {
+      plan: "ultimate",
+      priceLabel: prices.ultimate,
+      credits: ult.creditsPerMonth,
+      creditsLabel: formatCreditsLabel(ult.creditsPerMonth, currency),
+      headline: "Passe en Ultimate",
+      pitch: `${formatCreditsLabel(ult.creditsPerMonth, currency)} / mois — volume max + V2V Motion.`,
+      cta: `Passer à Ultimate — ${money("ultimate")}${eurSuffix}`,
+    },
+  };
+}
+
+function getActivePlanCredits() {
+  if (!isPricingV2Enabled()) return PLAN_CREDITS_V1;
+  return {
+    discovery: PRICING_CATALOG_V2.subscriptions[0].creditsPerMonth,
+    essential: PRICING_CATALOG_V2.subscriptions[1].creditsPerMonth,
+    ultimate: PRICING_CATALOG_V2.subscriptions[2].creditsPerMonth,
+  };
+}
+
+function enrichPackRow(pack) {
+  const hints = packUsageHints(pack.credits);
+  return {
+    ...pack,
+    images: hints.images,
+    usageHints: hints,
+  };
+}
 
 function normalizeCurrency(input) {
   const raw = String(input || "")
@@ -179,14 +278,25 @@ function getPlanPriceEnvKey(plan, currency) {
 }
 
 function getCreditPacks(currency) {
+  if (isPricingV2Enabled()) {
+    const rows =
+      currency === "usd"
+        ? PRICING_CATALOG_V2.creditPacks.usd
+        : PRICING_CATALOG_V2.creditPacks.eur;
+    return rows.map(enrichPackRow);
+  }
   return currency === "usd" ? CREDIT_PACKS_USD : CREDIT_PACKS_EUR;
 }
 
 function getUpgradeCopy(currency) {
+  if (isPricingV2Enabled()) return buildUpgradeCopyV2(currency);
   return currency === "usd" ? UPGRADE_COPY_USD : UPGRADE_COPY_EUR;
 }
 
 function getPlanPrices(currency) {
+  if (isPricingV2Enabled()) {
+    return currency === "usd" ? PLAN_PRICES_USD_V2 : PLAN_PRICES_EUR_V2;
+  }
   return currency === "usd" ? PLAN_PRICES_USD : PLAN_PRICES_EUR;
 }
 
@@ -235,17 +345,40 @@ function listConfiguredPacks(currency = "eur") {
     .filter((p) => p.configured);
 }
 
+/** Catalogue packs pour UI (inclut non configurés Stripe si v2 preview). */
+function listCreditPackCatalog(currency = "eur") {
+  const includeUnconfigured =
+    isPricingV2Enabled() &&
+    String(process.env.PRICING_V2_PREVIEW_PACKS || "").trim() === "1";
+  const rows = getCreditPacks(currency).map((pack) => ({
+    ...pack,
+    configured: Boolean(process.env[pack.envKey]),
+    priceId: process.env[pack.envKey] || null,
+    available: Boolean(process.env[pack.envKey]) || includeUnconfigured,
+  }));
+  return includeUnconfigured ? rows : rows.filter((p) => p.configured);
+}
+
 /** Fallback EUR pack env if USD price is not configured yet. */
 function resolvePackEnvKey(pack, currency) {
   const primary = pack.envKey;
   if (currency !== "usd") return primary;
   if (process.env[primary]) return primary;
-  const eurPack = CREDIT_PACKS_EUR.find((p) => p.id === pack.id);
+  const eurRows = isPricingV2Enabled()
+    ? PRICING_CATALOG_V2.creditPacks.eur
+    : CREDIT_PACKS_EUR;
+  const eurPack = eurRows.find((p) => p.id === pack.id);
   return eurPack?.envKey || primary;
 }
 
 function resolvePlanPriceId(plan, currency) {
   const normalized = normalizePlan(plan);
+  if (isPricingV2Enabled()) {
+    const v2Keys =
+      PRICING_CATALOG_V2.planStripeEnvKeys[currency === "usd" ? "usd" : "eur"];
+    const v2Key = v2Keys[normalized];
+    if (v2Key && process.env[v2Key]) return process.env[v2Key];
+  }
   const primaryKey = getPlanPriceEnvKey(normalized, currency);
   if (process.env[primaryKey]) return process.env[primaryKey];
   if (currency === "usd") {
@@ -255,8 +388,15 @@ function resolvePlanPriceId(plan, currency) {
   return null;
 }
 
+function getPricingCatalogVersion() {
+  return isPricingV2Enabled() ? "v2" : "v1";
+}
+
 module.exports = {
-  PLAN_CREDITS,
+  getActivePlanCredits,
+  getPricingCatalogVersion,
+  PLAN_CREDITS: PLAN_CREDITS_V1,
+  PLAN_CREDITS_V1,
   PLAN_PRICES_EUR,
   PLAN_PRICES_USD,
   PLAN_RANK,
@@ -274,6 +414,8 @@ module.exports = {
   getUpgradeTarget,
   getUpgradeOffers,
   listConfiguredPacks,
+  listCreditPackCatalog,
   resolvePackEnvKey,
   resolvePlanPriceId,
+  isPricingV2Enabled,
 };

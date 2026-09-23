@@ -3,7 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { assertCustomerCanStartCheckout } = require("../_lib/checkout-guard");
 const { resolveRequestLocale, copy } = require("../_lib/locale-copy");
 const {
-  PLAN_CREDITS,
+  getActivePlanCredits,
   normalizePlan,
   getPackById,
   getUpgradeOffers,
@@ -400,7 +400,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const creditsPerCycle = PLAN_CREDITS[plan];
+    const creditsPerCycle = getActivePlanCredits()[plan];
 
     try {
       const price = await stripe.prices.retrieve(priceId);

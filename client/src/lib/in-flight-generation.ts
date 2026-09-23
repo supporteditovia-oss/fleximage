@@ -1,7 +1,36 @@
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
 
 const IN_FLIGHT_GENERATION_KEY = "luxeflexia:in-flight-generation";
+const SUBMIT_STARTED_AT_KEY = "luxeflexia:generation-submit-started-at";
 export const GENERATION_IN_FLIGHT_EVENT = "luxeflexia:generation-in-flight";
+
+/** Horodatage au clic « Générer » — inclut Gemini + prep avant taskId. */
+export function markGenerationSubmitStarted(): void {
+  try {
+    sessionStorage.setItem(SUBMIT_STARTED_AT_KEY, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function peekGenerationSubmitStartedAt(): number | null {
+  try {
+    const raw = sessionStorage.getItem(SUBMIT_STARTED_AT_KEY);
+    if (!raw) return null;
+    const ms = Number(raw);
+    return Number.isFinite(ms) ? ms : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearGenerationSubmitStarted(): void {
+  try {
+    sessionStorage.removeItem(SUBMIT_STARTED_AT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Génération OneShot/Kie peut durer ~2–3 min avec fallback. */
 const MAX_AGE_MS = 5 * 60_000;
@@ -128,11 +157,16 @@ export function persistInFlightFromApiResult(
   const existing = getInFlightGeneration();
   const sameTask = existing?.taskId === result.taskId;
   const startedAtFromApi = parseApiCreatedAtMs(result.createdAt);
-  const startedAtMs = startedAtFromApi ?? (sameTask ? existing!.startedAtMs : Date.now());
+  const submitStartedAt = peekGenerationSubmitStartedAt();
+  const startedAtMs =
+    startedAtFromApi ??
+    submitStartedAt ??
+    (sameTask ? existing!.startedAtMs : Date.now());
   const mergedStartedAtMs =
     sameTask && existing
-      ? Math.min(existing.startedAtMs, startedAtMs)
-      : startedAtMs;
+      ? Math.min(existing.startedAtMs, startedAtMs, submitStartedAt ?? startedAtMs)
+      : Math.min(startedAtMs, submitStartedAt ?? startedAtMs);
+  clearGenerationSubmitStarted();
 
   const estimatedFromApi =
     typeof result.estimatedSeconds === "number" &&

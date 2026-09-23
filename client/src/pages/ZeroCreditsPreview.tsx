@@ -6,12 +6,122 @@ import { resolveBillingCurrency } from "@shared/billing";
 import "./generate-page.css";
 
 type PreviewVariant = "discovery" | "essential" | "ultimate";
+type CatalogPreview = "v1" | "v2";
+
+function buildV2Packs(isEn: boolean): NonNullable<CurrentPlanSummary["creditPacks"]> {
+  if (isEn) {
+    return [
+      {
+        id: "mini",
+        tier: "small",
+        label: "Boost Mini",
+        credits: 90,
+        priceLabel: "$3.99",
+        images: 9,
+        usageHints: {
+          images: 9,
+          videoI2v: 1,
+          videoV2v: 0,
+          voiceMinutes: 9,
+          voiceClones: 3,
+        },
+        available: true,
+      },
+      {
+        id: "standard",
+        tier: "medium",
+        label: "Boost Standard",
+        credits: 210,
+        priceLabel: "$8.99",
+        images: 21,
+        usageHints: {
+          images: 21,
+          videoI2v: 3,
+          videoV2v: 2,
+          voiceMinutes: 21,
+          voiceClones: 7,
+        },
+        available: true,
+      },
+      {
+        id: "plus",
+        tier: "large",
+        label: "Boost Plus",
+        credits: 450,
+        priceLabel: "$16.99",
+        images: 45,
+        usageHints: {
+          images: 45,
+          videoI2v: 7,
+          videoV2v: 4,
+          voiceMinutes: 45,
+          voiceClones: 15,
+        },
+        available: true,
+      },
+    ];
+  }
+  return [
+    {
+      id: "mini",
+      tier: "small",
+      label: "Boost Mini",
+      credits: 90,
+      priceLabel: "3,49 €",
+      images: 9,
+      usageHints: {
+        images: 9,
+        videoI2v: 1,
+        videoV2v: 0,
+        voiceMinutes: 9,
+        voiceClones: 3,
+      },
+      available: true,
+    },
+    {
+      id: "standard",
+      tier: "medium",
+      label: "Boost Standard",
+      credits: 210,
+      priceLabel: "7,99 €",
+      images: 21,
+      usageHints: {
+        images: 21,
+        videoI2v: 3,
+        videoV2v: 2,
+        voiceMinutes: 21,
+        voiceClones: 7,
+      },
+      available: true,
+    },
+    {
+      id: "plus",
+      tier: "large",
+      label: "Boost Plus",
+      credits: 450,
+      priceLabel: "14,99 €",
+      images: 45,
+      usageHints: {
+        images: 45,
+        videoI2v: 7,
+        videoV2v: 4,
+        voiceMinutes: 45,
+        voiceClones: 15,
+      },
+      available: true,
+    },
+  ];
+}
 
 function buildPreviewPlan(
   variant: PreviewVariant,
   isEn: boolean,
+  catalog: CatalogPreview,
 ): CurrentPlanSummary {
-  const packs = isEn
+  const packs =
+    catalog === "v2"
+      ? buildV2Packs(isEn)
+      : isEn
     ? [
         {
           id: "mini",
@@ -66,6 +176,7 @@ function buildPreviewPlan(
       ];
 
   const base: CurrentPlanSummary = {
+    pricingCatalogVersion: catalog,
     credits: 0,
     planType: variant,
     subscriptionStatus: "active",
@@ -136,12 +247,13 @@ function buildPreviewPlan(
 
 export default function ZeroCreditsPreview() {
   const { i18n } = useTranslation();
-  const [variant, setVariant] = useState<PreviewVariant>("discovery");
+  const [variant, setVariant] = useState<PreviewVariant>("ultimate");
+  const [catalog, setCatalog] = useState<CatalogPreview>("v2");
   const isEn = resolveBillingCurrency(i18n.resolvedLanguage) === "usd";
 
   const plan = useMemo(
-    () => buildPreviewPlan(variant, isEn),
-    [variant, isEn],
+    () => buildPreviewPlan(variant, isEn, catalog),
+    [variant, isEn, catalog],
   );
 
   useEffect(() => {
@@ -153,6 +265,20 @@ export default function ZeroCreditsPreview() {
   return (
     <div className="min-h-screen bg-[var(--lx-surface)] px-4 py-10">
       <div className="mx-auto mb-6 flex max-w-md flex-wrap gap-2">
+        {(["v1", "v2"] as const).map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setCatalog(item)}
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+              catalog === item
+                ? "bg-[var(--lx-ink)] text-white"
+                : "border border-black/10 bg-white"
+            }`}
+          >
+            {item}
+          </button>
+        ))}
         {(["discovery", "essential", "ultimate"] as const).map((item) => (
           <button
             key={item}

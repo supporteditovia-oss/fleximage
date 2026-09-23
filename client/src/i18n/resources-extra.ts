@@ -288,10 +288,19 @@ export const extraResources = {
       policyFailHint:
         "Le contenu demandé n'est pas autorisé. Aucun crédit n'est perdu.",
       seconds: "sec",
+      stepPromptIntel: "Prompt intelligent — on affine ta demande…",
       stepAnalyze: "Analyse de ton image...",
       stepUnderstood: "Demande comprise...",
       stepEditing: "Modification en cours...",
+      stepRendering: "Rendu photoréaliste en cours…",
       stepFinishing: "Finalisation du rendu...",
+      pipeline: {
+        enriching_prompt: "Optimisation de ta demande (Gemini)…",
+        uploading_inputs: "Envoi de tes photos…",
+        analyzing_subject: "Analyse du sujet et de la scène…",
+        submitting_provider: "Lancement du moteur image…",
+        waiting_provider: "Génération en cours — patiente un instant…",
+      },
     },
     voiceProgress: {
       badge: "Clonage IA",
@@ -563,6 +572,10 @@ export const extraResources = {
         "Tu es déjà en Ultimate — recharge un pack pour continuer.",
       packsTitle: "Ou recharger sans changer de plan",
       packLine: "{{credits}} crédits · ~{{images}} images",
+      packsUniversal:
+        "Crédits libres — tu dépenses comme tu veux (image, voix ou vidéo).",
+      packExamples:
+        "Jusqu'à {{images}} photos · {{video}} vidéo 5 s · {{clones}} clone(s) voix · tu mixes comme tu veux",
       packsNote:
         "Les packs coûtent plus cher à l'image qu'un abonnement — utiles en dépannage seulement.",
       paymentUnavailableTitle: "Paiement indisponible",
@@ -875,10 +888,19 @@ export const extraResources = {
       policyFail: "Content not allowed",
       policyFailHint: "That request isn't allowed. No credits were used.",
       seconds: "sec",
+      stepPromptIntel: "Smart prompt — refining your request…",
       stepAnalyze: "Analyzing your image...",
       stepUnderstood: "Request understood...",
       stepEditing: "Editing in progress...",
+      stepRendering: "Photoreal render in progress…",
       stepFinishing: "Finishing the render...",
+      pipeline: {
+        enriching_prompt: "Enhancing your prompt (Gemini)…",
+        uploading_inputs: "Uploading your photos…",
+        analyzing_subject: "Analyzing subject and scene…",
+        submitting_provider: "Starting image engine…",
+        waiting_provider: "Generating — hang tight…",
+      },
     },
     voiceProgress: {
       badge: "AI Voice Clone",
@@ -1151,6 +1173,10 @@ export const extraResources = {
         "You're already on Ultimate — buy a pack to keep going.",
       packsTitle: "Or top up without changing plans",
       packLine: "{{credits}} credits · ~{{images}} images",
+      packsUniversal:
+        "Universal credits — spend them on images, voice, or video.",
+      packExamples:
+        "Up to {{images}} photos · {{video}} × 5 s videos · {{clones}} voice clone(s) — mix as you like",
       packsNote:
         "Packs cost more per image than a subscription — useful as a backup only.",
       paymentUnavailableTitle: "Payment unavailable",

@@ -18,7 +18,11 @@ import {
   GenerationLoaderBackdrop,
 } from "@/components/larp/GenerationLoader";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
-import { clearInFlightGeneration } from "@/lib/in-flight-generation";
+import {
+  clearInFlightGeneration,
+  peekGenerationSubmitStartedAt,
+} from "@/lib/in-flight-generation";
+import { buildImagePipelineStatusMessages } from "@/lib/generation-pipeline-messages";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { FunnelOnboardingQuiz } from "@/components/funnel/FunnelOnboardingQuiz";
 import { PaywallOverlay, type PaywallPlan } from "@/components/larp/PaywallOverlay";
@@ -1484,7 +1488,17 @@ export default function Generate({
           taskId="pending"
           status="connecting"
           estimatedSeconds={
-            generationMode === "video" ? 150 : 50
+            generationMode === "video"
+              ? 150
+              : (generationEstimateSeconds ?? 58)
+          }
+          startedAtMs={peekGenerationSubmitStartedAt() ?? undefined}
+          statusMessages={
+            generationMode === "image"
+              ? buildImagePipelineStatusMessages(t, "enriching_prompt", {
+                  adminDetail: adminPreview,
+                })
+              : undefined
           }
           inputImageUrl={loaderInputImageUrl}
         />,

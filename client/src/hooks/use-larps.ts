@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@shared/routes";
 import {
   getInFlightGeneration,
+  markGenerationSubmitStarted,
   persistInFlightFromApiResult,
 } from "@/lib/in-flight-generation";
 import {
@@ -159,6 +160,9 @@ interface LarpStatusResponse {
   qaRetryCount?: number;
   remainingSeconds?: number | null;
   createdAt?: string | null;
+  pipelinePhase?: string | null;
+  pipelineStartedAt?: string | null;
+  provider?: string | null;
   isSubscriber?: boolean;
   requiresPaywall?: boolean;
   resultType?: "image" | "video";
@@ -236,6 +240,7 @@ export function useGenerateDirectLarp() {
       ) {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
+      markGenerationSubmitStarted();
 
       if (!data.generation_request_id?.trim()) {
         throw new Error(

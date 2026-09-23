@@ -1,6 +1,7 @@
 /**
  * LuxeFlexIA — Prompt Intelligence (Gemini 2.5 Flash uniquement).
  * Enrichit le prompt utilisateur avant Nano Banana (prompt-guard + génération).
+ * Produit client : actif pour tous les utilisateurs (prompt libre, hors templates catalogue).
  * Ne jamais utiliser Gemini Pro ni un autre modèle ici.
  */
 

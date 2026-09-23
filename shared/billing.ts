@@ -1,4 +1,6 @@
 import { toUiLocale, type UiLocale } from "./locales";
+import { isPricingV2Enabled } from "./pricing-flags";
+import { PRICING_CATALOG_V2 } from "./pricing-catalog-v2";
 
 export type BillingCurrency = "eur" | "usd";
 export type BillingPlan = "discovery" | "essential" | "ultimate";
@@ -28,7 +30,7 @@ export type PlanCardPrice = {
   showCurrencyCode: boolean;
 };
 
-const PLAN_CARD_PRICES: Record<
+const PLAN_CARD_PRICES_V1: Record<
   BillingCurrency,
   Record<BillingPlan, PlanCardPrice>
 > = {
@@ -44,11 +46,68 @@ const PLAN_CARD_PRICES: Record<
   },
 };
 
+const PLAN_CARD_PRICES_V2: Record<
+  BillingCurrency,
+  Record<BillingPlan, PlanCardPrice>
+> = {
+  eur: {
+    discovery: { prefix: "", major: "9", minor: "90", showCurrencyCode: true },
+    essential: { prefix: "", major: "24", minor: "90", showCurrencyCode: true },
+    ultimate: { prefix: "", major: "49", minor: "90", showCurrencyCode: true },
+  },
+  usd: {
+    discovery: { prefix: "$", major: "10", minor: "99", showCurrencyCode: false },
+    essential: { prefix: "$", major: "27", minor: "99", showCurrencyCode: false },
+    ultimate: { prefix: "$", major: "54", minor: "99", showCurrencyCode: false },
+  },
+};
+
+function centsToPlanCardPrice(
+  cents: number,
+  currency: BillingCurrency,
+): PlanCardPrice {
+  const majorUnits = Math.floor(cents / 100);
+  const minor = String(cents % 100).padStart(2, "0");
+  if (currency === "usd") {
+    return {
+      prefix: "$",
+      major: String(majorUnits),
+      minor,
+      showCurrencyCode: false,
+    };
+  }
+  return {
+    prefix: "",
+    major: String(majorUnits),
+    minor,
+    showCurrencyCode: true,
+  };
+}
+
 export function getPlanCardPrice(
   plan: BillingPlan,
   currency: BillingCurrency,
 ): PlanCardPrice {
-  return PLAN_CARD_PRICES[currency][plan];
+  if (isPricingV2Enabled()) {
+    const sub = PRICING_CATALOG_V2.subscriptions.find((s) => s.id === plan);
+    if (sub) return centsToPlanCardPrice(sub.priceTtcCents, currency);
+    return PLAN_CARD_PRICES_V2[currency][plan];
+  }
+  return PLAN_CARD_PRICES_V1[currency][plan];
+}
+
+const PLAN_CREDITS_V1: Record<BillingPlan, number> = {
+  discovery: 250,
+  essential: 1100,
+  ultimate: 2500,
+};
+
+export function getPlanCreditsPerMonth(plan: BillingPlan): number {
+  if (isPricingV2Enabled()) {
+    const sub = PRICING_CATALOG_V2.subscriptions.find((s) => s.id === plan);
+    return sub?.creditsPerMonth ?? PLAN_CREDITS_V1[plan];
+  }
+  return PLAN_CREDITS_V1[plan];
 }
 
 export function getPaywallPlanCards(currency: BillingCurrency) {
