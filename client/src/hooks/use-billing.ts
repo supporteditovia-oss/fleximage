@@ -56,6 +56,8 @@ export interface CurrentPlanSummary {
 }
 
 export const currentPlanQueryRoot = ["stripe", "current-plan"] as const;
+/** Alias pour invalidation globale (toutes locales). */
+export const currentPlanQueryKey = currentPlanQueryRoot;
 
 export function getCurrentPlanQueryKey(locale: string) {
   return [...currentPlanQueryRoot, billingLocaleParam(locale)] as const;
