@@ -6,6 +6,7 @@ const {
   listConfiguredPacks,
   resolveBillingCurrency,
 } = require("../_lib/billing-offers");
+const { getPlanUsageSnapshot } = require("../_lib/plan-usage-limits");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -130,6 +131,8 @@ module.exports = async function handler(req, res) {
         }))
       : [];
 
+    const usageLimits = await getPlanUsageSnapshot(supabase, userId, planType);
+
     res.status(200).json({
       planType,
       credits,
@@ -142,6 +145,14 @@ module.exports = async function handler(req, res) {
       cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
       canManageSubscription: Boolean(profile.stripe_customer_id),
       outOfCredits: !isAdmin && credits < 10,
+      usageLimits,
+      creditCosts: {
+        image: 10,
+        voiceClone: 30,
+        videoI2v: 60,
+        videoV2v: 95,
+        videoVoiceExtra: 5,
+      },
       // Primary offer kept for older clients
       upgradeOffer: upgradeOffers[0] || null,
       upgradeOffers,

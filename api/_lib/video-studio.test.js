@@ -14,6 +14,7 @@ const {
   buildV2VDashboardLockSuffix,
   maxVoiceCharsForDuration,
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
 } = require("./video-studio");
 
 describe("video-studio", () => {
@@ -71,7 +72,7 @@ describe("video-studio", () => {
         sourceVideoDurationSec: 6,
         isAdmin: false,
       }),
-      VIDEO_FLAT_CREDIT_COST,
+      VIDEO_V2V_CREDIT_COST,
     );
     assert.equal(
       computeVideoCreditCost({
@@ -79,7 +80,7 @@ describe("video-studio", () => {
         sourceVideoDurationSec: 8,
         isAdmin: false,
       }),
-      VIDEO_FLAT_CREDIT_COST,
+      VIDEO_V2V_CREDIT_COST,
     );
   });
 
@@ -90,7 +91,7 @@ describe("video-studio", () => {
         preserveSourceAudio: true,
         isAdmin: false,
       }),
-      VIDEO_FLAT_CREDIT_COST + 5,
+      VIDEO_V2V_CREDIT_COST + 5,
     );
   });
 

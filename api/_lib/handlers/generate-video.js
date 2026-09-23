@@ -34,6 +34,10 @@ const {
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
 } = require("../generation-dedup");
+const {
+  getPlanUsageSnapshot,
+  assertVideoPlanQuota,
+} = require("../plan-usage-limits");
 const { resolveRequestLocale, copy } = require("../locale-copy");
 const {
   isDisallowedAdultPrompt,
@@ -305,6 +309,16 @@ module.exports = async function handler(req, res) {
     const isAdmin = admin || profile?.role === "admin";
 
     if (!isAdmin) {
+      const usageSnapshot = await getPlanUsageSnapshot(supabase, userId);
+      const quotaCheck = assertVideoPlanQuota(usageSnapshot, workflow, uiLocale);
+      if (!quotaCheck.ok) {
+        res.status(quotaCheck.status).json({
+          code: quotaCheck.code,
+          message: quotaCheck.message,
+          usageLimits: usageSnapshot,
+        });
+        return;
+      }
       res.status(403).json({
         code: "ADMIN_PREVIEW_ONLY",
         message: copy(

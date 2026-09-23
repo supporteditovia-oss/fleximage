@@ -12,7 +12,7 @@ function getVideoDurationUploadLimitSec() {
 const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
 
 /** Prix fixe client : 1 vidéo = N crédits (3–8s, 720p). */
-const { VIDEO_FLAT_CREDIT_COST } = require("./credit-costs");
+const { VIDEO_V2V_CREDIT_COST } = require("./credit-costs");
 
 const VIDEO_I2V_OUTPUT_DURATION_SEC = 5;
 
@@ -53,7 +53,7 @@ function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
 
 function computeV2VCreditCost(_durationSec, isAdmin = false) {
   if (isAdmin) return 0;
-  return VIDEO_FLAT_CREDIT_COST;
+  return VIDEO_V2V_CREDIT_COST;
 }
 
 module.exports = {
@@ -63,7 +63,7 @@ module.exports = {
   getVideoDurationUploadLimitSec,
   VIDEO_V2V_MAX_SIZE_BYTES,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
-  VIDEO_FLAT_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
   validateSourceVideoDuration,
   computeV2VCreditCost,
 };

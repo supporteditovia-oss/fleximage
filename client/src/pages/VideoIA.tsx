@@ -28,7 +28,8 @@ import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
-  VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -448,7 +449,7 @@ export default function VideoIA() {
             <p className="via-step-desc">
               JPG ou PNG — ta propre image. Vidéo verticale max{" "}
               {VIDEO_I2V_OUTPUT_DURATION_SEC} s ·{" "}
-              <strong>{VIDEO_FLAT_CREDIT_COST} crédits</strong> par génération.
+              <strong>{VIDEO_I2V_CREDIT_COST} crédits</strong> par génération.
             </p>
 
             <input
@@ -545,7 +546,7 @@ export default function VideoIA() {
             <p className="via-step-desc">
               Filme avec ton smartphone — toi, un objet, une scène, un véhicule…{" "}
               <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
-              {VIDEO_FLAT_CREDIT_COST} crédits par vidéo. L&apos;IA conserve ta
+              {VIDEO_V2V_CREDIT_COST} crédits par clip (Motion Control). L&apos;IA conserve ta
               caméra et tous les mouvements. Change le décor (Dubai, yacht…),
               le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
               <strong>muette</strong> — active l&apos;option voix (+5 crédits)

@@ -1,6 +1,8 @@
 const { computeV2VCreditCost } = require("./video-limits");
 const {
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
 } = require("./credit-costs");
 
@@ -441,6 +443,8 @@ function studioStageLabel(stage) {
 
 module.exports = {
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
   V2V_SILENT_OUTPUT_LOCK,
   computeVideoCreditCost,

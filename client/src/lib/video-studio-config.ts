@@ -1,5 +1,7 @@
 import {
   VIDEO_FLAT_CREDIT_COST,
+  VIDEO_I2V_CREDIT_COST,
+  VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
 } from "@shared/credit-costs";
 
@@ -148,10 +150,10 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
 export function computeV2VCreditCost(
   _sourceVideoDurationSec?: number | null,
 ): number {
-  return VIDEO_FLAT_CREDIT_COST;
+  return VIDEO_V2V_CREDIT_COST;
 }
 
-/** 1 vidéo = 60 crédits (max 8s, 720p) ; +5 si voix IA (I2V) ou voix filmée (V2V). */
+/** 1 vidéo = 60 crédits (I2V max 5s · V2V source max 8s, 720p) ; +5 voix IA / voix filmée. */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
@@ -163,7 +165,7 @@ export function computeVideoCreditCost(params: {
   let cost =
     params.workflow === "video_to_video"
       ? computeV2VCreditCost(params.sourceVideoDurationSec)
-      : VIDEO_FLAT_CREDIT_COST;
+      : VIDEO_I2V_CREDIT_COST;
   if (params.workflow === "video_to_video") {
     if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
   } else if (params.voiceEnabled) {

@@ -2,6 +2,13 @@ const { requireUser, readBody, sendError } = require("../user-auth");
 const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require("../fish-audio");
 const { uploadToR2 } = require("../r2");
 const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
+const { isUserAdmin } = require("../admin-access");
+const { VOICE_CLONE_CREDIT_COST } = require("../credit-costs");
+const { applyCreditDelta } = require("../generation");
+const {
+  getPlanUsageSnapshot,
+  assertVoiceClonePlanQuota,
+} = require("../plan-usage-limits");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 
@@ -78,6 +85,36 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
+    const admin = await isUserAdmin(supabase, userId);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, credits")
+      .eq("id", userId)
+      .single();
+    const isAdmin = admin || profile?.role === "admin";
+
+    if (!isAdmin) {
+      const usageSnapshot = await getPlanUsageSnapshot(supabase, userId);
+      const quotaCheck = assertVoiceClonePlanQuota(usageSnapshot, "fr");
+      if (!quotaCheck.ok) {
+        res.status(quotaCheck.status).json({
+          code: quotaCheck.code,
+          message: quotaCheck.message,
+          usageLimits: usageSnapshot,
+        });
+        return;
+      }
+      const credits = profile?.credits ?? 0;
+      if (credits < VOICE_CLONE_CREDIT_COST) {
+        res.status(403).json({
+          code: "INSUFFICIENT_CREDITS",
+          message: "Plus assez de jetons pour créer un clone voix.",
+          creditCost: VOICE_CLONE_CREDIT_COST,
+        });
+        return;
+      }
+    }
+
     const sourceType =
       body.sourceType === "record" || body.sourceType === "catalog"
         ? body.sourceType
@@ -119,6 +156,29 @@ module.exports = async function voiceCloneHandler(req, res) {
       await waitForVoiceModelReady(fishVoice.id, { timeoutMs: 45000 });
     } catch (waitErr) {
       console.warn("voice-clone model wait", waitErr);
+    }
+
+    if (!isAdmin) {
+      const chargeKey = `voice-clone:${userId}:${fishVoice.id}`;
+      const { error: chargeErr } = await applyCreditDelta(supabase, {
+        userId,
+        delta: -VOICE_CLONE_CREDIT_COST,
+        reason: "voice_clone_charge",
+        idempotencyKey: chargeKey,
+        metadata: {
+          name,
+          credit_cost: VOICE_CLONE_CREDIT_COST,
+          fish_reference_id: fishVoice.id,
+        },
+      });
+      if (chargeErr) {
+        console.error("voice-clone charge failed", chargeErr);
+        res.status(403).json({
+          code: "CREDIT_CHARGE_FAILED",
+          message: "Impossible de débiter les jetons pour ce clone.",
+        });
+        return;
+      }
     }
 
     const row = await persistClone(supabase, userId, {
