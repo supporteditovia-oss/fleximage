@@ -10,8 +10,8 @@ Agence premium : sites web haut de gamme, développement SaaS, intelligence arti
 
 | Fichier | Usage |
 |--------|--------|
-| `client/public/brand/tsk/tsk-horizontal.svg` | Devis, contrats, factures, site, signatures e-mail |
-| `client/public/brand/tsk/tsk-mark.svg` | Favicon, réseaux sociaux, avatar |
+| **`client/public/brand/tsk/tsk-official-logo.png`** | **Logo officiel — seul logo autorisé sur les PDF** |
+| `client/public/brand/tsk/tsk-official-logo-hd.png` | Variante allégée pour export PDF |
 | `client/public/brand/tsk/tsk-horizontal-mono.svg` | Impression N&B, tampons |
 | `client/public/brand/tsk/tsk-horizontal-on-dark.svg` | Fonds sombres |
 | PNG associés | Export raster transparent (1024 / 2000 px) |

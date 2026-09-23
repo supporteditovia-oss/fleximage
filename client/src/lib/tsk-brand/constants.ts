@@ -12,30 +12,26 @@ export const TSK_BRAND = {
   fonts: {
     primary: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
   },
+  /** Logo officiel fourni par le fondateur — ne pas régénérer pour les PDF. */
   assets: {
-    logoHorizontal: "/brand/tsk/tsk-horizontal.svg",
-    logoHorizontalMono: "/brand/tsk/tsk-horizontal-mono.svg",
-    logoHorizontalOnDark: "/brand/tsk/tsk-horizontal-on-dark.svg",
-    logoMark: "/brand/tsk/tsk-mark.svg",
-    logoMarkOnDark: "/brand/tsk/tsk-mark-on-dark.svg",
-    logoMarkMono: "/brand/tsk/tsk-mark-mono.svg",
-    logoMarkPng: "/brand/tsk/tsk-mark.png",
-    logoHorizontalPng: "/brand/tsk/tsk-horizontal.png",
-    favicon32: "/brand/tsk/tsk-mark-32.png",
+    logoOfficial: "/brand/tsk/tsk-official-logo.png",
+    logoOfficialHd: "/brand/tsk/tsk-official-logo-hd.png",
   },
 } as const;
 
-/** Coordonnées émettrice par défaut (modifiables dans Administration → Documents). */
 export const TSK_ISSUER_DEFAULTS = {
   company: "TSK Digital",
-  addressLine1: "Adresse du siège",
-  addressLine2: "Code postal · Ville · France",
+  addressLine1: "224 Rue de Charlieu",
+  postalCode: "42300",
+  city: "Roanne",
   email: "contact@tskdigital.fr",
-  phone: "+33 · · · · · · · · ·",
-  siret: "SIRET · · · · · · · · · · · · ·",
-  vat: "TVA intracommunautaire · · · · · · · · ·",
-  iban: "IBAN · · · · · · · · · · · · · · · · · · · · · ·",
-  bic: "BIC · · · · · · ·",
+  phone: "07 49 43 46 98",
+  siret: "10620038900018",
+  vatNumber: "",
+  iban: "",
+  bic: "",
   paymentTermsDays: 30,
   quoteValidityDays: 30,
+  defaultVatRate: 20,
+  defaultDepositPercent: 30,
 } as const;
