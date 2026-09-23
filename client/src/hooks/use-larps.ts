@@ -218,22 +218,7 @@ export function useGenerateDirectLarp() {
   const queryClient = useQueryClient();
   return useMutation<GenerateLarpResponse, Error, GenerateDirectInput>({
     mutationFn: async (data) => {
-      const inflight = getInFlightGeneration();
-      if (inflight?.taskId) {
-        return {
-          id: inflight.taskId,
-          taskId: inflight.taskId,
-          status: "processing",
-          estimatedSeconds: inflight.estimatedSeconds,
-          createdAt: new Date(inflight.startedAtMs).toISOString(),
-          deduplicated: true,
-        };
-      }
-
-      const activeInFlight = getInFlightGeneration();
-      if (
-        !tryAcquireGenerationSubmitLockOrRecover(Boolean(activeInFlight?.taskId))
-      ) {
+      if (!tryAcquireGenerationSubmitLockOrRecover(false)) {
         throw new Error("Une génération est déjà en cours. Patiente quelques secondes.");
       }
 
@@ -305,6 +290,7 @@ export function useGenerateDirectLarp() {
                 : "generate",
             "image",
           );
+          releaseGenerationSubmitLock();
           return deduped;
         }
         releaseGenerationSubmitLockOnError();
