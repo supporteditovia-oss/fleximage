@@ -21,7 +21,18 @@ export const TSK_BRAND = {
     /** Variante dérivée pour impression fond blanc (même forme, encre #0B0B0C). */
     logoOfficialPrint: "/brand/tsk/tsk-official-logo-print-hd.png",
   },
+  /** PDF d'exemple (fichiers statiques — téléchargement direct dans le navigateur). */
+  samplePdfBase: "/brand/tsk/samples",
 } as const;
+
+export const TSK_SAMPLE_PDF_FILES = [
+  { label: "Devis", file: "TSK-Digital-devis-DV-2026-0001.pdf" },
+  { label: "Contrat", file: "TSK-Digital-contrat-CT-2026-0001.pdf" },
+  { label: "Facture d'acompte", file: "TSK-Digital-facture_acompte-FA-2026-0001.pdf" },
+  { label: "Facture finale", file: "TSK-Digital-facture-FC-2026-0001.pdf" },
+  { label: "Bon de livraison", file: "TSK-Digital-bon_livraison-BL-2026-0001.pdf" },
+  { label: "CGV", file: "TSK-Digital-cgv-CGV-2026-0001.pdf" },
+] as const;
 
 export const TSK_ISSUER_DEFAULTS = {
   company: "TSK Digital",

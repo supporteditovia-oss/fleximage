@@ -26,8 +26,9 @@ globalThis.fetch = (async (input: RequestInfo | URL) => {
 }) as typeof fetch;
 
 async function main() {
-  const outDir = "/opt/cursor/artifacts/tsk-pdf-pack";
+  const outDir = path.join(root, "client/public/brand/tsk/samples");
   fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync("/opt/cursor/artifacts/tsk-pdf-pack", { recursive: true });
 
   const { buildTskProjectPdf } = await import(
     "../client/src/lib/tsk-documents/pdf.ts"
@@ -79,10 +80,16 @@ async function main() {
       settingsWithCgv,
       kind as TskDocumentKind,
     );
-    fs.writeFileSync(path.join(outDir, built.filename), Buffer.from(built.buffer));
+    const buf = Buffer.from(built.buffer);
+    fs.writeFileSync(path.join(outDir, built.filename), buf);
+    fs.writeFileSync(
+      path.join("/opt/cursor/artifacts/tsk-pdf-pack", built.filename),
+      buf,
+    );
     console.log("wrote", built.filename, built.buffer.byteLength);
   }
 
+  console.log("Public URL base: /brand/tsk/samples/");
   console.log("Pack PDF:", outDir, fs.readdirSync(outDir));
 }
 

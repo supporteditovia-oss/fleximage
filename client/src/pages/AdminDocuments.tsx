@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { TSK_BRAND } from "@/lib/tsk-brand/constants";
+import { TSK_BRAND, TSK_SAMPLE_PDF_FILES } from "@/lib/tsk-brand/constants";
 import {
   depositAmountHt,
   formatDateFr,
@@ -230,6 +230,32 @@ export default function AdminDocuments() {
           <Plus className="h-4 w-4" /> Nouveau projet
         </Button>
       </div>
+
+      <Card className="border-[#E8E8E8] bg-[#FAFAFA]">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Télécharger les 6 PDF d&apos;exemple</CardTitle>
+          <CardDescription>
+            Liens directs (fichiers sur le site). Les liens « artifacts » du chat Cloud Agent ne
+            sont pas accessibles depuis votre téléphone ou PC — utilisez ceux-ci ou les boutons
+            PDF dans l&apos;onglet Workflow.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {TSK_SAMPLE_PDF_FILES.map(({ label, file }) => (
+            <Button key={file} variant="outline" size="sm" asChild>
+              <a
+                href={`${TSK_BRAND.samplePdfBase}/${file}`}
+                download={file}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                {label}
+              </a>
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="workflow" className="space-y-4">
         <TabsList>
