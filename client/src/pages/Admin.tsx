@@ -1078,6 +1078,43 @@ function AccessDenied({ setLocation }: { setLocation: any }) {
   );
 }
 
+type ProviderEnvStatus = {
+  checkedAt: string;
+  runtime: string;
+  oneshot: {
+    configured: boolean;
+    remainingCredits: number | null;
+  };
+  deepinfra: { configured: boolean; model: string };
+  kie: { configured: boolean; runwayVideo: boolean };
+  r2: { configured: boolean };
+  readiness: {
+    image: boolean;
+    imageWithReferencePhotos: boolean;
+    video: boolean;
+    deepinfraPipeline: boolean;
+    klingMotion: boolean;
+  };
+  warnings: string[];
+};
+
+function ProviderEnvFlag({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={
+          ok
+            ? "font-medium text-emerald-600 dark:text-emerald-400"
+            : "font-medium text-destructive"
+        }
+      >
+        {ok ? "OK" : "Manquant"}
+      </span>
+    </div>
+  );
+}
+
 /**
  * OneshotAPI / Kie AI Settings Card
  */
@@ -1085,7 +1122,11 @@ function OneshotApiSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: settings, isLoading } = useQuery<{ forceKieAi: boolean; fallbackTimeoutMs: number }>({
+  const { data: settings, isLoading } = useQuery<{
+    forceKieAi: boolean;
+    fallbackTimeoutMs: number;
+    providerEnv?: ProviderEnvStatus;
+  }>({
     queryKey: ["admin-settings"],
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -1224,6 +1265,58 @@ function OneshotApiSettings() {
             </Button>
           </div>
         </div>
+
+        {settings?.providerEnv ? (
+          <div className="rounded-lg border border-border/60 p-4 space-y-3">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">Clés API (runtime Vercel prod)</Label>
+              <p className="text-xs text-muted-foreground">
+                Lecture côté serveur — sans afficher les secrets. Mis à jour :{" "}
+                {new Date(settings.providerEnv.checkedAt).toLocaleString("fr-FR")}
+                {" · "}
+                env {settings.providerEnv.runtime}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <ProviderEnvFlag
+                ok={settings.providerEnv.deepinfra.configured}
+                label={`DeepInfra (${settings.providerEnv.deepinfra.model})`}
+              />
+              <ProviderEnvFlag
+                ok={settings.providerEnv.kie.configured}
+                label="Kie.ai (images + vidéo)"
+              />
+              <ProviderEnvFlag
+                ok={settings.providerEnv.readiness.deepinfraPipeline}
+                label="Pipeline DeepInfra + R2"
+              />
+              <ProviderEnvFlag
+                ok={settings.providerEnv.readiness.klingMotion}
+                label="Kling 3.0 Motion Control"
+              />
+              <ProviderEnvFlag
+                ok={settings.providerEnv.oneshot.configured}
+                label="OneShot (legacy)"
+              />
+              {settings.providerEnv.oneshot.remainingCredits != null ? (
+                <p className="text-xs text-muted-foreground">
+                  Crédits OneShot suivis : {settings.providerEnv.oneshot.remainingCredits}
+                </p>
+              ) : null}
+            </div>
+            {settings.providerEnv.warnings.length > 0 ? (
+              <ul className="list-disc pl-4 text-xs text-destructive space-y-1">
+                {settings.providerEnv.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                Toutes les clés requises pour DeepInfra + Kie sont présentes sur ce déploiement.
+              </p>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

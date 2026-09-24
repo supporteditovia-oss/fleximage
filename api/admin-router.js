@@ -5,6 +5,7 @@ const settingsHandler = require("./admin/settings");
 const funnelHandler = require("./_lib/handlers/admin-funnel");
 const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
+const cronProviderEnv = require("./_lib/handlers/cron-provider-env");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__adminPath;
@@ -74,6 +75,10 @@ module.exports = async function handler(req, res) {
   // GET|POST /api/cron/preview-expiry-reminders (routé via rewrite Hobby ≤12 fonctions)
   if (parts[0] === "cron" && parts[1] === "preview-expiry-reminders" && !parts[2]) {
     return cronPreviewExpiryReminders(req, res);
+  }
+
+  if (parts[0] === "cron" && parts[1] === "provider-env" && !parts[2]) {
+    return cronProviderEnv(req, res);
   }
 
   res.status(404).json({

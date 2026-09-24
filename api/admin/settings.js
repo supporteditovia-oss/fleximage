@@ -1,4 +1,5 @@
 const { requireAdmin, readBody, sendError } = require("../_lib/admin-auth");
+const { getProviderEnvStatus } = require("../_lib/provider-env-status");
 
 async function getAppSettings(supabase) {
   const { data, error } = await supabase.from("app_settings").select("key, value");
@@ -22,7 +23,8 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "GET") {
       const settings = await getAppSettings(supabase);
-      res.status(200).json(settings);
+      const providerEnv = await getProviderEnvStatus(supabase);
+      res.status(200).json({ ...settings, providerEnv });
       return;
     }
 

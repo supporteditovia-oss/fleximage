@@ -79,6 +79,10 @@
       "destination": "/api/admin-router?__adminPath=cron/preview-expiry-reminders"
     },
     {
+      "source": "/api/cron/provider-env",
+      "destination": "/api/admin-router?__adminPath=cron/provider-env"
+    },
+    {
       "source": "/api/larps/(.*)",
       "destination": "/api/larps-router?__larpsPath=$1"
     },
