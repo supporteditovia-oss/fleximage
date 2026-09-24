@@ -41,6 +41,7 @@ import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
   findTemplateByRouteKey,
   getCategoryBySlug,
+  getCatalogCategories,
   isOutfitCategory,
   MODELES_CATALOG_PATH,
   modelesCategoryPath,
@@ -346,8 +347,14 @@ export default function Modeles() {
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
   const list = useMemo(() => {
-    if (templates && templates.length > 0) return templates;
-    return BUILTIN_FEED_TEMPLATES;
+    const source =
+      templates && templates.length > 0 ? templates : BUILTIN_FEED_TEMPLATES;
+    const hasCatalogScenes = source.some((item) =>
+      getCatalogCategories().some(
+        (cat) => normalizeSceneCategory(item.category) === cat.slug,
+      ),
+    );
+    return hasCatalogScenes ? source : BUILTIN_FEED_TEMPLATES;
   }, [templates]);
 
   const categoryScenes = useMemo(

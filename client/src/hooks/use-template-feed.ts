@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { authFetch } from "@/lib/api";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import {
+  getCatalogCategories,
+  normalizeSceneCategory,
+} from "@/lib/modeles-categories";
 import { useAuth } from "@/hooks/use-auth";
 import { canAccessAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { useV2Access } from "@/hooks/use-v2-access";
@@ -84,6 +88,15 @@ function normalize(raw: any): FeedTemplate | null {
   };
 }
 
+const CATALOG_SLUGS = new Set(
+  getCatalogCategories().map((category) => category.slug),
+);
+
+function hasCatalogCategory(category: string | null | undefined): boolean {
+  if (!category) return false;
+  return CATALOG_SLUGS.has(normalizeSceneCategory(category));
+}
+
 function mergeTemplateLists(
   remote: FeedTemplate[],
   includeBuiltins: boolean,
@@ -97,22 +110,34 @@ function mergeTemplateLists(
   for (const template of remote) {
     const existing = byId.get(template.id);
     if (existing) {
+      const category =
+        hasCatalogCategory(template.category) && template.category
+          ? template.category
+          : existing.category;
       byId.set(template.id, {
         ...existing,
         ...template,
         id: existing.id,
         slug: existing.slug || template.slug,
+        category,
         generationPrompt: existing.generationPrompt ?? template.generationPrompt,
         generationMode: existing.generationMode ?? template.generationMode,
         isBuiltin: existing.isBuiltin ?? template.isBuiltin,
         demoBeforeUrl: template.demoBeforeUrl ?? existing.demoBeforeUrl,
         demoAfterUrl: template.demoAfterUrl ?? existing.demoAfterUrl,
       });
-    } else {
+    } else if (hasCatalogCategory(template.category)) {
       byId.set(template.id, template);
     }
   }
-  return Array.from(byId.values());
+  const merged = Array.from(byId.values());
+  const visibleInCatalog = merged.filter((item) =>
+    hasCatalogCategory(item.category),
+  );
+  if (includeBuiltins && visibleInCatalog.length === 0) {
+    return [...BUILTIN_FEED_TEMPLATES];
+  }
+  return merged;
 }
 
 export function useTemplateFeed(
