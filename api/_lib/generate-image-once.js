@@ -215,6 +215,8 @@ async function generateImageOnce(supabase, params) {
       externalTaskId: deepinfraTaskId,
       apiCallCount: readApiCallCount(meta),
       provider: "deepinfra",
+      outputUrl: deepinfraStoredUrl,
+      syncComplete: true,
     };
   }
 
@@ -244,22 +246,47 @@ async function generateImageOnce(supabase, params) {
     : [];
   const durationMs = Date.now() - startedAt;
 
+  function mergeProviderTaskId(previous, externalTaskId) {
+    const parts = String(previous || "")
+      .split(",")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    if (parts.includes(externalTaskId)) {
+      return parts.join(",");
+    }
+    const pending = parts.filter((segment) => segment.startsWith("pending_"));
+    const merged = [...pending, externalTaskId];
+    return merged.length > 0 ? merged.join(",") : externalTaskId;
+  }
+
   async function persistProviderResult({
     provider,
     externalTaskId,
     attemptRecord,
     nextMeta,
+    outputAssets,
+    terminalStatus,
   }) {
-    await supabase
-      .from("generations")
-      .update({
-        provider,
-        provider_task_id: externalTaskId,
-        metadata: nextMeta,
-        provider_attempts: [...prevAttempts, attemptRecord],
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", generationId);
+    const mergedTaskId = mergeProviderTaskId(
+      claim.generation.provider_task_id,
+      externalTaskId,
+    );
+    const patch = {
+      provider,
+      provider_task_id: mergedTaskId,
+      metadata: nextMeta,
+      provider_attempts: [...prevAttempts, attemptRecord],
+      updated_at: new Date().toISOString(),
+    };
+    if (Array.isArray(outputAssets) && outputAssets.length > 0) {
+      patch.output_assets = outputAssets;
+      patch.watermarked_assets = [];
+    }
+    if (terminalStatus === "succeeded" || terminalStatus === "failed") {
+      patch.status = terminalStatus;
+      patch.completed_at = new Date().toISOString();
+    }
+    await supabase.from("generations").update(patch).eq("id", generationId);
   }
 
   async function runOneshot() {
@@ -378,12 +405,28 @@ async function generateImageOnce(supabase, params) {
       provider_auto_retries: 0,
     };
 
-    await persistProviderResult({
-      provider: "deepinfra",
-      externalTaskId,
-      attemptRecord,
-      nextMeta,
-    });
+    const { error: persistErr } = await supabase
+      .from("generations")
+      .update({
+        provider: "deepinfra",
+        provider_task_id: mergeProviderTaskId(
+          claim.generation.provider_task_id,
+          externalTaskId,
+        ),
+        metadata: nextMeta,
+        provider_attempts: [...prevAttempts, attemptRecord],
+        output_assets: [outputUrl],
+        watermarked_assets: [],
+        status: "succeeded",
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", generationId);
+    if (persistErr) {
+      throw new Error(
+        `DeepInfra: échec enregistrement résultat (${persistErr.message || "db"})`,
+      );
+    }
 
     console.info("[generate-image-once] DeepInfra sync stored", {
       generationId,
@@ -398,6 +441,8 @@ async function generateImageOnce(supabase, params) {
       externalTaskId,
       apiCallCount: 1,
       provider: "deepinfra",
+      outputUrl,
+      syncComplete: true,
       durationMs: Date.now() - startedAt,
     };
   }
