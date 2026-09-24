@@ -108,7 +108,7 @@ async function decrementOneshotCreditIfTracked(supabase) {
  */
 async function resolveImageGenerationProvider(supabase, options = {}) {
   const hasReferenceImages = Boolean(options.hasReferenceImages);
-  const forceLegacyKie = Boolean(options.forceKieAi);
+  const adminPreferDeepInfra = Boolean(options.adminPreferDeepInfra);
   const oneshotConfigured = Boolean(
     getOneshotApiConfig().url && getOneshotApiConfig().key,
   );
@@ -116,31 +116,40 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
   const kieConfigured = isKieConfigured();
   const remainingCredits = await getOneshotRemainingCredits(supabase);
 
-  if (forceLegacyKie) {
+  /** Admin : test DeepInfra / Kie — jamais OneShot (clients restent sur OneShot). */
+  if (adminPreferDeepInfra) {
     if (hasReferenceImages) {
       if (kieConfigured) {
         return {
           provider: "kie",
-          reason: "force_kie_ai_refs",
+          reason: "admin_test_kie_refs",
           remainingCredits,
         };
       }
       throw new Error(
-        "Mode Kie forcé : les générations avec photos nécessitent KIE_AI_API_KEY.",
+        "Admin : génération avec photo — configure KIE_AI_API_KEY (DeepInfra seul ne gère pas les refs).",
       );
     }
     if (deepinfraConfigured) {
       return {
         provider: "deepinfra",
-        reason: "force_kie_ai→deepinfra",
+        reason: "admin_test_deepinfra",
         remainingCredits,
       };
     }
     if (kieConfigured) {
-      return { provider: "kie", reason: "force_kie_ai", remainingCredits };
+      return {
+        provider: "kie",
+        reason: "admin_test_kie_no_deepinfra",
+        remainingCredits,
+      };
     }
-    throw new Error("Aucun moteur image configuré (DeepInfra / Kie)");
+    throw new Error(
+      "Admin : configure DEEPINFRA_API_KEY ou KIE_AI_API_KEY pour tester.",
+    );
   }
+
+  // force_kie_ai (app_settings) : ignoré pour les clients — réservé au routage admin ci-dessus.
 
   const oneshotAllowed =
     oneshotConfigured &&

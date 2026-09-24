@@ -1227,7 +1227,7 @@ function OneshotApiSettings() {
           <div className="space-y-0.5">
             <Label className="text-sm font-medium">Mode Full Kie AI</Label>
             <p className="text-xs text-muted-foreground">
-              Quand activé, toutes les générations passent exclusivement par Kie AI (OneshotAPI ignoré).
+              Bypass OneShot pour les comptes admin (DeepInfra / Kie). Les clients restent sur OneShot.
             </p>
           </div>
           <Switch

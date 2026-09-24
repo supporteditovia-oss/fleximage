@@ -551,11 +551,13 @@ module.exports = async function handler(req, res) {
         aspectRatio,
         imageUrls,
         modelVariant: oneshotModelVariant,
+        adminPreferDeepInfra: admin,
         logContext: {
           userId,
           source,
           generationRequestId: claim.generationRequestId,
           clickCount,
+          isAdmin: admin,
         },
       });
     } catch (providerErr) {
