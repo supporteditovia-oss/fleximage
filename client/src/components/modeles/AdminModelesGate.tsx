@@ -10,13 +10,13 @@ import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
  * Modèles prêts — preview admin uniquement (fondateur / rôle admin).
  */
 export function AdminModelesGate({ children }: { children: ReactNode }) {
-  const { isLoading: authLoading, user } = useAuth();
+  const { isLoading: authLoading, user, isAdmin } = useAuth();
   const { isLoading: v2Loading, isAdmin: v2Admin } = useV2Access();
   const adminPreview = useAdminPreviewFeatures();
+  const allowed = isAdmin || v2Admin || adminPreview;
 
   const resolving =
-    authLoading ||
-    (Boolean(user) && v2Loading && !v2Admin && !adminPreview);
+    authLoading || (Boolean(user) && v2Loading && !allowed);
 
   if (resolving) {
     return <AuthResolveShell />;
@@ -26,8 +26,8 @@ export function AdminModelesGate({ children }: { children: ReactNode }) {
     return <Redirect to={AUTH_CONFIG.LOGIN_PATH} />;
   }
 
-  if (!adminPreview) {
-    return <Redirect to="/generate" />;
+  if (!allowed) {
+    return <Redirect to="/create" />;
   }
 
   return <>{children}</>;

@@ -1668,7 +1668,9 @@ export default function Generate({
                 onAspectRatioChange={setAspectRatio}
               />
 
-              {adminPreview ? <TemplateStrip variant="compact" /> : null}
+              {adminPreview || isAdmin ? (
+                <TemplateStrip variant="compact" />
+              ) : null}
             </>
           )}
         </div>

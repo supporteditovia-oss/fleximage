@@ -36,6 +36,13 @@ export function saveInFlightGeneration(
   }
 }
 
+/** Génération en cours lancée depuis /modeles uniquement (pas depuis Créer). */
+export function getModelesInFlightGeneration(): InFlightGeneration | null {
+  const row = getInFlightGeneration();
+  if (!row || row.source !== "modeles") return null;
+  return row;
+}
+
 export function getInFlightGeneration(): InFlightGeneration | null {
   try {
     const raw = sessionStorage.getItem(IN_FLIGHT_GENERATION_KEY);

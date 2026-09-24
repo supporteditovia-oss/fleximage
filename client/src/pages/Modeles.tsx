@@ -31,7 +31,7 @@ import { OutfitPickerModal } from "@/components/outfits/OutfitPickerModal";
 import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsBase64 } from "@/lib/fetch-catalog-image";
 import {
-  getInFlightGeneration,
+  getModelesInFlightGeneration,
   persistInFlightFromApiResult,
   clearInFlightGeneration,
 } from "@/lib/in-flight-generation";
@@ -325,11 +325,11 @@ export default function Modeles() {
     null,
   );
   const [taskId, setTaskId] = useState<string | null>(
-    () => getInFlightGeneration()?.taskId ?? null,
+    () => getModelesInFlightGeneration()?.taskId ?? null,
   );
   const [generationEstimateSeconds, setGenerationEstimateSeconds] = useState<
     number | null
-  >(() => getInFlightGeneration()?.estimatedSeconds ?? null);
+  >(() => getModelesInFlightGeneration()?.estimatedSeconds ?? null);
   const [busy, setBusy] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<FeedTemplate | null>(
     null,
