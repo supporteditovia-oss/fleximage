@@ -6,6 +6,8 @@ const {
   isGoogleAiPromptFlagged,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
+const { isDeepInfraConfigured } = require("../deepinfra");
+const { isKieConfigured } = require("../kie");
 const { generateImageOnce } = require("../generate-image-once");
 const {
   normalizeGenerationRequestId,
@@ -274,10 +276,14 @@ module.exports = async function handler(req, res) {
     }
 
     const oneshotConfig = getOneshotApiConfig();
-    if (!oneshotConfig.url || !oneshotConfig.key) {
+    const hasImageProvider =
+      (oneshotConfig.url && oneshotConfig.key) ||
+      isDeepInfraConfigured() ||
+      isKieConfigured();
+    if (!hasImageProvider) {
       res.status(503).json({
         message:
-          "Aucun fournisseur d'image configuré (ONESHOT_API_URL/KEY requis).",
+          "Aucun moteur d'image configuré (OneShot, DeepInfra ou Kie).",
       });
       return;
     }

@@ -5,6 +5,11 @@ const {
   ONESHOT_MODEL_VARIANT,
 } = require("./oneshot");
 const { createKieTask, isKieConfigured } = require("./kie");
+const { generateDeepInfraImage } = require("./deepinfra");
+const {
+  resolveImageGenerationProvider,
+  decrementOneshotCreditIfTracked,
+} = require("./model-router");
 const { readApiCallCount } = require("./generation-idempotency");
 
 function extractOneshotExternalTaskId(providerTaskId) {
@@ -256,6 +261,8 @@ async function generateImageOnce(supabase, params) {
       nextMeta,
     });
 
+    await decrementOneshotCreditIfTracked(supabase);
+
     console.info("[generate-image-once] provider call completed", {
       generationId,
       generationRequestId: nextMeta.generation_request_id || null,
@@ -274,6 +281,74 @@ async function generateImageOnce(supabase, params) {
       apiCallCount: 1,
       provider: "oneshot",
       oneshotJobId: oneshotResponse.id,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  async function runDeepInfra(reason) {
+    console.info("[generate-image-once] DeepInfra google/nano-banana", {
+      generationId,
+      reason: reason instanceof Error ? reason.message : reason || null,
+      ...logContext,
+    });
+
+    const { buffer, mimeType } = await generateDeepInfraImage({
+      prompt: finalPrompt,
+      aspectRatio,
+    });
+
+    const { uploadToR2 } = require("./r2");
+    const ext = mimeType.includes("png") ? "png" : "jpg";
+    const key = `generations/${generationId}/deepinfra-${Date.now()}.${ext}`;
+    const outputUrl = await uploadToR2(key, buffer, mimeType);
+
+    const externalTaskId = `deepinfra_sync_${generationId}`;
+    const attemptRecord = {
+      provider: "deepinfra",
+      jobId: externalTaskId,
+      externalTaskId,
+      modelVariant: "google/nano-banana",
+      requestedAt: claim.generation.metadata?.provider_call_started_at || null,
+      completedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+      autoRetry: false,
+      ...(reason
+        ? {
+            fallbackFrom:
+              reason instanceof Error ? reason.message : String(reason),
+          }
+        : {}),
+    };
+    const nextMeta = {
+      ...(claim.generation.metadata || {}),
+      api_call_count: 1,
+      provider_call_completed_at: new Date().toISOString(),
+      deepinfra_output_url: outputUrl,
+      deepinfra_sync: true,
+      provider_duration_ms: Date.now() - startedAt,
+      provider_auto_retries: 0,
+    };
+
+    await persistProviderResult({
+      provider: "deepinfra",
+      externalTaskId,
+      attemptRecord,
+      nextMeta,
+    });
+
+    console.info("[generate-image-once] DeepInfra sync stored", {
+      generationId,
+      externalTaskId,
+      durationMs: Date.now() - startedAt,
+      ...logContext,
+    });
+
+    return {
+      ok: true,
+      deduplicated: false,
+      externalTaskId,
+      apiCallCount: 1,
+      provider: "deepinfra",
       durationMs: Date.now() - startedAt,
     };
   }
@@ -347,13 +422,49 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
+  const hasReferenceImages =
+    Array.isArray(imageUrls) && imageUrls.length > 0;
+  let route;
   try {
-    if (appSettings.forceKieAi) {
-      return await runKieFallback(new Error("force_kie_ai"));
+    route = await resolveImageGenerationProvider(supabase, {
+      forceKieAi: appSettings.forceKieAi,
+      hasReferenceImages,
+    });
+  } catch (routeErr) {
+    throw routeErr;
+  }
+
+  console.info("[generate-image-once] model-router", {
+    generationId,
+    provider: route.provider,
+    reason: route.reason || null,
+    remainingCredits: route.remainingCredits,
+    hasReferenceImages,
+    ...logContext,
+  });
+
+  try {
+    if (route.provider === "deepinfra") {
+      return await runDeepInfra(route.reason || null);
+    }
+    if (route.provider === "kie") {
+      return await runKieFallback(
+        new Error(route.reason || "router_kie"),
+      );
     }
     return await runOneshot();
-  } catch (oneshotErr) {
-    return await runKieFallback(oneshotErr);
+  } catch (primaryErr) {
+    if (route.provider === "oneshot") {
+      try {
+        return await runDeepInfra(primaryErr);
+      } catch (deepErr) {
+        return await runKieFallback(deepErr);
+      }
+    }
+    if (route.provider === "deepinfra") {
+      return await runKieFallback(primaryErr);
+    }
+    throw primaryErr;
   }
 }
 

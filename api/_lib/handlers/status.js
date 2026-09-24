@@ -359,6 +359,33 @@ module.exports = async function handler(req, res) {
         apiStatus = "fail";
         apiFailMsg = "Erreur de polling vidéo";
       }
+    } else if (activeTaskId.startsWith("deepinfra_sync_")) {
+      const storedUrl =
+        pollMeta.deepinfra_output_url &&
+        typeof pollMeta.deepinfra_output_url === "string"
+          ? pollMeta.deepinfra_output_url.trim()
+          : "";
+      if (storedUrl.startsWith("http")) {
+        apiStatus = "success";
+        apiResultJson = JSON.stringify({ images: [storedUrl] });
+      } else if (ageInMs > 120_000) {
+        apiStatus = "fail";
+        apiFailMsg =
+          "Résultat DeepInfra introuvable. Réessaie — jetons remboursés.";
+      } else {
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "waiting",
+          resultUrls: [],
+          failMessage: null,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType,
+        });
+        return;
+      }
     } else if (activeTaskId.startsWith("custom_")) {
       const jobId = activeTaskId.replace("custom_", "");
       const currentSettings = await getAppSettings(supabase);
