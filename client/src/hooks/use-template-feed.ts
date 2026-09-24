@@ -115,7 +115,9 @@ function mergeTemplateLists(
   return Array.from(byId.values());
 }
 
-export function useTemplateFeed(options: { enabled?: boolean } = {}) {
+export function useTemplateFeed(
+  options: { enabled?: boolean; alwaysIncludeBuiltins?: boolean } = {},
+) {
   const { isAdmin, isLoading, profile, user } = useAuth();
   const { isAdmin: v2Admin } = useV2Access();
   const effectiveAdmin = isAdmin || v2Admin;
@@ -124,10 +126,13 @@ export function useTemplateFeed(options: { enabled?: boolean } = {}) {
     isAuthLoading: isLoading && !effectiveAdmin,
     profileLoaded: Boolean(user && profile),
   });
-  const fallbackTemplates = adminPreview ? BUILTIN_FEED_TEMPLATES : [];
+  const includeBuiltins = Boolean(
+    options.alwaysIncludeBuiltins || adminPreview,
+  );
+  const fallbackTemplates = includeBuiltins ? BUILTIN_FEED_TEMPLATES : [];
 
   return useQuery<FeedTemplate[]>({
-    queryKey: [...templateFeedQueryKey, adminPreview],
+    queryKey: [...templateFeedQueryKey, includeBuiltins],
     queryFn: async () => {
       try {
         const res = await authFetch("/api/templates");
@@ -138,7 +143,7 @@ export function useTemplateFeed(options: { enabled?: boolean } = {}) {
           .map(normalize)
           .filter((t: FeedTemplate | null): t is FeedTemplate => t !== null)
           .filter((t: FeedTemplate) => t.referenceImageCount > 0);
-        return mergeTemplateLists(remote, adminPreview);
+        return mergeTemplateLists(remote, includeBuiltins);
       } catch {
         return fallbackTemplates;
       }

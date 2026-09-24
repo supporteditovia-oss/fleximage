@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useV2Access } from "@/hooks/use-v2-access";
 import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
@@ -15,12 +15,13 @@ type TemplateStripProps = {
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
-  const adminPreview = useAdminPreviewFeatures();
+  const { v2Enabled } = useV2Access();
   const { data: templates } = useTemplateFeed({
-    enabled: adminPreview,
+    enabled: v2Enabled,
+    alwaysIncludeBuiltins: true,
   });
 
-  if (!adminPreview) {
+  if (!v2Enabled) {
     return null;
   }
 

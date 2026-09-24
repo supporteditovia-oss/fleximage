@@ -79,6 +79,7 @@ import {
 import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useV2Access } from "@/hooks/use-v2-access";
 import {
   buildPromptFromQuiz,
   getOnboardingQuiz,

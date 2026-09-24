@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useV2Access } from "@/hooks/use-v2-access";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -299,11 +299,12 @@ function TemplatePreviewLightbox({
 export default function Modeles() {
   const [location, navigate] = useLocation();
   const { profile, isLoading: isAuthLoading } = useAuth();
-  const adminPreview = useAdminPreviewFeatures();
+  const { v2Enabled } = useV2Access();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
   const { data: templates, isLoading } = useTemplateFeed({
-    enabled: adminPreview,
+    enabled: v2Enabled,
+    alwaysIncludeBuiltins: true,
   });
   const generateDirect = useGenerateDirectLarp();
   const generationLockRef = useRef(false);
@@ -367,11 +368,11 @@ export default function Modeles() {
   );
 
   useEffect(() => {
-    if (isAuthLoading) return;
-    if (profile && !adminPreview) {
-      navigate("/create", { replace: true });
+    if (viewMode !== "detail" || isLoading || !route.templateSlug) return;
+    if (!detailTemplate) {
+      navigate(MODELES_CATALOG_PATH, { replace: true });
     }
-  }, [profile, adminPreview, isAuthLoading, navigate]);
+  }, [viewMode, detailTemplate, isLoading, route.templateSlug, navigate]);
 
   // Rediriger l'ancienne catégorie outfits vers le catalogue.
   useEffect(() => {
@@ -604,10 +605,6 @@ export default function Modeles() {
     }
   };
 
-  if (!isAuthLoading && profile && !adminPreview) {
-    return null;
-  }
-
   if (busy && !taskId) {
     return (
       <>
@@ -674,7 +671,11 @@ export default function Modeles() {
   if (list.length === 0) {
     return (
       <div className="tpl-empty">
-        <p>Chargement des modèles…</p>
+        <p>
+          {isLoading
+            ? "Chargement des modèles…"
+            : "Aucun modèle disponible pour le moment."}
+        </p>
         <button className="tpl-cta" onClick={() => navigate("/create")}>
           Revenir au studio
         </button>
