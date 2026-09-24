@@ -11,7 +11,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const [location] = useLocation();
   const pathname = location.split("?")[0] || location;
-  const isWideStudioPage = pathname === "/bibliotheque";
+  const isModelesRoute =
+    pathname === "/modeles" || pathname.startsWith("/modeles/");
+  const isWideStudioPage = pathname === "/bibliotheque" || isModelesRoute;
 
   useEffect(() => {
     document.documentElement.classList.add("luxeflexia-app-shell");
@@ -45,13 +47,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <FloatingHeader variant="app" />
       <main
         id={APP_SCROLL_ID}
-        className="luxeflexia-app-scroll flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-4 pb-28 pt-[calc(var(--lx-app-header-h)+0.35rem)] md:px-8"
+        className={`luxeflexia-app-scroll flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-28 pt-[calc(var(--lx-app-header-h)+0.35rem)] ${
+          isModelesRoute ? "overflow-hidden p-0" : "px-4 md:px-8"
+        }`}
       >
         <div
           key={pathname}
-          className={`studio-route-enter mx-auto max-w-full ${
-            isWideStudioPage ? "md:max-w-6xl" : "md:max-w-[60vw]"
-          }`}
+          className={
+            isModelesRoute
+              ? "h-full w-full max-w-none"
+              : `studio-route-enter mx-auto max-w-full ${
+                  isWideStudioPage ? "md:max-w-6xl" : "md:max-w-[60vw]"
+                }`
+          }
         >
           {children}
         </div>

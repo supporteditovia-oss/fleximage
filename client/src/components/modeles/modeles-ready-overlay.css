@@ -2,19 +2,18 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(6, 5, 4, 0.72);
-  backdrop-filter: blur(6px);
+  background: #060504;
   display: flex;
-  align-items: stretch;
-  justify-content: center;
+  flex-direction: column;
   padding: 0;
 }
 
 .modeles-ready-overlay__panel {
   position: relative;
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  max-width: none;
+  flex: 1;
+  min-height: 0;
   height: 100%;
   max-height: 100dvh;
 }
@@ -23,8 +22,15 @@
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
-  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 0.85rem 0.5rem;
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 1rem 0.5rem;
   flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .modeles-ready-overlay__top {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }
 
 .modeles-ready-overlay__titles {
@@ -66,16 +72,14 @@
   color: rgba(245, 240, 230, 0.62);
 }
 
-.modeles-ready-overlay__fullpage {
-  display: block;
-  width: calc(100% - 2rem);
-  margin: 1rem auto 0;
-  padding: 0.75rem 1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  background: transparent;
-  color: rgba(232, 197, 71, 0.95);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
+@media (min-width: 768px) {
+  .modeles-ready-overlay__hint {
+    margin-left: 1.5rem;
+    margin-right: 1.5rem;
+  }
+
+  .modeles-ready-overlay .mcatalog-browse__section {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }

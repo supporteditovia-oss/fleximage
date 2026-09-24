@@ -126,6 +126,15 @@ export function formatSceneCount(count: number): string {
   return count === 1 ? "1 scène" : `${count} scènes`;
 }
 
+export function filterScenesByCategory<
+  T extends { category: string | null | undefined },
+>(templates: T[], category: ModelesCategorySlug): T[] {
+  if (isOutfitCategory(category)) return [];
+  return templates.filter(
+    (template) => normalizeSceneCategory(template.category) === category,
+  );
+}
+
 /** Parse le chemin /modeles, /modeles/c/:cat, /modeles/m/:slug */
 export function parseModelesPath(pathname: string): {
   view: "home" | "category" | "detail";

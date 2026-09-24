@@ -39,6 +39,7 @@ import {
 import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type { BuiltinOutfit } from "@/lib/builtin-outfit-templates";
 import {
+  filterScenesByCategory,
   findTemplateByRouteKey,
   getCategoryBySlug,
   getCatalogCategories,
@@ -67,16 +68,6 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-}
-
-function filterScenesByCategory(
-  templates: FeedTemplate[],
-  category: ModelesCategorySlug,
-): FeedTemplate[] {
-  if (isOutfitCategory(category)) return [];
-  return templates.filter(
-    (template) => normalizeSceneCategory(template.category) === category,
-  );
 }
 
 function TemplateSlideContent({
