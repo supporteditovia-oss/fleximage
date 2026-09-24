@@ -1,11 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
-import { useAuth } from "@/hooks/use-auth";
-import { useV2Access } from "@/hooks/use-v2-access";
-import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
+import { useModelesAdminAccess } from "@/lib/modeles-access";
+import { ModelesReadyCatalogOverlay } from "@/components/modeles/ModelesReadyCatalogOverlay";
 import "./template-strip.css";
 
 type TemplateStripProps = {
@@ -17,17 +15,15 @@ type TemplateStripProps = {
  * Entrée permanente vers les modèles depuis le studio Image IA (admin preview).
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
-  const { isAdmin } = useAuth();
-  const { isAdmin: v2Admin } = useV2Access();
-  const adminPreview = useAdminPreviewFeatures();
-  const canAccess = isAdmin || v2Admin || adminPreview;
+  const canAccess = useModelesAdminAccess();
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const { data: templates } = useTemplateFeed({
     enabled: canAccess,
     alwaysIncludeBuiltins: true,
   });
 
   const openCatalog = useCallback(() => {
-    window.location.assign(MODELES_CATALOG_PATH);
+    setCatalogOpen(true);
   }, []);
 
   if (!canAccess) {
@@ -43,6 +39,12 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
 
   if (variant === "compact") {
     return (
+      <>
+      <ModelesReadyCatalogOverlay
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        templates={list}
+      />
       <section
         className="tpl-strip-compact"
         aria-label="Modèles prêts à l'emploi"
@@ -72,10 +74,17 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
           ))}
         </div>
       </section>
+      </>
     );
   }
 
   return (
+    <>
+    <ModelesReadyCatalogOverlay
+      open={catalogOpen}
+      onClose={() => setCatalogOpen(false)}
+      templates={list}
+    />
     <section className="tpl-strip-entry" aria-label="Modèles prêts à l'emploi">
       <button
         type="button"
@@ -111,5 +120,6 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
         ))}
       </div>
     </section>
+    </>
   );
 }

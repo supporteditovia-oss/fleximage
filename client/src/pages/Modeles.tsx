@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useModelesAdminAccess } from "@/lib/modeles-access";
+import { Redirect } from "wouter";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -306,11 +307,11 @@ function TemplatePreviewLightbox({
 export default function Modeles() {
   const [location, navigate] = useLocation();
   const { profile, isLoading: isAuthLoading } = useAuth();
-  const adminPreview = useAdminPreviewFeatures();
+  const canAccessModeles = useModelesAdminAccess();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
   const { data: templates, isLoading } = useTemplateFeed({
-    enabled: adminPreview,
+    enabled: canAccessModeles,
     alwaysIncludeBuiltins: true,
   });
   const generateDirect = useGenerateDirectLarp();
@@ -615,6 +616,10 @@ export default function Modeles() {
       });
     }
   };
+
+  if (!isAuthLoading && !canAccessModeles) {
+    return <Redirect to="/create" />;
+  }
 
   if (busy && !taskId) {
     return (
