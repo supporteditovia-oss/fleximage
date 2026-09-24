@@ -1,16 +1,11 @@
 import { Mic } from "lucide-react";
-import {
-  VIDEO_VOICE_EXTRA_CREDIT,
-  VIDEO_VOICE_SCRIPT_PRESETS,
-} from "@/lib/video-studio-config";
+import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
 
 type VideoVoiceAddonProps = {
   enabled: boolean;
   onEnabledChange: (value: boolean) => void;
   text: string;
   onTextChange: (value: string) => void;
-  consent: boolean;
-  onConsentChange: (value: boolean) => void;
   maxChars?: number;
   voiceExtraCredit?: number;
 };
@@ -20,8 +15,6 @@ export function VideoVoiceAddon({
   onEnabledChange,
   text,
   onTextChange,
-  consent,
-  onConsentChange,
   maxChars = 200,
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
 }: VideoVoiceAddonProps) {
@@ -59,29 +52,6 @@ export function VideoVoiceAddon({
           <p className="via-voice-addon__hint">
             {text.trim().length}/{maxChars} caractères · voix catalogue
           </p>
-          <div className="via-chips">
-            {VIDEO_VOICE_SCRIPT_PRESETS.slice(0, 3).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                className="via-chip"
-                onClick={() => onTextChange(preset)}
-              >
-                {preset.length > 42 ? `${preset.slice(0, 42)}…` : preset}
-              </button>
-            ))}
-          </div>
-          <label className="via-voice-addon__consent">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => onConsentChange(e.target.checked)}
-            />
-            <span>
-              J&apos;accepte l&apos;utilisation d&apos;une voix IA générée sur
-              ma vidéo.
-            </span>
-          </label>
         </div>
       ) : null}
     </div>

@@ -32,7 +32,6 @@ import {
 import {
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
-  VIDEO_MOTION_PRESETS,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -126,7 +125,6 @@ export default function VideoIA() {
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
-  const [voiceConsent, setVoiceConsent] = useState(false);
   const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -160,7 +158,7 @@ export default function VideoIA() {
 
   const voiceReady =
     !voiceEnabled ||
-    (voiceText.trim().length >= 5 && voiceConsent && voiceText.length <= voiceMaxChars);
+    (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
   const creditCost = adminPreviewVideoCreditCost({
@@ -175,7 +173,7 @@ export default function VideoIA() {
           voice_enabled: true,
           voice_mode: "catalog" as const,
           voice_text: voiceText.trim(),
-          voice_consent: voiceConsent,
+          voice_consent: true,
         }
       : { voice_enabled: false };
 
@@ -518,21 +516,6 @@ export default function VideoIA() {
                   placeholder="Ex. : Il tombe dans l'eau en souriant, caméra lente…"
                   className="via-prompt-field"
                 />
-                <p className="via-step-label" style={{ marginTop: "0.75rem" }}>
-                  Exemples
-                </p>
-                <div className="via-chips">
-                  {VIDEO_MOTION_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      className="via-chip"
-                      onClick={() => setMotionPrompt(preset.prompt)}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
               </>
             )}
 
@@ -542,14 +525,11 @@ export default function VideoIA() {
                 onEnabledChange={(next) => {
                   setVoiceEnabled(next);
                   if (!next) {
-                    setVoiceConsent(false);
                     setVoiceText("");
                   }
                 }}
                 text={voiceText}
                 onTextChange={setVoiceText}
-                consent={voiceConsent}
-                onConsentChange={setVoiceConsent}
                 maxChars={voiceMaxChars}
                 voiceExtraCredit={adminBurn.videoVoiceExtra}
               />
