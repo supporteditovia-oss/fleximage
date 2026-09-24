@@ -290,7 +290,7 @@ async function generateImageOnce(supabase, params) {
   }
 
   async function runDeepInfra(reason) {
-    console.info("[generate-image-once] DeepInfra google/nano-banana", {
+    console.info("[generate-image-once] DeepInfra sync", {
       generationId,
       reason: reason instanceof Error ? reason.message : reason || null,
       ...logContext,
@@ -311,7 +311,7 @@ async function generateImageOnce(supabase, params) {
       provider: "deepinfra",
       jobId: externalTaskId,
       externalTaskId,
-      modelVariant: "google/nano-banana",
+      modelVariant: getDeepInfraModel(),
       requestedAt: claim.generation.metadata?.provider_call_started_at || null,
       completedAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
