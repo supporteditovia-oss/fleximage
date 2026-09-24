@@ -117,8 +117,24 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
   const remainingCredits = await getOneshotRemainingCredits(supabase);
 
   if (forceLegacyKie) {
+    if (hasReferenceImages) {
+      if (kieConfigured) {
+        return {
+          provider: "kie",
+          reason: "force_kie_ai_refs",
+          remainingCredits,
+        };
+      }
+      throw new Error(
+        "Mode Kie forcé : les générations avec photos nécessitent KIE_AI_API_KEY.",
+      );
+    }
     if (deepinfraConfigured) {
-      return { provider: "deepinfra", reason: "force_kie_ai→deepinfra", remainingCredits };
+      return {
+        provider: "deepinfra",
+        reason: "force_kie_ai→deepinfra",
+        remainingCredits,
+      };
     }
     if (kieConfigured) {
       return { provider: "kie", reason: "force_kie_ai", remainingCredits };
