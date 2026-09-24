@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -304,11 +305,12 @@ function TemplatePreviewLightbox({
 
 export default function Modeles() {
   const [location, navigate] = useLocation();
-  const { profile, user, isLoading: isAuthLoading } = useAuth();
+  const { profile, isLoading: isAuthLoading } = useAuth();
+  const adminPreview = useAdminPreviewFeatures();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
   const { data: templates, isLoading } = useTemplateFeed({
-    enabled: Boolean(user),
+    enabled: adminPreview,
     alwaysIncludeBuiltins: true,
   });
   const generateDirect = useGenerateDirectLarp();
@@ -668,7 +670,7 @@ export default function Modeles() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && list.length === 0) {
     return (
       <div className="tpl-empty">
         <Loader2 className="h-6 w-6 animate-spin" />

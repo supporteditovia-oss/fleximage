@@ -16,9 +16,10 @@ export function useAdminPreviewFeatures(): boolean {
   const { isAdmin, isLoading, profile, user } = useAuth();
   const { isAdmin: v2Admin } = useV2Access();
   const effectiveAdmin = isAdmin || v2Admin;
+  if (effectiveAdmin) return true;
   return canAccessAdminPreviewFeatures({
-    isAdmin: effectiveAdmin,
-    isAuthLoading: isLoading && !effectiveAdmin,
+    isAdmin: false,
+    isAuthLoading: isLoading,
     profileLoaded: Boolean(user && profile),
   });
 }

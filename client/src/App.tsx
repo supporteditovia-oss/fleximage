@@ -20,6 +20,7 @@ import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
+import { AdminModelesGate } from "@/components/modeles/AdminModelesGate";
 import WelcomeLoader from "@/pages/WelcomeLoader";
 import OnboardingResumePage from "@/pages/OnboardingResumePage";
 import ImagePrete from "@/pages/ImagePrete";
@@ -200,7 +201,11 @@ function StudioFeatureRoute({ component: Component }: { component: React.Compone
 }
 
 function ModelesRoute() {
-  return <Modeles />;
+  return (
+    <AdminModelesGate>
+      <Modeles />
+    </AdminModelesGate>
+  );
 }
 
 function VideoIARoute() {

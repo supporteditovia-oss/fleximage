@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
 import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
-import { useAuth } from "@/hooks/use-auth";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
@@ -16,13 +16,13 @@ type TemplateStripProps = {
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const adminPreview = useAdminPreviewFeatures();
   const { data: templates } = useTemplateFeed({
-    enabled: Boolean(user),
+    enabled: adminPreview,
     alwaysIncludeBuiltins: true,
   });
 
-  if (!user) {
+  if (!adminPreview) {
     return null;
   }
 
