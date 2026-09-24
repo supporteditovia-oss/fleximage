@@ -1,6 +1,7 @@
 const DEEPINFRA_IMAGES_URL =
   "https://api.deepinfra.com/v1/openai/images/generations";
-const DEFAULT_MODEL = "google/nano-banana";
+/** Aligné Kie (nano-banana-2) — surcharge via DEEPINFRA_MODEL. */
+const DEFAULT_MODEL = "google/nano-banana-2";
 
 function getDeepInfraApiKey() {
   return (process.env.DEEPINFRA_API_KEY || "").trim();

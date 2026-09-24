@@ -101,12 +101,17 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
   }
 
   if (deepinfraConfigured) {
-    if (hasReferenceImages && kieConfigured) {
-      return {
-        provider: "kie",
-        reason: "deepinfra_no_refs_fallback_kie",
-        remainingCredits,
-      };
+    if (hasReferenceImages) {
+      if (kieConfigured) {
+        return {
+          provider: "kie",
+          reason: "deepinfra_no_refs_fallback_kie",
+          remainingCredits,
+        };
+      }
+      throw new Error(
+        "Crédits OneShot épuisés : les générations avec photos nécessitent KIE_AI_API_KEY (DeepInfra seul = texte sans refs).",
+      );
     }
     return { provider: "deepinfra", remainingCredits };
   }

@@ -42,4 +42,31 @@ describe("model-router", () => {
     const n = await getOneshotRemainingCredits(null);
     assert.equal(n, 427);
   });
+
+  it("routes multi-ref to Kie when oneshot credits are 0", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "0";
+    process.env.DEEPINFRA_API_KEY = "di";
+    process.env.KIE_AI_API_KEY = "kie";
+
+    const route = await resolveImageGenerationProvider(null, {
+      hasReferenceImages: true,
+    });
+    assert.equal(route.provider, "kie");
+  });
+
+  it("rejects multi-ref when credits 0 and Kie missing", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "0";
+    process.env.DEEPINFRA_API_KEY = "di";
+    delete process.env.KIE_AI_API_KEY;
+
+    await assert.rejects(
+      () =>
+        resolveImageGenerationProvider(null, { hasReferenceImages: true }),
+      /KIE_AI_API_KEY/,
+    );
+  });
 });

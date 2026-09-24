@@ -5,7 +5,11 @@ const {
   ONESHOT_MODEL_VARIANT,
 } = require("./oneshot");
 const { createKieTask, isKieConfigured } = require("./kie");
-const { generateDeepInfraImage } = require("./deepinfra");
+const {
+  generateDeepInfraImage,
+  isDeepInfraConfigured,
+  getDeepInfraModel,
+} = require("./deepinfra");
 const {
   resolveImageGenerationProvider,
   decrementOneshotCreditIfTracked,
@@ -455,6 +459,14 @@ async function generateImageOnce(supabase, params) {
     return await runOneshot();
   } catch (primaryErr) {
     if (route.provider === "oneshot") {
+      if (hasReferenceImages && isKieConfigured()) {
+        try {
+          return await runKieFallback(primaryErr);
+        } catch (kieErr) {
+          if (!isDeepInfraConfigured()) throw kieErr;
+          return await runDeepInfra(kieErr);
+        }
+      }
       try {
         return await runDeepInfra(primaryErr);
       } catch (deepErr) {
