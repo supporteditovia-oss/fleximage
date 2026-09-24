@@ -10,15 +10,30 @@ async function getAppSettings(supabase) {
     const { data, error } = await supabase
       .from("app_settings")
       .select("key, value")
-      .in("key", ["force_kie_ai", "fallback_timeout_ms"]);
+      .in("key", [
+        "force_kie_ai",
+        "fallback_timeout_ms",
+        "admin_image_provider",
+      ]);
     if (error) throw error;
     const map = new Map((data || []).map((row) => [row.key, row.value]));
+    const rawAdminProvider = map.get("admin_image_provider");
     return {
       forceKieAi: map.get("force_kie_ai") === "true",
       fallbackTimeoutMs: Number(map.get("fallback_timeout_ms")) || 90000,
+      adminImageProvider:
+        String(rawAdminProvider || "")
+          .trim()
+          .toLowerCase() === "oneshot"
+          ? "oneshot"
+          : "deepinfra",
     };
   } catch {
-    return { forceKieAi: false, fallbackTimeoutMs: 90000 };
+    return {
+      forceKieAi: false,
+      fallbackTimeoutMs: 90000,
+      adminImageProvider: "deepinfra",
+    };
   }
 }
 

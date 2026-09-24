@@ -44,21 +44,36 @@ describe("model-router", () => {
     assert.equal(n, 427);
   });
 
-  it("admin always uses deepinfra (with or without photo refs)", async () => {
+  it("admin uses deepinfra by default (with or without photo refs)", async () => {
     process.env.ONESHOT_REMAINING_CREDITS = "999";
     process.env.DEEPINFRA_API_KEY = "di";
 
     const textOnly = await resolveImageGenerationProvider(null, {
-      adminPreferDeepInfra: true,
+      isAdmin: true,
       hasReferenceImages: false,
     });
     assert.equal(textOnly.provider, "deepinfra");
 
     const withRefs = await resolveImageGenerationProvider(null, {
-      adminPreferDeepInfra: true,
+      isAdmin: true,
       hasReferenceImages: true,
     });
     assert.equal(withRefs.provider, "deepinfra");
+  });
+
+  it("admin can pick oneshot in settings", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "999";
+    process.env.DEEPINFRA_API_KEY = "di";
+
+    const route = await resolveImageGenerationProvider(null, {
+      isAdmin: true,
+      adminImageProvider: "oneshot",
+      hasReferenceImages: true,
+    });
+    assert.equal(route.provider, "oneshot");
+    assert.equal(route.reason, "admin_settings_oneshot");
   });
 
   it("detects OneShot provider credit exhaustion", () => {

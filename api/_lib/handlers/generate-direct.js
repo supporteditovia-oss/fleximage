@@ -3,6 +3,7 @@ const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
   getOneshotApiConfig,
+  getAppSettings,
   isGoogleAiPromptFlagged,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
@@ -107,6 +108,8 @@ module.exports = async function handler(req, res) {
   try {
     const { supabase, userId } = await requireUser(req);
     const admin = await isUserAdmin(supabase, userId);
+    const adminAppSettings = admin ? await getAppSettings(supabase) : null;
+    const adminImageProvider = adminAppSettings?.adminImageProvider || "deepinfra";
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
     let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
@@ -136,7 +139,10 @@ module.exports = async function handler(req, res) {
 
     // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
     // Admin DeepInfra : pas d'enrichissement (latence + POST déjà long).
-    if (!templateId && !admin) {
+    if (
+      !templateId &&
+      (!admin || adminImageProvider === "oneshot")
+    ) {
       const enriched = await enrichPromptForGeneration(prompt, {
         locale: uiLocale,
       });
@@ -474,7 +480,8 @@ module.exports = async function handler(req, res) {
     const sceneContext = resolvedTemplate?.ok
       ? String(resolvedTemplate.prompt || effectivePrompt || "")
       : "";
-    const adminDeepInfraFastPath = admin && isDeepInfraConfigured();
+    const adminDeepInfraFastPath =
+      admin && adminImageProvider === "deepinfra" && isDeepInfraConfigured();
     const subjectAnalysis = adminDeepInfraFastPath
       ? heuristicAnalysis(effectivePrompt, sceneContext)
       : await analyzeSubjectContext(

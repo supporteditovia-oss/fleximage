@@ -2,6 +2,15 @@ const { getOneshotApiConfig } = require("./oneshot");
 const { isDeepInfraConfigured } = require("./deepinfra");
 
 const APP_SETTINGS_CREDITS_KEY = "oneshot_remaining_credits";
+/** Compte admin uniquement : oneshot | deepinfra (Nano Banana 2). */
+const ADMIN_IMAGE_PROVIDER_KEY = "admin_image_provider";
+
+function normalizeAdminImageProvider(value) {
+  const v = String(value || "")
+    .trim()
+    .toLowerCase();
+  return v === "oneshot" ? "oneshot" : "deepinfra";
+}
 
 /**
  * Remaining OneShot credits: app_settings (DB) then ONESHOT_REMAINING_CREDITS env.
@@ -107,15 +116,35 @@ async function decrementOneshotCreditIfTracked(supabase) {
  * @returns {Promise<{ provider: 'oneshot' | 'deepinfra', reason?: string, remainingCredits: number | null }>}
  */
 async function resolveImageGenerationProvider(supabase, options = {}) {
-  const adminPreferDeepInfra = Boolean(options.adminPreferDeepInfra);
+  const isAdmin = Boolean(options.isAdmin ?? options.adminPreferDeepInfra);
+  const adminImageProvider = normalizeAdminImageProvider(
+    options.adminImageProvider,
+  );
   const oneshotConfigured = Boolean(
     getOneshotApiConfig().url && getOneshotApiConfig().key,
   );
   const deepinfraConfigured = isDeepInfraConfigured();
   const remainingCredits = await getOneshotRemainingCredits(supabase);
 
-  /** Admin : Nano Banana 2 via DeepInfra uniquement (pas OneShot, pas Kie image). */
-  if (adminPreferDeepInfra) {
+  /** Admin : choix explicite OneShot (marketing) ou DeepInfra (Nano Banana 2). */
+  if (isAdmin) {
+    if (adminImageProvider === "oneshot") {
+      if (!oneshotConfigured) {
+        throw new Error(
+          "Admin : OneShot non configuré (ONESHOT_API_URL / ONESHOT_API_KEY).",
+        );
+      }
+      if (remainingCredits !== null && remainingCredits <= 0) {
+        throw new Error(
+          "Crédits OneShot épuisés — passe sur DeepInfra dans Paramètres admin ou recharge OneShot.",
+        );
+      }
+      return {
+        provider: "oneshot",
+        reason: "admin_settings_oneshot",
+        remainingCredits,
+      };
+    }
     if (!deepinfraConfigured) {
       throw new Error(
         "Admin : configure DEEPINFRA_API_KEY pour Nano Banana 2 (DeepInfra).",
@@ -123,7 +152,7 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
     }
     return {
       provider: "deepinfra",
-      reason: "admin_nano_banana_deepinfra",
+      reason: "admin_settings_deepinfra",
       remainingCredits,
     };
   }
@@ -151,6 +180,8 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
 
 module.exports = {
   APP_SETTINGS_CREDITS_KEY,
+  ADMIN_IMAGE_PROVIDER_KEY,
+  normalizeAdminImageProvider,
   getOneshotRemainingCredits,
   isOneshotCreditsExhaustedError,
   markOneshotCreditsExhausted,

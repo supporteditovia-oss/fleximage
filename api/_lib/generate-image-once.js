@@ -454,7 +454,8 @@ async function generateImageOnce(supabase, params) {
     route = await resolveImageGenerationProvider(supabase, {
       forceKieAi: appSettings.forceKieAi,
       hasReferenceImages,
-      adminPreferDeepInfra,
+      isAdmin: adminPreferDeepInfra,
+      adminImageProvider: appSettings.adminImageProvider,
     });
   } catch (routeErr) {
     throw routeErr;
