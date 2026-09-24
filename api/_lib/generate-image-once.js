@@ -13,6 +13,8 @@ const {
 const {
   resolveImageGenerationProvider,
   decrementOneshotCreditIfTracked,
+  isOneshotCreditsExhaustedError,
+  markOneshotCreditsExhausted,
 } = require("./model-router");
 const { readApiCallCount } = require("./generation-idempotency");
 
@@ -459,6 +461,13 @@ async function generateImageOnce(supabase, params) {
     return await runOneshot();
   } catch (primaryErr) {
     if (route.provider === "oneshot") {
+      if (isOneshotCreditsExhaustedError(primaryErr)) {
+        await markOneshotCreditsExhausted(supabase);
+        console.warn("[generate-image-once] OneShot credits exhausted — relay DeepInfra/Kie", {
+          generationId,
+          ...logContext,
+        });
+      }
       if (hasReferenceImages && isKieConfigured()) {
         try {
           return await runKieFallback(primaryErr);

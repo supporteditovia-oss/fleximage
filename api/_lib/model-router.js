@@ -31,6 +31,40 @@ async function getOneshotRemainingCredits(supabase) {
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : null;
 }
 
+function isOneshotCreditsExhaustedError(err) {
+  const status = err && err.status;
+  if (status === 402 || status === 429) return true;
+  const text = String(
+    (err && err.message) || (err && err.body) || err || "",
+  ).toLowerCase();
+  return (
+    /insufficient.*credit/.test(text) ||
+    /out of credit/.test(text) ||
+    /not enough credit/.test(text) ||
+    /credit.*depleted/.test(text) ||
+    /quota.*exceed/.test(text) ||
+    /payment required/.test(text) ||
+    /billing/.test(text)
+  );
+}
+
+/** Force le routeur à basculer DeepInfra/Kie dès la prochaine requête. */
+async function markOneshotCreditsExhausted(supabase) {
+  if (!supabase) return;
+  try {
+    await supabase.from("app_settings").upsert(
+      {
+        key: APP_SETTINGS_CREDITS_KEY,
+        value: "0",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" },
+    );
+  } catch (err) {
+    console.warn("[model-router] mark exhausted skipped", err?.message);
+  }
+}
+
 async function decrementOneshotCreditIfTracked(supabase) {
   if (!supabase) return;
   try {
@@ -120,16 +154,16 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
     return { provider: "kie", reason: "deepinfra_missing", remainingCredits };
   }
 
-  if (oneshotConfigured) {
-    return { provider: "oneshot", reason: "credits_exhausted_last_resort", remainingCredits };
-  }
-
-  throw new Error("Aucun moteur image configuré");
+  throw new Error(
+    "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY (et KIE_AI_API_KEY si photos).",
+  );
 }
 
 module.exports = {
   APP_SETTINGS_CREDITS_KEY,
   getOneshotRemainingCredits,
+  isOneshotCreditsExhaustedError,
+  markOneshotCreditsExhausted,
   decrementOneshotCreditIfTracked,
   resolveImageGenerationProvider,
 };

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const {
   resolveImageGenerationProvider,
   getOneshotRemainingCredits,
+  isOneshotCreditsExhaustedError,
 } = require("./model-router");
 
 describe("model-router", () => {
@@ -54,6 +55,20 @@ describe("model-router", () => {
       hasReferenceImages: true,
     });
     assert.equal(route.provider, "kie");
+  });
+
+  it("detects OneShot provider credit exhaustion", () => {
+    assert.equal(
+      isOneshotCreditsExhaustedError({
+        status: 402,
+        message: "Insufficient credits",
+      }),
+      true,
+    );
+    assert.equal(
+      isOneshotCreditsExhaustedError(new Error("network timeout")),
+      false,
+    );
   });
 
   it("rejects multi-ref when credits 0 and Kie missing", async () => {
