@@ -124,6 +124,24 @@ export function GenerationProgress({
     }
   }, [data?.status, hasResultMedia, restoredReady]);
 
+  // success sans URL = bug serveur — ne pas loader indéfiniment (remboursement côté API).
+  useEffect(() => {
+    if (resultType === "video") return;
+    if (data?.status !== "success" || hasResultMedia || restoredReady) return;
+    const timer = setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ["larp-status", taskId] });
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+    }, 50_000);
+    return () => clearTimeout(timer);
+  }, [
+    data?.status,
+    hasResultMedia,
+    queryClient,
+    restoredReady,
+    resultType,
+    taskId,
+  ]);
+
   useEffect(() => {
     if (revealDone) setShowResult(true);
   }, [revealDone]);

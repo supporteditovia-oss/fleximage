@@ -405,14 +405,28 @@ async function generateImageOnce(supabase, params) {
       provider_auto_retries: 0,
     };
 
-    await persistProviderResult({
-      provider: "deepinfra",
-      externalTaskId,
-      attemptRecord,
-      nextMeta,
-      outputAssets: [outputUrl],
-      terminalStatus: "succeeded",
-    });
+    const { error: persistErr } = await supabase
+      .from("generations")
+      .update({
+        provider: "deepinfra",
+        provider_task_id: mergeProviderTaskId(
+          claim.generation.provider_task_id,
+          externalTaskId,
+        ),
+        metadata: nextMeta,
+        provider_attempts: [...prevAttempts, attemptRecord],
+        output_assets: [outputUrl],
+        watermarked_assets: [],
+        status: "succeeded",
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", generationId);
+    if (persistErr) {
+      throw new Error(
+        `DeepInfra: échec enregistrement résultat (${persistErr.message || "db"})`,
+      );
+    }
 
     console.info("[generate-image-once] DeepInfra sync stored", {
       generationId,

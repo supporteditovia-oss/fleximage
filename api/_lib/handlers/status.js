@@ -31,6 +31,49 @@ const {
   isProviderFailStatus,
   withTimeout,
 } = require("../generation");
+const { readApiCallCount } = require("../generation-idempotency");
+
+/** Image bloquée sans livrable → fail + remboursement jetons (facturation DeepInfra séparée). */
+const STUCK_IMAGE_PROCESSING_MS = 3 * 60 * 1000;
+const STUCK_IMAGE_SUCCEEDED_EMPTY_MS = 45 * 1000;
+
+function resolveStoredImageDeliveryUrl(larp) {
+  const originals = toAssetList(larp.output_assets).filter(
+    (url) => typeof url === "string" && url.startsWith("http"),
+  );
+  if (originals.length > 0) return originals[0];
+  const meta =
+    larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+  const fromMeta =
+    typeof meta.deepinfra_output_url === "string"
+      ? meta.deepinfra_output_url.trim()
+      : "";
+  return fromMeta.startsWith("http") ? fromMeta : null;
+}
+
+async function markImageGenerationFailedWithRefund(
+  supabase,
+  userId,
+  larp,
+  failMessage,
+  source,
+) {
+  await supabase
+    .from("generations")
+    .update({
+      status: "failed",
+      fail_message: failMessage,
+      updated_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", larp.id);
+  await refundGenerationCreditsIfCharged(supabase, {
+    userId,
+    generationId: larp.id,
+    source,
+    failMessage,
+  }).catch((err) => console.error("refund failed", err));
+}
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
 function toUserFailMessage(value, fallback = "Échec de la génération") {
@@ -112,6 +155,84 @@ module.exports = async function handler(req, res) {
     }
 
     const resultType = larp.generation_type === "video" ? "video" : "image";
+    const ageInMs = Date.now() - new Date(larp.created_at).getTime();
+    const pollMetaEarly =
+      larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    const deliveryUrl =
+      resultType === "image" ? resolveStoredImageDeliveryUrl(larp) : null;
+
+    if (resultType === "image" && larp.status === "processing" && deliveryUrl) {
+      await supabase
+        .from("generations")
+        .update({
+          status: "succeeded",
+          output_assets: [deliveryUrl],
+          watermarked_assets: [],
+          updated_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
+      larp.status = "succeeded";
+      larp.output_assets = [deliveryUrl];
+    }
+
+    if (resultType === "image" && larp.status === "succeeded") {
+      const hasAssets = toAssetList(larp.output_assets).some(
+        (url) => typeof url === "string" && url.startsWith("http"),
+      );
+      if (!hasAssets && deliveryUrl) {
+        larp.output_assets = [deliveryUrl];
+      } else if (!hasAssets && !deliveryUrl && ageInMs > STUCK_IMAGE_SUCCEEDED_EMPTY_MS) {
+        const failMessage =
+          "Image introuvable après génération. Jetons remboursés — relance une nouvelle génération.";
+        await markImageGenerationFailedWithRefund(
+          supabase,
+          userId,
+          larp,
+          failMessage,
+          "succeeded_without_assets",
+        );
+        larp.status = "failed";
+        larp.fail_message = failMessage;
+      }
+    }
+
+    if (resultType === "image" && larp.status === "processing" && !deliveryUrl) {
+      const taskPartsEarly = (larp.provider_task_id || "").split(",");
+      const activeTaskIdEarly =
+        (taskPartsEarly[taskPartsEarly.length - 1] || "").trim();
+      const providerStarted =
+        readApiCallCount(pollMetaEarly) >= 1 ||
+        Boolean(pollMetaEarly.provider_call_started_at);
+      const looksStuckImageJob =
+        activeTaskIdEarly.startsWith("pending_") ||
+        activeTaskIdEarly.startsWith("deepinfra_sync_") ||
+        larp.provider === "deepinfra" ||
+        providerStarted;
+      if (looksStuckImageJob && ageInMs > STUCK_IMAGE_PROCESSING_MS) {
+        const failMessage =
+          "Génération interrompue (timeout). Jetons remboursés — réessaie.";
+        await markImageGenerationFailedWithRefund(
+          supabase,
+          userId,
+          larp,
+          failMessage,
+          "stuck_image_processing",
+        );
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "fail",
+          resultUrls: [],
+          failMessage,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType,
+        });
+        return;
+      }
+    }
 
     if (larp.status === "succeeded" || larp.status === "failed") {
       if (larp.status === "failed") {
@@ -157,7 +278,6 @@ module.exports = async function handler(req, res) {
 
     const taskParts = (larp.provider_task_id || "").split(",");
     const activeTaskId = taskParts[taskParts.length - 1] || "";
-    const ageInMs = Date.now() - new Date(larp.created_at).getTime();
 
     // Soft-retry / vision-QA claim can get stuck forever if the process dies mid-claim.
     if (activeTaskId === "__claiming__" || activeTaskId === "__vision_qa_claim__") {
@@ -388,10 +508,10 @@ module.exports = async function handler(req, res) {
           resultType,
         });
         return;
-      } else if (ageInMs > 120_000) {
+      } else if (ageInMs > 180_000) {
         apiStatus = "fail";
         apiFailMsg =
-          "Résultat DeepInfra introuvable. Réessaie — jetons remboursés.";
+          "Résultat introuvable. Jetons remboursés — relance une nouvelle génération.";
         console.warn("[status] deepinfra sync failed — no auto-retry", {
           larpId: larp.id,
           generationRequestId:
@@ -471,6 +591,48 @@ module.exports = async function handler(req, res) {
               : null,
           error: apiFailMsg,
         });
+      }
+    } else if (
+      resultType === "image" &&
+      (activeTaskId.startsWith("pending_") ||
+        activeTaskId.startsWith("deepinfra_sync_"))
+    ) {
+      if (ageInMs > 180_000) {
+        apiStatus = "fail";
+        apiFailMsg =
+          "Génération trop longue sans image. Jetons remboursés — réessaie.";
+      } else {
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "waiting",
+          resultUrls: [],
+          failMessage: null,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType,
+        });
+        return;
+      }
+    } else if (resultType === "image") {
+      if (ageInMs > STUCK_IMAGE_PROCESSING_MS) {
+        apiStatus = "fail";
+        apiFailMsg =
+          "Génération trop longue (timeout). Jetons remboursés — réessaie.";
+      } else {
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "waiting",
+          resultUrls: [],
+          failMessage: null,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType,
+        });
+        return;
       }
     } else {
       try {
