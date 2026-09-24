@@ -79,7 +79,6 @@ import {
 import { reshuffleOutfitCatalog } from "@/lib/outfit-display-order";
 import { fetchCatalogImageAsFile } from "@/lib/fetch-catalog-image";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
-import { useV2Access } from "@/hooks/use-v2-access";
 import {
   buildPromptFromQuiz,
   getOnboardingQuiz,
@@ -181,7 +180,6 @@ export default function Generate({
     isAdmin,
   } = useAuth();
   const adminPreview = useAdminPreviewFeatures();
-  const { v2Enabled } = useV2Access();
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
