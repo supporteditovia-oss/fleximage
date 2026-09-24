@@ -2,6 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   extractOneshotExternalTaskId,
+  extractProviderExternalTaskId,
   claimProviderApiCall,
 } = require("./generate-image-once");
 
@@ -12,6 +13,13 @@ describe("generate-image-once helpers", () => {
       "custom_abc123",
     );
     assert.equal(extractOneshotExternalTaskId("custom_only"), "custom_only");
+  });
+
+  it("extractProviderExternalTaskId returns deepinfra_sync task id", () => {
+    assert.equal(
+      extractProviderExternalTaskId("deepinfra_sync_gen-uuid-1"),
+      "deepinfra_sync_gen-uuid-1",
+    );
   });
 
   it("claimProviderApiCall rejects when api_call_count is already 1", async () => {

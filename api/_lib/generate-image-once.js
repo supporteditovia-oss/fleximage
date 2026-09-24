@@ -7,7 +7,6 @@ const {
 const { createKieTask, isKieConfigured } = require("./kie");
 const {
   generateDeepInfraImage,
-  isDeepInfraConfigured,
   getDeepInfraModel,
 } = require("./deepinfra");
 const {
@@ -18,16 +17,27 @@ const {
 } = require("./model-router");
 const { readApiCallCount } = require("./generation-idempotency");
 
-function extractOneshotExternalTaskId(providerTaskId) {
+/** Dernier taskId actif (OneShot, DeepInfra sync, Kie, …). */
+function extractProviderExternalTaskId(providerTaskId) {
   const parts = String(providerTaskId || "")
     .split(",")
     .map((segment) => segment.trim())
     .filter(Boolean);
   for (let i = parts.length - 1; i >= 0; i -= 1) {
-    if (parts[i].startsWith("custom_")) return parts[i];
+    const seg = parts[i];
+    if (seg.startsWith("__")) continue;
+    if (
+      seg.startsWith("custom_") ||
+      seg.startsWith("deepinfra_sync_") ||
+      seg.length > 0
+    ) {
+      return seg;
+    }
   }
   return parts[parts.length - 1] || null;
 }
+
+const extractOneshotExternalTaskId = extractProviderExternalTaskId;
 
 async function logCriticalDoubleBilling(supabase, generation, details) {
   const meta =
@@ -78,7 +88,7 @@ async function claimProviderApiCall(supabase, generationId) {
       allowed: false,
       generation: row,
       apiCallCount: currentCount,
-      existingTaskId: extractOneshotExternalTaskId(row.provider_task_id),
+      existingTaskId: extractProviderExternalTaskId(row.provider_task_id),
     };
   }
 
@@ -133,8 +143,9 @@ function enforceSingleImageResult(oneshotResponse) {
 }
 
 /**
- * Official single entry point for billable Nano Banana 2 / OneShot image generation.
- * Guarantees at most ONE provider API call per generation row.
+ * Point d'entrée unique image (OneShot, DeepInfra, Kie).
+ * Politique identique OneShot : au plus UN appel API fournisseur par ligne generation
+ * (claim api_call_count) — pas de 2e job auto en fallback ; échec → remboursement site.
  */
 async function generateImageOnce(supabase, params) {
   const {
@@ -163,12 +174,16 @@ async function generateImageOnce(supabase, params) {
       existingTaskId: claim.existingTaskId,
       ...logContext,
     });
+    const dedupeProvider =
+      claim.generation.provider && String(claim.generation.provider).trim()
+        ? String(claim.generation.provider).trim()
+        : "oneshot";
     return {
       ok: true,
       deduplicated: true,
       externalTaskId: claim.existingTaskId,
       apiCallCount: claim.apiCallCount,
-      provider: "oneshot",
+      provider: dedupeProvider,
     };
   }
 
@@ -176,6 +191,33 @@ async function generateImageOnce(supabase, params) {
     claim.generation.metadata && typeof claim.generation.metadata === "object"
       ? claim.generation.metadata
       : {};
+  const deepinfraStoredUrl =
+    meta.deepinfra_sync &&
+    typeof meta.deepinfra_output_url === "string"
+      ? meta.deepinfra_output_url.trim()
+      : "";
+  const deepinfraTaskId = extractProviderExternalTaskId(
+    claim.generation.provider_task_id,
+  );
+  if (
+    deepinfraStoredUrl.startsWith("http") &&
+    deepinfraTaskId &&
+    deepinfraTaskId.startsWith("deepinfra_sync_")
+  ) {
+    console.info("[generate-image-once] reusing existing DeepInfra result", {
+      generationId,
+      externalTaskId: deepinfraTaskId,
+      ...logContext,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: deepinfraTaskId,
+      apiCallCount: readApiCallCount(meta),
+      provider: "deepinfra",
+    };
+  }
+
   const existingJobId =
     typeof meta.oneshot_job_id === "string" && meta.oneshot_job_id.trim()
       ? meta.oneshot_job_id.trim()
@@ -460,30 +502,16 @@ async function generateImageOnce(supabase, params) {
     }
     return await runOneshot();
   } catch (primaryErr) {
-    if (route.provider === "oneshot") {
-      if (isOneshotCreditsExhaustedError(primaryErr)) {
-        await markOneshotCreditsExhausted(supabase);
-        console.warn("[generate-image-once] OneShot credits exhausted — relay DeepInfra/Kie", {
-          generationId,
-          ...logContext,
-        });
-      }
-      if (hasReferenceImages && isKieConfigured()) {
-        try {
-          return await runKieFallback(primaryErr);
-        } catch (kieErr) {
-          if (!isDeepInfraConfigured()) throw kieErr;
-          return await runDeepInfra(kieErr);
-        }
-      }
-      try {
-        return await runDeepInfra(primaryErr);
-      } catch (deepErr) {
-        return await runKieFallback(deepErr);
-      }
-    }
-    if (route.provider === "deepinfra") {
-      return await runKieFallback(primaryErr);
+    if (
+      route.provider === "oneshot" &&
+      isOneshotCreditsExhaustedError(primaryErr)
+    ) {
+      await markOneshotCreditsExhausted(supabase);
+      const retryErr = new Error(
+        "Crédits OneShot épuisés. Relance la génération — DeepInfra ou Kie prendra le relais automatiquement.",
+      );
+      retryErr.code = "ONESHOT_CREDITS_EXHAUSTED";
+      throw retryErr;
     }
     throw primaryErr;
   }
@@ -493,5 +521,6 @@ module.exports = {
   generateImageOnce,
   claimProviderApiCall,
   extractOneshotExternalTaskId,
+  extractProviderExternalTaskId,
   logCriticalDoubleBilling,
 };

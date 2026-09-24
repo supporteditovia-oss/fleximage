@@ -563,15 +563,17 @@ module.exports = async function handler(req, res) {
       const detail =
         providerErr && providerErr.message
           ? String(providerErr.message).slice(0, 240)
-          : "erreur Oneshot";
+          : "erreur moteur image";
       const failMessage = isGoogleAiPromptFlagged(providerErr)
         ? "Échec provider (filtre). Reformule ta demande — jetons remboursés."
-        : `Échec de la génération (${detail}). Jetons remboursés.`;
+        : providerErr && providerErr.code === "ONESHOT_CREDITS_EXHAUSTED"
+          ? String(providerErr.message)
+          : `Échec de la génération (${detail}). Jetons remboursés.`;
       await failAndRefund(supabase, {
         userId,
         generationId: larp.id,
         failMessage,
-        source: "oneshot_create_failed",
+        source: "provider_create_failed",
       });
       res.status(502).json({
         message: failMessage,

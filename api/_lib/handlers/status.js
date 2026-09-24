@@ -372,6 +372,13 @@ module.exports = async function handler(req, res) {
         apiStatus = "fail";
         apiFailMsg =
           "Résultat DeepInfra introuvable. Réessaie — jetons remboursés.";
+        console.warn("[status] deepinfra sync failed — no auto-retry", {
+          larpId: larp.id,
+          generationRequestId:
+            larp.metadata && typeof larp.metadata === "object"
+              ? larp.metadata.generation_request_id
+              : null,
+        });
       } else {
         res.status(200).json({
           larpId: larp.id,
