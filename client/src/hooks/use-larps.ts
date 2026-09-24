@@ -141,6 +141,7 @@ interface GenerateLarpResponse {
   id: string;
   taskId: string;
   status: string;
+  resultUrls?: string[];
   estimatedSeconds?: number | null;
   createdAt?: string | null;
   deduplicated?: boolean;
@@ -267,6 +268,28 @@ export function useGenerateDirectLarp() {
             "image",
           );
           releaseGenerationSubmitLock();
+        }
+        if (
+          json?.status === "success" &&
+          Array.isArray(json.resultUrls) &&
+          json.resultUrls.length > 0 &&
+          json.taskId
+        ) {
+          queryClient.setQueryData(["larp-status", json.taskId], {
+            larpId: json.id,
+            status: "success",
+            resultUrls: json.resultUrls,
+            watermarkedUrls: [],
+            failMessage: null,
+            costTime: null,
+            estimatedSeconds: json.estimatedSeconds ?? null,
+            qaRetryCount: 0,
+            remainingSeconds: 0,
+            createdAt: json.createdAt ?? null,
+            isSubscriber: true,
+            requiresPaywall: false,
+            resultType: "image",
+          });
         }
         return {
           ...json,

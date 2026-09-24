@@ -25,7 +25,10 @@ const {
   translateLimitReason,
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
-const { analyzeSubjectContext } = require("../subject-analysis");
+const {
+  analyzeSubjectContext,
+  heuristicAnalysis,
+} = require("../subject-analysis");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
 const {
   isDisallowedAdultPrompt,
@@ -132,7 +135,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
-    if (!templateId) {
+    // Admin DeepInfra : pas d'enrichissement (latence + POST déjà long).
+    if (!templateId && !admin) {
       const enriched = await enrichPromptForGeneration(prompt, {
         locale: uiLocale,
       });
@@ -470,18 +474,21 @@ module.exports = async function handler(req, res) {
     const sceneContext = resolvedTemplate?.ok
       ? String(resolvedTemplate.prompt || effectivePrompt || "")
       : "";
-    const subjectAnalysis = await analyzeSubjectContext(
-      referenceImageUrl
-        ? {
-            imageUrl: referenceImageUrl,
-            userPrompt: effectivePrompt,
-            sceneContext,
-          }
-        : {
-            userPrompt: effectivePrompt,
-            sceneContext,
-          },
-    );
+    const adminDeepInfraFastPath = admin && isDeepInfraConfigured();
+    const subjectAnalysis = adminDeepInfraFastPath
+      ? heuristicAnalysis(effectivePrompt, sceneContext)
+      : await analyzeSubjectContext(
+          referenceImageUrl
+            ? {
+                imageUrl: referenceImageUrl,
+                userPrompt: effectivePrompt,
+                sceneContext,
+              }
+            : {
+                userPrompt: effectivePrompt,
+                sceneContext,
+              },
+        );
 
     const subjectPoseBlock = buildSubjectPosePromptBlock({
       subject,
@@ -593,10 +600,20 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    const syncOutputUrl =
+      typeof providerResult.outputUrl === "string"
+        ? providerResult.outputUrl.trim()
+        : "";
+    const deepInfraSyncReady =
+      providerResult.provider === "deepinfra" &&
+      Boolean(providerResult.syncComplete) &&
+      syncOutputUrl.startsWith("http");
+
     res.status(201).json({
       id: larp.id,
       taskId: externalTaskId,
-      status: "waiting",
+      status: deepInfraSyncReady ? "success" : "waiting",
+      ...(deepInfraSyncReady ? { resultUrls: [syncOutputUrl] } : {}),
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
       createdAt: larp.created_at,
@@ -616,5 +633,5 @@ module.exports.config = {
       sizeLimit: "10mb",
     },
   },
-  maxDuration: 60,
+  maxDuration: 120,
 };

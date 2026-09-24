@@ -359,15 +359,35 @@ module.exports = async function handler(req, res) {
         apiStatus = "fail";
         apiFailMsg = "Erreur de polling vidéo";
       }
-    } else if (activeTaskId.startsWith("deepinfra_sync_")) {
-      const storedUrl =
+    } else if (
+      activeTaskId.startsWith("deepinfra_sync_") ||
+      activeTaskId.startsWith("pending_")
+    ) {
+      const outputAssets = toAssetList(larp.output_assets);
+      const storedFromMeta =
         pollMeta.deepinfra_output_url &&
         typeof pollMeta.deepinfra_output_url === "string"
           ? pollMeta.deepinfra_output_url.trim()
           : "";
+      const storedUrl =
+        outputAssets.find((url) => typeof url === "string" && url.startsWith("http")) ||
+        (storedFromMeta.startsWith("http") ? storedFromMeta : "");
       if (storedUrl.startsWith("http")) {
         apiStatus = "success";
         apiResultJson = JSON.stringify({ images: [storedUrl] });
+      } else if (activeTaskId.startsWith("pending_") && ageInMs < 180_000) {
+        res.status(200).json({
+          larpId: larp.id,
+          ...statusTimingFields(larp),
+          status: "waiting",
+          resultUrls: [],
+          failMessage: null,
+          costTime: null,
+          isSubscriber: false,
+          requiresPaywall: false,
+          resultType,
+        });
+        return;
       } else if (ageInMs > 120_000) {
         apiStatus = "fail";
         apiFailMsg =
@@ -566,17 +586,30 @@ module.exports = async function handler(req, res) {
         }
 
         if (resultUrls.length > 0 && resultType !== "video") {
-          try {
-            const stored = await withTimeout(
-              downloadAndStoreImages(larp.id, resultUrls),
-              4_000,
-              null,
-            );
-            if (Array.isArray(stored) && stored.length > 0) {
-              resultUrls = stored;
+          const r2Public = String(process.env.R2_PUBLIC_URL || "")
+            .replace(/\/$/, "")
+            .trim();
+          const alreadyOnR2 =
+            larp.provider === "deepinfra" ||
+            resultUrls.every((url) => {
+              const u = String(url || "").trim();
+              if (!u.startsWith("http")) return false;
+              if (r2Public && u.startsWith(r2Public)) return true;
+              return u.includes(`/generations/${larp.id}/`);
+            });
+          if (!alreadyOnR2) {
+            try {
+              const stored = await withTimeout(
+                downloadAndStoreImages(larp.id, resultUrls),
+                4_000,
+                null,
+              );
+              if (Array.isArray(stored) && stored.length > 0) {
+                resultUrls = stored;
+              }
+            } catch (err) {
+              console.error("Failed to store images to R2", err);
             }
-          } catch (err) {
-            console.error("Failed to store images to R2", err);
           }
         }
 
@@ -593,7 +626,9 @@ module.exports = async function handler(req, res) {
               ? larp.metadata
               : {};
           const isBuiltinReadyModel = Boolean(meta.builtin_template_id);
-          if (!isBuiltinReadyModel) {
+          const skipVisionQa =
+            larp.provider === "deepinfra" || Boolean(meta.deepinfra_sync);
+          if (!isBuiltinReadyModel && !skipVisionQa) {
             const qaModelVariant =
               meta.oneshot_model_variant || ONESHOT_MODEL_VARIANT;
             const qaDecision = await withTimeout(
