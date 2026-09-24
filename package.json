@@ -10,6 +10,7 @@
     "build": "bun run script/build.ts",
     "vercel-build": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs && npx vite build",
     "vercel:deploy": "node script/vercel-deploy-prod.mjs",
+    "vercel:sync-env": "node script/sync-vercel-prod-env.mjs",
     "seo:static": "node script/build-seo-niches-en.mjs && node script/generate-seo-static.mjs",
     "seo:brand": "node script/inject-brand-seo.mjs",
     "seo:indexnow": "node script/ping-indexnow.mjs",

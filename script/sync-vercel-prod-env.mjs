@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 /**
  * Pousse les clés API (DeepInfra, Kie) vers Vercel Production — projet luxeflexia.
- * Prérequis : VERCEL_TOKEN + clés lues depuis l'environnement (secrets Cursor).
+ * Lit d'abord `.env` à la racine du repo (ton fichier local), puis les variables d'environnement.
  *
- * Usage (agent ou local) :
- *   VERCEL_TOKEN=... DEEPINFRA_API_KEY=... KIE_AI_API_KEY=... node script/sync-vercel-prod-env.mjs
+ * Usage local (recommandé si tu as tout dans .env) :
+ *   node script/sync-vercel-prod-env.mjs
+ *
+ * Usage agent (secrets Cursor : VERCEL_TOKEN + DEEPINFRA_API_KEY + KIE_AI_API_KEY) :
+ *   node script/sync-vercel-prod-env.mjs
  */
 import { spawnSync } from "node:child_process";
+import { loadDotenv } from "./load-dotenv.mjs";
+
+const envFile = process.env.ENV_FILE || ".env";
+const dot = loadDotenv(envFile);
+if (dot.loaded > 0) {
+  console.log(`Chargé ${dot.loaded} variable(s) depuis ${dot.path}`);
+} else if (process.env.ENV_FILE) {
+  console.warn(`Aucune variable chargée depuis ${dot.path}`);
+}
 
 const PROJECT = "luxeflexia";
 const TARGET = "production";
