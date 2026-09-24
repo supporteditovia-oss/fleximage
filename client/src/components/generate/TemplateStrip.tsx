@@ -80,7 +80,7 @@ export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
       <button
         type="button"
         className="tpl-strip-entry__head"
-        onClick={() => navigate(MODELES_CATALOG_PATH)}
+        onClick={openCatalog}
       >
         <span className="tpl-strip-entry__title">
           <Sparkles className="h-4 w-4" aria-hidden />
