@@ -1284,7 +1284,7 @@ function OneshotApiSettings() {
               />
               <ProviderEnvFlag
                 ok={settings.providerEnv.kie.configured}
-                label="Kie.ai (images + vidéo)"
+                label="Kie.ai (vidéo IA + Kling — pas les images)"
               />
               <ProviderEnvFlag
                 ok={settings.providerEnv.readiness.deepinfraPipeline}

@@ -7,7 +7,6 @@ const {
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
 const { isDeepInfraConfigured } = require("../deepinfra");
-const { isKieConfigured } = require("../kie");
 const { generateImageOnce } = require("../generate-image-once");
 const {
   normalizeGenerationRequestId,
@@ -277,13 +276,11 @@ module.exports = async function handler(req, res) {
 
     const oneshotConfig = getOneshotApiConfig();
     const hasImageProvider =
-      (oneshotConfig.url && oneshotConfig.key) ||
-      isDeepInfraConfigured() ||
-      isKieConfigured();
+      (oneshotConfig.url && oneshotConfig.key) || isDeepInfraConfigured();
     if (!hasImageProvider) {
       res.status(503).json({
         message:
-          "Aucun moteur d'image configuré (OneShot, DeepInfra ou Kie).",
+          "Aucun moteur d'image configuré (OneShot ou DeepInfra Nano Banana 2).",
       });
       return;
     }

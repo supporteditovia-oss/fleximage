@@ -1,5 +1,7 @@
 const DEEPINFRA_IMAGES_URL =
   "https://api.deepinfra.com/v1/openai/images/generations";
+const DEEPINFRA_IMAGES_EDITS_URL =
+  "https://api.deepinfra.com/v1/openai/images/edits";
 /** Aligné Kie (nano-banana-2) — surcharge via DEEPINFRA_MODEL. */
 const DEFAULT_MODEL = "google/nano-banana-2";
 
@@ -21,8 +23,54 @@ function aspectRatioToSize(aspectRatio) {
   return "768x1344";
 }
 
+async function fetchHttpImageBuffer(url) {
+  const res = await fetch(String(url).trim());
+  if (!res.ok) {
+    throw new Error(`DeepInfra: impossible de lire l'image (${res.status})`);
+  }
+  const mimeType = res.headers.get("content-type") || "image/jpeg";
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length < 256) {
+    throw new Error("DeepInfra: image de référence invalide");
+  }
+  return { buffer, mimeType };
+}
+
+function parseDeepInfraImageResponse(text, status) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`DeepInfra API: réponse non-JSON (${status})`);
+  }
+  if (!parsed || (parsed.error && !parsed.data)) {
+    const detail =
+      parsed?.error?.message ||
+      parsed?.message ||
+      text.slice(0, 280) ||
+      `HTTP ${status}`;
+    throw new Error(`DeepInfra API error: ${detail}`);
+  }
+  const b64 =
+    parsed?.data?.[0]?.b64_json ||
+    parsed?.images?.[0]?.b64_json ||
+    parsed?.output?.[0]?.b64_json;
+  if (!b64 || typeof b64 !== "string") {
+    throw new Error("DeepInfra API: aucune image dans la réponse");
+  }
+  const buffer = Buffer.from(b64, "base64");
+  if (buffer.length < 256) {
+    throw new Error("DeepInfra API: image invalide (buffer trop petit)");
+  }
+  return {
+    buffer,
+    mimeType: "image/png",
+    revisedPrompt: parsed?.data?.[0]?.revised_prompt,
+  };
+}
+
 /**
- * Génération synchrone DeepInfra (nano-banana).
+ * Génération / édition synchrone DeepInfra (google/nano-banana-2).
  * @returns {Promise<{ buffer: Buffer, mimeType: string, revisedPrompt?: string }>}
  */
 async function generateDeepInfraImage(params) {
@@ -38,6 +86,47 @@ async function generateDeepInfraImage(params) {
 
   const model = getDeepInfraModel();
   const size = aspectRatioToSize(params.aspectRatio);
+  const refUrls = Array.isArray(params.imageUrls)
+    ? params.imageUrls.filter((u) => typeof u === "string" && /^https?:\/\//i.test(u))
+    : [];
+
+  if (refUrls.length > 0) {
+    const { buffer: inputBuffer, mimeType: inputMime } =
+      await fetchHttpImageBuffer(refUrls[0]);
+    const form = new FormData();
+    form.append("model", model);
+    form.append("prompt", prompt);
+    form.append("size", size);
+    form.append("n", "1");
+    form.append("response_format", "b64_json");
+    form.append(
+      "image",
+      new Blob([inputBuffer], { type: inputMime }),
+      "reference.jpg",
+    );
+
+    const response = await fetch(DEEPINFRA_IMAGES_EDITS_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        /* ignore */
+      }
+      const detail =
+        parsed?.error?.message ||
+        parsed?.message ||
+        text.slice(0, 280) ||
+        `HTTP ${response.status}`;
+      throw new Error(`DeepInfra API error: ${detail}`);
+    }
+    return parseDeepInfraImageResponse(text, response.status);
+  }
 
   const response = await fetch(DEEPINFRA_IMAGES_URL, {
     method: "POST",
@@ -55,14 +144,13 @@ async function generateDeepInfraImage(params) {
   });
 
   const text = await response.text();
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(`DeepInfra API: réponse non-JSON (${response.status})`);
-  }
-
   if (!response.ok) {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      /* ignore */
+    }
     const detail =
       parsed?.error?.message ||
       parsed?.message ||
@@ -70,26 +158,7 @@ async function generateDeepInfraImage(params) {
       `HTTP ${response.status}`;
     throw new Error(`DeepInfra API error: ${detail}`);
   }
-
-  const b64 =
-    parsed?.data?.[0]?.b64_json ||
-    parsed?.images?.[0]?.b64_json ||
-    parsed?.output?.[0]?.b64_json;
-
-  if (!b64 || typeof b64 !== "string") {
-    throw new Error("DeepInfra API: aucune image dans la réponse");
-  }
-
-  const buffer = Buffer.from(b64, "base64");
-  if (buffer.length < 256) {
-    throw new Error("DeepInfra API: image invalide (buffer trop petit)");
-  }
-
-  return {
-    buffer,
-    mimeType: "image/png",
-    revisedPrompt: parsed?.data?.[0]?.revised_prompt,
-  };
+  return parseDeepInfraImageResponse(text, response.status);
 }
 
 module.exports = {

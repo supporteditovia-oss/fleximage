@@ -4,7 +4,6 @@ const {
   getAppSettings,
   ONESHOT_MODEL_VARIANT,
 } = require("./oneshot");
-const { createKieTask, isKieConfigured } = require("./kie");
 const {
   generateDeepInfraImage,
   getDeepInfraModel,
@@ -344,6 +343,7 @@ async function generateImageOnce(supabase, params) {
     const { buffer, mimeType } = await generateDeepInfraImage({
       prompt: finalPrompt,
       aspectRatio,
+      imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
     });
 
     const { uploadToR2 } = require("./r2");
@@ -402,75 +402,6 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
-  async function runKieFallback(reason) {
-    if (!isKieConfigured()) {
-      throw reason;
-    }
-
-    console.warn("[generate-image-once] falling back to Kie AI", {
-      generationId,
-      reason: reason instanceof Error ? reason.message : String(reason),
-      ...logContext,
-    });
-
-    const kieResponse = await createKieTask({
-      prompt: finalPrompt,
-      aspect_ratio: aspectRatio,
-      ...(Array.isArray(imageUrls) && imageUrls.length > 0
-        ? { image_input: imageUrls }
-        : {}),
-    });
-
-    if (kieResponse.code !== 200 || !kieResponse.data?.taskId) {
-      throw reason;
-    }
-
-    const externalTaskId = kieResponse.data.taskId;
-    const attemptRecord = {
-      provider: "kie",
-      jobId: externalTaskId,
-      externalTaskId,
-      modelVariant,
-      requestedAt: claim.generation.metadata?.provider_call_started_at || null,
-      completedAt: new Date().toISOString(),
-      durationMs: Date.now() - startedAt,
-      autoRetry: false,
-      fallbackFrom: "oneshot",
-    };
-    const nextMeta = {
-      ...(claim.generation.metadata || {}),
-      api_call_count: 1,
-      provider_call_completed_at: new Date().toISOString(),
-      provider_duration_ms: Date.now() - startedAt,
-      provider_auto_retries: 0,
-      kie_fallback_reason:
-        reason instanceof Error ? reason.message : String(reason),
-    };
-
-    await persistProviderResult({
-      provider: "kie",
-      externalTaskId,
-      attemptRecord,
-      nextMeta,
-    });
-
-    console.info("[generate-image-once] Kie fallback started", {
-      generationId,
-      externalTaskId,
-      durationMs: Date.now() - startedAt,
-      ...logContext,
-    });
-
-    return {
-      ok: true,
-      deduplicated: false,
-      externalTaskId,
-      apiCallCount: 1,
-      provider: "kie",
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
   const hasReferenceImages =
     Array.isArray(imageUrls) && imageUrls.length > 0;
   let route;
@@ -497,11 +428,6 @@ async function generateImageOnce(supabase, params) {
     if (route.provider === "deepinfra") {
       return await runDeepInfra(route.reason || null);
     }
-    if (route.provider === "kie") {
-      return await runKieFallback(
-        new Error(route.reason || "router_kie"),
-      );
-    }
     return await runOneshot();
   } catch (primaryErr) {
     if (
@@ -510,7 +436,7 @@ async function generateImageOnce(supabase, params) {
     ) {
       await markOneshotCreditsExhausted(supabase);
       const retryErr = new Error(
-        "Crédits OneShot épuisés. Relance la génération — DeepInfra ou Kie prendra le relais automatiquement.",
+        "Crédits OneShot épuisés. Relance la génération — DeepInfra (Nano Banana 2) prendra le relais.",
       );
       retryErr.code = "ONESHOT_CREDITS_EXHAUSTED";
       throw retryErr;

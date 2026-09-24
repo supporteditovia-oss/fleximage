@@ -1,4 +1,4 @@
-const { describe, it, beforeEach, afterEach } = require("node:test");
+const { describe, it, afterEach } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   resolveImageGenerationProvider,
@@ -44,17 +44,21 @@ describe("model-router", () => {
     assert.equal(n, 427);
   });
 
-  it("routes multi-ref to Kie when oneshot credits are 0", async () => {
-    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
-    process.env.ONESHOT_API_KEY = "key";
-    process.env.ONESHOT_REMAINING_CREDITS = "0";
+  it("admin always uses deepinfra (with or without photo refs)", async () => {
+    process.env.ONESHOT_REMAINING_CREDITS = "999";
     process.env.DEEPINFRA_API_KEY = "di";
-    process.env.KIE_AI_API_KEY = "kie";
 
-    const route = await resolveImageGenerationProvider(null, {
+    const textOnly = await resolveImageGenerationProvider(null, {
+      adminPreferDeepInfra: true,
+      hasReferenceImages: false,
+    });
+    assert.equal(textOnly.provider, "deepinfra");
+
+    const withRefs = await resolveImageGenerationProvider(null, {
+      adminPreferDeepInfra: true,
       hasReferenceImages: true,
     });
-    assert.equal(route.provider, "kie");
+    assert.equal(withRefs.provider, "deepinfra");
   });
 
   it("detects OneShot provider credit exhaustion", () => {
@@ -71,32 +75,6 @@ describe("model-router", () => {
     );
   });
 
-  it("admin always uses deepinfra for prompt-only (clients unchanged)", async () => {
-    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
-    process.env.ONESHOT_API_KEY = "key";
-    process.env.ONESHOT_REMAINING_CREDITS = "999";
-    process.env.DEEPINFRA_API_KEY = "di";
-
-    const route = await resolveImageGenerationProvider(null, {
-      adminPreferDeepInfra: true,
-      hasReferenceImages: false,
-    });
-    assert.equal(route.provider, "deepinfra");
-    assert.equal(route.reason, "admin_test_deepinfra");
-  });
-
-  it("admin with refs uses Kie not OneShot", async () => {
-    process.env.ONESHOT_REMAINING_CREDITS = "999";
-    process.env.DEEPINFRA_API_KEY = "di";
-    process.env.KIE_AI_API_KEY = "kie";
-
-    const route = await resolveImageGenerationProvider(null, {
-      adminPreferDeepInfra: true,
-      hasReferenceImages: true,
-    });
-    assert.equal(route.provider, "kie");
-  });
-
   it("clients ignore forceKieAi and stay on oneshot", async () => {
     process.env.ONESHOT_API_URL = "https://api.oneshot.example";
     process.env.ONESHOT_API_KEY = "key";
@@ -105,22 +83,18 @@ describe("model-router", () => {
 
     const route = await resolveImageGenerationProvider(null, {
       forceKieAi: true,
-      hasReferenceImages: false,
+      hasReferenceImages: true,
     });
     assert.equal(route.provider, "oneshot");
   });
 
-  it("rejects multi-ref when credits 0 and Kie missing", async () => {
-    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
-    process.env.ONESHOT_API_KEY = "key";
+  it("fallback deepinfra when oneshot exhausted even with refs", async () => {
     process.env.ONESHOT_REMAINING_CREDITS = "0";
     process.env.DEEPINFRA_API_KEY = "di";
-    delete process.env.KIE_AI_API_KEY;
 
-    await assert.rejects(
-      () =>
-        resolveImageGenerationProvider(null, { hasReferenceImages: true }),
-      /KIE_AI_API_KEY/,
-    );
+    const route = await resolveImageGenerationProvider(null, {
+      hasReferenceImages: true,
+    });
+    assert.equal(route.provider, "deepinfra");
   });
 });

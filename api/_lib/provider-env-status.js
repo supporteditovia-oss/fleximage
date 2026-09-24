@@ -40,7 +40,7 @@ async function getProviderEnvStatus(supabase) {
     deepinfra ||
     kie;
 
-  const imageWithRefsReady = oneshotConfigured || kie;
+  const imageWithRefsReady = oneshotConfigured || deepinfra;
 
   const videoReady = isRunwayConfigured();
 
@@ -49,7 +49,7 @@ async function getProviderEnvStatus(supabase) {
     warnings.push("DEEPINFRA_API_KEY manquant — pas de Nano Banana 2 (texte sans refs).");
   }
   if (!kie) {
-    warnings.push("KIE_AI_API_KEY manquant — pas de Kie image ni vidéo/Kling.");
+    warnings.push("KIE_AI_API_KEY manquant — pas de vidéo IA / Kling Motion.");
   }
   if (deepinfra && !isR2Configured()) {
     warnings.push("R2 incomplet — DeepInfra ne pourra pas enregistrer les images.");

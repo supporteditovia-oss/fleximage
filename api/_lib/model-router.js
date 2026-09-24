@@ -1,5 +1,4 @@
 const { getOneshotApiConfig } = require("./oneshot");
-const { isKieConfigured } = require("./kie");
 const { isDeepInfraConfigured } = require("./deepinfra");
 
 const APP_SETTINGS_CREDITS_KEY = "oneshot_remaining_credits";
@@ -48,7 +47,7 @@ function isOneshotCreditsExhaustedError(err) {
   );
 }
 
-/** Force le routeur à basculer DeepInfra/Kie dès la prochaine requête. */
+/** Force le routeur à basculer DeepInfra dès la prochaine requête. */
 async function markOneshotCreditsExhausted(supabase) {
   if (!supabase) return;
   try {
@@ -103,53 +102,31 @@ async function decrementOneshotCreditIfTracked(supabase) {
 }
 
 /**
- * Choix transparent OneShot → DeepInfra (puis Kie secours si refs / erreur).
- * @returns {Promise<{ provider: 'oneshot' | 'deepinfra' | 'kie', reason?: string, remainingCredits: number | null }>}
+ * Images : OneShot (clients) ou DeepInfra Nano Banana 2 (admin / fallback).
+ * Kie.ai = vidéo uniquement (Runway, Aleph, Kling) — jamais pour les images ici.
+ * @returns {Promise<{ provider: 'oneshot' | 'deepinfra', reason?: string, remainingCredits: number | null }>}
  */
 async function resolveImageGenerationProvider(supabase, options = {}) {
-  const hasReferenceImages = Boolean(options.hasReferenceImages);
   const adminPreferDeepInfra = Boolean(options.adminPreferDeepInfra);
   const oneshotConfigured = Boolean(
     getOneshotApiConfig().url && getOneshotApiConfig().key,
   );
   const deepinfraConfigured = isDeepInfraConfigured();
-  const kieConfigured = isKieConfigured();
   const remainingCredits = await getOneshotRemainingCredits(supabase);
 
-  /** Admin : test DeepInfra / Kie — jamais OneShot (clients restent sur OneShot). */
+  /** Admin : Nano Banana 2 via DeepInfra uniquement (pas OneShot, pas Kie image). */
   if (adminPreferDeepInfra) {
-    if (hasReferenceImages) {
-      if (kieConfigured) {
-        return {
-          provider: "kie",
-          reason: "admin_test_kie_refs",
-          remainingCredits,
-        };
-      }
+    if (!deepinfraConfigured) {
       throw new Error(
-        "Admin : génération avec photo — configure KIE_AI_API_KEY (DeepInfra seul ne gère pas les refs).",
+        "Admin : configure DEEPINFRA_API_KEY pour Nano Banana 2 (DeepInfra).",
       );
     }
-    if (deepinfraConfigured) {
-      return {
-        provider: "deepinfra",
-        reason: "admin_test_deepinfra",
-        remainingCredits,
-      };
-    }
-    if (kieConfigured) {
-      return {
-        provider: "kie",
-        reason: "admin_test_kie_no_deepinfra",
-        remainingCredits,
-      };
-    }
-    throw new Error(
-      "Admin : configure DEEPINFRA_API_KEY ou KIE_AI_API_KEY pour tester.",
-    );
+    return {
+      provider: "deepinfra",
+      reason: "admin_nano_banana_deepinfra",
+      remainingCredits,
+    };
   }
-
-  // force_kie_ai (app_settings) : ignoré pour les clients — réservé au routage admin ci-dessus.
 
   const oneshotAllowed =
     oneshotConfigured &&
@@ -160,27 +137,15 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
   }
 
   if (deepinfraConfigured) {
-    if (hasReferenceImages) {
-      if (kieConfigured) {
-        return {
-          provider: "kie",
-          reason: "deepinfra_no_refs_fallback_kie",
-          remainingCredits,
-        };
-      }
-      throw new Error(
-        "Crédits OneShot épuisés : les générations avec photos nécessitent KIE_AI_API_KEY (DeepInfra seul = texte sans refs).",
-      );
-    }
-    return { provider: "deepinfra", remainingCredits };
-  }
-
-  if (kieConfigured) {
-    return { provider: "kie", reason: "deepinfra_missing", remainingCredits };
+    return {
+      provider: "deepinfra",
+      reason: "oneshot_exhausted_deepinfra",
+      remainingCredits,
+    };
   }
 
   throw new Error(
-    "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY (et KIE_AI_API_KEY si photos).",
+    "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY (Nano Banana 2).",
   );
 }
 
