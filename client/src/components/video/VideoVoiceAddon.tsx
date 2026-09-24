@@ -35,22 +35,38 @@ export function VideoVoiceAddon({
         </span>
       </button>
 
+      {!enabled ? (
+        <p className="via-voice-addon__hint via-voice-addon__hint--panel">
+          Il doit <strong>parler ou crier</strong> ? Active l&apos;option (+5
+          crédits) : les <strong>mots exacts</strong> vont dans le champ
+          ci-dessous, pas dans le prompt mouvement. Ex. chute dans l&apos;eau →
+          prompt ; « Aaaah ! Non non ! » → parole.
+        </p>
+      ) : null}
+
       {enabled ? (
         <div className="via-voice-addon__panel">
           <label className="via-step-label" htmlFor="video-voice-script">
-            Texte à lire
+            Parole du personnage (sync lèvres)
           </label>
+          <p className="via-voice-addon__hint via-voice-addon__hint--panel">
+            L&apos;IA fait <strong>dire ce texte à voix haute</strong> avec
+            bouche, mâchoire et timing réalistes — comme une vraie prise, pas
+            une photo figée. Chaque mot doit coller au mouvement des lèvres.
+          </p>
           <textarea
             id="video-voice-script"
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
             rows={3}
             maxLength={maxChars}
-            placeholder="Ex. : Personne ne croyait en moi, alors j'ai arrêté d'expliquer."
+            placeholder="Ex. : Bonjour les amis, comment vous allez ? — ou pour un cri : Aaaah ! Non non non !"
             className="via-prompt-field"
           />
           <p className="via-voice-addon__hint">
-            {text.trim().length}/{maxChars} caractères · voix catalogue
+            {text.trim().length}/{maxChars} caractères · voix catalogue · le
+            prompt mouvement décrit l&apos;action, ce champ décrit{" "}
+            <strong>uniquement</strong> ce qu&apos;on entend
           </p>
         </div>
       ) : null}

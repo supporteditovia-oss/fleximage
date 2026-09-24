@@ -506,14 +506,22 @@ export default function VideoIA() {
               <>
                 <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  Étape 2 — Prompt
+                  Étape 2 — Mouvement &amp; scène
+                </p>
+                <p className="via-step-desc" style={{ marginTop: "0.35rem" }}>
+                  <strong>Action visuelle seulement</strong> : ce que fait le
+                  corps, la caméra, l&apos;environnement (tomber, sourire,
+                  ralenti…).{" "}
+                  <strong>Pas de paroles ni de cris ici</strong> — sans
+                  l&apos;option voix, la vidéo reste muette même si tu écris
+                  « il parle ».
                 </p>
                 <textarea
                   value={motionPrompt}
                   onChange={(e) => setMotionPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Il tombe dans l'eau en souriant, caméra lente…"
+                  placeholder="Ex. : Il tombe dans l'eau en souriant, caméra lente, éclaboussures…"
                   className="via-prompt-field"
                 />
               </>

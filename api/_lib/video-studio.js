@@ -382,8 +382,13 @@ function buildRunwayPrompt(params) {
   ];
 
   if (params.voiceEnabled && params.voiceText) {
+    const spoken = String(params.voiceText || "")
+      .trim()
+      .replace(/["«»]/g, "'")
+      .slice(0, 280);
     parts.push(
-      "Visage visible : synchronisation labiale naturelle et subtile avec la parole implicite, bouche réaliste sans exagération.",
+      "Visage visible : synchronisation labiale précise, mot pour mot, timing naturel comme une vraie vidéo tournée (pas une photo animée).",
+      `Le personnage dit exactement à voix haute : '${spoken}'. Mouvements de bouche et expressions alignés sur chaque syllabe.`,
     );
   } else {
     parts.push(V2V_SILENT_OUTPUT_LOCK.trim());
