@@ -12,6 +12,7 @@ type VideoVoiceAddonProps = {
   consent: boolean;
   onConsentChange: (value: boolean) => void;
   maxChars?: number;
+  voiceExtraCredit?: number;
 };
 
 export function VideoVoiceAddon({
@@ -22,6 +23,7 @@ export function VideoVoiceAddon({
   consent,
   onConsentChange,
   maxChars = 200,
+  voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
 }: VideoVoiceAddonProps) {
   return (
     <div className="via-voice-addon">
@@ -35,7 +37,7 @@ export function VideoVoiceAddon({
         <span className="via-voice-addon__toggle-text">
           Ajouter une voix IA
           <span className="via-voice-addon__toggle-meta">
-            +{VIDEO_VOICE_EXTRA_CREDIT} crédits
+            +{voiceExtraCredit} crédits
           </span>
         </span>
       </button>

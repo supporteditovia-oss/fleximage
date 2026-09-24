@@ -67,6 +67,36 @@ export const VIDEO_MOTION_PRESETS: VideoMotionPreset[] = [
     prompt:
       "Il marche lentement, regarde la caméra et sourit. Mouvement naturel, allure premium.",
   },
+  {
+    id: "water_fall",
+    label: "Chute eau",
+    prompt:
+      "Il tombe dans l'eau en souriant, ralenti cinématique, éclaboussures réalistes, caméra lente.",
+  },
+  {
+    id: "yacht_sunset",
+    label: "Yacht",
+    prompt:
+      "Sur le pont d'un yacht au coucher du soleil, vent dans les cheveux, regard vers l'horizon, mouvement fluide.",
+  },
+  {
+    id: "jet_tarmac",
+    label: "Tarmac",
+    prompt:
+      "Marche confiante vers un jet privé sur le tarmac, lumière dorée, ombre longue, allure premium.",
+  },
+  {
+    id: "rooftop_dubai",
+    label: "Dubai",
+    prompt:
+      "Pose détendue sur un rooftop avec skyline de nuit, micro-mouvements naturels, bokeh lumineux.",
+  },
+  {
+    id: "pool_dive",
+    label: "Piscine",
+    prompt:
+      "Plongeon élégant dans une piscine à débordement, eau cristalline, ralenti sur l'impact.",
+  },
 ];
 
 export type V2VScenePreset = {

@@ -58,6 +58,20 @@ describe("video-studio", () => {
     });
     assert.match(prompt, /marche calmement/i);
     assert.match(prompt, /pas de diaporama/i);
+    assert.match(prompt, /silent|muette|no voice/i);
+  });
+
+  it("buildRunwayPrompt strips speech tricks when voice addon off", () => {
+    const prompt = buildRunwayPrompt({
+      motionPrompt:
+        "Il tombe dans l'eau et crie hop, mets ma voix de meuf.",
+      cameraMovement: "fixed",
+      motionIntensity: "natural",
+      style: "cinematic",
+      voiceEnabled: false,
+    });
+    assert.doesNotMatch(prompt, /voix/i);
+    assert.match(prompt, /silent|no voice/i);
   });
 
   it("maxVoiceCharsForDuration", () => {

@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
+import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   adminPreviewVideoCreditCost,
   ADMIN_PRICING_REFERENCE,
@@ -31,6 +32,7 @@ import {
 import {
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
+  VIDEO_MOTION_PRESETS,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -39,6 +41,7 @@ import {
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
 import {
+  finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
   isVehicleDrivingPrompt,
 } from "@/lib/v2v-prompt";
@@ -266,10 +269,21 @@ export default function VideoIA() {
     releaseGenerationLoaderTheme();
     setIsSubmitting(true);
     try {
-      const prompt =
+      const rawPrompt =
         motionPrompt.trim().length >= 10
           ? motionPrompt.trim()
           : `${motionPrompt.trim()}. ${DEFAULT_IMAGE_TO_VIDEO_PROMPT}`;
+      const prompt = finalizeI2VMotionPromptForSubmit(rawPrompt, voiceEnabled);
+      if (prompt.length < 10) {
+        toast({
+          variant: "destructive",
+          title: "Voix non activée",
+          description:
+            "Sans l'option voix (+5 crédits), le prompt ne peut pas demander de parole ou de son. Active « Ajouter une voix IA » ou décris seulement le mouvement visuel.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
       const result = await generateVideo.mutateAsync({
         workflow: "image_to_video",
@@ -453,7 +467,10 @@ export default function VideoIA() {
             <p className="via-step-desc">
               JPG ou PNG — ta propre image. Vidéo verticale max{" "}
               {VIDEO_I2V_OUTPUT_DURATION_SEC} s ·{" "}
-              <strong>{adminBurn.videoI2V} crédits</strong> par génération.
+              <strong>{adminBurn.videoI2V} crédits</strong> par génération. Par
+              défaut la vidéo est <strong>muette</strong> — active l&apos;option
+              voix IA (+{adminBurn.videoVoiceExtra} crédits) pour entendre un
+              texte à lire.
             </p>
 
             <input
@@ -498,11 +515,45 @@ export default function VideoIA() {
                   onChange={(e) => setMotionPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Je veux qu'il tombe dans l'eau en souriant, caméra lente…"
+                  placeholder="Ex. : Il tombe dans l'eau en souriant, caméra lente…"
                   className="via-prompt-field"
                 />
+                <p className="via-step-label" style={{ marginTop: "0.75rem" }}>
+                  Exemples
+                </p>
+                <div className="via-chips">
+                  {VIDEO_MOTION_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className="via-chip"
+                      onClick={() => setMotionPrompt(preset.prompt)}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
               </>
             )}
+
+            {imagePreviewUrl ? (
+              <VideoVoiceAddon
+                enabled={voiceEnabled}
+                onEnabledChange={(next) => {
+                  setVoiceEnabled(next);
+                  if (!next) {
+                    setVoiceConsent(false);
+                    setVoiceText("");
+                  }
+                }}
+                text={voiceText}
+                onTextChange={setVoiceText}
+                consent={voiceConsent}
+                onConsentChange={setVoiceConsent}
+                maxChars={voiceMaxChars}
+                voiceExtraCredit={adminBurn.videoVoiceExtra}
+              />
+            ) : null}
 
             <div className="via-orient-toggle" role="group" aria-label="Orientation">
               <button

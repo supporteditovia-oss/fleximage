@@ -55,7 +55,11 @@ const VOICE_INSTRUCTION_PATTERNS = [
   /\b(fais?|faire|g[ée]n[èe]re|g[ée]n[èe]rer|make|create|generate)\s+(?:une?|un|la|le|my|a)?\s*(?:voix|voice|audio|parole|speech)\b/gi,
   /\bvoix\s+(?:de|d['’]|of)\s+(?:femme|homme|meuf|mec|woman|man|girl|boy|celebrity|celebrit[ée])\b/gi,
   /\b(female|male|woman|man)\s+voice\b/gi,
-  /\b(parle|parler|speak|talking|talk|dis\s+(?:que|qu['’]))\b/gi,
+  /\b(parle|parler|speak|speaks?|speaking|talking|talk|dis\s+(?:que|qu['’]|«|"))\b/gi,
+  /\b(crie|crier|hurle|hurler|shouts?|screams?|exclaim|murmure|chuchote|whispers?)\b/gi,
+  /\b(dit|dire|disent|say|says|said|tell|telling)\s+(?:que|qu['’]|«|"| loudly|aloud)\b/gi,
+  /\bet\s+(?:qui\s+)?(?:dit|crie|parle|hurle|lance|fait\s+un\s+son)\b/gi,
+  /\b(avec\s+(?:de\s+la\s+)?(?:voix|parole|dialogue|narration|son\s+de\s+voix))\b/gi,
   /\b(lip[\s-]?sync|synchronis(?:e|ation)\s+(?:labiale|des\s+l[eè]vres))\b/gi,
   /\b(musique|music|bande\s+son|soundtrack|bgm)\b/gi,
 ];
@@ -362,8 +366,13 @@ function buildCarSwapPrompt(vehicleDescription) {
 }
 
 function buildRunwayPrompt(params) {
+  let motion = String(params.motionPrompt || "").trim();
+  if (!params.voiceEnabled) {
+    motion = stripVoiceInstructionsFromPrompt(motion);
+  }
+
   const parts = [
-    String(params.motionPrompt || "").trim(),
+    motion,
     CAMERA_PROMPTS[params.cameraMovement] || CAMERA_PROMPTS.fixed,
     INTENSITY_PROMPTS[params.motionIntensity] || INTENSITY_PROMPTS.natural,
     STYLE_PROMPTS[params.style] || STYLE_PROMPTS.realistic,
@@ -376,6 +385,8 @@ function buildRunwayPrompt(params) {
     parts.push(
       "Visage visible : synchronisation labiale naturelle et subtile avec la parole implicite, bouche réaliste sans exagération.",
     );
+  } else {
+    parts.push(V2V_SILENT_OUTPUT_LOCK.trim());
   }
 
   parts.push("Contenu créé par IA — rendu vidéo réaliste.");

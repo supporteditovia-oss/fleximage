@@ -22,6 +22,7 @@ const {
   buildRunwayPrompt,
   buildV2VProviderPrompt,
   validateVoiceText,
+  stripVoiceInstructionsFromPrompt,
 } = require("../video-studio");
 const {
   checkGenerationLimits,
@@ -337,10 +338,28 @@ module.exports = async function handler(req, res) {
         : "9:16";
     const quality = body.quality === "high" ? "high" : "standard";
     const voiceEnabled =
-      workflow === "image_to_video" && Boolean(body.voice_enabled);
+      workflow === "image_to_video" &&
+      Boolean(body.voice_enabled) &&
+      Boolean(body.voice_consent) &&
+      String(body.voice_text || "").trim().length >= 5;
     const preserveSourceAudio =
       workflow === "video_to_video" && Boolean(body.preserve_source_audio);
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
+
+    if (workflow === "image_to_video" && !voiceEnabled) {
+      const sanitizedMotion = stripVoiceInstructionsFromPrompt(motionPrompt);
+      if (sanitizedMotion.length < 10) {
+        res.status(422).json({
+          code: "VOICE_PROMPT_BLOCKED",
+          message: copy(
+            uiLocale,
+            "Sans l'option voix activée (+5 crédits), ton prompt ne peut pas demander de parole, cri ou son. Active « Ajouter une voix IA » ou décris uniquement le mouvement visuel.",
+            "Without the paid voice option (+5 credits), your prompt cannot request speech or sound. Enable “Add AI voice” or describe visual motion only.",
+          ),
+        });
+        return;
+      }
+    }
 
     let sourceVideoDurationSec = null;
     if (workflow === "video_to_video") {
