@@ -181,6 +181,7 @@ export default function Generate({
     isAdmin,
   } = useAuth();
   const adminPreview = useAdminPreviewFeatures();
+  const { v2Enabled } = useV2Access();
   const { data: currentPlan } = useCurrentPlan({ enabled: !!user });
   const queryClient = useQueryClient();
   const { data: templatesList } = useTemplates();
@@ -1669,7 +1670,7 @@ export default function Generate({
                 onAspectRatioChange={setAspectRatio}
               />
 
-              {adminPreview ? <TemplateStrip variant="compact" /> : null}
+              {v2Enabled ? <TemplateStrip variant="compact" /> : null}
             </>
           )}
         </div>
