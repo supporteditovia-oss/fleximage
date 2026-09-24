@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { useTemplateFeed } from "@/hooks/use-template-feed";
-import { useV2Access } from "@/hooks/use-v2-access";
+import { BUILTIN_FEED_TEMPLATES } from "@/lib/builtin-image-templates";
+import { useAuth } from "@/hooks/use-auth";
 import { MODELES_CATALOG_PATH } from "@/lib/modeles-categories";
 import "@/pages/modeles-page.css";
 
@@ -15,17 +16,18 @@ type TemplateStripProps = {
  */
 export function TemplateStrip({ variant = "compact" }: TemplateStripProps) {
   const [, navigate] = useLocation();
-  const { v2Enabled } = useV2Access();
+  const { user } = useAuth();
   const { data: templates } = useTemplateFeed({
-    enabled: v2Enabled,
+    enabled: Boolean(user),
     alwaysIncludeBuiltins: true,
   });
 
-  if (!v2Enabled) {
+  if (!user) {
     return null;
   }
 
-  const list = templates ?? [];
+  const list =
+    templates && templates.length > 0 ? templates : BUILTIN_FEED_TEMPLATES;
 
   if (list.length === 0) {
     return null;

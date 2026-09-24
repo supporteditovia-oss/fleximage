@@ -1670,7 +1670,7 @@ export default function Generate({
                 onAspectRatioChange={setAspectRatio}
               />
 
-              {v2Enabled ? <TemplateStrip variant="compact" /> : null}
+              {user ? <TemplateStrip variant="compact" /> : null}
             </>
           )}
         </div>

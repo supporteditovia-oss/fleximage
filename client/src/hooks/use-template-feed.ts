@@ -150,7 +150,7 @@ export function useTemplateFeed(
     },
     enabled: options.enabled ?? true,
     initialData: fallbackTemplates,
-    placeholderData: fallbackTemplates,
+    placeholderData: () => fallbackTemplates,
     staleTime: 5 * 60 * 1000,
   });
 }

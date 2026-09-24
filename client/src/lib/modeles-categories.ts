@@ -157,6 +157,7 @@ export function parseModelesPath(pathname: string): {
         templateSlug: null,
       };
     }
+    return { view: "home", categorySlug: null, templateSlug: null };
   }
 
   if (path === "/modeles") {

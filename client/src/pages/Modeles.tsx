@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ChevronLeft, Expand, Gem, ImagePlus, Loader2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useV2Access } from "@/hooks/use-v2-access";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useTemplateFeed, type FeedTemplate } from "@/hooks/use-template-feed";
 import { useGenerateDirectLarp } from "@/hooks/use-larps";
@@ -15,7 +14,14 @@ import {
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { getBuiltinGenerationPrompt, getTemplateComparePair, getTemplateDisplayUrl, hasTemplateBeforeAfterDemo, isVehicleSwapTemplate } from "@/lib/builtin-image-templates";
+import {
+  BUILTIN_FEED_TEMPLATES,
+  getBuiltinGenerationPrompt,
+  getTemplateComparePair,
+  getTemplateDisplayUrl,
+  hasTemplateBeforeAfterDemo,
+  isVehicleSwapTemplate,
+} from "@/lib/builtin-image-templates";
 import { BeforeAfterSlider } from "@/components/v2/BeforeAfterSlider";
 import { useToast } from "@/hooks/use-toast";
 import { ModelesScene } from "@/components/modeles/ModelesScene";
@@ -298,12 +304,11 @@ function TemplatePreviewLightbox({
 
 export default function Modeles() {
   const [location, navigate] = useLocation();
-  const { profile, isLoading: isAuthLoading } = useAuth();
-  const { v2Enabled } = useV2Access();
+  const { profile, user, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(profile?.id) });
   const { data: templates, isLoading } = useTemplateFeed({
-    enabled: v2Enabled,
+    enabled: Boolean(user),
     alwaysIncludeBuiltins: true,
   });
   const generateDirect = useGenerateDirectLarp();
@@ -333,10 +338,14 @@ export default function Modeles() {
 
   const route = useMemo(() => parseModelesPath(location), [location]);
   const viewMode = route.view;
-  const activeCategory = route.categorySlug ?? "lifestyle";
+  const activeCategory: ModelesCategorySlug =
+    route.categorySlug ?? "destinations";
 
   const credits = plan?.credits ?? profile?.credits ?? 0;
-  const list = templates ?? [];
+  const list = useMemo(() => {
+    if (templates && templates.length > 0) return templates;
+    return BUILTIN_FEED_TEMPLATES;
+  }, [templates]);
 
   const categoryScenes = useMemo(
     () => filterScenesByCategory(list, activeCategory),

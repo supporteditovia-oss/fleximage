@@ -200,7 +200,7 @@ function StudioFeatureRoute({ component: Component }: { component: React.Compone
 }
 
 function ModelesRoute() {
-  return <StudioFeatureRoute component={Modeles} />;
+  return <Modeles />;
 }
 
 function VideoIARoute() {
