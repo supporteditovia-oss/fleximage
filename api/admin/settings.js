@@ -1,5 +1,9 @@
 const { requireAdmin, readBody, sendError } = require("../_lib/admin-auth");
 const { getProviderEnvStatus } = require("../_lib/provider-env-status");
+const {
+  ADMIN_IMAGE_PROVIDER_KEY,
+  normalizeAdminImageProvider,
+} = require("../_lib/model-router");
 
 async function getAppSettings(supabase) {
   const { data, error } = await supabase.from("app_settings").select("key, value");
@@ -9,6 +13,9 @@ async function getAppSettings(supabase) {
   return {
     forceKieAi: map.get("force_kie_ai") === "true",
     fallbackTimeoutMs: Number(map.get("fallback_timeout_ms")) || 105_000,
+    adminImageProvider: normalizeAdminImageProvider(
+      map.get(ADMIN_IMAGE_PROVIDER_KEY),
+    ),
   };
 }
 
@@ -37,6 +44,25 @@ module.exports = async function handler(req, res) {
           {
             key: "force_kie_ai",
             value: String(body.forceKieAi),
+            updated_at: now,
+          },
+          { onConflict: "key" },
+        );
+        if (error) throw error;
+      }
+
+      if (body.adminImageProvider !== undefined) {
+        const provider = normalizeAdminImageProvider(body.adminImageProvider);
+        if (provider !== "oneshot" && provider !== "deepinfra") {
+          res.status(400).json({
+            message: "adminImageProvider doit être oneshot ou deepinfra",
+          });
+          return;
+        }
+        const { error } = await supabase.from("app_settings").upsert(
+          {
+            key: ADMIN_IMAGE_PROVIDER_KEY,
+            value: provider,
             updated_at: now,
           },
           { onConflict: "key" },

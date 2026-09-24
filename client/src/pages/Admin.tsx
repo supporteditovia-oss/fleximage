@@ -1125,6 +1125,7 @@ function OneshotApiSettings() {
   const { data: settings, isLoading } = useQuery<{
     forceKieAi: boolean;
     fallbackTimeoutMs: number;
+    adminImageProvider?: "oneshot" | "deepinfra";
     providerEnv?: ProviderEnvStatus;
   }>({
     queryKey: ["admin-settings"],
@@ -1140,15 +1141,55 @@ function OneshotApiSettings() {
   });
 
   const [forceKieAi, setForceKieAi] = useState(false);
+  const [adminImageProvider, setAdminImageProvider] = useState<
+    "oneshot" | "deepinfra"
+  >("deepinfra");
   const [timeoutSec, setTimeoutSec] = useState("105");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setForceKieAi(settings.forceKieAi);
+      setAdminImageProvider(settings.adminImageProvider ?? "deepinfra");
       setTimeoutSec(String(Math.round(settings.fallbackTimeoutMs / 1000)));
     }
   }, [settings]);
+
+  const handleAdminImageProvider = async (provider: "oneshot" | "deepinfra") => {
+    if (provider === adminImageProvider) return;
+    const previous = adminImageProvider;
+    setAdminImageProvider(provider);
+    setSaving(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
+        body: JSON.stringify({ adminImageProvider: provider }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      toast({
+        title: "Moteur images admin mis à jour",
+        description:
+          provider === "oneshot"
+            ? "Tes générations (Créer, modèles prêts…) passent par OneShot — idéal marketing."
+            : "Tes générations passent par DeepInfra (Nano Banana 2).",
+      });
+    } catch (err: unknown) {
+      setAdminImageProvider(previous);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: err instanceof Error ? err.message : "Mise à jour impossible",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleToggle = async (checked: boolean) => {
     setForceKieAi(checked);
@@ -1222,12 +1263,51 @@ function OneshotApiSettings() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Force Kie AI toggle */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 p-4">
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
           <div className="space-y-0.5">
-            <Label className="text-sm font-medium">Mode Full Kie AI</Label>
+            <Label className="text-sm font-medium">
+              Moteur images — ton compte admin
+            </Label>
             <p className="text-xs text-muted-foreground">
-              Bypass OneShot pour les comptes admin (DeepInfra / Kie). Les clients restent sur OneShot.
+              Choisis où sont prélevés tes crédits API image (Créer, modèles prêts,
+              catalogue). Les <strong>clients</strong> restent toujours sur OneShot.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={adminImageProvider === "oneshot" ? "default" : "outline"}
+              disabled={saving}
+              onClick={() => void handleAdminImageProvider("oneshot")}
+            >
+              OneShot (marketing)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={adminImageProvider === "deepinfra" ? "default" : "outline"}
+              disabled={saving}
+              onClick={() => void handleAdminImageProvider("deepinfra")}
+            >
+              DeepInfra (Nano Banana 2)
+            </Button>
+          </div>
+          {settings?.providerEnv?.oneshot.remainingCredits != null ? (
+            <p className="text-xs text-muted-foreground">
+              Solde OneShot suivi : {settings.providerEnv.oneshot.remainingCredits}{" "}
+              crédit(s) API
+            </p>
+          ) : null}
+        </div>
+
+        {/* Legacy — n'affecte plus les images */}
+        <div className="flex items-center justify-between rounded-lg border border-border/60 p-4 opacity-80">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">Mode Full Kie AI (legacy)</Label>
+            <p className="text-xs text-muted-foreground">
+              Ancien réglage vidéo / fallback — les images admin utilisent le choix
+              ci-dessus.
             </p>
           </div>
           <Switch
