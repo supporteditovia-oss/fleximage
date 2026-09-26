@@ -11,13 +11,48 @@ const {
 } = require("../plan-usage-limits");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
+const { normalizeVideoDataUrlContentType } = require("../media-buffer-sniff");
+const {
+  extractVoiceSampleWavFromVideoBuffer,
+  MAX_VOICE_VIDEO_BYTES,
+} = require("../extract-audio-from-video-buffer");
 
-function parseDataUrl(dataUrl) {
+async function parseVoiceSampleDataUrl(dataUrl, durationHint) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
   if (!match) return null;
-  const buffer = Buffer.from(match[2], "base64");
+  let contentType = String(match[1] || "")
+    .trim()
+    .toLowerCase()
+    .split(";")[0];
+  let buffer = Buffer.from(match[2], "base64");
+  if (!buffer.length) return null;
+
+  const normalizedVideoType = normalizeVideoDataUrlContentType(contentType, buffer);
+  const isVideo =
+    contentType.startsWith("video/") ||
+    (contentType === "application/octet-stream" &&
+      normalizedVideoType.startsWith("video/"));
+
+  if (isVideo) {
+    if (buffer.length > MAX_VOICE_VIDEO_BYTES) return null;
+    try {
+      const durationSec =
+        typeof durationHint === "number" && durationHint > 0
+          ? durationHint
+          : 25;
+      buffer = await extractVoiceSampleWavFromVideoBuffer(buffer, {
+        durationSec: Math.min(25, durationSec),
+      });
+      contentType = "audio/wav";
+    } catch {
+      return null;
+    }
+  } else if (!contentType.startsWith("audio/")) {
+    return null;
+  }
+
   if (buffer.length === 0 || buffer.length > MAX_AUDIO_BYTES) return null;
-  return { contentType: match[1], buffer };
+  return { contentType, buffer };
 }
 
 async function persistClone(supabase, userId, payload) {
@@ -76,10 +111,14 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
-    const parsed = parseDataUrl(body.audioDataUrl);
+    const parsed = await parseVoiceSampleDataUrl(
+      body.audioDataUrl,
+      body.durationSec,
+    );
     if (!parsed) {
       res.status(400).json({
-        message: "Échantillon audio invalide (max 12 Mo)",
+        message:
+          "Échantillon invalide — audio ou vidéo (MP4, MOV, TikTok téléchargé… max 25 Mo vidéo / 12 Mo audio).",
         code: "invalid_audio",
       });
       return;

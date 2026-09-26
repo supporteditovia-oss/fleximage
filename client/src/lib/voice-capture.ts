@@ -1,3 +1,5 @@
+import { isVideoMediaFile as detectVideoFile } from "@/lib/media-file-detect";
+
 export const MAX_CLIP_SEC = 25;
 /** Durée cible pour un clone très fidèle (Fish Audio). */
 export const IDEAL_CLIP_SEC = 20;
@@ -14,15 +16,13 @@ export type VoiceClip = {
   fileName?: string;
 };
 
-const VIDEO_EXT = /\.(mp4|mov|webm|mkv|m4v)$/i;
-
 function isMobileCaptureUa(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 }
 
 export function isVideoMediaFile(file: File): boolean {
-  return file.type.startsWith("video/") || VIDEO_EXT.test(file.name);
+  return detectVideoFile(file);
 }
 
 export function revokeVoiceClipUrl(clip: VoiceClip | null) {

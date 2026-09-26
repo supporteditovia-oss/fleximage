@@ -59,6 +59,7 @@ import {
   prepareVideoFileForStudio,
   type StudioVideoUpload,
 } from "@/lib/upload-video";
+import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
@@ -198,6 +199,14 @@ export default function VideoIA() {
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
+    if (!isImageMediaFile(file)) {
+      toast({
+        variant: "destructive",
+        title: "Format invalide",
+        description: "Importe une photo JPG, PNG, WebP ou HEIC.",
+      });
+      return;
+    }
     try {
       const compressed = await compressImageForGeneration(file);
       const b64 = await fileToBase64(compressed);
@@ -216,11 +225,12 @@ export default function VideoIA() {
 
   const handleVideoUpload = async (file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("video/")) {
+    if (!isVideoMediaFile(file)) {
       toast({
         variant: "destructive",
         title: "Format invalide",
-        description: "Importe une vidéo MP4 filmée au smartphone.",
+        description:
+          "Importe une vidéo (MP4, MOV…) — enregistrement, TikTok téléchargé, etc.",
       });
       return;
     }

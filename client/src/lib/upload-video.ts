@@ -1,4 +1,9 @@
 import { authFetch } from "@/lib/api";
+import {
+  fileToVideoDataUrl,
+  resolveVideoMimeType,
+  withNormalizedVideoFile,
+} from "@/lib/media-file-detect";
 
 /** Sous ce seuil, repli base64 via l'API si l'upload direct R2 échoue (CORS mobile). */
 export const VIDEO_INLINE_FALLBACK_MAX_BYTES = 18 * 1024 * 1024;
@@ -13,17 +18,9 @@ export type StudioVideoUpload =
   | { mode: "url"; videoUrl: string }
   | { mode: "inline"; dataUrl: string };
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 async function uploadVideoDirectToR2(file: File): Promise<string> {
-  const contentType = file.type || "video/mp4";
+  const normalized = withNormalizedVideoFile(file);
+  const contentType = resolveVideoMimeType(normalized);
   const res = await authFetch("/api/larps/video-upload-url", {
     method: "POST",
     body: JSON.stringify({
@@ -41,7 +38,7 @@ async function uploadVideoDirectToR2(file: File): Promise<string> {
   const putRes = await fetch(uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body: file,
+    body: normalized,
   });
 
   if (!putRes.ok) {
@@ -54,12 +51,13 @@ async function uploadVideoDirectToR2(file: File): Promise<string> {
 export async function prepareVideoFileForStudio(
   file: File,
 ): Promise<StudioVideoUpload> {
+  const normalized = withNormalizedVideoFile(file);
   try {
-    const videoUrl = await uploadVideoDirectToR2(file);
+    const videoUrl = await uploadVideoDirectToR2(normalized);
     return { mode: "url", videoUrl };
   } catch (directErr) {
-    if (file.size <= VIDEO_INLINE_FALLBACK_MAX_BYTES) {
-      const dataUrl = await fileToDataUrl(file);
+    if (normalized.size <= VIDEO_INLINE_FALLBACK_MAX_BYTES) {
+      const dataUrl = await fileToVideoDataUrl(normalized);
       return { mode: "inline", dataUrl };
     }
     const message =
