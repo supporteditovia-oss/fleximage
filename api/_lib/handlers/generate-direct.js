@@ -41,10 +41,7 @@ const {
   isBuiltinTemplateId,
   resolveBuiltinTemplateGeneration,
 } = require("../builtin-image-templates");
-const {
-  findRecentInFlightGeneration,
-  SESSION_BURST_WINDOW_MS,
-} = require("../generation-dedup");
+const { failStaleProcessingGenerations } = require("../stale-processing");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
 
 function normalizeAspectRatio(value) {
@@ -235,54 +232,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const burstInFlight = await findRecentInFlightGeneration(
-      supabase,
-      userId,
-      SESSION_BURST_WINDOW_MS,
-    );
-    if (burstInFlight) {
-      const burstRequestId =
-        burstInFlight.metadata &&
-        typeof burstInFlight.metadata === "object"
-          ? burstInFlight.metadata.generation_request_id
-          : null;
-      if (burstRequestId !== generationRequestId) {
-        console.info("[generate-direct] 409 burst — concurrent generation", {
-          userId,
-          generationRequestId,
-          existingRequestId: burstRequestId,
-          existingId: burstInFlight.id,
-        });
-        res.status(409).json(
-          conflictResponse(burstInFlight, generationRequestId, {
-            generationType: "image",
-          }),
-        );
-        return;
-      }
-    }
-
-    const inFlight = await findRecentInFlightGeneration(supabase, userId);
-    if (inFlight) {
-      const inflightRequestId =
-        inFlight.metadata && typeof inFlight.metadata === "object"
-          ? inFlight.metadata.generation_request_id
-          : null;
-      if (inflightRequestId !== generationRequestId) {
-        console.info("[generate-direct] 409 — generation already in flight", {
-          userId,
-          generationRequestId,
-          existingRequestId: inflightRequestId,
-          existingId: inFlight.id,
-        });
-        res.status(409).json(
-          conflictResponse(inFlight, generationRequestId, {
-            generationType: "image",
-          }),
-        );
-        return;
-      }
-    }
+    await failStaleProcessingGenerations(supabase, userId);
 
     const oneshotConfig = getOneshotApiConfig();
     const hasImageProvider =

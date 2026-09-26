@@ -1,8 +1,8 @@
 const SUBMIT_LOCK_KEY = "luxeflexia:generation-submit-lock";
-/** Aligné sur GENERATION_DEDUP_WINDOW_MS côté serveur (120 s). */
-const SUBMIT_LOCK_MS = 120_000;
+/** Anti double-tap / double-clic (pas de blocage pendant toute la génération). */
+const SUBMIT_LOCK_MS = 2_500;
 
-/** Verrou cross-onglet : empêche deux POST avant le claim serveur. */
+/** Verrou cross-onglet : empêche deux POST simultanés (< 2,5 s). */
 export function tryAcquireGenerationSubmitLock(): boolean {
   try {
     const raw = sessionStorage.getItem(SUBMIT_LOCK_KEY);
