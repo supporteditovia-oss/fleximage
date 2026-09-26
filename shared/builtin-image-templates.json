@@ -150,21 +150,6 @@
     "categoryName": "Supercars"
   },
   {
-    "id": "builtin-batch13-nike-quad-dunes",
-    "slug": "nike-quad-dunes",
-    "name": "Selfie Nike → quad dunes",
-    "description": "Du selfie maison au quad dans les dunes avec casque en main.",
-    "imagePath": "/models/modele-batch13-nike-avant.webp",
-    "readyImagePath": "/models/modele-batch13-quad-desert-apres.webp",
-    "demoAfterPath": "/models/modele-batch13-quad-desert-apres.webp",
-    "generationMode": "face-swap",
-    "requiresUserPhoto": true,
-    "faceSwapPrompt": "Remplace uniquement la personne de la seconde image par la personne de la première image. Conserve fidèlement son identité, visage, barbe, coiffure et carnation. Garde exactement la pose de profil dans le sable, le t-shirt Nike noir manches longues, le pantalon noir, le casque intégral noir en main, les lunettes sur la tête, la montre, le quad sport noir et les dunes dorées au coucher du soleil, le cadrage vertical 9:16 et l'éclairage de la seconde image. Photographie quad désert photoréaliste, proportions naturelles, intégration parfaite, sans texte ni logo.",
-    "prompt": "Remplace uniquement la personne, garde le quad et les dunes identiques.",
-    "category": "destinations",
-    "categoryName": "Lifestyle"
-  },
-  {
     "id": "builtin-batch14-mirror-yacht-restaurant",
     "slug": "mirror-yacht-restaurant",
     "name": "Selfie miroir → terrasse yacht restaurant",
