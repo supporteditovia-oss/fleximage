@@ -157,7 +157,8 @@ const COPY: Record<"fr" | "en" | "es" | "de", Copy> = {
 };
 
 /** Bornes de fin de chapitre (fraction de l'estimation). */
-const CHAPTER_ENDS = [0.1, 0.24, 0.86, 1] as const;
+const CHAPTER_ENDS_I2V = [0.1, 0.24, 0.86, 1] as const;
+const CHAPTER_ENDS_V2V = [0.06, 0.16, 0.92, 1] as const;
 const FPS = 24;
 const EXIT_FADE_MS = 650;
 const FILM_CELLS = 8;
@@ -323,12 +324,14 @@ export function VideoGenerationLoader({
   const videoPoster = useVideoPoster(inputVideoUrl);
   const stillUrl = inputImageUrl || videoPoster || undefined;
 
+  const chapterEnds =
+    workflow === "video_to_video" ? CHAPTER_ENDS_V2V : CHAPTER_ENDS_I2V;
   const chapters = copy.chapters[workflow];
   const activeChapter = isSuccess
     ? chapters.length
-    : Math.max(0, CHAPTER_ENDS.findIndex((end) => progress < end));
+    : Math.max(0, chapterEnds.findIndex((end) => progress < end));
   const chapterLabel =
-    status === "connecting" && progress < CHAPTER_ENDS[0]
+    status === "connecting" && progress < chapterEnds[0]
       ? copy.connecting
       : isSuccess
         ? copy.ready
@@ -499,7 +502,7 @@ export function VideoGenerationLoader({
               className="lx-vid-loader__track-fill"
               style={{ width: `${progressPct}%` }}
             />
-            {CHAPTER_ENDS.slice(0, -1).map((end) => (
+            {chapterEnds.slice(0, -1).map((end) => (
               <span
                 key={end}
                 className={`lx-vid-loader__keyframe${progress >= end || isSuccess ? " is-done" : ""}`}

@@ -1,18 +1,18 @@
 /** Miroir de api/_lib/video-timing.js — garder les deux synchronisés. */
 const VIDEO_TIMING = {
-  overheadSec: 20,
+  overheadSec: 25,
   i2v: {
-    render5sSec: 100,
-    render10sSec: 160,
+    render5sSec: 105,
+    render10sSec: 165,
     hdExtraSec: 30,
-    voiceExtraSec: 15,
+    voiceExtraSec: 20,
   },
   runwayAleph: { baseSec: 150, perSourceSec: 8 },
-  klingMotion: { baseSec: 180, perSourceSec: 12 },
-  sourceAudioMuxSec: 20,
+  klingMotion: { baseSec: 200, perSourceSec: 22, prepSec: 12 },
+  sourceAudioMuxSec: 25,
   defaultSourceDurationSec: 8,
-  minSec: 60,
-  maxSec: 420,
+  minSec: 90,
+  maxSec: 480,
 } as const;
 
 export type VideoTimingInput = {
@@ -38,6 +38,7 @@ export function estimateVideoGenerationSeconds(input: VideoTimingInput): number 
     const provider =
       input.v2vProvider === "runway_aleph" ? t.runwayAleph : t.klingMotion;
     total += provider.baseSec + provider.perSourceSec * src;
+    if ("prepSec" in provider && provider.prepSec) total += provider.prepSec;
     if (input.preserveSourceAudio) total += t.sourceAudioMuxSec;
   } else {
     total +=
@@ -48,6 +49,25 @@ export function estimateVideoGenerationSeconds(input: VideoTimingInput): number 
 
   const rounded = Math.ceil(total / 5) * 5;
   return Math.min(t.maxSec, Math.max(t.minSec, rounded));
+}
+
+/** Fallback loader quand l’API n’a pas encore renvoyé estimatedSeconds. */
+export function defaultVideoLoaderEstimate(options: {
+  workflow: "image_to_video" | "video_to_video";
+  sourceVideoDurationSec?: number | null;
+  durationSec?: number;
+  voiceEnabled?: boolean;
+  preserveSourceAudio?: boolean;
+}): number {
+  return estimateVideoGenerationSeconds({
+    workflow: options.workflow,
+    v2vProvider: options.workflow === "video_to_video" ? "kling_motion" : null,
+    sourceVideoDurationSec: options.sourceVideoDurationSec,
+    durationSec: options.durationSec ?? 5,
+    quality: "standard",
+    voiceEnabled: options.voiceEnabled,
+    preserveSourceAudio: options.preserveSourceAudio,
+  });
 }
 
 export function formatClock(totalSeconds: number): string {

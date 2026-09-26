@@ -17,7 +17,10 @@ import {
   VideoGenerationLoader,
   VideoGenerationLoaderBackdrop,
 } from "@/components/larp/VideoGenerationLoader";
-import { estimateVideoGenerationSeconds } from "@/lib/video-generation-timing";
+import {
+  defaultVideoLoaderEstimate,
+  estimateVideoGenerationSeconds,
+} from "@/lib/video-generation-timing";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
@@ -422,7 +425,16 @@ export default function VideoIA() {
           taskId="video-pending"
           status="connecting"
           workflow={workflow}
-          estimatedSeconds={generationEstimate ?? 150}
+          estimatedSeconds={
+            generationEstimate ??
+            defaultVideoLoaderEstimate({
+              workflow,
+              sourceVideoDurationSec: videoDurationSec,
+              preserveSourceAudio: preserveSourceVoice,
+              durationSec,
+              voiceEnabled,
+            })
+          }
           inputImageUrl={loaderImageUrl}
           inputVideoUrl={loaderVideoUrl}
           aspectRatio={aspectRatio}
@@ -447,6 +459,8 @@ export default function VideoIA() {
             aspectRatio={aspectRatio}
             videoSpecs={loaderSpecs}
             initialEstimatedSeconds={generationEstimate ?? undefined}
+            sourceVideoDurationSec={videoDurationSec}
+            preserveSourceAudio={preserveSourceVoice}
           />
         </div>
       </>

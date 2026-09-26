@@ -2,10 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { estimateVideoGenerationSeconds } = require("./video-timing");
 
-test("I2V 5s standard ≈ 2 min", () => {
+test("I2V 5s standard ≈ 2 min 10", () => {
   assert.equal(
     estimateVideoGenerationSeconds({ workflow: "image_to_video", durationSec: 5 }),
-    120,
+    130,
   );
 });
 
@@ -17,29 +17,22 @@ test("I2V 10s + voix + HD plus long", () => {
       quality: "high",
       voiceEnabled: true,
     }),
-    225,
+    240,
   );
 });
 
-test("V2V Runway Aleph dépend de la durée source", () => {
+test("V2V Kling Motion 3 s source ≈ 5 min", () => {
   assert.equal(
     estimateVideoGenerationSeconds({
       workflow: "video_to_video",
-      v2vProvider: "runway_aleph",
-      sourceVideoDurationSec: 5,
+      v2vProvider: "kling_motion",
+      sourceVideoDurationSec: 3,
     }),
-    210,
-  );
-  assert.equal(
-    estimateVideoGenerationSeconds({
-      workflow: "video_to_video",
-      v2vProvider: "runway_aleph",
-    }),
-    235,
+    305,
   );
 });
 
-test("V2V Kling Motion + son d'origine ≈ 5 min", () => {
+test("V2V Kling Motion 8 s + son d'origine", () => {
   assert.equal(
     estimateVideoGenerationSeconds({
       workflow: "video_to_video",
@@ -47,7 +40,18 @@ test("V2V Kling Motion + son d'origine ≈ 5 min", () => {
       sourceVideoDurationSec: 8,
       preserveSourceAudio: true,
     }),
-    320,
+    440,
+  );
+});
+
+test("V2V Runway Aleph (legacy) dépend de la durée source", () => {
+  assert.equal(
+    estimateVideoGenerationSeconds({
+      workflow: "video_to_video",
+      v2vProvider: "runway_aleph",
+      sourceVideoDurationSec: 5,
+    }),
+    215,
   );
 });
 
