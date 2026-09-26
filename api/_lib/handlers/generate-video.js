@@ -45,6 +45,7 @@ const {
   contentPolicyResponse,
 } = require("../content-policy");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
+const { resolveVideoGenerationProvider } = require("../generation-provider");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -581,10 +582,7 @@ module.exports = async function handler(req, res) {
         generation_type: "video",
         prompt: userPrompt,
         final_prompt: providerPrompt,
-        provider:
-          workflow === "video_to_video"
-            ? v2vProvider || "runway_aleph"
-            : "runway",
+        provider: resolveVideoGenerationProvider(workflow, v2vProvider),
         provider_task_id: pendingTaskId,
         status: "processing",
         aspect_ratio: aspectRatio,
