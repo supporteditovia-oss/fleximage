@@ -4,6 +4,7 @@ const {
   createKlingMotionTask,
   buildKlingMotionPrompt,
 } = require("./kie-kling-motion");
+const { normalizeProviderForDb } = require("./generation-provider");
 
 function readVideoApiCallCount(metadata) {
   const meta = metadata && typeof metadata === "object" ? metadata : {};
@@ -199,7 +200,7 @@ async function generateVideoV2VOnce(supabase, params) {
   await supabase
     .from("generations")
     .update({
-      provider: "runway_aleph",
+      provider: normalizeProviderForDb("runway_aleph"),
       provider_task_id: externalTaskId,
       metadata: nextMeta,
       provider_attempts: [
@@ -281,7 +282,7 @@ async function generateKlingMotionOnce(supabase, params) {
   await supabase
     .from("generations")
     .update({
-      provider: "kling_motion",
+      provider: normalizeProviderForDb("kling_motion"),
       provider_task_id: externalTaskId,
       metadata: nextMeta,
       provider_attempts: [
