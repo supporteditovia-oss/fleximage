@@ -36,7 +36,7 @@ export function estimateVideoGenerationSeconds(input: VideoTimingInput): number 
         ? Math.min(rawSrc, t.defaultSourceDurationSec)
         : t.defaultSourceDurationSec;
     const provider =
-      input.v2vProvider === "kling_motion" ? t.klingMotion : t.runwayAleph;
+      input.v2vProvider === "runway_aleph" ? t.runwayAleph : t.klingMotion;
     total += provider.baseSec + provider.perSourceSec * src;
     if (input.preserveSourceAudio) total += t.sourceAudioMuxSec;
   } else {

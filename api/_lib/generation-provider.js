@@ -28,7 +28,7 @@ function normalizeProviderForDb(provider) {
 
 function resolveVideoGenerationProvider(workflow, v2vProvider) {
   if (workflow !== "video_to_video") return "runway";
-  return normalizeProviderForDb(v2vProvider || "runway_aleph");
+  return normalizeProviderForDb(v2vProvider || "kling_motion");
 }
 
 module.exports = {
