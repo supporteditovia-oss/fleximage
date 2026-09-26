@@ -34,6 +34,7 @@ import {
   maxVoiceCharsForVideoDuration,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
+  VIDEO_V2V_MIN_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_V2V_PRESETS,
   type VideoAspectRatio,
@@ -85,7 +86,7 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr / clip · max 8 s`,
+    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr / clip · 3–8 s · 720p`,
     icon: Wand2,
   },
 ];
@@ -223,7 +224,7 @@ export default function VideoIA() {
       toast({
         variant: "destructive",
         title: "Vidéo trop lourde",
-        description: `Ta vidéo fait ${formatVideoSizeMb(file.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 1080p ou coupe avant d'importer.`,
+        description: `Ta vidéo fait ${formatVideoSizeMb(file.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 720p ou compresse avant d'importer.`,
       });
       return;
     }
@@ -624,7 +625,10 @@ export default function VideoIA() {
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
               Filme avec ton smartphone — toi, un objet, une scène, un véhicule…{" "}
-              <strong>Max {VIDEO_V2V_MAX_DURATION_SEC}s</strong> ·{" "}
+              <strong>
+                {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
+              </strong>{" "}
+              en <strong>720p</strong> ·{" "}
               {adminBurn.videoV2V} crédits par clip (Motion Control). L&apos;IA conserve ta
               caméra et tous les mouvements. Change le décor (Dubai, yacht…),
               le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
@@ -663,7 +667,8 @@ export default function VideoIA() {
                     : "Choisir une vidéo"}
               </span>
               <span className="via-upload-zone__meta">
-                MP4 · max {VIDEO_V2V_MAX_SIZE_MB} Mo · max {VIDEO_V2V_MAX_DURATION_SEC}s
+                MP4 · 720p · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
+                {VIDEO_V2V_MAX_SIZE_MB} Mo
                 {videoDurationSec ? ` · ${videoDurationSec}s détectées` : ""}
               </span>
             </button>
