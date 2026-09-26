@@ -146,7 +146,7 @@ export function persistInFlightFromApiResult(
     Number.isFinite(result.estimatedSeconds)
       ? result.estimatedSeconds
       : resultType === "video"
-        ? 150
+        ? 210
         : 45;
   const estimatedSeconds =
     sameTask && existing ? existing.estimatedSeconds : estimatedFromApi;

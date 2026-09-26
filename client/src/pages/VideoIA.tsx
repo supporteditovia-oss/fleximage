@@ -56,6 +56,7 @@ import {
   prepareVideoFileForStudio,
   type StudioVideoUpload,
 } from "@/lib/upload-video";
+import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
 import "./video-ia-page.css";
@@ -86,7 +87,7 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr / clip · 3–8 s · 720p`,
+    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr · Kling 3.0 · 3–8 s`,
     icon: Wand2,
   },
 ];
@@ -246,9 +247,16 @@ export default function VideoIA() {
       setVideoPreview(preview);
       const prepared = await prepareVideoFileForStudio(file);
       setVideoSource(prepared);
+      const frameFile = await extractVideoFrameAsJpegFile(file);
+      const frameCompressed = await compressImageForGeneration(frameFile);
+      const frameB64 = await fileToBase64(frameCompressed);
+      setRefImageBase64(frameB64);
+      setRefImagePreview(URL.createObjectURL(frameCompressed));
     } catch (err: unknown) {
       setVideoPreview(null);
       setVideoDurationSec(null);
+      setRefImageBase64(null);
+      setRefImagePreview(null);
       const message =
         err instanceof Error ? err.message : "Impossible de lire cette vidéo.";
       toast({
@@ -346,7 +354,7 @@ export default function VideoIA() {
     setGenerationEstimate(
       estimateVideoGenerationSeconds({
         workflow: "video_to_video",
-        v2vProvider: refImageBase64 ? "kling_motion" : "runway_aleph",
+        v2vProvider: "kling_motion",
         sourceVideoDurationSec: videoDurationSec,
         preserveSourceAudio: preserveSourceVoice,
       }),
@@ -395,8 +403,9 @@ export default function VideoIA() {
   const loaderVideoUrl = isV2V ? videoPreview || undefined : undefined;
   const loaderSpecs = isV2V
     ? [
-        refImagePreview ? "Kling Motion" : "Runway Aleph",
+        "Kling 3.0 Motion",
         videoDurationSec ? `${videoDurationSec} s` : "V2V",
+        "720p",
         aspectRatio,
       ]
     : [`${durationSec} s`, "24 fps", aspectRatio];
@@ -629,7 +638,8 @@ export default function VideoIA() {
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>{" "}
               en <strong>720p</strong> ·{" "}
-              {adminBurn.videoV2V} crédits par clip (Motion Control). L&apos;IA conserve ta
+              {adminBurn.videoV2V} crédits ·{" "}
+              <strong>Kling 3.0 Motion Control</strong>. L&apos;IA conserve ta
               caméra et tous les mouvements. Change le décor (Dubai, yacht…),
               le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
               <strong>muette</strong> — active l&apos;option voix (+
@@ -686,7 +696,8 @@ export default function VideoIA() {
                   Référence visuelle (optionnel)
                 </p>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Photo du personnage, objet, tenue ou véhicule à intégrer — pour
+                  Optionnel — une frame est déjà extraite de ta vidéo pour Kling
+                  Motion Control. Ajoute une photo (Urus, tenue, personnage…) pour
                   un rendu plus précis.
                 </p>
                 <input

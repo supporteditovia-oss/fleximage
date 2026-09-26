@@ -9,7 +9,6 @@ const {
 const { isRunwayConfigured } = require("../kie-runway");
 const {
   generateVideoOnce,
-  generateVideoV2VOnce,
   generateKlingMotionOnce,
 } = require("../generate-video-once");
 const {
@@ -47,6 +46,7 @@ const {
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
 const { resolveVideoGenerationProvider } = require("../generation-provider");
 const { estimateVideoGenerationSeconds } = require("../video-timing");
+const { extractReferenceFrameFromVideoUrl } = require("../extract-video-frame");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -495,6 +495,7 @@ module.exports = async function handler(req, res) {
     let sourceAssetUrl;
     let referenceImageUrl = null;
     let v2vProvider = null;
+    let motionReferenceSource = null;
     let providerPrompt;
     try {
       if (workflow === "video_to_video") {
@@ -504,7 +505,14 @@ module.exports = async function handler(req, res) {
           userId,
           body,
         );
-        v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
+        motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
+        if (!referenceImageUrl) {
+          referenceImageUrl = await extractReferenceFrameFromVideoUrl(
+            sourceAssetUrl,
+            userId,
+          );
+        }
+        v2vProvider = "kling_motion";
         providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
           preserveSourceAudio,
         });
@@ -564,6 +572,7 @@ module.exports = async function handler(req, res) {
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
       v2v_provider: v2vProvider,
+      motion_reference_source: motionReferenceSource,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
       estimated_seconds: estimateVideoGenerationSeconds({
@@ -595,8 +604,8 @@ module.exports = async function handler(req, res) {
         status: "processing",
         aspect_ratio: aspectRatio,
         input_assets:
-          workflow === "video_to_video" && referenceImageUrl
-            ? [referenceImageUrl, sourceAssetUrl]
+          workflow === "video_to_video"
+            ? [referenceImageUrl, sourceAssetUrl].filter(Boolean)
             : [sourceAssetUrl],
         credit_cost: creditCost,
         metadata: studioMetadata,
@@ -636,22 +645,13 @@ module.exports = async function handler(req, res) {
     let providerResult;
     try {
       if (workflow === "video_to_video") {
-        if (referenceImageUrl) {
-          providerResult = await generateKlingMotionOnce(supabase, {
-            generationId: larp.id,
-            prompt: providerPrompt,
-            imageUrl: referenceImageUrl,
-            videoUrl: sourceAssetUrl,
-            mode: "720p",
-          });
-        } else {
-          providerResult = await generateVideoV2VOnce(supabase, {
-            generationId: larp.id,
-            prompt: providerPrompt,
-            videoUrl: sourceAssetUrl,
-            aspectRatio,
-          });
-        }
+        providerResult = await generateKlingMotionOnce(supabase, {
+          generationId: larp.id,
+          prompt: providerPrompt,
+          imageUrl: referenceImageUrl,
+          videoUrl: sourceAssetUrl,
+          mode: "720p",
+        });
       } else {
         providerResult = await generateVideoOnce(supabase, {
           generationId: larp.id,
