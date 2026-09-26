@@ -685,21 +685,30 @@ module.exports = async function handler(req, res) {
       }).catch(() => {});
       const providerStatus =
         typeof providerErr.status === "number" ? providerErr.status : 502;
-      const providerMessage =
-        typeof providerErr.message === "string" && providerErr.message.trim()
-          ? providerErr.message.trim()
-          : null;
-      res.status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502).json({
-        message:
-          providerStatus === 422 && providerMessage
-            ? `${providerMessage} Jetons remboursés.`
-            : copy(
-                uiLocale,
-                "Échec création vidéo. Jetons remboursés.",
-                "Video creation failed. Credits refunded.",
-              ),
-        videoRequestId,
-      });
+      const apiMsg =
+        typeof providerErr.apiMsg === "string" && providerErr.apiMsg.trim()
+          ? providerErr.apiMsg.trim()
+          : typeof providerErr.message === "string" && providerErr.message.trim()
+            ? providerErr.message.trim()
+            : null;
+      const generic = copy(
+        uiLocale,
+        "Échec création vidéo. Jetons remboursés.",
+        "Video creation failed. Credits refunded.",
+      );
+      const detailed =
+        apiMsg &&
+        !/^(Aleph API error|Kling Motion Control API error|Runway API error)$/i.test(
+          apiMsg,
+        )
+          ? `${apiMsg} Jetons remboursés.`
+          : generic;
+      res
+        .status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502)
+        .json({
+          message: detailed,
+          videoRequestId,
+        });
       return;
     }
 
