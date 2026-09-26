@@ -451,15 +451,29 @@ html.luxeflexia-video-page .floating-header::before {
     0 16px 40px rgba(18, 16, 14, 0.16);
 }
 
-.via-preview-frame__poster {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+.via-preview-frame__still-btn {
   display: block;
   width: 100%;
-  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+}
+
+.via-preview-frame__still {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
   object-fit: cover;
-  pointer-events: none;
+}
+
+.via-preview-frame__play-hint {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--lx-muted);
 }
 
 .via-preview-frame img:not(.via-preview-frame__poster),

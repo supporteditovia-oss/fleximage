@@ -126,7 +126,12 @@ export default function VideoIA() {
     null,
   );
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
-  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  /** Lecture durée + vignette (court). */
+  const [isVideoReading, setIsVideoReading] = useState(false);
+  /** Envoi cloud / encodage base64 en arrière-plan — ne bloque plus toute la page. */
+  const [isVideoCloudSync, setIsVideoCloudSync] = useState(false);
+  const [showVideoPlayback, setShowVideoPlayback] = useState(false);
+  const videoUploadGenRef = useRef(0);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   /** false = vignette auto extraite de la vidéo (cachée en UI, utilisée côté serveur). */
@@ -146,7 +151,8 @@ export default function VideoIA() {
   useEffect(() => {
     writeStudioMode("video");
     document.documentElement.classList.add("luxeflexia-video-page");
-    setIsVideoUploading(false);
+    setIsVideoReading(false);
+    setIsVideoCloudSync(false);
     setIsSubmitting(false);
     releaseGenerationSubmitLock();
     generateVideo.reset();
@@ -205,7 +211,9 @@ export default function VideoIA() {
     Boolean(videoSource) &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !isVideoUploading;
+    !isVideoReading &&
+    !isVideoCloudSync &&
+    Boolean(videoSource);
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -253,8 +261,12 @@ export default function VideoIA() {
       });
       return;
     }
-    setIsVideoUploading(true);
+    const uploadGen = ++videoUploadGenRef.current;
+    setShowVideoPlayback(false);
+    setIsVideoReading(true);
+    setIsVideoCloudSync(false);
     setVideoSource(null);
+    let fileReadyForCloud: File | null = null;
     try {
       const duration = await readVideoDurationSec(normalized);
       const check = validateVideoDurationForUpload(duration);
@@ -266,6 +278,7 @@ export default function VideoIA() {
         });
         return;
       }
+      fileReadyForCloud = normalized;
 
       setVideoPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -273,7 +286,7 @@ export default function VideoIA() {
       });
       setVideoDurationSec(Number(formatVideoDurationLabel(duration)));
 
-      const frameTask = (async () => {
+      try {
         const frameFile = await extractVideoFrameAsJpegFile(normalized);
         const frameCompressed = await compressImageForGeneration(frameFile);
         const frameB64 = await fileToBase64(frameCompressed);
@@ -283,13 +296,9 @@ export default function VideoIA() {
           if (prev) URL.revokeObjectURL(prev);
           return URL.createObjectURL(frameCompressed);
         });
-      })().catch(() => {
-        /* aperçu vidéo seul si extraction frame impossible */
-      });
-
-      const prepared = await prepareVideoFileForStudio(normalized);
-      setVideoSource(prepared);
-      await frameTask;
+      } catch {
+        /* aperçu vidéo brut si frame impossible */
+      }
     } catch (err: unknown) {
       setVideoPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -310,8 +319,37 @@ export default function VideoIA() {
         description: message,
       });
     } finally {
-      setIsVideoUploading(false);
+      setIsVideoReading(false);
     }
+
+    if (!fileReadyForCloud) return;
+
+    setIsVideoCloudSync(true);
+    void (async () => {
+      try {
+        const prepared = await prepareVideoFileForStudio(fileReadyForCloud);
+        if (videoUploadGenRef.current !== uploadGen) return;
+        setVideoSource(prepared);
+      } catch (err: unknown) {
+        if (videoUploadGenRef.current !== uploadGen) return;
+        const message =
+          err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
+        toast({
+          variant: "destructive",
+          title: "Envoi impossible",
+          description: message,
+        });
+        setVideoPreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+        setVideoDurationSec(null);
+      } finally {
+        if (videoUploadGenRef.current === uploadGen) {
+          setIsVideoCloudSync(false);
+        }
+      }
+    })();
   };
 
   const handleGenerateI2V = async () => {
@@ -691,19 +729,19 @@ export default function VideoIA() {
             <button
               type="button"
               className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
-              disabled={isVideoUploading}
+              disabled={isVideoReading}
               onClick={() => videoFileRef.current?.click()}
             >
               <span className="via-upload-zone__icon">
-                {isVideoUploading ? (
+                {isVideoReading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
               </span>
               <span className="via-upload-zone__text">
-                {isVideoUploading
-                  ? "Préparation de la vidéo…"
+                {isVideoReading
+                  ? "Lecture de la vidéo…"
                   : videoPreview
                     ? "Changer la vidéo"
                     : "Choisir une vidéo"}
@@ -717,24 +755,44 @@ export default function VideoIA() {
 
             {videoPreview && (
               <div className="via-preview-frame">
-                {refImagePreview ? (
-                  <img
-                    src={refImagePreview}
-                    alt=""
-                    className="via-preview-frame__poster"
-                    aria-hidden
+                {refImagePreview && !showVideoPlayback ? (
+                  <button
+                    type="button"
+                    className="via-preview-frame__still-btn"
+                    onClick={() => setShowVideoPlayback(true)}
+                  >
+                    <img
+                      src={refImagePreview}
+                      alt="Aperçu de ta vidéo"
+                      className="via-preview-frame__still"
+                    />
+                    <span className="via-preview-frame__play-hint">
+                      Appuie pour lire la vidéo
+                    </span>
+                  </button>
+                ) : (
+                  <video
+                    src={videoPreview}
+                    poster={refImagePreview ?? undefined}
+                    controls
+                    autoPlay={showVideoPlayback}
+                    muted
+                    playsInline
+                    preload="metadata"
                   />
-                ) : null}
-                <video
-                  src={videoPreview}
-                  poster={refImagePreview ?? undefined}
-                  controls
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+                )}
               </div>
             )}
+            {isVideoCloudSync ? (
+              <p className="via-step-desc" style={{ marginTop: "0.5rem" }}>
+                <Loader2
+                  className="mr-1 inline h-3.5 w-3.5 animate-spin align-[-2px]"
+                  aria-hidden
+                />
+                Finalisation de l&apos;import en arrière-plan… Tu peux déjà
+                remplir le prompt.
+              </p>
+            ) : null}
 
             {videoPreview && (
               <>
@@ -848,14 +906,15 @@ export default function VideoIA() {
                 !canGenerateV2V ||
                 isSubmitting ||
                 generateVideo.isPending ||
-                isVideoUploading
+                isVideoReading ||
+                isVideoCloudSync
               }
               onClick={() => void handleGenerateV2V()}
             >
-              {isVideoUploading ? (
+              {isVideoCloudSync ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Préparation…
+                  Import en cours…
                 </>
               ) : isSubmitting || generateVideo.isPending ? (
                 <>

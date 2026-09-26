@@ -81,9 +81,19 @@ async function uploadVideoDirectToR2(file: File): Promise<string> {
   return videoUrl;
 }
 
+const INLINE_READ_TIMEOUT_MS = 90_000;
+
 async function uploadInlineDataUrl(file: File): Promise<StudioVideoUpload> {
   const normalized = withNormalizedVideoFile(file);
-  const dataUrl = await fileToVideoDataUrl(normalized);
+  const dataUrl = await Promise.race([
+    fileToVideoDataUrl(normalized),
+    new Promise<string>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error("UPLOAD_INLINE_TIMEOUT")),
+        INLINE_READ_TIMEOUT_MS,
+      );
+    }),
+  ]);
   return { mode: "inline", dataUrl };
 }
 
