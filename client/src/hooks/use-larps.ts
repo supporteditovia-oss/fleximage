@@ -389,6 +389,12 @@ export function useLarpStatus(taskId: string | null) {
         return false;
       }
       const remaining = data?.remainingSeconds;
+      if (
+        data?.resultType === "video" &&
+        !(typeof remaining === "number" && remaining <= 15)
+      ) {
+        return 2500;
+      }
       if (typeof remaining === "number" && remaining <= 8) return 400;
       if ((data?.qaRetryCount ?? 0) > 0) return 600;
       return 800;

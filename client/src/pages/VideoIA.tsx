@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Redirect, useLocation } from "wouter";
 import {
   Film,
@@ -15,9 +14,10 @@ import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
 import { GenerationProgress } from "@/components/larp/GenerationProgress";
 import {
-  GenerationLoader,
-  GenerationLoaderBackdrop,
-} from "@/components/larp/GenerationLoader";
+  VideoGenerationLoader,
+  VideoGenerationLoaderBackdrop,
+} from "@/components/larp/VideoGenerationLoader";
+import { estimateVideoGenerationSeconds } from "@/lib/video-generation-timing";
 import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
@@ -265,6 +265,14 @@ export default function VideoIA() {
     if (!canGenerateI2V) return;
 
     releaseGenerationLoaderTheme();
+    setGenerationEstimate(
+      estimateVideoGenerationSeconds({
+        workflow: "image_to_video",
+        durationSec,
+        quality: "standard",
+        voiceEnabled,
+      }),
+    );
     setIsSubmitting(true);
     try {
       const rawPrompt =
@@ -303,7 +311,7 @@ export default function VideoIA() {
         source: "video_studio",
       });
       setTaskId(result.taskId);
-      setGenerationEstimate(result.estimatedSeconds ?? 120);
+      if (result.estimatedSeconds) setGenerationEstimate(result.estimatedSeconds);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Génération vidéo impossible";
@@ -334,6 +342,14 @@ export default function VideoIA() {
     if (!canGenerateV2V || !videoSource) return;
 
     releaseGenerationLoaderTheme();
+    setGenerationEstimate(
+      estimateVideoGenerationSeconds({
+        workflow: "video_to_video",
+        v2vProvider: refImageBase64 ? "kling_motion" : "runway_aleph",
+        sourceVideoDurationSec: videoDurationSec,
+        preserveSourceAudio: preserveSourceVoice,
+      }),
+    );
     setIsSubmitting(true);
     try {
       const sanitizedPrompt = finalizeV2VPromptForSubmit(
@@ -355,7 +371,7 @@ export default function VideoIA() {
         source: "video_studio",
       });
       setTaskId(result.taskId);
-      setGenerationEstimate(result.estimatedSeconds ?? 240);
+      if (result.estimatedSeconds) setGenerationEstimate(result.estimatedSeconds);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Remplacement impossible";
@@ -371,6 +387,19 @@ export default function VideoIA() {
     setGenerationEstimate(null);
   }, []);
 
+  const isV2V = workflow === "video_to_video";
+  const loaderImageUrl = isV2V
+    ? refImagePreview || undefined
+    : imagePreviewUrl || undefined;
+  const loaderVideoUrl = isV2V ? videoPreview || undefined : undefined;
+  const loaderSpecs = isV2V
+    ? [
+        refImagePreview ? "Kling Motion" : "Runway Aleph",
+        videoDurationSec ? `${videoDurationSec} s` : "V2V",
+        aspectRatio,
+      ]
+    : [`${durationSec} s`, "24 fps", aspectRatio];
+
   if (!adminPreview) {
     return <Redirect to="/create" />;
   }
@@ -378,16 +407,17 @@ export default function VideoIA() {
   if ((isSubmitting || generateVideo.isPending) && !taskId) {
     return (
       <>
-        <GenerationLoaderBackdrop zIndex={99} />
-        {createPortal(
-      <GenerationLoader
-        taskId="video-pending"
-        status="connecting"
-        estimatedSeconds={generationEstimate ?? 120}
-        inputImageUrl={imagePreviewUrl || videoPreview || undefined}
-      />,
-      document.body,
-        )}
+        <VideoGenerationLoaderBackdrop zIndex={99} />
+        <VideoGenerationLoader
+          taskId="video-pending"
+          status="connecting"
+          workflow={workflow}
+          estimatedSeconds={generationEstimate ?? 150}
+          inputImageUrl={loaderImageUrl}
+          inputVideoUrl={loaderVideoUrl}
+          aspectRatio={aspectRatio}
+          specs={loaderSpecs}
+        />
       </>
     );
   }
@@ -395,16 +425,20 @@ export default function VideoIA() {
   if (taskId) {
     return (
       <>
-        <GenerationLoaderBackdrop zIndex={99} />
-      <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-5xl px-4 py-6">
-        <GenerationProgress
-          taskId={taskId}
-          inputImageUrl={imagePreviewUrl || videoPreview || undefined}
-          onReset={resetStudio}
-          resultType="video"
-          initialEstimatedSeconds={generationEstimate ?? undefined}
-        />
-      </div>
+        <VideoGenerationLoaderBackdrop zIndex={99} />
+        <div className="mx-auto min-h-[calc(100dvh-5rem)] max-w-5xl px-4 py-6">
+          <GenerationProgress
+            taskId={taskId}
+            inputImageUrl={loaderImageUrl}
+            inputVideoUrl={loaderVideoUrl}
+            onReset={resetStudio}
+            resultType="video"
+            videoWorkflow={workflow}
+            aspectRatio={aspectRatio}
+            videoSpecs={loaderSpecs}
+            initialEstimatedSeconds={generationEstimate ?? undefined}
+          />
+        </div>
       </>
     );
   }

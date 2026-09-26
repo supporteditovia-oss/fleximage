@@ -46,6 +46,7 @@ const {
 } = require("../content-policy");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
 const { resolveVideoGenerationProvider } = require("../generation-provider");
+const { estimateVideoGenerationSeconds } = require("../video-timing");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -565,8 +566,15 @@ module.exports = async function handler(req, res) {
       v2v_provider: v2vProvider,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
-      estimated_seconds:
-        workflow === "video_to_video" ? 240 : durationSec === 10 ? 180 : 120,
+      estimated_seconds: estimateVideoGenerationSeconds({
+        workflow,
+        durationSec,
+        quality,
+        voiceEnabled,
+        v2vProvider,
+        sourceVideoDurationSec,
+        preserveSourceAudio,
+      }),
     };
 
     const userPrompt =
