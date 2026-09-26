@@ -44,6 +44,7 @@ const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
 } = require("../content-policy");
+const { enrichPromptForGeneration } = require("../prompt-intelligence");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -361,6 +362,41 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    let studioMotionPrompt = motionPrompt;
+    let studioVehicleDescription = vehicleDescription;
+    let promptIntelligenceApplied = false;
+    const promptUserRaw =
+      workflow === "video_to_video" ? vehicleDescription : motionPrompt;
+
+    if (workflow === "video_to_video" && studioVehicleDescription) {
+      const enriched = await enrichPromptForGeneration(studioVehicleDescription, {
+        locale: uiLocale,
+        mode: "video_v2v",
+      });
+      if (enriched && enriched !== studioVehicleDescription) {
+        studioVehicleDescription = enriched.slice(0, 500);
+        promptIntelligenceApplied = true;
+        console.info("[generate-video] prompt-intelligence v2v", {
+          userId,
+          length: studioVehicleDescription.length,
+        });
+      }
+    } else if (workflow === "image_to_video" && studioMotionPrompt) {
+      const enriched = await enrichPromptForGeneration(studioMotionPrompt, {
+        locale: uiLocale,
+        mode: "video_i2v",
+        voiceEnabled,
+      });
+      if (enriched && enriched !== studioMotionPrompt) {
+        studioMotionPrompt = enriched.slice(0, 2000);
+        promptIntelligenceApplied = true;
+        console.info("[generate-video] prompt-intelligence i2v", {
+          userId,
+          length: studioMotionPrompt.length,
+        });
+      }
+    }
+
     let sourceVideoDurationSec = null;
     if (workflow === "video_to_video") {
       const durationCheck = validateSourceVideoDuration(
@@ -467,13 +503,13 @@ module.exports = async function handler(req, res) {
           body,
         );
         v2vProvider = referenceImageUrl ? "kling_motion" : "runway_aleph";
-        providerPrompt = buildV2VProviderPrompt(vehicleDescription, {
+        providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
           preserveSourceAudio,
         });
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({
-          motionPrompt,
+          motionPrompt: studioMotionPrompt,
           cameraMovement: body.camera_movement,
           motionIntensity: body.motion_intensity,
           style: body.style,
@@ -518,7 +554,9 @@ module.exports = async function handler(req, res) {
       subtitle_position: body.subtitle_position || "bottom",
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
-      vehicle_prompt: vehicleDescription,
+      vehicle_prompt: studioVehicleDescription,
+      prompt_intelligence_applied: promptIntelligenceApplied,
+      prompt_user_raw: promptUserRaw,
       source_video_duration_sec: sourceVideoDurationSec,
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,
@@ -531,7 +569,9 @@ module.exports = async function handler(req, res) {
     };
 
     const userPrompt =
-      workflow === "video_to_video" ? vehicleDescription : motionPrompt;
+      workflow === "video_to_video"
+        ? studioVehicleDescription
+        : studioMotionPrompt;
 
     const { data: larp, error: insertErr } = await supabase
       .from("generations")
