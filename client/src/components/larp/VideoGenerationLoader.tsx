@@ -15,6 +15,7 @@ import {
   useGenerationProgress,
 } from "@/hooks/use-generation-countdown";
 import { acquireGenerationLoaderTheme } from "@/lib/generation-loader-theme";
+import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import { formatClock } from "@/lib/video-generation-timing";
 import "./video-generation-loader.css";
 
@@ -276,6 +277,17 @@ export function VideoGenerationLoader({
   const isOvertime = !isSuccess && remaining <= 0;
   const [isExiting, setIsExiting] = useState(false);
   const revealFired = useRef(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-fullscreen-overlay", "true");
+    document.body.setAttribute("data-fullscreen-overlay", "true");
+    setCrispOverlaySuppressed(true);
+    return () => {
+      document.documentElement.removeAttribute("data-fullscreen-overlay");
+      document.body.removeAttribute("data-fullscreen-overlay");
+      setCrispOverlaySuppressed(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSuccess || revealFired.current) return;

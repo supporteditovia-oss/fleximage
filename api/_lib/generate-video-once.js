@@ -5,6 +5,7 @@ const {
   buildKlingMotionPrompt,
 } = require("./kie-kling-motion");
 const { normalizeProviderForDb } = require("./generation-provider");
+const { resolveAlephSourceVideoUrl } = require("./prepare-aleph-source-video");
 
 function readVideoApiCallCount(metadata) {
   const meta = metadata && typeof metadata === "object" ? metadata : {};
@@ -175,9 +176,13 @@ async function generateVideoV2VOnce(supabase, params) {
   }
 
   const startedAt = Date.now();
+  const alephVideoUrl = await resolveAlephSourceVideoUrl(
+    params.videoUrl,
+    claim.generation.user_id,
+  );
   const aleph = await createAlephVideoTask({
     prompt: params.prompt,
-    videoUrl: params.videoUrl,
+    videoUrl: alephVideoUrl,
     aspectRatio: params.aspectRatio,
     referenceImage: params.referenceImage,
   });
