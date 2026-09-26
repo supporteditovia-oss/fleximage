@@ -360,7 +360,7 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           apiFailMsg = toUserFailMessage(
             klingData.failMsg,
-            "Échec Kling Motion Control",
+            "Échec de la transformation vidéo",
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
@@ -387,7 +387,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Kling";
+        apiFailMsg = "Erreur de suivi vidéo";
       }
     } else if (isAlephTask) {
       const {
