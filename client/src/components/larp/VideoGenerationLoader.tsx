@@ -10,10 +10,7 @@ import { motion } from "framer-motion";
 import { Check, Gem } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BrandMark } from "@/components/BrandMark";
-import {
-  useGenerationCountdown,
-  useGenerationProgress,
-} from "@/hooks/use-generation-countdown";
+import { useGenerationCountdown } from "@/hooks/use-generation-countdown";
 import { acquireGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import { setCrispOverlaySuppressed } from "@/lib/crisp-gate";
 import { formatClock } from "@/lib/video-generation-timing";
@@ -266,13 +263,11 @@ export function VideoGenerationLoader({
     lockedEstimate.current,
     isSuccess,
     serverRemainingSeconds,
+    "video_server",
   );
-  const progress = useGenerationProgress(
-    countdownSessionId,
-    effectiveStartedAtMs,
-    lockedEstimate.current,
-    isSuccess,
-  );
+  const progress = isSuccess
+    ? 1
+    : Math.min(0.99, Math.max(0, 1 - remaining / lockedEstimate.current));
 
   const elapsedSec = Math.max(0, Math.floor((Date.now() - effectiveStartedAtMs) / 1000));
   const isOvertime = !isSuccess && remaining <= 0;
