@@ -412,10 +412,11 @@ module.exports = async function handler(req, res) {
           }
         } else if (state === "fail") {
           apiStatus = "fail";
-          apiFailMsg = toUserFailMessage(
-            alephData.errorMessage,
-            "Échec du remplacement véhicule",
-          );
+          const { extractAlephFailMessage } = require("../kie-runway-aleph");
+          const rawAlephFail = extractAlephFailMessage(alephData);
+          apiFailMsg =
+            mapVideoProviderMessage(rawAlephFail, "fr") ||
+            toUserFailMessage(rawAlephFail, "Échec transformation vidéo");
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
           apiFailMsg =

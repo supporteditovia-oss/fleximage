@@ -207,12 +207,12 @@ describe("video-studio", () => {
     assert.match(generic, /OEM key fob/i);
   });
 
-  it("resolveV2VProviderForStudio routes cockpit prompts to Aleph", () => {
+  it("resolveV2VProviderForStudio routes cockpit prompts to Kling Motion", () => {
     assert.equal(
       resolveV2VProviderForStudio(
         "Remplace l'intérieur par Heurs Consulée, même volant",
       ),
-      "runway_aleph",
+      "kling_motion",
     );
     assert.equal(
       resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),

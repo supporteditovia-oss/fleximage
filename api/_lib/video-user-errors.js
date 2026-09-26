@@ -10,6 +10,12 @@ function mapVideoProviderMessage(raw, locale = "fr") {
       : "This POV clip is not compatible with character motion mode. Retry — your prompt will run via the transform engine (like Image IA). Credits refunded.";
   }
 
+  if (/internal error|please try again later/i.test(text)) {
+    return locale === "fr"
+      ? "Le moteur vidéo a eu un incident temporaire. Réessaie dans 1–2 minutes — jetons remboursés si la génération a échoué."
+      : "The video engine had a temporary issue. Try again in 1–2 minutes — credits refunded if generation failed.";
+  }
+
   if (/file type not supported/i.test(text)) {
     return locale === "fr"
       ? "Format vidéo incompatible. Réessaie avec un clip 3–8 s (720p). Jetons remboursés."

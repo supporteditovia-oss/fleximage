@@ -5,6 +5,14 @@ const {
   resolveKlingCharacterOrientation,
 } = require("./video-user-errors");
 
+test("mapVideoProviderMessage — internal error", () => {
+  const fr = mapVideoProviderMessage(
+    "internal error, please try again later.",
+    "fr",
+  );
+  assert.match(fr, /incident temporaire/i);
+});
+
 test("mapVideoProviderMessage — no valid characters", () => {
   const fr = mapVideoProviderMessage(
     "No valid characters detected in the video",

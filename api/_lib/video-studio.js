@@ -96,15 +96,33 @@ const V2V_PROMPT_TRANSFORM_PATTERN =
   /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
 
 /**
- * Aleph = transformation pilotée par le prompt (comme Image IA).
- * Kling Motion = transfert de mouvement sur un personnage détectable (tête/buste).
+ * Kling Motion (orientation image + frame) = défaut studio V2V — POV volant OK.
+ * Aleph = repli si Kling refuse le clip (via v2v-provider-errors + handler).
  */
 function resolveV2VProviderForStudio(userPrompt) {
   const prompt = String(userPrompt || "").trim();
-  if (!prompt) return "runway_aleph";
-  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
-  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
+  if (!prompt) return "kling_motion";
+  if (isVehicleDrivingPrompt(prompt)) return "kling_motion";
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "kling_motion";
   return "kling_motion";
+}
+
+/** Prompt court pour Aleph (jobs API) — évite les locks énormes qui provoquent des 500. */
+function buildAlephSubmitPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
+  let prompt = String(userPrompt || "").trim();
+  if (!preserveSourceAudio) {
+    prompt = stripVoiceInstructionsFromPrompt(prompt);
+  }
+  const vehicle = extractRequestedVehicleModel(prompt);
+  const vehicleHint = vehicle
+    ? ` Apply ${vehicle.model} OEM interior, steering wheel, keys and badges. ${vehicle.interior}`
+    : "";
+  const base =
+    prompt.length >= 5
+      ? prompt
+      : "Transform the video as described while keeping camera motion identical.";
+  const combined = `${base}.${vehicleHint} Photorealistic, same framing and motion.`;
+  return combined.length <= 1900 ? combined : combined.slice(0, 1900);
 }
 
 function extractMentionedSpeedKmh(text) {
@@ -486,6 +504,7 @@ module.exports = {
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
   resolveV2VProviderForStudio,
+  buildAlephSubmitPrompt,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,
   buildV2VCockpitIntelligenceLock,

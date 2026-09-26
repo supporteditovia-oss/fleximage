@@ -7,11 +7,15 @@ test("mapAlephState reste en attente sans errorCode explicite", () => {
   assert.equal(mapAlephState({ successFlag: 0, errorCode: 0 }), "waiting");
 });
 
-test("mapAlephState échoue avec errorCode ou message", () => {
+test("mapAlephState échoue avec errorCode ou state fail", () => {
   assert.equal(mapAlephState({ successFlag: 0, errorCode: 400 }), "fail");
   assert.equal(
-    mapAlephState({ successFlag: 0, errorMessage: "Video too large" }),
+    mapAlephState({ state: "fail", errorMessage: "Video too large" }),
     "fail",
+  );
+  assert.equal(
+    mapAlephState({ successFlag: 0, errorMessage: "Video too large" }),
+    "waiting",
   );
 });
 

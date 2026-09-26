@@ -21,10 +21,16 @@ const {
   computeVideoCreditCost,
   buildRunwayPrompt,
   buildV2VProviderPrompt,
+  buildAlephSubmitPrompt,
   resolveV2VProviderForStudio,
   validateVoiceText,
   stripVoiceInstructionsFromPrompt,
 } = require("../video-studio");
+const {
+  isKlingCharacterRejection,
+  isRetryableAlephError,
+  resetVideoProviderClaim,
+} = require("../v2v-provider-errors");
 const {
   checkGenerationLimits,
   deductGenerationCredits,
@@ -504,6 +510,7 @@ module.exports = async function handler(req, res) {
     let v2vProvider = null;
     let motionReferenceSource = null;
     let providerPrompt;
+    let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
         sourceAssetUrl = await resolveSourceVideoUrl(userId, body);
@@ -514,11 +521,17 @@ module.exports = async function handler(req, res) {
         );
         motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
         v2vProvider = resolveV2VProviderForStudio(studioVehicleDescription);
-        sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
-          sourceAssetUrl,
-          userId,
-        );
+        providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
+          preserveSourceAudio,
+        });
+        alephSubmitPrompt = buildAlephSubmitPrompt(studioVehicleDescription, {
+          preserveSourceAudio,
+        });
         if (v2vProvider === "kling_motion") {
+          sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
+            sourceAssetUrl,
+            userId,
+          );
           if (!referenceImageUrl) {
             referenceImageUrl = await extractReferenceFrameFromVideoUrl(
               sourceAssetUrl,
@@ -536,9 +549,6 @@ module.exports = async function handler(req, res) {
             userId,
           );
         }
-        providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
-          preserveSourceAudio,
-        });
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
         providerPrompt = buildRunwayPrompt({
@@ -666,25 +676,59 @@ module.exports = async function handler(req, res) {
     await recordGeneration(supabase, userId);
 
     let providerResult;
+    let finalV2vProvider = v2vProvider;
     try {
       if (workflow === "video_to_video") {
-        if (v2vProvider === "runway_aleph") {
-          providerResult = await generateVideoV2VOnce(supabase, {
-            generationId: larp.id,
-            prompt: providerPrompt,
-            videoUrl: sourceAssetUrl,
-            aspectRatio,
-            referenceImage: referenceImageUrl || undefined,
-          });
-        } else {
-          providerResult = await generateKlingMotionOnce(supabase, {
+        const runKling = () =>
+          generateKlingMotionOnce(supabase, {
             generationId: larp.id,
             prompt: providerPrompt,
             imageUrl: referenceImageUrl,
             videoUrl: sourceAssetUrl,
             mode: "720p",
           });
+        const runAleph = () =>
+          generateVideoV2VOnce(supabase, {
+            generationId: larp.id,
+            prompt: alephSubmitPrompt || providerPrompt,
+            videoUrl: sourceAssetUrl,
+            aspectRatio,
+            referenceImage: referenceImageUrl || undefined,
+          });
+
+        try {
+          providerResult =
+            finalV2vProvider === "runway_aleph" ? await runAleph() : await runKling();
+        } catch (firstErr) {
+          await resetVideoProviderClaim(supabase, larp.id, studioMetadata);
+          if (
+            finalV2vProvider === "kling_motion" &&
+            isKlingCharacterRejection(firstErr)
+          ) {
+            finalV2vProvider = "runway_aleph";
+            providerResult = await runAleph();
+          } else if (
+            finalV2vProvider === "runway_aleph" &&
+            isRetryableAlephError(firstErr)
+          ) {
+            finalV2vProvider = "kling_motion";
+            sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
+              sourceAssetUrl,
+              userId,
+            );
+            if (!referenceImageUrl) {
+              referenceImageUrl = await extractReferenceFrameFromVideoUrl(
+                sourceAssetUrl,
+                userId,
+              );
+            }
+            providerResult = await runKling();
+          } else {
+            throw firstErr;
+          }
         }
+        studioMetadata.v2v_provider = finalV2vProvider;
+        v2vProvider = finalV2vProvider;
       } else {
         providerResult = await generateVideoOnce(supabase, {
           generationId: larp.id,

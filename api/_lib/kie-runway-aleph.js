@@ -18,7 +18,7 @@ function parseAlephResponse(text, status, context) {
   }
 }
 
-async function createAlephVideoTask(input) {
+async function createAlephVideoTaskJobs(input) {
   const aspectRatio = input.aspectRatio || "9:16";
   const body = {
     model: ALEPH_MODEL,
@@ -55,7 +55,55 @@ async function createAlephVideoTask(input) {
     throw err;
   }
 
-  return { taskId, raw: parsed };
+  return { taskId, raw: parsed, transport: "jobs" };
+}
+
+async function createAlephVideoTaskLegacy(input) {
+  const aspectRatio = input.aspectRatio || "9:16";
+  const payload = {
+    prompt: String(input.prompt || "").slice(0, 2000),
+    videoUrl: input.videoUrl,
+    waterMark: "",
+    uploadCn: false,
+    aspectRatio,
+  };
+  if (input.referenceImage) {
+    payload.referenceImage = input.referenceImage;
+  }
+
+  const response = await fetch("https://api.kie.ai/api/v1/aleph/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getApiKey()}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await response.text();
+  const parsed = parseAlephResponse(text, response.status, "legacyGenerate");
+  const taskId = parsed?.data?.taskId;
+
+  if (!response.ok || parsed.code !== 200 || !taskId) {
+    const err = new Error(parsed.msg || "Aleph API error");
+    err.status = response.status;
+    err.apiCode = parsed.code;
+    err.apiMsg = parsed.msg;
+    throw err;
+  }
+
+  return { taskId, raw: parsed, transport: "legacy" };
+}
+
+async function createAlephVideoTask(input) {
+  try {
+    return await createAlephVideoTaskJobs(input);
+  } catch (jobsErr) {
+    if (!/internal error|please try again/i.test(String(jobsErr.apiMsg || jobsErr.message))) {
+      throw jobsErr;
+    }
+    return createAlephVideoTaskLegacy(input);
+  }
 }
 
 async function getAlephVideoStatus(taskId) {
@@ -87,10 +135,23 @@ function mapAlephState(data) {
   const successFlag = Number(data.successFlag);
   if (successFlag === 1) return "success";
   const errorCode = Number(data.errorCode);
-  const errorMessage = String(data.errorMessage || data.failMsg || "").trim();
   if (Number.isFinite(errorCode) && errorCode !== 0) return "fail";
-  if (errorMessage) return "fail";
   return "waiting";
+}
+
+function extractAlephFailMessage(data) {
+  const direct = String(data?.failMsg || data?.errorMessage || "").trim();
+  if (direct) return direct;
+  if (data?.resultJson) {
+    try {
+      const parsed = JSON.parse(data.resultJson);
+      const fromJson = String(parsed?.failMsg || parsed?.errorMessage || "").trim();
+      if (fromJson) return fromJson;
+    } catch {
+      /* ignore */
+    }
+  }
+  return "";
 }
 
 function extractAlephVideoUrl(data) {
@@ -121,7 +182,10 @@ function extractAlephVideoUrl(data) {
 module.exports = {
   ALEPH_MODEL,
   createAlephVideoTask,
+  createAlephVideoTaskJobs,
+  createAlephVideoTaskLegacy,
   getAlephVideoStatus,
   mapAlephState,
   extractAlephVideoUrl,
+  extractAlephFailMessage,
 };
