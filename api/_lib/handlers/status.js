@@ -31,6 +31,7 @@ const {
   isProviderFailStatus,
   withTimeout,
 } = require("../generation");
+const { videoTimingFieldsForLarp } = require("../video-status-timing");
 const { readApiCallCount } = require("../generation-idempotency");
 
 /** Image bloquée sans livrable → fail + remboursement jetons (facturation DeepInfra séparée). */
@@ -106,7 +107,10 @@ function statusTimingFields(larp) {
       : null;
   const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
   let remainingSeconds = null;
-  if (estimatedSeconds != null && larp && larp.created_at) {
+  if (larp?.generation_type === "video") {
+    const videoTiming = videoTimingFieldsForLarp(larp);
+    remainingSeconds = videoTiming.remainingSeconds;
+  } else if (estimatedSeconds != null && larp && larp.created_at) {
     const elapsed = Math.max(
       0,
       Math.floor((Date.now() - new Date(larp.created_at).getTime()) / 1000),

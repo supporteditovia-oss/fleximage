@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   computeGenerationRemaining,
+  computeServerAnchoredRemaining,
 } from "./use-generation-countdown";
 
 describe("use-generation-countdown helpers", () => {
@@ -15,5 +16,12 @@ describe("use-generation-countdown helpers", () => {
   it("computeGenerationRemaining never goes negative", () => {
     const start = 1_000_000;
     assert.equal(computeGenerationRemaining(start, 50, start + 120_000), 0);
+  });
+
+  it("computeServerAnchoredRemaining drifts down from anchor", () => {
+    const anchorAt = 2_000_000;
+    assert.equal(computeServerAnchoredRemaining(40, anchorAt, anchorAt), 40);
+    assert.equal(computeServerAnchoredRemaining(40, anchorAt, anchorAt + 5_000), 35);
+    assert.equal(computeServerAnchoredRemaining(40, anchorAt, anchorAt + 45_000), 0);
   });
 });
