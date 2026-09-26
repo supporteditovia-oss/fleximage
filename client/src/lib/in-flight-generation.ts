@@ -1,4 +1,5 @@
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
+import { defaultVideoLoaderEstimate } from "@/lib/video-generation-timing";
 
 const IN_FLIGHT_GENERATION_KEY = "luxeflexia:in-flight-generation";
 export const GENERATION_IN_FLIGHT_EVENT = "luxeflexia:generation-in-flight";
@@ -146,7 +147,7 @@ export function persistInFlightFromApiResult(
     Number.isFinite(result.estimatedSeconds)
       ? result.estimatedSeconds
       : resultType === "video"
-        ? 210
+        ? defaultVideoLoaderEstimate({ workflow: "video_to_video" })
         : 45;
   const estimatedSeconds =
     sameTask && existing ? existing.estimatedSeconds : estimatedFromApi;

@@ -1,22 +1,23 @@
 /**
  * Durées réelles observées (KIE) — clic → vidéo stockée sur R2.
- * Inclut upload + Gemini (~10 s) et téléchargement/stockage final (~10 s).
+ * Inclut upload, Gemini (~10 s), frame Motion Control (~15 s), stockage final (~10 s).
  * Miroir client : client/src/lib/video-generation-timing.ts
  */
 const VIDEO_TIMING = {
-  overheadSec: 20,
+  overheadSec: 25,
   i2v: {
-    render5sSec: 100,
-    render10sSec: 160,
+    render5sSec: 105,
+    render10sSec: 165,
     hdExtraSec: 30,
-    voiceExtraSec: 15,
+    voiceExtraSec: 20,
   },
   runwayAleph: { baseSec: 150, perSourceSec: 8 },
-  klingMotion: { baseSec: 180, perSourceSec: 12 },
-  sourceAudioMuxSec: 20,
+  /** Kling 3.0 Motion Control 720p — plus long qu'Aleph, surtout 3–8 s source. */
+  klingMotion: { baseSec: 200, perSourceSec: 22, prepSec: 12 },
+  sourceAudioMuxSec: 25,
   defaultSourceDurationSec: 8,
-  minSec: 60,
-  maxSec: 420,
+  minSec: 90,
+  maxSec: 480,
 };
 
 function roundUpTo5(value) {
@@ -36,6 +37,7 @@ function estimateVideoGenerationSeconds(input = {}) {
     const provider =
       input.v2vProvider === "runway_aleph" ? t.runwayAleph : t.klingMotion;
     total += provider.baseSec + provider.perSourceSec * src;
+    if (provider.prepSec) total += provider.prepSec;
     if (input.preserveSourceAudio) total += t.sourceAudioMuxSec;
   } else {
     total += Number(input.durationSec) === 10 ? t.i2v.render10sSec : t.i2v.render5sSec;

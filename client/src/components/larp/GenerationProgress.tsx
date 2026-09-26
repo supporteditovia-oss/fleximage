@@ -27,6 +27,7 @@ import {
   parseApiCreatedAtMs,
   type GenerationTimingLock,
 } from "@/lib/in-flight-generation";
+import { defaultVideoLoaderEstimate } from "@/lib/video-generation-timing";
 
 interface GenerationProgressProps {
   taskId: string;
@@ -42,6 +43,8 @@ interface GenerationProgressProps {
   inputVideoUrl?: string;
   aspectRatio?: string;
   videoSpecs?: string[];
+  sourceVideoDurationSec?: number | null;
+  preserveSourceAudio?: boolean;
 }
 
 const LX_AUTH_BG =
@@ -59,6 +62,8 @@ export function GenerationProgress({
   inputVideoUrl,
   aspectRatio,
   videoSpecs,
+  sourceVideoDurationSec,
+  preserveSourceAudio,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -296,7 +301,12 @@ export function GenerationProgress({
         : inflightSnapshot?.taskId === taskId
           ? inflightSnapshot.estimatedSeconds
           : resultType === "video"
-            ? 150
+            ? defaultVideoLoaderEstimate({
+                workflow: videoWorkflow ?? "image_to_video",
+                sourceVideoDurationSec,
+                preserveSourceAudio,
+                durationSec: 5,
+              })
             : referenceImageCount >= 2
               ? 62
               : 50;
