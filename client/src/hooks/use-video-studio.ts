@@ -85,10 +85,18 @@ export function useVideoStudioGenerate() {
       };
 
       try {
-        const res = await authFetch("/api/larps/generate-video", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+        const controller = new AbortController();
+        const abortTimer = window.setTimeout(() => controller.abort(), 180_000);
+        let res: Response;
+        try {
+          res = await authFetch("/api/larps/generate-video", {
+            method: "POST",
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+        } finally {
+          window.clearTimeout(abortTimer);
+        }
         const json = (await res.json()) as VideoStudioGenerateResponse;
         if (json?.taskId) {
           releaseGenerationSubmitLock();

@@ -63,6 +63,8 @@ import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { writeStudioMode } from "@/lib/v2-experience";
+import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
+import { withNormalizedVideoFile } from "@/lib/media-file-detect";
 import "./video-ia-page.css";
 
 function fileToBase64(file: File): Promise<string> {
@@ -142,9 +144,15 @@ export default function VideoIA() {
   useEffect(() => {
     writeStudioMode("video");
     document.documentElement.classList.add("luxeflexia-video-page");
+    setIsVideoUploading(false);
+    setIsSubmitting(false);
+    releaseGenerationSubmitLock();
+    generateVideo.reset();
     return () => {
       document.documentElement.classList.remove("luxeflexia-video-page");
     };
+    // Remise à zéro des états bloqués au retour sur la page (refresh mobile).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount uniquement
   }, []);
 
   useEffect(() => {
@@ -225,7 +233,8 @@ export default function VideoIA() {
 
   const handleVideoUpload = async (file: File | null) => {
     if (!file) return;
-    if (!isVideoMediaFile(file)) {
+    const normalized = withNormalizedVideoFile(file);
+    if (!isVideoMediaFile(normalized)) {
       toast({
         variant: "destructive",
         title: "Format invalide",
@@ -234,18 +243,18 @@ export default function VideoIA() {
       });
       return;
     }
-    if (file.size > VIDEO_V2V_MAX_SIZE_MB * 1024 * 1024) {
+    if (normalized.size > VIDEO_V2V_MAX_SIZE_MB * 1024 * 1024) {
       toast({
         variant: "destructive",
         title: "Vidéo trop lourde",
-        description: `Ta vidéo fait ${formatVideoSizeMb(file.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 720p ou compresse avant d'importer.`,
+        description: `Ta vidéo fait ${formatVideoSizeMb(normalized.size)} Mo (max ${VIDEO_V2V_MAX_SIZE_MB} Mo). Filme en 720p ou compresse avant d'importer.`,
       });
       return;
     }
     setIsVideoUploading(true);
     setVideoSource(null);
     try {
-      const duration = await readVideoDurationSec(file);
+      const duration = await readVideoDurationSec(normalized);
       const check = validateVideoDurationForUpload(duration);
       if (!check.ok) {
         toast({
@@ -255,21 +264,40 @@ export default function VideoIA() {
         });
         return;
       }
-      const preview = URL.createObjectURL(file);
+
+      setVideoPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(normalized);
+      });
       setVideoDurationSec(Number(formatVideoDurationLabel(duration)));
-      setVideoPreview(preview);
-      const prepared = await prepareVideoFileForStudio(file);
+
+      const frameTask = (async () => {
+        const frameFile = await extractVideoFrameAsJpegFile(normalized);
+        const frameCompressed = await compressImageForGeneration(frameFile);
+        const frameB64 = await fileToBase64(frameCompressed);
+        setRefImageBase64(frameB64);
+        setRefImagePreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(frameCompressed);
+        });
+      })().catch(() => {
+        /* aperçu vidéo seul si extraction frame impossible */
+      });
+
+      const prepared = await prepareVideoFileForStudio(normalized);
       setVideoSource(prepared);
-      const frameFile = await extractVideoFrameAsJpegFile(file);
-      const frameCompressed = await compressImageForGeneration(frameFile);
-      const frameB64 = await fileToBase64(frameCompressed);
-      setRefImageBase64(frameB64);
-      setRefImagePreview(URL.createObjectURL(frameCompressed));
+      await frameTask;
     } catch (err: unknown) {
-      setVideoPreview(null);
+      setVideoPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setVideoDurationSec(null);
       setRefImageBase64(null);
-      setRefImagePreview(null);
+      setRefImagePreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       const message =
         err instanceof Error ? err.message : "Impossible de lire cette vidéo.";
       toast({
@@ -425,33 +453,6 @@ export default function VideoIA() {
 
   if (!adminPreview) {
     return <Redirect to="/create" />;
-  }
-
-  if ((isSubmitting || generateVideo.isPending) && !taskId) {
-    return (
-      <>
-        <VideoGenerationLoaderBackdrop zIndex={99} />
-        <VideoGenerationLoader
-          taskId="video-pending"
-          status="connecting"
-          workflow={workflow}
-          estimatedSeconds={
-            generationEstimate ??
-            defaultVideoLoaderEstimate({
-              workflow,
-              sourceVideoDurationSec: videoDurationSec,
-              preserveSourceAudio: preserveSourceVoice,
-              durationSec,
-              voiceEnabled,
-            })
-          }
-          inputImageUrl={loaderImageUrl}
-          inputVideoUrl={loaderVideoUrl}
-          aspectRatio={aspectRatio}
-          specs={loaderSpecs}
-        />
-      </>
-    );
   }
 
   if (taskId) {
@@ -694,7 +695,7 @@ export default function VideoIA() {
               </span>
               <span className="via-upload-zone__text">
                 {isVideoUploading
-                  ? "Envoi de la vidéo…"
+                  ? "Préparation de la vidéo…"
                   : videoPreview
                     ? "Changer la vidéo"
                     : "Choisir une vidéo"}
@@ -708,7 +709,22 @@ export default function VideoIA() {
 
             {videoPreview && (
               <div className="via-preview-frame">
-                <video src={videoPreview} controls muted playsInline />
+                {refImagePreview ? (
+                  <img
+                    src={refImagePreview}
+                    alt=""
+                    className="via-preview-frame__poster"
+                    aria-hidden
+                  />
+                ) : null}
+                <video
+                  src={videoPreview}
+                  poster={refImagePreview ?? undefined}
+                  controls
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
               </div>
             )}
 
@@ -825,7 +841,7 @@ export default function VideoIA() {
               {isVideoUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Envoi de la vidéo…
+                  Préparation…
                 </>
               ) : isSubmitting || generateVideo.isPending ? (
                 <>
