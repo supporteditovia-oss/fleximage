@@ -10,6 +10,7 @@ import {
   FileText,
   ScrollText,
   Clapperboard,
+  FolderOpen,
   GitBranch,
   Gauge,
   Library,
@@ -48,6 +49,7 @@ export function BottomDock() {
     { href: "/admin/users", label: t("layout.dock.users"), icon: Users },
     { href: "/admin/templates", label: t("layout.dock.templates"), icon: FileText },
     { href: "/admin/studio", label: "Studio", icon: Clapperboard },
+    { href: "/admin/documents", label: "Documents", icon: FolderOpen },
     { href: "/admin/logs", label: t("layout.dock.logs"), icon: ScrollText },
   ];
 

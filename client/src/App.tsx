@@ -17,6 +17,7 @@ import AdminLogs from "@/pages/AdminLogs";
 import AdminStudio from "@/pages/AdminStudio";
 import AdminFunnel from "@/pages/AdminFunnel";
 import AdminCommandCenter from "@/pages/AdminCommandCenter";
+import AdminDocuments from "@/pages/AdminDocuments";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
 import Modeles from "@/pages/Modeles";
@@ -281,6 +282,7 @@ function ProtectedAppRoutes() {
           <Route path="/admin/templates" component={AdminTemplates} />
           <Route path="/admin/logs" component={AdminLogs} />
           <Route path="/admin/studio" component={AdminStudio} />
+          <Route path="/admin/documents" component={AdminDocuments} />
           <Route component={NotFound} />
         </Switch>
       </ErrorBoundary>
@@ -312,6 +314,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/admin/templates": "meta:titles.adminTemplates",
   "/admin/logs": "meta:titles.adminLogs",
   "/admin/studio": "Studio",
+  "/admin/documents": "Documents — TSK Digital",
   "/mentions-legales": "meta:titles.legal",
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
@@ -342,6 +345,7 @@ const PROTECTED_PATHS = new Set([
   "/admin/templates",
   "/admin/logs",
   "/admin/studio",
+  "/admin/documents",
 ]);
 
 function Router() {
