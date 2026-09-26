@@ -12,6 +12,12 @@ function isRetryableAlephError(err) {
   );
 }
 
+function isRetryableKlingError(err) {
+  return /internal error|please try again later|kling motion control api error/i.test(
+    providerErrorText(err),
+  );
+}
+
 async function resetVideoProviderClaim(supabase, generationId, baseMetadata) {
   const meta =
     baseMetadata && typeof baseMetadata === "object" ? baseMetadata : {};
@@ -28,5 +34,6 @@ module.exports = {
   providerErrorText,
   isKlingCharacterRejection,
   isRetryableAlephError,
+  isRetryableKlingError,
   resetVideoProviderClaim,
 };

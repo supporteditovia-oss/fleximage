@@ -90,6 +90,21 @@ function mapKlingMotionState(data) {
   return "waiting";
 }
 
+function extractKlingFailMessage(data) {
+  const direct = String(data?.failMsg || data?.errorMessage || "").trim();
+  if (direct) return direct;
+  if (data?.resultJson) {
+    try {
+      const parsed = JSON.parse(data.resultJson);
+      const fromJson = String(parsed?.failMsg || parsed?.errorMessage || "").trim();
+      if (fromJson) return fromJson;
+    } catch {
+      /* ignore */
+    }
+  }
+  return "";
+}
+
 function extractKlingMotionVideoUrl(data) {
   if (!data?.resultJson) return null;
   try {
@@ -105,12 +120,12 @@ function extractKlingMotionVideoUrl(data) {
 function buildKlingMotionPrompt(userPrompt) {
   const base = String(userPrompt || "").trim();
   const lock =
-    " No distortion. Keep camera movement, background, ground and reflections consistent with the reference video. Full vehicle swap: body, interior, keys and badges must match target model OEM. All cars: screens off when parked, wake on door open, correct gear P/D, speedometer matches source when driving.";
+    " Keep camera motion identical. Photorealistic vehicle/interior swap as described. No distortion.";
   if (!base) {
     return "No distortion, the character's movements are consistent with the video.";
   }
   const combined = `${base}.${lock}`;
-  return combined.length <= 2500 ? combined : base.slice(0, 2500);
+  return combined.length <= 1200 ? combined : base.slice(0, 1200);
 }
 
 module.exports = {
@@ -119,5 +134,6 @@ module.exports = {
   getKlingMotionStatus,
   mapKlingMotionState,
   extractKlingMotionVideoUrl,
+  extractKlingFailMessage,
   buildKlingMotionPrompt,
 };

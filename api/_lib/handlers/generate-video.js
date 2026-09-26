@@ -28,6 +28,7 @@ const {
 } = require("../video-studio");
 const {
   isKlingCharacterRejection,
+  isRetryableKlingError,
   isRetryableAlephError,
   resetVideoProviderClaim,
 } = require("../v2v-provider-errors");
@@ -711,7 +712,7 @@ module.exports = async function handler(req, res) {
           await resetVideoProviderClaim(supabase, larp.id, studioMetadata);
           if (
             finalV2vProvider === "kling_motion" &&
-            isKlingCharacterRejection(firstErr)
+            (isKlingCharacterRejection(firstErr) || isRetryableKlingError(firstErr))
           ) {
             finalV2vProvider = "runway_aleph";
             providerResult = await runAleph();

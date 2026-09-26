@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const {
   isKlingCharacterRejection,
   isRetryableAlephError,
+  isRetryableKlingError,
 } = require("./v2v-provider-errors");
 
 test("isKlingCharacterRejection", () => {
@@ -10,6 +11,13 @@ test("isKlingCharacterRejection", () => {
     isKlingCharacterRejection({
       apiMsg: "No valid characters detected in the video",
     }),
+    true,
+  );
+});
+
+test("isRetryableKlingError", () => {
+  assert.equal(
+    isRetryableKlingError({ apiMsg: "internal error, please try again later." }),
     true,
   );
 });

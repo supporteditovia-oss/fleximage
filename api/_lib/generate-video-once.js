@@ -6,6 +6,7 @@ const {
 } = require("./kie-kling-motion");
 const { normalizeProviderForDb } = require("./generation-provider");
 const { resolveAlephSourceVideoUrl } = require("./prepare-aleph-source-video");
+const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 
 function readVideoApiCallCount(metadata) {
   const meta = metadata && typeof metadata === "object" ? metadata : {};
@@ -180,11 +181,15 @@ async function generateVideoV2VOnce(supabase, params) {
     params.videoUrl,
     claim.generation.user_id,
   );
+  const kieVideoUrl = await ensureKieAccessibleMediaUrl(alephVideoUrl, "video");
+  const kieRefImage = params.referenceImage
+    ? await ensureKieAccessibleMediaUrl(params.referenceImage, "image")
+    : undefined;
   const aleph = await createAlephVideoTask({
     prompt: params.prompt,
-    videoUrl: alephVideoUrl,
+    videoUrl: kieVideoUrl,
     aspectRatio: params.aspectRatio,
-    referenceImage: params.referenceImage,
+    referenceImage: kieRefImage,
   });
 
   const externalTaskId = `aleph_${aleph.taskId}`;
@@ -269,10 +274,12 @@ async function generateKlingMotionOnce(supabase, params) {
     Boolean(params.imageUrl),
   );
   const backgroundSource = resolveKlingBackgroundSource(params.prompt);
+  const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
+  const kieImageUrl = await ensureKieAccessibleMediaUrl(params.imageUrl, "image");
   const kling = await createKlingMotionTask({
     prompt: klingPrompt,
-    inputUrls: [params.imageUrl],
-    videoUrls: [params.videoUrl],
+    inputUrls: [kieImageUrl],
+    videoUrls: [kieVideoUrl],
     characterOrientation,
     backgroundSource,
     mode: params.mode || "720p",

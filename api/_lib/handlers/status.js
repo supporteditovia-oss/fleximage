@@ -78,6 +78,11 @@ async function markImageGenerationFailedWithRefund(
 }
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
+function formatVideoFailForClient(value, fallback = "Échec de la génération") {
+  const raw = toUserFailMessage(value, fallback);
+  return mapVideoProviderMessage(raw, "fr") || raw;
+}
+
 function toUserFailMessage(value, fallback = "Échec de la génération") {
   if (value == null || value === "") return fallback;
   if (typeof value === "string") {
@@ -359,14 +364,12 @@ module.exports = async function handler(req, res) {
           }
         } else if (state === "fail") {
           apiStatus = "fail";
-          const rawKlingFail = toUserFailMessage(
-            klingData.failMsg,
+          const { extractKlingFailMessage } = require("../kie-kling-motion");
+          const rawKlingFail = extractKlingFailMessage(klingData);
+          apiFailMsg = formatVideoFailForClient(
+            rawKlingFail,
             "Échec de la transformation vidéo",
           );
-          apiFailMsg =
-            mapVideoProviderMessage(rawKlingFail, "fr") ||
-            mapVideoProviderMessage(klingData.failMsg, "fr") ||
-            rawKlingFail;
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
           apiFailMsg =
@@ -414,9 +417,10 @@ module.exports = async function handler(req, res) {
           apiStatus = "fail";
           const { extractAlephFailMessage } = require("../kie-runway-aleph");
           const rawAlephFail = extractAlephFailMessage(alephData);
-          apiFailMsg =
-            mapVideoProviderMessage(rawAlephFail, "fr") ||
-            toUserFailMessage(rawAlephFail, "Échec transformation vidéo");
+          apiFailMsg = formatVideoFailForClient(
+            rawAlephFail,
+            "Échec transformation vidéo",
+          );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
           apiFailMsg =
@@ -873,7 +877,10 @@ module.exports = async function handler(req, res) {
           status: toDbStatus(apiStatus),
           output_assets: resultUrls,
           watermarked_assets: [],
-          fail_message: toUserFailMessage(apiFailMsg, null) || null,
+          fail_message:
+            resultType === "video"
+              ? formatVideoFailForClient(apiFailMsg, null)
+              : toUserFailMessage(apiFailMsg, null) || null,
           cost_time: apiCostTime == null ? null : Number(apiCostTime),
           metadata: terminalMeta,
           updated_at: new Date().toISOString(),
@@ -886,7 +893,10 @@ module.exports = async function handler(req, res) {
           userId,
           generationId: larp.id,
           source: "failed_generation",
-          failMessage: toUserFailMessage(apiFailMsg, null) || apiFailMsg,
+          failMessage:
+            resultType === "video"
+              ? formatVideoFailForClient(apiFailMsg, null)
+              : toUserFailMessage(apiFailMsg, null) || apiFailMsg,
         }).catch((err) => console.error("refund failed", err));
       }
 
@@ -896,7 +906,10 @@ module.exports = async function handler(req, res) {
         status: apiStatus,
         resultUrls,
         watermarkedUrls: [],
-        failMessage: toUserFailMessage(apiFailMsg, null) || apiFailMsg,
+        failMessage:
+          resultType === "video"
+            ? formatVideoFailForClient(apiFailMsg, null)
+            : toUserFailMessage(apiFailMsg, null) || apiFailMsg,
         costTime: apiCostTime == null ? null : Number(apiCostTime),
         isSubscriber,
         requiresPaywall: false,
