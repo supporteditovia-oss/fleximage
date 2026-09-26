@@ -36,8 +36,16 @@ module.exports = async function aiPromptHandler(req, res) {
       return;
     }
 
-    const prompt = await enrichPromptForGeneration(input, { locale: uiLocale });
-    res.status(200).json({ prompt });
+    const mode =
+      body.mode === "video_i2v" || body.mode === "video_v2v"
+        ? body.mode
+        : "image";
+    const prompt = await enrichPromptForGeneration(input, {
+      locale: uiLocale,
+      mode,
+      voiceEnabled: Boolean(body.voice_enabled),
+    });
+    res.status(200).json({ prompt, mode });
   } catch (error) {
     console.error("ai-prompt error", error);
     sendError(res, error);

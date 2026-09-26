@@ -514,7 +514,9 @@ export default function VideoIA() {
                   ralenti…).{" "}
                   <strong>Pas de paroles ni de cris ici</strong> — sans
                   l&apos;option voix, la vidéo reste muette même si tu écris
-                  « il parle ».
+                  « il parle ». À l&apos;envoi,{" "}
+                  <strong>Gemini optimise ton prompt</strong> puis l&apos;IA
+                  vidéo génère le clip.
                 </p>
                 <textarea
                   value={motionPrompt}
@@ -678,6 +680,12 @@ export default function VideoIA() {
                 <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                   Étape 2 — Prompt
+                </p>
+                <p className="via-step-desc" style={{ marginTop: "0.35rem" }}>
+                  Écris en français librement — à l&apos;envoi,{" "}
+                  <strong>Gemini 2.5 Flash</strong> reformule le prompt (plus
+                  précis, plus réaliste) puis l&apos;IA vidéo applique la
+                  transformation sur ta vidéo.
                 </p>
                 <textarea
                   value={swapPrompt}

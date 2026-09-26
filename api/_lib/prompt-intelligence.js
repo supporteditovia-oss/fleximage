@@ -8,7 +8,7 @@ const TIMEOUT_MS = 18_000;
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const MAX_OUTPUT_CHARS = 2000;
 
-const SYSTEM_INSTRUCTION = `You are LuxeFlexIA Prompt Intelligence (Prompt Shield + optimizer).
+const SYSTEM_INSTRUCTION_IMAGE = `You are LuxeFlexIA Prompt Intelligence (Prompt Shield + optimizer).
 
 Task: rewrite the user's image-generation request into ONE final English prompt for a photorealistic lifestyle AI image model.
 
@@ -19,6 +19,44 @@ Rules:
 - No text overlays, no watermarks, no logos unless user explicitly asked.
 - Output ONLY the optimized prompt plain text (no JSON, no markdown, no quotes wrapper).
 - Keep under 1200 characters when possible.`;
+
+const SYSTEM_INSTRUCTION_VIDEO_I2V = `You are LuxeFlexIA Video Prompt Intelligence for Image-to-Video (Kling I2V).
+
+Task: rewrite the user's motion/scene request into ONE final English prompt for animating a reference photo into a short photorealistic video clip.
+
+Rules:
+- Preserve EXACT intent: subject identity, outfit, location, action, camera feel.
+- Describe VISUAL motion only: body movement, expressions, environment, camera (slow pan, dolly, etc.).
+- Do NOT request speech, dialogue, screams, music or sound unless the user explicitly paid for voice (ignore any voice request if voice addon is off).
+- One continuous take, realistic physics, no slideshow, no morphing identity.
+- Premium cinematic or UGC realism as implied by the user.
+- Output ONLY plain English prompt text (no JSON, no markdown).
+- Keep under 900 characters.`;
+
+const SYSTEM_INSTRUCTION_VIDEO_V2V = `You are LuxeFlexIA Video Prompt Intelligence for Video-to-Video (Runway Aleph / Kling Motion Control).
+
+Task: rewrite the user's transformation request into ONE final English prompt for editing their source smartphone video.
+
+Rules:
+- Preserve EXACT swap intent: what must change (vehicle, outfit, location, person) vs what must stay locked (camera path, timing, background unless user asked to change it).
+- For vehicles: name REAL existing brand and model only (e.g. Lamborghini Urus Mansory, Ferrari Purosangue). Never invent fictional cars. Include exterior AND interior/key swap when driving scenes are implied.
+- Match source video logic: speedometer/tachometer digits follow the source clip unless user gave an explicit km/h; screens on/off consistent with doors and driving state; same hand motion and timing.
+- Do NOT request voice, dialogue, music or lip sync — output video is silent unless source audio is preserved separately.
+- Photorealistic, same framing and motion as source; only transform what the user asked.
+- Output ONLY plain English prompt text (no JSON, no markdown).
+- Keep under 480 characters (downstream locks will append).`;
+
+/** @param {'image'|'video_i2v'|'video_v2v'} mode */
+function resolveSystemInstruction(mode, options = {}) {
+  if (mode === "video_i2v") {
+    const voiceNote = options.voiceEnabled
+      ? " Voice addon ON: user may request spoken line — keep lip-sync wording minimal and exact if present."
+      : " Voice addon OFF: strip any speech/audio requests.";
+    return SYSTEM_INSTRUCTION_VIDEO_I2V + voiceNote;
+  }
+  if (mode === "video_v2v") return SYSTEM_INSTRUCTION_VIDEO_V2V;
+  return SYSTEM_INSTRUCTION_IMAGE;
+}
 
 function getGeminiApiKey() {
   return (
@@ -53,6 +91,13 @@ async function enrichPromptForGeneration(input, options = {}) {
   const trimmed = String(input || "").trim();
   if (!trimmed) return trimmed;
 
+  const mode =
+    options.mode === "video_i2v" || options.mode === "video_v2v"
+      ? options.mode
+      : "image";
+  const maxOut =
+    mode === "video_v2v" ? 520 : mode === "video_i2v" ? 950 : MAX_OUTPUT_CHARS;
+
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     return trimmed;
@@ -73,6 +118,13 @@ async function enrichPromptForGeneration(input, options = {}) {
         ? "User writes in English."
         : "User may write in French; keep entities, output English prompt.";
 
+  const workflowHint =
+    mode === "video_v2v"
+      ? "Workflow: video-to-video edit of an uploaded clip."
+      : mode === "video_i2v"
+        ? "Workflow: animate a still photo into video."
+        : "Workflow: text-to-image or image edit.";
+
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
     `?key=${encodeURIComponent(apiKey)}`;
@@ -82,13 +134,15 @@ async function enrichPromptForGeneration(input, options = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: {
+          parts: [{ text: resolveSystemInstruction(mode, options) }],
+        },
         contents: [
           {
             role: "user",
             parts: [
               {
-                text: `${localeHint}\n\nUser request:\n${trimmed}`,
+                text: `${localeHint}\n${workflowHint}\n\nUser request:\n${trimmed}`,
               },
             ],
           },
@@ -124,7 +178,7 @@ async function enrichPromptForGeneration(input, options = {}) {
     const cleaned = text
       .replace(/^["'`]+|["'`]+$/g, "")
       .trim()
-      .slice(0, MAX_OUTPUT_CHARS);
+      .slice(0, maxOut);
 
     return cleaned.length >= 8 ? cleaned : trimmed;
   } catch (err) {
@@ -138,4 +192,5 @@ module.exports = {
   enrichPromptForGeneration,
   getGeminiApiKey,
   resolvePromptModel,
+  resolveSystemInstruction,
 };
