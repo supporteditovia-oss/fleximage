@@ -6,8 +6,8 @@ function mapVideoProviderMessage(raw, locale = "fr") {
 
   if (/no valid characters detected/i.test(text)) {
     return locale === "fr"
-      ? "Le moteur vidéo doit voir une personne ou des mains visibles (ex. toi au volant). Filme un plan où ton corps ou tes mains apparaissent, puis réessaie. Jetons remboursés."
-      : "The video engine needs a visible person or hands (e.g. you at the wheel). Refilm with yourself in frame and try again. Credits refunded.";
+      ? "Ce clip POV (volant, mains seules) n’est pas compatible avec le mode mouvement personnage. Réessaie : ton prompt sera appliqué via le moteur transformation (comme Image IA). Jetons remboursés."
+      : "This POV clip is not compatible with character motion mode. Retry — your prompt will run via the transform engine (like Image IA). Credits refunded.";
   }
 
   if (/file type not supported/i.test(text)) {
@@ -19,14 +19,24 @@ function mapVideoProviderMessage(raw, locale = "fr") {
   return null;
 }
 
-function resolveKlingCharacterOrientation(prompt, hasReferenceImage) {
-  if (!hasReferenceImage) return "video";
-  const p = String(prompt || "").toLowerCase();
-  const vehicleOrSwap =
-    /voiture|véhicule|vehicle|volant|steering|condu|driving|urus|porsche|lamborghini|g-class|swap|remplace|car/i.test(
-      p,
-    );
-  return vehicleOrSwap ? "image" : "video";
+function resolveKlingCharacterOrientation(_prompt, hasReferenceImage) {
+  return hasReferenceImage ? "image" : "video";
 }
 
-module.exports = { mapVideoProviderMessage, resolveKlingCharacterOrientation };
+function resolveKlingBackgroundSource(prompt) {
+  const p = String(prompt || "").toLowerCase();
+  if (
+    /int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|voiture|vehicle|swap|remplace/.test(
+      p,
+    )
+  ) {
+    return "input_video";
+  }
+  return "input_video";
+}
+
+module.exports = {
+  mapVideoProviderMessage,
+  resolveKlingCharacterOrientation,
+  resolveKlingBackgroundSource,
+};

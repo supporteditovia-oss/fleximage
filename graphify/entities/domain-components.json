@@ -1,0 +1,41 @@
+{
+  "domain": "Components",
+  "description": "Composants React réutilisables (UI primitives, formulaires, landing blocks, studio interactif)",
+  "root": "client/src/components",
+  "categories": {
+    "ui": [
+      "client/src/components/ui/button.tsx",
+      "client/src/components/ui/dialog.tsx",
+      "client/src/components/ui/toaster.tsx",
+      "client/src/components/ui/tooltip.tsx",
+      "client/src/components/ui/switch.tsx",
+      "client/src/components/ui/tabs.tsx"
+    ],
+    "generate": [
+      "client/src/components/generate/ImageUploadGrid.tsx",
+      "client/src/components/generate/PromptInputBar.tsx",
+      "client/src/components/generate/LuxePaywallModal.tsx",
+      "client/src/components/generate/ZeroCreditsModal.tsx"
+    ],
+    "larp": [
+      "client/src/components/larp/GenerationLoader.tsx",
+      "client/src/components/larp/GenerationProgress.tsx",
+      "client/src/components/larp/LarpResult.tsx"
+    ],
+    "landing": [
+      "client/src/components/landing/LandingClientHeroWidget.tsx",
+      "client/src/components/landing/LandingStudioWidget.tsx",
+      "client/src/components/landing/LandingImagePanel.tsx",
+      "client/src/components/landing/LandingVideoShowcase.tsx",
+      "client/src/components/landing/LandingVoicePlayer.tsx",
+      "client/src/components/landing/LandingEditorialGrid.tsx"
+    ],
+    "v2": [
+      "client/src/components/v2/StudioModeSwitch.tsx",
+      "client/src/components/v2/VoiceStudioMock.tsx"
+    ],
+    "marketing": [
+      "client/src/components/marketing/SocialProofLine.tsx"
+    ]
+  }
+}

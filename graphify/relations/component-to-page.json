@@ -1,0 +1,61 @@
+{
+  "relationType": "COMPONENT_TO_PAGE",
+  "description": "Liaisons directes entre composants UI et leurs pages hôtes",
+  "mappings": [
+    {
+      "component": "LandingClientHeroWidget",
+      "file": "client/src/components/landing/LandingClientHeroWidget.tsx",
+      "pages": ["LandingV2", "LandingGate"]
+    },
+    {
+      "component": "LandingStudioWidget",
+      "file": "client/src/components/landing/LandingStudioWidget.tsx",
+      "pages": ["LandingV2 (admin preview)"]
+    },
+    {
+      "component": "LandingEditorialGrid",
+      "file": "client/src/components/landing/LandingEditorialGrid.tsx",
+      "pages": ["LandingV2"]
+    },
+    {
+      "component": "ImageUploadGrid",
+      "file": "client/src/components/generate/ImageUploadGrid.tsx",
+      "pages": ["Generate", "Create", "LandingImagePanel"]
+    },
+    {
+      "component": "PromptInputBar",
+      "file": "client/src/components/generate/PromptInputBar.tsx",
+      "pages": ["Generate", "Create", "LandingImagePanel"]
+    },
+    {
+      "component": "GenerationLoader",
+      "file": "client/src/components/larp/GenerationLoader.tsx",
+      "pages": ["Generate", "Create", "Modeles"]
+    },
+    {
+      "component": "GenerationProgress",
+      "file": "client/src/components/larp/GenerationProgress.tsx",
+      "pages": ["Generate", "Create", "Modeles"]
+    },
+    {
+      "component": "LarpResult",
+      "file": "client/src/components/larp/LarpResult.tsx",
+      "pages": ["Resultat", "Generate", "Historique"]
+    },
+    {
+      "component": "LuxePaywallModal",
+      "file": "client/src/components/generate/LuxePaywallModal.tsx",
+      "pages": ["Generate", "Create", "Settings"]
+    },
+    {
+      "component": "ZeroCreditsModal",
+      "file": "client/src/components/generate/ZeroCreditsModal.tsx",
+      "pages": ["Generate", "Create"]
+    },
+    {
+      "component": "AdminCommandCenter",
+      "file": "client/src/pages/AdminCommandCenter.tsx",
+      "pages": ["Admin (nested sub-route)"]
+    }
+  ]
+}

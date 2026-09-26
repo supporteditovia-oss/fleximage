@@ -33,6 +33,7 @@ async function createKlingMotionTask(input) {
       input_urls: input.inputUrls,
       video_urls: input.videoUrls,
       character_orientation: input.characterOrientation || "video",
+      background_source: input.backgroundSource || "input_video",
       mode: input.mode === "1080p" ? "1080p" : "720p",
     },
   };

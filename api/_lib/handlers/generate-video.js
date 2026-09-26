@@ -9,6 +9,7 @@ const {
 const { isRunwayConfigured } = require("../kie-runway");
 const {
   generateVideoOnce,
+  generateVideoV2VOnce,
   generateKlingMotionOnce,
 } = require("../generate-video-once");
 const {
@@ -20,6 +21,7 @@ const {
   computeVideoCreditCost,
   buildRunwayPrompt,
   buildV2VProviderPrompt,
+  resolveV2VProviderForStudio,
   validateVoiceText,
   stripVoiceInstructionsFromPrompt,
 } = require("../video-studio");
@@ -511,22 +513,29 @@ module.exports = async function handler(req, res) {
           body,
         );
         motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
+        v2vProvider = resolveV2VProviderForStudio(studioVehicleDescription);
         sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
           sourceAssetUrl,
           userId,
         );
-        if (!referenceImageUrl) {
-          referenceImageUrl = await extractReferenceFrameFromVideoUrl(
-            sourceAssetUrl,
-            userId,
-          );
-        } else {
+        if (v2vProvider === "kling_motion") {
+          if (!referenceImageUrl) {
+            referenceImageUrl = await extractReferenceFrameFromVideoUrl(
+              sourceAssetUrl,
+              userId,
+            );
+          } else {
+            referenceImageUrl = await normalizeMotionReferenceImageUrl(
+              referenceImageUrl,
+              userId,
+            );
+          }
+        } else if (referenceImageUrl) {
           referenceImageUrl = await normalizeMotionReferenceImageUrl(
             referenceImageUrl,
             userId,
           );
         }
-        v2vProvider = "kling_motion";
         providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
           preserveSourceAudio,
         });
@@ -659,13 +668,23 @@ module.exports = async function handler(req, res) {
     let providerResult;
     try {
       if (workflow === "video_to_video") {
-        providerResult = await generateKlingMotionOnce(supabase, {
-          generationId: larp.id,
-          prompt: providerPrompt,
-          imageUrl: referenceImageUrl,
-          videoUrl: sourceAssetUrl,
-          mode: "720p",
-        });
+        if (v2vProvider === "runway_aleph") {
+          providerResult = await generateVideoV2VOnce(supabase, {
+            generationId: larp.id,
+            prompt: providerPrompt,
+            videoUrl: sourceAssetUrl,
+            aspectRatio,
+            referenceImage: referenceImageUrl || undefined,
+          });
+        } else {
+          providerResult = await generateKlingMotionOnce(supabase, {
+            generationId: larp.id,
+            prompt: providerPrompt,
+            imageUrl: referenceImageUrl,
+            videoUrl: sourceAssetUrl,
+            mode: "720p",
+          });
+        }
       } else {
         providerResult = await generateVideoOnce(supabase, {
           generationId: larp.id,

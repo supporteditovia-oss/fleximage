@@ -1,0 +1,38 @@
+{
+  "domain": "Supabase",
+  "description": "Base de données relationnelle PostgreSQL, authentification Supabase et migrations SQL",
+  "root": "supabase",
+  "files": [
+    "supabase/config.toml",
+    "client/src/lib/supabase.ts",
+    "api/_lib/supabase-admin.js",
+    "shared/schema.ts"
+  ],
+  "tables": [
+    "profiles",
+    "generations",
+    "prompt_templates",
+    "template_categories",
+    "voice_clones",
+    "voice_generations",
+    "user_subscriptions",
+    "credit_transactions",
+    "funnel_events"
+  ],
+  "functions": [
+    "increment_credits",
+    "decrement_credits",
+    "get_trust_stats",
+    "record_generation_completion"
+  ],
+  "dependencies": [
+    "@supabase/supabase-js",
+    "drizzle-orm",
+    "drizzle-zod"
+  ],
+  "security": [
+    "Row Level Security (RLS)",
+    "Service Role bypass in API admin backend",
+    "User JWT authentication"
+  ]
+}

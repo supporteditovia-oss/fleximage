@@ -1,0 +1,62 @@
+{
+  "/api/larps/generate-direct": {
+    "tables": [
+      "generations",
+      "profiles"
+    ],
+    "operations": [
+      "INSERT generation status=processing",
+      "DECREMENT profile.credits",
+      "INCREMENT profile.generation_count"
+    ]
+  },
+  "/api/larps/status": {
+    "tables": [
+      "generations"
+    ],
+    "operations": [
+      "SELECT status, result_assets WHERE provider_task_id"
+    ]
+  },
+  "/api/larps/history": {
+    "tables": [
+      "generations"
+    ],
+    "operations": [
+      "SELECT * WHERE user_id ORDER BY created_at DESC"
+    ]
+  },
+  "/api/profiles/me": {
+    "tables": [
+      "profiles"
+    ],
+    "operations": [
+      "SELECT * FROM profiles WHERE id = auth.uid()",
+      "UPDATE preferences"
+    ]
+  },
+  "/api/stripe/webhook": {
+    "tables": [
+      "profiles",
+      "user_subscriptions",
+      "credit_transactions"
+    ],
+    "operations": [
+      "UPDATE profiles SET is_subscriber, credits",
+      "INSERT INTO credit_transactions",
+      "UPSERT user_subscriptions"
+    ]
+  },
+  "/api/admin/*": {
+    "tables": [
+      "profiles",
+      "generations",
+      "prompt_templates",
+      "template_categories",
+      "admin_audit_logs"
+    ],
+    "operations": [
+      "SELECT / UPDATE / INSERT admin bypass RLS"
+    ]
+  }
+}

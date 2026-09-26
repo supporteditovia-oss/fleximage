@@ -8,6 +8,7 @@ const {
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
+  resolveV2VProviderForStudio,
   buildV2VCockpitIntelligenceLock,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,
@@ -204,6 +205,19 @@ describe("video-studio", () => {
     const generic = buildKeySwapInstruction(null);
     assert.match(generic, /exact target vehicle model/i);
     assert.match(generic, /OEM key fob/i);
+  });
+
+  it("resolveV2VProviderForStudio routes cockpit prompts to Aleph", () => {
+    assert.equal(
+      resolveV2VProviderForStudio(
+        "Remplace l'intérieur par Heurs Consulée, même volant",
+      ),
+      "runway_aleph",
+    );
+    assert.equal(
+      resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),
+      "kling_motion",
+    );
   });
 
   it("buildV2VCockpitIntelligenceLock includes dynamic key swap", () => {

@@ -1,0 +1,50 @@
+{
+  "domain": "AI",
+  "description": "Moteurs d'inférence, génération d'images, de voix et de vidéos (OneShot API, Kie fallback, Kling, Fish Audio)",
+  "root": "api/_lib",
+  "files": [
+    "api/_lib/oneshot.js",
+    "api/_lib/generate-image-once.js",
+    "api/_lib/prompt-guard.js",
+    "api/_lib/handlers/generate-direct.js",
+    "api/_lib/handlers/generate-video.js",
+    "api/_lib/handlers/voice-generate.js",
+    "api/_lib/handlers/voice-clone.js",
+    "client/src/lib/subject-pose-prompt.ts",
+    "client/src/lib/in-flight-generation.ts"
+  ],
+  "providers": [
+    {
+      "name": "OneShot API",
+      "type": "image",
+      "models": ["Nano-Banana-2", "v2-lifestyle"]
+    },
+    {
+      "name": "Kie API",
+      "type": "fallback",
+      "role": "image-fallback"
+    },
+    {
+      "name": "Kling",
+      "type": "video",
+      "modes": ["Image-to-Video", "Video-to-Video"]
+    },
+    {
+      "name": "Fish Audio",
+      "type": "voice",
+      "modes": ["Voice Cloning", "TTS"]
+    }
+  ],
+  "apis": [
+    "/api/larps/generate-direct",
+    "/api/larps/generate-video",
+    "/api/larps/voice/generate",
+    "/api/larps/voice/clone"
+  ],
+  "components": [
+    "GenerationLoader",
+    "GenerationProgress",
+    "PromptInputBar",
+    "ImageUploadGrid"
+  ]
+}

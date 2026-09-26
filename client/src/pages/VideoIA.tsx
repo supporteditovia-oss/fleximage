@@ -47,7 +47,7 @@ import {
 import {
   finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
-  isVehicleDrivingPrompt,
+  resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
 import {
   formatVideoDurationLabel,
@@ -441,11 +441,12 @@ export default function VideoIA() {
     if (!canGenerateV2V || !videoSource) return;
 
     releaseGenerationLoaderTheme();
+    const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
     flushSync(() => {
       setGenerationEstimate(
         estimateVideoGenerationSeconds({
           workflow: "video_to_video",
-          v2vProvider: "kling_motion",
+          v2vProvider,
           sourceVideoDurationSec: videoDurationSec,
           preserveSourceAudio: preserveSourceVoice,
         }),
@@ -742,9 +743,7 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton smartphone — idéalement avec{" "}
-              <strong>toi ou tes mains visibles</strong> (ex. au volant). Scène,
-              objet ou véhicule…{" "}
+              Filme avec ton smartphone — conduite, scène, objet ou véhicule…{" "}
               <strong>
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>{" "}
@@ -882,10 +881,11 @@ export default function VideoIA() {
                   Étape 2 — Prompt
                 </p>
                 <p className="via-step-desc" style={{ marginTop: "0.35rem" }}>
-                  Écris en français librement — à l&apos;envoi,{" "}
-                  <strong>Gemini 2.5 Flash</strong> reformule le prompt (plus
-                  précis, plus réaliste) puis l&apos;IA vidéo applique la
-                  transformation sur ta vidéo.
+                  Écris en français librement (comme en Image IA : « remplace
+                  l&apos;intérieur par… », « mets-moi à Dubaï… »). À
+                  l&apos;envoi, <strong>Gemini 2.5 Flash</strong> reformule le
+                  prompt puis l&apos;IA applique la transformation sur ta vidéo
+                  — visage non requis.
                 </p>
                 <textarea
                   value={swapPrompt}

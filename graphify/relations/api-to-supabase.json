@@ -1,0 +1,40 @@
+{
+  "relationType": "API_TO_SUPABASE",
+  "description": "Liaisons entre endpoints API Vercel et tables/fonctions Supabase",
+  "mappings": [
+    {
+      "api": "/api/larps/generate-direct",
+      "supabaseTables": ["generations", "profiles"],
+      "operations": ["INSERT generation status=processing", "DECREMENT profile.credits", "INCREMENT profile.generation_count"]
+    },
+    {
+      "api": "/api/larps/status",
+      "supabaseTables": ["generations"],
+      "operations": ["SELECT status, result_assets WHERE provider_task_id"]
+    },
+    {
+      "api": "/api/larps/history",
+      "supabaseTables": ["generations"],
+      "operations": ["SELECT * WHERE user_id ORDER BY created_at DESC"]
+    },
+    {
+      "api": "/api/profiles/me",
+      "supabaseTables": ["profiles"],
+      "operations": ["SELECT * FROM profiles WHERE id = auth.uid()", "UPDATE preferences"]
+    },
+    {
+      "api": "/api/stripe/webhook",
+      "supabaseTables": ["profiles", "user_subscriptions", "credit_transactions"],
+      "operations": [
+        "UPDATE profiles SET is_subscriber, credits",
+        "INSERT INTO credit_transactions",
+        "UPSERT user_subscriptions"
+      ]
+    },
+    {
+      "api": "/api/admin/*",
+      "supabaseTables": ["profiles", "generations", "prompt_templates", "template_categories", "admin_audit_logs"],
+      "operations": ["SELECT / UPDATE / INSERT admin bypass RLS"]
+    }
+  ]
+}

@@ -92,6 +92,21 @@ function isVehicleDrivingPrompt(text) {
   return VEHICLE_CONTEXT_PATTERN.test(String(text || ""));
 }
 
+const V2V_PROMPT_TRANSFORM_PATTERN =
+  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
+
+/**
+ * Aleph = transformation pilotée par le prompt (comme Image IA).
+ * Kling Motion = transfert de mouvement sur un personnage détectable (tête/buste).
+ */
+function resolveV2VProviderForStudio(userPrompt) {
+  const prompt = String(userPrompt || "").trim();
+  if (!prompt) return "runway_aleph";
+  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
+  return "kling_motion";
+}
+
 function extractMentionedSpeedKmh(text) {
   const match = String(text || "").match(/\b(\d{2,3})\s*(?:km\/h|kmh|km\/h)\b/i);
   if (match) return match[1];
@@ -470,6 +485,7 @@ module.exports = {
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
+  resolveV2VProviderForStudio,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,
   buildV2VCockpitIntelligenceLock,

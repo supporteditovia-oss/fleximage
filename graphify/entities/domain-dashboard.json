@@ -1,0 +1,52 @@
+{
+  "domain": "Dashboard",
+  "description": "Espaces d'administration, monitoring des générations, gestion des templates et KPIs du funnel",
+  "root": "client/src/pages",
+  "files": [
+    "client/src/pages/Admin.tsx",
+    "client/src/pages/AdminStudio.tsx",
+    "client/src/pages/AdminTemplates.tsx",
+    "client/src/pages/AdminCategories.tsx",
+    "client/src/pages/AdminLogs.tsx",
+    "client/src/pages/AdminFunnel.tsx",
+    "client/src/pages/AdminCommandCenter.tsx",
+    "client/src/components/admin/AdminLayout.tsx"
+  ],
+  "pages": [
+    "Admin",
+    "AdminStudio",
+    "AdminTemplates",
+    "AdminCategories",
+    "AdminLogs",
+    "AdminFunnel",
+    "AdminCommandCenter"
+  ],
+  "components": [
+    "AdminLayout",
+    "AdminGuard",
+    "AdminHeader"
+  ],
+  "routes": [
+    "/admin",
+    "/admin/studio",
+    "/admin/templates",
+    "/admin/categories",
+    "/admin/logs",
+    "/admin/funnel",
+    "/admin/command-center"
+  ],
+  "apis": [
+    "/api/admin/users",
+    "/api/admin/generations",
+    "/api/admin/templates",
+    "/api/admin/funnel-kpis",
+    "/api/admin/stats"
+  ],
+  "supabaseTables": [
+    "profiles",
+    "generations",
+    "prompt_templates",
+    "template_categories",
+    "admin_audit_logs"
+  ]
+}

@@ -36,6 +36,18 @@ export function isVehicleDrivingPrompt(text: string): boolean {
   return VEHICLE_DRIVING_PATTERN.test(text);
 }
 
+const V2V_PROMPT_TRANSFORM_PATTERN =
+  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
+
+/** Miroir de api/_lib/video-studio.js resolveV2VProviderForStudio */
+export function resolveV2VProviderForStudio(userPrompt: string): "runway_aleph" | "kling_motion" {
+  const prompt = String(userPrompt || "").trim();
+  if (!prompt) return "runway_aleph";
+  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
+  return "kling_motion";
+}
+
 export function finalizeV2VPromptForSubmit(
   prompt: string,
   preserveSourceVoice: boolean,

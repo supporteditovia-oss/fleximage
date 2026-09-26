@@ -1,0 +1,64 @@
+{
+  "domain": "Frontend",
+  "description": "Interface utilisateur principale basée sur React, Vite, Wouter, Tailwind CSS et i18next (clients, visiteurs)",
+  "root": "client/src",
+  "files": [
+    "client/src/App.tsx",
+    "client/src/main.tsx",
+    "client/src/index.css",
+    "client/src/pages/LandingGate.tsx",
+    "client/src/pages/LandingV2.tsx",
+    "client/src/pages/Auth.tsx",
+    "client/src/pages/Create.tsx",
+    "client/src/pages/Generate.tsx",
+    "client/src/pages/Modeles.tsx",
+    "client/src/pages/Historique.tsx",
+    "client/src/pages/Bibliotheque.tsx",
+    "client/src/pages/Resultat.tsx",
+    "client/src/pages/Settings.tsx",
+    "client/src/pages/WelcomeLoader.tsx",
+    "client/src/pages/ImagePrete.tsx"
+  ],
+  "pages": [
+    "LandingV2",
+    "LandingGate",
+    "Auth",
+    "Create",
+    "Generate",
+    "Modeles",
+    "Historique",
+    "Bibliotheque",
+    "Resultat",
+    "Settings",
+    "WelcomeLoader",
+    "ImagePrete"
+  ],
+  "dependencies": [
+    "react",
+    "wouter",
+    "@tanstack/react-query",
+    "tailwindcss",
+    "i18next",
+    "react-i18next",
+    "lucide-react"
+  ],
+  "routes": [
+    "/",
+    "/login",
+    "/register",
+    "/create",
+    "/generate",
+    "/modeles",
+    "/historique",
+    "/bibliotheque",
+    "/resultat",
+    "/settings",
+    "/welcome"
+  ],
+  "apis": [
+    "/api/larps/generate-direct",
+    "/api/larps/history",
+    "/api/profiles/me",
+    "/api/stripe/create-checkout-session"
+  ]
+}

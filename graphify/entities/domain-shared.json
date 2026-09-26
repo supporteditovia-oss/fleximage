@@ -1,0 +1,27 @@
+{
+  "domain": "Shared",
+  "description": "Types TypeScript, schémas de validation Drizzle/Zod, constantes de localisation et contrats d'API partagés",
+  "root": "shared",
+  "files": [
+    "shared/schema.ts",
+    "shared/routes.ts",
+    "shared/billing.ts",
+    "shared/locales.ts",
+    "shared/site-seo.ts",
+    "shared/builtin-image-templates.json",
+    "shared/builtin-outfit-templates.json"
+  ],
+  "consumedBy": [
+    "client",
+    "api",
+    "server",
+    "script",
+    "supabase"
+  ],
+  "exports": {
+    "schema": ["profiles", "generations", "promptTemplates", "templateCategories"],
+    "routes": ["api definition", "errorSchemas"],
+    "billing": ["BILLING_PLANS", "CREDIT_PACKS"],
+    "locales": ["SUPPORTED_LOCALES", "DEFAULT_LOCALE", "toUiLocale"]
+  }
+}

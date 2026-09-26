@@ -1,0 +1,57 @@
+{
+  "relationType": "ROUTE_TO_API",
+  "description": "Liaisons entre routes frontend et endpoints API backend appelés",
+  "mappings": [
+    {
+      "route": "/generate",
+      "apis": [
+        "/api/larps/generate-direct",
+        "/api/larps/status",
+        "/api/larps/templates",
+        "/api/profiles/me"
+      ]
+    },
+    {
+      "route": "/create",
+      "apis": [
+        "/api/larps/generate-direct",
+        "/api/larps/generate-video",
+        "/api/larps/voice/generate",
+        "/api/larps/status"
+      ]
+    },
+    {
+      "route": "/modeles",
+      "apis": [
+        "/api/larps/generate-direct",
+        "/api/larps/templates",
+        "/api/profiles/me"
+      ]
+    },
+    {
+      "route": "/historique",
+      "apis": [
+        "/api/larps/history",
+        "/api/larps/delete"
+      ]
+    },
+    {
+      "route": "/settings",
+      "apis": [
+        "/api/profiles/me",
+        "/api/stripe/create-portal-session",
+        "/api/stripe/current-plan"
+      ]
+    },
+    {
+      "route": "/admin/*",
+      "apis": [
+        "/api/admin/users",
+        "/api/admin/generations",
+        "/api/admin/templates",
+        "/api/admin/funnel-kpis",
+        "/api/admin/stats"
+      ]
+    }
+  ]
+}

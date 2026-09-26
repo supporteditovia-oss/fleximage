@@ -1,0 +1,255 @@
+{
+  "updatedAt": "2026-09-22T20:29:58.043Z",
+  "domains": {
+    "AI": {
+      "description": "Moteurs d'inférence, génération d'images, de voix et de vidéos (OneShot API, Kie fallback, Kling, Fish Audio)",
+      "file": "graphify/entities/domain-ai.json"
+    },
+    "Billing": {
+      "description": "Système de monétisation, abonnements récurrents, packs de crédits et intégration webhooks Stripe",
+      "file": "graphify/entities/domain-billing.json"
+    },
+    "Components": {
+      "description": "Composants React réutilisables (UI primitives, formulaires, landing blocks, studio interactif)",
+      "file": "graphify/entities/domain-components.json"
+    },
+    "Dashboard": {
+      "description": "Espaces d'administration, monitoring des générations, gestion des templates et KPIs du funnel",
+      "file": "graphify/entities/domain-dashboard.json"
+    },
+    "Frontend": {
+      "description": "Interface utilisateur principale basée sur React, Vite, Wouter, Tailwind CSS et i18next (clients, visiteurs)",
+      "file": "graphify/entities/domain-frontend.json"
+    },
+    "Routes": {
+      "description": "Cartographie des routes applicatives client (Wouter) et endpoints API serverless Vercel",
+      "file": "graphify/entities/domain-routes.json"
+    },
+    "Shared": {
+      "description": "Types TypeScript, schémas de validation Drizzle/Zod, constantes de localisation et contrats d'API partagés",
+      "file": "graphify/entities/domain-shared.json"
+    },
+    "Supabase": {
+      "description": "Base de données relationnelle PostgreSQL, authentification Supabase et migrations SQL",
+      "file": "graphify/entities/domain-supabase.json"
+    }
+  },
+  "components": {
+    "LandingClientHeroWidget": {
+      "file": "client/src/components/landing/LandingClientHeroWidget.tsx",
+      "pages": [
+        "LandingV2",
+        "LandingGate"
+      ]
+    },
+    "LandingStudioWidget": {
+      "file": "client/src/components/landing/LandingStudioWidget.tsx",
+      "pages": [
+        "LandingV2 (admin preview)"
+      ]
+    },
+    "LandingEditorialGrid": {
+      "file": "client/src/components/landing/LandingEditorialGrid.tsx",
+      "pages": [
+        "LandingV2"
+      ]
+    },
+    "ImageUploadGrid": {
+      "file": "client/src/components/generate/ImageUploadGrid.tsx",
+      "pages": [
+        "Generate",
+        "Create",
+        "LandingImagePanel"
+      ]
+    },
+    "PromptInputBar": {
+      "file": "client/src/components/generate/PromptInputBar.tsx",
+      "pages": [
+        "Generate",
+        "Create",
+        "LandingImagePanel"
+      ]
+    },
+    "GenerationLoader": {
+      "file": "client/src/components/larp/GenerationLoader.tsx",
+      "pages": [
+        "Generate",
+        "Create",
+        "Modeles"
+      ]
+    },
+    "GenerationProgress": {
+      "file": "client/src/components/larp/GenerationProgress.tsx",
+      "pages": [
+        "Generate",
+        "Create",
+        "Modeles"
+      ]
+    },
+    "LarpResult": {
+      "file": "client/src/components/larp/LarpResult.tsx",
+      "pages": [
+        "Resultat",
+        "Generate",
+        "Historique"
+      ]
+    },
+    "LuxePaywallModal": {
+      "file": "client/src/components/generate/LuxePaywallModal.tsx",
+      "pages": [
+        "Generate",
+        "Create",
+        "Settings"
+      ]
+    },
+    "ZeroCreditsModal": {
+      "file": "client/src/components/generate/ZeroCreditsModal.tsx",
+      "pages": [
+        "Generate",
+        "Create"
+      ]
+    },
+    "AdminCommandCenter": {
+      "file": "client/src/pages/AdminCommandCenter.tsx",
+      "pages": [
+        "Admin (nested sub-route)"
+      ]
+    }
+  },
+  "routes": {
+    "/": {
+      "page": "LandingGate / LandingV2",
+      "file": "client/src/pages/LandingV2.tsx"
+    },
+    "/login": {
+      "page": "Auth (Login)",
+      "file": "client/src/pages/Auth.tsx"
+    },
+    "/register": {
+      "page": "Auth (Register)",
+      "file": "client/src/pages/Auth.tsx"
+    },
+    "/generate": {
+      "page": "Generate",
+      "file": "client/src/pages/Generate.tsx"
+    },
+    "/create": {
+      "page": "Create (V2 Studio)",
+      "file": "client/src/pages/Create.tsx"
+    },
+    "/modeles": {
+      "page": "Modeles",
+      "file": "client/src/pages/Modeles.tsx"
+    },
+    "/historique": {
+      "page": "Historique",
+      "file": "client/src/pages/Historique.tsx"
+    },
+    "/bibliotheque": {
+      "page": "Bibliotheque",
+      "file": "client/src/pages/Bibliotheque.tsx"
+    },
+    "/resultat": {
+      "page": "Resultat",
+      "file": "client/src/pages/Resultat.tsx"
+    },
+    "/settings": {
+      "page": "Settings",
+      "file": "client/src/pages/Settings.tsx"
+    },
+    "/welcome": {
+      "page": "WelcomeLoader",
+      "file": "client/src/pages/WelcomeLoader.tsx"
+    },
+    "/admin": {
+      "page": "Admin",
+      "file": "client/src/pages/Admin.tsx"
+    },
+    "/admin/studio": {
+      "page": "AdminStudio",
+      "file": "client/src/pages/AdminStudio.tsx"
+    },
+    "/admin/templates": {
+      "page": "AdminTemplates",
+      "file": "client/src/pages/AdminTemplates.tsx"
+    },
+    "/admin/categories": {
+      "page": "AdminCategories",
+      "file": "client/src/pages/AdminCategories.tsx"
+    },
+    "/admin/logs": {
+      "page": "AdminLogs",
+      "file": "client/src/pages/AdminLogs.tsx"
+    },
+    "/admin/funnel": {
+      "page": "AdminFunnel",
+      "file": "client/src/pages/AdminFunnel.tsx"
+    },
+    "/admin/command-center": {
+      "page": "AdminCommandCenter",
+      "file": "client/src/pages/AdminCommandCenter.tsx"
+    }
+  },
+  "apis": {
+    "/api/larps/generate-direct": {
+      "tables": [
+        "generations",
+        "profiles"
+      ],
+      "operations": [
+        "INSERT generation status=processing",
+        "DECREMENT profile.credits",
+        "INCREMENT profile.generation_count"
+      ]
+    },
+    "/api/larps/status": {
+      "tables": [
+        "generations"
+      ],
+      "operations": [
+        "SELECT status, result_assets WHERE provider_task_id"
+      ]
+    },
+    "/api/larps/history": {
+      "tables": [
+        "generations"
+      ],
+      "operations": [
+        "SELECT * WHERE user_id ORDER BY created_at DESC"
+      ]
+    },
+    "/api/profiles/me": {
+      "tables": [
+        "profiles"
+      ],
+      "operations": [
+        "SELECT * FROM profiles WHERE id = auth.uid()",
+        "UPDATE preferences"
+      ]
+    },
+    "/api/stripe/webhook": {
+      "tables": [
+        "profiles",
+        "user_subscriptions",
+        "credit_transactions"
+      ],
+      "operations": [
+        "UPDATE profiles SET is_subscriber, credits",
+        "INSERT INTO credit_transactions",
+        "UPSERT user_subscriptions"
+      ]
+    },
+    "/api/admin/*": {
+      "tables": [
+        "profiles",
+        "generations",
+        "prompt_templates",
+        "template_categories",
+        "admin_audit_logs"
+      ],
+      "operations": [
+        "SELECT / UPDATE / INSERT admin bypass RLS"
+      ]
+    }
+  }
+}

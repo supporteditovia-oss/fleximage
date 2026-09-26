@@ -1,0 +1,24 @@
+{
+  "relationType": "SUPABASE_TO_BILLING",
+  "description": "Liaisons directes entre colonnes/tables Supabase et le moteur de facturation Stripe",
+  "mappings": [
+    {
+      "table": "profiles",
+      "columns": {
+        "credits": "Solde disponible débité à chaque génération image (10) ou vidéo (50)",
+        "is_subscriber": "Statut d'abonnement actif (débloque les fonctionnalités premium)",
+        "stripe_customer_id": "Identifiant client Stripe persistant pour portail et checkout",
+        "stripe_subscription_id": "ID de la souscription Stripe courante",
+        "subscription_status": "Statut webhook Stripe (active, past_due, canceled)"
+      }
+    },
+    {
+      "table": "user_subscriptions",
+      "role": "Historique et statut détaillé des abonnements (Discovery, Essential, Ultimate)"
+    },
+    {
+      "table": "credit_transactions",
+      "role": "Journal d'audit de chaque débit (génération) ou crédit (achat de pack ou renouvellement d'abonnement)"
+    }
+  ]
+}

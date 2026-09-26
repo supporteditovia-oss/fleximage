@@ -1,0 +1,24 @@
+{
+  "relationType": "PAGE_TO_ROUTE",
+  "description": "Liaisons entre pages React et routes frontend (Wouter)",
+  "mappings": [
+    { "page": "LandingGate / LandingV2", "file": "client/src/pages/LandingV2.tsx", "route": "/" },
+    { "page": "Auth (Login)", "file": "client/src/pages/Auth.tsx", "route": "/login" },
+    { "page": "Auth (Register)", "file": "client/src/pages/Auth.tsx", "route": "/register" },
+    { "page": "Generate", "file": "client/src/pages/Generate.tsx", "route": "/generate" },
+    { "page": "Create (V2 Studio)", "file": "client/src/pages/Create.tsx", "route": "/create" },
+    { "page": "Modeles", "file": "client/src/pages/Modeles.tsx", "route": "/modeles" },
+    { "page": "Historique", "file": "client/src/pages/Historique.tsx", "route": "/historique" },
+    { "page": "Bibliotheque", "file": "client/src/pages/Bibliotheque.tsx", "route": "/bibliotheque" },
+    { "page": "Resultat", "file": "client/src/pages/Resultat.tsx", "route": "/resultat" },
+    { "page": "Settings", "file": "client/src/pages/Settings.tsx", "route": "/settings" },
+    { "page": "WelcomeLoader", "file": "client/src/pages/WelcomeLoader.tsx", "route": "/welcome" },
+    { "page": "Admin", "file": "client/src/pages/Admin.tsx", "route": "/admin" },
+    { "page": "AdminStudio", "file": "client/src/pages/AdminStudio.tsx", "route": "/admin/studio" },
+    { "page": "AdminTemplates", "file": "client/src/pages/AdminTemplates.tsx", "route": "/admin/templates" },
+    { "page": "AdminCategories", "file": "client/src/pages/AdminCategories.tsx", "route": "/admin/categories" },
+    { "page": "AdminLogs", "file": "client/src/pages/AdminLogs.tsx", "route": "/admin/logs" },
+    { "page": "AdminFunnel", "file": "client/src/pages/AdminFunnel.tsx", "route": "/admin/funnel" },
+    { "page": "AdminCommandCenter", "file": "client/src/pages/AdminCommandCenter.tsx", "route": "/admin/command-center" }
+  ]
+}

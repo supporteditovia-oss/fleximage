@@ -1,0 +1,82 @@
+{
+  "LandingClientHeroWidget": {
+    "file": "client/src/components/landing/LandingClientHeroWidget.tsx",
+    "pages": [
+      "LandingV2",
+      "LandingGate"
+    ]
+  },
+  "LandingStudioWidget": {
+    "file": "client/src/components/landing/LandingStudioWidget.tsx",
+    "pages": [
+      "LandingV2 (admin preview)"
+    ]
+  },
+  "LandingEditorialGrid": {
+    "file": "client/src/components/landing/LandingEditorialGrid.tsx",
+    "pages": [
+      "LandingV2"
+    ]
+  },
+  "ImageUploadGrid": {
+    "file": "client/src/components/generate/ImageUploadGrid.tsx",
+    "pages": [
+      "Generate",
+      "Create",
+      "LandingImagePanel"
+    ]
+  },
+  "PromptInputBar": {
+    "file": "client/src/components/generate/PromptInputBar.tsx",
+    "pages": [
+      "Generate",
+      "Create",
+      "LandingImagePanel"
+    ]
+  },
+  "GenerationLoader": {
+    "file": "client/src/components/larp/GenerationLoader.tsx",
+    "pages": [
+      "Generate",
+      "Create",
+      "Modeles"
+    ]
+  },
+  "GenerationProgress": {
+    "file": "client/src/components/larp/GenerationProgress.tsx",
+    "pages": [
+      "Generate",
+      "Create",
+      "Modeles"
+    ]
+  },
+  "LarpResult": {
+    "file": "client/src/components/larp/LarpResult.tsx",
+    "pages": [
+      "Resultat",
+      "Generate",
+      "Historique"
+    ]
+  },
+  "LuxePaywallModal": {
+    "file": "client/src/components/generate/LuxePaywallModal.tsx",
+    "pages": [
+      "Generate",
+      "Create",
+      "Settings"
+    ]
+  },
+  "ZeroCreditsModal": {
+    "file": "client/src/components/generate/ZeroCreditsModal.tsx",
+    "pages": [
+      "Generate",
+      "Create"
+    ]
+  },
+  "AdminCommandCenter": {
+    "file": "client/src/pages/AdminCommandCenter.tsx",
+    "pages": [
+      "Admin (nested sub-route)"
+    ]
+  }
+}

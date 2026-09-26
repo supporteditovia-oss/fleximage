@@ -1,0 +1,48 @@
+{
+  "relationType": "SHARED_TO_ALL",
+  "description": "Liaisons transversales depuis le module shared vers tous les autres modules",
+  "sharedModules": [
+    {
+      "source": "shared/schema.ts",
+      "consumers": [
+        "client/src/hooks/use-auth.tsx",
+        "client/src/pages/Generate.tsx",
+        "client/src/pages/Settings.tsx",
+        "api/larps-router.js",
+        "api/_lib/supabase-admin.js",
+        "server/storage.ts"
+      ],
+      "consumedExports": ["profiles", "generations", "promptTemplates", "templateCategories"]
+    },
+    {
+      "source": "shared/routes.ts",
+      "consumers": [
+        "client/src/lib/api.ts",
+        "client/src/hooks/use-larps.ts",
+        "api/larps-router.js"
+      ],
+      "consumedExports": ["api", "errorSchemas"]
+    },
+    {
+      "source": "shared/billing.ts",
+      "consumers": [
+        "client/src/lib/stripe.ts",
+        "client/src/components/generate/LuxePaywallModal.tsx",
+        "client/src/components/generate/ZeroCreditsModal.tsx",
+        "api/stripe/create-checkout-session.js",
+        "api/stripe/webhook.js"
+      ],
+      "consumedExports": ["BILLING_PLANS", "CREDIT_PACKS", "calculateCredits"]
+    },
+    {
+      "source": "shared/locales.ts",
+      "consumers": [
+        "client/src/i18n/index.ts",
+        "client/src/pages/LandingV2.tsx",
+        "client/src/App.tsx",
+        "api/_lib/handlers/generate-direct.js"
+      ],
+      "consumedExports": ["SUPPORTED_LOCALES", "DEFAULT_LOCALE", "toUiLocale", "resolvePreferredLocale"]
+    }
+  ]
+}

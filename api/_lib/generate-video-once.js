@@ -260,16 +260,21 @@ async function generateKlingMotionOnce(supabase, params) {
 
   const startedAt = Date.now();
   const klingPrompt = buildKlingMotionPrompt(params.prompt);
-  const { resolveKlingCharacterOrientation } = require("./video-user-errors");
+  const {
+    resolveKlingCharacterOrientation,
+    resolveKlingBackgroundSource,
+  } = require("./video-user-errors");
   const characterOrientation = resolveKlingCharacterOrientation(
     params.prompt,
     Boolean(params.imageUrl),
   );
+  const backgroundSource = resolveKlingBackgroundSource(params.prompt);
   const kling = await createKlingMotionTask({
     prompt: klingPrompt,
     inputUrls: [params.imageUrl],
     videoUrls: [params.videoUrl],
     characterOrientation,
+    backgroundSource,
     mode: params.mode || "720p",
   });
 

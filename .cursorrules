@@ -1,0 +1,14 @@
+# LUXEFLEXIA — CURSOR WORKSPACE CONFIGURATION
+
+# Priorité absolue : Économie de contexte et recherche ciblée via Knowledge Graph
+# Ne jamais effectuer de scan récursif sans avoir interrogé Graphify d'abord.
+
+1. Knowledge Graph :
+   - Index maître : graphify/indexes/master-index.json
+   - CLI de recherche rapide : node graphify/lookup.mjs <Composant|Route|Domaine>
+   - Relations directes : graphify/relations/
+
+2. Règles de modification :
+   - Ne jamais altérer le code métier sans validation.
+   - Ne pas toucher aux intégrations Stripe et Supabase en production.
+   - Les nouvelles fonctionnalités vidéo et voix sont réservées à l'aperçu admin.

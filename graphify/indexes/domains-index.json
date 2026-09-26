@@ -1,0 +1,34 @@
+{
+  "AI": {
+    "description": "Moteurs d'inférence, génération d'images, de voix et de vidéos (OneShot API, Kie fallback, Kling, Fish Audio)",
+    "file": "graphify/entities/domain-ai.json"
+  },
+  "Billing": {
+    "description": "Système de monétisation, abonnements récurrents, packs de crédits et intégration webhooks Stripe",
+    "file": "graphify/entities/domain-billing.json"
+  },
+  "Components": {
+    "description": "Composants React réutilisables (UI primitives, formulaires, landing blocks, studio interactif)",
+    "file": "graphify/entities/domain-components.json"
+  },
+  "Dashboard": {
+    "description": "Espaces d'administration, monitoring des générations, gestion des templates et KPIs du funnel",
+    "file": "graphify/entities/domain-dashboard.json"
+  },
+  "Frontend": {
+    "description": "Interface utilisateur principale basée sur React, Vite, Wouter, Tailwind CSS et i18next (clients, visiteurs)",
+    "file": "graphify/entities/domain-frontend.json"
+  },
+  "Routes": {
+    "description": "Cartographie des routes applicatives client (Wouter) et endpoints API serverless Vercel",
+    "file": "graphify/entities/domain-routes.json"
+  },
+  "Shared": {
+    "description": "Types TypeScript, schémas de validation Drizzle/Zod, constantes de localisation et contrats d'API partagés",
+    "file": "graphify/entities/domain-shared.json"
+  },
+  "Supabase": {
+    "description": "Base de données relationnelle PostgreSQL, authentification Supabase et migrations SQL",
+    "file": "graphify/entities/domain-supabase.json"
+  }
+}

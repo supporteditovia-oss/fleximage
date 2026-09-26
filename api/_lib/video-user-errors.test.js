@@ -14,14 +14,14 @@ test("mapVideoProviderMessage — no valid characters", () => {
   assert.match(fr, /rembours/i);
 });
 
-test("resolveKlingCharacterOrientation — vehicle prompt + ref → image", () => {
+test("resolveKlingCharacterOrientation — ref image → image", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Je veux une Urus à Dubai", true),
     "image",
   );
   assert.equal(
     resolveKlingCharacterOrientation("Paysage calme", true),
-    "video",
+    "image",
   );
   assert.equal(resolveKlingCharacterOrientation("Urus", false), "video");
 });

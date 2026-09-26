@@ -1,0 +1,74 @@
+{
+  "/": {
+    "page": "LandingGate / LandingV2",
+    "file": "client/src/pages/LandingV2.tsx"
+  },
+  "/login": {
+    "page": "Auth (Login)",
+    "file": "client/src/pages/Auth.tsx"
+  },
+  "/register": {
+    "page": "Auth (Register)",
+    "file": "client/src/pages/Auth.tsx"
+  },
+  "/generate": {
+    "page": "Generate",
+    "file": "client/src/pages/Generate.tsx"
+  },
+  "/create": {
+    "page": "Create (V2 Studio)",
+    "file": "client/src/pages/Create.tsx"
+  },
+  "/modeles": {
+    "page": "Modeles",
+    "file": "client/src/pages/Modeles.tsx"
+  },
+  "/historique": {
+    "page": "Historique",
+    "file": "client/src/pages/Historique.tsx"
+  },
+  "/bibliotheque": {
+    "page": "Bibliotheque",
+    "file": "client/src/pages/Bibliotheque.tsx"
+  },
+  "/resultat": {
+    "page": "Resultat",
+    "file": "client/src/pages/Resultat.tsx"
+  },
+  "/settings": {
+    "page": "Settings",
+    "file": "client/src/pages/Settings.tsx"
+  },
+  "/welcome": {
+    "page": "WelcomeLoader",
+    "file": "client/src/pages/WelcomeLoader.tsx"
+  },
+  "/admin": {
+    "page": "Admin",
+    "file": "client/src/pages/Admin.tsx"
+  },
+  "/admin/studio": {
+    "page": "AdminStudio",
+    "file": "client/src/pages/AdminStudio.tsx"
+  },
+  "/admin/templates": {
+    "page": "AdminTemplates",
+    "file": "client/src/pages/AdminTemplates.tsx"
+  },
+  "/admin/categories": {
+    "page": "AdminCategories",
+    "file": "client/src/pages/AdminCategories.tsx"
+  },
+  "/admin/logs": {
+    "page": "AdminLogs",
+    "file": "client/src/pages/AdminLogs.tsx"
+  },
+  "/admin/funnel": {
+    "page": "AdminFunnel",
+    "file": "client/src/pages/AdminFunnel.tsx"
+  },
+  "/admin/command-center": {
+    "page": "AdminCommandCenter",
+    "file": "client/src/pages/AdminCommandCenter.tsx"
+  }
+}

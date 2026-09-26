@@ -1,0 +1,33 @@
+{
+  "domain": "Routes",
+  "description": "Cartographie des routes applicatives client (Wouter) et endpoints API serverless Vercel",
+  "clientRoutes": [
+    { "path": "/", "page": "LandingGate / LandingV2", "auth": false },
+    { "path": "/login", "page": "Auth", "auth": false },
+    { "path": "/register", "page": "Auth", "auth": false },
+    { "path": "/create", "page": "Create", "auth": true },
+    { "path": "/generate", "page": "Generate", "auth": true },
+    { "path": "/modeles", "page": "Modeles", "auth": true },
+    { "path": "/historique", "page": "Historique", "auth": true },
+    { "path": "/bibliotheque", "page": "Bibliotheque", "auth": true },
+    { "path": "/resultat", "page": "Resultat", "auth": true },
+    { "path": "/settings", "page": "Settings", "auth": true },
+    { "path": "/welcome", "page": "WelcomeLoader", "auth": true },
+    { "path": "/admin", "page": "Admin", "auth": "admin" },
+    { "path": "/admin/studio", "page": "AdminStudio", "auth": "admin" },
+    { "path": "/admin/templates", "page": "AdminTemplates", "auth": "admin" },
+    { "path": "/admin/logs", "page": "AdminLogs", "auth": "admin" },
+    { "path": "/admin/funnel", "page": "AdminFunnel", "auth": "admin" },
+    { "path": "/admin/command-center", "page": "AdminCommandCenter", "auth": "admin" }
+  ],
+  "apiRoutes": [
+    { "route": "/api/larps/generate-direct", "handler": "api/larps-router.js -> api/_lib/handlers/generate-direct.js" },
+    { "route": "/api/larps/generate-video", "handler": "api/larps-router.js -> api/_lib/handlers/generate-video.js" },
+    { "route": "/api/larps/history", "handler": "api/larps-router.js -> api/_lib/handlers/history.js" },
+    { "route": "/api/larps/status", "handler": "api/larps-router.js -> api/_lib/handlers/status.js" },
+    { "route": "/api/profiles/me", "handler": "api/profiles/me.js" },
+    { "route": "/api/stripe/create-checkout-session", "handler": "api/stripe/create-checkout-session.js" },
+    { "route": "/api/stripe/webhook", "handler": "api/stripe/webhook.js" },
+    { "route": "/api/admin/*", "handler": "api/admin-router.js" }
+  ]
+}

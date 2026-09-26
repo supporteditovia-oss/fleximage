@@ -1,0 +1,35 @@
+{
+  "domain": "Billing",
+  "description": "Système de monétisation, abonnements récurrents, packs de crédits et intégration webhooks Stripe",
+  "root": "api/stripe",
+  "files": [
+    "api/stripe/webhook.js",
+    "api/_lib/stripe-service.js",
+    "shared/billing.ts",
+    "client/src/lib/stripe.ts",
+    "client/src/components/generate/LuxePaywallModal.tsx",
+    "client/src/components/generate/ZeroCreditsModal.tsx",
+    "client/src/components/larp/PaywallOverlay.tsx"
+  ],
+  "plans": [
+    "Discovery",
+    "Essential",
+    "Ultimate"
+  ],
+  "creditPacks": [
+    "Pack 100",
+    "Pack 300",
+    "Pack 1000"
+  ],
+  "apis": [
+    "/api/stripe/create-checkout-session",
+    "/api/stripe/create-portal-session",
+    "/api/stripe/webhook",
+    "/api/stripe/current-plan"
+  ],
+  "supabaseTables": [
+    "profiles (credits, is_subscriber, stripe_customer_id)",
+    "user_subscriptions",
+    "credit_transactions"
+  ]
+}
