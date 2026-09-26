@@ -65,6 +65,10 @@ import {
   type VoiceSharePlatform,
 } from "@/lib/share-voice";
 import {
+  fileToVideoDataUrl,
+  withNormalizedVideoFile,
+} from "@/lib/media-file-detect";
+import {
   MAX_CLIP_SEC,
   MIN_CLIP_SEC,
   IDEAL_CLIP_SEC,
@@ -745,14 +749,15 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     if (!file) return;
     resetCapture();
     setCaptureError(null);
-    importFileRef.current = file;
-    setImportLabel(file.name);
+    const normalized = withNormalizedVideoFile(file);
+    importFileRef.current = normalized;
+    setImportLabel(normalized.name);
     setIsDecoding(true);
 
-    const previewUrl = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(normalized);
     importPreviewUrlRef.current = previewUrl;
     setImportPreviewUrl(previewUrl);
-    setImportIsVideo(isVideoMediaFile(file));
+    setImportIsVideo(isVideoMediaFile(normalized));
 
     if (!voiceName.trim()) {
       const base = file.name.replace(/\.[^.]+$/, "").trim();
@@ -761,7 +766,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
     let totalSec = 0;
     try {
-      totalSec = await getMediaDurationQuick(file);
+      totalSec = await getMediaDurationQuick(normalized);
     } catch {
       totalSec = 0;
     }
@@ -773,8 +778,8 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     if (totalSec > 0) applyDefaultTrim(totalSec);
 
     try {
-      if (!isVideoMediaFile(file)) {
-        const buffer = await decodeMediaFile(file);
+      if (!isVideoMediaFile(normalized)) {
+        const buffer = await decodeMediaFile(normalized);
         importBufferRef.current = buffer;
         if (buffer.duration > totalSec) {
           totalSec = buffer.duration;
@@ -805,21 +810,21 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
       if (needsTrimWindow(knownTotal)) {
         const ok = await rebuildImportClip(range.start, range.end);
-        if (!ok && isVideoMediaFile(file)) {
+        if (!ok && isVideoMediaFile(normalized)) {
           await buildFallbackVideoClip();
         }
       } else if (knownTotal > 0) {
         setNeedsTrim(false);
         const clip = await buildVoiceClipFromFile(
-          file,
+          normalized,
           0,
           Math.min(MAX_CLIP_SEC, knownTotal),
           "import",
-          file.name,
+          normalized.name,
           importBufferRef.current,
         );
         setClip(clip);
-      } else if (isVideoMediaFile(file)) {
+      } else if (isVideoMediaFile(normalized)) {
         const ok = await buildFallbackVideoClip();
         if (!ok) {
           setCaptureError(null);
@@ -833,20 +838,20 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         const range = defaultTrimRange(total);
         setCaptureError(null);
         const ok = await rebuildImportClip(range.start, range.end);
-        if (!ok && isVideoMediaFile(file)) {
+        if (!ok && isVideoMediaFile(normalized)) {
           await buildFallbackVideoClip();
         }
-      } else if (isVideoMediaFile(file)) {
+      } else if (isVideoMediaFile(normalized)) {
         const ok = await buildFallbackVideoClip();
         if (!ok) {
           setCaptureError(
-            "Impossible de lire ce fichier. Essaie MP3, WAV, M4A ou MP4.",
+            "Impossible de lire ce fichier. Essaie MP3, WAV, M4A, MP4 ou MOV (TikTok téléchargé…).",
           );
           resetCapture();
         }
       } else {
         setCaptureError(
-          "Impossible de lire ce fichier. Essaie MP3, WAV, M4A ou MP4.",
+          "Impossible de lire ce fichier. Essaie MP3, WAV, M4A, MP4 ou MOV.",
         );
         resetCapture();
       }
@@ -1008,7 +1013,19 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
         if (hasPendingCapture && voiceClip) {
           const name = voiceName.trim();
-          const audioDataUrl = await voiceClipToDataUrl(voiceClip);
+          let audioDataUrl: string;
+          try {
+            audioDataUrl = await voiceClipToDataUrl(voiceClip);
+          } catch {
+            const raw = importFileRef.current;
+            if (raw && isVideoMediaFile(raw) && raw.size <= 25 * 1024 * 1024) {
+              audioDataUrl = await fileToVideoDataUrl(raw);
+            } else {
+              throw new Error(
+                "Impossible de préparer l’extrait. Réessaie avec une vidéo ou un audio plus court.",
+              );
+            }
+          }
           const clonedRemote = await cloneVoice({
             name,
             audioDataUrl,

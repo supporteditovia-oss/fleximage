@@ -132,7 +132,10 @@ async function listR2Objects(prefix, maxKeys = 300) {
 }
 
 async function createPresignedVideoUploadUrl(userId, { contentType, fileSizeBytes }) {
-  const mime = String(contentType || "video/mp4").trim().toLowerCase();
+  let mime = String(contentType || "video/mp4").trim().toLowerCase();
+  if (mime === "application/octet-stream" || mime === "") {
+    mime = "video/mp4";
+  }
   if (!mime.startsWith("video/")) {
     throw Object.assign(new Error("Format vidéo invalide"), {
       status: 422,
@@ -184,11 +187,16 @@ function isOwnedR2PublicUrl(url) {
 }
 
 async function uploadInputVideoToR2(userId, dataUrl) {
-  const match = String(dataUrl).match(/^data:(video\/[\w+.-]+);base64,([\s\S]+)$/);
+  const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
   if (!match) return null;
-  const contentType = match[1];
   const buffer = Buffer.from(match[2], "base64");
-  const ext = contentType.split("/")[1] || "mp4";
+  if (!buffer.length) return null;
+  const { normalizeVideoDataUrlContentType } = require("./media-buffer-sniff");
+  const contentType = normalizeVideoDataUrlContentType(match[1], buffer);
+  const ext =
+    contentType === "video/quicktime"
+      ? "mov"
+      : contentType.split("/")[1]?.replace(/[^a-z0-9+.-]/gi, "") || "mp4";
   const key = `inputs/${userId}/${Date.now()}-source.${ext}`;
   return uploadToR2(key, buffer, contentType);
 }

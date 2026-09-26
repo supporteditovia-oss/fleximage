@@ -1,4 +1,5 @@
 import { compressImageForGeneration } from "@/lib/compress-image";
+import { isVideoMediaFile } from "@/lib/media-file-detect";
 
 /**
  * Extract a JPEG still from a video file (first readable frame).
@@ -68,7 +69,7 @@ export async function extractVideoFrameAsJpegFile(file: File): Promise<File> {
 }
 
 export async function toGenerationImageFile(file: File): Promise<File> {
-  if (file.type.startsWith("video/")) {
+  if (isVideoMediaFile(file)) {
     // Frame extract can still be huge on 4K video — compress after.
     return compressImageForGeneration(await extractVideoFrameAsJpegFile(file));
   }
