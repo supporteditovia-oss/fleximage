@@ -129,6 +129,8 @@ export default function VideoIA() {
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
+  /** false = vignette auto extraite de la vidéo (cachée en UI, utilisée côté serveur). */
+  const [refImageIsCustom, setRefImageIsCustom] = useState(false);
   const [swapPrompt, setSwapPrompt] = useState("");
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -276,6 +278,7 @@ export default function VideoIA() {
         const frameCompressed = await compressImageForGeneration(frameFile);
         const frameB64 = await fileToBase64(frameCompressed);
         setRefImageBase64(frameB64);
+        setRefImageIsCustom(false);
         setRefImagePreview((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return URL.createObjectURL(frameCompressed);
@@ -294,6 +297,7 @@ export default function VideoIA() {
       });
       setVideoDurationSec(null);
       setRefImageBase64(null);
+      setRefImageIsCustom(false);
       setRefImagePreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return null;
@@ -377,7 +381,11 @@ export default function VideoIA() {
       const compressed = await compressImageForGeneration(file);
       const b64 = await fileToBase64(compressed);
       setRefImageBase64(b64);
-      setRefImagePreview(URL.createObjectURL(compressed));
+      setRefImageIsCustom(true);
+      setRefImagePreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(compressed);
+      });
     } catch {
       toast({
         variant: "destructive",
@@ -730,13 +738,19 @@ export default function VideoIA() {
 
             {videoPreview && (
               <>
-                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
+                <p className="via-step-desc" style={{ marginTop: "0.85rem" }}>
+                  En haut : <strong>ta vidéo source</strong> (mouvements, caméra).
+                  Le studio prépare automatiquement une image à partir de cette
+                  vidéo — tu n&apos;as rien à faire de plus.
+                </p>
+
+                <p className="via-step-pill" style={{ marginTop: "1rem" }}>
                   <ImageIcon className="h-3.5 w-3.5" />
-                  Référence visuelle (optionnel)
+                  Photo bonus (optionnel)
                 </p>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Optionnel — une image est déjà extraite de ta vidéo. Ajoute une
-                  photo (Urus, tenue, personnage…) pour un rendu plus précis.
+                  Uniquement si tu veux imposer un look précis (Urus, tenue,
+                  personnage…) en plus de ta vidéo. Sinon, ignore cette étape.
                 </p>
                 <input
                   ref={refImageFileRef}
@@ -749,21 +763,21 @@ export default function VideoIA() {
                 />
                 <button
                   type="button"
-                  className={`via-upload-zone ${refImagePreview ? "has-file" : ""}`}
-                  style={{ minHeight: "5rem" }}
+                  className={`via-upload-zone ${refImageIsCustom ? "has-file" : ""}`}
+                  style={{ minHeight: "4.25rem" }}
                   onClick={() => refImageFileRef.current?.click()}
                 >
                   <span className="via-upload-zone__text">
-                    {refImagePreview
-                      ? "Changer la photo de référence"
-                      : "Ajouter une photo de référence"}
+                    {refImageIsCustom
+                      ? "Changer la photo bonus"
+                      : "Ajouter une photo bonus (optionnel)"}
                   </span>
                 </button>
-                {refImagePreview && (
+                {refImageIsCustom && refImagePreview ? (
                   <div className="via-preview-frame" style={{ maxWidth: "8rem" }}>
-                    <img src={refImagePreview} alt="Référence" />
+                    <img src={refImagePreview} alt="Photo bonus" />
                   </div>
-                )}
+                ) : null}
 
                 <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
                   <Sparkles className="h-3.5 w-3.5" />
