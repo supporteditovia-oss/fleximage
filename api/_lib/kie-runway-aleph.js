@@ -77,7 +77,8 @@ function mapAlephState(data) {
   if (successFlag === 1) return "success";
   const errorCode = Number(data.errorCode);
   const errorMessage = String(data.errorMessage || "").trim();
-  if (errorCode !== 0 || errorMessage) return "fail";
+  if (Number.isFinite(errorCode) && errorCode !== 0) return "fail";
+  if (errorMessage) return "fail";
   return "waiting";
 }
 

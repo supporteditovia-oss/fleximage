@@ -361,7 +361,9 @@
 .lx-vid-loader__frame {
   position: relative;
   height: 100%;
-  max-width: min(64vw, 30rem);
+  width: min(78vw, 32rem);
+  max-width: min(78vw, 32rem);
+  flex: 0 1 auto;
   border-radius: 14px;
   overflow: hidden;
   background: #0d0a06;
@@ -789,12 +791,23 @@
     gap: 0.4rem;
   }
 
-  .lx-vid-loader__frame {
-    max-width: 62vw;
+  .lx-vid-loader__film {
+    width: clamp(1.35rem, 4.5vw, 2.2rem);
+    opacity: 0.65;
   }
 
   .lx-vid-loader__rig {
+    gap: 0.35rem;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0.15rem;
     max-height: 54vh;
+  }
+
+  .lx-vid-loader__frame {
+    width: min(86vw, 22rem);
+    max-width: min(86vw, 22rem);
+    flex: 1 1 auto;
   }
 
   .lx-vid-loader__chapter-item {

@@ -683,12 +683,21 @@ module.exports = async function handler(req, res) {
         source: "video_provider_failed",
         failMessage: providerErr.message,
       }).catch(() => {});
-      res.status(502).json({
-        message: copy(
-          uiLocale,
-          "Échec création vidéo. Jetons remboursés.",
-          "Video creation failed. Credits refunded.",
-        ),
+      const providerStatus =
+        typeof providerErr.status === "number" ? providerErr.status : 502;
+      const providerMessage =
+        typeof providerErr.message === "string" && providerErr.message.trim()
+          ? providerErr.message.trim()
+          : null;
+      res.status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502).json({
+        message:
+          providerStatus === 422 && providerMessage
+            ? `${providerMessage} Jetons remboursés.`
+            : copy(
+                uiLocale,
+                "Échec création vidéo. Jetons remboursés.",
+                "Video creation failed. Credits refunded.",
+              ),
         videoRequestId,
       });
       return;

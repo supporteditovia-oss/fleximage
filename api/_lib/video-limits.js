@@ -10,6 +10,8 @@ function getVideoDurationUploadLimitSec() {
 }
 /** iPhone 8s en 4K peut dépasser 20 Mo — upload direct R2 jusqu'à 100 Mo. */
 const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
+/** Plafond Runway Aleph (KIE) — au-delà, transcodage serveur obligatoire. */
+const VIDEO_ALEPH_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
 /** Prix fixe client : 1 vidéo = N crédits (3–8s, 720p). */
 const { VIDEO_V2V_CREDIT_COST } = require("./credit-costs");
@@ -62,6 +64,7 @@ module.exports = {
   VIDEO_V2V_MIN_DURATION_SEC,
   getVideoDurationUploadLimitSec,
   VIDEO_V2V_MAX_SIZE_BYTES,
+  VIDEO_ALEPH_MAX_SOURCE_BYTES,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_CREDIT_COST,
   validateSourceVideoDuration,
