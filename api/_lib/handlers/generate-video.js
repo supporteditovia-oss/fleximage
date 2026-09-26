@@ -543,6 +543,14 @@ module.exports = async function handler(req, res) {
               userId,
             );
           }
+          if (!referenceImageUrl) {
+            throw Object.assign(
+              new Error(
+                "Impossible de préparer ta vidéo (image de référence). Réessaie avec un clip 3–8 s en 720p.",
+              ),
+              { status: 422, code: "V2V_FRAME_REQUIRED" },
+            );
+          }
         } else if (referenceImageUrl) {
           referenceImageUrl = await normalizeMotionReferenceImageUrl(
             referenceImageUrl,
