@@ -1,4 +1,6 @@
-const KIE_ALEPH_BASE_URL = "https://api.kie.ai/api/v1/aleph";
+const KIE_JOBS_BASE_URL = "https://api.kie.ai/api/v1/jobs";
+/** Nouvelle API KIE (2025+) — l’ancien POST /api/v1/aleph/generate renvoie des erreurs. */
+const ALEPH_MODEL = "runway/gen4-aleph";
 
 function getApiKey() {
   const key = process.env.KIE_AI_API_KEY;
@@ -17,17 +19,22 @@ function parseAlephResponse(text, status, context) {
 }
 
 async function createAlephVideoTask(input) {
+  const aspectRatio = input.aspectRatio || "9:16";
   const body = {
-    prompt: String(input.prompt || "").slice(0, 1000),
-    videoUrl: input.videoUrl,
-    waterMark: "",
-    aspectRatio: input.aspectRatio || "9:16",
+    model: ALEPH_MODEL,
+    input: {
+      prompt: String(input.prompt || "").slice(0, 2000),
+      video_url: input.videoUrl,
+      watermark: "",
+      upload_cn: false,
+      aspect_ratio: aspectRatio,
+    },
   };
   if (input.referenceImage) {
-    body.referenceImage = input.referenceImage;
+    body.input.reference_image = input.referenceImage;
   }
 
-  const response = await fetch(`${KIE_ALEPH_BASE_URL}/generate`, {
+  const response = await fetch(`${KIE_JOBS_BASE_URL}/createTask`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +60,7 @@ async function createAlephVideoTask(input) {
 
 async function getAlephVideoStatus(taskId) {
   const response = await fetch(
-    `${KIE_ALEPH_BASE_URL}/record-info?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_JOBS_BASE_URL}/recordInfo?taskId=${encodeURIComponent(taskId)}`,
     {
       method: "GET",
       headers: { Authorization: `Bearer ${getApiKey()}` },
@@ -61,7 +68,7 @@ async function getAlephVideoStatus(taskId) {
   );
 
   const text = await response.text();
-  const parsed = parseAlephResponse(text, response.status, "getStatus");
+  const parsed = parseAlephResponse(text, response.status, "recordInfo");
 
   if (!response.ok || parsed.code !== 200) {
     const err = new Error(parsed.msg || "Aleph status error");
@@ -73,20 +80,46 @@ async function getAlephVideoStatus(taskId) {
 }
 
 function mapAlephState(data) {
+  const state = String(data.state || "").toLowerCase();
+  if (state === "success") return "success";
+  if (state === "fail" || state === "failed") return "fail";
+
   const successFlag = Number(data.successFlag);
   if (successFlag === 1) return "success";
   const errorCode = Number(data.errorCode);
-  const errorMessage = String(data.errorMessage || "").trim();
+  const errorMessage = String(data.errorMessage || data.failMsg || "").trim();
   if (Number.isFinite(errorCode) && errorCode !== 0) return "fail";
   if (errorMessage) return "fail";
   return "waiting";
 }
 
 function extractAlephVideoUrl(data) {
-  return data?.response?.resultVideoUrl ?? data?.resultVideoUrl ?? null;
+  if (data?.resultJson) {
+    try {
+      const result = JSON.parse(data.resultJson);
+      if (Array.isArray(result.resultUrls) && result.resultUrls[0]) {
+        return result.resultUrls[0];
+      }
+      if (typeof result.resultVideoUrl === "string" && result.resultVideoUrl) {
+        return result.resultVideoUrl;
+      }
+      if (typeof result.video_url === "string" && result.video_url) {
+        return result.video_url;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return (
+    data?.response?.resultVideoUrl ??
+    data?.resultVideoUrl ??
+    data?.videoInfo?.videoUrl ??
+    null
+  );
 }
 
 module.exports = {
+  ALEPH_MODEL,
   createAlephVideoTask,
   getAlephVideoStatus,
   mapAlephState,
