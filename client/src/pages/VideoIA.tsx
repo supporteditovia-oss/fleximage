@@ -47,6 +47,7 @@ import {
 import {
   finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
+  isVehicleDrivingPrompt,
   resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
 import {
