@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Redirect, useLocation } from "wouter";
 import {
   Film,
@@ -357,15 +358,17 @@ export default function VideoIA() {
     if (!canGenerateI2V) return;
 
     releaseGenerationLoaderTheme();
-    setGenerationEstimate(
-      estimateVideoGenerationSeconds({
-        workflow: "image_to_video",
-        durationSec,
-        quality: "standard",
-        voiceEnabled,
-      }),
-    );
-    setIsSubmitting(true);
+    flushSync(() => {
+      setGenerationEstimate(
+        estimateVideoGenerationSeconds({
+          workflow: "image_to_video",
+          durationSec,
+          quality: "standard",
+          voiceEnabled,
+        }),
+      );
+      setIsSubmitting(true);
+    });
     try {
       const rawPrompt =
         motionPrompt.trim().length >= 10
@@ -438,15 +441,17 @@ export default function VideoIA() {
     if (!canGenerateV2V || !videoSource) return;
 
     releaseGenerationLoaderTheme();
-    setGenerationEstimate(
-      estimateVideoGenerationSeconds({
-        workflow: "video_to_video",
-        v2vProvider: "kling_motion",
-        sourceVideoDurationSec: videoDurationSec,
-        preserveSourceAudio: preserveSourceVoice,
-      }),
-    );
-    setIsSubmitting(true);
+    flushSync(() => {
+      setGenerationEstimate(
+        estimateVideoGenerationSeconds({
+          workflow: "video_to_video",
+          v2vProvider: "kling_motion",
+          sourceVideoDurationSec: videoDurationSec,
+          preserveSourceAudio: preserveSourceVoice,
+        }),
+      );
+      setIsSubmitting(true);
+    });
     try {
       const sanitizedPrompt = finalizeV2VPromptForSubmit(
         swapPrompt,
@@ -479,8 +484,11 @@ export default function VideoIA() {
 
   const resetStudio = useCallback(() => {
     releaseGenerationLoaderTheme();
+    document.documentElement.removeAttribute("data-fullscreen-overlay");
+    document.body.removeAttribute("data-fullscreen-overlay");
     setTaskId(null);
     setGenerationEstimate(null);
+    setIsSubmitting(false);
   }, []);
 
   const isV2V = workflow === "video_to_video";
@@ -499,6 +507,36 @@ export default function VideoIA() {
 
   if (!adminPreview) {
     return <Redirect to="/create" />;
+  }
+
+  const showSubmitLoader =
+    (isSubmitting || generateVideo.isPending) && !taskId;
+
+  if (showSubmitLoader) {
+    return (
+      <>
+        <VideoGenerationLoaderBackdrop zIndex={99} />
+        <VideoGenerationLoader
+          taskId="video-submit"
+          status="connecting"
+          workflow={workflow}
+          estimatedSeconds={
+            generationEstimate ??
+            defaultVideoLoaderEstimate({
+              workflow,
+              sourceVideoDurationSec: videoDurationSec,
+              preserveSourceAudio: preserveSourceVoice,
+              durationSec,
+              voiceEnabled,
+            })
+          }
+          inputImageUrl={loaderImageUrl}
+          inputVideoUrl={loaderVideoUrl}
+          aspectRatio={aspectRatio}
+          specs={loaderSpecs}
+        />
+      </>
+    );
   }
 
   if (taskId) {
@@ -704,7 +742,9 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton smartphone — toi, un objet, une scène, un véhicule…{" "}
+              Filme avec ton smartphone — idéalement avec{" "}
+              <strong>toi ou tes mains visibles</strong> (ex. au volant). Scène,
+              objet ou véhicule…{" "}
               <strong>
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>{" "}

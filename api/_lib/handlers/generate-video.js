@@ -51,6 +51,7 @@ const {
   resolveKlingMotionSourceVideoUrl,
   normalizeMotionReferenceImageUrl,
 } = require("../prepare-kling-source-video");
+const { mapVideoProviderMessage } = require("../video-user-errors");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -717,20 +718,15 @@ module.exports = async function handler(req, res) {
               .replace(/\s{2,}/g, " ")
               .trim()
           : "";
+      const mapped = mapVideoProviderMessage(sanitizedApiMsg, uiLocale);
       const friendlyFromProvider =
-        sanitizedApiMsg &&
-        /file type not supported/i.test(sanitizedApiMsg)
-          ? copy(
-              uiLocale,
-              "Format vidéo incompatible. Réessaie avec un clip 3–8 s (720p). Jetons remboursés.",
-              "Unsupported video format. Try a 3–8 s clip (720p). Credits refunded.",
-            )
-          : sanitizedApiMsg &&
-              !/^(Aleph API error|Kling Motion Control API error|Runway API error)$/i.test(
-                sanitizedApiMsg,
-              )
-            ? `${sanitizedApiMsg} Jetons remboursés.`
-            : null;
+        mapped ||
+        (sanitizedApiMsg &&
+        !/^(Aleph API error|Kling Motion Control API error|Runway API error)$/i.test(
+          sanitizedApiMsg,
+        )
+          ? `${sanitizedApiMsg} Jetons remboursés.`
+          : null);
       const detailed = friendlyFromProvider || generic;
       res
         .status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502)

@@ -32,6 +32,7 @@ const {
   withTimeout,
 } = require("../generation");
 const { videoTimingFieldsForLarp } = require("../video-status-timing");
+const { mapVideoProviderMessage } = require("../video-user-errors");
 const { readApiCallCount } = require("../generation-idempotency");
 
 /** Image bloquée sans livrable → fail + remboursement jetons (facturation DeepInfra séparée). */
@@ -358,10 +359,14 @@ module.exports = async function handler(req, res) {
           }
         } else if (state === "fail") {
           apiStatus = "fail";
-          apiFailMsg = toUserFailMessage(
+          const rawKlingFail = toUserFailMessage(
             klingData.failMsg,
             "Échec de la transformation vidéo",
           );
+          apiFailMsg =
+            mapVideoProviderMessage(rawKlingFail, "fr") ||
+            mapVideoProviderMessage(klingData.failMsg, "fr") ||
+            rawKlingFail;
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
           apiFailMsg =

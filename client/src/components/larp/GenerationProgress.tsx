@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { Gem } from "lucide-react";
@@ -246,46 +246,55 @@ export function GenerationProgress({
         ),
       });
       handleReset();
-      navigate(studioPath);
+      if (resultType !== "video") {
+        navigate(studioPath);
+      }
       return;
     }
-
-    if (data?.status === "fail") {
-      clearInFlightGeneration();
-      hasHandledFailure.current = true;
-      document.documentElement.removeAttribute("data-fullscreen-overlay");
-      document.body.removeAttribute("data-fullscreen-overlay");
-      document.documentElement.removeAttribute("data-larp-result-mode");
-      document.body.removeAttribute("data-larp-result-mode");
-      const failMessage =
-        typeof data.failMessage === "string" &&
-        data.failMessage &&
-        data.failMessage !== "[object Object]"
-          ? data.failMessage
-          : t("progress.generationFailedDefault");
-      const isPolicyFail =
-        /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito/i.test(
-          failMessage,
-        );
-      toast({
-        variant: "destructive",
-        title: isPolicyFail ? t("progress.policyFail") : t("progress.generationFailed"),
-        description: failMessage,
-      });
-      // Credits may have been refunded server-side on policy/provider fail.
-      void queryClient.invalidateQueries({ queryKey: ["profile"] });
-      handleReset();
-      navigate(studioPath);
-    }
   }, [
-    data?.status,
-    data?.failMessage,
     fatalConnectionError,
     error,
     handleReset,
     navigate,
     queryClient,
+    resultType,
     studioPath,
+    t,
+    toast,
+  ]);
+
+  // Reset before paint so Vidéo IA never shows an empty overlay after provider fail.
+  useLayoutEffect(() => {
+    if (hasHandledFailure.current || data?.status !== "fail") return;
+
+    clearInFlightGeneration();
+    hasHandledFailure.current = true;
+    document.documentElement.removeAttribute("data-fullscreen-overlay");
+    document.body.removeAttribute("data-fullscreen-overlay");
+    document.documentElement.removeAttribute("data-larp-result-mode");
+    document.body.removeAttribute("data-larp-result-mode");
+    const failMessage =
+      typeof data.failMessage === "string" &&
+      data.failMessage &&
+      data.failMessage !== "[object Object]"
+        ? data.failMessage
+        : t("progress.generationFailedDefault");
+    const isPolicyFail =
+      /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito/i.test(
+        failMessage,
+      );
+    toast({
+      variant: "destructive",
+      title: isPolicyFail ? t("progress.policyFail") : t("progress.generationFailed"),
+      description: failMessage,
+    });
+    void queryClient.invalidateQueries({ queryKey: ["profile"] });
+    handleReset();
+  }, [
+    data?.status,
+    data?.failMessage,
+    handleReset,
+    queryClient,
     t,
     toast,
   ]);
@@ -345,7 +354,11 @@ export function GenerationProgress({
     !fatalConnectionError &&
     data?.status !== "fail";
 
-  if (fatalConnectionError || data?.status === "fail") {
+  if (fatalConnectionError) {
+    return null;
+  }
+
+  if (data?.status === "fail") {
     return null;
   }
 
