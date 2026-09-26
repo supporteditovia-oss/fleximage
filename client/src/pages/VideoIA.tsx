@@ -90,7 +90,7 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr · Kling 3.0 · 3–8 s`,
+    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr · 3–8 s · 720p`,
     icon: Wand2,
   },
 ];
@@ -406,7 +406,7 @@ export default function VideoIA() {
   const loaderVideoUrl = isV2V ? videoPreview || undefined : undefined;
   const loaderSpecs = isV2V
     ? [
-        "Kling 3.0 Motion",
+        "Motion cinéma",
         videoDurationSec ? `${videoDurationSec} s` : "V2V",
         "720p",
         aspectRatio,
@@ -652,9 +652,8 @@ export default function VideoIA() {
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>{" "}
               en <strong>720p</strong> ·{" "}
-              {adminBurn.videoV2V} crédits ·{" "}
-              <strong>Kling 3.0 Motion Control</strong>. L&apos;IA conserve ta
-              caméra et tous les mouvements. Change le décor (Dubai, yacht…),
+              {adminBurn.videoV2V} crédits. Le studio conserve ta caméra et tous
+              les mouvements. Change le décor (Dubai, yacht…),
               le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
               <strong>muette</strong> — active l&apos;option voix (+
               {adminBurn.videoVoiceExtra} crédits)
@@ -691,7 +690,7 @@ export default function VideoIA() {
                     : "Choisir une vidéo"}
               </span>
               <span className="via-upload-zone__meta">
-                MP4 · 720p · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
+                Vidéo · 720p · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
                 {VIDEO_V2V_MAX_SIZE_MB} Mo
                 {videoDurationSec ? ` · ${videoDurationSec}s détectées` : ""}
               </span>
@@ -710,9 +709,8 @@ export default function VideoIA() {
                   Référence visuelle (optionnel)
                 </p>
                 <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Optionnel — une frame est déjà extraite de ta vidéo pour Kling
-                  Motion Control. Ajoute une photo (Urus, tenue, personnage…) pour
-                  un rendu plus précis.
+                  Optionnel — une image est déjà extraite de ta vidéo. Ajoute une
+                  photo (Urus, tenue, personnage…) pour un rendu plus précis.
                 </p>
                 <input
                   ref={refImageFileRef}
