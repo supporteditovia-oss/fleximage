@@ -8,6 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { LarpResult } from "./LarpResult";
 import { GenerationLoader, GenerationLoaderBackdrop } from "./GenerationLoader";
 import {
+  VideoGenerationLoader,
+  VideoGenerationLoaderBackdrop,
+  type VideoLoaderWorkflow,
+} from "./VideoGenerationLoader";
+import {
   peekGenerationLoaderTiming,
   releaseGenerationLoaderTheme,
 } from "@/lib/generation-loader-theme";
@@ -33,6 +38,10 @@ interface GenerationProgressProps {
   referenceImageCount?: number;
   /** Server estimate returned at generate-direct start (before first poll). */
   initialEstimatedSeconds?: number;
+  videoWorkflow?: VideoLoaderWorkflow;
+  inputVideoUrl?: string;
+  aspectRatio?: string;
+  videoSpecs?: string[];
 }
 
 const LX_AUTH_BG =
@@ -46,6 +55,10 @@ export function GenerationProgress({
   resultType = "image",
   referenceImageCount = 1,
   initialEstimatedSeconds,
+  videoWorkflow,
+  inputVideoUrl,
+  aspectRatio,
+  videoSpecs,
 }: GenerationProgressProps) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -272,25 +285,23 @@ export function GenerationProgress({
     toast,
   ]);
 
-  const estimatedSeconds =
-    resultType === "video"
-      ? 150
-      : (() => {
-          const polled =
-            data?.estimatedSeconds != null && Number.isFinite(data.estimatedSeconds)
-              ? data.estimatedSeconds
-              : null;
-          const fallback =
-            initialEstimatedSeconds != null &&
-            Number.isFinite(initialEstimatedSeconds)
-              ? initialEstimatedSeconds
-              : inflightSnapshot?.taskId === taskId
-                ? inflightSnapshot.estimatedSeconds
-                : referenceImageCount >= 2
-                  ? 62
-                  : 50;
-          return polled ?? fallback;
-        })();
+  const estimatedSeconds = (() => {
+    const polled =
+      data?.estimatedSeconds != null && Number.isFinite(data.estimatedSeconds)
+        ? data.estimatedSeconds
+        : null;
+    const fallback =
+      initialEstimatedSeconds != null && Number.isFinite(initialEstimatedSeconds)
+        ? initialEstimatedSeconds
+        : inflightSnapshot?.taskId === taskId
+          ? inflightSnapshot.estimatedSeconds
+          : resultType === "video"
+            ? 150
+            : referenceImageCount >= 2
+              ? 62
+              : 50;
+    return polled ?? fallback;
+  })();
 
   if (taskId) {
     timingLockRef.current = mergeGenerationTimingLock(timingLockRef.current, {
@@ -330,8 +341,27 @@ export function GenerationProgress({
 
   return (
     <>
-      {showLoader ? <GenerationLoaderBackdrop zIndex={100} /> : null}
-      {showLoader ? (
+      {showLoader && resultType === "video" ? (
+        <>
+          <VideoGenerationLoaderBackdrop zIndex={100} />
+          <VideoGenerationLoader
+            taskId={taskId}
+            status={loaderStatus}
+            workflow={videoWorkflow}
+            estimatedSeconds={displayEstimate}
+            serverRemainingSeconds={serverRemainingSeconds}
+            startedAtMs={startedAtMs}
+            inputImageUrl={inputImageUrl}
+            inputVideoUrl={inputVideoUrl}
+            aspectRatio={aspectRatio}
+            specs={videoSpecs}
+            onRevealStart={() => setRevealStarted(true)}
+            onRevealComplete={() => setRevealDone(true)}
+          />
+        </>
+      ) : null}
+      {showLoader && resultType !== "video" ? <GenerationLoaderBackdrop zIndex={100} /> : null}
+      {showLoader && resultType !== "video" ? (
         <GenerationLoader
           taskId={taskId}
           status={loaderStatus}
