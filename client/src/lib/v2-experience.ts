@@ -4,14 +4,13 @@ export type V2AccessProfile = {
   credits?: number | null;
 };
 
-/**
- * Studio V2 — preview admin uniquement tant que Voix / Vidéo / Modèles ne sont pas finalisés.
- */
+/** Studio V2 — admin, abonné actif, ou IP allowlist (API /api/v2-access). */
 export function isV2ExperienceEnabled(
   profile: V2AccessProfile | null | undefined,
   isAdmin = false,
 ): boolean {
-  return isAdmin || profile?.role === "admin";
+  if (isAdmin || profile?.role === "admin") return true;
+  return Boolean(profile?.is_subscriber);
 }
 
 export type StudioMode = "image" | "voice" | "video";

@@ -337,15 +337,6 @@ module.exports = async function handler(req, res) {
         });
         return;
       }
-      res.status(403).json({
-        code: "ADMIN_PREVIEW_ONLY",
-        message: copy(
-          uiLocale,
-          "Le studio vidéo IA est réservé aux administrateurs (preview).",
-          "The AI video studio is admin-only preview.",
-        ),
-      });
-      return;
     }
 
     const durationSec = body.duration_sec === 10 ? 10 : 5;

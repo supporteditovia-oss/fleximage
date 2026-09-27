@@ -41,22 +41,27 @@ module.exports = async function handler(req, res) {
     const ipAllowed = isIpAllowedForV2(ip);
 
     let isAdmin = false;
+    let isSubscriber = false;
 
     try {
       const { supabase, userId } = await requireUser(req);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_subscriber")
         .eq("id", userId)
         .maybeSingle();
       isAdmin = profile?.role === "admin";
+      isSubscriber = Boolean(profile?.is_subscriber);
     } catch {
       /* optional auth — IP discovery still works */
     }
 
+    const enabled = isAdmin || isSubscriber || ipAllowed;
+
     res.status(200).json({
-      enabled: isAdmin,
+      enabled,
       isAdmin,
+      isSubscriber,
       ipAllowed,
       ip,
     });

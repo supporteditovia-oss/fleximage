@@ -10,6 +10,7 @@ import {
 type V2AccessResponse = {
   enabled: boolean;
   isAdmin: boolean;
+  isSubscriber?: boolean;
   ipAllowed: boolean;
   ip: string;
 };
@@ -64,8 +65,10 @@ export function useV2Access() {
 
   const ipAllowed = Boolean(data?.ipAllowed);
   const serverAdmin = Boolean(data?.isAdmin);
+  const serverEnabled = Boolean(data?.enabled);
   const effectiveAdmin = isAdmin || serverAdmin;
-  const v2Enabled = isV2ExperienceEnabled(profile, effectiveAdmin);
+  const v2Enabled =
+    serverEnabled || ipAllowed || isV2ExperienceEnabled(profile, effectiveAdmin);
   const isLoading = authLoading;
 
   useEffect(() => {

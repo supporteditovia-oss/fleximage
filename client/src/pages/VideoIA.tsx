@@ -64,6 +64,7 @@ import {
 import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { useV2Access } from "@/hooks/use-v2-access";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
 import { withNormalizedVideoFile } from "@/lib/media-file-detect";
@@ -103,6 +104,7 @@ const WORKFLOW_OPTIONS: {
 export default function VideoIA() {
   const [, setLocation] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
+  const { v2Enabled, isLoading: v2Loading } = useV2Access();
   const { user } = useAuth();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
@@ -507,7 +509,15 @@ export default function VideoIA() {
       ]
     : [`${durationSec} s`, "24 fps", aspectRatio];
 
-  if (!adminPreview) {
+  if (v2Loading && user) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!v2Enabled) {
     return <Redirect to="/create" />;
   }
 
