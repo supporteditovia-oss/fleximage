@@ -78,12 +78,27 @@ async function markImageGenerationFailedWithRefund(
 }
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
+function stripProviderBrandNames(text) {
+  return String(text || "")
+    .replace(/\bgemini[\s\d.-]*/gi, "")
+    .replace(/\bkling[\s\d.-]*/gi, "")
+    .replace(/\brunway[\s\d.-]*/gi, "")
+    .replace(/\baleph\b/gi, "")
+    .replace(/\bnano[\s-]?banana[\s\d.]*/gi, "")
+    .replace(/\bdeepinfra\b/gi, "")
+    .replace(/\bfish[\s-]?audio\b/gi, "")
+    .replace(/\bkie\.?ai\b/gi, "")
+    .replace(/\bopenai\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function formatVideoFailForClient(
   value,
   fallback = "Échec de la génération",
   options = {},
 ) {
-  const raw = toUserFailMessage(value, fallback);
+  const raw = stripProviderBrandNames(toUserFailMessage(value, fallback));
   return mapVideoProviderMessage(raw, "fr", options) || raw;
 }
 
@@ -540,7 +555,7 @@ module.exports = async function handler(req, res) {
           return;
         }
         apiStatus = "fail";
-        apiFailMsg = "Erreur de polling vidéo Aleph";
+        apiFailMsg = "Erreur de suivi vidéo — réessaie dans un instant.";
       }
     } else if (isVideoTask) {
       const runwayTaskId = activeTaskId.replace("video_", "");

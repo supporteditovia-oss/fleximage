@@ -84,7 +84,7 @@ async function transcodeForAleph(inputPath, outputPath) {
   }
   throw Object.assign(
     new Error(
-      "Vidéo trop lourde pour Runway Aleph (max 10 Mo). Filme en 720p ou coupe la vidéo.",
+      "Vidéo trop lourde pour le studio (max 10 Mo). Filme en 720p ou coupe la vidéo.",
     ),
     { status: 422, code: "VIDEO_TOO_HEAVY_FOR_ALEPH", cause: lastErr },
   );

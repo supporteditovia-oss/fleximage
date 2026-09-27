@@ -1246,7 +1246,7 @@ export function TemplateFormDialog({
                                 }
                                 rows={3}
                                 maxLength={2000}
-                                placeholder="Prompt Runway pour cette image…"
+                                placeholder="Prompt vidéo pour cette image…"
                               />
                             </div>
                           )}
@@ -1309,7 +1309,7 @@ export function TemplateFormDialog({
                                 }
                                 rows={3}
                                 maxLength={2000}
-                                placeholder="Prompt Runway pour cette image…"
+                                placeholder="Prompt vidéo pour cette image…"
                               />
                             </div>
                           )}
@@ -1373,7 +1373,7 @@ export function TemplateFormDialog({
                   </legend>
 
                   <div className="space-y-3">
-                    <Label htmlFor="video_prompt_text">Prompt Runway global</Label>
+                    <Label htmlFor="video_prompt_text">Prompt vidéo global</Label>
                     <Textarea
                       id="video_prompt_text"
                       value={videoPromptText}

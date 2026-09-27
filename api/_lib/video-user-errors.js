@@ -12,8 +12,8 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
         : "Transform failed on this POV clip. Try an angle with more visible body or a slightly longer clip. Credits refunded.";
     }
     return locale === "fr"
-      ? "Ce clip POV n’est pas compatible avec le mode personnage — bascule automatique vers le moteur transformation…"
-      : "This POV clip is not compatible with character motion — switching to the transform engine…";
+      ? "Le studio adapte automatiquement ton clip POV — la génération continue…"
+      : "The studio is adapting your POV clip — generation continues…";
   }
 
   if (/internal error|please try again later/i.test(text)) {
