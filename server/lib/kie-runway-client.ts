@@ -126,6 +126,77 @@ export async function createRunwayVideoTask(
   return parsed;
 }
 
+export interface CreateRunwayExtendVideoInput {
+  taskId: string;
+  prompt: string;
+  quality?: "standard" | "high" | "720p" | "1080p";
+  callBackUrl?: string;
+}
+
+export function normalizeRunwayExtendQuality(
+  quality?: string,
+): "720p" | "1080p" {
+  const q = String(quality || "").toLowerCase();
+  if (q === "high" || q === "1080p") return "1080p";
+  return "720p";
+}
+
+export async function createRunwayExtendVideoTask(
+  input: CreateRunwayExtendVideoInput,
+): Promise<{ taskId: string; parentTaskId: string }> {
+  const taskId = String(input.taskId || "").trim();
+  const prompt = String(input.prompt || "").trim().slice(0, 2000);
+  if (!taskId) {
+    throw new Error("Runway extend requires taskId");
+  }
+
+  const body: Record<string, unknown> = {
+    taskId,
+    prompt,
+    quality: normalizeRunwayExtendQuality(input.quality),
+    waterMark: "",
+  };
+  if (input.callBackUrl) {
+    body.callBackUrl = input.callBackUrl;
+  }
+
+  const response = await fetch(`${KIE_RUNWAY_BASE_URL}/extend`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getApiKey()}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+  const parsed = parseRunwayResponse<{
+    code: number;
+    msg: string;
+    data: { taskId?: string; task_id?: string } | null;
+  }>(text, response.status, "extend");
+  const newTaskId = parsed.data?.taskId ?? parsed.data?.task_id;
+
+  if (!response.ok || parsed.code !== 200 || !newTaskId) {
+    logger.error(
+      {
+        status: response.status,
+        apiCode: parsed.code,
+        apiMsg: parsed.msg,
+        parentTaskId: taskId,
+      },
+      "Kie.ai Runway extend failed",
+    );
+    throw new RunwayApiError(
+      parsed.msg || "Runway extend API error",
+      parsed.code,
+      parsed.msg,
+    );
+  }
+
+  return { taskId: newTaskId, parentTaskId: taskId };
+}
+
 export async function getRunwayVideoStatus(
   taskId: string,
 ): Promise<RunwayVideoStatusResponse> {
