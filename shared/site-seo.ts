@@ -108,6 +108,24 @@ export const INDEXABLE_SITE_PAGES = [
     images: [],
   },
   {
+    path: "/terms",
+    title: "Conditions d'utilisation — LuxeFlexIA",
+    description:
+      "Conditions d'utilisation de LuxeFlexIA (luxeflexia.com) : comptes, responsabilites, propriete intellectuelle.",
+    changefreq: "yearly" as const,
+    priority: "0.4",
+    images: [],
+  },
+  {
+    path: "/privacy",
+    title: "Politique de confidentialité — LuxeFlexIA",
+    description:
+      "Politique de confidentialité LuxeFlexIA : RGPD, cookies, donnees TikTok, Instagram et YouTube.",
+    changefreq: "yearly" as const,
+    priority: "0.4",
+    images: [],
+  },
+  {
     path: SEO_DIRECTORY_PATH,
     title: "Tous nos générateurs IA (Pranks, Luxe, Voyage) — LuxeFlexIA",
     description:
@@ -125,7 +143,12 @@ export const LEGAL_NOINDEX_PATHS = [
 ] as const;
 
 /** Legal pages Google OAuth branding must be able to crawl. */
-export const LEGAL_PUBLIC_PATHS = ["/cgu", "/confidentialite"] as const;
+export const LEGAL_PUBLIC_PATHS = [
+  "/cgu",
+  "/confidentialite",
+  "/terms",
+  "/privacy",
+] as const;
 
 export type LegalNoindexPath = (typeof LEGAL_NOINDEX_PATHS)[number];
 

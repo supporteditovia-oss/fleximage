@@ -318,8 +318,10 @@ export default function LandingV2() {
         <BrandLink className="footer-brand" />
         <p>{t("landing:footer.tagline")}</p>
         <nav aria-label={t("landing:footer.legalAria")}>
-          <a href="/confidentialite">{t("landing:footer.privacy")}</a>
-          <a href="/cgu">{t("landing:footer.terms")}</a>
+          <a href="/privacy">{t("landing:footer.privacy")}</a>
+          <a href="/terms">{t("landing:footer.terms")}</a>
+          <a href="/confidentialite">Confidentialité (FR)</a>
+          <a href="/cgu">CGU (FR)</a>
           <a href="mailto:support.luxeflexia@gmail.com">{t("landing:footer.contact")}</a>
         </nav>
         <small>© {new Date().getFullYear()} LuxeFlexIA</small>

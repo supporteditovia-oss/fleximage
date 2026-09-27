@@ -157,7 +157,16 @@ const r = spawnSync(process.execPath, [path.join(__dirname, "generate-seo-static
 if (r.status !== 0) {
   console.warn("[seo:brand] generate-seo-static failed — writing minimal sitemap");
   const lastmod = new Date().toISOString().slice(0, 10);
-  const urls = ["/", "/generate", "/pricing", "/cgu", "/confidentialite", "/tous-les-generateurs"];
+  const urls = [
+    "/",
+    "/generate",
+    "/pricing",
+    "/cgu",
+    "/confidentialite",
+    "/terms",
+    "/privacy",
+    "/tous-les-generateurs",
+  ];
   const body = urls
     .map(
       (p, i) => `  <url>

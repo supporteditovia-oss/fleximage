@@ -35,6 +35,8 @@ import MentionsLegales from "@/pages/MentionsLegales";
 import CGU from "@/pages/CGU";
 import CGV from "@/pages/CGV";
 import Confidentialite from "@/pages/Confidentialite";
+import TermsPublic from "@/pages/TermsPublic";
+import PrivacyPublic from "@/pages/PrivacyPublic";
 import DebugGenerate from "@/pages/DebugGenerate";
 import SeoNicheLanding from "@/pages/SeoNicheLanding";
 import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
@@ -328,6 +330,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
   "/confidentialite": "meta:titles.privacy",
+  "/terms": "Conditions d'utilisation — LuxeFlexIA",
+  "/privacy": "Politique de confidentialité — LuxeFlexIA",
   "/pricing": "meta:titles.pricing",
 };
 
@@ -512,6 +516,8 @@ function Router() {
       <Route path="/cgu" component={CGU} />
       <Route path="/cgv" component={CGV} />
       <Route path="/confidentialite" component={Confidentialite} />
+      <Route path="/terms" component={TermsPublic} />
+      <Route path="/privacy" component={PrivacyPublic} />
       <Route path="/preview/zero-credits" component={ZeroCreditsPreview} />
 
       <Route path="/reset-password" component={ResetPassword} />

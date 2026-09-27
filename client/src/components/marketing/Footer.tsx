@@ -6,9 +6,9 @@ import { localeHref } from "@/lib/locale-href";
 const FOOTER_HREFS = [
   { href: "/tous-les-generateurs", labelKey: "footer.generators" },
   { href: "/mentions-legales", labelKey: "footer.legal" },
-  { href: "/cgu", labelKey: "footer.cgu" },
+  { href: "/terms", labelKey: "footer.cgu" },
+  { href: "/privacy", labelKey: "footer.privacy" },
   { href: "/cgv", labelKey: "footer.cgv" },
-  { href: "/confidentialite", labelKey: "footer.privacy" },
 ] as const;
 
 export default function Footer() {
