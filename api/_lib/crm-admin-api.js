@@ -6,6 +6,7 @@ const {
   setSessionCookie,
   clearSessionCookie,
 } = require("./crm-auth");
+const { handleCrmDataApi } = require("./crm/data-api");
 
 /** Routes CRM : login / logout / session (parts sans préfixe `crm`). */
 async function handleCrmAdminApi(req, res, parts) {
@@ -39,6 +40,11 @@ async function handleCrmAdminApi(req, res, parts) {
   if (parts[0] === "logout" && !parts[1] && req.method === "POST") {
     clearSessionCookie(res);
     res.status(200).json({ ok: true });
+    return;
+  }
+
+  if (parts[0] === "data") {
+    await handleCrmDataApi(req, res, parts.slice(1));
     return;
   }
 

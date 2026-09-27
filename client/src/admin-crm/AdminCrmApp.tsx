@@ -8,6 +8,9 @@ import MusicPage from "@/admin-crm/pages/music";
 import PublishPage from "@/admin-crm/pages/publish";
 import AnalyticsPage from "@/admin-crm/pages/analytics";
 import SettingsPage from "@/admin-crm/pages/settings";
+import AccountsPage from "@/admin-crm/pages/accounts";
+import AccountDetailPage from "@/admin-crm/pages/account-detail";
+import WarmupPage from "@/admin-crm/pages/warmup";
 
 function Protected({ children }: { children: React.ReactNode }) {
   return <AdminCrmProtectedLayout>{children}</AdminCrmProtectedLayout>;
@@ -26,6 +29,21 @@ export function AdminCrmApp() {
       <Route path="/admin/dashboard">
         <Protected>
           <DashboardPage />
+        </Protected>
+      </Route>
+      <Route path="/admin/accounts/:id">
+        <Protected>
+          <AccountDetailPage />
+        </Protected>
+      </Route>
+      <Route path="/admin/accounts">
+        <Protected>
+          <AccountsPage />
+        </Protected>
+      </Route>
+      <Route path="/admin/warmup">
+        <Protected>
+          <WarmupPage />
         </Protected>
       </Route>
       <Route path="/admin/library">
@@ -69,6 +87,8 @@ export function isAdminCrmPath(pathname: string): boolean {
   if (pathname === "/admin") return true;
   return (
     pathname.startsWith("/admin/dashboard") ||
+    pathname.startsWith("/admin/accounts") ||
+    pathname.startsWith("/admin/warmup") ||
     pathname.startsWith("/admin/library") ||
     pathname.startsWith("/admin/pov") ||
     pathname.startsWith("/admin/music") ||

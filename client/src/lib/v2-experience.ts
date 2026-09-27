@@ -161,6 +161,8 @@ export function studioHomePath(): string {
   if (
     path === "/admin" ||
     path.startsWith("/admin/dashboard") ||
+    path.startsWith("/admin/accounts") ||
+    path.startsWith("/admin/warmup") ||
     path.startsWith("/admin/library") ||
     path.startsWith("/admin/pov") ||
     path.startsWith("/admin/music") ||

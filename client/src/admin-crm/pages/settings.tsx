@@ -9,6 +9,16 @@ export default function SettingsPage() {
       </div>
 
       <GlassCard variant="flat">
+        <h2 className="text-sm font-medium mb-4">Base Supabase CRM V3</h2>
+        <p className="text-xs text-[var(--lux-text-muted)] leading-relaxed">
+          Applique la migration{" "}
+          <code className="text-[var(--lux-gold)]">20260927030000_crm_v3_admin.sql</code>{" "}
+          (<code className="opacity-80">npm run db:push</code> ou SQL Editor Supabase).
+          Tables : comptes, posts, analytics, médias, musiques, warm-up, POV.
+        </p>
+      </GlassCard>
+
+      <GlassCard variant="flat">
         <h2 className="text-sm font-medium mb-4">Compte administrateur</h2>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between py-2 border-b border-[var(--lux-border)]">

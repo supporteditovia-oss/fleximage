@@ -9,14 +9,18 @@ import {
   LineChart,
   Settings,
   LogOut,
+  Users,
+  Flame,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/admin/accounts", label: "Comptes", icon: Users },
+  { href: "/admin/warmup", label: "Warm-up", icon: Flame },
+  { href: "/admin/publish", label: "Publish", icon: CalendarDays },
+  { href: "/admin/music", label: "Musiques", icon: Music2 },
   { href: "/admin/library", label: "Bibliothèque", icon: FolderOpen },
   { href: "/admin/pov", label: "POV Engine", icon: Wand2 },
-  { href: "/admin/music", label: "Musiques", icon: Music2 },
-  { href: "/admin/publish", label: "Publish", icon: CalendarDays },
   { href: "/admin/analytics", label: "Analytics", icon: LineChart },
   { href: "/admin/settings", label: "Réglages", icon: Settings },
 ];
@@ -38,7 +42,9 @@ export default function Sidebar() {
 
       <nav className="flex-1 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href === "/admin/accounts" && pathname.startsWith("/admin/accounts/"));
           const Icon = item.icon;
           return (
             <Link key={item.href} href={item.href} className="relative block">

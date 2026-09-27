@@ -1,127 +1,273 @@
-
-
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { startOfMonth, endOfMonth, formatISO } from "date-fns";
 import GlassCard from "@/admin-crm/components/ui/GlassCard";
-
-type Statut = "Programmée" | "Publiée" | "En attente";
-
-type Post = {
-  id: number;
-  compte: string;
-  plateforme: string;
-  heure: string;
-  statut: Statut;
-  jour: number; // jour du mois, pour la démo
-};
-
-const STATUT_COLOR: Record<Statut, string> = {
-  Programmée: "var(--lux-blue)",
-  Publiée: "var(--lux-success)",
-  "En attente": "var(--lux-text-faint)",
-};
-
-const INITIAL_POSTS: Post[] = [
-  { id: 1, compte: "Luxe", plateforme: "TikTok", heure: "18:30", statut: "Programmée", jour: 27 },
-  { id: 2, compte: "Motivation", plateforme: "Reels", heure: "12:00", statut: "Publiée", jour: 27 },
-  { id: 3, compte: "France", plateforme: "Shorts", heure: "09:00", statut: "En attente", jour: 28 },
-  { id: 4, compte: "Luxe", plateforme: "Reels", heure: "20:00", statut: "Programmée", jour: 29 },
-];
-
-const DAYS_IN_MONTH = 30;
-const START_WEEKDAY = 1; // le 1er tombe un mardi, pour la démo
+import { PublishCalendar } from "@/admin-crm/components/PublishCalendar";
+import { CrmEmptyState } from "@/admin-crm/components/CrmEmptyState";
+import {
+  useCrmPosts,
+  useCrmAccounts,
+  useCrmMedia,
+  useCrmMusic,
+  useCrmInvalidate,
+} from "@/admin-crm/hooks/use-crm-queries";
+import { crmApi } from "@/admin-crm/lib/crm-api";
+import type { CrmPost } from "@/admin-crm/types";
+import { COUNTRY_META } from "@/admin-crm/lib/constants";
+import { Loader2 } from "lucide-react";
 
 export default function PublishPage() {
-  const [view, setView] = useState<"Jour" | "Semaine" | "Mois">("Mois");
-  const [posts, setPosts] = useState(INITIAL_POSTS);
-  const [dragId, setDragId] = useState<number | null>(null);
+  const [cursor, setCursor] = useState(new Date());
+  const [view, setView] = useState<"month" | "week" | "day">("month");
+  const [modal, setModal] = useState<{ mode: "create" | "edit"; date?: Date; post?: CrmPost } | null>(
+    null,
+  );
+  const invalidate = useCrmInvalidate();
 
-  function handleDrop(jour: number) {
-    if (dragId === null) return;
-    setPosts((prev) => prev.map((p) => (p.id === dragId ? { ...p, jour } : p)));
-    setDragId(null);
+  const rangeFrom = formatISO(startOfMonth(cursor));
+  const rangeTo = formatISO(endOfMonth(cursor));
+  const { data: posts, isLoading, error } = useCrmPosts(rangeFrom, rangeTo);
+  const { data: accounts } = useCrmAccounts();
+  const { data: media } = useCrmMedia();
+  const { data: music } = useCrmMusic();
+
+  const accountById = useMemo(
+    () => new Map((accounts || []).map((a) => [a.id, a])),
+    [accounts],
+  );
+
+  async function handleMove(postId: string, newDate: Date) {
+    await crmApi.posts.update(postId, { scheduled_at: newDate.toISOString() });
+    invalidate();
+  }
+
+  async function handleDelete(id: string) {
+    await crmApi.posts.remove(id);
+    invalidate();
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <CrmEmptyState
+        title="Agenda indisponible"
+        hint={error instanceof Error ? error.message : undefined}
+      />
+    );
   }
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="lux-display text-2xl">Publish</h1>
-          <p className="text-sm text-[var(--lux-text-muted)]">Glisse une carte pour la reprogrammer</p>
-        </div>
-
-        <div className="flex gap-1 rounded-lg bg-black/30 border border-[var(--lux-glass-border)] p-1">
-          {(["Jour", "Semaine", "Mois"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-md text-xs transition-colors duration-200 ${
-                view === v ? "bg-[var(--lux-glass)] text-[var(--lux-text)]" : "text-[var(--lux-text-muted)]"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+      <div>
+        <h1 className="lux-display text-2xl">Publish</h1>
+        <p className="text-sm text-[var(--lux-text-muted)]">
+          Calendrier éditorial — glisser-déposer, création et édition
+        </p>
       </div>
 
-      {view === "Mois" && (
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: DAYS_IN_MONTH + START_WEEKDAY }).map((_, i) => {
-            const jour = i - START_WEEKDAY + 1;
-            if (jour < 1) return <div key={i} />;
-            const dayPosts = posts.filter((p) => p.jour === jour);
+      <PublishCalendar
+        posts={posts || []}
+        cursor={cursor}
+        onCursorChange={setCursor}
+        view={view}
+        onViewChange={setView}
+        onSlotClick={(date) => setModal({ mode: "create", date })}
+        onPostMove={handleMove}
+        onPostClick={(post) => setModal({ mode: "edit", post })}
+        onDeletePost={handleDelete}
+      />
 
-            return (
-              <div
-                key={jour}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(jour)}
-                className="min-h-[92px] rounded-xl border border-[var(--lux-border)] p-2 space-y-1"
-              >
-                <span className="text-[11px] text-[var(--lux-text-faint)]">{jour}</span>
-                {dayPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    draggable
-                    onDragStart={() => setDragId(post.id)}
-                    className="rounded-md px-2 py-1 text-[11px] cursor-grab active:cursor-grabbing lux-glass"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="h-1.5 w-1.5 rounded-full shrink-0"
-                        style={{ background: STATUT_COLOR[post.statut] }}
-                      />
-                      <span className="truncate text-[var(--lux-text)]">{post.compte}</span>
-                    </div>
-                    <span className="text-[var(--lux-text-faint)]">{post.heure} · {post.plateforme}</span>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {view !== "Mois" && (
-        <GlassCard variant="flat">
-          <div className="space-y-2">
-            {posts.map((post) => (
-              <div key={post.id} className="flex items-center justify-between py-2.5 border-b border-[var(--lux-border)] last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full" style={{ background: STATUT_COLOR[post.statut] }} />
-                  <span className="text-sm text-[var(--lux-text)] w-20">{post.compte}</span>
-                  <span className="text-sm text-[var(--lux-text-muted)] w-20">{post.plateforme}</span>
-                  <span className="text-sm text-[var(--lux-text-muted)]">Jour {post.jour} · {post.heure}</span>
-                </div>
-                <span className="text-xs text-[var(--lux-text-muted)]">{post.statut}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-[var(--lux-text-faint)] mt-4">
-            Vues {view} en lecture seule pour l'instant — le drag & drop est actif en vue Mois.
-          </p>
-        </GlassCard>
-      )}
+      {modal ? (
+        <PostEditorModal
+          mode={modal.mode}
+          initialDate={modal.date}
+          post={modal.post}
+          accounts={accounts || []}
+          media={media || []}
+          music={music || []}
+          accountById={accountById}
+          onClose={() => setModal(null)}
+          onSaved={() => {
+            setModal(null);
+            invalidate();
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function PostEditorModal({
+  mode,
+  initialDate,
+  post,
+  accounts,
+  media,
+  music,
+  accountById,
+  onClose,
+  onSaved,
+}: {
+  mode: "create" | "edit";
+  initialDate?: Date;
+  post?: CrmPost;
+  accounts: import("@/admin-crm/types").CrmAccount[];
+  media: import("@/admin-crm/types").CrmMedia[];
+  music: import("@/admin-crm/types").CrmMusic[];
+  accountById: Map<string, import("@/admin-crm/types").CrmAccount>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [accountId, setAccountId] = useState(post?.account_id || accounts[0]?.id || "");
+  const [scheduledAt, setScheduledAt] = useState(
+    post?.scheduled_at?.slice(0, 16) ||
+      (initialDate
+        ? new Date(
+            initialDate.getFullYear(),
+            initialDate.getMonth(),
+            initialDate.getDate(),
+            18,
+            30,
+          )
+            .toISOString()
+            .slice(0, 16)
+        : ""),
+  );
+  const [mediaId, setMediaId] = useState(post?.media_id || "");
+  const [musicId, setMusicId] = useState(post?.music_id || "");
+  const [caption, setCaption] = useState(post?.caption || "");
+  const [hashtags, setHashtags] = useState((post?.hashtags || []).join(", "));
+  const [saving, setSaving] = useState(false);
+
+  const acc = accountById.get(accountId);
+  const countryMeta = acc ? COUNTRY_META[acc.country_code] : null;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const payload = {
+        account_id: accountId,
+        scheduled_at: new Date(scheduledAt).toISOString(),
+        media_id: mediaId || null,
+        music_id: musicId || null,
+        caption,
+        hashtags: hashtags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        status: "scheduled",
+      };
+      if (mode === "edit" && post) {
+        await crmApi.posts.update(post.id, payload);
+      } else {
+        await crmApi.posts.create(payload);
+      }
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+      <GlassCard className="w-full max-w-lg space-y-3 lux-glow-gold my-8">
+        <h2 className="lux-display text-xl">
+          {mode === "create" ? "Nouvelle publication" : "Modifier"}
+        </h2>
+
+        <Field label="Compte">
+          <select
+            className="crm-input"
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                @{a.username} ({a.platform})
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {countryMeta ? (
+          <p className="text-xs text-[var(--lux-text-faint)]">
+            Auto : {countryMeta.label} · langue {acc?.language_code} · fuseau{" "}
+            {acc?.timezone} · heure optimale suggérée 18:30 locale
+          </p>
+        ) : null}
+
+        <Field label="Date & heure">
+          <input
+            type="datetime-local"
+            className="crm-input"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Vidéo (bibliothèque)">
+          <select className="crm-input" value={mediaId} onChange={(e) => setMediaId(e.target.value)}>
+            <option value="">—</option>
+            {media.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Musique">
+          <select className="crm-input" value={musicId} onChange={(e) => setMusicId(e.target.value)}>
+            <option value="">—</option>
+            {music.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Description">
+          <textarea
+            className="crm-input min-h-[80px]"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Hashtags (virgules)">
+          <input className="crm-input" value={hashtags} onChange={(e) => setHashtags(e.target.value)} />
+        </Field>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="text-sm text-[var(--lux-text-muted)] px-3">
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={!accountId || !scheduledAt || saving}
+            onClick={() => void save()}
+            className="px-4 py-2 rounded-lg bg-[var(--lux-gold-soft)] text-[var(--lux-gold)] text-sm disabled:opacity-40"
+          >
+            {saving ? "…" : "Enregistrer"}
+          </button>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block text-xs text-[var(--lux-text-muted)]">
+      {label}
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }

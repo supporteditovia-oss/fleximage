@@ -70,6 +70,16 @@
   background: transparent;
 }
 
+.lux-scope .crm-input {
+  width: 100%;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--lux-border);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--lux-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lux-scope * {
     animation-duration: 0.01ms !important;

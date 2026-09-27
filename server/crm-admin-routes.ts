@@ -19,7 +19,7 @@ const {
 };
 
 const CRM_PROTECTED_HTML =
-  /^\/admin\/(dashboard|library|pov|music|publish|analytics|settings)(\/|$)/;
+  /^\/admin\/(dashboard|accounts|warmup|library|pov|music|publish|analytics|settings)(\/|$)/;
 
 export function registerCrmAdminRoutes(app: Express) {
   app.use("/admin/api", (req, res) => {
