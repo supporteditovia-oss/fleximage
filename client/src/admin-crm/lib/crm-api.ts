@@ -24,6 +24,16 @@ async function crmRequest<T>(
 export const crmApi = {
   dashboard: () => crmRequest<import("../types").CrmDashboard>("data/dashboard"),
 
+  oauth: {
+    status: () =>
+      crmRequest<{
+        redirectOrigin: string;
+        platforms: Record<import("../types").CrmPlatform, boolean>;
+      }>("oauth/status"),
+    startUrl: (platform: import("../types").CrmPlatform, country: string) =>
+      `/admin/api/oauth/start?platform=${encodeURIComponent(platform)}&country=${encodeURIComponent(country)}`,
+  },
+
   accounts: {
     list: () =>
       crmRequest<{ items: import("../types").CrmAccount[] }>("data/accounts"),
@@ -34,6 +44,11 @@ export const crmApi = {
       crmRequest(`data/accounts/${id}`, { method: "PATCH", json }),
     remove: (id: string) =>
       crmRequest(`data/accounts/${id}`, { method: "DELETE" }),
+    disconnect: (id: string) =>
+      crmRequest<import("../types").CrmAccount>(
+        `data/accounts/${id}/disconnect`,
+        { method: "POST" },
+      ),
   },
 
   warmup: {

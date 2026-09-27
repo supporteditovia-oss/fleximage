@@ -61,6 +61,10 @@ async function handleCrmDataApi(req, res, parts) {
         res.status(200).json(await accounts.updateAccount(id, parseBody(req)));
         return;
       }
+      if (id && action === "disconnect" && method === "POST") {
+        res.status(200).json(await accounts.disconnectAccount(id));
+        return;
+      }
       if (id && !action && method === "DELETE") {
         await accounts.deleteAccount(id);
         res.status(200).json({ ok: true });

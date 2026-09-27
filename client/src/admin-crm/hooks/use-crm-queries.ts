@@ -16,6 +16,14 @@ export function useCrmAccounts() {
   });
 }
 
+export function useCrmOAuthStatus() {
+  return useQuery({
+    queryKey: ["crm", "oauth", "status"],
+    queryFn: () => crmApi.oauth.status(),
+    staleTime: 60_000,
+  });
+}
+
 export function useCrmAccount(id: string | null) {
   return useQuery({
     queryKey: ["crm", "account", id],

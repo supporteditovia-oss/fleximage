@@ -20,6 +20,7 @@ export type CrmAccount = {
   followers: number;
   likes: number;
   views: number;
+  provider_account_id?: string | null;
 };
 
 export type CrmDashboard = {

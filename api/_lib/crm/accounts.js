@@ -84,6 +84,14 @@ async function getAccount(id) {
 }
 
 async function createAccount(body) {
+  if (!body._oauthInternal) {
+    throw Object.assign(
+      new Error(
+        "Connexion manuelle désactivée — utilisez « Se connecter » (OAuth officiel).",
+      ),
+      { status: 400 },
+    );
+  }
   const sb = getCrmSupabase();
   let avatarUrl = body.avatar_url || null;
   if (body.avatar_base64) {
@@ -171,8 +179,14 @@ async function updateAccount(id, body) {
 
 async function deleteAccount(id) {
   const sb = getCrmSupabase();
+  await sb.from("crm_oauth_tokens").delete().eq("account_id", id);
   const { error } = await sb.from("crm_social_accounts").delete().eq("id", id);
   if (error) throw error;
+}
+
+async function disconnectAccount(id) {
+  const { disconnectAccount: oauthDisconnect } = require("./oauth/persist");
+  return oauthDisconnect(id);
 }
 
 module.exports = {
@@ -181,4 +195,5 @@ module.exports = {
   createAccount,
   updateAccount,
   deleteAccount,
+  disconnectAccount,
 };
