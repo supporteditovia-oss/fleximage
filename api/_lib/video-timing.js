@@ -11,9 +11,9 @@ const VIDEO_TIMING = {
     hdExtraSec: 30,
     voiceExtraSec: 20,
   },
-  runwayAleph: { baseSec: 150, perSourceSec: 8 },
+  runwayAleph: { baseSec: 120, perSourceSec: 6 },
   /** Kling 3.0 Motion Control 720p — plus long qu'Aleph, surtout 3–8 s source. */
-  klingMotion: { baseSec: 200, perSourceSec: 22, prepSec: 12 },
+  klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
   sourceAudioMuxSec: 25,
   defaultSourceDurationSec: 8,
   minSec: 90,

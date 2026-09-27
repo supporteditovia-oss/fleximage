@@ -7,8 +7,8 @@ const VIDEO_TIMING = {
     hdExtraSec: 30,
     voiceExtraSec: 20,
   },
-  runwayAleph: { baseSec: 150, perSourceSec: 8 },
-  klingMotion: { baseSec: 200, perSourceSec: 22, prepSec: 12 },
+  runwayAleph: { baseSec: 120, perSourceSec: 6 },
+  klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
   sourceAudioMuxSec: 25,
   defaultSourceDurationSec: 8,
   minSec: 90,
@@ -61,7 +61,8 @@ export function defaultVideoLoaderEstimate(options: {
 }): number {
   return estimateVideoGenerationSeconds({
     workflow: options.workflow,
-    v2vProvider: options.workflow === "video_to_video" ? "kling_motion" : null,
+    v2vProvider:
+      options.workflow === "video_to_video" ? "runway_aleph" : null,
     sourceVideoDurationSec: options.sourceVideoDurationSec,
     durationSec: options.durationSec ?? 5,
     quality: "standard",

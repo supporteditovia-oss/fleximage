@@ -491,10 +491,16 @@ export default function VideoIA() {
     }
     if (!source) return;
 
+    const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
+
     let referenceImages: string[] | undefined;
     if (refImageBase64) {
       referenceImages = [refImageBase64];
-    } else if (localVideoFile && !refImageIsCustom) {
+    } else if (
+      localVideoFile &&
+      !refImageIsCustom &&
+      v2vProvider !== "runway_aleph"
+    ) {
       try {
         const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
         const frameCompressed = await compressImageForGeneration(frameFile);
@@ -503,12 +509,11 @@ export default function VideoIA() {
         setRefImageIsCustom(false);
         referenceImages = [frameB64];
       } catch {
-        /* serveur extrait si besoin */
+        /* Kling seulement — Aleph n'a pas besoin de frame avant envoi */
       }
     }
 
     releaseGenerationLoaderTheme();
-    const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
     flushSync(() => {
       setGenerationEstimate(
         estimateVideoGenerationSeconds({

@@ -305,8 +305,83 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const taskParts = (larp.provider_task_id || "").split(",");
-    const activeTaskId = taskParts[taskParts.length - 1] || "";
+    let taskParts = (larp.provider_task_id || "").split(",");
+    let activeTaskId = taskParts[taskParts.length - 1] || "";
+
+    if (resultType === "video" && activeTaskId.startsWith("pending_")) {
+      const {
+        kickoffVideoStudioProvider,
+        readVideoApiCallCount,
+        markVideoKickoffFailed,
+      } = require("../video-studio-kickoff");
+      const kickMeta =
+        larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+      const kickoffDone = readVideoApiCallCount(kickMeta) >= 1;
+      if (!kickoffDone && !kickMeta.video_kickoff_failed) {
+        if (ageInMs > 300_000) {
+          await markVideoKickoffFailed(
+            supabase,
+            userId,
+            larp,
+            "Envoi studio trop long. Jetons remboursés — réessaie.",
+          );
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "fail",
+            resultUrls: [],
+            failMessage:
+              "Envoi studio trop long. Jetons remboursés — réessaie.",
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        if (ageInMs >= 1_500) {
+          const kick = await kickoffVideoStudioProvider(supabase, larp, userId);
+          if (kick.failed) {
+            res.status(200).json({
+              larpId: larp.id,
+              ...statusTimingFields(larp),
+              status: "fail",
+              resultUrls: [],
+              failMessage:
+                kick.failMessage ||
+                "Échec envoi studio. Jetons remboursés — réessaie.",
+              costTime: null,
+              isSubscriber: false,
+              requiresPaywall: false,
+              resultType,
+            });
+            return;
+          }
+          if (kick.larp) {
+            larp.provider_task_id = kick.larp.provider_task_id;
+            larp.metadata = kick.larp.metadata;
+            larp.status = kick.larp.status;
+            taskParts = (larp.provider_task_id || "").split(",");
+            activeTaskId = taskParts[taskParts.length - 1] || activeTaskId;
+          }
+        } else {
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: "UPLOADING",
+            studioStageLabel: "Envoi au studio…",
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+      }
+    }
 
     // Soft-retry / vision-QA claim can get stuck forever if the process dies mid-claim.
     if (activeTaskId === "__claiming__" || activeTaskId === "__vision_qa_claim__") {
@@ -495,7 +570,8 @@ module.exports = async function handler(req, res) {
           if (
             resultType === "video" &&
             isRetryableProviderFailText(rawAlephFail) &&
-            alephRetries < 2
+            alephRetries < 1 &&
+            ageInMs < 150_000
           ) {
             try {
               const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");

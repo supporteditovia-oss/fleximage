@@ -8,11 +8,6 @@ const {
 } = require("../r2");
 const { isRunwayConfigured } = require("../kie-runway");
 const {
-  generateVideoOnce,
-  generateVideoV2VOnce,
-  generateKlingMotionOnce,
-} = require("../generate-video-once");
-const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
   validateSourceVideoDuration,
@@ -27,15 +22,8 @@ const {
   stripVoiceInstructionsFromPrompt,
 } = require("../video-studio");
 const {
-  isKlingCharacterRejection,
-  isRetryableKlingError,
-  isRetryableAlephError,
-  resetVideoProviderClaim,
-} = require("../v2v-provider-errors");
-const {
   checkGenerationLimits,
   deductGenerationCredits,
-  refundGenerationCreditsIfCharged,
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
@@ -60,8 +48,6 @@ const {
   resolveKlingMotionSourceVideoUrl,
   normalizeMotionReferenceImageUrl,
 } = require("../prepare-kling-source-video");
-const { mapVideoProviderMessage } = require("../video-user-errors");
-
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -375,20 +361,7 @@ module.exports = async function handler(req, res) {
     const promptUserRaw =
       workflow === "video_to_video" ? vehicleDescription : motionPrompt;
 
-    if (workflow === "video_to_video" && studioVehicleDescription) {
-      const enriched = await enrichPromptForGeneration(studioVehicleDescription, {
-        locale: uiLocale,
-        mode: "video_v2v",
-      });
-      if (enriched && enriched !== studioVehicleDescription) {
-        studioVehicleDescription = enriched.slice(0, 500);
-        promptIntelligenceApplied = true;
-        console.info("[generate-video] prompt-intelligence v2v", {
-          userId,
-          length: studioVehicleDescription.length,
-        });
-      }
-    } else if (workflow === "image_to_video" && studioMotionPrompt) {
+    if (workflow === "image_to_video" && studioMotionPrompt) {
       const enriched = await enrichPromptForGeneration(studioMotionPrompt, {
         locale: uiLocale,
         mode: "video_i2v",
@@ -505,12 +478,37 @@ module.exports = async function handler(req, res) {
     let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
-        sourceAssetUrl = await resolveSourceVideoUrl(userId, body);
-        referenceImageUrl = await resolveOptionalReferenceImageUrl(
-          supabase,
-          userId,
-          body,
-        );
+        const [enrichedDesc, sourceBundle] = await Promise.all([
+          studioVehicleDescription
+            ? enrichPromptForGeneration(studioVehicleDescription, {
+                locale: uiLocale,
+                mode: "video_v2v",
+              })
+            : Promise.resolve(studioVehicleDescription),
+          (async () => {
+            const url = await resolveSourceVideoUrl(userId, body);
+            const ref = await resolveOptionalReferenceImageUrl(
+              supabase,
+              userId,
+              body,
+            );
+            return { url, ref };
+          })(),
+        ]);
+        if (
+          enrichedDesc &&
+          enrichedDesc !== studioVehicleDescription &&
+          String(enrichedDesc).trim()
+        ) {
+          studioVehicleDescription = enrichedDesc.slice(0, 500);
+          promptIntelligenceApplied = true;
+          console.info("[generate-video] prompt-intelligence v2v", {
+            userId,
+            length: studioVehicleDescription.length,
+          });
+        }
+        sourceAssetUrl = sourceBundle.url;
+        referenceImageUrl = sourceBundle.ref;
         motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
         v2vProvider = resolveV2VProviderForStudio(studioVehicleDescription);
         providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
@@ -605,6 +603,7 @@ module.exports = async function handler(req, res) {
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
       v2v_provider: v2vProvider,
+      aleph_submit_prompt: alephSubmitPrompt,
       motion_reference_source: motionReferenceSource,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,
       ai_label: "Vidéo générée ou modifiée par IA.",
@@ -675,191 +674,23 @@ module.exports = async function handler(req, res) {
 
     await recordGeneration(supabase, userId);
 
-    let providerResult;
-    let finalV2vProvider = v2vProvider;
-    try {
-      if (workflow === "video_to_video") {
-        const runKling = () =>
-          generateKlingMotionOnce(supabase, {
-            generationId: larp.id,
-            prompt: providerPrompt,
-            imageUrl: referenceImageUrl,
-            videoUrl: sourceAssetUrl,
-            mode: "720p",
-          });
-        const runAleph = () =>
-          generateVideoV2VOnce(supabase, {
-            generationId: larp.id,
-            prompt: alephSubmitPrompt || providerPrompt,
-            videoUrl: sourceAssetUrl,
-            aspectRatio,
-            referenceImage: referenceImageUrl || undefined,
-          });
-
-        try {
-          providerResult =
-            finalV2vProvider === "runway_aleph" ? await runAleph() : await runKling();
-        } catch (firstErr) {
-          await resetVideoProviderClaim(supabase, larp.id, studioMetadata);
-          if (
-            finalV2vProvider === "kling_motion" &&
-            (isKlingCharacterRejection(firstErr) || isRetryableKlingError(firstErr))
-          ) {
-            finalV2vProvider = "runway_aleph";
-            providerResult = await runAleph();
-          } else if (
-            finalV2vProvider === "runway_aleph" &&
-            isRetryableAlephError(firstErr)
-          ) {
-            finalV2vProvider = "kling_motion";
-            sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
-              sourceAssetUrl,
-              userId,
-            );
-            if (!referenceImageUrl) {
-              referenceImageUrl = await extractReferenceFrameFromVideoUrl(
-                sourceAssetUrl,
-                userId,
-              );
-            }
-            providerResult = await runKling();
-          } else {
-            throw firstErr;
-          }
-        }
-        studioMetadata.v2v_provider = finalV2vProvider;
-        v2vProvider = finalV2vProvider;
-      } else {
-        providerResult = await generateVideoOnce(supabase, {
-          generationId: larp.id,
-          prompt: providerPrompt,
-          imageUrl: sourceAssetUrl,
-          aspectRatio,
-          durationSec,
-          quality,
-        });
-      }
-    } catch (providerErr) {
-      console.error("[generate-video] provider failed", providerErr);
-      // DIAGNOSTIC (temporaire) — sépare la vraie cause (stage/apiMsg/raw
-      // response Kie.ai) du message générique envoyé au client plus bas,
-      // pour ne plus jamais confondre un message de succès Kie.ai
-      // ("File uploaded successfully") avec une erreur de génération.
-      console.error("[generate-video] provider failed — diagnostic", {
-        generationId: larp.id,
-        videoRequestId,
-        stage: providerErr.stage || (providerErr.uploadMethod ? "kie_file_upload" : "provider_task"),
-        mediaKind: providerErr.mediaKind,
-        uploadMethod: providerErr.uploadMethod,
-        apiMsg: providerErr.apiMsg,
-        apiCode: providerErr.apiCode,
-        httpStatus: providerErr.status,
-        rawApiResponse: providerErr.rawApiResponse,
-        message: providerErr.message,
-      });
-      await supabase
-        .from("generations")
-        .update({
-          status: "failed",
-          fail_message: String(providerErr.message || "Échec Runway").slice(0, 240),
-          metadata: {
-            ...studioMetadata,
-            studio_stage: "FAILED",
-          },
-          updated_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", larp.id);
-      await refundGenerationCreditsIfCharged(supabase, {
-        userId,
-        generationId: larp.id,
-        source: "video_provider_failed",
-        failMessage: providerErr.message,
-      }).catch(() => {});
-      const providerStatus =
-        typeof providerErr.status === "number" ? providerErr.status : 502;
-      const isUploadSuccessNoise = (text) =>
-        /upload(ed)? successfully|file upload successful/i.test(String(text || ""));
-
-      let apiMsg =
-        typeof providerErr.apiMsg === "string" && providerErr.apiMsg.trim()
-          ? providerErr.apiMsg.trim()
-          : null;
-      if (isUploadSuccessNoise(apiMsg)) apiMsg = null;
-
-      const errMessage =
-        typeof providerErr.message === "string" && providerErr.message.trim()
-          ? providerErr.message.trim()
-          : null;
-
-      const generic = copy(
-        uiLocale,
-        "Échec création vidéo. Jetons remboursés.",
-        "Video creation failed. Credits refunded.",
-      );
-      const sanitizedApiMsg =
-        typeof apiMsg === "string"
-          ? apiMsg
-              .replace(/\bkling\b[\s\d.]*/gi, "")
-              .replace(/\brunway\b[\s\d.]*/gi, "")
-              .replace(/\s{2,}/g, " ")
-              .trim()
-          : "";
-      const mapped = mapVideoProviderMessage(sanitizedApiMsg, uiLocale);
-      const providerStage =
-        providerErr.stage ||
-        (providerErr.uploadMethod ? "kie_file_upload" : "provider_task");
-
-      let friendlyFromProvider = mapped;
-      if (!friendlyFromProvider && providerStage === "kie_file_upload" && errMessage) {
-        friendlyFromProvider = `${errMessage} Jetons remboursés.`;
-      } else if (
-        !friendlyFromProvider &&
-        sanitizedApiMsg &&
-        !isUploadSuccessNoise(sanitizedApiMsg) &&
-        !/^(Aleph API error|Kling Motion Control API error|Runway API error)$/i.test(
-          sanitizedApiMsg,
-        )
-      ) {
-        friendlyFromProvider = `${sanitizedApiMsg} Jetons remboursés.`;
-      } else if (!friendlyFromProvider && errMessage && !isUploadSuccessNoise(errMessage)) {
-        friendlyFromProvider = `${errMessage} Jetons remboursés.`;
-      }
-      const detailed = friendlyFromProvider || generic;
-      res
-        .status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502)
-        .json({
-          message: detailed,
-          videoRequestId,
-          // DIAGNOSTIC (temporaire, non affiché par l'UI actuelle) — visible
-          // dans l'onglet Network pour comparer avec le log serveur ci-dessus.
-          // À retirer une fois la cause racine confirmée.
-          debugStage:
-            providerErr.stage || (providerErr.uploadMethod ? "kie_file_upload" : "provider_task"),
-          debugApiMsg: providerErr.apiMsg || null,
-        });
-      return;
-    }
-
+    studioMetadata.studio_stage = "QUEUED";
     await supabase
       .from("generations")
       .update({
-        metadata: {
-          ...studioMetadata,
-          studio_stage: "GENERATING_VIDEO",
-        },
+        metadata: studioMetadata,
         updated_at: new Date().toISOString(),
       })
       .eq("id", larp.id);
 
     res.status(201).json({
       id: larp.id,
-      taskId: providerResult.externalTaskId,
+      taskId: pendingTaskId,
       status: "waiting",
       estimatedSeconds: studioMetadata.estimated_seconds,
       createdAt: larp.created_at,
       videoRequestId,
-      deduplicated: Boolean(providerResult.deduplicated),
+      deduplicated: false,
       creditCost,
       generationType: "video",
     });
@@ -873,5 +704,5 @@ module.exports.config = {
   api: {
     bodyParser: { sizeLimit: "25mb" },
   },
-  maxDuration: 120,
+  maxDuration: 60,
 };

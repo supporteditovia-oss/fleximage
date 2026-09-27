@@ -28,7 +28,7 @@ test("V2V Kling Motion 3 s source ≈ 5 min", () => {
       v2vProvider: "kling_motion",
       sourceVideoDurationSec: 3,
     }),
-    305,
+    270,
   );
 });
 
@@ -40,7 +40,7 @@ test("V2V Kling Motion 8 s + son d'origine", () => {
       sourceVideoDurationSec: 8,
       preserveSourceAudio: true,
     }),
-    440,
+    385,
   );
 });
 
@@ -51,7 +51,7 @@ test("V2V Runway Aleph (legacy) dépend de la durée source", () => {
       v2vProvider: "runway_aleph",
       sourceVideoDurationSec: 5,
     }),
-    215,
+    175,
   );
 });
 

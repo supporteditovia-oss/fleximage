@@ -5,6 +5,7 @@
  */
 
 const TIMEOUT_MS = 18_000;
+const TIMEOUT_MS_VIDEO_V2V = 10_000;
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const MAX_OUTPUT_CHARS = 2000;
 
@@ -97,6 +98,7 @@ async function enrichPromptForGeneration(input, options = {}) {
       : "image";
   const maxOut =
     mode === "video_v2v" ? 520 : mode === "video_i2v" ? 950 : MAX_OUTPUT_CHARS;
+  const timeoutMs = mode === "video_v2v" ? TIMEOUT_MS_VIDEO_V2V : TIMEOUT_MS;
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
@@ -152,7 +154,7 @@ async function enrichPromptForGeneration(input, options = {}) {
           maxOutputTokens: 1024,
         },
       }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
