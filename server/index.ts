@@ -1,6 +1,16 @@
+import path from "node:path";
+import { loadDotenv } from "../script/load-dotenv.mjs";
+
+/** Bun précharge parfois .env avec troncature des `$` dans les hash bcrypt — on force la relecture. */
+for (const key of ["ADMIN_EMAIL", "ADMIN_PASSWORD_HASH", "SESSION_SECRET"] as const) {
+  delete process.env[key];
+}
+loadDotenv(path.resolve(process.cwd(), ".env"));
+
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
+import { registerCrmAdminRoutes } from "./crm-admin-routes";
 import { registerSeoRoutes } from "./lib/seo-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -49,6 +59,7 @@ app.use(
 );
 
 (async () => {
+  registerCrmAdminRoutes(app);
   await registerRoutes(httpServer, app);
   registerSeoRoutes(app);
 

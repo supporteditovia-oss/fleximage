@@ -196,7 +196,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
     }
   };
 
-  if (location === "/admin/studio" || hideAppChrome || isModelesPage) {
+  if (location === "/platform-admin/studio" || hideAppChrome || isModelesPage) {
     return null;
   }
 

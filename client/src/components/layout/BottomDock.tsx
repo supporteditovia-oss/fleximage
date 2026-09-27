@@ -42,13 +42,13 @@ export function BottomDock() {
   const lastScrollY = useRef(0);
 
   const adminNavItems = [
-    { href: "/admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
-    { href: "/admin/hq", label: "HQ", icon: Gauge },
-    { href: "/admin/funnel", label: "Funnel", icon: GitBranch },
-    { href: "/admin/users", label: t("layout.dock.users"), icon: Users },
-    { href: "/admin/templates", label: t("layout.dock.templates"), icon: FileText },
-    { href: "/admin/studio", label: "Studio", icon: Clapperboard },
-    { href: "/admin/logs", label: t("layout.dock.logs"), icon: ScrollText },
+    { href: "/platform-admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
+    { href: "/platform-admin/hq", label: "HQ", icon: Gauge },
+    { href: "/platform-admin/funnel", label: "Funnel", icon: GitBranch },
+    { href: "/platform-admin/users", label: t("layout.dock.users"), icon: Users },
+    { href: "/platform-admin/templates", label: t("layout.dock.templates"), icon: FileText },
+    { href: "/platform-admin/studio", label: "Studio", icon: Clapperboard },
+    { href: "/platform-admin/logs", label: t("layout.dock.logs"), icon: ScrollText },
   ];
 
   useEffect(() => {

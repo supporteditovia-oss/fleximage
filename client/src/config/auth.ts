@@ -3,7 +3,8 @@ export const AUTH_CONFIG = {
   LOGIN_PATH: "/login",
   REGISTER_PATH: "/register",
   LANDING_PATH: "/",
-  ADMIN_PATH: "/admin",
+  /** Console produit (Supabase admin) — le CRM marketing est sur /admin */
+  ADMIN_PATH: "/platform-admin",
   COOKIE_OPTIONS: {
     path: "/",
     sameSite: "Lax",

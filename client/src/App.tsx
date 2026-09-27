@@ -59,6 +59,16 @@ import { parseSeoNicheSlugFromPath } from "@shared/seo-niches";
 import { setRobotsMeta } from "@/lib/robots-meta";
 import { applyLocaleFromSearch, readLocaleFromSearch } from "@/i18n";
 import { useCrispSubscriberGate } from "@/hooks/use-crisp-subscriber-gate";
+import { AdminCrmApp, isAdminCrmPath } from "@/admin-crm/AdminCrmApp";
+
+const LEGACY_PLATFORM_ADMIN_REDIRECT: Record<string, string> = {
+  "/admin/users": "/platform-admin/users",
+  "/admin/funnel": "/platform-admin/funnel",
+  "/admin/hq": "/platform-admin/hq",
+  "/admin/templates": "/platform-admin/templates",
+  "/admin/logs": "/platform-admin/logs",
+  "/admin/studio": "/platform-admin/studio",
+};
 
 // OAuth callback — consumes ?code= (PKCE) or hash tokens, then goes to /welcome
 function AuthCallback() {
@@ -274,13 +284,13 @@ function ProtectedAppRoutes() {
             <Redirect to="/historique" />
           </Route>
           <Route path="/settings" component={Settings} />
-          <Route path="/admin" component={AdminPage} />
-          <Route path="/admin/users" component={AdminPage} />
-          <Route path="/admin/funnel" component={AdminFunnel} />
-          <Route path="/admin/hq" component={AdminCommandCenter} />
-          <Route path="/admin/templates" component={AdminTemplates} />
-          <Route path="/admin/logs" component={AdminLogs} />
-          <Route path="/admin/studio" component={AdminStudio} />
+          <Route path="/platform-admin" component={AdminPage} />
+          <Route path="/platform-admin/users" component={AdminPage} />
+          <Route path="/platform-admin/funnel" component={AdminFunnel} />
+          <Route path="/platform-admin/hq" component={AdminCommandCenter} />
+          <Route path="/platform-admin/templates" component={AdminTemplates} />
+          <Route path="/platform-admin/logs" component={AdminLogs} />
+          <Route path="/platform-admin/studio" component={AdminStudio} />
           <Route component={NotFound} />
         </Switch>
       </ErrorBoundary>
@@ -305,13 +315,15 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/bibliotheque": "Bibliothèque — LuxeFlexIA",
   "/history": "meta:titles.history",
   "/settings": "meta:titles.settings",
-  "/admin": "meta:titles.admin",
-  "/admin/users": "meta:titles.adminUsers",
-  "/admin/funnel": "Funnel — LuxeFlexIA",
-  "/admin/hq": "HQ — LuxeFlexIA",
-  "/admin/templates": "meta:titles.adminTemplates",
-  "/admin/logs": "meta:titles.adminLogs",
-  "/admin/studio": "Studio",
+  "/platform-admin": "meta:titles.admin",
+  "/platform-admin/users": "meta:titles.adminUsers",
+  "/platform-admin/funnel": "Funnel — LuxeFlexIA",
+  "/platform-admin/hq": "HQ — LuxeFlexIA",
+  "/platform-admin/templates": "meta:titles.adminTemplates",
+  "/platform-admin/logs": "meta:titles.adminLogs",
+  "/platform-admin/studio": "Studio",
+  "/admin": "CRM — LuxeFlexIA",
+  "/admin/dashboard": "CRM Dashboard — LuxeFlexIA",
   "/mentions-legales": "meta:titles.legal",
   "/cgu": "meta:titles.cgu",
   "/cgv": "meta:titles.cgv",
@@ -335,13 +347,13 @@ const PROTECTED_PATHS = new Set([
   "/bibliotheque",
   "/history",
   "/settings",
-  "/admin",
-  "/admin/users",
-  "/admin/funnel",
-  "/admin/hq",
-  "/admin/templates",
-  "/admin/logs",
-  "/admin/studio",
+  "/platform-admin",
+  "/platform-admin/users",
+  "/platform-admin/funnel",
+  "/platform-admin/hq",
+  "/platform-admin/templates",
+  "/platform-admin/logs",
+  "/platform-admin/studio",
 ]);
 
 function Router() {
@@ -475,6 +487,15 @@ function Router() {
         : "noindex, nofollow",
     );
   }, [pathname, t]);
+
+  const legacyPlatformAdmin = LEGACY_PLATFORM_ADMIN_REDIRECT[pathname];
+  if (legacyPlatformAdmin) {
+    return <Redirect to={legacyPlatformAdmin} />;
+  }
+
+  if (isAdminCrmPath(pathname)) {
+    return <AdminCrmApp />;
+  }
 
   if (PROTECTED_PATHS.has(pathname) || pathname.startsWith("/modeles/")) {
     return <ProtectedAppRoutes />;

@@ -91,6 +91,10 @@
       "destination": "/api/admin-router?__adminPath=$1"
     },
     {
+      "source": "/admin/api/(.*)",
+      "destination": "/api/crm-admin-router?__crmPath=$1"
+    },
+    {
       "source": "/api/templates",
       "destination": "/api/larps-router?__larpsPath=templates"
     },

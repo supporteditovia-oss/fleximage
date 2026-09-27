@@ -249,7 +249,7 @@ export default function AdminPage() {
   const { data: metrics, isLoading: isLoadingMetrics } = useAdminMetrics();
   const { data: growthData, isLoading: isLoadingGrowth } = useUserGrowth();
   
-  const isUsersPage = location === "/admin/users";
+  const isUsersPage = location === "/platform-admin/users";
 
   const isLoading = isLoadingMetrics || isLoadingGrowth;
 

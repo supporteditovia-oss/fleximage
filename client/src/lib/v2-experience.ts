@@ -158,7 +158,19 @@ export function libraryPathForUser(v2Enabled: boolean): string {
 export function studioHomePath(): string {
   if (typeof window === "undefined") return "/generate";
   const path = window.location.pathname;
-  if (path.startsWith("/admin")) return "/admin/users";
+  if (
+    path === "/admin" ||
+    path.startsWith("/admin/dashboard") ||
+    path.startsWith("/admin/library") ||
+    path.startsWith("/admin/pov") ||
+    path.startsWith("/admin/music") ||
+    path.startsWith("/admin/publish") ||
+    path.startsWith("/admin/analytics") ||
+    path.startsWith("/admin/settings")
+  ) {
+    return "/admin/dashboard";
+  }
+  if (path.startsWith("/platform-admin")) return "/platform-admin/users";
   if (path === "/create" || path === "/bibliotheque") return "/create";
   try {
     if (sessionStorage.getItem(V2_ENABLED_KEY) === "1") return "/create";
