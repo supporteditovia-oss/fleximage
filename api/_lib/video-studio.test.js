@@ -207,15 +207,25 @@ describe("video-studio", () => {
     assert.match(generic, /OEM key fob/i);
   });
 
-  it("resolveV2VProviderForStudio routes cockpit prompts to Kling Motion", () => {
+  it("resolveV2VProviderForStudio routes transform vs character prompts", () => {
     assert.equal(
       resolveV2VProviderForStudio(
-        "Remplace l'intérieur par Heurs Consulée, même volant",
+        "Remplace l'intérieur par une Urus, même volant",
       ),
-      "kling_motion",
+      "runway_aleph",
+    );
+    assert.equal(
+      resolveV2VProviderForStudio(
+        "Transforme ma Twingo en Lamborghini, habitacle complet",
+      ),
+      "runway_aleph",
     );
     assert.equal(
       resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),
+      "kling_motion",
+    );
+    assert.equal(
+      resolveV2VProviderForStudio("Personne qui marche, garde le mouvement"),
       "kling_motion",
     );
   });

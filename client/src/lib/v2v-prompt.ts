@@ -37,14 +37,39 @@ export function isVehicleDrivingPrompt(text: string): boolean {
 }
 
 const V2V_PROMPT_TRANSFORM_PATTERN =
-  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
+  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|tableau de bord|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule|volant|steering)\b/i;
+
+const V2V_PROMPT_CHARACTER_PATTERN =
+  /\b(personnage|personne|humain|corps|silhouette|danse|danser|dancing|même mouvement|same motion|same movement|marche|walking|walks?|course|cours|courant|running|runs?|saut|jump|jumping|geste|gesticul|choreograph|perform(?:er|ance)|character motion|body movement|transfer(?:ring)?\s+motion)\b/i;
+
+function isV2VObjectTransformPrompt(prompt: string): boolean {
+  const p = String(prompt || "").trim();
+  if (!p) return false;
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(p)) return true;
+  if (isVehicleDrivingPrompt(p)) return true;
+  return false;
+}
 
 /** Miroir de api/_lib/video-studio.js resolveV2VProviderForStudio */
 export function resolveV2VProviderForStudio(userPrompt: string): "runway_aleph" | "kling_motion" {
   const prompt = String(userPrompt || "").trim();
   if (!prompt) return "kling_motion";
-  if (isVehicleDrivingPrompt(prompt)) return "kling_motion";
-  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "kling_motion";
+
+  const wantsTransform = isV2VObjectTransformPrompt(prompt);
+  const wantsCharacter = V2V_PROMPT_CHARACTER_PATTERN.test(prompt);
+
+  if (wantsCharacter && !wantsTransform) return "kling_motion";
+  if (wantsTransform && !wantsCharacter) return "runway_aleph";
+  if (wantsTransform && wantsCharacter) {
+    if (
+      /\b(remplace|remplacer|swap|change|transforme|transformer|urus|volant|habitacle|int[ée]rieur|interior|voiture|v[ée]hicule)\b/i.test(
+        prompt,
+      )
+    ) {
+      return "runway_aleph";
+    }
+    return "kling_motion";
+  }
   return "kling_motion";
 }
 

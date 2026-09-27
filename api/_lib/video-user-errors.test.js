@@ -18,8 +18,19 @@ test("mapVideoProviderMessage — no valid characters", () => {
     "No valid characters detected in the video",
     "fr",
   );
-  assert.match(fr, /personne|mains/i);
+  assert.match(fr, /POV|mains|personnage/i);
+  assert.doesNotMatch(fr, /prochain essai/i);
+});
+
+test("mapVideoProviderMessage — no valid characters after aleph fallback", () => {
+  const fr = mapVideoProviderMessage(
+    "No valid characters detected in the video",
+    "fr",
+    { afterAlephFallback: true },
+  );
+  assert.match(fr, /Transformation impossible/i);
   assert.match(fr, /rembours/i);
+  assert.doesNotMatch(fr, /Réessaie.*prochain/i);
 });
 
 test("resolveKlingCharacterOrientation — ref image → image", () => {

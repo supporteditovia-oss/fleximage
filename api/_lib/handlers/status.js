@@ -78,9 +78,13 @@ async function markImageGenerationFailedWithRefund(
 }
 
 /** Never show "[object Object]" in the UI — coerce provider errors to readable text. */
-function formatVideoFailForClient(value, fallback = "Échec de la génération") {
+function formatVideoFailForClient(
+  value,
+  fallback = "Échec de la génération",
+  mapOptions = {},
+) {
   const raw = toUserFailMessage(value, fallback);
-  return mapVideoProviderMessage(raw, "fr") || raw;
+  return mapVideoProviderMessage(raw, "fr", mapOptions) || raw;
 }
 
 function toUserFailMessage(value, fallback = "Échec de la génération") {
@@ -363,13 +367,117 @@ module.exports = async function handler(req, res) {
             apiResultJson = JSON.stringify({ video_url: videoUrl });
           }
         } else if (state === "fail") {
-          apiStatus = "fail";
           const { extractKlingFailMessage } = require("../kie-kling-motion");
           const rawKlingFail = extractKlingFailMessage(klingData);
-          apiFailMsg = formatVideoFailForClient(
-            rawKlingFail,
-            "Échec de la transformation vidéo",
-          );
+          const {
+            isKlingCharacterRejectionFromText,
+            resetVideoProviderClaim,
+          } = require("../v2v-provider-errors");
+          const charRejection = isKlingCharacterRejectionFromText(rawKlingFail);
+          const alephFallbackDone =
+            pollMeta.v2v_kling_poll_aleph_fallback === true;
+
+          if (resultType === "video" && charRejection && !alephFallbackDone) {
+            try {
+              const { generateVideoV2VOnce } = require("../generate-video-once");
+              const { buildAlephSubmitPrompt } = require("../video-studio");
+              const preserveSourceAudio =
+                pollMeta.preserve_source_audio === true;
+              const userPrompt = String(
+                larp.prompt || pollMeta.vehicle_prompt || "",
+              ).trim();
+              const alephPrompt = buildAlephSubmitPrompt(userPrompt, {
+                preserveSourceAudio,
+              });
+              const sourceVideoUrl =
+                pollMeta.source_video_url || getSourceVideoUrlFromLarp(larp);
+              const inputAssets = Array.isArray(larp.input_assets)
+                ? larp.input_assets.filter(Boolean)
+                : [];
+              const referenceImage =
+                typeof inputAssets[0] === "string" &&
+                inputAssets[0].startsWith("http")
+                  ? inputAssets[0]
+                  : undefined;
+
+              if (!sourceVideoUrl) {
+                throw new Error("missing source video for aleph poll fallback");
+              }
+
+              await resetVideoProviderClaim(supabase, larp.id, pollMeta);
+              await generateVideoV2VOnce(supabase, {
+                generationId: larp.id,
+                prompt: alephPrompt,
+                videoUrl: sourceVideoUrl,
+                aspectRatio: larp.aspect_ratio || "9:16",
+                referenceImage,
+              });
+
+              const { data: refreshed } = await supabase
+                .from("generations")
+                .select("metadata")
+                .eq("id", larp.id)
+                .single();
+              const mergedMeta = {
+                ...(refreshed?.metadata && typeof refreshed.metadata === "object"
+                  ? refreshed.metadata
+                  : pollMeta),
+                v2v_kling_poll_aleph_fallback: true,
+                v2v_provider: "runway_aleph",
+                studio_stage: "GENERATING",
+              };
+              await supabase
+                .from("generations")
+                .update({
+                  status: "processing",
+                  fail_message: null,
+                  metadata: mergedMeta,
+                  updated_at: new Date().toISOString(),
+                  completed_at: null,
+                })
+                .eq("id", larp.id);
+
+              console.info("[status] kling no-character → aleph poll fallback", {
+                larpId: larp.id,
+              });
+
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (fallbackErr) {
+              console.error(
+                "[status] kling→aleph poll fallback failed",
+                fallbackErr,
+              );
+              apiStatus = "fail";
+              apiFailMsg = formatVideoFailForClient(
+                rawKlingFail,
+                "Échec de la transformation vidéo",
+                { afterAlephFallback: true },
+              );
+            }
+          } else {
+            apiStatus = "fail";
+            apiFailMsg = formatVideoFailForClient(
+              rawKlingFail,
+              "Échec de la transformation vidéo",
+              charRejection && alephFallbackDone
+                ? { afterAlephFallback: true }
+                : {},
+            );
+          }
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
           apiFailMsg =
