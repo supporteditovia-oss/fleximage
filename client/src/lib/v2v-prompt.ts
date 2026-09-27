@@ -43,8 +43,8 @@ const V2V_PROMPT_TRANSFORM_PATTERN =
 export function resolveV2VProviderForStudio(userPrompt: string): "runway_aleph" | "kling_motion" {
   const prompt = String(userPrompt || "").trim();
   if (!prompt) return "kling_motion";
-  if (isVehicleDrivingPrompt(prompt)) return "kling_motion";
-  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "kling_motion";
+  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
   return "kling_motion";
 }
 

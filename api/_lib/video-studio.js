@@ -96,14 +96,14 @@ const V2V_PROMPT_TRANSFORM_PATTERN =
   /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
 
 /**
- * Kling Motion (orientation image + frame) = défaut studio V2V — POV volant OK.
- * Aleph = repli si Kling refuse le clip (via v2v-provider-errors + handler).
+ * Véhicule / habitacle / décor → Runway Aleph (POV volant+mains OK).
+ * Kling Motion = personnage visible (corps entier), pas POV mains seules.
  */
 function resolveV2VProviderForStudio(userPrompt) {
   const prompt = String(userPrompt || "").trim();
   if (!prompt) return "kling_motion";
-  if (isVehicleDrivingPrompt(prompt)) return "kling_motion";
-  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "kling_motion";
+  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
+  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
   return "kling_motion";
 }
 

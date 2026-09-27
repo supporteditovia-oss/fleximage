@@ -2,8 +2,12 @@ function providerErrorText(err) {
   return `${err?.apiMsg || ""} ${err?.message || ""}`.trim();
 }
 
+function isKlingCharacterRejectionFromText(text) {
+  return /no valid characters detected/i.test(String(text || "").trim());
+}
+
 function isKlingCharacterRejection(err) {
-  return /no valid characters detected/i.test(providerErrorText(err));
+  return isKlingCharacterRejectionFromText(providerErrorText(err));
 }
 
 function isRetryableAlephError(err) {
@@ -33,6 +37,7 @@ async function resetVideoProviderClaim(supabase, generationId, baseMetadata) {
 module.exports = {
   providerErrorText,
   isKlingCharacterRejection,
+  isKlingCharacterRejectionFromText,
   isRetryableAlephError,
   isRetryableKlingError,
   resetVideoProviderClaim,

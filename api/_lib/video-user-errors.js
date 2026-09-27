@@ -1,13 +1,19 @@
 /** Messages client pour erreurs provider vidéo (sans noms de modèle). */
 
-function mapVideoProviderMessage(raw, locale = "fr") {
+function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   const text = String(raw || "").trim();
   if (!text) return null;
+  const afterAlephFallback = Boolean(options.afterAlephFallback);
 
   if (/no valid characters detected/i.test(text)) {
+    if (afterAlephFallback) {
+      return locale === "fr"
+        ? "Transformation impossible sur ce clip POV. Essaie un angle où plus de corps est visible, ou un clip légèrement plus long. Jetons remboursés."
+        : "Transform failed on this POV clip. Try an angle with more visible body or a slightly longer clip. Credits refunded.";
+    }
     return locale === "fr"
-      ? "Ce clip POV (volant, mains seules) n’est pas compatible avec le mode mouvement personnage. Réessaie : ton prompt sera appliqué via le moteur transformation (comme Image IA). Jetons remboursés."
-      : "This POV clip is not compatible with character motion mode. Retry — your prompt will run via the transform engine (like Image IA). Credits refunded.";
+      ? "Ce clip POV n’est pas compatible avec le mode personnage — bascule automatique vers le moteur transformation…"
+      : "This POV clip is not compatible with character motion — switching to the transform engine…";
   }
 
   if (/internal error|please try again later/i.test(text)) {
