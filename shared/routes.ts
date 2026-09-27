@@ -134,6 +134,10 @@ export const api = {
       method: "POST" as const,
       path: "/api/larps/generate-video",
     },
+    extendVideo: {
+      method: "POST" as const,
+      path: "/api/larps/extend-video",
+    },
     status: {
       method: "GET" as const,
       path: "/api/larps/:taskId/status",

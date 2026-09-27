@@ -1,4 +1,7 @@
-const { createRunwayVideoTask } = require("./kie-runway");
+const {
+  createRunwayVideoTask,
+  createRunwayExtendVideoTask,
+} = require("./kie-runway");
 const { createAlephVideoTask } = require("./kie-runway-aleph");
 const {
   createKlingMotionTask,
@@ -339,8 +342,90 @@ async function generateKlingMotionOnce(supabase, params) {
   };
 }
 
+/**
+ * Prolonge une vidéo Runway déjà générée (Kie extend API).
+ */
+async function generateVideoExtendOnce(supabase, params) {
+  const claim = await claimVideoProviderCall(supabase, params.generationId);
+  if (!claim.allowed) {
+    console.info("[generate-video-extend-once] skipped duplicate provider call", {
+      generationId: params.generationId,
+      apiCallCount: claim.apiCallCount,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: claim.externalTaskId,
+      apiCallCount: claim.apiCallCount,
+    };
+  }
+
+  const startedAt = Date.now();
+  const extend = await createRunwayExtendVideoTask({
+    taskId: params.parentRunwayTaskId,
+    prompt: params.prompt,
+    quality: params.quality,
+  });
+
+  const externalTaskId = `video_${extend.taskId}`;
+  const durationMs = Date.now() - startedAt;
+  const prevAttempts = Array.isArray(claim.generation.provider_attempts)
+    ? claim.generation.provider_attempts
+    : [];
+
+  const nextMeta = {
+    ...(claim.generation.metadata || {}),
+    video_api_call_count: 1,
+    video_provider_completed_at: new Date().toISOString(),
+    studio_stage: "GENERATING_VIDEO",
+    runway_task_id: extend.taskId,
+    runway_extend_parent_task_id: extend.parentTaskId,
+    video_provider_duration_ms: durationMs,
+    video_auto_retries: 0,
+  };
+
+  await supabase
+    .from("generations")
+    .update({
+      provider: "runway",
+      provider_task_id: externalTaskId,
+      metadata: nextMeta,
+      provider_attempts: [
+        ...prevAttempts,
+        {
+          provider: "runway_extend",
+          taskId: extend.taskId,
+          parentTaskId: extend.parentTaskId,
+          externalTaskId,
+          durationMs,
+          autoRetry: false,
+        },
+      ],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.generationId);
+
+  console.info("[generate-video-extend-once] runway extend job created", {
+    generationId: params.generationId,
+    parentRunwayTaskId: extend.parentTaskId,
+    runwayTaskId: extend.taskId,
+    durationMs,
+  });
+
+  return {
+    ok: true,
+    deduplicated: false,
+    externalTaskId,
+    apiCallCount: 1,
+    runwayTaskId: extend.taskId,
+    parentRunwayTaskId: extend.parentTaskId,
+    durationMs,
+  };
+}
+
 module.exports = {
   generateVideoOnce,
+  generateVideoExtendOnce,
   generateVideoV2VOnce,
   generateKlingMotionOnce,
   claimVideoProviderCall,
