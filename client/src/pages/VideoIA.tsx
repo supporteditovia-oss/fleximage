@@ -179,6 +179,22 @@ export default function VideoIA() {
     }
   }, []);
 
+  /** iOS Safari : lancer la lecture dès que le blob est prêt (évite écran noir). */
+  useEffect(() => {
+    const el = videoPreviewRef.current;
+    if (!el || !videoPreview) return;
+    const kick = () => {
+      try {
+        if (el.paused) void el.play().catch(() => {});
+      } catch {
+        /* autoplay policy */
+      }
+    };
+    el.addEventListener("loadeddata", kick);
+    if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) kick();
+    return () => el.removeEventListener("loadeddata", kick);
+  }, [videoPreview]);
+
   const imagePreviewUrl = uploadPreview || prefillImageUrl;
 
   const voiceMaxChars = maxVoiceCharsForVideoDuration(
@@ -215,11 +231,12 @@ export default function VideoIA() {
     voiceReady &&
     canAfford;
   const hasVideoReady = Boolean(videoSource || localVideoFile);
+  const videoImportBusy = isVideoReading && !videoPreview;
   const canGenerateV2V =
     hasVideoReady &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !isVideoReading;
+    !videoImportBusy;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -293,20 +310,6 @@ export default function VideoIA() {
         return URL.createObjectURL(normalized);
       });
       setVideoDurationSec(Number(formatVideoDurationLabel(duration)));
-
-      try {
-        const frameFile = await extractVideoFrameAsJpegFile(normalized);
-        const frameCompressed = await compressImageForGeneration(frameFile);
-        const frameB64 = await fileToBase64(frameCompressed);
-        setRefImageBase64(frameB64);
-        setRefImageIsCustom(false);
-        setRefImagePreview((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(frameCompressed);
-        });
-      } catch {
-        /* aperçu vidéo brut si frame impossible */
-      }
     } catch (err: unknown) {
       setVideoPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -331,6 +334,25 @@ export default function VideoIA() {
     }
 
     if (!fileReadyForCloud) return;
+
+    void (async () => {
+      try {
+        const frameFile = await extractVideoFrameAsJpegFile(fileReadyForCloud);
+        if (videoUploadGenRef.current !== uploadGen) return;
+        const frameCompressed = await compressImageForGeneration(frameFile);
+        if (videoUploadGenRef.current !== uploadGen) return;
+        const frameB64 = await fileToBase64(frameCompressed);
+        if (videoUploadGenRef.current !== uploadGen) return;
+        setRefImageBase64(frameB64);
+        setRefImageIsCustom(false);
+        setRefImagePreview((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(frameCompressed);
+        });
+      } catch {
+        /* vignette auto optionnelle — la V2V fonctionne sans */
+      }
+    })();
 
     setIsVideoCloudSync(true);
     void (async () => {
@@ -469,6 +491,22 @@ export default function VideoIA() {
     }
     if (!source) return;
 
+    let referenceImages: string[] | undefined;
+    if (refImageBase64) {
+      referenceImages = [refImageBase64];
+    } else if (localVideoFile && !refImageIsCustom) {
+      try {
+        const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
+        const frameCompressed = await compressImageForGeneration(frameFile);
+        const frameB64 = await fileToBase64(frameCompressed);
+        setRefImageBase64(frameB64);
+        setRefImageIsCustom(false);
+        referenceImages = [frameB64];
+      } catch {
+        /* serveur extrait si besoin */
+      }
+    }
+
     releaseGenerationLoaderTheme();
     const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
     flushSync(() => {
@@ -498,7 +536,9 @@ export default function VideoIA() {
         source_video_duration_sec: videoDurationSec ?? undefined,
         preserve_source_audio: preserveSourceVoice,
         voice_enabled: false,
-        ...(refImageBase64 ? { reference_images: [refImageBase64] } : {}),
+        ...(referenceImages?.length
+          ? { reference_images: referenceImages }
+          : {}),
         source: "video_studio",
       });
       setTaskId(result.taskId);
@@ -805,18 +845,18 @@ export default function VideoIA() {
             <button
               type="button"
               className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
-              disabled={isVideoReading}
+              disabled={videoImportBusy}
               onClick={() => videoFileRef.current?.click()}
             >
               <span className="via-upload-zone__icon">
-                {isVideoReading ? (
+                {videoImportBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
               </span>
               <span className="via-upload-zone__text">
-                {isVideoReading
+                {videoImportBusy
                   ? "Lecture de la vidéo…"
                   : videoPreview
                     ? "Changer la vidéo"
@@ -836,6 +876,8 @@ export default function VideoIA() {
                   src={videoPreview}
                   poster={refImagePreview ?? undefined}
                   controls
+                  autoPlay
+                  loop
                   muted
                   playsInline
                   preload="auto"
@@ -846,6 +888,7 @@ export default function VideoIA() {
                       if (el.duration > 0.05) {
                         el.currentTime = Math.min(0.05, el.duration * 0.02);
                       }
+                      void el.play().catch(() => {});
                     } catch {
                       /* iOS blob seek */
                     }
@@ -977,7 +1020,7 @@ export default function VideoIA() {
                 !canGenerateV2V ||
                 isSubmitting ||
                 generateVideo.isPending ||
-                isVideoReading
+                videoImportBusy
               }
               onClick={() => void handleGenerateV2V()}
             >
