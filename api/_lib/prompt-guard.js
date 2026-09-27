@@ -392,7 +392,7 @@ const WEATHER_ATMOSPHERE_CLARIFIER =
 
 /** Shared brand/model tokens for add-cars / count detection (any vehicle the user names). */
 const VEHICLE_NAME_RE =
-  "lamborghini|lambo|svj|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|cullinan|bentley|bugatti|chiron|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
+  "lamborghini|lambo|svj|svg|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|g90|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|cullinan|bentley|bugatti|chiron|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
 
 const VEHICLE_TUNER_RE =
   "mansory|brabus|abt|novitec|alpina|hamann|techart|gemballa|keyvany|lorinser|overfinch|wald|prior\\s*design|liberty\\s*walk|lbwk";
@@ -420,7 +420,8 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "Copy the original open/closed state of doors and fuel flap. An open filler is a REAL empty factory neck: dark plastic cavity, real cap if the original had one. " +
   "FORBIDDEN inside the tank/filler: yellow blob, orange glow, LED, gold liquid, extra object, invented cap. " +
   "Inherit original night/day light, reflections, grain. " +
-  "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, studio lighting, fake body artifacts.";
+  "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, studio lighting, fake body artifacts. " +
+  "MODEL LOCK: output the EXACT brand+model the user named — NEVER Nissan Silvia/S15, Skyline, GT-R, R34/R35, Supra, or generic JDM widebody when they asked BMW, Lamborghini, Mercedes, Ferrari, etc.";
 
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
@@ -962,6 +963,17 @@ function isVehicleDriverPrompt(prompt) {
     ) &&
     !isSitOnCarPrompt(text)
   ) {
+    // "mets moi une BMW G90 / une Lambo SVJ" on a photo = swap the car body, not driver seat.
+    if (
+      parseVehicleSpec(prompt) &&
+      /\b(mets|mettre|met|donne|change|remplace|replace)\b/.test(text) &&
+      !/\b(au volant|behind the wheel|habitacle|interieur|interior|conduire|conduis|driving|drive)\b/.test(
+        text,
+      ) &&
+      !/\b(moi|me)\b[\s\S]{0,24}\b(dans|in|into|inside)\b/.test(text)
+    ) {
+      return false;
+    }
     return true;
   }
   // "put me in a Porsche / Urus / any named car" → driver-seat cabin (door lock applies).
@@ -974,12 +986,24 @@ function isVehicleDriverPrompt(prompt) {
   ) {
     return true;
   }
-  return (
+  if (
     !isSitOnCarPrompt(text) &&
     /\b(mets|mettre|put|place|make|assis|asseoir)\b[\s\S]{0,80}\b(moi|me)\b[\s\S]{0,80}\b(voiture|car|moto|scooter|urus|lambo|lamborghini|suv|volant|guidon|siege|seat|porsche|audi)\b/i.test(
       text,
     )
-  );
+  ) {
+    if (
+      parseVehicleSpec(prompt) &&
+      !/\b(au volant|behind the wheel|habitacle|interieur|interior|dans\s+l)\b/.test(
+        text,
+      ) &&
+      !/\b(moi|me)\b[\s\S]{0,24}\b(dans|in|into|inside)\b/.test(text)
+    ) {
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -1813,15 +1837,19 @@ function isVehicleReplacePrompt(prompt) {
   if (/\b(moi|me|je)\b/.test(text) && isInsideNamedCarPrompt(text)) return false;
   const hasCar = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
   if (!hasCar) return false;
-  const replaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|put)\b/.test(
+  const hasReplaceVerb =
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne)\b/.test(
       text,
-    ) &&
+    );
+  const mentionsCarNoun =
     /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
-  if (replaceVerb) return true;
-  // Implicit: user named a specific vehicle on a car photo (no "put me in", no city relocate).
-  if (/\b(moi|me|je)\b/.test(text)) return false;
-  return Boolean(parseVehicleSpec(prompt));
+  if (hasReplaceVerb && mentionsCarNoun) return true;
+  const spec = parseVehicleSpec(prompt);
+  if (spec && hasReplaceVerb) return true;
+  if (/\b(moi|me|je)\b/.test(text)) {
+    return Boolean(spec && hasReplaceVerb);
+  }
+  return Boolean(spec);
 }
 
 function isVehicleCockpitRefinePrompt(prompt) {
@@ -1859,7 +1887,11 @@ function isVehicleCockpitRefinePrompt(prompt) {
 function prettyVehicleToken(tok) {
   const t = String(tok || "").trim();
   if (!t) return "";
-  if (/^(bmw|amg|abt|gtr|gt-r|vw|rs[3567]|r8|sf90|svj)$/i.test(t)) return t.toUpperCase();
+  if (/^(bmw|amg|abt|gtr|gt-r|vw|rs[3567]|r8|sf90|svj|svg|g90)$/i.test(t)) {
+    if (/^svg$/i.test(t)) return "SVJ";
+    if (/^g90$/i.test(t)) return "G90";
+    return t.toUpperCase();
+  }
   if (/^m[23458]$/i.test(t)) return t.toUpperCase();
   if (/^g[- ]?wagen$/i.test(t)) return "G-Wagen";
   return t.charAt(0).toUpperCase() + t.slice(1);
@@ -1873,9 +1905,15 @@ function parseVehicleSpec(prompt) {
   const nameRe = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "gi");
   let m;
   while ((m = nameRe.exec(text))) {
-    const tok = String(m[1] || "").toLowerCase();
+    let tok = String(m[1] || "").toLowerCase();
     if (!tok || GENERIC_VEHICLE_WORDS_RE.test(tok)) continue;
     if (tok === "golf" && isGolfSportPrompt(prompt)) continue;
+    if (
+      tok === "svg" &&
+      /\b(lamborghini|lambo|aventador)\b/.test(text)
+    ) {
+      tok = "svj";
+    }
     if (!names.includes(tok)) names.push(tok);
   }
   const chassisM = text.match(new RegExp(`\\b(${VEHICLE_CHASSIS_RE})\\b`, "i"));
@@ -1900,13 +1938,25 @@ function parseVehicleSpec(prompt) {
   tuners.forEach((t) => {
     if (!parts.some((p) => p.toUpperCase() === t)) parts.push(t);
   });
+  let label = parts.join(" ").trim();
+  if (/\bbmw\b/.test(text) && (chassis === "G90" || names.includes("g90"))) {
+    label = /\bm5\b/.test(text) ? "BMW M5 G90" : "BMW M5 G90 sedan";
+  }
+  if (
+    names.some((n) => n === "svj") ||
+    (/\b(lamborghini|lambo|aventador)\b/.test(text) &&
+      /\b(svj|svg)\b/.test(text))
+  ) {
+    label = "Lamborghini Aventador SVJ";
+  }
+
   return {
     hasVehicle: true,
     names: specificNames,
     chassis,
     year,
     tuners,
-    label: parts.join(" ").trim(),
+    label,
   };
 }
 
@@ -1916,6 +1966,15 @@ function isNamedVehiclePrompt(prompt) {
 
 function generationAntimixLine(prompt) {
   const t = normalizePromptText(prompt);
+  if (/\bbmw\b/.test(t) && /\bg90\b/.test(t)) {
+    return " BMW M5 G90 2024+ luxury sedan — large kidney grille, modern LCI body, curved iDrive screens. FORBIDDEN: Nissan Silvia/S15, Skyline, GT-R, R34, generic JDM widebody, 3 Series, F90 M5.";
+  }
+  if (
+    /\b(lamborghini|lambo|aventador)\b/.test(t) &&
+    /\b(svj|svg)\b/.test(t)
+  ) {
+    return " Lamborghini Aventador SVJ — large rear wing, SVJ aero, V12 supercar silhouette. FORBIDDEN: Huracan, Nissan GT-R, Skyline R34, Silvia, any non-Lamborghini.";
+  }
   if (/\bm5\b/.test(t) && /\bg90\b/.test(t)) {
     return " G90 M5 2024+ curved dual screens — NOT F90 twin-circle, NOT F10/E60 analog.";
   }
@@ -2011,9 +2070,51 @@ function vehicleForbiddenBrandHint(prompt) {
   } else {
     return "";
   }
+  const jdmForbidden =
+    " NEVER Nissan Skyline, GT-R, R34, R35, Silvia, S15, 240SX, Toyota Supra, Honda NSX, Mazda RX-7, or generic JDM tuner.";
   return (
-    ` (FORBIDDEN BRAND SWAP: user asked ${label} ONLY — NEVER ${forbidden.join(", ")}, or any other brand cabin/exterior/badges/cluster.)`
+    ` (FORBIDDEN BRAND SWAP: user asked ${label} ONLY — NEVER ${forbidden.join(", ")}, or any other brand cabin/exterior/badges/cluster.${jdmForbidden})`
   );
+}
+
+/** Block classic AI wrong-car substitutions (JDM instead of requested luxury model). */
+function vehicleWrongModelForbiddenHint(prompt) {
+  if (!parseVehicleSpec(prompt)) return "";
+  const t = normalizePromptText(prompt);
+  if (
+    !/\b(bmw|mercedes|amg|lamborghini|lambo|ferrari|porsche|bentley|rolls|maserati|audi|mclaren|bugatti|urus|purosangue|svj|svg|g90)\b/.test(
+      t,
+    )
+  ) {
+    return "";
+  }
+  return (
+    " (EXTERIOR BODY LOCK: car body must match the EXACT requested model silhouette, grille, headlights, and badges. " +
+    "FORBIDDEN: Nissan Silvia, S15, Skyline, GT-R, R34, R35, Toyota Supra, Honda NSX, Mazda RX-7, or any car not named by the user.)"
+  );
+}
+
+/** Prepended on vehicle body-swap — survives MAX_FINAL_PROMPT truncation. */
+function buildVehicleReplaceCompactHead(userPrompt) {
+  const spec = parseVehicleSpec(userPrompt);
+  if (!spec) return "";
+  return (
+    `${vehicleWrongModelForbiddenHint(userPrompt)}` +
+    `${vehicleForbiddenBrandHint(userPrompt)}` +
+    `${vehicleIdentityHint(userPrompt)}`
+  ).trim();
+}
+
+function buildVehicleReplaceUserLine(userPrompt) {
+  const spec = parseVehicleSpec(userPrompt);
+  const raw = String(userPrompt || "").trim();
+  const label = spec?.label || raw;
+  const antimix = generationAntimixLine(userPrompt).trim();
+  const detail = antimix ? ` ${antimix}` : "";
+  return (
+    `Replace ONLY the existing car with ${label}.${detail} ` +
+    "Keep the same person, pose, outfit, station/building, lighting, and camera framing."
+  ).trim();
 }
 
 /** Nano Banana Pro for complex vehicle identity / lifestyle relocations. */
@@ -2588,7 +2689,10 @@ function sanitizeUserPrompt(prompt) {
     .replace(/\bclag[eé]\b/gi, "Clio")
     // Yamaha TMAX typos
     .replace(/\btmag\b/gi, "TMAX")
-    .replace(/\bt\s*max\b/gi, "TMAX");
+    .replace(/\bt\s*max\b/gi, "TMAX")
+    .replace(/\b(lamborghini|lambo)\s+svg\b/gi, "Lamborghini Aventador SVJ")
+    .replace(/\bmet(s|tre|s-moi|tre-moi)\s+(?:moi\s+)?(?:en\s+)?(?:une?\s+)?lamborghini\s+svg\b/gi, "Lamborghini Aventador SVJ")
+    .replace(/\bbwm\b/gi, "BMW");
 
   const facialHairRequest = isFacialHairPrompt(cleaned);
   if (facialHairRequest) {
@@ -2810,6 +2914,22 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${cleaned}${countHint}`;
     }
   } else if (vehicleReplaceRequest) {
+    const wrongModel =
+      vehicleWrongModelForbiddenHint(cleaned) ||
+      vehicleWrongModelForbiddenHint(prompt);
+    if (wrongModel && !/EXTERIOR BODY LOCK/i.test(cleaned)) {
+      cleaned = `${wrongModel}${cleaned}`;
+    }
+    const forbidBrand =
+      vehicleForbiddenBrandHint(cleaned) || vehicleForbiddenBrandHint(prompt);
+    if (forbidBrand && !/FORBIDDEN BRAND SWAP/i.test(cleaned)) {
+      cleaned = `${forbidBrand}${cleaned}`;
+    }
+    const genHint =
+      vehicleIdentityHint(cleaned) || vehicleIdentityHint(prompt);
+    if (genHint && !/GEN LOCK:/i.test(cleaned)) {
+      cleaned = `${genHint}${cleaned}`;
+    }
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
@@ -3093,6 +3213,12 @@ function sanitizeUserPrompt(prompt) {
           vehicleForbiddenBrandHint(cleaned) || vehicleForbiddenBrandHint(prompt);
         if (forbid && !/FORBIDDEN BRAND SWAP/i.test(cleaned)) {
           cleaned = `${forbid}${cleaned}`;
+        }
+        const wrongModel =
+          vehicleWrongModelForbiddenHint(cleaned) ||
+          vehicleWrongModelForbiddenHint(prompt);
+        if (wrongModel && !/EXTERIOR BODY LOCK/i.test(cleaned)) {
+          cleaned = `${wrongModel}${cleaned}`;
         }
       }
     }
@@ -3882,10 +4008,12 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     ? cleaned
     : animalScene
       ? cleaned
-      : expandImageEditUserRequest(cleaned, {
-          allowSceneChange: lifestyleScene || fullRewrite,
-          allowCameraChange: cameraChange,
-        });
+      : vehicleReplaceScene
+        ? buildVehicleReplaceUserLine(userPrompt)
+        : expandImageEditUserRequest(cleaned, {
+            allowSceneChange: lifestyleScene || fullRewrite,
+            allowCameraChange: cameraChange,
+          });
   const userBlock = weatherAtmosphereScene
     ? `Sky/atmosphere inpaint only — freeze ground and concrete exactly as uploaded. User request: ${cleaned}`
     : animalScene
@@ -3925,7 +4053,13 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           isSwimwearBeachOutfitPrompt(userPrompt) ? SWIMWEAR_OUTFIT_CLARIFIER : ""
         }`
       : "";
-  const core = `${nonCarScenePrefix}${sceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
+  const vehicleReplaceHead = vehicleReplaceScene
+    ? buildVehicleReplaceCompactHead(userPrompt)
+    : "";
+  const effectiveSceneGuard = vehicleReplaceHead
+    ? `${vehicleReplaceHead} ${sceneGuard}`
+    : sceneGuard;
+  const core = `${nonCarScenePrefix}${effectiveSceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
   const suffix = qualitySuffix(
     swap ||
