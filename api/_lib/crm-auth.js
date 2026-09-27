@@ -1,5 +1,13 @@
-const { SignJWT, jwtVerify } = require("jose");
 const bcrypt = require("bcryptjs");
+
+/** jose v5+ est ESM — import dynamique obligatoire sur Vercel (api en CJS). */
+let joseModulePromise;
+function loadJose() {
+  if (!joseModulePromise) {
+    joseModulePromise = import("jose");
+  }
+  return joseModulePromise;
+}
 
 const SESSION_COOKIE_NAME = "lux_admin_session";
 const SESSION_DURATION = "7d";
@@ -32,6 +40,7 @@ async function verifyCredentials(email, password) {
 }
 
 async function createSessionToken(email) {
+  const { SignJWT } = await loadJose();
   return new SignJWT({ email, role: "admin" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -42,6 +51,7 @@ async function createSessionToken(email) {
 async function verifySessionToken(token) {
   if (!token) return null;
   try {
+    const { jwtVerify } = await loadJose();
     const { payload } = await jwtVerify(token, getSessionSecret());
     return payload;
   } catch {
@@ -61,7 +71,7 @@ function sessionCookieOptions() {
 }
 
 function readSessionCookie(req) {
-  const raw = req.headers.cookie || "";
+  const raw = (req.headers && req.headers.cookie) || "";
   const match = raw.match(
     new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]+)`),
   );

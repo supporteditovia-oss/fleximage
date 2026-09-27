@@ -38,7 +38,8 @@ module.exports = async function handler(req, res) {
 
   // /admin/api/* → rewrite __adminPath=crm/… (limite Hobby : pas de fonction dédiée)
   if (parts[0] === "crm") {
-    return handleCrmAdminApi(req, res, parts.slice(1));
+    await handleCrmAdminApi(req, res, parts.slice(1));
+    return;
   }
 
   // GET /api/admin/users/:id/activity
