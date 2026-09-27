@@ -1,5 +1,6 @@
 const { getCrmSupabase } = require("./supabase");
 const { logCrmActivity } = require("./activity");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 async function listMedia(query) {
   const sb = getCrmSupabase();
@@ -8,7 +9,10 @@ async function listMedia(query) {
   if (query.q) q = q.ilike("name", `%${query.q}%`);
   if (query.favorite === "1") q = q.eq("is_favorite", true);
   const { data, error } = await q.limit(500);
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return [];
+    throw error;
+  }
   return data;
 }
 

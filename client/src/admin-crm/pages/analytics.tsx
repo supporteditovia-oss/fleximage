@@ -14,7 +14,7 @@ import {
 import { Loader2 } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const { data, isLoading, error } = useCrmDashboard();
+  const { data, isLoading } = useCrmDashboard();
 
   if (isLoading) {
     return (
@@ -24,9 +24,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (error || !data) {
-    return <CrmEmptyState title="Analytics indisponibles" hint={String(error)} />;
-  }
+  if (!data) return null;
 
   const { stats, chartSeries } = data;
 

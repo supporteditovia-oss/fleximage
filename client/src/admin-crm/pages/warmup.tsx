@@ -28,7 +28,7 @@ type WarmupRow = {
 };
 
 export default function WarmupPage() {
-  const { data, isLoading, error } = useCrmWarmup();
+  const { data, isLoading } = useCrmWarmup();
   const invalidate = useCrmInvalidate();
 
   async function logInteraction(accountId: string) {
@@ -45,15 +45,6 @@ export default function WarmupPage() {
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin text-[var(--lux-text-muted)]" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <CrmEmptyState
-        title="Warm-up indisponible"
-        hint={error instanceof Error ? error.message : undefined}
-      />
     );
   }
 

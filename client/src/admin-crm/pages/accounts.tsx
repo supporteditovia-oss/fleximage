@@ -17,7 +17,7 @@ import type { CrmPlatform } from "@/admin-crm/types";
 import { Loader2, Plus } from "lucide-react";
 
 export default function AccountsPage() {
-  const { data: accounts, isLoading, error } = useCrmAccounts();
+  const { data: accounts, isLoading } = useCrmAccounts();
   const { create } = useCrmAccountMutations();
   const [open, setOpen] = useState(false);
 
@@ -26,15 +26,6 @@ export default function AccountsPage() {
       <div className="flex justify-center py-20 text-[var(--lux-text-muted)]">
         <Loader2 className="animate-spin" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <CrmEmptyState
-        title="Impossible de charger les comptes"
-        hint={error instanceof Error ? error.message : undefined}
-      />
     );
   }
 

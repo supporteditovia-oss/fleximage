@@ -1,4 +1,6 @@
 const { getCrmSupabase } = require("./supabase");
+const { isCrmSchemaMissingError } = require("./schema-errors");
+const { emptyDashboardPayload } = require("./empty");
 
 function startOfDayUtc(d) {
   const x = new Date(d);
@@ -22,7 +24,6 @@ async function fetchDashboard() {
 
   const weekAgoStr = weekAgo.toISOString().slice(0, 10);
   const monthAgoStr = monthAgo.toISOString().slice(0, 10);
-  const todayStr = now.toISOString().slice(0, 10);
 
   const [
     accountsRes,
@@ -30,38 +31,33 @@ async function fetchDashboard() {
     postsPendingRes,
     postsTodayRes,
     shortsQueueRes,
-    activityRes,
     upcomingRes,
     topPostsRes,
     topAccountRes,
   ] = await Promise.all([
     sb.from("crm_social_accounts").select("id, platform", { count: "exact" }),
     sb
-      .from("crm_account_daily_metrics")
+      .from("crm_analytics")
       .select("*")
+      .not("metric_date", "is", null)
       .gte("metric_date", monthAgoStr),
     sb
-      .from("crm_posts")
+      .from("crm_schedule")
       .select("id", { count: "exact", head: true })
       .in("status", ["draft", "scheduled"]),
     sb
-      .from("crm_posts")
+      .from("crm_schedule")
       .select("id", { count: "exact", head: true })
       .eq("status", "published")
       .gte("published_at", startOfDayUtc(now))
       .lte("published_at", endOfDayUtc(now)),
     sb
-      .from("crm_posts")
+      .from("crm_schedule")
       .select("id", { count: "exact", head: true })
       .eq("status", "scheduled")
       .eq("platform", "youtube"),
     sb
-      .from("crm_activity_log")
-      .select("id, kind, message, created_at")
-      .order("created_at", { ascending: false })
-      .limit(8),
-    sb
-      .from("crm_posts")
+      .from("crm_schedule")
       .select(
         "id, scheduled_at, status, platform, account:crm_social_accounts(display_name, username)",
       )
@@ -70,17 +66,30 @@ async function fetchDashboard() {
       .order("scheduled_at", { ascending: true })
       .limit(6),
     sb
-      .from("crm_post_analytics")
+      .from("crm_analytics")
       .select(
-        "views, viral_score, post:crm_posts(id, caption, platform, account:crm_social_accounts(username, display_name))",
+        "views, viral_score, post:crm_schedule(id, caption, platform, account:crm_social_accounts(username, display_name))",
       )
+      .not("post_id", "is", null)
       .order("views", { ascending: false })
       .limit(5),
     sb
-      .from("crm_account_daily_metrics")
-      .select("account_id, views, performance_score, account:crm_social_accounts(id, username, display_name, platform, country_code)")
+      .from("crm_analytics")
+      .select(
+        "account_id, views, performance_score, account:crm_social_accounts(id, username, display_name, platform, country_code)",
+      )
+      .not("metric_date", "is", null)
       .gte("metric_date", weekAgoStr),
   ]);
+
+  const firstErr = [
+    accountsRes.error,
+    dailyRes.error,
+    postsPendingRes.error,
+  ].find(Boolean);
+  if (isCrmSchemaMissingError(firstErr)) {
+    return emptyDashboardPayload();
+  }
 
   const daily = dailyRes.data || [];
   const totals = daily.reduce(
@@ -180,6 +189,7 @@ async function fetchDashboard() {
       day: "numeric",
       month: "long",
     }),
+    schemaReady: true,
     stats: {
       totalViews: totals.views,
       avgWatchTimeSeconds:
@@ -205,7 +215,7 @@ async function fetchDashboard() {
     })),
     topAccountWeek,
     chartSeries,
-    recentActivity: activityRes.data || [],
+    recentActivity: [],
     upcomingPosts: (upcomingRes.data || []).map((p) => ({
       id: p.id,
       scheduledAt: p.scheduled_at,

@@ -10,7 +10,7 @@ import { Loader2, Play, Pause, Star, Trash2, Plus } from "lucide-react";
 export default function MusicPage() {
   const [search, setSearch] = useState("");
   const [favOnly, setFavOnly] = useState(false);
-  const { data, isLoading, error } = useCrmMusic(search, favOnly);
+  const { data, isLoading } = useCrmMusic(search, favOnly);
   const invalidate = useCrmInvalidate();
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,12 +55,6 @@ export default function MusicPage() {
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <CrmEmptyState title="Bibliothèque musique indisponible" hint={String(error)} />
     );
   }
 

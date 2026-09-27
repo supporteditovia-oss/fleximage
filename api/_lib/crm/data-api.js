@@ -1,4 +1,6 @@
 const { requireCrmSession } = require("./require-crm-session");
+const { isCrmSchemaMissingError } = require("./schema-errors");
+const { emptyDashboardPayload } = require("./empty");
 const { fetchDashboard } = require("./dashboard");
 const accounts = require("./accounts");
 const warmup = require("./warmup");
@@ -155,6 +157,28 @@ async function handleCrmDataApi(req, res, parts) {
 
     res.status(404).json({ error: "Route CRM data introuvable", path: parts });
   } catch (err) {
+    if (isCrmSchemaMissingError(err)) {
+      if (method === "GET" && resource === "dashboard") {
+        res.status(200).json(emptyDashboardPayload());
+        return;
+      }
+      if (method === "GET" && resource === "accounts" && !id) {
+        res.status(200).json({ items: [], schemaReady: false });
+        return;
+      }
+      if (method === "GET" && resource === "warmup") {
+        res.status(200).json({ items: [], schemaReady: false });
+        return;
+      }
+      if (method === "GET" && (resource === "media" || resource === "music" || resource === "posts")) {
+        res.status(200).json({ items: [], schemaReady: false });
+        return;
+      }
+      if (method === "GET" && resource === "pov") {
+        res.status(200).json({ preset: null, schemaReady: false });
+        return;
+      }
+    }
     const status = err.status || 500;
     const message = err.message || "Erreur CRM";
     if (status >= 500) {

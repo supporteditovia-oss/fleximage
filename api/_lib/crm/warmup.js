@@ -1,5 +1,5 @@
 const { getCrmSupabase } = require("./supabase");
-const { logCrmActivity } = require("./activity");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 async function listWarmupOverview() {
   const sb = getCrmSupabase();
@@ -10,16 +10,20 @@ async function listWarmupOverview() {
     )
     .order("warmup_phase")
     .order("username");
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return [];
+    throw error;
+  }
 
   const ids = (accounts || []).map((a) => a.id);
   let logsByAccount = {};
   if (ids.length > 0) {
-    const { data: logs } = await sb
-      .from("crm_warmup_logs")
+    const { data: logs, error: logErr } = await sb
+      .from("crm_warmup")
       .select("*")
       .in("account_id", ids)
       .order("created_at", { ascending: false });
+    if (logErr && !isCrmSchemaMissingError(logErr)) throw logErr;
     for (const log of logs || []) {
       if (!logsByAccount[log.account_id]) logsByAccount[log.account_id] = [];
       if (logsByAccount[log.account_id].length < 10) {
@@ -53,18 +57,19 @@ async function recordWarmupInteraction(accountId, body) {
   );
   const newTotal = account.warmup_interactions_total + interactions;
 
-  const { error: logErr } = await sb.from("crm_warmup_logs").insert({
+  let phase = account.warmup_phase;
+  if (phase === "new" && newDay >= 1) phase = "warming";
+  if (phase === "warming" && newTrust >= 70) phase = "active";
+
+  const { error: logErr } = await sb.from("crm_warmup").insert({
     account_id: accountId,
     day_number: newDay,
+    phase: body.warmup_phase || phase,
     interactions_count: interactions,
     trust_score: newTrust,
     note: body.note || null,
   });
   if (logErr) throw logErr;
-
-  let phase = account.warmup_phase;
-  if (phase === "new" && newDay >= 1) phase = "warming";
-  if (phase === "warming" && newTrust >= 70) phase = "active";
 
   const { data: updated, error } = await sb
     .from("crm_social_accounts")
@@ -79,10 +84,6 @@ async function recordWarmupInteraction(accountId, body) {
     .select("*")
     .single();
   if (error) throw error;
-
-  await logCrmActivity("warmup", `Warm-up @${updated.username} — jour ${newDay}`, {
-    accountId,
-  });
   return updated;
 }
 

@@ -1,5 +1,6 @@
 const { getCrmSupabase } = require("./supabase");
 const { logCrmActivity } = require("./activity");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 async function listMusic(query) {
   const sb = getCrmSupabase();
@@ -9,7 +10,10 @@ async function listMusic(query) {
   }
   if (query.favorite === "1") q = q.eq("is_favorite", true);
   const { data, error } = await q.limit(300);
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return [];
+    throw error;
+  }
   return data;
 }
 

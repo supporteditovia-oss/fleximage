@@ -1,16 +1,19 @@
 const { getCrmSupabase } = require("./supabase");
-const { logCrmActivity } = require("./activity");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 const POST_SELECT =
   "id, account_id, platform, scheduled_at, status, media_id, music_id, caption, hashtags, published_at, created_at, updated_at, account:crm_social_accounts(id, username, display_name, country_code, language_code, timezone), media:crm_media(id, name, thumbnail_url), music:crm_music(id, title)";
 
 async function listPosts(range) {
   const sb = getCrmSupabase();
-  let q = sb.from("crm_posts").select(POST_SELECT).order("scheduled_at");
+  let q = sb.from("crm_schedule").select(POST_SELECT).order("scheduled_at");
   if (range?.from) q = q.gte("scheduled_at", range.from);
   if (range?.to) q = q.lte("scheduled_at", range.to);
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return [];
+    throw error;
+  }
   return data;
 }
 
@@ -24,7 +27,7 @@ async function createPost(body) {
   if (accErr) throw accErr;
 
   const { data, error } = await sb
-    .from("crm_posts")
+    .from("crm_schedule")
     .insert({
       account_id: body.account_id,
       platform: body.platform || account.platform,
@@ -38,9 +41,6 @@ async function createPost(body) {
     .select(POST_SELECT)
     .single();
   if (error) throw error;
-  await logCrmActivity("publish", `Publication programmée — ${account.platform}`, {
-    postId: data.id,
-  });
   return {
     ...data,
     inferred: {
@@ -66,7 +66,7 @@ async function updatePost(id, body) {
     if (body[k] !== undefined) patch[k] = body[k];
   }
   const { data, error } = await sb
-    .from("crm_posts")
+    .from("crm_schedule")
     .update(patch)
     .eq("id", id)
     .select(POST_SELECT)
@@ -77,7 +77,7 @@ async function updatePost(id, body) {
 
 async function deletePost(id) {
   const sb = getCrmSupabase();
-  const { error } = await sb.from("crm_posts").delete().eq("id", id);
+  const { error } = await sb.from("crm_schedule").delete().eq("id", id);
   if (error) throw error;
 }
 

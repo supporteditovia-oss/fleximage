@@ -1,4 +1,5 @@
 const { getCrmSupabase } = require("./supabase");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 async function getLatestPovPreset() {
   const sb = getCrmSupabase();

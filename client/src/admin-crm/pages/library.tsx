@@ -12,7 +12,7 @@ export default function LibraryPage() {
   const [folder, setFolder] = useState("photos/normal");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { data, isLoading, error } = useCrmMedia(folder, search);
+  const { data, isLoading } = useCrmMedia(folder, search);
   const invalidate = useCrmInvalidate();
 
   const onDrop = useCallback(
@@ -60,10 +60,6 @@ export default function LibraryPage() {
         <Loader2 className="animate-spin" />
       </div>
     );
-  }
-
-  if (error) {
-    return <CrmEmptyState title="Bibliothèque indisponible" hint={String(error)} />;
   }
 
   return (

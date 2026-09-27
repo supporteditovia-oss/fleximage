@@ -12,8 +12,8 @@ export default function SettingsPage() {
         <h2 className="text-sm font-medium mb-4">Base Supabase CRM V3</h2>
         <p className="text-xs text-[var(--lux-text-muted)] leading-relaxed">
           Applique la migration{" "}
-          <code className="text-[var(--lux-gold)]">20260927030000_crm_v3_admin.sql</code>{" "}
-          (<code className="opacity-80">npm run db:push</code> ou SQL Editor Supabase).
+          <code className="text-[var(--lux-gold)]">20260927120000_crm_core_tables_and_seed.sql</code>{" "}
+          (<code className="opacity-80">node script/apply-crm-supabase.mjs</code> ou SQL Editor).
           Tables : comptes, posts, analytics, médias, musiques, warm-up, POV.
         </p>
       </GlassCard>

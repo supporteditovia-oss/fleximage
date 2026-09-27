@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useCrmDashboard();
+  const { data, isLoading } = useCrmDashboard();
 
   if (isLoading) {
     return (
@@ -37,17 +37,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (error || !data) {
-    return (
-      <CrmEmptyState
-        title="Dashboard indisponible"
-        hint={
-          error instanceof Error
-            ? `${error.message} — applique la migration Supabase CRM V3 si ce n’est pas déjà fait.`
-            : undefined
-        }
-      />
-    );
+  if (!data) {
+    return null;
   }
 
   const { stats } = data;

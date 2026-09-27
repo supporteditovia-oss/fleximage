@@ -1,5 +1,6 @@
 const { getCrmSupabase } = require("./supabase");
 const { logCrmActivity } = require("./activity");
+const { isCrmSchemaMissingError } = require("./schema-errors");
 
 const ACCOUNT_SELECT =
   "id, platform, username, display_name, avatar_url, banner_url, country_code, language_code, timezone, status, warmup_phase, warmup_day, warmup_trust_score, warmup_interactions_total, followers, likes, views, created_at, updated_at";
@@ -11,7 +12,10 @@ async function listAccounts() {
     .select(ACCOUNT_SELECT)
     .order("platform")
     .order("username");
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return [];
+    throw error;
+  }
   return data;
 }
 
@@ -22,32 +26,37 @@ async function getAccount(id) {
     .select(ACCOUNT_SELECT)
     .eq("id", id)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return null;
+    throw error;
+  }
   if (!account) return null;
 
   const [posts, analytics, warmupLogs, daily] = await Promise.all([
     sb
-      .from("crm_posts")
+      .from("crm_schedule")
       .select("id, scheduled_at, status, platform, caption, published_at")
       .eq("account_id", id)
       .order("scheduled_at", { ascending: false })
       .limit(12),
     sb
-      .from("crm_post_analytics")
+      .from("crm_analytics")
       .select("views, likes, comments, shares, viral_score, recorded_at, post_id")
       .eq("account_id", id)
+      .not("post_id", "is", null)
       .order("recorded_at", { ascending: false })
       .limit(20),
     sb
-      .from("crm_warmup_logs")
+      .from("crm_warmup")
       .select("*")
       .eq("account_id", id)
       .order("created_at", { ascending: false })
       .limit(30),
     sb
-      .from("crm_account_daily_metrics")
+      .from("crm_analytics")
       .select("*")
       .eq("account_id", id)
+      .not("metric_date", "is", null)
       .order("metric_date", { ascending: false })
       .limit(14),
   ]);
@@ -141,7 +150,6 @@ async function deleteAccount(id) {
   const sb = getCrmSupabase();
   const { error } = await sb.from("crm_social_accounts").delete().eq("id", id);
   if (error) throw error;
-  await logCrmActivity("account", "Compte supprimé", { id });
 }
 
 module.exports = {

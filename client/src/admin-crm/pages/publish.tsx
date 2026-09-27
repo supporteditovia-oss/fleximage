@@ -25,7 +25,7 @@ export default function PublishPage() {
 
   const rangeFrom = formatISO(startOfMonth(cursor));
   const rangeTo = formatISO(endOfMonth(cursor));
-  const { data: posts, isLoading, error } = useCrmPosts(rangeFrom, rangeTo);
+  const { data: posts, isLoading } = useCrmPosts(rangeFrom, rangeTo);
   const { data: accounts } = useCrmAccounts();
   const { data: media } = useCrmMedia();
   const { data: music } = useCrmMusic();
@@ -50,15 +50,6 @@ export default function PublishPage() {
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <CrmEmptyState
-        title="Agenda indisponible"
-        hint={error instanceof Error ? error.message : undefined}
-      />
     );
   }
 
