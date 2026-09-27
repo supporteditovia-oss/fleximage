@@ -32,6 +32,7 @@ import {
 import "./transforme-ta-voiture.css";
 
 export default function TransformeTaVoiture() {
+  const adminPreview = useAdminPreviewFeatures();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -154,6 +155,10 @@ export default function TransformeTaVoiture() {
 
   const credits =
     durationSec != null ? estimateCarVideoCredits(durationSec) : null;
+
+  if (!adminPreview) {
+    return <Redirect to="/create" />;
+  }
 
   return (
     <div className="car-transform-page mx-auto max-w-3xl px-4 py-8">
