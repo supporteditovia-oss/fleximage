@@ -750,6 +750,22 @@ module.exports = async function handler(req, res) {
       }
     } catch (providerErr) {
       console.error("[generate-video] provider failed", providerErr);
+      // DIAGNOSTIC (temporaire) — sépare la vraie cause (stage/apiMsg/raw
+      // response Kie.ai) du message générique envoyé au client plus bas,
+      // pour ne plus jamais confondre un message de succès Kie.ai
+      // ("File uploaded successfully") avec une erreur de génération.
+      console.error("[generate-video] provider failed — diagnostic", {
+        generationId: larp.id,
+        videoRequestId,
+        stage: providerErr.stage || (providerErr.uploadMethod ? "kie_file_upload" : "provider_task"),
+        mediaKind: providerErr.mediaKind,
+        uploadMethod: providerErr.uploadMethod,
+        apiMsg: providerErr.apiMsg,
+        apiCode: providerErr.apiCode,
+        httpStatus: providerErr.status,
+        rawApiResponse: providerErr.rawApiResponse,
+        message: providerErr.message,
+      });
       await supabase
         .from("generations")
         .update({
@@ -805,6 +821,12 @@ module.exports = async function handler(req, res) {
         .json({
           message: detailed,
           videoRequestId,
+          // DIAGNOSTIC (temporaire, non affiché par l'UI actuelle) — visible
+          // dans l'onglet Network pour comparer avec le log serveur ci-dessus.
+          // À retirer une fois la cause racine confirmée.
+          debugStage:
+            providerErr.stage || (providerErr.uploadMethod ? "kie_file_upload" : "provider_task"),
+          debugApiMsg: providerErr.apiMsg || null,
         });
       return;
     }

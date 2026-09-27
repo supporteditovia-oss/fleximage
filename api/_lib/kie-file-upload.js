@@ -47,14 +47,38 @@ async function uploadBufferToKie(buffer, { fileName, mimeType, uploadPath }) {
   try {
     parsed = JSON.parse(text);
   } catch {
+    console.error("[kie-file-upload] stream-upload réponse non-JSON", {
+      status: response.status,
+      bodyPreview: text.slice(0, 500),
+    });
     throw new Error(`KIE upload: réponse non-JSON (${response.status})`);
   }
 
   const fileUrl = parsed?.data?.fileUrl;
   if (!response.ok || !parsed?.success || !fileUrl) {
+    // DIAGNOSTIC (temporaire) — capture la réponse brute Kie.ai avant de la
+    // remplacer par un message générique. Ne pas retirer sans avoir isolé
+    // la cause : parsed.msg peut être un message de SUCCÈS Kie.ai (ex.
+    // "File uploaded successfully") même quand fileUrl est absent, ce qui
+    // produit un message d'erreur trompeur en aval.
+    console.error("[kie-file-upload] stream-upload rejeté", {
+      endpoint: "file-stream-upload",
+      httpStatus: response.status,
+      httpOk: response.ok,
+      parsedSuccess: parsed?.success,
+      parsedMsg: parsed?.msg,
+      parsedDataKeys: parsed?.data ? Object.keys(parsed.data) : null,
+      parsedDataRaw: parsed?.data,
+      fileUrlResolved: fileUrl,
+      rawBodyPreview: text.slice(0, 800),
+      fileName,
+      mimeType,
+    });
     const err = new Error(parsed?.msg || "KIE file upload failed");
     err.status = response.status;
     err.apiMsg = parsed?.msg;
+    err.uploadMethod = "stream";
+    err.rawApiResponse = { status: response.status, body: parsed };
     throw err;
   }
 
@@ -85,14 +109,34 @@ async function uploadUrlToKie(sourceUrl, { uploadPath, fileName }) {
   try {
     parsed = JSON.parse(text);
   } catch {
+    console.error("[kie-file-upload] url-upload réponse non-JSON", {
+      status: response.status,
+      bodyPreview: text.slice(0, 500),
+    });
     throw new Error(`KIE url-upload: réponse non-JSON (${response.status})`);
   }
 
   const fileUrl = parsed?.data?.fileUrl;
   if (!response.ok || !parsed?.success || !fileUrl) {
+    // DIAGNOSTIC (temporaire) — voir commentaire équivalent dans uploadBufferToKie.
+    console.error("[kie-file-upload] url-upload rejeté", {
+      endpoint: "file-url-upload",
+      httpStatus: response.status,
+      httpOk: response.ok,
+      parsedSuccess: parsed?.success,
+      parsedMsg: parsed?.msg,
+      parsedDataKeys: parsed?.data ? Object.keys(parsed.data) : null,
+      parsedDataRaw: parsed?.data,
+      fileUrlResolved: fileUrl,
+      rawBodyPreview: text.slice(0, 800),
+      sourceUrl,
+      fileName,
+    });
     const err = new Error(parsed?.msg || "KIE url upload failed");
     err.status = response.status;
     err.apiMsg = parsed?.msg;
+    err.uploadMethod = "url";
+    err.rawApiResponse = { status: response.status, body: parsed };
     throw err;
   }
 
@@ -120,7 +164,13 @@ async function ensureKieAccessibleMediaUrl(sourceUrl, kind = "video") {
   try {
     return await uploadUrlToKie(url, { uploadPath, fileName });
   } catch (urlErr) {
-    console.warn("[kie-file-upload] url-upload failed, trying stream", urlErr.message);
+    console.warn("[kie-file-upload] url-upload failed, trying stream", {
+      kind,
+      sourceUrl: url,
+      apiMsg: urlErr.apiMsg,
+      message: urlErr.message,
+      rawApiResponse: urlErr.rawApiResponse,
+    });
   }
 
   const controller = new AbortController();
@@ -141,6 +191,12 @@ async function ensureKieAccessibleMediaUrl(sourceUrl, kind = "video") {
       mimeType,
       uploadPath,
     });
+  } catch (streamErr) {
+    // Tag pour identifier, en aval, si l'échec vient de la PRÉPARATION
+    // de l'upload (ce fichier) et non de Kling/Aleph eux-mêmes.
+    streamErr.stage = streamErr.stage || "kie_file_upload";
+    streamErr.mediaKind = kind;
+    throw streamErr;
   } finally {
     clearTimeout(timer);
   }
