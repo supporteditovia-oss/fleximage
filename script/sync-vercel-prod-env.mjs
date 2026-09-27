@@ -27,6 +27,9 @@ const VARS = [
   { name: "DEEPINFRA_API_KEY", required: false },
   { name: "DEEPINFRA_MODEL", required: false, defaultValue: "google/nano-banana-2" },
   { name: "KIE_AI_API_KEY", required: false },
+  { name: "ADMIN_EMAIL", required: false },
+  { name: "ADMIN_PASSWORD_HASH", required: false },
+  { name: "SESSION_SECRET", required: false },
 ];
 
 function runVercel(args, stdin) {
