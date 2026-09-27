@@ -1,3 +1,5 @@
+import { computeVideoStudioCreditCost } from "./credit-costs";
+
 /**
  * Grille cible v2 — affichée aux admins uniquement (Paramètres).
  * La facturation prod reste sur `credit-costs.ts` tant que PRICING_V2_ENABLED ≠ 1.
@@ -52,16 +54,16 @@ export function adminPreviewVideoCreditCost(params: {
   workflow?: "image_to_video" | "video_to_video";
   voiceEnabled?: boolean;
   preserveSourceAudio?: boolean;
+  sourceVideoDurationSec?: number | null;
+  v2vProvider?: "runway_aleph" | "kling_motion" | null;
 }): number {
-  const b = ADMIN_PRICING_REFERENCE.creditBurn;
-  let cost =
-    params.workflow === "video_to_video" ? b.videoV2V : b.videoI2V;
-  if (params.workflow === "video_to_video") {
-    if (params.preserveSourceAudio) cost += b.videoVoiceExtra;
-  } else if (params.voiceEnabled) {
-    cost += b.videoVoiceExtra;
-  }
-  return cost;
+  return computeVideoStudioCreditCost({
+    workflow: params.workflow,
+    voiceEnabled: params.voiceEnabled,
+    preserveSourceAudio: params.preserveSourceAudio,
+    sourceVideoDurationSec: params.sourceVideoDurationSec,
+    v2vProvider: params.v2vProvider,
+  });
 }
 
 /** Coût affiché sur « Générer la voix » (grille v2 admin / studio voix). */

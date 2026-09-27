@@ -4,7 +4,6 @@ const {
   validateSourceVideoDuration,
   computeV2VCreditCost,
   VIDEO_V2V_MAX_DURATION_SEC,
-  VIDEO_V2V_CREDIT_COST,
 } = require("./video-limits");
 
 describe("video-limits", () => {
@@ -38,9 +37,13 @@ describe("video-limits", () => {
     assert.equal(result.code, "VIDEO_TOO_LONG");
   });
 
-  it("computeV2VCreditCost is flat regardless of duration", () => {
-    assert.equal(computeV2VCreditCost(3), VIDEO_V2V_CREDIT_COST);
-    assert.equal(computeV2VCreditCost(8), VIDEO_V2V_CREDIT_COST);
+  it("computeV2VCreditCost Aleph flat 85", () => {
+    assert.equal(computeV2VCreditCost(8, "runway_aleph"), 85);
+  });
+
+  it("computeV2VCreditCost Kling 3-5 vs 6-8", () => {
+    assert.equal(computeV2VCreditCost(5, "kling_motion"), 85);
+    assert.equal(computeV2VCreditCost(6, "kling_motion"), 120);
   });
 
   it("max duration is 8 seconds", () => {

@@ -430,6 +430,11 @@ module.exports = async function handler(req, res) {
       sourceVideoDurationSec = durationCheck.durationSec;
     }
 
+    const plannedV2vProvider =
+      workflow === "video_to_video"
+        ? resolveV2VProviderForStudio(studioVehicleDescription)
+        : null;
+
     const creditCost = computeVideoCreditCost({
       workflow,
       durationSec,
@@ -438,6 +443,7 @@ module.exports = async function handler(req, res) {
       preserveSourceAudio,
       isAdmin,
       sourceVideoDurationSec,
+      v2vProvider: plannedV2vProvider,
     });
 
     const limitResult = await checkGenerationLimits(supabase, userId);

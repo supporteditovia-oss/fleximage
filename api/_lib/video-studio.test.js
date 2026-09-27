@@ -80,22 +80,24 @@ describe("video-studio", () => {
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });
 
-  it("computeVideoCreditCost flat for video_to_video", () => {
-    assert.equal(
-      computeVideoCreditCost({
-        workflow: "video_to_video",
-        sourceVideoDurationSec: 6,
-        isAdmin: false,
-      }),
-      VIDEO_V2V_CREDIT_COST,
-    );
+  it("computeVideoCreditCost V2V by provider and duration", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
         sourceVideoDurationSec: 8,
+        v2vProvider: "runway_aleph",
         isAdmin: false,
       }),
-      VIDEO_V2V_CREDIT_COST,
+      85,
+    );
+    assert.equal(
+      computeVideoCreditCost({
+        workflow: "video_to_video",
+        sourceVideoDurationSec: 6,
+        v2vProvider: "kling_motion",
+        isAdmin: false,
+      }),
+      120,
     );
   });
 
@@ -103,10 +105,11 @@ describe("video-studio", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
+        v2vProvider: "runway_aleph",
         preserveSourceAudio: true,
         isAdmin: false,
       }),
-      VIDEO_V2V_CREDIT_COST + 5,
+      85 + 5,
     );
   });
 

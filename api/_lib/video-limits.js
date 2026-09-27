@@ -14,7 +14,7 @@ const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
 const VIDEO_ALEPH_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
 /** Prix fixe client : 1 vidéo = N crédits (3–8s, 720p). */
-const { VIDEO_V2V_CREDIT_COST } = require("./credit-costs");
+const { computeV2VCreditCost: computeV2VCreditCostFromProvider } = require("./credit-costs");
 
 const VIDEO_I2V_OUTPUT_DURATION_SEC = 5;
 
@@ -53,9 +53,8 @@ function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
   return { ok: true, durationSec: dur };
 }
 
-function computeV2VCreditCost(_durationSec, isAdmin = false) {
-  if (isAdmin) return 0;
-  return VIDEO_V2V_CREDIT_COST;
+function computeV2VCreditCost(durationSec, v2vProvider, isAdmin = false) {
+  return computeV2VCreditCostFromProvider(durationSec, v2vProvider, isAdmin);
 }
 
 module.exports = {
@@ -66,7 +65,6 @@ module.exports = {
   VIDEO_V2V_MAX_SIZE_BYTES,
   VIDEO_ALEPH_MAX_SOURCE_BYTES,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
-  VIDEO_V2V_CREDIT_COST,
   validateSourceVideoDuration,
   computeV2VCreditCost,
 };

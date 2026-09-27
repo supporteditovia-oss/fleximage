@@ -185,10 +185,16 @@ export default function VideoIA() {
     (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
+  const plannedV2vProvider =
+    workflow === "video_to_video"
+      ? resolveV2VProviderForStudio(swapPrompt)
+      : null;
   const creditCost = adminPreviewVideoCreditCost({
     workflow,
     voiceEnabled,
     preserveSourceAudio: preserveSourceVoice,
+    sourceVideoDurationSec: videoDurationSec,
+    v2vProvider: plannedV2vProvider,
   });
 
   const buildVoicePayload = () =>

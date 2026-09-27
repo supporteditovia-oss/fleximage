@@ -33,7 +33,11 @@ function computeVideoCreditCost(options) {
 
   let cost =
     options.workflow === "video_to_video"
-      ? computeV2VCreditCost(options.sourceVideoDurationSec, false)
+      ? computeV2VCreditCost(
+          options.sourceVideoDurationSec,
+          options.v2vProvider,
+          false,
+        )
       : VIDEO_FLAT_CREDIT_COST;
 
   if (options.workflow === "video_to_video") {

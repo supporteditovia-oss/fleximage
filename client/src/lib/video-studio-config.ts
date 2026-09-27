@@ -1,9 +1,13 @@
 import {
   VIDEO_FLAT_CREDIT_COST,
   VIDEO_I2V_CREDIT_COST,
-  VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
+  computeV2VCreditCost as sharedComputeV2VCreditCost,
+  computeVideoStudioCreditCost,
+  type V2VStudioProvider,
 } from "@shared/credit-costs";
+
+export type { V2VStudioProvider };
 
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
@@ -178,12 +182,13 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
 ];
 
 export function computeV2VCreditCost(
-  _sourceVideoDurationSec?: number | null,
+  sourceVideoDurationSec?: number | null,
+  v2vProvider?: V2VStudioProvider | null,
 ): number {
-  return VIDEO_V2V_CREDIT_COST;
+  return sharedComputeV2VCreditCost(sourceVideoDurationSec, v2vProvider);
 }
 
-/** 1 vidéo = 60 crédits (I2V max 5s · V2V source max 8s, 720p) ; +5 voix IA / voix filmée. */
+/** I2V 85 cr · V2V selon moteur + durée source ; +5 voix. */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
@@ -191,17 +196,9 @@ export function computeVideoCreditCost(params: {
   preserveSourceAudio?: boolean;
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
+  v2vProvider?: V2VStudioProvider | null;
 }): number {
-  let cost =
-    params.workflow === "video_to_video"
-      ? computeV2VCreditCost(params.sourceVideoDurationSec)
-      : VIDEO_I2V_CREDIT_COST;
-  if (params.workflow === "video_to_video") {
-    if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
-  } else if (params.voiceEnabled) {
-    cost += VIDEO_VOICE_EXTRA_CREDIT;
-  }
-  return cost;
+  return computeVideoStudioCreditCost(params);
 }
 
 export function maxVoiceCharsForVideoDuration(durationSec?: number | null): number {
