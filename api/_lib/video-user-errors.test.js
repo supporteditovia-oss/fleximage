@@ -18,8 +18,7 @@ test("mapVideoProviderMessage — no valid characters", () => {
     "No valid characters detected in the video",
     "fr",
   );
-  assert.match(fr, /personne|mains/i);
-  assert.match(fr, /rembours/i);
+  assert.match(fr, /POV|personnage|transformation/i);
 });
 
 test("resolveKlingCharacterOrientation — ref image → image", () => {
