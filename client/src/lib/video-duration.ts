@@ -4,11 +4,24 @@ import {
   VIDEO_V2V_MIN_DURATION_SEC,
 } from "@/lib/video-studio-config";
 
+const READ_DURATION_TIMEOUT_MS = 15_000;
+
 export function readVideoDurationSec(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "metadata";
+    video.playsInline = true;
+    video.muted = true;
+
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      cleanup();
+      fn();
+    };
 
     const cleanup = () => {
       URL.revokeObjectURL(url);
@@ -16,19 +29,27 @@ export function readVideoDurationSec(file: File): Promise<number> {
       video.load();
     };
 
+    const timer = window.setTimeout(() => {
+      finish(() =>
+        reject(
+          new Error(
+            "Lecture trop longue — réessaie ou exporte la vidéo en MP4 (720p).",
+          ),
+        ),
+      );
+    }, READ_DURATION_TIMEOUT_MS);
+
     video.onloadedmetadata = () => {
       const duration = video.duration;
-      cleanup();
       if (!Number.isFinite(duration) || duration <= 0) {
-        reject(new Error("Durée vidéo illisible"));
+        finish(() => reject(new Error("Durée vidéo illisible")));
         return;
       }
-      resolve(duration);
+      finish(() => resolve(duration));
     };
 
     video.onerror = () => {
-      cleanup();
-      reject(new Error("Impossible de lire la vidéo"));
+      finish(() => reject(new Error("Impossible de lire la vidéo")));
     };
 
     video.src = url;

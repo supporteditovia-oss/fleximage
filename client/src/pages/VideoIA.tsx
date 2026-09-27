@@ -59,6 +59,7 @@ import { consumeVideoStudioPrefill } from "@/lib/video-studio-prefill";
 import {
   formatVideoSizeMb,
   prepareVideoFileForStudio,
+  prepareVideoFileForStudioWithTimeout,
   type StudioVideoUpload,
 } from "@/lib/upload-video";
 import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
@@ -129,12 +130,14 @@ export default function VideoIA() {
   const [videoSource, setVideoSource] = useState<StudioVideoUpload | null>(
     null,
   );
+  /** Fichier local prêt dès la lecture metadata — ne pas attendre R2/base64. */
+  const [localVideoFile, setLocalVideoFile] = useState<File | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   /** Lecture durée + vignette (court). */
   const [isVideoReading, setIsVideoReading] = useState(false);
   /** Envoi cloud / encodage base64 en arrière-plan — ne bloque plus toute la page. */
   const [isVideoCloudSync, setIsVideoCloudSync] = useState(false);
-  const [showVideoPlayback, setShowVideoPlayback] = useState(false);
   const videoUploadGenRef = useRef(0);
   const [refImagePreview, setRefImagePreview] = useState<string | null>(null);
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
@@ -211,13 +214,12 @@ export default function VideoIA() {
     motionPrompt.trim().length >= 5 &&
     voiceReady &&
     canAfford;
+  const hasVideoReady = Boolean(videoSource || localVideoFile);
   const canGenerateV2V =
-    Boolean(videoSource) &&
+    hasVideoReady &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !isVideoReading &&
-    !isVideoCloudSync &&
-    Boolean(videoSource);
+    !isVideoReading;
 
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
@@ -266,10 +268,11 @@ export default function VideoIA() {
       return;
     }
     const uploadGen = ++videoUploadGenRef.current;
-    setShowVideoPlayback(false);
     setIsVideoReading(true);
     setIsVideoCloudSync(false);
     setVideoSource(null);
+    setLocalVideoFile(null);
+    setVideoDurationSec(null);
     let fileReadyForCloud: File | null = null;
     try {
       const duration = await readVideoDurationSec(normalized);
@@ -283,6 +286,7 @@ export default function VideoIA() {
         return;
       }
       fileReadyForCloud = normalized;
+      setLocalVideoFile(normalized);
 
       setVideoPreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);
@@ -331,23 +335,24 @@ export default function VideoIA() {
     setIsVideoCloudSync(true);
     void (async () => {
       try {
-        const prepared = await prepareVideoFileForStudio(fileReadyForCloud);
+        const prepared = await prepareVideoFileForStudioWithTimeout(
+          fileReadyForCloud,
+        );
         if (videoUploadGenRef.current !== uploadGen) return;
         setVideoSource(prepared);
       } catch (err: unknown) {
         if (videoUploadGenRef.current !== uploadGen) return;
-        const message =
-          err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
-        toast({
-          variant: "destructive",
-          title: "Envoi impossible",
-          description: message,
-        });
-        setVideoPreview((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return null;
-        });
-        setVideoDurationSec(null);
+        const isTimeout =
+          err instanceof Error && err.message === "PREPARE_VIDEO_TIMEOUT";
+        if (!isTimeout) {
+          const message =
+            err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
+          toast({
+            variant: "destructive",
+            title: "Préparation lente",
+            description: `${message} Tu peux quand même lancer la transformation — envoi au clic.`,
+          });
+        }
       } finally {
         if (videoUploadGenRef.current === uploadGen) {
           setIsVideoCloudSync(false);
@@ -441,7 +446,28 @@ export default function VideoIA() {
 
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
-    if (!canGenerateV2V || !videoSource) return;
+    if (!canGenerateV2V) return;
+
+    let source = videoSource;
+    if (!source && localVideoFile) {
+      setIsVideoCloudSync(true);
+      try {
+        source = await prepareVideoFileForStudio(localVideoFile);
+        setVideoSource(source);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
+        toast({
+          variant: "destructive",
+          title: "Envoi impossible",
+          description: message,
+        });
+        return;
+      } finally {
+        setIsVideoCloudSync(false);
+      }
+    }
+    if (!source) return;
 
     releaseGenerationLoaderTheme();
     const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
@@ -465,9 +491,9 @@ export default function VideoIA() {
       const result = await generateVideo.mutateAsync({
         workflow: "video_to_video",
         aspect_ratio: aspectRatio,
-        ...(videoSource.mode === "url"
-          ? { video_url: videoSource.videoUrl }
-          : { videos: [videoSource.dataUrl] }),
+        ...(source.mode === "url"
+          ? { video_url: source.videoUrl }
+          : { videos: [source.dataUrl] }),
         vehicle_prompt: sanitizedPrompt,
         source_video_duration_sec: videoDurationSec ?? undefined,
         preserve_source_audio: preserveSourceVoice,
@@ -805,32 +831,26 @@ export default function VideoIA() {
 
             {videoPreview && (
               <div className="via-preview-frame">
-                {refImagePreview && !showVideoPlayback ? (
-                  <button
-                    type="button"
-                    className="via-preview-frame__still-btn"
-                    onClick={() => setShowVideoPlayback(true)}
-                  >
-                    <img
-                      src={refImagePreview}
-                      alt="Aperçu de ta vidéo"
-                      className="via-preview-frame__still"
-                    />
-                    <span className="via-preview-frame__play-hint">
-                      Appuie pour lire la vidéo
-                    </span>
-                  </button>
-                ) : (
-                  <video
-                    src={videoPreview}
-                    poster={refImagePreview ?? undefined}
-                    controls
-                    autoPlay={showVideoPlayback}
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
-                )}
+                <video
+                  ref={videoPreviewRef}
+                  src={videoPreview}
+                  poster={refImagePreview ?? undefined}
+                  controls
+                  muted
+                  playsInline
+                  preload="auto"
+                  className="via-preview-frame__video"
+                  onLoadedMetadata={(e) => {
+                    const el = e.currentTarget;
+                    try {
+                      if (el.duration > 0.05) {
+                        el.currentTime = Math.min(0.05, el.duration * 0.02);
+                      }
+                    } catch {
+                      /* iOS blob seek */
+                    }
+                  }}
+                />
               </div>
             )}
             {isVideoCloudSync ? (
@@ -839,8 +859,8 @@ export default function VideoIA() {
                   className="mr-1 inline h-3.5 w-3.5 animate-spin align-[-2px]"
                   aria-hidden
                 />
-                Finalisation de l&apos;import en arrière-plan… Tu peux déjà
-                remplir le prompt.
+                Préparation serveur en cours… Tu peux remplir le prompt et
+                lancer — envoi final au clic si besoin.
               </p>
             ) : null}
 
@@ -957,8 +977,7 @@ export default function VideoIA() {
                 !canGenerateV2V ||
                 isSubmitting ||
                 generateVideo.isPending ||
-                isVideoReading ||
-                isVideoCloudSync
+                isVideoReading
               }
               onClick={() => void handleGenerateV2V()}
             >

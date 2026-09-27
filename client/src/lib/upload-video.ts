@@ -81,7 +81,25 @@ async function uploadVideoDirectToR2(file: File): Promise<string> {
   return videoUrl;
 }
 
-const INLINE_READ_TIMEOUT_MS = 90_000;
+const INLINE_READ_TIMEOUT_MS = 45_000;
+
+const PREPARE_VIDEO_SOFT_TIMEOUT_MS = 28_000;
+
+/** Préparation R2 / base64 — abandon silencieux après timeout (reprise au clic Générer). */
+export async function prepareVideoFileForStudioWithTimeout(
+  file: File,
+  timeoutMs = PREPARE_VIDEO_SOFT_TIMEOUT_MS,
+): Promise<StudioVideoUpload> {
+  return Promise.race([
+    prepareVideoFileForStudio(file),
+    new Promise<StudioVideoUpload>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error("PREPARE_VIDEO_TIMEOUT")),
+        timeoutMs,
+      );
+    }),
+  ]);
+}
 
 async function uploadInlineDataUrl(file: File): Promise<StudioVideoUpload> {
   const normalized = withNormalizedVideoFile(file);
