@@ -225,15 +225,19 @@ const TransformeTaVoiture = React.lazy(
 
 function TransformeTaVoitureRoute() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      }
-    >
-      <TransformeTaVoiture />
-    </React.Suspense>
+    <StudioFeatureRoute
+      component={() => (
+        <React.Suspense
+          fallback={
+            <div className="flex h-48 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }
+        >
+          <TransformeTaVoiture />
+        </React.Suspense>
+      )}
+    />
   );
 }
 

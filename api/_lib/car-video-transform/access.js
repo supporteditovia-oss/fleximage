@@ -1,23 +1,10 @@
 const { getClientIp } = require("../client-ip");
 
-function isProductionEnv() {
-  return process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
-}
-
-function parseDevWhitelist() {
-  const raw = String(process.env.CAR_VIDEO_DEV_USER_IDS || "").trim();
-  if (!raw) return new Set();
-  return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-}
-
-/**
- * Prod : abonné actif ou crédits suffisants (vérifié avant débit).
- * Dev : admin ou whitelist (CAR_VIDEO_DEV_USER_IDS), sauf CAR_VIDEO_DEV_OPEN=1.
- */
-async function assertCarVideoGenerationAccess(supabase, userId, { creditCost }) {
+/** Preview admin — clients n’y ont pas accès (UI + API). */
+async function assertCarVideoAdminAccess(supabase, userId) {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, is_subscriber, credits")
+    .select("role, credits")
     .eq("id", userId)
     .single();
 
@@ -26,32 +13,24 @@ async function assertCarVideoGenerationAccess(supabase, userId, { creditCost }) 
   }
 
   const isAdmin = profile.role === "admin";
-
-  if (!isProductionEnv()) {
-    const devOpen = process.env.CAR_VIDEO_DEV_OPEN === "1";
-    const whitelist = parseDevWhitelist();
-    if (!devOpen && !isAdmin && !whitelist.has(userId)) {
-      throw Object.assign(
-        new Error(
-          "Fonctionnalité réservée aux comptes admin en environnement de développement.",
-        ),
-        { status: 403, code: "CAR_VIDEO_DEV_RESTRICTED" },
-      );
-    }
-  } else if (!isAdmin && !profile.is_subscriber) {
+  if (!isAdmin) {
     throw Object.assign(
-      new Error("Abonnement requis pour lancer une transformation vidéo."),
-      { status: 402, code: "PAYMENT_REQUIRED" },
+      new Error("Fonctionnalité réservée aux administrateurs."),
+      { status: 403, code: "CAR_VIDEO_ADMIN_ONLY" },
     );
   }
 
-  if (!isAdmin && Number(profile.credits) < creditCost) {
+  return { profile, isAdmin: true };
+}
+
+async function assertCarVideoGenerationAccess(supabase, userId, { creditCost }) {
+  const { profile, isAdmin } = await assertCarVideoAdminAccess(supabase, userId);
+  if (creditCost > 0 && Number(profile.credits) < creditCost) {
     throw Object.assign(new Error("Plus assez de jetons pour cette génération."), {
       status: 402,
       code: "INSUFFICIENT_CREDITS",
     });
   }
-
   return { profile, isAdmin };
 }
 
@@ -99,7 +78,7 @@ async function bumpCarVideoRateLimit(supabase, userId, req) {
 }
 
 module.exports = {
+  assertCarVideoAdminAccess,
   assertCarVideoGenerationAccess,
   bumpCarVideoRateLimit,
-  isProductionEnv,
 };

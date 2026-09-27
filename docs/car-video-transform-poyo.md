@@ -32,7 +32,7 @@ Configurer R2 (`R2_*`) comme le reste du studio vidéo — les uploads passent p
 4. Valider l'upload, choisir **Extérieur** + **SUV luxe noir**, confirmer.
 5. Le backend appelle PoYo (`wan2.7-edit-video`, **720p** fixe) ; le frontend interroge `GET /api/video-generations/:id` toutes les 5 s.
 
-En production, un **abonnement actif** est requis ; en dev, compte **admin** ou whitelist sauf `CAR_VIDEO_DEV_OPEN=1`.
+**Accès admin uniquement** (comme le studio Vidéo IA en preview) — les clients sont redirigés vers `/create` et l’API renvoie `403 CAR_VIDEO_ADMIN_ONLY`.
 
 ## Stockage
 

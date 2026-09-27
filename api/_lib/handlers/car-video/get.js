@@ -1,4 +1,5 @@
 const { requireUser, sendError } = require("../../user-auth");
+const { assertCarVideoAdminAccess } = require("../../car-video-transform/access");
 const { maybePollCarVideoGeneration } = require("../../car-video-transform/poll");
 
 function publicStatusLabel(status) {
@@ -48,6 +49,7 @@ module.exports = async function carVideoGetHandler(req, res, generationId) {
 
   try {
     const { supabase, userId } = await requireUser(req);
+    await assertCarVideoAdminAccess(supabase, userId);
     const { data: row, error } = await supabase
       .from("car_video_generations")
       .select("*")

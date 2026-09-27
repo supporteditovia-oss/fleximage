@@ -1,6 +1,9 @@
 const { requireUser, readBody, sendError } = require("../../user-auth");
 const { createCarVideoPresignedUpload } = require("../../car-video-transform/upload-presign");
-const { bumpCarVideoRateLimit } = require("../../car-video-transform/access");
+const {
+  assertCarVideoAdminAccess,
+  bumpCarVideoRateLimit,
+} = require("../../car-video-transform/access");
 
 module.exports = async function carVideoUploadHandler(req, res) {
   if (req.method !== "POST") {
@@ -10,6 +13,7 @@ module.exports = async function carVideoUploadHandler(req, res) {
 
   try {
     const { supabase, userId } = await requireUser(req);
+    await assertCarVideoAdminAccess(supabase, userId);
     await bumpCarVideoRateLimit(supabase, userId, req);
     const body = readBody(req);
     const result = await createCarVideoPresignedUpload(userId, {
