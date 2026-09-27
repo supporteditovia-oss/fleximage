@@ -83,6 +83,22 @@
       "destination": "/api/admin-router?__adminPath=cron/provider-env"
     },
     {
+      "source": "/api/video-generations/upload",
+      "destination": "/api/video-generations-router?__videoGenPath=upload"
+    },
+    {
+      "source": "/api/video-generations",
+      "destination": "/api/video-generations-router"
+    },
+    {
+      "source": "/api/video-generations/(.*)",
+      "destination": "/api/video-generations-router?__videoGenPath=$1"
+    },
+    {
+      "source": "/api/webhooks/poyo",
+      "destination": "/api/webhooks-poyo"
+    },
+    {
       "source": "/api/larps/(.*)",
       "destination": "/api/larps-router?__larpsPath=$1"
     },

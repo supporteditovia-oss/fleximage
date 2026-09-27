@@ -219,6 +219,24 @@ function VideoIARoute() {
   return <StudioFeatureRoute component={VideoIA} />;
 }
 
+const TransformeTaVoiture = React.lazy(
+  () => import("@/pages/TransformeTaVoiture"),
+);
+
+function TransformeTaVoitureRoute() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <TransformeTaVoiture />
+    </React.Suspense>
+  );
+}
+
 function ProtectedAppRoutes() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
@@ -273,6 +291,7 @@ function ProtectedAppRoutes() {
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
           <Route path="/video-ia" component={VideoIARoute} />
+          <Route path="/transforme-ta-voiture" component={TransformeTaVoitureRoute} />
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/voix-prete" component={VoixPrete} />
           <Route path="/video-prete" component={VideoPrete} />
