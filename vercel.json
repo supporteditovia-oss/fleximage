@@ -92,7 +92,7 @@
     },
     {
       "source": "/admin/api/(.*)",
-      "destination": "/api/crm-admin-router?__crmPath=$1"
+      "destination": "/api/admin-router?__adminPath=crm/$1"
     },
     {
       "source": "/api/templates",

@@ -5,27 +5,10 @@ const {
   readSessionCookie,
   setSessionCookie,
   clearSessionCookie,
-} = require("./_lib/crm-auth");
+} = require("./crm-auth");
 
-function crmPathParts(req) {
-  const fromQuery = req.query && req.query.__crmPath;
-  if (typeof fromQuery === "string" && fromQuery.length > 0) {
-    return fromQuery.split("/").filter(Boolean);
-  }
-  const rawUrl = String(req.url || "");
-  const match = rawUrl.match(/\/admin\/api\/?(.*)$/i);
-  if (!match) return [];
-  return match[1].split("/").filter(Boolean);
-}
-
-module.exports = async function handler(req, res) {
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-
-  const parts = crmPathParts(req);
-
+/** Routes CRM : login / logout / session (parts sans préfixe `crm`). */
+async function handleCrmAdminApi(req, res, parts) {
   if (parts[0] === "login" && !parts[1] && req.method === "POST") {
     try {
       let body = req.body;
@@ -75,4 +58,6 @@ module.exports = async function handler(req, res) {
   }
 
   res.status(404).json({ error: "Not found" });
-};
+}
+
+module.exports = { handleCrmAdminApi };

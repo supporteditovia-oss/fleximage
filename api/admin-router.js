@@ -6,6 +6,7 @@ const funnelHandler = require("./_lib/handlers/admin-funnel");
 const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
 const cronProviderEnv = require("./_lib/handlers/cron-provider-env");
+const { handleCrmAdminApi } = require("./_lib/crm-admin-api");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__adminPath;
@@ -34,6 +35,11 @@ module.exports = async function handler(req, res) {
   }
 
   const parts = pathParts(req);
+
+  // /admin/api/* → rewrite __adminPath=crm/… (limite Hobby : pas de fonction dédiée)
+  if (parts[0] === "crm") {
+    return handleCrmAdminApi(req, res, parts.slice(1));
+  }
 
   // GET /api/admin/users/:id/activity
   if (

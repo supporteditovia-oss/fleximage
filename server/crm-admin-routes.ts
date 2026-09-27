@@ -1,9 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const crmRouter = require("../api/crm-admin-router.js") as (
-  req: Request,
-  res: Response,
-) => Promise<void>;
+const { handleCrmAdminApi } = require("../api/_lib/crm-admin-api.js") as {
+  handleCrmAdminApi: (
+    req: Request,
+    res: Response,
+    parts: string[],
+  ) => Promise<void>;
+};
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const {
   verifySessionToken,
@@ -20,8 +23,8 @@ const CRM_PROTECTED_HTML =
 
 export function registerCrmAdminRoutes(app: Express) {
   app.use("/admin/api", (req, res) => {
-    req.query = { ...(req.query as object), __crmPath: req.path.replace(/^\//, "") };
-    void crmRouter(req, res);
+    const parts = req.path.replace(/^\//, "").split("/").filter(Boolean);
+    void handleCrmAdminApi(req, res, parts);
   });
 
   app.use(async (req: Request, res: Response, next: NextFunction) => {
