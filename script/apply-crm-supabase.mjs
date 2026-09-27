@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Applique la migration CRM sur le projet Supabase lié à VITE_SUPABASE_URL.
+ * Applique les migrations CRM sur le projet Supabase lié à VITE_SUPABASE_URL.
  * Nécessite SUPABASE_ACCESS_TOKEN (Dashboard → Account → Access Tokens).
  *
- * Usage: node script/apply-crm-supabase.mjs
+ * Usage: npm run crm:db:apply
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -26,28 +26,37 @@ if (!ref) {
   process.exit(1);
 }
 
-const sqlPath = path.resolve(
-  "supabase/migrations/20260927120000_crm_core_tables_and_seed.sql",
-);
-const query = fs.readFileSync(sqlPath, "utf8");
+const migrationsDir = path.resolve("supabase/migrations");
+const files = fs
+  .readdirSync(migrationsDir)
+  .filter((f) => /^20260927.*\.sql$/.test(f))
+  .sort();
 
-const res = await fetch(
-  `https://api.supabase.com/v1/projects/${ref}/database/query`,
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query }),
-  },
-);
-
-const text = await res.text();
-if (!res.ok) {
-  console.error("Échec Supabase SQL API:", res.status, text);
+if (!files.length) {
+  console.error("Aucune migration CRM trouvée dans supabase/migrations/");
   process.exit(1);
 }
 
-console.log("✓ Migration CRM appliquée sur le projet", ref);
-if (text) console.log(text);
+for (const file of files) {
+  const query = fs.readFileSync(path.join(migrationsDir, file), "utf8");
+  console.log("→", file);
+  const res = await fetch(
+    `https://api.supabase.com/v1/projects/${ref}/database/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("Échec Supabase SQL API:", res.status, text);
+    process.exit(1);
+  }
+  if (text && text !== "[]") console.log(text);
+}
+
+console.log("✓ Migrations CRM appliquées sur le projet", ref, `(${files.length} fichiers)`);

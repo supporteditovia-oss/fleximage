@@ -9,7 +9,10 @@ async function getLatestPovPreset() {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) return null;
+    throw error;
+  }
   return data;
 }
 

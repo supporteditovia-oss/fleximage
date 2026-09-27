@@ -11,4 +11,13 @@ function isCrmSchemaMissingError(err) {
   );
 }
 
-module.exports = { isCrmSchemaMissingError };
+function crmSchemaNotReadyError() {
+  return Object.assign(
+    new Error(
+      "Base CRM non initialisée — appliquez les migrations Supabase (npm run crm:db:apply ou SQL Editor).",
+    ),
+    { status: 503, code: "CRM_SCHEMA_MISSING" },
+  );
+}
+
+module.exports = { isCrmSchemaMissingError, crmSchemaNotReadyError };

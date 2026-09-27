@@ -55,7 +55,7 @@ async function fetchDashboard() {
       .from("crm_schedule")
       .select("id", { count: "exact", head: true })
       .eq("status", "scheduled")
-      .eq("platform", "youtube"),
+      .in("platform", ["tiktok", "youtube"]),
     sb
       .from("crm_schedule")
       .select(

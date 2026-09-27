@@ -113,7 +113,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Vidéos en attente" value={stats.videosPending} />
         <StatCard label="Publiées aujourd'hui" value={stats.publishedToday} />
-        <StatCard label="Shorts en file" value={stats.shortsInQueue} />
+        <StatCard label="Shorts programmés" value={stats.shortsInQueue} />
       </div>
 
       <GlassCard variant="flat" className="h-72">

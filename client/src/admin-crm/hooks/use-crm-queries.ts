@@ -31,6 +31,13 @@ export function useCrmWarmup() {
   });
 }
 
+export function useCrmFolders() {
+  return useQuery({
+    queryKey: ["crm", "folders"],
+    queryFn: async () => (await crmApi.folders.list()).items,
+  });
+}
+
 export function useCrmMedia(folderKey?: string, search?: string) {
   return useQuery({
     queryKey: ["crm", "media", folderKey, search],

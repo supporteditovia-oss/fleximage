@@ -1,6 +1,10 @@
 const { getCrmSupabase } = require("./supabase");
 const { logCrmActivity } = require("./activity");
-const { isCrmSchemaMissingError } = require("./schema-errors");
+const {
+  isCrmSchemaMissingError,
+  crmSchemaNotReadyError,
+} = require("./schema-errors");
+const { uploadCrmAvatar } = require("./storage");
 
 const ACCOUNT_SELECT =
   "id, platform, username, display_name, avatar_url, banner_url, country_code, language_code, timezone, status, warmup_phase, warmup_day, warmup_trust_score, warmup_interactions_total, followers, likes, views, created_at, updated_at";
@@ -81,11 +85,19 @@ async function getAccount(id) {
 
 async function createAccount(body) {
   const sb = getCrmSupabase();
+  let avatarUrl = body.avatar_url || null;
+  if (body.avatar_base64) {
+    avatarUrl = await uploadCrmAvatar({
+      dataBase64: body.avatar_base64,
+      contentType: body.avatar_content_type,
+      fileName: body.avatar_file_name,
+    });
+  }
   const payload = {
     platform: body.platform,
     username: String(body.username || "").replace(/^@/, ""),
     display_name: body.display_name || body.username,
-    avatar_url: body.avatar_url || null,
+    avatar_url: avatarUrl,
     banner_url: body.banner_url || null,
     country_code: (body.country_code || "FR").toUpperCase().slice(0, 2),
     language_code: body.language_code || "fr",
@@ -101,7 +113,18 @@ async function createAccount(body) {
     .insert(payload)
     .select(ACCOUNT_SELECT)
     .single();
-  if (error) throw error;
+  if (error) {
+    if (isCrmSchemaMissingError(error)) throw crmSchemaNotReadyError();
+    if (error.code === "23505") {
+      throw Object.assign(
+        new Error(
+          "Ce @username existe déjà sur cette plateforme pour ce pays — choisissez un autre pseudo ou un autre pays.",
+        ),
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
   await logCrmActivity("account", `Compte ajouté @${data.username} (${data.platform})`, {
     id: data.id,
   });

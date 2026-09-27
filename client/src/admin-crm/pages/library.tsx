@@ -1,41 +1,71 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "@/admin-crm/components/ui/GlassCard";
 import { CrmEmptyState } from "@/admin-crm/components/CrmEmptyState";
-import { useCrmMedia, useCrmInvalidate } from "@/admin-crm/hooks/use-crm-queries";
+import {
+  useCrmMedia,
+  useCrmFolders,
+  useCrmInvalidate,
+} from "@/admin-crm/hooks/use-crm-queries";
 import { crmApi } from "@/admin-crm/lib/crm-api";
-import { CRM_MEDIA_FOLDERS } from "@/admin-crm/lib/constants";
+import {
+  fileToBase64,
+  isAllowedMediaFile,
+  MEDIA_ACCEPT,
+} from "@/admin-crm/lib/crm-files";
 import type { CrmMedia } from "@/admin-crm/types";
-import { UploadCloud, Search, Star, Loader2 } from "lucide-react";
+import { UploadCloud, Search, Star, Loader2, FolderPlus } from "lucide-react";
 
 export default function LibraryPage() {
   const [folder, setFolder] = useState("photos/normal");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [uploading, setUploading] = useState(false);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderLabel, setNewFolderLabel] = useState("");
+  const [newFolderGroup, setNewFolderGroup] = useState<"photos" | "videos">("photos");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: folders, isLoading: foldersLoading } = useCrmFolders();
   const { data, isLoading } = useCrmMedia(folder, search);
   const invalidate = useCrmInvalidate();
+
+  const grouped = useMemo(() => {
+    const photos = (folders || []).filter((f) => f.parent_group === "photos");
+    const videos = (folders || []).filter((f) => f.parent_group === "videos");
+    return { photos, videos };
+  }, [folders]);
+
+  const uploadFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const list = Array.from(files).filter(isAllowedMediaFile);
+      if (!list.length) return;
+      setUploading(true);
+      try {
+        for (const file of list) {
+          const dataBase64 = await fileToBase64(file);
+          await crmApi.media.upload({
+            folder_key: folder,
+            fileName: file.name,
+            contentType: file.type,
+            dataBase64,
+          });
+        }
+        invalidate();
+      } finally {
+        setUploading(false);
+      }
+    },
+    [folder, invalidate],
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const files = e.dataTransfer.files;
-      if (!files?.length) return;
-      void (async () => {
-        for (const file of Array.from(files)) {
-          const url = URL.createObjectURL(file);
-          await crmApi.media.create({
-            folder_key: folder,
-            name: file.name,
-            media_type: file.type.startsWith("video") ? "video" : "image",
-            file_url: url,
-            thumbnail_url: url,
-            status: "pending",
-          });
-        }
-        invalidate();
-      })();
+      if (e.dataTransfer.files?.length) {
+        void uploadFiles(e.dataTransfer.files);
+      }
     },
-    [folder, invalidate],
+    [uploadFiles],
   );
 
   function toggleSelect(id: string) {
@@ -54,7 +84,19 @@ export default function LibraryPage() {
     invalidate();
   }
 
-  if (isLoading) {
+  async function createFolder() {
+    if (!newFolderLabel.trim()) return;
+    const created = await crmApi.folders.create({
+      label: newFolderLabel.trim(),
+      parent_group: newFolderGroup,
+    });
+    setFolder(created.folder_key);
+    setNewFolderOpen(false);
+    setNewFolderLabel("");
+    invalidate();
+  }
+
+  if (isLoading || foldersLoading) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin" />
@@ -64,34 +106,78 @@ export default function LibraryPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="lux-display text-2xl">Bibliothèque</h1>
-        <p className="text-sm text-[var(--lux-text-muted)]">
-          Dossiers structurés — drop, tags, filtres
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="lux-display text-2xl">Bibliothèque</h1>
+          <p className="text-sm text-[var(--lux-text-muted)]">
+            JPG, PNG, WEBP, MP4, MOV → Supabase Storage
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setNewFolderOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm border border-[var(--lux-glass-border)]"
+          >
+            <FolderPlus size={16} /> Nouveau dossier
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm bg-[var(--lux-gold-soft)] text-[var(--lux-gold)]"
+          >
+            <UploadCloud size={16} /> Importer
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={MEDIA_ACCEPT.accept}
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) void uploadFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <GlassCard variant="flat" className="md:col-span-1 space-y-3">
-          {CRM_MEDIA_FOLDERS.map((group) => (
-            <div key={group.id}>
-              <p className="text-xs text-[var(--lux-text-muted)] mb-1">📁 {group.label}</p>
-              {group.children.map((child) => (
-                <button
-                  key={child.key}
-                  type="button"
-                  onClick={() => setFolder(child.key)}
-                  className={`block w-full text-left text-sm px-2 py-1.5 rounded-lg ${
-                    folder === child.key
-                      ? "bg-[var(--lux-glass)] text-[var(--lux-text)]"
-                      : "text-[var(--lux-text-muted)] hover:text-[var(--lux-text)]"
-                  }`}
-                >
-                  {child.label}
-                </button>
-              ))}
-            </div>
-          ))}
+        <GlassCard variant="flat" className="md:col-span-1 space-y-4">
+          <div>
+            <p className="text-xs text-[var(--lux-text-muted)] mb-1">📸 Photos</p>
+            {grouped.photos.map((child) => (
+              <button
+                key={child.folder_key}
+                type="button"
+                onClick={() => setFolder(child.folder_key)}
+                className={`block w-full text-left text-sm px-2 py-1.5 rounded-lg ${
+                  folder === child.folder_key
+                    ? "bg-[var(--lux-glass)] text-[var(--lux-text)]"
+                    : "text-[var(--lux-text-muted)] hover:text-[var(--lux-text)]"
+                }`}
+              >
+                {child.label}
+              </button>
+            ))}
+          </div>
+          <div>
+            <p className="text-xs text-[var(--lux-text-muted)] mb-1">🎥 Vidéos</p>
+            {grouped.videos.map((child) => (
+              <button
+                key={child.folder_key}
+                type="button"
+                onClick={() => setFolder(child.folder_key)}
+                className={`block w-full text-left text-sm px-2 py-1.5 rounded-lg ${
+                  folder === child.folder_key
+                    ? "bg-[var(--lux-glass)] text-[var(--lux-text)]"
+                    : "text-[var(--lux-text-muted)] hover:text-[var(--lux-text)]"
+                }`}
+              >
+                {child.label}
+              </button>
+            ))}
+          </div>
         </GlassCard>
 
         <div className="md:col-span-3 space-y-4">
@@ -122,14 +208,14 @@ export default function LibraryPage() {
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
-            className="rounded-2xl border border-dashed border-[var(--lux-glass-border)] p-6 text-center text-sm text-[var(--lux-text-muted)] mb-2"
+            className="rounded-2xl border border-dashed border-[var(--lux-glass-border)] p-6 text-center text-sm text-[var(--lux-text-muted)]"
           >
             <UploadCloud className="mx-auto mb-2 opacity-60" size={24} />
-            Glisser-déposer ici — upload stockage (S3/R2) à brancher sur `file_url`
+            {uploading ? "Import en cours…" : "Glisser-déposer des fichiers ici"}
           </div>
 
           {!data?.length ? (
-            <CrmEmptyState title="Dossier vide" hint="Importe des médias ou change de dossier." />
+            <CrmEmptyState title="Dossier vide" hint="Importe des médias pour ce dossier." />
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <AnimatePresence>
@@ -166,18 +252,8 @@ export default function LibraryPage() {
                       <div className="p-3 space-y-1">
                         <p className="text-sm truncate">{item.name}</p>
                         <p className="text-[10px] text-[var(--lux-text-muted)]">
-                          {item.status} · {item.niche || "—"} · {item.country_code || "—"}
+                          {item.status} · {item.country_code || "—"}
                         </p>
-                        <div className="flex flex-wrap gap-1">
-                          {item.tags?.slice(0, 3).map((t) => (
-                            <span
-                              key={t}
-                              className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--lux-glass)]"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                     </GlassCard>
                   </motion.div>
@@ -187,6 +263,42 @@ export default function LibraryPage() {
           )}
         </div>
       </div>
+
+      {newFolderOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <GlassCard className="w-full max-w-sm space-y-3 lux-glow-gold">
+            <h2 className="lux-display text-lg">Nouveau dossier</h2>
+            <select
+              className="crm-input"
+              value={newFolderGroup}
+              onChange={(e) =>
+                setNewFolderGroup(e.target.value as "photos" | "videos")
+              }
+            >
+              <option value="photos">📸 Photos</option>
+              <option value="videos">🎥 Vidéos</option>
+            </select>
+            <input
+              className="crm-input"
+              placeholder="Nom du dossier"
+              value={newFolderLabel}
+              onChange={(e) => setNewFolderLabel(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setNewFolderOpen(false)} className="text-sm px-3">
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void createFolder()}
+                className="px-4 py-2 rounded-lg bg-[var(--lux-gold-soft)] text-[var(--lux-gold)] text-sm"
+              >
+                Créer
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      ) : null}
     </div>
   );
 }

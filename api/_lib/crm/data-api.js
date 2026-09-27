@@ -8,6 +8,7 @@ const media = require("./media");
 const music = require("./music");
 const posts = require("./posts");
 const pov = require("./pov");
+const folders = require("./folders");
 
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -80,7 +81,22 @@ async function handleCrmDataApi(req, res, parts) {
       }
     }
 
+    if (resource === "folders") {
+      if (!id && method === "GET") {
+        res.status(200).json({ items: await folders.listFolders() });
+        return;
+      }
+      if (!id && method === "POST") {
+        res.status(201).json(await folders.createFolder(parseBody(req)));
+        return;
+      }
+    }
+
     if (resource === "media") {
+      if (id === "upload" && method === "POST") {
+        res.status(201).json(await media.uploadMedia(parseBody(req)));
+        return;
+      }
       if (!id && method === "GET") {
         res.status(200).json({ items: await media.listMedia(queryRecord(req)) });
         return;
@@ -102,6 +118,10 @@ async function handleCrmDataApi(req, res, parts) {
     }
 
     if (resource === "music") {
+      if (id === "upload" && method === "POST") {
+        res.status(201).json(await music.uploadMusic(parseBody(req)));
+        return;
+      }
       if (!id && method === "GET") {
         res.status(200).json({ items: await music.listMusic(queryRecord(req)) });
         return;
@@ -178,6 +198,25 @@ async function handleCrmDataApi(req, res, parts) {
         res.status(200).json({ preset: null, schemaReady: false });
         return;
       }
+      if (method === "GET" && resource === "folders") {
+        res.status(200).json({ items: [], schemaReady: false });
+        return;
+      }
+      if (method !== "GET") {
+        res.status(503).json({
+          error:
+            "Base CRM non initialisée — appliquez les migrations Supabase (npm run crm:db:apply).",
+          code: "CRM_SCHEMA_MISSING",
+        });
+        return;
+      }
+    }
+    if (err.code === "CRM_BUCKET_MISSING" || err.code === "CRM_SCHEMA_MISSING") {
+      res.status(err.status || 503).json({
+        error: err.message,
+        code: err.code,
+      });
+      return;
     }
     const status = err.status || 500;
     const message = err.message || "Erreur CRM";

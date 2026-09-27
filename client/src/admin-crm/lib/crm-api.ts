@@ -45,7 +45,15 @@ export const crmApi = {
       }),
   },
 
+  folders: {
+    list: () => crmRequest<{ items: Array<{ folder_key: string; parent_group: string; label: string }> }>("data/folders"),
+    create: (json: { label: string; parent_group: "photos" | "videos" }) =>
+      crmRequest("data/folders", { method: "POST", json }),
+  },
+
   media: {
+    upload: (json: Record<string, unknown>) =>
+      crmRequest("data/media/upload", { method: "POST", json }),
     list: (params?: Record<string, string>) => {
       const qs = params ? `?${new URLSearchParams(params)}` : "";
       return crmRequest<{ items: import("../types").CrmMedia[] }>(
@@ -61,6 +69,8 @@ export const crmApi = {
   },
 
   music: {
+    upload: (json: Record<string, unknown>) =>
+      crmRequest("data/music/upload", { method: "POST", json }),
     list: (params?: Record<string, string>) => {
       const qs = params ? `?${new URLSearchParams(params)}` : "";
       return crmRequest<{ items: import("../types").CrmMusic[] }>(

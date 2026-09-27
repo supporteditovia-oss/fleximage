@@ -11,10 +11,12 @@ export default function SettingsPage() {
       <GlassCard variant="flat">
         <h2 className="text-sm font-medium mb-4">Base Supabase CRM V3</h2>
         <p className="text-xs text-[var(--lux-text-muted)] leading-relaxed">
-          Applique la migration{" "}
-          <code className="text-[var(--lux-gold)]">20260927120000_crm_core_tables_and_seed.sql</code>{" "}
-          (<code className="opacity-80">node script/apply-crm-supabase.mjs</code> ou SQL Editor).
-          Tables : comptes, posts, analytics, médias, musiques, warm-up, POV.
+          Applique les migrations{" "}
+          <code className="text-[var(--lux-gold)]">20260927120000</code> +{" "}
+          <code className="text-[var(--lux-gold)]">20260927180000</code> via{" "}
+          <code className="opacity-80">npm run crm:db:apply</code> (token Supabase) ou le SQL
+          Editor. Buckets <code>crm-media</code> / <code>crm-music</code>, tables comptes,
+          warm-up, schedule, posts, analytics, dossiers bibliothèque.
         </p>
       </GlassCard>
 

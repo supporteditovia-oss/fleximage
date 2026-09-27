@@ -1,6 +1,7 @@
 const { getCrmSupabase } = require("./supabase");
 const { logCrmActivity } = require("./activity");
 const { isCrmSchemaMissingError } = require("./schema-errors");
+const { uploadCrmMediaFile, removeStorageObject } = require("./storage");
 
 async function listMedia(query) {
   const sb = getCrmSupabase();
@@ -16,7 +17,32 @@ async function listMedia(query) {
   return data;
 }
 
+async function uploadMedia(body) {
+  const uploaded = await uploadCrmMediaFile(body);
+  const sb = getCrmSupabase();
+  const { data, error } = await sb
+    .from("crm_media")
+    .insert({
+      folder_key: body.folder_key || "photos/normal",
+      name: body.fileName || body.name || "fichier",
+      media_type: uploaded.mediaType,
+      file_url: uploaded.publicUrl,
+      thumbnail_url: uploaded.publicUrl,
+      storage_path: uploaded.storagePath,
+      tags: body.tags || [],
+      status: "ready",
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  await logCrmActivity("media", `Média importé — ${data.name}`, { id: data.id });
+  return data;
+}
+
 async function createMedia(body) {
+  if (body.dataBase64) {
+    return uploadMedia(body);
+  }
   const sb = getCrmSupabase();
   const { data, error } = await sb
     .from("crm_media")
@@ -26,17 +52,17 @@ async function createMedia(body) {
       media_type: body.media_type,
       file_url: body.file_url || null,
       thumbnail_url: body.thumbnail_url || body.file_url || null,
+      storage_path: body.storage_path || null,
       tags: body.tags || [],
       language_code: body.language_code || null,
       country_code: body.country_code || null,
       niche: body.niche || null,
-      status: body.status || "pending",
+      status: body.status || "ready",
       is_favorite: !!body.is_favorite,
     })
     .select("*")
     .single();
   if (error) throw error;
-  await logCrmActivity("media", `Média importé — ${data.name}`, { id: data.id });
   return data;
 }
 
@@ -48,6 +74,7 @@ async function updateMedia(id, body) {
     "name",
     "file_url",
     "thumbnail_url",
+    "storage_path",
     "tags",
     "language_code",
     "country_code",
@@ -70,8 +97,15 @@ async function updateMedia(id, body) {
 
 async function deleteMedia(ids) {
   const sb = getCrmSupabase();
+  const { data: rows } = await sb
+    .from("crm_media")
+    .select("id, storage_path")
+    .in("id", ids);
   const { error } = await sb.from("crm_media").delete().in("id", ids);
   if (error) throw error;
+  for (const row of rows || []) {
+    await removeStorageObject("crm-media", row.storage_path);
+  }
 }
 
-module.exports = { listMedia, createMedia, updateMedia, deleteMedia };
+module.exports = { listMedia, createMedia, uploadMedia, updateMedia, deleteMedia };

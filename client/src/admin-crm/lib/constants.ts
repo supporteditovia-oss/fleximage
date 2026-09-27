@@ -28,6 +28,13 @@ export const COUNTRY_META: Record<
   GB: { flag: "🇬🇧", label: "Royaume-Uni", timezone: "Europe/London", language: "en" },
   DE: { flag: "🇩🇪", label: "Allemagne", timezone: "Europe/Berlin", language: "de" },
   IT: { flag: "🇮🇹", label: "Italie", timezone: "Europe/Rome", language: "it" },
+  TR: { flag: "🇹🇷", label: "Turquie", timezone: "Europe/Istanbul", language: "tr" },
+};
+
+export const ACCOUNT_STATUS_LABEL: Record<string, string> = {
+  active: "Connecté",
+  paused: "En pause",
+  disconnected: "Déconnecté",
 };
 
 export function countryFlag(code: string | null | undefined) {

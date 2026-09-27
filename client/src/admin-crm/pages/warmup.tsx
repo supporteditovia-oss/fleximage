@@ -7,6 +7,7 @@ import {
   countryFlag,
   platformLabel,
   WARMUP_PHASE_LABEL,
+  ACCOUNT_STATUS_LABEL,
 } from "@/admin-crm/lib/constants";
 import { Loader2 } from "lucide-react";
 
@@ -19,6 +20,7 @@ type WarmupRow = {
   warmup_day: number;
   warmup_trust_score: number;
   warmup_interactions_total: number;
+  status?: string;
   history: Array<{
     day_number: number;
     interactions_count: number;
@@ -75,8 +77,8 @@ export default function WarmupPage() {
                     {platformLabel(acc.platform)} · @{acc.username}
                   </p>
                   <p className="text-xs text-[var(--lux-text-muted)]">
-                    Phase {WARMUP_PHASE_LABEL[acc.warmup_phase]} · Jour{" "}
-                    {acc.warmup_day}
+                    {ACCOUNT_STATUS_LABEL[acc.status || "active"] || acc.status} ·
+                    Phase {WARMUP_PHASE_LABEL[acc.warmup_phase]} · Jour {acc.warmup_day}
                   </p>
                 </div>
                 <button
