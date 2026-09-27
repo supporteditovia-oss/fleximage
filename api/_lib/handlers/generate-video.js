@@ -787,12 +787,20 @@ module.exports = async function handler(req, res) {
       }).catch(() => {});
       const providerStatus =
         typeof providerErr.status === "number" ? providerErr.status : 502;
-      const apiMsg =
+      const isUploadSuccessNoise = (text) =>
+        /upload(ed)? successfully|file upload successful/i.test(String(text || ""));
+
+      let apiMsg =
         typeof providerErr.apiMsg === "string" && providerErr.apiMsg.trim()
           ? providerErr.apiMsg.trim()
-          : typeof providerErr.message === "string" && providerErr.message.trim()
-            ? providerErr.message.trim()
-            : null;
+          : null;
+      if (isUploadSuccessNoise(apiMsg)) apiMsg = null;
+
+      const errMessage =
+        typeof providerErr.message === "string" && providerErr.message.trim()
+          ? providerErr.message.trim()
+          : null;
+
       const generic = copy(
         uiLocale,
         "Échec création vidéo. Jetons remboursés.",
@@ -807,14 +815,25 @@ module.exports = async function handler(req, res) {
               .trim()
           : "";
       const mapped = mapVideoProviderMessage(sanitizedApiMsg, uiLocale);
-      const friendlyFromProvider =
-        mapped ||
-        (sanitizedApiMsg &&
+      const providerStage =
+        providerErr.stage ||
+        (providerErr.uploadMethod ? "kie_file_upload" : "provider_task");
+
+      let friendlyFromProvider = mapped;
+      if (!friendlyFromProvider && providerStage === "kie_file_upload" && errMessage) {
+        friendlyFromProvider = `${errMessage} Jetons remboursés.`;
+      } else if (
+        !friendlyFromProvider &&
+        sanitizedApiMsg &&
+        !isUploadSuccessNoise(sanitizedApiMsg) &&
         !/^(Aleph API error|Kling Motion Control API error|Runway API error)$/i.test(
           sanitizedApiMsg,
         )
-          ? `${sanitizedApiMsg} Jetons remboursés.`
-          : null);
+      ) {
+        friendlyFromProvider = `${sanitizedApiMsg} Jetons remboursés.`;
+      } else if (!friendlyFromProvider && errMessage && !isUploadSuccessNoise(errMessage)) {
+        friendlyFromProvider = `${errMessage} Jetons remboursés.`;
+      }
       const detailed = friendlyFromProvider || generic;
       res
         .status(providerStatus >= 400 && providerStatus < 600 ? providerStatus : 502)
