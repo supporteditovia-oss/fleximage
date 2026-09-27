@@ -95,15 +95,27 @@ async function createAlephVideoTaskLegacy(input) {
   return { taskId, raw: parsed, transport: "legacy" };
 }
 
+function isAlephTransientCreateError(err) {
+  return /internal error|please try again/i.test(
+    String(err?.apiMsg || err?.message || ""),
+  );
+}
+
 async function createAlephVideoTask(input) {
-  try {
-    return await createAlephVideoTaskJobs(input);
-  } catch (jobsErr) {
-    if (!/internal error|please try again/i.test(String(jobsErr.apiMsg || jobsErr.message))) {
-      throw jobsErr;
+  let jobsErr = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await createAlephVideoTaskJobs(input);
+    } catch (err) {
+      jobsErr = err;
+      if (!isAlephTransientCreateError(err) || attempt >= 1) break;
+      await new Promise((resolve) => setTimeout(resolve, 2500));
     }
+  }
+  if (jobsErr && isAlephTransientCreateError(jobsErr)) {
     return createAlephVideoTaskLegacy(input);
   }
+  throw jobsErr;
 }
 
 async function getAlephVideoStatus(taskId) {

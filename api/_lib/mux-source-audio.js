@@ -38,6 +38,23 @@ function getSourceVideoUrlFromLarp(larp) {
   return videoAssets[videoAssets.length - 1];
 }
 
+/** Première image HTTP dans input_assets (pas la vidéo source). */
+function getReferenceImageUrlFromLarp(larp) {
+  const assets = Array.isArray(larp?.input_assets)
+    ? larp.input_assets.filter(Boolean)
+    : [];
+  for (const url of assets) {
+    if (
+      typeof url === "string" &&
+      url.startsWith("http") &&
+      !isLikelyVideoAssetUrl(url)
+    ) {
+      return url;
+    }
+  }
+  return undefined;
+}
+
 async function downloadToFile(url, filePath, timeoutMs = 45_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -143,6 +160,7 @@ async function muxSourceAudioOntoVideo({
 
 module.exports = {
   getSourceVideoUrlFromLarp,
+  getReferenceImageUrlFromLarp,
   isLikelyVideoAssetUrl,
   muxSourceAudioOntoVideo,
 };

@@ -15,15 +15,30 @@ try {
 
 const execFileAsync = promisify(execFile);
 
-async function probeRemoteVideoBytes(videoUrl) {
+async function probeRemoteVideoHead(videoUrl) {
   try {
     const head = await fetch(videoUrl, { method: "HEAD" });
-    if (!head.ok) return null;
+    if (!head.ok) return { bytes: null, contentType: null };
     const len = Number(head.headers.get("content-length"));
-    return Number.isFinite(len) && len > 0 ? len : null;
+    const bytes = Number.isFinite(len) && len > 0 ? len : null;
+    const contentType = String(head.headers.get("content-type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    return { bytes, contentType: contentType || null };
   } catch {
-    return null;
+    return { bytes: null, contentType: null };
   }
+}
+
+function urlLooksLikeMov(videoUrl) {
+  return /\.mov(\?|#|$)/i.test(String(videoUrl || ""));
+}
+
+function needsAlephNormalize(videoUrl, contentType) {
+  if (urlLooksLikeMov(videoUrl)) return true;
+  if (contentType && /quicktime/.test(contentType)) return true;
+  return false;
 }
 
 async function transcodeForAleph(inputPath, outputPath) {
@@ -87,8 +102,11 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId) {
     });
   }
 
-  const remoteBytes = await probeRemoteVideoBytes(url);
+  const { bytes: remoteBytes, contentType: remoteType } =
+    await probeRemoteVideoHead(url);
+  const mustNormalize = needsAlephNormalize(url, remoteType);
   if (
+    !mustNormalize &&
     remoteBytes != null &&
     remoteBytes <= VIDEO_ALEPH_MAX_SOURCE_BYTES
   ) {
@@ -115,7 +133,15 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId) {
       });
     }
     const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length <= VIDEO_ALEPH_MAX_SOURCE_BYTES) {
+    const fetchedType = String(response.headers.get("content-type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (
+      !mustNormalize &&
+      !needsAlephNormalize(url, fetchedType) &&
+      buffer.length <= VIDEO_ALEPH_MAX_SOURCE_BYTES
+    ) {
       return url;
     }
     await fs.writeFile(inputPath, buffer);

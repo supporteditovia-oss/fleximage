@@ -371,75 +371,26 @@ module.exports = async function handler(req, res) {
           const rawKlingFail = extractKlingFailMessage(klingData);
           const {
             isKlingCharacterRejectionFromText,
-            resetVideoProviderClaim,
+            isRetryableProviderFailText,
           } = require("../v2v-provider-errors");
           const charRejection = isKlingCharacterRejectionFromText(rawKlingFail);
           const alephFallbackDone =
             pollMeta.v2v_kling_poll_aleph_fallback === true;
+          const klingInternal = isRetryableProviderFailText(rawKlingFail);
+          const shouldAlephFallback =
+            resultType === "video" &&
+            !alephFallbackDone &&
+            (charRejection || klingInternal);
 
-          if (resultType === "video" && charRejection && !alephFallbackDone) {
+          if (shouldAlephFallback) {
             try {
-              const { generateVideoV2VOnce } = require("../generate-video-once");
-              const { buildAlephSubmitPrompt } = require("../video-studio");
-              const preserveSourceAudio =
-                pollMeta.preserve_source_audio === true;
-              const userPrompt = String(
-                larp.prompt || pollMeta.vehicle_prompt || "",
-              ).trim();
-              const alephPrompt = buildAlephSubmitPrompt(userPrompt, {
-                preserveSourceAudio,
-              });
-              const sourceVideoUrl =
-                pollMeta.source_video_url || getSourceVideoUrlFromLarp(larp);
-              const inputAssets = Array.isArray(larp.input_assets)
-                ? larp.input_assets.filter(Boolean)
-                : [];
-              const referenceImage =
-                typeof inputAssets[0] === "string" &&
-                inputAssets[0].startsWith("http")
-                  ? inputAssets[0]
-                  : undefined;
-
-              if (!sourceVideoUrl) {
-                throw new Error("missing source video for aleph poll fallback");
-              }
-
-              await resetVideoProviderClaim(supabase, larp.id, pollMeta);
-              await generateVideoV2VOnce(supabase, {
-                generationId: larp.id,
-                prompt: alephPrompt,
-                videoUrl: sourceVideoUrl,
-                aspectRatio: larp.aspect_ratio || "9:16",
-                referenceImage,
-              });
-
-              const { data: refreshed } = await supabase
-                .from("generations")
-                .select("metadata")
-                .eq("id", larp.id)
-                .single();
-              const mergedMeta = {
-                ...(refreshed?.metadata && typeof refreshed.metadata === "object"
-                  ? refreshed.metadata
-                  : pollMeta),
-                v2v_kling_poll_aleph_fallback: true,
-                v2v_provider: "runway_aleph",
-                studio_stage: "GENERATING",
-              };
-              await supabase
-                .from("generations")
-                .update({
-                  status: "processing",
-                  fail_message: null,
-                  metadata: mergedMeta,
-                  updated_at: new Date().toISOString(),
-                  completed_at: null,
-                })
-                .eq("id", larp.id);
-
-              console.info("[status] kling no-character → aleph poll fallback", {
-                larpId: larp.id,
-              });
+              const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");
+              const mergedMeta = await relaunchAlephV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                charRejection ? "kling_character" : "kling_internal",
+              );
 
               const stage = mapStudioStage(mergedMeta, "generating");
               res.status(200).json({
@@ -522,12 +473,47 @@ module.exports = async function handler(req, res) {
             apiResultJson = JSON.stringify({ video_url: videoUrl });
           }
         } else if (state === "fail") {
-          apiStatus = "fail";
           const { extractAlephFailMessage } = require("../kie-runway-aleph");
           const rawAlephFail = extractAlephFailMessage(alephData);
+          const { isRetryableProviderFailText } = require("../v2v-provider-errors");
+          const alephRetries = Number(pollMeta.video_auto_retries) || 0;
+          if (
+            resultType === "video" &&
+            isRetryableProviderFailText(rawAlephFail) &&
+            alephRetries < 2
+          ) {
+            try {
+              const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");
+              const mergedMeta = await relaunchAlephV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                "aleph_internal",
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (relaunchErr) {
+              console.error("[status] aleph poll relaunch failed", relaunchErr);
+            }
+          }
+          apiStatus = "fail";
           apiFailMsg = formatVideoFailForClient(
             rawAlephFail,
             "Échec transformation vidéo",
+            alephRetries >= 1 ? { afterAlephFallback: true } : {},
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";

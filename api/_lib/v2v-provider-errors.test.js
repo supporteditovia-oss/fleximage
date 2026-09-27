@@ -4,6 +4,7 @@ const {
   isKlingCharacterRejection,
   isRetryableAlephError,
   isRetryableKlingError,
+  isRetryableProviderFailText,
 } = require("./v2v-provider-errors");
 
 test("isKlingCharacterRejection", () => {
@@ -27,4 +28,12 @@ test("isRetryableAlephError", () => {
     isRetryableAlephError({ apiMsg: "internal error, please try again later." }),
     true,
   );
+});
+
+test("isRetryableProviderFailText", () => {
+  assert.equal(
+    isRetryableProviderFailText("internal error, please try again later."),
+    true,
+  );
+  assert.equal(isRetryableProviderFailText("No valid characters detected"), false);
 });

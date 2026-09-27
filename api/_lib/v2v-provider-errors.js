@@ -22,6 +22,12 @@ function isRetryableKlingError(err) {
   );
 }
 
+function isRetryableProviderFailText(text) {
+  return /internal error|please try again later|file type not supported|video too large|timeout/i.test(
+    String(text || "").trim(),
+  );
+}
+
 async function resetVideoProviderClaim(supabase, generationId, baseMetadata) {
   const meta =
     baseMetadata && typeof baseMetadata === "object" ? baseMetadata : {};
@@ -40,5 +46,6 @@ module.exports = {
   isKlingCharacterRejectionFromText,
   isRetryableAlephError,
   isRetryableKlingError,
+  isRetryableProviderFailText,
   resetVideoProviderClaim,
 };
