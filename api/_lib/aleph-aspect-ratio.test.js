@@ -23,11 +23,11 @@ test("POV habitacle : UI 9:16 mais pas de détection → 16:9", () => {
   );
 });
 
-test("détection prioritaire sur UI", () => {
+test("POV habitacle : détection 9:16 ignorée → 16:9", () => {
   assert.equal(
     resolveAlephAspectForV2V({
       userAspect: "9:16",
-      detectedAspect: "16:9",
+      detectedAspect: "9:16",
       vehiclePov: true,
     }),
     "16:9",

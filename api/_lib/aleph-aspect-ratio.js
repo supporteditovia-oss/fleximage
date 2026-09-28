@@ -30,13 +30,14 @@ function resolveAlephAspectForV2V({
   detectedAspect,
   vehiclePov = false,
 }) {
+  /** POV habitacle : ne jamais laisser la détection 9:16 écraser — Aleph/Kie plante souvent. */
+  if (vehiclePov) {
+    return "16:9";
+  }
   if (detectedAspect) {
     return normalizeAlephAspect(detectedAspect, "16:9");
   }
-  if (vehiclePov && userAspect === "9:16") {
-    return "16:9";
-  }
-  return normalizeAlephAspect(userAspect, vehiclePov ? "16:9" : "9:16");
+  return normalizeAlephAspect(userAspect, "9:16");
 }
 
 module.exports = {

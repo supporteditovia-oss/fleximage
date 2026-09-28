@@ -19,16 +19,19 @@ function parseAlephResponse(text, status, context) {
 }
 
 async function createAlephVideoTaskJobs(input) {
-  const aspectRatio = input.aspectRatio || "9:16";
+  const aspectRatio = input.aspectRatio || "16:9";
+  const inputPayload = {
+    prompt: String(input.prompt || "").slice(0, 2000),
+    video_url: input.videoUrl,
+    watermark: "",
+    upload_cn: false,
+  };
+  if (input.omitAspectRatio !== true && aspectRatio) {
+    inputPayload.aspect_ratio = aspectRatio;
+  }
   const body = {
     model: ALEPH_MODEL,
-    input: {
-      prompt: String(input.prompt || "").slice(0, 2000),
-      video_url: input.videoUrl,
-      watermark: "",
-      upload_cn: false,
-      aspect_ratio: aspectRatio,
-    },
+    input: inputPayload,
   };
   if (input.referenceImage) {
     body.input.reference_image = input.referenceImage;

@@ -211,12 +211,12 @@ describe("video-studio", () => {
     assert.match(generic, /OEM key fob/i);
   });
 
-  it("resolveV2VProviderForStudio routes cockpit/vehicle to Aleph", () => {
+  it("resolveV2VProviderForStudio routes cockpit/vehicle to Kling first", () => {
     assert.equal(
       resolveV2VProviderForStudio(
         "Remplace l'intérieur par Urus OEM, même volant",
       ),
-      "runway_aleph",
+      "kling_motion",
     );
     assert.equal(
       resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),
