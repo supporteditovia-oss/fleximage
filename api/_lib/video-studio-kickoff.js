@@ -7,6 +7,7 @@ const {
 const {
   buildAlephSubmitPrompt,
   buildV2VProviderPrompt,
+  isVehicleDrivingPrompt,
 } = require("./video-studio");
 const {
   isKlingCharacterRejection,
@@ -123,14 +124,18 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
           videoUrl,
           mode: "720p",
         });
-      const runAleph = async (videoUrl, refImage) =>
-        generateVideoV2VOnce(supabase, {
+      const runAleph = async (videoUrl, refImage) => {
+        const omitRef =
+          isVehicleDrivingPrompt(userPrompt) ||
+          isVehicleDrivingPrompt(alephSubmitPrompt);
+        return generateVideoV2VOnce(supabase, {
           generationId: larp.id,
           prompt: alephSubmitPrompt || providerPrompt,
           videoUrl,
           aspectRatio,
-          referenceImage: refImage || undefined,
+          referenceImage: omitRef ? undefined : refImage || undefined,
         });
+      };
 
       try {
         if (finalV2vProvider === "runway_aleph") {

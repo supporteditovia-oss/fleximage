@@ -108,12 +108,23 @@ function resolveV2VProviderForStudio(userPrompt) {
 }
 
 /** Prompt court pour Aleph (jobs API) — évite les locks énormes qui provoquent des 500. */
-function buildAlephSubmitPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
+function buildAlephSubmitPrompt(
+  userPrompt,
+  { preserveSourceAudio = false, minimal = false } = {},
+) {
   let prompt = String(userPrompt || "").trim();
   if (!preserveSourceAudio) {
     prompt = stripVoiceInstructionsFromPrompt(prompt);
   }
   const vehicle = extractRequestedVehicleModel(prompt);
+  if (minimal) {
+    const label = vehicle?.model || "the exact vehicle named by the user";
+    return (
+      `Photorealistic edit: replace the visible car interior with authentic ${label} OEM cabin, ` +
+      "steering wheel and badges only. Keep identical camera path, hand motion and timing. " +
+      "No wrong-brand logos."
+    ).slice(0, 900);
+  }
   const vehicleHint = vehicle
     ? ` Apply ${vehicle.model} OEM interior, steering wheel, keys and badges. ${vehicle.interior}`
     : "";

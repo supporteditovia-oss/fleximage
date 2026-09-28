@@ -609,11 +609,20 @@ module.exports = async function handler(req, res) {
           const rawAlephFail = extractAlephFailMessage(alephData);
           const { isRetryableProviderFailText } = require("../v2v-provider-errors");
           const alephRetries = Number(pollMeta.video_auto_retries) || 0;
+          if (rawAlephFail) {
+            console.warn("[status] aleph poll fail", {
+              larpId: larp.id,
+              alephTaskId,
+              rawAlephFail: String(rawAlephFail).slice(0, 240),
+              alephRetries,
+              ageInMs,
+            });
+          }
           if (
             resultType === "video" &&
             isRetryableProviderFailText(rawAlephFail) &&
-            alephRetries < 1 &&
-            ageInMs < 150_000
+            alephRetries < 3 &&
+            ageInMs < 280_000
           ) {
             try {
               const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");
@@ -640,6 +649,43 @@ module.exports = async function handler(req, res) {
               return;
             } catch (relaunchErr) {
               console.error("[status] aleph poll relaunch failed", relaunchErr);
+            }
+          }
+          if (
+            resultType === "video" &&
+            isRetryableProviderFailText(rawAlephFail) &&
+            !pollMeta.v2v_aleph_poll_kling_fallback &&
+            ageInMs < 360_000
+          ) {
+            try {
+              const { relaunchKlingV2VFromLarp } = require("../v2v-poll-kling-relaunch");
+              const mergedMeta = await relaunchKlingV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                userId,
+                "aleph_internal_exhausted",
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (klingRelaunchErr) {
+              console.error(
+                "[status] kling poll relaunch after aleph fail",
+                klingRelaunchErr,
+              );
             }
           }
           apiStatus = "fail";

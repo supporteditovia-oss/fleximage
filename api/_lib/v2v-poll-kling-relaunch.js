@@ -3,42 +3,47 @@ const {
   getReferenceImageUrlFromLarp,
 } = require("./mux-source-audio");
 const { resetVideoProviderClaim } = require("./v2v-provider-errors");
-const { buildAlephSubmitPrompt } = require("./video-studio");
+const { buildV2VProviderPrompt } = require("./video-studio");
+const { extractReferenceFrameFromVideoUrl } = require("./extract-video-frame");
+const { resolveKlingMotionSourceVideoUrl } = require("./prepare-kling-source-video");
 
 /**
- * Relance Aleph V2V après échec poll Kling ou incident Kie — sans re-débit.
+ * Relance Kling Motion après échecs Aleph poll (internal error) — sans re-débit.
  */
-async function relaunchAlephV2VFromLarp(supabase, larp, pollMeta, reason) {
-  const { generateVideoV2VOnce } = require("./generate-video-once");
-  const { isVehicleDrivingPrompt } = require("./video-studio");
+async function relaunchKlingV2VFromLarp(supabase, larp, pollMeta, userId, reason) {
+  const { generateKlingMotionOnce } = require("./generate-video-once");
   const preserveSourceAudio = pollMeta.preserve_source_audio === true;
   const userPrompt = String(
     larp.prompt || pollMeta.vehicle_prompt || "",
   ).trim();
-  const prevRetries = Number(pollMeta.video_auto_retries) || 0;
-  const useMinimal = prevRetries >= 1 || reason === "aleph_internal";
-  const alephPrompt = buildAlephSubmitPrompt(userPrompt, {
+  const providerPrompt = buildV2VProviderPrompt(userPrompt, {
     preserveSourceAudio,
-    minimal: useMinimal,
   });
   const sourceVideoUrl =
     pollMeta.source_video_url || getSourceVideoUrlFromLarp(larp);
-  let referenceImage = getReferenceImageUrlFromLarp(larp);
-  if (useMinimal || isVehicleDrivingPrompt(userPrompt)) {
-    referenceImage = null;
+  if (!sourceVideoUrl) {
+    throw new Error("missing source video for kling poll relaunch");
   }
 
-  if (!sourceVideoUrl) {
-    throw new Error("missing source video for aleph poll relaunch");
+  const videoUrl = await resolveKlingMotionSourceVideoUrl(
+    sourceVideoUrl,
+    userId,
+  );
+  let imageUrl = getReferenceImageUrlFromLarp(larp);
+  if (!imageUrl) {
+    imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
+  }
+  if (!imageUrl) {
+    throw new Error("missing reference frame for kling poll relaunch");
   }
 
   await resetVideoProviderClaim(supabase, larp.id, pollMeta);
-  await generateVideoV2VOnce(supabase, {
+  await generateKlingMotionOnce(supabase, {
     generationId: larp.id,
-    prompt: alephPrompt,
-    videoUrl: sourceVideoUrl,
-    aspectRatio: larp.aspect_ratio || "9:16",
-    referenceImage,
+    prompt: providerPrompt,
+    imageUrl,
+    videoUrl,
+    mode: "720p",
   });
 
   const { data: refreshed } = await supabase
@@ -47,15 +52,13 @@ async function relaunchAlephV2VFromLarp(supabase, larp, pollMeta, reason) {
     .eq("id", larp.id)
     .single();
 
+  const prevRetries = Number(pollMeta.video_auto_retries) || 0;
   const mergedMeta = {
     ...(refreshed?.metadata && typeof refreshed.metadata === "object"
       ? refreshed.metadata
       : pollMeta),
-    v2v_kling_poll_aleph_fallback:
-      pollMeta.v2v_kling_poll_aleph_fallback === true ||
-      reason === "kling_character" ||
-      reason === "kling_internal",
-    v2v_provider: "runway_aleph",
+    v2v_aleph_poll_kling_fallback: true,
+    v2v_provider: "kling_motion",
     studio_stage: "GENERATING",
     video_auto_retries: prevRetries + 1,
     v2v_poll_relaunch_reason: reason,
@@ -73,7 +76,7 @@ async function relaunchAlephV2VFromLarp(supabase, larp, pollMeta, reason) {
     })
     .eq("id", larp.id);
 
-  console.info("[status] v2v aleph poll relaunch", {
+  console.info("[status] v2v kling poll relaunch after aleph fail", {
     larpId: larp.id,
     reason,
     retries: mergedMeta.video_auto_retries,
@@ -82,4 +85,4 @@ async function relaunchAlephV2VFromLarp(supabase, larp, pollMeta, reason) {
   return mergedMeta;
 }
 
-module.exports = { relaunchAlephV2VFromLarp };
+module.exports = { relaunchKlingV2VFromLarp };
