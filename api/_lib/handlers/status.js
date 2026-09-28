@@ -475,6 +475,23 @@ module.exports = async function handler(req, res) {
     }
     const pollMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+    if (resultType === "video" && pollMeta.studio_cancelled === true) {
+      const cancelledMsg =
+        larp.fail_message ||
+        "Génération annulée. Lance une nouvelle vidéo si besoin.";
+      res.status(200).json({
+        larpId: larp.id,
+        ...statusTimingFields(larp),
+        status: "fail",
+        resultUrls: [],
+        failMessage: cancelledMsg,
+        costTime: null,
+        isSubscriber: false,
+        requiresPaywall: false,
+        resultType,
+      });
+      return;
+    }
     const isVideoTask = activeTaskId.startsWith("video_");
     const isAlephTask = activeTaskId.startsWith("aleph_");
     const isKlingTask = activeTaskId.startsWith("kling_");

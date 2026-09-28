@@ -33,6 +33,7 @@ const {
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
 } = require("../generation-dedup");
+const { cancelSupersededVideoGenerations } = require("../cancel-superseded-video-generations");
 const {
   getPlanUsageSnapshot,
   assertVideoPlanQuota,
@@ -425,6 +426,10 @@ module.exports = async function handler(req, res) {
       });
       return;
     }
+
+    await cancelSupersededVideoGenerations(supabase, userId, {
+      reason: "new_generate_video_request",
+    });
 
     const inFlight = await findRecentInFlightGeneration(supabase, userId);
     if (inFlight) {

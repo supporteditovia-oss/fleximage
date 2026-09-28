@@ -5,7 +5,10 @@ import {
   releaseGenerationSubmitLockOnError,
   tryAcquireGenerationSubmitLockOrRecover,
 } from "@/lib/generation-submit-lock";
-import { getInFlightGeneration } from "@/lib/in-flight-generation";
+import {
+  clearInFlightGeneration,
+  getInFlightGeneration,
+} from "@/lib/in-flight-generation";
 import { createGenerationRequestId } from "@/lib/generation-request-id";
 import type {
   SubtitlePosition,
@@ -68,6 +71,7 @@ export function useVideoStudioGenerate() {
   const queryClient = useQueryClient();
   return useMutation<VideoStudioGenerateResponse, Error, VideoStudioGenerateInput>({
     mutationFn: async (data) => {
+      clearInFlightGeneration();
       const activeInFlight = getInFlightGeneration();
       if (
         !tryAcquireGenerationSubmitLockOrRecover(Boolean(activeInFlight?.taskId))
