@@ -5,6 +5,10 @@ const path = require("path");
 const os = require("os");
 const { uploadToR2 } = require("./r2");
 const { VIDEO_ALEPH_MAX_SOURCE_BYTES } = require("./video-limits");
+const { pickAlephAspectFromDimensions } = require("./aleph-aspect-ratio");
+
+/** Runway Aleph (Kie) ne traite que les ~5 premières secondes. */
+const ALEPH_MAX_SOURCE_DURATION_SEC = 5;
 
 let ffmpegPath = null;
 try {
@@ -41,6 +45,22 @@ function needsAlephNormalize(videoUrl, contentType) {
   return false;
 }
 
+async function probeVideoDimensions(inputPath) {
+  if (!ffmpegPath) return null;
+  try {
+    await execFileAsync(ffmpegPath, ["-hide_banner", "-i", inputPath], {
+      timeout: 25_000,
+    });
+  } catch (err) {
+    const text = `${err.stderr || ""}${err.stdout || ""}`;
+    const match = text.match(/Video:.*? (\d{2,5})x(\d{2,5})/);
+    if (match) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+  }
+  return null;
+}
+
 async function transcodeForAleph(inputPath, outputPath) {
   if (!ffmpegPath) {
     throw Object.assign(new Error("Transcodage vidéo indisponible"), {
@@ -59,7 +79,7 @@ async function transcodeForAleph(inputPath, outputPath) {
           "-i",
           inputPath,
           "-t",
-          "8",
+          String(ALEPH_MAX_SOURCE_DURATION_SEC),
           "-vf",
           "scale='min(720,iw)':-2",
           "-c:v",
@@ -94,7 +114,8 @@ async function transcodeForAleph(inputPath, outputPath) {
  * Runway Aleph (KIE) refuse les sources > 10 Mo. On transcode côté serveur si besoin.
  */
 async function resolveAlephSourceVideoUrl(videoUrl, userId, options = {}) {
-  const forceTranscode = options.forceTranscode === true;
+  const forceTranscode = options.forceTranscode !== false;
+  const fallbackAspect = options.fallbackAspect || "16:9";
   const url = String(videoUrl || "").trim();
   if (!url.startsWith("http")) {
     throw Object.assign(new Error("URL vidéo invalide"), {
@@ -113,7 +134,7 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId, options = {}) {
     remoteBytes != null &&
     remoteBytes <= VIDEO_ALEPH_MAX_SOURCE_BYTES
   ) {
-    return url;
+    return { url, aspectRatio: fallbackAspect };
   }
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "aleph-src-"));
@@ -146,16 +167,30 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId, options = {}) {
       !needsAlephNormalize(url, fetchedType) &&
       buffer.length <= VIDEO_ALEPH_MAX_SOURCE_BYTES
     ) {
-      return url;
+      return { url, aspectRatio: fallbackAspect };
     }
     await fs.writeFile(inputPath, buffer);
+    const dims = await probeVideoDimensions(inputPath);
     await transcodeForAleph(inputPath, outputPath);
+    const outDims = (await probeVideoDimensions(outputPath)) || dims;
+    const aspectRatio = pickAlephAspectFromDimensions(
+      outDims?.width,
+      outDims?.height,
+      fallbackAspect,
+    );
     const outBuffer = await fs.readFile(outputPath);
     const key = `inputs/${userId}/${Date.now()}-aleph.mp4`;
-    return uploadToR2(key, outBuffer, "video/mp4");
+    const uploaded = await uploadToR2(key, outBuffer, "video/mp4");
+    return { url: uploaded, aspectRatio };
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
-module.exports = { resolveAlephSourceVideoUrl, VIDEO_ALEPH_MAX_SOURCE_BYTES };
+module.exports = {
+  resolveAlephSourceVideoUrl,
+  VIDEO_ALEPH_MAX_SOURCE_BYTES,
+  ALEPH_MAX_SOURCE_DURATION_SEC,
+  pickAlephAspectFromDimensions,
+  probeVideoDimensions,
+};

@@ -18,9 +18,11 @@ const {
   buildV2VProviderPrompt,
   buildAlephSubmitPrompt,
   resolveV2VProviderForStudio,
+  isVehicleDrivingPrompt,
   validateVoiceText,
   stripVoiceInstructionsFromPrompt,
 } = require("../video-studio");
+const { resolveAlephAspectForV2V } = require("../aleph-aspect-ratio");
 const {
   checkGenerationLimits,
   deductGenerationCredits,
@@ -357,6 +359,8 @@ module.exports = async function handler(req, res) {
 
     let studioMotionPrompt = motionPrompt;
     let studioVehicleDescription = vehicleDescription;
+    const vehiclePromptRaw =
+      workflow === "video_to_video" ? vehicleDescription : "";
     let promptIntelligenceApplied = false;
     const promptUserRaw =
       workflow === "video_to_video" ? vehicleDescription : motionPrompt;
@@ -478,8 +482,9 @@ module.exports = async function handler(req, res) {
     let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
+        const skipV2VEnrichment = isVehicleDrivingPrompt(vehiclePromptRaw);
         const [enrichedDesc, sourceBundle] = await Promise.all([
-          studioVehicleDescription
+          studioVehicleDescription && !skipV2VEnrichment
             ? enrichPromptForGeneration(studioVehicleDescription, {
                 locale: uiLocale,
                 mode: "video_v2v",
@@ -514,7 +519,7 @@ module.exports = async function handler(req, res) {
         providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
           preserveSourceAudio,
         });
-        alephSubmitPrompt = buildAlephSubmitPrompt(studioVehicleDescription, {
+        alephSubmitPrompt = buildAlephSubmitPrompt(vehiclePromptRaw || studioVehicleDescription, {
           preserveSourceAudio,
         });
         if (v2vProvider === "kling_motion") {
@@ -599,6 +604,16 @@ module.exports = async function handler(req, res) {
       overlay_text: body.overlay_text || null,
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: studioVehicleDescription,
+      vehicle_prompt_raw: vehiclePromptRaw || studioVehicleDescription,
+      aleph_aspect_ratio:
+        workflow === "video_to_video"
+          ? resolveAlephAspectForV2V({
+              userAspect: aspectRatio,
+              vehiclePov: isVehicleDrivingPrompt(
+                vehiclePromptRaw || studioVehicleDescription,
+              ),
+            })
+          : null,
       prompt_intelligence_applied: promptIntelligenceApplied,
       prompt_user_raw: promptUserRaw,
       source_video_duration_sec: sourceVideoDurationSec,

@@ -629,6 +629,10 @@ module.exports = async function handler(req, res) {
               rawAlephFail: String(rawAlephFail).slice(0, 240),
               alephRetries,
               ageInMs,
+              alephAspect: pollMeta.aleph_aspect_ratio || larp.aspect_ratio,
+              resultJsonPreview: alephData?.resultJson
+                ? String(alephData.resultJson).slice(0, 320)
+                : null,
             });
           }
           if (

@@ -10,6 +10,8 @@ const {
 } = require("./kie-kling-motion");
 const { normalizeProviderForDb } = require("./generation-provider");
 const { resolveAlephSourceVideoUrl } = require("./prepare-aleph-source-video");
+const { resolveAlephAspectForV2V } = require("./aleph-aspect-ratio");
+const { isVehicleDrivingPrompt } = require("./video-studio");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 
 function readVideoApiCallCount(metadata) {
@@ -212,20 +214,37 @@ async function generateVideoV2VOnce(supabase, params) {
   const alephJobsBefore = countAlephJobsInProviderTaskId(
     claim.generation.provider_task_id,
   );
+  const meta =
+    claim.generation.metadata && typeof claim.generation.metadata === "object"
+      ? claim.generation.metadata
+      : {};
+  const userPrompt = String(
+    claim.generation.prompt || meta.vehicle_prompt_raw || meta.vehicle_prompt || "",
+  ).trim();
+  const vehiclePov = isVehicleDrivingPrompt(userPrompt);
+  const fallbackAspect = resolveAlephAspectForV2V({
+    userAspect: meta.aleph_aspect_ratio || params.aspectRatio,
+    vehiclePov,
+  });
   const forceTranscode = params.forceTranscode !== false;
-  const alephVideoUrl = await resolveAlephSourceVideoUrl(
+  const prepared = await resolveAlephSourceVideoUrl(
     params.videoUrl,
     claim.generation.user_id,
-    { forceTranscode },
+    { forceTranscode, fallbackAspect },
   );
-  const kieVideoUrl = await ensureKieAccessibleMediaUrl(alephVideoUrl, "video");
+  const alephAspectRatio = resolveAlephAspectForV2V({
+    userAspect: fallbackAspect,
+    detectedAspect: prepared.aspectRatio,
+    vehiclePov,
+  });
+  const kieVideoUrl = await ensureKieAccessibleMediaUrl(prepared.url, "video");
   const kieRefImage = params.referenceImage
     ? await ensureKieAccessibleMediaUrl(params.referenceImage, "image")
     : undefined;
   const alephInput = {
     prompt: params.prompt,
     videoUrl: kieVideoUrl,
-    aspectRatio: params.aspectRatio,
+    aspectRatio: alephAspectRatio,
     referenceImage: kieRefImage,
   };
   const useLegacy =
@@ -278,6 +297,7 @@ async function generateVideoV2VOnce(supabase, params) {
     generationId: params.generationId,
     videoRequestId: nextMeta.video_request_id || null,
     alephTaskId: aleph.taskId,
+    alephAspectRatio,
     durationMs,
     apiCallCount: 1,
   });

@@ -101,7 +101,8 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
     return { larp, started: false, failed: true };
   }
 
-  const aspectRatio = larp.aspect_ratio || "9:16";
+  const aspectRatio =
+    meta.aleph_aspect_ratio || larp.aspect_ratio || "16:9";
   const preserveSourceAudio = meta.preserve_source_audio === true;
   let referenceImageUrl = getReferenceImageUrlFromLarp(larp);
   let finalV2vProvider = meta.v2v_provider || "runway_aleph";

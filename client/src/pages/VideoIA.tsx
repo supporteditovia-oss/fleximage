@@ -675,7 +675,12 @@ export default function VideoIA() {
             <button
               key={option.id}
               type="button"
-              onClick={() => setWorkflow(option.id)}
+              onClick={() => {
+                setWorkflow(option.id);
+                if (option.id === "video_to_video") {
+                  setAspectRatio("16:9");
+                }
+              }}
               className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
             >
               <span className="via-mode-card__icon" aria-hidden>
