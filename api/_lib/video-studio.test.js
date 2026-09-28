@@ -178,6 +178,10 @@ describe("video-studio", () => {
       extractRequestedVehicleModel("Ferrari Purosangue")?.model,
       "Ferrari Purosangue",
     );
+    assert.equal(
+      extractRequestedVehicleModel("Urus Mansory, volant")?.model,
+      "Lamborghini Urus Mansory",
+    );
   });
 
   it("isVehicleDrivingPrompt detects keys and generic car swaps", () => {

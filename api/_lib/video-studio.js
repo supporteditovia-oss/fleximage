@@ -231,7 +231,19 @@ const VEHICLE_MODEL_CATALOG = [
 ];
 
 function extractRequestedVehicleModel(text) {
-  const source = String(text || "");
+  const source = String(text || "")
+    .replace(/\bmontesori\b/gi, "Mansory")
+    .replace(/\bmansori\b/gi, "Mansory")
+    .replace(/\bmontessori\b/gi, "Mansory");
+  if (/\b(mansory)\b/i.test(source) && /\b(urus)\b/i.test(source)) {
+    return {
+      pattern: /\b(urus)\b/i,
+      model: "Lamborghini Urus Mansory",
+      interior:
+        "authentic Lamborghini Urus cabin with Mansory tuning: Mansory carbon fiber dash and console trim, Mansory steering wheel accents, Urus dual digital screens with Lamborghini UI, alcantara/carbon luxury finish — never BMW roundel, never generic SUV.",
+      key: "Lamborghini hexagonal key fob with bull logo — Urus OEM remote",
+    };
+  }
   for (const entry of VEHICLE_MODEL_CATALOG) {
     if (entry.pattern.test(source)) return entry;
   }
@@ -266,6 +278,11 @@ function extractCustomInteriorFeatures(text) {
   }
   if (/\b(carbon|carbone|carbon\s+fiber)\b/i.test(source)) {
     features.push("carbon fiber trim where appropriate for the model");
+  }
+  if (/\b(mansory|mansori|montesori)\b/i.test(source)) {
+    features.push(
+      "Mansory widebody/carbon interior accents and Mansory branding where visible — on Urus base",
+    );
   }
 
   return features;
