@@ -26,10 +26,15 @@ function videoTimingFieldsForLarp(larp) {
   const meta =
     larp && larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
   const estimatedRaw = meta.estimated_seconds;
-  const estimatedSeconds =
+  let estimatedSeconds =
     estimatedRaw != null && Number.isFinite(Number(estimatedRaw))
       ? Number(estimatedRaw)
       : null;
+  const autoRetries = Number(meta.video_auto_retries) || 0;
+  if (estimatedSeconds != null && autoRetries > 0) {
+    estimatedSeconds += autoRetries * 75;
+    if (meta.v2v_aleph_poll_kling_fallback) estimatedSeconds += 120;
+  }
   if (estimatedSeconds == null || !larp?.created_at) {
     return { estimatedSeconds, remainingSeconds: null };
   }

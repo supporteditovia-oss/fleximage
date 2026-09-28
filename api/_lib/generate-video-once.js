@@ -226,13 +226,15 @@ async function generateVideoV2VOnce(supabase, params) {
     ? claim.generation.provider_attempts
     : [];
 
+  const prevAutoRetries =
+    Number(claim.generation.metadata?.video_auto_retries) || 0;
   const nextMeta = {
     ...(claim.generation.metadata || {}),
     video_api_call_count: 1,
     video_provider_completed_at: new Date().toISOString(),
     aleph_task_id: aleph.taskId,
     video_provider_duration_ms: durationMs,
-    video_auto_retries: 0,
+    video_auto_retries: prevAutoRetries,
   };
 
   await supabase
