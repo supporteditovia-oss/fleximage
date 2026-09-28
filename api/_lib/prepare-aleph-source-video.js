@@ -93,7 +93,8 @@ async function transcodeForAleph(inputPath, outputPath) {
 /**
  * Runway Aleph (KIE) refuse les sources > 10 Mo. On transcode côté serveur si besoin.
  */
-async function resolveAlephSourceVideoUrl(videoUrl, userId) {
+async function resolveAlephSourceVideoUrl(videoUrl, userId, options = {}) {
+  const forceTranscode = options.forceTranscode === true;
   const url = String(videoUrl || "").trim();
   if (!url.startsWith("http")) {
     throw Object.assign(new Error("URL vidéo invalide"), {
@@ -104,8 +105,10 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId) {
 
   const { bytes: remoteBytes, contentType: remoteType } =
     await probeRemoteVideoHead(url);
-  const mustNormalize = needsAlephNormalize(url, remoteType);
+  const mustNormalize =
+    forceTranscode || needsAlephNormalize(url, remoteType);
   if (
+    !forceTranscode &&
     !mustNormalize &&
     remoteBytes != null &&
     remoteBytes <= VIDEO_ALEPH_MAX_SOURCE_BYTES
@@ -138,6 +141,7 @@ async function resolveAlephSourceVideoUrl(videoUrl, userId) {
       .trim()
       .toLowerCase();
     if (
+      !forceTranscode &&
       !mustNormalize &&
       !needsAlephNormalize(url, fetchedType) &&
       buffer.length <= VIDEO_ALEPH_MAX_SOURCE_BYTES

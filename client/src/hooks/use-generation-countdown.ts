@@ -92,9 +92,12 @@ export function useGenerationCountdown(
       Number.isFinite(serverRemainingSeconds)
     ) {
       const rounded = Math.max(0, Math.round(serverRemainingSeconds));
-      if (lastServerRemainingRef.current !== rounded) {
-        lastServerRemainingRef.current = rounded;
-        serverAnchorRef.current = { value: rounded, atMs: Date.now() };
+      const prev = lastServerRemainingRef.current;
+      const monotonic =
+        prev == null || rounded <= prev ? rounded : prev;
+      if (lastServerRemainingRef.current !== monotonic) {
+        lastServerRemainingRef.current = monotonic;
+        serverAnchorRef.current = { value: monotonic, atMs: Date.now() };
       }
     }
     const anchor = serverAnchorRef.current;

@@ -509,13 +509,25 @@ module.exports = async function handler(req, res) {
           const charRejection = isKlingCharacterRejectionFromText(rawKlingFail);
           const alephFallbackDone =
             pollMeta.v2v_kling_poll_aleph_fallback === true;
+          const afterAlephKlingRound =
+            pollMeta.v2v_aleph_poll_kling_fallback === true;
           const klingInternal = isRetryableProviderFailText(rawKlingFail);
+          const { canLaunchAnotherAlephJob } = require("../v2v-aleph-attempts");
           const shouldAlephFallback =
             resultType === "video" &&
+            !afterAlephKlingRound &&
             !alephFallbackDone &&
+            canLaunchAnotherAlephJob(larp.provider_task_id) &&
             (charRejection || klingInternal);
 
-          if (shouldAlephFallback) {
+          if (afterAlephKlingRound) {
+            apiStatus = "fail";
+            apiFailMsg = formatVideoFailForClient(
+              rawKlingFail,
+              "Échec de la transformation vidéo",
+              { afterAlephFallback: true, v2vExhausted: true },
+            );
+          } else if (shouldAlephFallback) {
             try {
               const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");
               const mergedMeta = await relaunchAlephV2VFromLarp(
@@ -609,6 +621,7 @@ module.exports = async function handler(req, res) {
           const rawAlephFail = extractAlephFailMessage(alephData);
           const { isRetryableProviderFailText } = require("../v2v-provider-errors");
           const alephRetries = Number(pollMeta.video_auto_retries) || 0;
+          const { canLaunchAnotherAlephJob } = require("../v2v-aleph-attempts");
           if (rawAlephFail) {
             console.warn("[status] aleph poll fail", {
               larpId: larp.id,
@@ -621,8 +634,8 @@ module.exports = async function handler(req, res) {
           if (
             resultType === "video" &&
             isRetryableProviderFailText(rawAlephFail) &&
-            alephRetries < 3 &&
-            ageInMs < 280_000
+            canLaunchAnotherAlephJob(larp.provider_task_id) &&
+            ageInMs < 360_000
           ) {
             try {
               const { relaunchAlephV2VFromLarp } = require("../v2v-poll-aleph-relaunch");
@@ -688,11 +701,17 @@ module.exports = async function handler(req, res) {
               );
             }
           }
+          const exhausted =
+            pollMeta.v2v_aleph_poll_kling_fallback === true || alephRetries >= 2;
           apiStatus = "fail";
           apiFailMsg = formatVideoFailForClient(
             rawAlephFail,
             "Échec transformation vidéo",
-            alephRetries >= 1 ? { afterAlephFallback: true } : {},
+            exhausted
+              ? { afterAlephFallback: true, v2vExhausted: true }
+              : alephRetries >= 1
+                ? { afterAlephFallback: true }
+                : {},
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";

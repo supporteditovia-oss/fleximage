@@ -39,6 +39,8 @@ async function relaunchAlephV2VFromLarp(supabase, larp, pollMeta, reason) {
     videoUrl: sourceVideoUrl,
     aspectRatio: larp.aspect_ratio || "9:16",
     referenceImage,
+    forceTranscode: reason === "aleph_internal" || prevRetries >= 1,
+    preferLegacyTransport: prevRetries >= 2,
   });
 
   const { data: refreshed } = await supabase

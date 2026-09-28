@@ -1,5 +1,9 @@
 const { createRunwayVideoTask } = require("./kie-runway");
-const { createAlephVideoTask } = require("./kie-runway-aleph");
+const {
+  createAlephVideoTask,
+  createAlephVideoTaskLegacy,
+} = require("./kie-runway-aleph");
+const { countAlephJobsInProviderTaskId } = require("./v2v-aleph-attempts");
 const {
   createKlingMotionTask,
   buildKlingMotionPrompt,
@@ -205,20 +209,30 @@ async function generateVideoV2VOnce(supabase, params) {
   }
 
   const startedAt = Date.now();
+  const alephJobsBefore = countAlephJobsInProviderTaskId(
+    claim.generation.provider_task_id,
+  );
+  const forceTranscode = params.forceTranscode !== false;
   const alephVideoUrl = await resolveAlephSourceVideoUrl(
     params.videoUrl,
     claim.generation.user_id,
+    { forceTranscode },
   );
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(alephVideoUrl, "video");
   const kieRefImage = params.referenceImage
     ? await ensureKieAccessibleMediaUrl(params.referenceImage, "image")
     : undefined;
-  const aleph = await createAlephVideoTask({
+  const alephInput = {
     prompt: params.prompt,
     videoUrl: kieVideoUrl,
     aspectRatio: params.aspectRatio,
     referenceImage: kieRefImage,
-  });
+  };
+  const useLegacy =
+    params.preferLegacyTransport === true || alephJobsBefore >= 2;
+  const aleph = useLegacy
+    ? await createAlephVideoTaskLegacy(alephInput)
+    : await createAlephVideoTask(alephInput);
 
   const externalTaskId = `aleph_${aleph.taskId}`;
   const durationMs = Date.now() - startedAt;
