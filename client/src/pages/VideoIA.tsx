@@ -272,7 +272,7 @@ export default function VideoIA() {
         variant: "destructive",
         title: "Format invalide",
         description:
-          "Importe une vidéo (MP4, MOV…) — enregistrement, TikTok téléchargé, etc.",
+          "Importe une vidéo — MP4, MOV iPhone, enregistrement caméra, etc.",
       });
       return;
     }

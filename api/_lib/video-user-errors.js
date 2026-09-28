@@ -8,8 +8,8 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
 
   if (v2vExhausted && afterAlephFallback) {
     return locale === "fr"
-      ? "Le studio n’a pas pu transformer ce clip après plusieurs tentatives (POV habitacle). Réessaie en MP4 720p, 5 s, mains + volant bien visibles. Jetons remboursés."
-      : "The studio could not transform this clip after several attempts. Try MP4 720p, 5 s, with hands and wheel clearly visible. Credits refunded.";
+      ? "Le studio n’a pas pu transformer ce clip après plusieurs tentatives (POV habitacle). Réessaie avec un clip iPhone (MOV ou MP4), 720p, ~5 s, mains + volant bien visibles. Jetons remboursés."
+      : "The studio could not transform this clip after several attempts. Try an iPhone clip (MOV or MP4), 720p, ~5 s, hands and wheel visible. Credits refunded.";
   }
 
   if (/no valid characters detected/i.test(text)) {
