@@ -569,6 +569,9 @@ module.exports = async function handler(req, res) {
     const pendingTaskId = `pending_${randomUUID()}`;
     const studioMetadata = {
       video_request_id: videoRequestId,
+      // Never overwritten — lets status.js recover this row even if
+      // provider_task_id itself is ever corrupted/overwritten by a bug.
+      pending_task_id: pendingTaskId,
       video_api_call_count: 0,
       video_auto_retries: 0,
       studio_stage: "VALIDATING",

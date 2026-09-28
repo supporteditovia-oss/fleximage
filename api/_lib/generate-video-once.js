@@ -14,6 +14,31 @@ function readVideoApiCallCount(metadata) {
   return Number.isFinite(count) && count >= 0 ? count : 0;
 }
 
+/**
+ * CRITICAL: append the new provider taskId to the existing `provider_task_id`
+ * chain instead of overwriting it. The client polls GET /status with the
+ * ORIGINAL `pending_<uuid>` it received from the generate-video response and
+ * never updates that id afterwards. status.js finds the row via
+ * `ilike provider_task_id %taskId%` + a comma-segment check — if we replace
+ * `pending_<uuid>` with `aleph_<kieId>` here, that original id disappears
+ * from the column and every subsequent client poll 404s forever (row
+ * "disparaît" from the client's point of view even though it keeps
+ * processing/succeeding server-side). Keeping a comma-joined history
+ * (`pending_<uuid>,aleph_<kieId>`) keeps the original id matchable for the
+ * whole lifetime of the generation.
+ */
+function appendProviderTaskId(prevTaskId, externalTaskId) {
+  const prev = String(prevTaskId || "").trim();
+  const next = String(externalTaskId || "").trim();
+  if (!next) return prev;
+  const parts = prev
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.includes(next)) return parts.join(",");
+  return [...parts, next].join(",");
+}
+
 async function claimVideoProviderCall(supabase, generationId) {
   const { data: row, error: fetchErr } = await supabase
     .from("generations")
@@ -124,7 +149,10 @@ async function generateVideoOnce(supabase, params) {
     .from("generations")
     .update({
       provider: "runway",
-      provider_task_id: externalTaskId,
+      provider_task_id: appendProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
       metadata: nextMeta,
       provider_attempts: [
         ...prevAttempts,
@@ -211,7 +239,10 @@ async function generateVideoV2VOnce(supabase, params) {
     .from("generations")
     .update({
       provider: normalizeProviderForDb("runway_aleph"),
-      provider_task_id: externalTaskId,
+      provider_task_id: appendProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
       metadata: nextMeta,
       provider_attempts: [
         ...prevAttempts,
@@ -305,7 +336,10 @@ async function generateKlingMotionOnce(supabase, params) {
     .from("generations")
     .update({
       provider: normalizeProviderForDb("kling_motion"),
-      provider_task_id: externalTaskId,
+      provider_task_id: appendProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
       metadata: nextMeta,
       provider_attempts: [
         ...prevAttempts,
@@ -345,4 +379,5 @@ module.exports = {
   generateKlingMotionOnce,
   claimVideoProviderCall,
   readVideoApiCallCount,
+  appendProviderTaskId,
 };

@@ -39,6 +39,16 @@ const { readApiCallCount } = require("../generation-idempotency");
 const STUCK_IMAGE_PROCESSING_MS = 3 * 60 * 1000;
 const STUCK_IMAGE_SUCCEEDED_EMPTY_MS = 45 * 1000;
 
+/**
+ * Global safety-net timeouts (video studio). A generation must NEVER stay
+ * "processing" forever without a clear resolution + refund, regardless of
+ * the underlying cause (provider outage, unexpected exception, orphaned
+ * row…). Kept intentionally well under any provider's real completion time.
+ */
+const VIDEO_PENDING_KICKOFF_TIMEOUT_MS = 3 * 60 * 1000; // still "pending_*"
+const VIDEO_TIMEOUT_USER_MESSAGE =
+  "La génération a pris trop de temps. Tes crédits ont été remboursés — réessaie.";
+
 function resolveStoredImageDeliveryUrl(larp) {
   const originals = toAssetList(larp.output_assets).filter(
     (url) => typeof url === "string" && url.startsWith("http"),
@@ -164,7 +174,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data: larp, error: fetchErr } = await supabase
+    let { data: larp, error: fetchErr } = await supabase
       .from("generations")
       .select("*")
       .ilike("provider_task_id", `%${taskId}%`)
@@ -173,12 +183,43 @@ module.exports = async function handler(req, res) {
       .limit(1)
       .maybeSingle();
 
-    const taskIdSegments = (larp?.provider_task_id || "")
+    let taskIdSegments = (larp?.provider_task_id || "")
       .split(",")
       .map((segment) => segment.trim())
       .filter(Boolean);
 
-    if (fetchErr || !larp || !taskIdSegments.includes(taskId)) {
+    // Safety-net recovery: `provider_task_id` is normally a comma-joined
+    // history (`pending_<uuid>,aleph_<kieId>`) so the client's ORIGINAL
+    // polling id stays matchable forever (see appendProviderTaskId). If some
+    // future bug ever overwrites it instead of appending, the row becomes
+    // unreachable via the ilike lookup above and every poll would 404
+    // forever (this exact incident). `pending_task_id` in metadata is set
+    // once at creation and NEVER modified afterwards, so it is used here as
+    // a last-resort recovery key before giving up.
+    if ((fetchErr || !larp || !taskIdSegments.includes(taskId)) && taskId.startsWith("pending_")) {
+      const fallback = await supabase
+        .from("generations")
+        .select("*")
+        .eq("user_id", userId)
+        .contains("metadata", { pending_task_id: taskId })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fallback.data) {
+        larp = fallback.data;
+        fetchErr = fallback.error;
+        taskIdSegments = (larp.provider_task_id || "")
+          .split(",")
+          .map((segment) => segment.trim())
+          .filter(Boolean);
+        console.warn(
+          "[status] recovered orphaned generation via metadata.pending_task_id fallback",
+          { larpId: larp.id, taskId },
+        );
+      }
+    }
+
+    if (fetchErr || !larp) {
       res.status(404).json({ message: "Tâche introuvable" });
       return;
     }
@@ -318,20 +359,22 @@ module.exports = async function handler(req, res) {
         larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
       const kickoffDone = readVideoApiCallCount(kickMeta) >= 1;
       if (!kickoffDone && !kickMeta.video_kickoff_failed) {
-        if (ageInMs > 300_000) {
+        // Safety-net timeout: a generation must never stay "processing"
+        // indefinitely without ever reaching aleph_*/kling_*/video_*. 3 min
+        // is well above the ~1.5s normally needed to kick off the provider.
+        if (ageInMs > VIDEO_PENDING_KICKOFF_TIMEOUT_MS) {
           await markVideoKickoffFailed(
             supabase,
             userId,
             larp,
-            "Envoi studio trop long. Jetons remboursés — réessaie.",
+            VIDEO_TIMEOUT_USER_MESSAGE,
           );
           res.status(200).json({
             larpId: larp.id,
             ...statusTimingFields(larp),
             status: "fail",
             resultUrls: [],
-            failMessage:
-              "Envoi studio trop long. Jetons remboursés — réessaie.",
+            failMessage: VIDEO_TIMEOUT_USER_MESSAGE,
             costTime: null,
             isSubscriber: false,
             requiresPaywall: false,
@@ -521,8 +564,7 @@ module.exports = async function handler(req, res) {
           }
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
-          apiFailMsg =
-            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+          apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Kling video", err);
@@ -608,8 +650,7 @@ module.exports = async function handler(req, res) {
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
-          apiFailMsg =
-            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+          apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Aleph video", err);
@@ -653,8 +694,7 @@ module.exports = async function handler(req, res) {
           );
         } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
           apiStatus = "fail";
-          apiFailMsg =
-            "Génération trop longue (timeout). Réessaie — jetons remboursés.";
+          apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Runway video", err);
