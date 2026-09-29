@@ -8,6 +8,17 @@ const instagram = require("./instagram");
 
 const PLATFORMS = new Set(["tiktok", "instagram", "youtube"]);
 
+function accountsReturnPath({ ok, error }) {
+  const params = new URLSearchParams();
+  if (ok) params.set("connected", "1");
+  else {
+    params.set("oauth_error", "1");
+    const msg = error ? String(error).trim().slice(0, 240) : "";
+    if (msg) params.set("oauth_msg", msg);
+  }
+  return `/admin/accounts?${params}`;
+}
+
 function oauthResultHtml({ ok, error, platform }) {
   const payload = JSON.stringify({
     type: "crm-oauth-complete",
@@ -15,6 +26,7 @@ function oauthResultHtml({ ok, error, platform }) {
     error: error || null,
     platform: platform || null,
   });
+  const fallback = accountsReturnPath({ ok, error });
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><title>Luxeflexia CRM</title></head><body>
 <script>
 (function(){
@@ -26,10 +38,10 @@ function oauthResultHtml({ ok, error, platform }) {
       return;
     }
   } catch (e) {}
-  window.location.href = '/admin/accounts?' + (data.ok ? 'connected=1' : 'oauth_error=1');
+  window.location.href = ${JSON.stringify(fallback)};
 })();
 </script>
-<p style="font-family:system-ui;padding:24px">${ok ? "Compte connecté — vous pouvez fermer cette fenêtre." : "Erreur de connexion — retour au CRM…"}</p>
+<p style="font-family:system-ui;padding:24px">${ok ? "Compte connecté — retour au CRM…" : "Erreur de connexion — retour au CRM…"}</p>
 </body></html>`;
 }
 
@@ -70,27 +82,19 @@ async function handleOAuthStart(req, res) {
 async function handleOAuthCallback(req, res, platform) {
   const p = String(platform || "").toLowerCase();
   if (!PLATFORMS.has(p)) {
-    sendHtml(res, 400, oauthResultHtml({ ok: false, error: "Plateforme inconnue", platform: p }));
+    redirect(res, accountsReturnPath({ ok: false, error: "Plateforme inconnue" }));
     return;
   }
   const q = req.query || {};
   const errMsg = q.error_description || q.error;
   if (errMsg) {
-    sendHtml(
-      res,
-      400,
-      oauthResultHtml({ ok: false, error: String(errMsg), platform: p }),
-    );
+    redirect(res, accountsReturnPath({ ok: false, error: String(errMsg) }));
     return;
   }
   const code = q.code;
   const stateRaw = q.state;
   if (!code || !stateRaw) {
-    sendHtml(
-      res,
-      400,
-      oauthResultHtml({ ok: false, error: "Paramètres OAuth manquants", platform: p }),
-    );
+    redirect(res, accountsReturnPath({ ok: false, error: "Paramètres OAuth manquants" }));
     return;
   }
   try {
@@ -111,15 +115,13 @@ async function handleOAuthCallback(req, res, platform) {
       ...profile,
     });
 
-    sendHtml(res, 200, oauthResultHtml({ ok: true, platform: p }));
+    redirect(res, accountsReturnPath({ ok: true }));
   } catch (err) {
-    sendHtml(
+    redirect(
       res,
-      err.status || 500,
-      oauthResultHtml({
+      accountsReturnPath({
         ok: false,
         error: err.message || "Connexion impossible",
-        platform: p,
       }),
     );
   }

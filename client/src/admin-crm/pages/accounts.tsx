@@ -32,7 +32,12 @@ export default function AccountsPage() {
       invalidate();
     }
     if (params.get("oauth_error") === "1") {
-      setBanner("La connexion OAuth a échoué — réessayez.");
+      const detail = params.get("oauth_msg");
+      setBanner(
+        detail
+          ? `Connexion TikTok refusée ou interrompue : ${detail}`
+          : "La connexion TikTok a échoué — réessayez.",
+      );
     }
   }, [search, invalidate]);
 
@@ -63,7 +68,7 @@ export default function AccountsPage() {
         <div>
           <h1 className="lux-display text-2xl">Comptes</h1>
           <p className="text-sm text-[var(--lux-text-muted)]">
-            Connexion OAuth officielle — TikTok, Instagram, YouTube
+            Connexion TikTok Login Kit (OAuth) — autres plateformes bientôt
           </p>
         </div>
         <button
@@ -85,7 +90,7 @@ export default function AccountsPage() {
       {!accounts?.length ? (
         <CrmEmptyState
           title="Aucun compte connecté"
-          hint="Ajoute un compte via OAuth : identité, photo et @username sont récupérés automatiquement."
+          hint="Ajoute un compte TikTok via Login Kit : avatar, nom affiché et identifiant sont récupérés automatiquement."
         />
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
@@ -156,44 +161,22 @@ function OAuthConnectModal({
     redirectOrigin: string;
   };
 }) {
-  const invalidate = useCrmInvalidate();
-  const [platform, setPlatform] = useState<CrmPlatform>("tiktok");
+  const platform: CrmPlatform = "tiktok";
   const [country, setCountry] = useState("FR");
   const [error, setError] = useState<string | null>(null);
 
-  const configured = oauthStatus?.platforms[platform] ?? false;
+  const configured = oauthStatus?.platforms.tiktok ?? false;
 
   function connect() {
     setError(null);
     if (!configured) {
       setError(
-        "OAuth non configuré sur le serveur pour cette plateforme — voir Réglages CRM.",
+        "TikTok Login Kit non configuré (CRM_TIKTOK_*) — voir Réglages CRM.",
       );
       return;
     }
     const url = crmApi.oauth.startUrl(platform, country);
-    const popup = window.open(
-      url,
-      "luxeflexia_oauth",
-      "width=520,height=720,menubar=no,toolbar=no",
-    );
-    if (!popup) {
-      setError("Autorisez les pop-ups pour ouvrir la fenêtre de connexion.");
-      return;
-    }
-    const onMessage = (ev: MessageEvent) => {
-      if (ev.origin !== window.location.origin) return;
-      const data = ev.data as { type?: string; ok?: boolean; error?: string };
-      if (data?.type !== "crm-oauth-complete") return;
-      window.removeEventListener("message", onMessage);
-      if (data.ok) {
-        invalidate();
-        onClose();
-      } else {
-        setError(data.error || "Connexion annulée ou refusée.");
-      }
-    };
-    window.addEventListener("message", onMessage);
+    window.location.assign(url);
   }
 
   return (
@@ -201,21 +184,20 @@ function OAuthConnectModal({
       <GlassCard className="w-full max-w-md space-y-4 lux-glow-gold">
         <h2 className="lux-display text-xl">Ajouter un compte</h2>
         <p className="text-xs text-[var(--lux-text-muted)]">
-          Choisissez la plateforme et le marché CRM (pays). Vous serez redirigé
-          vers la connexion officielle — aucune saisie de @username.
+          TikTok Login Kit — redirection vers la page officielle TikTok pour
+          autoriser LuxFlexIA. Aucune saisie manuelle de @username.
         </p>
-        <label className="block text-xs text-[var(--lux-text-muted)]">
-          Plateforme
-          <select
-            className="mt-1 w-full rounded-lg bg-black/40 border border-[var(--lux-border)] px-3 py-2 text-sm"
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value as CrmPlatform)}
-          >
-            <option value="tiktok">TikTok</option>
-            <option value="instagram">Instagram</option>
-            <option value="youtube">YouTube</option>
-          </select>
-        </label>
+        <div className="flex items-center gap-3 rounded-lg bg-black/40 border border-[var(--lux-border)] px-3 py-3">
+          <span className="text-lg" aria-hidden>
+            🎵
+          </span>
+          <div>
+            <p className="text-sm font-medium">TikTok</p>
+            <p className="text-xs text-[var(--lux-text-muted)]">
+              Scope <code className="opacity-80">user.info.basic</code>
+            </p>
+          </div>
+        </div>
         <label className="block text-xs text-[var(--lux-text-muted)]">
           Pays (segmentation CRM)
           <select
@@ -232,7 +214,7 @@ function OAuthConnectModal({
         </label>
         {!configured ? (
           <p className="text-xs text-amber-400/90">
-            Clés OAuth manquantes côté serveur pour {platformLabel(platform)}.
+            Clés TikTok manquantes côté serveur ({platformLabel(platform)}).
           </p>
         ) : null}
         {error ? <p className="text-xs text-[var(--lux-danger)]">{error}</p> : null}
@@ -249,7 +231,7 @@ function OAuthConnectModal({
             onClick={connect}
             className="px-4 py-2 rounded-lg bg-[var(--lux-gold-soft)] text-[var(--lux-gold)] text-sm"
           >
-            Se connecter
+            Continuer avec TikTok
           </button>
         </div>
       </GlassCard>

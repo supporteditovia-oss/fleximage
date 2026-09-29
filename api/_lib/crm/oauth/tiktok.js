@@ -38,22 +38,37 @@ async function exchangeAndProfile(code) {
       { status: 502 },
     );
   }
-  const accessToken = tokenJson.access_token;
-  const refreshToken = tokenJson.refresh_token || null;
-  const expiresIn = Number(tokenJson.expires_in) || 0;
+  const tokenData = tokenJson.data || tokenJson;
+  const accessToken = tokenData.access_token || tokenJson.access_token;
+  const refreshToken = tokenData.refresh_token || tokenJson.refresh_token || null;
+  const expiresIn = Number(tokenData.expires_in || tokenJson.expires_in) || 0;
+  const tokenOpenId = tokenData.open_id || tokenJson.open_id || null;
   const expiresAt = expiresIn
     ? new Date(Date.now() + expiresIn * 1000).toISOString()
     : null;
 
+  if (!accessToken) {
+    throw Object.assign(new Error("Réponse token TikTok invalide (access_token manquant)"), {
+      status: 502,
+    });
+  }
+
   const userRes = await fetch(
-    `${cfg.userInfoUrl}?fields=open_id,union_id,avatar_url,display_name,username`,
+    `${cfg.userInfoUrl}?fields=open_id,union_id,avatar_url,display_name`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
   const userJson = await userRes.json().catch(() => ({}));
+  const apiErr = userJson.error;
+  if (apiErr && String(apiErr.code || "").toLowerCase() !== "ok") {
+    throw Object.assign(
+      new Error(apiErr.message || apiErr.code || "Profil TikTok refusé"),
+      { status: 502 },
+    );
+  }
   const user = userJson.data?.user || userJson.user || {};
-  const openId = user.open_id || user.union_id;
+  const openId = user.open_id || user.union_id || tokenOpenId;
   if (!openId) {
     throw Object.assign(new Error("Profil TikTok incomplet (open_id manquant)"), {
       status: 502,
@@ -62,7 +77,9 @@ async function exchangeAndProfile(code) {
 
   return {
     providerAccountId: String(openId),
-    username: String(user.username || user.display_name || openId).replace(/^@/, ""),
+    username: String(user.username || user.display_name || openId)
+      .replace(/^@/, "")
+      .slice(0, 120),
     displayName: user.display_name || user.username || null,
     avatarUrl: user.avatar_url || null,
     followers: 0,
