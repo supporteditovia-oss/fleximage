@@ -1,6 +1,9 @@
 import GlassCard from "@/admin-crm/components/ui/GlassCard";
+import { useCrmOAuthStatus } from "@/admin-crm/hooks/use-crm-queries";
 
 export default function SettingsPage() {
+  const { data: oauthStatus } = useCrmOAuthStatus();
+  const tiktok = oauthStatus?.tiktokDiagnostics;
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -48,6 +51,48 @@ export default function SettingsPage() {
             Origine redirect : <code>CRM_OAUTH_REDIRECT_ORIGIN=https://www.luxeflexia.com</code>
           </li>
         </ul>
+        {tiktok ? (
+          <div className="mt-4 pt-4 border-t border-[var(--lux-border)] text-xs space-y-2">
+            <p className="font-medium text-[var(--lux-text)]">Diagnostic TikTok (runtime prod)</p>
+            <p className="text-[var(--lux-text-muted)]">
+              Client Key ({tiktok.envVarNames.clientKey}) :{" "}
+              {tiktok.clientKey.present ? (
+                <>
+                  présente · longueur {tiktok.clientKey.length} ·{" "}
+                  <code className="text-[var(--lux-gold)]">{tiktok.clientKey.masked}</code>
+                </>
+              ) : (
+                <span className="text-[var(--lux-danger)]">absente ou vide</span>
+              )}
+            </p>
+            {tiktok.clientKey.hadOuterQuotes || tiktok.clientKey.hadEdgeWhitespace ? (
+              <p className="text-amber-400/90">
+                Guillemets ou espaces détectés dans la variable — corrigez la valeur dans Vercel.
+              </p>
+            ) : null}
+            {tiktok.clientKeyEqualsSecret ? (
+              <p className="text-[var(--lux-danger)]">
+                La Client Key et le Client Secret sont identiques — vérifiez Vercel.
+              </p>
+            ) : null}
+            {tiktok.authorizePreview && "authorizeEndpoint" in tiktok.authorizePreview ? (
+              <p className="text-[var(--lux-text-muted)]">
+                URL authorize :{" "}
+                <code className="text-[var(--lux-gold)]">
+                  {tiktok.authorizePreview.authorizeEndpoint}
+                </code>
+                {" · "}
+                <code>client_key</code> longueur envoyée :{" "}
+                {tiktok.authorizePreview.clientKeyParamLength}
+              </p>
+            ) : null}
+            <ul className="list-disc pl-4 text-[var(--lux-text-muted)] space-y-1">
+              {tiktok.hints.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </GlassCard>
 
       <GlassCard variant="flat">

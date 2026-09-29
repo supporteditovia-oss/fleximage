@@ -1,4 +1,5 @@
 const { COUNTRY_META } = require("./country-meta");
+const { readCrmEnv, maskCredential } = require("./env-utils");
 
 const PRODUCTION_SITE_ORIGIN = "https://www.luxeflexia.com";
 
@@ -19,8 +20,10 @@ function redirectUri(platform) {
 
 function platformConfig(platform) {
   if (platform === "tiktok") {
-    const clientKey = String(process.env.CRM_TIKTOK_CLIENT_KEY || "").trim();
-    const clientSecret = String(process.env.CRM_TIKTOK_CLIENT_SECRET || "").trim();
+    const keyEnv = readCrmEnv("CRM_TIKTOK_CLIENT_KEY");
+    const secretEnv = readCrmEnv("CRM_TIKTOK_CLIENT_SECRET");
+    const clientKey = keyEnv.value;
+    const clientSecret = secretEnv.value;
     return {
       configured: !!(clientKey && clientSecret),
       clientKey,
@@ -76,6 +79,73 @@ function platformConfig(platform) {
   return { configured: false };
 }
 
+function tiktokOAuthDiagnostics() {
+  const keyEnv = readCrmEnv("CRM_TIKTOK_CLIENT_KEY");
+  const secretEnv = readCrmEnv("CRM_TIKTOK_CLIENT_SECRET");
+  const cfg = platformConfig("tiktok");
+  let authorizePreview = null;
+  try {
+    const tiktok = require("./tiktok");
+    const sampleState = "diag";
+    const full = tiktok.buildAuthorizeUrl(sampleState);
+    const u = new URL(full);
+    const paramKey = u.searchParams.get("client_key") || "";
+    authorizePreview = {
+      authorizeEndpoint: `${u.origin}${u.pathname}`,
+      responseType: u.searchParams.get("response_type"),
+      scope: u.searchParams.get("scope"),
+      redirectUri: u.searchParams.get("redirect_uri"),
+      clientKeyParamPresent: !!paramKey,
+      clientKeyParamLength: paramKey.length,
+      clientKeyParamMatchesEnv: paramKey === cfg.clientKey,
+    };
+  } catch (err) {
+    authorizePreview = { error: err.message || "Impossible de construire l’URL authorize" };
+  }
+
+  const keyMask = maskCredential(keyEnv.value);
+  const secretMask = maskCredential(secretEnv.value);
+
+  return {
+    envVarNames: {
+      clientKey: "CRM_TIKTOK_CLIENT_KEY",
+      clientSecret: "CRM_TIKTOK_CLIENT_SECRET",
+    },
+    clientKey: {
+      present: keyMask.present,
+      length: keyMask.length,
+      masked: keyMask.masked,
+      hadEdgeWhitespace: keyEnv.hadEdgeWhitespace,
+      hadOuterQuotes: keyEnv.hadOuterQuotes,
+      hadNewline: keyEnv.hadNewline,
+      hasNonAscii: keyEnv.hasNonAscii,
+    },
+    clientSecret: {
+      present: secretMask.present,
+      length: secretMask.length,
+      masked: secretMask.masked,
+    },
+    clientKeyEqualsSecret: !!(
+      keyEnv.value &&
+      secretEnv.value &&
+      keyEnv.value === secretEnv.value
+    ),
+    likelyKeySecretSwap:
+      keyMask.present &&
+      secretMask.present &&
+      keyMask.length >= 28 &&
+      secretMask.length >= 28 &&
+      keyMask.length >= secretMask.length - 4,
+    configured: cfg.configured,
+    authorizePreview,
+    hints: [
+      "Comparez clientKey.masked avec la Client Key affichée dans TikTok Developer → LuxFlexIA (Manage apps).",
+      "Si l’app est en mode Développement, le compte TikTok doit être ajouté dans App permissions → Test users (sinon TikTok affiche souvent « client_key »).",
+      "Ne mettez jamais le Client Secret dans CRM_TIKTOK_CLIENT_KEY.",
+    ],
+  };
+}
+
 function publicOAuthStatus() {
   return {
     redirectOrigin: appOrigin(),
@@ -89,6 +159,7 @@ function publicOAuthStatus() {
       instagram: platformConfig("instagram").configured,
       youtube: platformConfig("youtube").configured,
     },
+    tiktokDiagnostics: tiktokOAuthDiagnostics(),
   };
 }
 
@@ -102,5 +173,7 @@ module.exports = {
   redirectUri,
   platformConfig,
   publicOAuthStatus,
+  tiktokOAuthDiagnostics,
   localeFromCountry,
+  maskCredential,
 };

@@ -1,6 +1,6 @@
 const { requireCrmSession } = require("../require-crm-session");
 const { signOAuthState, verifyOAuthState, randomNonce } = require("./state");
-const { publicOAuthStatus } = require("./config");
+const { publicOAuthStatus, maskCredential, platformConfig } = require("./config");
 const { upsertOAuthAccount } = require("./persist");
 const tiktok = require("./tiktok");
 const youtube = require("./youtube");
@@ -73,8 +73,17 @@ async function handleOAuthStart(req, res) {
     nonce: randomNonce(),
   });
   let url;
-  if (platform === "tiktok") url = tiktok.buildAuthorizeUrl(state);
-  else if (platform === "youtube") url = youtube.buildAuthorizeUrl(state);
+  if (platform === "tiktok") {
+    const cfg = platformConfig("tiktok");
+    const keyInfo = maskCredential(cfg.clientKey);
+    console.info("[crm-oauth] tiktok start", {
+      clientKeyPresent: keyInfo.present,
+      clientKeyLength: keyInfo.length,
+      clientKeyMasked: keyInfo.masked,
+      authorizeUrl: cfg.authorizeUrl,
+    });
+    url = tiktok.buildAuthorizeUrl(state);
+  } else if (platform === "youtube") url = youtube.buildAuthorizeUrl(state);
   else url = instagram.buildAuthorizeUrl(state);
   redirect(res, url);
 }
