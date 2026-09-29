@@ -17,6 +17,8 @@ Rules:
 - Preserve EXACT user intent: brands, car models, chassis codes (G90, F90, SVJ, 992…), colors, objects, locations, people count.
 - Do NOT invent unrelated subjects or swap requested vehicles/objects.
 - NEVER substitute a different car: if user says BMW M5 G90, output must say BMW M5 G90 (not Nissan, Silvia, Skyline, GT-R). If user says Lamborghini SVJ/SVG, output Aventador SVJ (not GT-R, not Huracan unless asked).
+- Interior/cockpit swap from driver POV: change ONLY cabin (wheel, dash, seats, trim, screens) — NEVER move legs, feet, knees, bag on lap, or hand positions from the reference photo.
+- If physical car doors look closed, instrument cluster / MMI must NOT show open-door warnings (no red door highlight on the white car graphic). Rebuild OEM UI for the target model; do not copy wrong door alerts from the source car.
 - Keep French model names verbatim in English prompt (brand + model + generation).
 - Add cinematic composition, premium lighting, photorealism, natural depth of field, 35mm lens feel, ultra-realistic textures, vertical 9:16 when lifestyle/social is implied.
 - No text overlays, no watermarks, no logos unless user explicitly asked.

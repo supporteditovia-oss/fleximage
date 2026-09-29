@@ -603,12 +603,19 @@ const COCKPIT_INTERIOR_REPLACE_GUARD =
   "COCKPIT INTERIOR SWAP from driver POV (mandatory). " +
   "Replace ONLY the cabin/interior of the uploaded driver photo with the EXACT factory cockpit of the named vehicle (brand + model + generation/chassis + trim). " +
   "Transform: steering wheel, instrument cluster, center screens, console, shifter, seats, door trims, vents, rearview mirror — authentic to THAT generation only. " +
-  "FROZEN unless asked: road/traffic/sky through the windshield, driver hand on wheel, crop, camera angle, exterior daylight. " +
-  "FORBIDDEN: pasting the named car as a ghost on the road outside, blurry car in traffic ahead, toy on dashboard, keeping the original Clio/Renault/generic interior, hybrid cockpit from two brands. " +
+  "BODY POSE LOCK (absolute): freeze the ENTIRE driver body exactly as the upload — same leg positions (left foot on dashboard/console if present, same knee height and angle), feet, hips, bag/straps on lap, pants, jacket, hands on wheel, head, crop. User asked interior ONLY — NEVER move, straighten, lower, or repose any limb. " +
+  "DOOR UI LOCK: if every physical door looks CLOSED, ALL screens (cluster + MMI/virtual cockpit) must show ALL doors closed on the white top-down car graphic — ZERO red open-door highlights, ZERO copied open-door warnings from the source Peugeot/Renault/generic cluster. " +
+  "FROZEN unless asked: road/traffic/sky through the windshield, driver hands, crop, camera angle, exterior daylight. " +
+  "FORBIDDEN: pasting the named car as a ghost on the road outside, blurry car in traffic ahead, toy on dashboard, keeping the original Clio/Renault/generic interior, hybrid cockpit from two brands, moving legs, inventing open-door alerts while doors are shut. " +
   "Real smartphone driver POV — sharp logos and UI of the exact generation requested.";
 
 const COCKPIT_INTERIOR_REPLACE_CLARIFIER =
-  " (COCKPIT INTERIOR LOCK — critical: swap the INSIDE/cockpit to the named model. Do NOT paste that car on the road outside. Keep traffic/road view through windshield.)";
+  " (COCKPIT INTERIOR LOCK — critical: swap ONLY the INSIDE/cockpit to the named model. Do NOT paste that car on the road outside. Keep traffic/road view through windshield. " +
+  "Keep EXACT leg/body pose from upload. Physical doors closed ⇒ cluster/MMI door graphic ALL closed — never red open-door icon.)";
+
+/** Front-load for cockpit-only swaps — survives 2900-char truncation. */
+const COCKPIT_BODY_POSE_FRONT_LOCK =
+  "COCKPIT BODY POSE LOCK: freeze legs/feet/knees/bag/hands — interior swap ONLY, zero limb movement. ";
 
 /**
  * Fictional / animated / cartoon / game vehicles (Cars-style, Oui-Oui, police toon,
@@ -1949,6 +1956,9 @@ function parseVehicleSpec(prompt) {
   ) {
     label = "Lamborghini Aventador SVJ";
   }
+  if (names.includes("rs3") && !/\burus\b/.test(text)) {
+    label = /\baudi\b/.test(text) ? "Audi RS3" : "Audi RS3 sportback";
+  }
 
   return {
     hasVehicle: true,
@@ -1997,6 +2007,7 @@ function generationAntimixLine(prompt) {
 }
 
 function vehicleIdentityHint(prompt) {
+  // Always parse the user's raw request — enriched clarifiers mention Urus/MANSORY and poison GEN LOCK.
   const spec = parseVehicleSpec(prompt);
   if (!spec) return "";
   const antimix = generationAntimixLine(prompt);
@@ -2926,7 +2937,7 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${forbidBrand}${cleaned}`;
     }
     const genHint =
-      vehicleIdentityHint(cleaned) || vehicleIdentityHint(prompt);
+      vehicleIdentityHint(prompt);
     if (genHint && !/GEN LOCK:/i.test(cleaned)) {
       cleaned = `${genHint}${cleaned}`;
     }
@@ -2947,15 +2958,30 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${cleaned}${EXTERIOR_TRAFFIC_CLARIFIER}`;
     }
   } else if (cockpitInteriorReplaceRequest) {
+    if (!/DOORS CLOSED LOCK/i.test(cleaned)) {
+      cleaned = `${DOOR_CLOSED_FRONT_LOCK}${cleaned}`;
+    }
+    if (!/COCKPIT BODY POSE LOCK/i.test(cleaned)) {
+      cleaned = `${COCKPIT_BODY_POSE_FRONT_LOCK}${cleaned}`;
+    }
+    if (!/DOOR STATUS LOCK/i.test(cleaned)) {
+      cleaned = `${DOOR_STATUS_CLARIFIER}${cleaned}`;
+    }
+    if (!/SPEED LOCK/i.test(cleaned)) {
+      cleaned = `${SPEED_GAUGE_CLARIFIER}${cleaned}`;
+    }
+    if (!/DASHBOARD LOCK/i.test(cleaned)) {
+      cleaned = `${DASHBOARD_GAUGE_CLARIFIER}${cleaned}`;
+    }
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
     if (!/COCKPIT INTERIOR LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${COCKPIT_INTERIOR_REPLACE_CLARIFIER}`;
     }
-    const genHint = vehicleIdentityHint(cleaned);
+    const genHint = vehicleIdentityHint(prompt);
     if (genHint && !/GEN LOCK:/i.test(cleaned)) {
-      cleaned = `${cleaned}${genHint}`;
+      cleaned = `${genHint}${cleaned}`;
     }
   } else if (motorcycleRideRequest) {
     const seatedUser =
@@ -3028,7 +3054,7 @@ function sanitizeUserPrompt(prompt) {
   }
 
   if (namedVehicle && !lifestyleRequest) {
-    const genHint = vehicleIdentityHint(cleaned);
+    const genHint = vehicleIdentityHint(prompt);
     if (genHint && !/GEN LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${genHint}`;
     }
@@ -3205,7 +3231,7 @@ function sanitizeUserPrompt(prompt) {
     if (isNamedVehiclePrompt(cleaned) || isNamedVehiclePrompt(prompt)) {
       if (!isNonCarLifestylePrompt(cleaned) && !isNonCarLifestylePrompt(prompt)) {
         const genHint =
-          vehicleIdentityHint(cleaned) || vehicleIdentityHint(prompt);
+          vehicleIdentityHint(prompt);
         if (genHint && !/GEN LOCK:/i.test(cleaned)) {
           cleaned = `${genHint}${cleaned}`;
         }
