@@ -35,8 +35,8 @@ export default function AccountsPage() {
       const detail = params.get("oauth_msg");
       setBanner(
         detail
-          ? `Connexion TikTok refusée ou interrompue : ${detail}`
-          : "La connexion TikTok a échoué — réessayez.",
+          ? `Connexion TikTok refusée : ${detail} — vérifiez aussi Test users / Target users sur developers.tiktok.com.`
+          : "Connexion TikTok refusée — ajoutez votre compte en Test user ou Target user (Sandbox) sur TikTok Developer, puis réessayez.",
       );
     }
   }, [search, invalidate]);
@@ -212,6 +212,36 @@ function OAuthConnectModal({
             ))}
           </select>
         </label>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90 space-y-1">
+          <p className="font-medium text-amber-200/95">
+            Erreur TikTok « client_key » après login ?
+          </p>
+          <p>
+            Ce n’est en général <strong>pas</strong> la clé Vercel : TikTok refuse le{" "}
+            <strong>compte</strong> utilisé. Ajoutez-le dans{" "}
+            <a
+              href="https://developers.tiktok.com/apps"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-[var(--lux-gold)]"
+            >
+              TikTok Developer → LuxFlexIA
+            </a>
+            :
+          </p>
+          <ul className="list-disc pl-4 space-y-0.5">
+            <li>
+              <strong>Sandbox</strong> : Sandbox settings → Target users → Add account
+              (même compte TikTok).
+            </li>
+            <li>
+              <strong>Production / staging</strong> : App permissions → Test users.
+            </li>
+          </ul>
+          <p className="text-[var(--lux-text-muted)]">
+            Puis déconnexion TikTok, navigateur privé, et réessayez.
+          </p>
+        </div>
         {!configured ? (
           <p className="text-xs text-amber-400/90">
             Clés TikTok manquantes côté serveur ({platformLabel(platform)}).

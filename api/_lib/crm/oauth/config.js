@@ -15,6 +15,10 @@ function appOrigin() {
 }
 
 function redirectUri(platform) {
+  if (platform === "tiktok") {
+    const exact = String(process.env.CRM_TIKTOK_REDIRECT_URI || "").trim();
+    if (exact) return exact;
+  }
   return `${appOrigin()}/admin/api/oauth/callback/${platform}`;
 }
 
@@ -139,8 +143,10 @@ function tiktokOAuthDiagnostics() {
     configured: cfg.configured,
     authorizePreview,
     hints: [
-      "Comparez clientKey.masked avec la Client Key affichée dans TikTok Developer → LuxFlexIA (Manage apps).",
-      "Si l’app est en mode Développement, le compte TikTok doit être ajouté dans App permissions → Test users (sinon TikTok affiche souvent « client_key »).",
+      "La Client Key est reconnue par TikTok si vous voyez enter_from=dev_<clé> — l’erreur « client_key » après login vient presque toujours du compte TikTok non autorisé pour l’app.",
+      "Mode Sandbox (toggle Sandbox) : Sandbox settings → Target users → Add account → connectez-vous avec LE MÊME compte TikTok que dans LuxFlexIA (délai possible ~1 h).",
+      "Mode Production (brouillon / staging) : App permissions → Test users → ajoutez le @username du compte.",
+      "Login Kit Web : redirect URI identique caractère par caractère (essai avec / final si besoin via CRM_TIKTOK_REDIRECT_URI).",
       "Ne mettez jamais le Client Secret dans CRM_TIKTOK_CLIENT_KEY.",
     ],
   };
