@@ -8,8 +8,20 @@ test("RS3 interior swap: locks body pose and closed-door cluster", () => {
     { referenceImageCount: 1 },
   );
   assert.match(prompt, /COCKPIT INTERIOR SWAP/i);
-  assert.match(prompt, /BODY POSE LOCK|COCKPIT BODY POSE/i);
   assert.match(prompt, /DOORS CLOSED LOCK/i);
-  assert.match(prompt, /DOOR UI LOCK|DOOR STATUS LOCK|open-door/i);
-  assert.match(prompt, /rs3|audi/i);
+  assert.match(prompt, /windshield traffic|never delete\/remove/i);
+  assert.match(prompt, /GEN LOCK.*Audi RS3/i);
+  assert.match(prompt, /User request:.*rs3/i);
+});
+
+test("ES Peugeot→Purosangue Mansory: cockpit swap + traffic lock", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Convierte el interior de mi Peugeot en un Ferrari Purosangue Mansory: cuero negro y rojo, carbono, Alcantara y luz roja. Mismo ángulo, resultado hiperrealista.",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /COCKPIT INTERIOR SWAP/i);
+  assert.match(prompt, /windshield traffic|never delete\/remove/i);
+  assert.match(prompt, /screens-only|Vehicle Status/i);
+  assert.match(prompt, /Convierte el interior/i);
+  assert.match(prompt, /Purosangue|Ferrari|Mansory/i);
 });

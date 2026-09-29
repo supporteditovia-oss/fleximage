@@ -605,8 +605,10 @@ const COCKPIT_INTERIOR_REPLACE_GUARD =
   "Transform: steering wheel, instrument cluster, center screens, console, shifter, seats, door trims, vents, rearview mirror — authentic to THAT generation only. " +
   "BODY POSE LOCK (absolute): freeze the ENTIRE driver body exactly as the upload — same leg positions (left foot on dashboard/console if present, same knee height and angle), feet, hips, bag/straps on lap, pants, jacket, hands on wheel, head, crop. User asked interior ONLY — NEVER move, straighten, lower, or repose any limb. " +
   "DOOR UI LOCK: if every physical door looks CLOSED, ALL screens (cluster + MMI/virtual cockpit) must show ALL doors closed on the white top-down car graphic — ZERO red open-door highlights, ZERO copied open-door warnings from the source Peugeot/Renault/generic cluster. " +
-  "FROZEN unless asked: road/traffic/sky through the windshield, driver hands, crop, camera angle, exterior daylight. " +
-  "FORBIDDEN: pasting the named car as a ghost on the road outside, blurry car in traffic ahead, toy on dashboard, keeping the original Clio/Renault/generic interior, hybrid cockpit from two brands, moving legs, inventing open-door alerts while doors are shut. " +
+  "WINDSHIELD TRAFFIC LOCK: freeze ALL exterior vehicles through the windshield — same cars in the same lanes (never delete/remove a gray/white/red car ahead). " +
+  "FULL MATERIAL SWAP: user-requested leather/carbon/Alcantara/ambient light must appear on wheel, seats, trim — NOT a screens-only reskin. " +
+  "FROZEN unless asked: road/traffic/sky through the windshield, driver hands, crop, camera angle, exterior daylight, CarPlay/music layout unless part of authentic target OEM UI. " +
+  "FORBIDDEN: pasting the named car as a ghost on the road outside, removing traffic cars, screens-only 'Vehicle Status' overlay, toy on dashboard, keeping Peugeot wheel/badge/plastics, hybrid cockpit from two brands, moving legs, inventing open-door alerts while doors are shut. " +
   "Real smartphone driver POV — sharp logos and UI of the exact generation requested.";
 
 const COCKPIT_INTERIOR_REPLACE_CLARIFIER =
@@ -616,6 +618,18 @@ const COCKPIT_INTERIOR_REPLACE_CLARIFIER =
 /** Front-load for cockpit-only swaps — survives 2900-char truncation. */
 const COCKPIT_BODY_POSE_FRONT_LOCK =
   "COCKPIT BODY POSE LOCK: freeze legs/feet/knees/bag/hands — interior swap ONLY, zero limb movement. ";
+
+const COCKPIT_WINDSHIELD_TRAFFIC_FRONT_LOCK =
+  "WINDSHIELD TRAFFIC LOCK (absolute): freeze EVERY pixel outside — same road, lanes, sky, trees, buildings, AND every car/truck in traffic (same count, colors, positions, distance). NEVER delete, remove, or erase a vehicle ahead. ";
+
+const COCKPIT_FULL_MATERIAL_SWAP_LOCK =
+  "FULL COCKPIT SWAP (not screens-only): change steering wheel, wheel badge, dash materials, carbon/Alcantara/leather colors, ambient lighting, seats, console, shifter, door cards — authentic to the named model + trim/tuner. FORBIDDEN: lazy edit that ONLY replaces cluster/tablet UI with generic 'Vehicle Status' white-car graphics while Peugeot/generic wheel and plastics remain. ";
+
+/** Short guard — user prompt must fit in 2900-char provider budget. */
+const COCKPIT_INTERIOR_COMPACT_GUARD =
+  "COCKPIT INTERIOR SWAP (driver POV): rebuild FULL cabin to the EXACT named model/trim — wheel+badge, black/red leather, carbon, Alcantara, red ambient light, cluster, center screen, console, seats, door trim. " +
+  "FREEZE windshield traffic (every car ahead stays — never delete/remove), same camera angle, road, sky, hands. " +
+  "NO screens-only 'Vehicle Status' reskin; NO Peugeot/generic wheel left; doors closed ⇒ NO red open-door graphic on screens. ";
 
 /**
  * Fictional / animated / cartoon / game vehicles (Cars-style, Oui-Oui, police toon,
@@ -1407,10 +1421,12 @@ function isCockpitInteriorReplacePrompt(prompt) {
   const hasTargetVehicle = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
   if (!hasTargetVehicle) return false;
   const replaceIntent =
-    /\b(remplac\w*|replace\w*|swap\w*|change\w*|transforme\w*|mets|mettre|put)\b/.test(text);
+    /\b(remplac\w*|replace\w*|swap\w*|change\w*|transforme\w*|transforma\w*|conviert\w*|convert\w*|cambia\w*|cambiar|mets|mettre|put|poner|haz|make)\b/.test(
+      text,
+    );
   if (!replaceIntent) return false;
   const interiorIntent =
-    /\b(interieur|interior|habitacle|cockpit|cabin|cabine|dedans|inside|a\s+l['']interieur|dans\s+la\s+voiture|in\s+the\s+car|volant|dashboard|tableau\s*de\s*bord|combine|compteur|sellerie|interieur\s+(?:de\s+la\s+)?voiture|inside\s+(?:of\s+the\s+)?car|car\s+inside|voiture\s+interieur|interieur\s+voiture)\b/.test(
+    /\b(interieur|interior|interior\s+de|habitacle|habitaculo|cockpit|cabina|cabin|cabine|dedans|inside|a\s+l['']interieur|dans\s+la\s+voiture|in\s+the\s+car|volant|volante|dashboard|tableau\s*de\s*bord|tablero|salpicadero|combine|compteur|sellerie|cuero|alcantara|carbono|interieur\s+(?:de\s+la\s+)?voiture|inside\s+(?:of\s+the\s+)?car|car\s+inside|voiture\s+interieur|interieur\s+voiture)\b/.test(
       text,
     ) &&
     !/\b(factory\s+interior|generic\s+.*interior|replace\s+the\s+interior\/cockpit|interior\/cockpit)\b/.test(
@@ -1422,6 +1438,13 @@ function isCockpitInteriorReplacePrompt(prompt) {
     ) && !interiorIntent;
   if (explicitExteriorAhead) return false;
   if (interiorIntent) return true;
+  if (
+    replaceIntent &&
+    /\b(peugeot|clio|renault|megane|208|308|polo|habitacle|habitaculo)\b/.test(text) &&
+    hasTargetVehicle
+  ) {
+    return true;
+  }
   if (
     replaceIntent &&
     /\b(clio|renault|megane|208|308|polo|habitacle)\b/.test(text) &&
@@ -2958,6 +2981,12 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${cleaned}${EXTERIOR_TRAFFIC_CLARIFIER}`;
     }
   } else if (cockpitInteriorReplaceRequest) {
+    if (!/WINDSHIELD TRAFFIC LOCK/i.test(cleaned)) {
+      cleaned = `${COCKPIT_WINDSHIELD_TRAFFIC_FRONT_LOCK}${cleaned}`;
+    }
+    if (!/FULL COCKPIT SWAP/i.test(cleaned)) {
+      cleaned = `${COCKPIT_FULL_MATERIAL_SWAP_LOCK}${cleaned}`;
+    }
     if (!/DOORS CLOSED LOCK/i.test(cleaned)) {
       cleaned = `${DOOR_CLOSED_FRONT_LOCK}${cleaned}`;
     }
@@ -4107,6 +4136,18 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const compactCockpitCore = (() => {
+    if (!cockpitInteriorReplaceScene) return "";
+    const genHint = vehicleIdentityHint(userPrompt);
+    const head = [genHint, COCKPIT_INTERIOR_COMPACT_GUARD]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const rawUser = String(userPrompt || "").trim();
+    const budget = Math.max(120, MAX_FINAL_PROMPT - head.length - 16);
+    return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  })();
   const candidates =
     lifestyleScene ||
     jetSkiScene ||
@@ -4126,7 +4167,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     cameraChange
       ? lifestyleScene
         ? [compactLifestyleCore, core].filter(Boolean)
-        : [core]
+        : cockpitInteriorReplaceScene
+          ? [compactCockpitCore, core].filter(Boolean)
+          : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
