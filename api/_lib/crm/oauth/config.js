@@ -1,8 +1,13 @@
 const { COUNTRY_META } = require("./country-meta");
 
+const PRODUCTION_SITE_ORIGIN = "https://www.luxeflexia.com";
+
 function appOrigin() {
   const explicit = String(process.env.CRM_OAUTH_REDIRECT_ORIGIN || "").trim();
   if (explicit) return explicit.replace(/\/$/, "");
+  if (String(process.env.VERCEL_ENV || "").trim() === "production") {
+    return PRODUCTION_SITE_ORIGIN;
+  }
   const vercel = String(process.env.VERCEL_URL || "").trim();
   if (vercel) return `https://${vercel}`;
   return "http://localhost:5000";
@@ -74,6 +79,11 @@ function platformConfig(platform) {
 function publicOAuthStatus() {
   return {
     redirectOrigin: appOrigin(),
+    redirectUris: {
+      tiktok: redirectUri("tiktok"),
+      instagram: redirectUri("instagram"),
+      youtube: redirectUri("youtube"),
+    },
     platforms: {
       tiktok: platformConfig("tiktok").configured,
       instagram: platformConfig("instagram").configured,

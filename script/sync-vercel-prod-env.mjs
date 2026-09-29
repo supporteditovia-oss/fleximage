@@ -30,6 +30,9 @@ const VARS = [
   { name: "ADMIN_EMAIL", required: false },
   { name: "ADMIN_PASSWORD_HASH", required: false },
   { name: "SESSION_SECRET", required: false },
+  { name: "CRM_OAUTH_REDIRECT_ORIGIN", required: false, defaultValue: "https://www.luxeflexia.com" },
+  { name: "CRM_TIKTOK_CLIENT_KEY", required: false },
+  { name: "CRM_TIKTOK_CLIENT_SECRET", required: false },
 ];
 
 function runVercel(args, stdin) {
