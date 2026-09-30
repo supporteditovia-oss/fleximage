@@ -523,6 +523,14 @@ html.luxeflexia-video-page .floating-header::before {
   margin-top: 1.1rem;
 }
 
+.via-option-block--prominent {
+  margin-top: 1.25rem;
+  padding: 0.85rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .via-option-block__label {
   margin: 0 0 0.45rem;
   font-size: 0.72rem;

@@ -768,6 +768,60 @@ export default function VideoIA() {
               <span className="via-upload-zone__meta">JPG · PNG · max 10 Mo</span>
             </button>
 
+            <div className="via-option-block via-option-block--prominent">
+              <p className="via-option-block__label">Durée du clip</p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Durée"
+              >
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${durationSec === 3 ? "is-active" : ""}`}
+                  onClick={() => setDurationSec(3)}
+                >
+                  3 secondes
+                </button>
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${durationSec === 5 ? "is-active" : ""}`}
+                  onClick={() => setDurationSec(5)}
+                >
+                  5 secondes
+                  <span className="via-orient-toggle__hint">
+                    +{i2vExtra5s} cr
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="via-option-block via-option-block--prominent">
+              <p className="via-option-block__label">Qualité</p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Qualité"
+              >
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${videoQuality === "standard" ? "is-active" : ""}`}
+                  onClick={() => setVideoQuality("standard")}
+                >
+                  720p
+                </button>
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${videoQuality === "high" ? "is-active" : ""}`}
+                  onClick={() => setVideoQuality("high")}
+                >
+                  1080p
+                  <span className="via-orient-toggle__hint">
+                    +{i2vExtra1080} cr
+                  </span>
+                </button>
+              </div>
+            </div>
+
             {imagePreviewUrl && (
               <div
                 className={`via-preview-frame ${aspectRatio === "16:9" ? "is-landscape" : ""}`}
@@ -818,60 +872,6 @@ export default function VideoIA() {
                 voiceExtraCredit={adminBurn.videoVoiceExtra}
               />
             ) : null}
-
-            <div className="via-option-block">
-              <p className="via-option-block__label">Durée du clip</p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Durée"
-              >
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${durationSec === 3 ? "is-active" : ""}`}
-                  onClick={() => setDurationSec(3)}
-                >
-                  3 secondes
-                </button>
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${durationSec === 5 ? "is-active" : ""}`}
-                  onClick={() => setDurationSec(5)}
-                >
-                  5 secondes
-                  <span className="via-orient-toggle__hint">
-                    +{i2vExtra5s} cr
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="via-option-block">
-              <p className="via-option-block__label">Qualité</p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Qualité"
-              >
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${videoQuality === "standard" ? "is-active" : ""}`}
-                  onClick={() => setVideoQuality("standard")}
-                >
-                  720p
-                </button>
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${videoQuality === "high" ? "is-active" : ""}`}
-                  onClick={() => setVideoQuality("high")}
-                >
-                  1080p
-                  <span className="via-orient-toggle__hint">
-                    +{i2vExtra1080} cr
-                  </span>
-                </button>
-              </div>
-            </div>
 
             <div className="via-orient-toggle" role="group" aria-label="Orientation">
               <button
