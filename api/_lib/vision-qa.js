@@ -145,6 +145,10 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     : "PRIORITY #1 — DOOR STATE (REAL cars only):\n" +
       "If physical doors look CLOSED → white top-down car silhouette on screens must show ALL doors closed (no red open-door). " +
       "Contradiction = CRITICAL door_state_contradiction.\n";
+  const vehicleSwapBlock = isVehicleReplaceQaContext(request, finalBrief)
+    ? "PRIORITY #2 — VEHICLE SWAP DECALS:\n" +
+      "If the same sticker/decal (e.g. French red apprentice letter A, plate sticker) appears TWICE or floats in mid-air / on car-wash brushes / ceiling → CRITICAL duplicated_objects.\n"
+    : "";
   return (
     "You are a strict photoreal image-edit QA inspector for a lifestyle photo AI product (Luxeflexia). " +
     "Inspect the RESULT image against the user request. Reply with JSON ONLY (no markdown).\n" +
@@ -152,6 +156,7 @@ function buildQaSystemPrompt(userPrompt, finalPrompt) {
     '{"pass":boolean,"critical":boolean,"issues":[{"code":string,"detail":string,"severity":"critical"|"major"|"minor"}],"correctiveInstructions":string}\n' +
     cartoonNote +
     doorBlock +
+    vehicleSwapBlock +
     "Check: edit applied, identity, pose, placement, anatomy, text/logos, lighting, AI artifacts.\n" +
     "If only minor softness/noise, pass=true critical=false.\n" +
     "correctiveInstructions: short English fix for CRITICAL issues only (max 400 chars).\n" +

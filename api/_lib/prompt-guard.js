@@ -392,7 +392,7 @@ const WEATHER_ATMOSPHERE_CLARIFIER =
 
 /** Shared brand/model tokens for add-cars / count detection (any vehicle the user names). */
 const VEHICLE_NAME_RE =
-  "lamborghini|lambo|svj|svg|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|g90|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|cullinan|bentley|bugatti|chiron|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
+  "lamborghini|lambo|svj|svg|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|g90|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|cullinan|bentley|bugatti|chiron|tourbillon|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
 
 const VEHICLE_TUNER_RE =
   "mansory|brabus|abt|novitec|alpina|hamann|techart|gemballa|keyvany|lorinser|overfinch|wald|prior\\s*design|liberty\\s*walk|lbwk";
@@ -410,13 +410,21 @@ const VEHICLE_SCENE_MATCH_CLARIFIER =
  * Replace the car already in the uploaded photo — keep parking pose + whole background.
  * Must NEVER use LARGE/CENTERED local-edit (that re-parks the car and rebuilds shops).
  */
+/** Stickers/plates from source — one physical copy only (fixes floating duplicate apprentice A). */
+const VEHICLE_DECAL_SINGLE_COPY_LOCK =
+  "DECAL & PLATE LOCK (critical): if the original car had a sticker/decal (French red apprentice letter A, P plates, brand sticker, etc.) or a readable license plate, " +
+  "copy it at most ONCE onto the equivalent panel of the NEW body — physically attached, correct perspective, real contact with paint/glass. " +
+  "EXACTLY ONE instance per sticker type — NEVER a second ghost copy floating in mid-air, on car-wash brushes/rollers, ceiling, pillars, windows, or background. " +
+  "Never duplicate the same letter/logo above the roof or beside the car. Wash equipment stays clean — no pasted vehicle decals on machinery.";
+
 const VEHICLE_REPLACE_SCENE_GUARD =
   "VEHICLE BODY SWAP on the uploaded photograph (mandatory). " +
   "Change ONLY the car/bike already in the photo into the EXACT named vehicle (brand + model + generation/chassis + trim + tuner). " +
   "PARK LOCK: the new vehicle occupies the EXACT original parking pose — same slot, same diagonal angle, same distance to camera, same crop, same wheel steering direction, same tire contact points on the ground. Never re-park, never straighten, never center, never reframe. " +
-  "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, other parked cars, people, sky, buildings. " +
+  "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, car-wash brushes/rollers, other parked cars, people, sky, buildings. " +
   "If a shop/store/station is CLOSED (shutters/rideaux down, dark interior), it STAYS CLOSED — never open the windows, never light the shop, never invent shelves or merchandise. If it was open, it stays open. " +
   "If a fuel nozzle is plugged in, keep that same hose path and plug it into the new car on the same side. Keep the original plate on the new bumper if readable. " +
+  `${VEHICLE_DECAL_SINGLE_COPY_LOCK} ` +
   "Copy the original open/closed state of doors and fuel flap. An open filler is a REAL empty factory neck: dark plastic cavity, real cap if the original had one. " +
   "FORBIDDEN inside the tank/filler: yellow blob, orange glow, LED, gold liquid, extra object, invented cap. " +
   "Inherit original night/day light, reflections, grain. " +
@@ -427,6 +435,7 @@ const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
   "BACKGROUND LOCK: shop/shutters/lights/pump/pavement UNCHANGED. Closed stays closed, open stays open. " +
   "Doors and fuel flap stay as in the original. Open tank = real empty filler only — no yellow glow, no invented object, no liquid unless asked. " +
+  "One sticker/decal/plate copy only — no floating duplicate A or logo in the air or on wash brushes. " +
   "Swap the vehicle body only. Do not reframe or recenter.)";
 
 /** Critical: standing selfie → seated in car must NOT become a floating legless torso. */
@@ -2129,10 +2138,14 @@ function vehicleWrongModelForbiddenHint(prompt) {
 }
 
 /** Prepended on vehicle body-swap — survives MAX_FINAL_PROMPT truncation. */
+const VEHICLE_DECAL_FRONT_LOCK =
+  "ONE STICKER COPY ONLY — no duplicate/floating A or decals in air or on car-wash brushes. ";
+
 function buildVehicleReplaceCompactHead(userPrompt) {
   const spec = parseVehicleSpec(userPrompt);
   if (!spec) return "";
   return (
+    `${VEHICLE_DECAL_FRONT_LOCK}` +
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
     `${vehicleIdentityHint(userPrompt)}`
@@ -2147,6 +2160,7 @@ function buildVehicleReplaceUserLine(userPrompt) {
   const detail = antimix ? ` ${antimix}` : "";
   return (
     `Replace ONLY the existing car with ${label}.${detail} ` +
+    "Keep the same license plate and any apprentice/sticker decals from the original — each at most once on the new body, never duplicated floating in the air or on car-wash equipment. " +
     "Keep the same person, pose, outfit, station/building, lighting, and camera framing."
   ).trim();
 }
@@ -2644,7 +2658,7 @@ const SYSTEM_PRODUCTION_RULES =
  * Nano Banana has no native negativePrompt field — exclusions go in the main prompt.
  */
 const NEGATIVE_PROMPT_EXCLUSIONS =
-  "hybrides, corps fusionnés, clone du sujet, personne dupliquée, jumeau miroir, yeux déformés, tête bizarre, telephone disparu, face swap, peau plastique, rendu 3D, homme en robe, jambes supplémentaires, mains fantômes, doigts déformés, animal colle, animal sticker, animal CGI, animal dessine, dessin animal, cartoon animal, anime animal, pixar animal, 3d animal, illustration animal, pattes en trop, animal flottant, sans ombre animal, sans ombre contact, cutout halo, stock png animal, lumiere studio animal, animal trop lumineux, peluche fake, bebe animal non demande, baby animal unwanted, adult when baby asked, texte illisible, charabia, effet plastique, dessin 3D, barbe brûlée, barbe plastique, barbe collée, moustache fake, poils CGI, torse flottant, sans jambes, siege vide sous le corps, jambes blanches peau noire, voiture en trop, troisieme voiture, conducteur invente, personne inventee dans la voiture, piece reconstruite, photo transformee, nouveau sol, nouveau plafond, murs reinventes, trou dans le sol, trou dans le plafond, trappe, cage d'escalier inventee, etage invente, mezzanine, sous-sol, ouverture inventee, architecture extra, compteur illisible, fausses jauges, interface inventee, chiffres melanges, symboles deformes, pseudo-lettres, icônes volant inventées, porte ouverte rouge, alerte porte ouverte, porte rouge tableau de bord, door open warning, red open door cluster, collage coupe vertical, demi capot exterieur, demi habitacle, floating pillar, toit flottant, cutaway car, dual perspective, exterior interior splice, sparkle diamants uniforme, montre générique, mauvaise generation, mélange de chassis, habitacle générique, cockpit hybride, voiture recentree, voiture reparkée, angle de stationnement change, boutique ouverte, rideaux releves, station reconstruite, blob jaune reservoir, lumiere dans la trappe essence, objet invente dans le plein, vetements colles, photo produit, packshot vetement, chaussures flottantes, jouet tableau de bord, mini voiture interieur, mauvaise direction route, guidon invisible, mains noires flottantes, celebrity CGI, celebrite brulee, lunettes enlevees, lunettes supprimees, cheveux attaches, chignon invente, visage different, autre personne, mannequin visage, voiture fantome devant, ghost car traffic, interieur clio, interieur renault, habitacle non change";
+  "hybrides, corps fusionnés, clone du sujet, personne dupliquée, jumeau miroir, yeux déformés, tête bizarre, telephone disparu, face swap, peau plastique, rendu 3D, homme en robe, jambes supplémentaires, mains fantômes, doigts déformés, animal colle, animal sticker, animal CGI, animal dessine, dessin animal, cartoon animal, anime animal, pixar animal, 3d animal, illustration animal, pattes en trop, animal flottant, sans ombre animal, sans ombre contact, cutout halo, stock png animal, lumiere studio animal, animal trop lumineux, peluche fake, bebe animal non demande, baby animal unwanted, adult when baby asked, texte illisible, charabia, effet plastique, dessin 3D, barbe brûlée, barbe plastique, barbe collée, moustache fake, poils CGI, torse flottant, sans jambes, siege vide sous le corps, jambes blanches peau noire, autocollant dupliqué, double A apprenti, sticker flottant, logo en l'air, decal fantome, duplicate sticker, floating decal, ghost apprentice A, voiture en trop, troisieme voiture, conducteur invente, personne inventee dans la voiture, piece reconstruite, photo transformee, nouveau sol, nouveau plafond, murs reinventes, trou dans le sol, trou dans le plafond, trappe, cage d'escalier inventee, etage invente, mezzanine, sous-sol, ouverture inventee, architecture extra, compteur illisible, fausses jauges, interface inventee, chiffres melanges, symboles deformes, pseudo-lettres, icônes volant inventées, porte ouverte rouge, alerte porte ouverte, porte rouge tableau de bord, door open warning, red open door cluster, collage coupe vertical, demi capot exterieur, demi habitacle, floating pillar, toit flottant, cutaway car, dual perspective, exterior interior splice, sparkle diamants uniforme, montre générique, mauvaise generation, mélange de chassis, habitacle générique, cockpit hybride, voiture recentree, voiture reparkée, angle de stationnement change, boutique ouverte, rideaux releves, station reconstruite, blob jaune reservoir, lumiere dans la trappe essence, objet invente dans le plein, vetements colles, photo produit, packshot vetement, chaussures flottantes, jouet tableau de bord, mini voiture interieur, mauvaise direction route, guidon invisible, mains noires flottantes, celebrity CGI, celebrite brulee, lunettes enlevees, lunettes supprimees, cheveux attaches, chignon invente, visage different, autre personne, mannequin visage, voiture fantome devant, ghost car traffic, interieur clio, interieur renault, habitacle non change";
 
 const NEGATIVE_PROMPT_CLAUSE =
   `Negative prompt: ${NEGATIVE_PROMPT_EXCLUSIONS}. ` +
@@ -4307,6 +4321,11 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
     list.length > 0
       ? list.join("; ")
       : "fix critical photoreal defects (door open warning, pose paste, floating body, plastic face, gibberish text, wrong cabin, speed contradiction, anatomy)";
+  const decalDup =
+    /\bduplicat|floating|ghost|sticker|decal|apprenti|\bA\b|autocollant/i.test(blob);
+  const decalFix = decalDup
+    ? "DECAL FIX (highest priority): keep EXACTLY ONE physical copy of each sticker/decal (e.g. red apprentice A) on the car body — DELETE any second floating duplicate in the air, on brushes, or background. "
+    : "";
   const doorFix = cartoonBase
     ? "FICTIONAL VEHICLE REQUIRED: preserve THAT vehicle's design language (exterior + matching interior). Photoreal materials OK if asked — FORBIDDEN to substitute a generic Ferrari/Porsche/Lamborghini/Urus cabin. Match reference if uploaded. "
     : doorFail
@@ -4315,6 +4334,7 @@ function buildVisionQaRetryPrompt(finalPrompt, issues) {
       : "VEHICLE: coherent cabin; closed doors ⇒ white car outline shows ALL doors closed (no red open-door). ";
   const prefix =
     "QA CORRECTION PASS (mandatory). Keep the SAME person identity. " +
+    decalFix +
     doorFix +
     `Fix ONLY these critical defects: ${fixList}. ` +
     "IDENTITY≠POSE: if relocating, invent a NEW natural pose — never paste the reference selfie/hand-on-cheek. " +
