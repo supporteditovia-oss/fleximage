@@ -19,7 +19,7 @@ const {
 } = require("./video-studio");
 
 describe("video-studio", () => {
-  it("computeVideoCreditCost flat 50 for image_to_video", () => {
+  it("computeVideoCreditCost I2V 5s 720p baseline", () => {
     assert.equal(
       computeVideoCreditCost({
         durationSec: 5,
@@ -28,6 +28,36 @@ describe("video-studio", () => {
         isAdmin: false,
       }),
       VIDEO_FLAT_CREDIT_COST,
+    );
+  });
+
+  it("computeVideoCreditCost I2V 3s cheaper than 5s", () => {
+    const short = computeVideoCreditCost({
+      durationSec: 3,
+      quality: "standard",
+      voiceEnabled: false,
+      isAdmin: false,
+    });
+    const long = computeVideoCreditCost({
+      durationSec: 5,
+      quality: "standard",
+      voiceEnabled: false,
+      isAdmin: false,
+    });
+    assert.equal(short, VIDEO_FLAT_CREDIT_COST - 20);
+    assert.equal(long, VIDEO_FLAT_CREDIT_COST);
+    assert.ok(short < long);
+  });
+
+  it("computeVideoCreditCost I2V 1080p premium", () => {
+    assert.equal(
+      computeVideoCreditCost({
+        durationSec: 5,
+        quality: "high",
+        voiceEnabled: false,
+        isAdmin: false,
+      }),
+      VIDEO_FLAT_CREDIT_COST + 15,
     );
   });
 
@@ -76,6 +106,7 @@ describe("video-studio", () => {
   });
 
   it("maxVoiceCharsForDuration", () => {
+    assert.equal(maxVoiceCharsForDuration(3), 100);
     assert.equal(maxVoiceCharsForDuration(5), 140);
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });

@@ -16,10 +16,17 @@ function parseRunwayResponse(text, status, context) {
   }
 }
 
+function normalizeRunwayDurationSec(durationSec) {
+  const n = Number(durationSec);
+  if (n === 10) return 10;
+  if (n === 3) return 3;
+  return 5;
+}
+
 async function createRunwayVideoTask(input) {
   const body = {
     prompt: String(input.prompt || "").slice(0, 2000),
-    duration: input.durationSec === 10 ? 10 : 5,
+    duration: normalizeRunwayDurationSec(input.durationSec),
     quality: input.quality === "high" ? "1080p" : "720p",
     aspectRatio: input.aspectRatio || "9:16",
     waterMark: "",

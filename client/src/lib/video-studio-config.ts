@@ -4,6 +4,7 @@ import {
   VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
 } from "@shared/credit-costs";
+import { computeImageToVideoCreditCost } from "@shared/video-i2v-pricing";
 
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
@@ -19,7 +20,7 @@ export { VIDEO_FLAT_CREDIT_COST, VIDEO_VOICE_EXTRA_CREDIT };
 export const VIDEO_V2V_MIN_DURATION_SEC = 3;
 /** Upload direct R2 — les vidéos smartphone 8s dépassent souvent 20 Mo. */
 export const VIDEO_V2V_MAX_SIZE_MB = 100;
-export type VideoDuration = 5 | 10;
+export type VideoDuration = 3 | 5 | 10;
 export type VideoAspectRatio = "9:16" | "16:9" | "1:1";
 export type VideoCameraMovement =
   | "fixed"
@@ -183,7 +184,7 @@ export function computeV2VCreditCost(
   return VIDEO_V2V_CREDIT_COST;
 }
 
-/** 1 vidéo = 60 crédits (I2V max 5s · V2V source max 8s, 720p) ; +5 voix IA / voix filmée. */
+/** I2V : durée + qualité + voix ; V2V : forfait + voix source. */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
@@ -192,22 +193,24 @@ export function computeVideoCreditCost(params: {
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
 }): number {
-  let cost =
-    params.workflow === "video_to_video"
-      ? computeV2VCreditCost(params.sourceVideoDurationSec)
-      : VIDEO_I2V_CREDIT_COST;
   if (params.workflow === "video_to_video") {
+    let cost = computeV2VCreditCost(params.sourceVideoDurationSec);
     if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
-  } else if (params.voiceEnabled) {
-    cost += VIDEO_VOICE_EXTRA_CREDIT;
+    return cost;
   }
-  return cost;
+  return computeImageToVideoCreditCost({
+    durationSec: params.durationSec,
+    quality: params.quality,
+    voiceEnabled: params.voiceEnabled,
+    billingGrid: "prod",
+  });
 }
 
 export function maxVoiceCharsForVideoDuration(durationSec?: number | null): number {
   const d = Number(durationSec) || 5;
   if (d >= 10) return 280;
   if (d >= 8) return 200;
+  if (d <= 3) return 100;
   return 140;
 }
 

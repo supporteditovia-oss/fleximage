@@ -3,6 +3,8 @@
  * La facturation prod reste sur `credit-costs.ts` tant que PRICING_V2_ENABLED ≠ 1.
  */
 
+import { computeImageToVideoCreditCost } from "./video-i2v-pricing";
+
 export const ADMIN_PRICING_REFERENCE = {
   version: "v2-preview" as const,
   prodBillingNote:
@@ -50,18 +52,23 @@ export const ADMIN_PRICING_REFERENCE = {
 /** Coût vidéo affiché en preview admin (grille v2) — ne remplace pas l’API prod. */
 export function adminPreviewVideoCreditCost(params: {
   workflow?: "image_to_video" | "video_to_video";
+  durationSec?: number;
+  quality?: "standard" | "high";
   voiceEnabled?: boolean;
   preserveSourceAudio?: boolean;
 }): number {
   const b = ADMIN_PRICING_REFERENCE.creditBurn;
-  let cost =
-    params.workflow === "video_to_video" ? b.videoV2V : b.videoI2V;
   if (params.workflow === "video_to_video") {
+    let cost = b.videoV2V;
     if (params.preserveSourceAudio) cost += b.videoVoiceExtra;
-  } else if (params.voiceEnabled) {
-    cost += b.videoVoiceExtra;
+    return cost;
   }
-  return cost;
+  return computeImageToVideoCreditCost({
+    durationSec: params.durationSec,
+    quality: params.quality,
+    voiceEnabled: params.voiceEnabled,
+    billingGrid: "admin_v2",
+  });
 }
 
 /** Coût affiché sur « Générer la voix » (grille v2 admin / studio voix). */

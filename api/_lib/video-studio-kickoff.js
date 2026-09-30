@@ -192,7 +192,12 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         prompt: providerPrompt,
         imageUrl: sourceAssetUrl,
         aspectRatio,
-        durationSec: meta.duration_sec === 10 ? 10 : 5,
+        durationSec:
+          meta.duration_sec === 10
+            ? 10
+            : require("../../shared/video-i2v-pricing.cjs").normalizeI2VDurationSec(
+                meta.duration_sec,
+              ),
         quality: meta.quality === "high" ? "high" : "standard",
       });
     }

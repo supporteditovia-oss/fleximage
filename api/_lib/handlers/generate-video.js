@@ -12,6 +12,7 @@ const {
   VIDEO_V2V_MAX_SIZE_BYTES,
   validateSourceVideoDuration,
 } = require("../video-limits");
+const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.cjs");
 const {
   computeVideoCreditCost,
   buildRunwayPrompt,
@@ -328,7 +329,10 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const durationSec = body.duration_sec === 10 ? 10 : 5;
+    const durationSec =
+      body.duration_sec === 10
+        ? 10
+        : normalizeI2VDurationSec(body.duration_sec);
     const aspectRatio =
       body.aspect_ratio === "16:9" || body.aspect_ratio === "1:1"
         ? body.aspect_ratio

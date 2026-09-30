@@ -34,6 +34,12 @@ import {
   ADMIN_PRICING_REFERENCE,
 } from "@shared/pricing-admin-reference";
 import {
+  VIDEO_I2V_EXTRA_DURATION_5S,
+  VIDEO_I2V_EXTRA_QUALITY_HIGH,
+  type VideoI2VDurationSec,
+} from "@shared/video-i2v-pricing";
+import {
+  computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
   VIDEO_I2V_OUTPUT_DURATION_SEC,
@@ -42,6 +48,7 @@ import {
   VIDEO_V2V_MAX_SIZE_MB,
   VIDEO_V2V_PRESETS,
   type VideoAspectRatio,
+  type VideoQuality,
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
 import {
@@ -91,7 +98,7 @@ const WORKFLOW_OPTIONS: {
   {
     id: "image_to_video",
     label: "Image → Vidéo",
-    hint: `${ADMIN_VIDEO_BURN.videoI2V} cr / génération · 5 s`,
+    hint: "3–5 s · 720p / 1080p · prix dynamique",
     icon: ImageIcon,
   },
   {
@@ -123,7 +130,8 @@ export default function VideoIA() {
   const [prefillLarpId, setPrefillLarpId] = useState<string | null>(null);
 
   const [motionPrompt, setMotionPrompt] = useState("");
-  const [durationSec] = useState<5>(5);
+  const [durationSec, setDurationSec] = useState<VideoI2VDurationSec>(5);
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>("standard");
   const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>("9:16");
 
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -206,11 +214,26 @@ export default function VideoIA() {
     (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
-  const creditCost = adminPreviewVideoCreditCost({
-    workflow,
-    voiceEnabled,
-    preserveSourceAudio: preserveSourceVoice,
-  });
+  const creditCost =
+    workflow === "video_to_video"
+      ? computeVideoCreditCost({
+          workflow: "video_to_video",
+          preserveSourceAudio: preserveSourceVoice,
+          sourceVideoDurationSec: videoDurationSec,
+        })
+      : adminPreview
+        ? adminPreviewVideoCreditCost({
+            workflow: "image_to_video",
+            durationSec,
+            quality: videoQuality,
+            voiceEnabled,
+          })
+        : computeVideoCreditCost({
+            workflow: "image_to_video",
+            durationSec,
+            quality: videoQuality,
+            voiceEnabled,
+          });
 
   const buildVoicePayload = () =>
     voiceEnabled
@@ -393,7 +416,7 @@ export default function VideoIA() {
         estimateVideoGenerationSeconds({
           workflow: "image_to_video",
           durationSec,
-          quality: "standard",
+          quality: videoQuality,
           voiceEnabled,
         }),
       );
@@ -424,7 +447,7 @@ export default function VideoIA() {
         camera_movement: "slow_zoom",
         motion_intensity: "natural",
         style: "cinematic",
-        quality: "standard",
+        quality: videoQuality,
         subtitles_enabled: false,
         ...buildVoicePayload(),
         ...(uploadBase64
@@ -578,7 +601,12 @@ export default function VideoIA() {
         "720p",
         aspectRatio,
       ]
-    : [`${durationSec} s`, "24 fps", aspectRatio];
+    : [
+        `${durationSec} s`,
+        videoQuality === "high" ? "1080p" : "720p",
+        "24 fps",
+        aspectRatio,
+      ];
 
   if (v2Loading && user) {
     return (
@@ -704,12 +732,13 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Vidéo verticale max{" "}
-              {VIDEO_I2V_OUTPUT_DURATION_SEC} s ·{" "}
-              <strong>{adminBurn.videoI2V} crédits</strong> par génération. Par
-              défaut la vidéo est <strong>muette</strong> — active l&apos;option
-              voix IA (+{adminBurn.videoVoiceExtra} crédits) pour entendre un
-              texte à lire.
+              JPG ou PNG — ta propre image. Choisis la{" "}
+              <strong>durée</strong> (3 ou {VIDEO_I2V_OUTPUT_DURATION_SEC} s) et
+              la <strong>qualité</strong> (720p / 1080p) : le prix sur le bouton
+              se met à jour automatiquement. Par défaut la vidéo est{" "}
+              <strong>muette</strong> — active l&apos;option voix IA (+
+              {adminBurn.videoVoiceExtra} crédits) pour entendre un texte à
+              lire.
             </p>
 
             <input
@@ -785,6 +814,60 @@ export default function VideoIA() {
                 voiceExtraCredit={adminBurn.videoVoiceExtra}
               />
             ) : null}
+
+            <div className="via-option-block">
+              <p className="via-option-block__label">Durée du clip</p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Durée"
+              >
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${durationSec === 3 ? "is-active" : ""}`}
+                  onClick={() => setDurationSec(3)}
+                >
+                  3 secondes
+                </button>
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${durationSec === 5 ? "is-active" : ""}`}
+                  onClick={() => setDurationSec(5)}
+                >
+                  5 secondes
+                  <span className="via-orient-toggle__hint">
+                    +{VIDEO_I2V_EXTRA_DURATION_5S} cr
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="via-option-block">
+              <p className="via-option-block__label">Qualité</p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Qualité"
+              >
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${videoQuality === "standard" ? "is-active" : ""}`}
+                  onClick={() => setVideoQuality("standard")}
+                >
+                  720p
+                </button>
+                <button
+                  type="button"
+                  className={`via-orient-toggle__btn ${videoQuality === "high" ? "is-active" : ""}`}
+                  onClick={() => setVideoQuality("high")}
+                >
+                  1080p
+                  <span className="via-orient-toggle__hint">
+                    +{VIDEO_I2V_EXTRA_QUALITY_HIGH} cr
+                  </span>
+                </button>
+              </div>
+            </div>
 
             <div className="via-orient-toggle" role="group" aria-label="Orientation">
               <button

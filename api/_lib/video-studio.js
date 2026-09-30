@@ -5,6 +5,7 @@ const {
   VIDEO_V2V_CREDIT_COST,
   VIDEO_VOICE_EXTRA_CREDIT,
 } = require("./credit-costs");
+const { computeImageToVideoCreditCost } = require("../../shared/video-i2v-pricing.cjs");
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",
@@ -27,24 +28,24 @@ const STYLE_PROMPTS = {
   luxury_ad: "Publicité luxe, éclairage premium, rendu haut de gamme.",
 };
 
-/** 1 vidéo Kling (max 8s, 720p) = prix fixe ; voix IA (I2V) ou voix filmée (V2V) en supplément. */
+/** V2V = prix fixe ; I2V = durée (3/5 s) + qualité (720p/1080p) + voix optionnelle. */
 function computeVideoCreditCost(options) {
   if (options.isAdmin) return 0;
 
-  let cost =
-    options.workflow === "video_to_video"
-      ? computeV2VCreditCost(options.sourceVideoDurationSec, false)
-      : VIDEO_FLAT_CREDIT_COST;
-
   if (options.workflow === "video_to_video") {
+    let cost = computeV2VCreditCost(options.sourceVideoDurationSec, false);
     if (options.preserveSourceAudio) {
       cost += VIDEO_VOICE_EXTRA_CREDIT;
     }
-  } else if (options.voiceEnabled) {
-    cost += VIDEO_VOICE_EXTRA_CREDIT;
+    return cost;
   }
 
-  return cost;
+  return computeImageToVideoCreditCost({
+    durationSec: options.durationSec,
+    quality: options.quality,
+    voiceEnabled: options.voiceEnabled,
+    billingGrid: "prod",
+  });
 }
 
 const V2V_SILENT_OUTPUT_LOCK =
@@ -463,6 +464,7 @@ function maxVoiceCharsForDuration(durationSec) {
   const d = Number(durationSec) || 5;
   if (d >= 10) return 280;
   if (d >= 8) return 200;
+  if (d <= 3) return 100;
   return 140;
 }
 
