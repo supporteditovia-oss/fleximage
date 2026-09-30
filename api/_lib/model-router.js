@@ -135,8 +135,15 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
         );
       }
       if (remainingCredits !== null && remainingCredits <= 0) {
+        if (deepinfraConfigured) {
+          return {
+            provider: "deepinfra",
+            reason: "admin_oneshot_exhausted_deepinfra",
+            remainingCredits,
+          };
+        }
         throw new Error(
-          "Crédits OneShot épuisés — passe sur DeepInfra dans Paramètres admin ou recharge OneShot.",
+          "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY ou recharge OneShot.",
         );
       }
       return {

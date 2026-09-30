@@ -7,6 +7,7 @@ const {
 const {
   generateDeepInfraImage,
   getDeepInfraModel,
+  isDeepInfraConfigured,
 } = require("./deepinfra");
 const {
   resolveImageGenerationProvider,
@@ -481,8 +482,18 @@ async function generateImageOnce(supabase, params) {
       isOneshotCreditsExhaustedError(primaryErr)
     ) {
       await markOneshotCreditsExhausted(supabase);
+      if (isDeepInfraConfigured()) {
+        console.warn(
+          "[generate-image-once] OneShot credits exhausted — DeepInfra fallback",
+          {
+            generationId,
+            ...logContext,
+          },
+        );
+        return await runDeepInfra(primaryErr);
+      }
       const retryErr = new Error(
-        "Crédits OneShot épuisés. Relance la génération — DeepInfra (Nano Banana 2) prendra le relais.",
+        "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY pour le relais automatique.",
       );
       retryErr.code = "ONESHOT_CREDITS_EXHAUSTED";
       throw retryErr;

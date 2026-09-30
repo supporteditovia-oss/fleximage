@@ -112,4 +112,19 @@ describe("model-router", () => {
     });
     assert.equal(route.provider, "deepinfra");
   });
+
+  it("admin oneshot setting falls back to deepinfra when credits are 0", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "0";
+    process.env.DEEPINFRA_API_KEY = "di";
+
+    const route = await resolveImageGenerationProvider(null, {
+      isAdmin: true,
+      adminImageProvider: "oneshot",
+      hasReferenceImages: true,
+    });
+    assert.equal(route.provider, "deepinfra");
+    assert.equal(route.reason, "admin_oneshot_exhausted_deepinfra");
+  });
 });
