@@ -16,18 +16,14 @@ function parseRunwayResponse(text, status, context) {
   }
 }
 
-function normalizeRunwayDurationSec(durationSec) {
-  const n = Number(durationSec);
-  if (n === 10) return 10;
-  if (n === 3) return 3;
-  return 5;
-}
+const { runwayProviderDurationSec } = require("../../shared/video-i2v-pricing.cjs");
 
 async function createRunwayVideoTask(input) {
+  const quality = input.quality === "high" ? "high" : "standard";
   const body = {
     prompt: String(input.prompt || "").slice(0, 2000),
-    duration: normalizeRunwayDurationSec(input.durationSec),
-    quality: input.quality === "high" ? "1080p" : "720p",
+    duration: runwayProviderDurationSec(input.durationSec, quality),
+    quality: quality === "high" ? "1080p" : "720p",
     aspectRatio: input.aspectRatio || "9:16",
     waterMark: "",
   };

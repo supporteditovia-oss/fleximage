@@ -8,6 +8,11 @@ export const PRICING_ECONOMICS = {
     imageNanoBanana2_1K: { cost: 0.02, unit: "per_image" as const },
 
     videoI2V_5s_720p_noAudio: { cost: 0.39, unit: "per_clip" as const },
+    /** ~37/17 × 720p (crédits Kie Runway). Durée facturée min. 5 s même si UX 3 s. */
+    videoI2V_5s_1080p_noAudio: {
+      cost: 0.39 * (37 / 17),
+      unit: "per_clip" as const,
+    },
     videoI2V_5s_720p_withAudio: { cost: 0.58, unit: "per_clip" as const },
     videoV2V_8s_720p_motion_noAudio: { cost: 1.01, unit: "per_clip" as const },
     videoV2V_8s_720p_motion_withAudio: { cost: 1.23, unit: "per_clip" as const },

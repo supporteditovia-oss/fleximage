@@ -34,8 +34,8 @@ import {
   ADMIN_PRICING_REFERENCE,
 } from "@shared/pricing-admin-reference";
 import {
-  VIDEO_I2V_EXTRA_DURATION_5S,
-  VIDEO_I2V_EXTRA_QUALITY_HIGH,
+  i2vDuration5sExtraCredits,
+  i2vQuality1080ExtraCredits,
   type VideoI2VDurationSec,
 } from "@shared/video-i2v-pricing";
 import {
@@ -214,6 +214,9 @@ export default function VideoIA() {
     (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
+  const i2vBillingGrid = adminPreview ? ("admin_v2" as const) : ("prod" as const);
+  const i2vExtra5s = i2vDuration5sExtraCredits(i2vBillingGrid);
+  const i2vExtra1080 = i2vQuality1080ExtraCredits(i2vBillingGrid);
   const creditCost =
     workflow === "video_to_video"
       ? computeVideoCreditCost({
@@ -732,10 +735,11 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta photo</h2>
             <p className="via-step-desc">
-              JPG ou PNG — ta propre image. Choisis la{" "}
-              <strong>durée</strong> (3 ou {VIDEO_I2V_OUTPUT_DURATION_SEC} s) et
-              la <strong>qualité</strong> (720p / 1080p) : le prix sur le bouton
-              se met à jour automatiquement. Par défaut la vidéo est{" "}
+              JPG ou PNG — ta propre image.               Choisis la <strong>durée</strong> (3 ou{" "}
+              {VIDEO_I2V_OUTPUT_DURATION_SEC} s) et la <strong>qualité</strong>{" "}
+              (720p / 1080p) : le prix se met à jour automatiquement. Le mode{" "}
+              <strong>3 s</strong> reste facturé comme un clip court côté studio
+              (génération 5 s max). Par défaut la vidéo est{" "}
               <strong>muette</strong> — active l&apos;option voix IA (+
               {adminBurn.videoVoiceExtra} crédits) pour entendre un texte à
               lire.
@@ -836,7 +840,7 @@ export default function VideoIA() {
                 >
                   5 secondes
                   <span className="via-orient-toggle__hint">
-                    +{VIDEO_I2V_EXTRA_DURATION_5S} cr
+                    +{i2vExtra5s} cr
                   </span>
                 </button>
               </div>
@@ -863,7 +867,7 @@ export default function VideoIA() {
                 >
                   1080p
                   <span className="via-orient-toggle__hint">
-                    +{VIDEO_I2V_EXTRA_QUALITY_HIGH} cr
+                    +{i2vExtra1080} cr
                   </span>
                 </button>
               </div>

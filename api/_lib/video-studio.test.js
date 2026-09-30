@@ -31,7 +31,7 @@ describe("video-studio", () => {
     );
   });
 
-  it("computeVideoCreditCost I2V 3s cheaper than 5s", () => {
+  it("computeVideoCreditCost I2V 3s cheaper than 5s (remise UX, pas API)", () => {
     const short = computeVideoCreditCost({
       durationSec: 3,
       quality: "standard",
@@ -44,21 +44,24 @@ describe("video-studio", () => {
       voiceEnabled: false,
       isAdmin: false,
     });
-    assert.equal(short, VIDEO_FLAT_CREDIT_COST - 20);
-    assert.equal(long, VIDEO_FLAT_CREDIT_COST);
     assert.ok(short < long);
+    assert.ok(long >= VIDEO_FLAT_CREDIT_COST);
   });
 
-  it("computeVideoCreditCost I2V 1080p premium", () => {
-    assert.equal(
-      computeVideoCreditCost({
-        durationSec: 5,
-        quality: "high",
-        voiceEnabled: false,
-        isAdmin: false,
-      }),
-      VIDEO_FLAT_CREDIT_COST + 15,
-    );
+  it("computeVideoCreditCost I2V 1080p >> 720p (ratio Kie ~37/17)", () => {
+    const hd = computeVideoCreditCost({
+      durationSec: 5,
+      quality: "standard",
+      voiceEnabled: false,
+      isAdmin: false,
+    });
+    const fhd = computeVideoCreditCost({
+      durationSec: 5,
+      quality: "high",
+      voiceEnabled: false,
+      isAdmin: false,
+    });
+    assert.ok(fhd > hd * 1.9);
   });
 
   it("computeVideoCreditCost adds voice extra", () => {
