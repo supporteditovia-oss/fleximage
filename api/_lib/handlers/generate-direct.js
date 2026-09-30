@@ -75,6 +75,16 @@ function isCatalogOutfitCatalogPrompt(promptText) {
   );
 }
 
+/** Évite « jetons remboursés » quand aucun débit Luxe (ex. compte admin). */
+function luxeBillingFailSuffix(uiLocale, creditCost) {
+  if (creditCost > 0) {
+    return uiLocale === "es" ? "Créditos reembolsados." : "Jetons remboursés.";
+  }
+  return uiLocale === "es"
+    ? "Ningún crédito Luxe fue debitado."
+    : "Aucun jeton Luxe n'avait été débité.";
+}
+
 async function failAndRefund(supabase, { userId, generationId, failMessage, source }) {
   await supabase
     .from("generations")
@@ -86,12 +96,20 @@ async function failAndRefund(supabase, { userId, generationId, failMessage, sour
     })
     .eq("id", generationId);
 
-  await refundGenerationCreditsIfCharged(supabase, {
+  const refundErr = await refundGenerationCreditsIfCharged(supabase, {
     userId,
     generationId,
     source,
     failMessage,
-  }).catch((err) => console.error("refund failed", err));
+  });
+  if (refundErr) {
+    console.error("[generate-direct] refund failed", {
+      userId,
+      generationId,
+      source,
+      refundErr,
+    });
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -573,22 +591,46 @@ module.exports = async function handler(req, res) {
       });
     } catch (providerErr) {
       console.error("[generate-direct] generateImageOnce failed", providerErr);
+      const deepinfraOrphanUrl =
+        providerErr &&
+        providerErr.code === "DEEPINFRA_PERSIST_FAILED" &&
+        typeof providerErr.deepinfraOutputUrl === "string"
+          ? providerErr.deepinfraOutputUrl.trim()
+          : "";
+      if (deepinfraOrphanUrl.startsWith("http")) {
+        await supabase
+          .from("generations")
+          .update({
+            metadata: {
+              ...generationMetadata,
+              deepinfra_output_url: deepinfraOrphanUrl,
+              deepinfra_sync: true,
+              deepinfra_orphan_r2: true,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", larp.id)
+          .catch((err) =>
+            console.error("[generate-direct] orphan deepinfra meta patch failed", err),
+          );
+      }
       const detail =
         providerErr && providerErr.message
           ? String(providerErr.message).slice(0, 240)
           : "erreur moteur image";
       const { mapImageProviderMessage } = require("../image-user-errors");
+      const billingSuffix = luxeBillingFailSuffix(uiLocale, creditCost);
       const failMessage = isGoogleAiPromptFlagged(providerErr)
         ? mapImageProviderMessage(
             providerErr && providerErr.message ? providerErr.message : providerErr,
             uiLocale,
           ) ||
           (uiLocale === "es"
-            ? "Filtro del proveedor. Reformula — créditos reembolsados."
-            : "Échec provider (filtre). Reformule ta demande — jetons remboursés.")
+            ? `Filtro del proveedor. Reformula — ${billingSuffix}`
+            : `Échec provider (filtre). Reformule ta demande — ${billingSuffix}`)
         : providerErr && providerErr.code === "ONESHOT_CREDITS_EXHAUSTED"
           ? String(providerErr.message)
-          : `Échec de la génération (${detail}). Jetons remboursés.`;
+          : `Échec de la génération (${detail}). ${billingSuffix}`;
       await failAndRefund(supabase, {
         userId,
         generationId: larp.id,

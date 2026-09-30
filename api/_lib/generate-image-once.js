@@ -407,27 +407,50 @@ async function generateImageOnce(supabase, params) {
       provider_auto_retries: 0,
     };
 
-    const { error: persistErr } = await supabase
+    const persistPayload = {
+      provider: resolveGenerationsTableProvider("deepinfra"),
+      provider_task_id: mergeProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
+      metadata: {
+        ...nextMeta,
+        image_engine: "deepinfra",
+      },
+      provider_attempts: [...prevAttempts, attemptRecord],
+      output_assets: [outputUrl],
+      watermarked_assets: [],
+      status: "succeeded",
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    let { error: persistErr } = await supabase
       .from("generations")
-      .update({
-        provider: resolveGenerationsTableProvider("deepinfra"),
-        provider_task_id: mergeProviderTaskId(
-          claim.generation.provider_task_id,
-          externalTaskId,
-        ),
-        metadata: nextMeta,
-        provider_attempts: [...prevAttempts, attemptRecord],
-        output_assets: [outputUrl],
-        watermarked_assets: [],
-        status: "succeeded",
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(persistPayload)
       .eq("id", generationId);
+
+    // Prod DB sans migration provider : retenter sans toucher `provider` (image déjà sur R2).
     if (persistErr) {
-      throw new Error(
+      console.warn("[generate-image-once] DeepInfra persist retry without provider", {
+        generationId,
+        message: persistErr.message,
+        ...logContext,
+      });
+      const { provider: _drop, ...withoutProvider } = persistPayload;
+      ({ error: persistErr } = await supabase
+        .from("generations")
+        .update(withoutProvider)
+        .eq("id", generationId));
+    }
+
+    if (persistErr) {
+      const err = new Error(
         `DeepInfra: échec enregistrement résultat (${persistErr.message || "db"})`,
       );
+      err.code = "DEEPINFRA_PERSIST_FAILED";
+      err.deepinfraOutputUrl = outputUrl;
+      throw err;
     }
 
     console.info("[generate-image-once] DeepInfra sync stored", {
