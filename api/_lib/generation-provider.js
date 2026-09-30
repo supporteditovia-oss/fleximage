@@ -26,6 +26,18 @@ function normalizeProviderForDb(provider) {
   return "kie";
 }
 
+/**
+ * Colonne `generations.provider` — certaines bases prod n'ont pas encore
+ * `deepinfra` dans generations_provider_check (migration 20260926023000).
+ * On stocke `fallback` + metadata.deepinfra_sync ; le moteur logique reste deepinfra.
+ */
+function resolveGenerationsTableProvider(provider) {
+  const raw = String(provider || "").trim();
+  if (!raw) return null;
+  if (raw === "deepinfra") return "fallback";
+  return normalizeProviderForDb(raw);
+}
+
 function resolveVideoGenerationProvider(workflow, v2vProvider) {
   if (workflow !== "video_to_video") return "kie";
   return normalizeProviderForDb(v2vProvider || "kling_motion");
@@ -34,5 +46,6 @@ function resolveVideoGenerationProvider(workflow, v2vProvider) {
 module.exports = {
   DB_ALLOWED_PROVIDERS,
   normalizeProviderForDb,
+  resolveGenerationsTableProvider,
   resolveVideoGenerationProvider,
 };

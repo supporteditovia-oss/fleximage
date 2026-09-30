@@ -15,6 +15,7 @@ const {
   isOneshotCreditsExhaustedError,
   markOneshotCreditsExhausted,
 } = require("./model-router");
+const { resolveGenerationsTableProvider } = require("./generation-provider");
 const { readApiCallCount } = require("./generation-idempotency");
 
 /** Dernier taskId actif (OneShot, DeepInfra sync, Kie, …). */
@@ -273,7 +274,7 @@ async function generateImageOnce(supabase, params) {
       externalTaskId,
     );
     const patch = {
-      provider,
+      provider: resolveGenerationsTableProvider(provider),
       provider_task_id: mergedTaskId,
       metadata: nextMeta,
       provider_attempts: [...prevAttempts, attemptRecord],
@@ -409,7 +410,7 @@ async function generateImageOnce(supabase, params) {
     const { error: persistErr } = await supabase
       .from("generations")
       .update({
-        provider: "deepinfra",
+        provider: resolveGenerationsTableProvider("deepinfra"),
         provider_task_id: mergeProviderTaskId(
           claim.generation.provider_task_id,
           externalTaskId,

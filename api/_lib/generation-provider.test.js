@@ -2,6 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   normalizeProviderForDb,
+  resolveGenerationsTableProvider,
   resolveVideoGenerationProvider,
 } = require("./generation-provider");
 
@@ -12,8 +13,13 @@ describe("generation-provider", () => {
     assert.equal(normalizeProviderForDb("runway"), "runway");
   });
 
+  it("stores deepinfra as fallback on generations row (legacy CHECK)", () => {
+    assert.equal(resolveGenerationsTableProvider("deepinfra"), "fallback");
+    assert.equal(normalizeProviderForDb("deepinfra"), "deepinfra");
+  });
+
   it("resolveVideoGenerationProvider for workflows", () => {
-    assert.equal(resolveVideoGenerationProvider("image_to_video", null), "runway");
+    assert.equal(resolveVideoGenerationProvider("image_to_video", null), "kie");
     assert.equal(
       resolveVideoGenerationProvider("video_to_video", "runway_aleph"),
       "runway",
