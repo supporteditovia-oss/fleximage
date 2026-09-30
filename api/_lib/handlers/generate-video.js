@@ -6,7 +6,8 @@ const {
   uploadInputVideoToR2,
   isOwnedR2PublicUrl,
 } = require("../r2");
-const { isRunwayConfigured } = require("../kie-runway");
+const { isAiAvatarProConfigured } = require("../kie-ai-avatar-pro");
+const { DEFAULT_CATALOG_FISH_ID } = require("../i2v-avatar-audio");
 const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
@@ -15,7 +16,6 @@ const {
 const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.cjs");
 const {
   computeVideoCreditCost,
-  buildRunwayPrompt,
   buildV2VProviderPrompt,
   buildAlephSubmitPrompt,
   resolveV2VProviderForStudio,
@@ -463,7 +463,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (!isRunwayConfigured()) {
+    if (!isAiAvatarProConfigured()) {
       res.status(503).json({
         message: "Fournisseur vidéo non configuré (KIE_AI_API_KEY requis).",
       });
@@ -563,14 +563,7 @@ module.exports = async function handler(req, res) {
         }
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
-        providerPrompt = buildRunwayPrompt({
-          motionPrompt: studioMotionPrompt,
-          cameraMovement: body.camera_movement,
-          motionIntensity: body.motion_intensity,
-          style: body.style,
-          voiceEnabled,
-          voiceText: body.voice_text,
-        });
+        providerPrompt = studioMotionPrompt.slice(0, 5000);
       }
     } catch (srcErr) {
       res.status(srcErr.status || 422).json({
@@ -605,7 +598,11 @@ module.exports = async function handler(req, res) {
         ? String(body.voice_text || "").trim()
         : null,
       voice_consent: Boolean(body.voice_consent),
+      voice_fish_reference_id: voiceEnabled
+        ? voiceClone?.fish_reference_id || DEFAULT_CATALOG_FISH_ID
+        : DEFAULT_CATALOG_FISH_ID,
       lip_sync_enabled: voiceEnabled,
+      i2v_provider: "kling_ai_avatar_pro",
       subtitles_enabled:
         workflow === "image_to_video" ? subtitlesEnabled : false,
       subtitle_style: body.subtitle_style || "minimal_white",

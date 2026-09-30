@@ -1,4 +1,4 @@
-const { createRunwayVideoTask } = require("./kie-runway");
+const { createAiAvatarProTask } = require("./kie-ai-avatar-pro");
 const {
   createAlephVideoTask,
   createAlephVideoTaskLegacy,
@@ -61,6 +61,7 @@ async function claimVideoProviderCall(supabase, generationId) {
       parts.find(
         (p) =>
           p.startsWith("video_") ||
+          p.startsWith("avatar_") ||
           p.startsWith("aleph_") ||
           p.startsWith("kling_"),
       ) || parts[parts.length - 1];
@@ -100,6 +101,7 @@ async function claimVideoProviderCall(supabase, generationId) {
         parts.find(
           (p) =>
             p.startsWith("video_") ||
+            p.startsWith("avatar_") ||
             p.startsWith("aleph_") ||
             p.startsWith("kling_"),
         ) || null,
@@ -110,7 +112,7 @@ async function claimVideoProviderCall(supabase, generationId) {
 }
 
 /**
- * Single billable Runway video call per generation row.
+ * Image → Vidéo via Kling Ai Avatar Pro (Kie jobs).
  */
 async function generateVideoOnce(supabase, params) {
   const claim = await claimVideoProviderCall(supabase, params.generationId);
@@ -128,15 +130,13 @@ async function generateVideoOnce(supabase, params) {
   }
 
   const startedAt = Date.now();
-  const runway = await createRunwayVideoTask({
+  const avatar = await createAiAvatarProTask({
     prompt: params.prompt,
-    image: params.imageUrl,
-    aspectRatio: params.aspectRatio,
-    durationSec: params.durationSec,
-    quality: params.quality,
+    imageUrl: params.imageUrl,
+    audioUrl: params.audioUrl,
   });
 
-  const externalTaskId = `video_${runway.taskId}`;
+  const externalTaskId = `avatar_${avatar.taskId}`;
   const durationMs = Date.now() - startedAt;
   const prevAttempts = Array.isArray(claim.generation.provider_attempts)
     ? claim.generation.provider_attempts
@@ -146,7 +146,8 @@ async function generateVideoOnce(supabase, params) {
     ...(claim.generation.metadata || {}),
     video_api_call_count: 1,
     video_provider_completed_at: new Date().toISOString(),
-    runway_task_id: runway.taskId,
+    i2v_provider: "kling_ai_avatar_pro",
+    avatar_task_id: avatar.taskId,
     video_provider_duration_ms: durationMs,
     video_auto_retries: 0,
   };
@@ -154,7 +155,7 @@ async function generateVideoOnce(supabase, params) {
   await supabase
     .from("generations")
     .update({
-      provider: "runway",
+      provider: "kie",
       provider_task_id: appendProviderTaskId(
         claim.generation.provider_task_id,
         externalTaskId,
@@ -163,8 +164,8 @@ async function generateVideoOnce(supabase, params) {
       provider_attempts: [
         ...prevAttempts,
         {
-          provider: "runway",
-          taskId: runway.taskId,
+          provider: "kling_ai_avatar_pro",
+          taskId: avatar.taskId,
           externalTaskId,
           durationMs,
           autoRetry: false,
@@ -174,10 +175,10 @@ async function generateVideoOnce(supabase, params) {
     })
     .eq("id", params.generationId);
 
-  console.info("[generate-video-once] runway job created", {
+  console.info("[generate-video-once] ai-avatar-pro job created", {
     generationId: params.generationId,
     videoRequestId: nextMeta.video_request_id || null,
-    runwayTaskId: runway.taskId,
+    avatarTaskId: avatar.taskId,
     durationMs,
     apiCallCount: 1,
   });
@@ -187,7 +188,7 @@ async function generateVideoOnce(supabase, params) {
     deduplicated: false,
     externalTaskId,
     apiCallCount: 1,
-    runwayTaskId: runway.taskId,
+    avatarTaskId: avatar.taskId,
     durationMs,
   };
 }

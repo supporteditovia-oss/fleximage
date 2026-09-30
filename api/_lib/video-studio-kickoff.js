@@ -4,6 +4,8 @@ const {
   generateKlingMotionOnce,
   readVideoApiCallCount,
 } = require("./generate-video-once");
+const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
+const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
   buildV2VProviderPrompt,
@@ -187,18 +189,18 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         }
       }
     } else {
+      const imageUrl = await ensureKieAccessibleMediaUrl(sourceAssetUrl, "image");
+      const audioUrl = await prepareI2VAvatarAudioUrl({
+        userId,
+        meta,
+      });
+      const avatarPrompt =
+        String(larp.final_prompt || providerPrompt || larp.prompt || "").trim();
       await generateVideoOnce(supabase, {
         generationId: larp.id,
-        prompt: providerPrompt,
-        imageUrl: sourceAssetUrl,
-        aspectRatio,
-        durationSec:
-          meta.duration_sec === 10
-            ? 10
-            : require("../../shared/video-i2v-pricing.cjs").normalizeI2VDurationSec(
-                meta.duration_sec,
-              ),
-        quality: meta.quality === "high" ? "high" : "standard",
+        prompt: avatarPrompt,
+        imageUrl,
+        audioUrl,
       });
     }
 

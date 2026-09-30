@@ -493,6 +493,7 @@ module.exports = async function handler(req, res) {
       return;
     }
     const isVideoTask = activeTaskId.startsWith("video_");
+    const isAvatarTask = activeTaskId.startsWith("avatar_");
     const isAlephTask = activeTaskId.startsWith("aleph_");
     const isKlingTask = activeTaskId.startsWith("kling_");
     let apiStatus = "waiting";
@@ -740,6 +741,55 @@ module.exports = async function handler(req, res) {
         }
       } catch (err) {
         console.error("Failed to poll Aleph video", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de suivi vidéo — réessaie dans un instant.";
+      }
+    } else if (isAvatarTask) {
+      const {
+        getAiAvatarProStatus,
+        mapAiAvatarProState,
+        extractAiAvatarProVideoUrl,
+        extractAiAvatarProFailMessage,
+      } = require("../kie-ai-avatar-pro");
+      const avatarTaskId = activeTaskId.replace("avatar_", "");
+      try {
+        const avatarData = await getAiAvatarProStatus(avatarTaskId);
+        const state = mapAiAvatarProState(avatarData);
+        const videoUrl = extractAiAvatarProVideoUrl(avatarData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = formatVideoFailForClient(
+            extractAiAvatarProFailMessage(avatarData),
+            "Échec de la génération vidéo",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
+        }
+      } catch (err) {
+        console.error("Failed to poll Ai Avatar Pro", err);
         if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
