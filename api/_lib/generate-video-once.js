@@ -1,4 +1,5 @@
 const { createAiAvatarProTask } = require("./kie-ai-avatar-pro");
+const { createKlingOmniRef2VTask } = require("./kie-kling-omni-ref2v");
 const {
   createAlephVideoTask,
   createAlephVideoTaskLegacy,
@@ -63,7 +64,8 @@ async function claimVideoProviderCall(supabase, generationId) {
           p.startsWith("video_") ||
           p.startsWith("avatar_") ||
           p.startsWith("aleph_") ||
-          p.startsWith("kling_"),
+          p.startsWith("kling_") ||
+          p.startsWith("omni_"),
       ) || parts[parts.length - 1];
     return { allowed: false, generation: row, apiCallCount: count, externalTaskId: videoPart };
   }
@@ -103,7 +105,8 @@ async function claimVideoProviderCall(supabase, generationId) {
             p.startsWith("video_") ||
             p.startsWith("avatar_") ||
             p.startsWith("aleph_") ||
-            p.startsWith("kling_"),
+            p.startsWith("kling_") ||
+            p.startsWith("omni_"),
         ) || null,
     };
   }
@@ -410,10 +413,90 @@ async function generateKlingMotionOnce(supabase, params) {
   };
 }
 
+/**
+ * Transformation Pro — Kling 3.0 Omni Reference To Video (single provider call).
+ */
+async function generateOmniRef2VOnce(supabase, params) {
+  const claim = await claimVideoProviderCall(supabase, params.generationId);
+  if (!claim.allowed) {
+    console.info("[generate-omni-ref2v-once] skipped duplicate provider call", {
+      generationId: params.generationId,
+      apiCallCount: claim.apiCallCount,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: claim.externalTaskId,
+      apiCallCount: claim.apiCallCount,
+    };
+  }
+
+  const startedAt = Date.now();
+  const omni = await createKlingOmniRef2VTask({
+    prompt: params.prompt,
+    videoUrl: params.videoUrl,
+    durationSec: params.durationSec,
+    resolution: params.resolution,
+  });
+
+  const externalTaskId = `omni_${omni.taskId}`;
+  const durationMs = Date.now() - startedAt;
+  const prevAttempts = Array.isArray(claim.generation.provider_attempts)
+    ? claim.generation.provider_attempts
+    : [];
+
+  const nextMeta = {
+    ...(claim.generation.metadata || {}),
+    video_api_call_count: 1,
+    video_provider_completed_at: new Date().toISOString(),
+    ultra_provider: "kling_3_omni_ref2v",
+    omni_task_id: omni.taskId,
+    video_provider_duration_ms: durationMs,
+  };
+
+  await supabase
+    .from("generations")
+    .update({
+      provider: "kie",
+      provider_task_id: appendProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
+      metadata: nextMeta,
+      provider_attempts: [
+        ...prevAttempts,
+        {
+          provider: "kling_3_omni_ref2v",
+          taskId: omni.taskId,
+          externalTaskId,
+          durationMs,
+        },
+      ],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.generationId);
+
+  console.info("[generate-omni-ref2v-once] job created", {
+    generationId: params.generationId,
+    omniTaskId: omni.taskId,
+    durationMs,
+  });
+
+  return {
+    ok: true,
+    deduplicated: false,
+    externalTaskId,
+    apiCallCount: 1,
+    omniTaskId: omni.taskId,
+    durationMs,
+  };
+}
+
 module.exports = {
   generateVideoOnce,
   generateVideoV2VOnce,
   generateKlingMotionOnce,
+  generateOmniRef2VOnce,
   claimVideoProviderCall,
   readVideoApiCallCount,
   appendProviderTaskId,

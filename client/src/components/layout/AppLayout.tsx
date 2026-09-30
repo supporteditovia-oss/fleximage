@@ -41,7 +41,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           ? "create"
           : pathname === "/video-ia"
             ? "video-ia"
-            : undefined
+            : pathname === "/transformation-pro"
+              ? "video-ultra"
+              : undefined
       }
     >
       <FloatingHeader variant="app" />

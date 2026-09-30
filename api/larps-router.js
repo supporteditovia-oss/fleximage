@@ -1,5 +1,6 @@
 const generateDirect = require("./_lib/handlers/generate-direct");
 const generateVideo = require("./_lib/handlers/generate-video");
+const generateVideoUltra = require("./_lib/handlers/generate-video-ultra");
 const videoUploadUrl = require("./_lib/handlers/video-upload-url");
 const canGenerate = require("./_lib/handlers/can-generate");
 const statusHandler = require("./_lib/handlers/status");
@@ -55,6 +56,10 @@ module.exports = async function handler(req, res) {
 
   if (parts[0] === "generate-video") {
     return generateVideo(req, res);
+  }
+
+  if (parts[0] === "generate-video-ultra") {
+    return generateVideoUltra(req, res);
   }
 
   if (parts[0] === "video-upload-url") {

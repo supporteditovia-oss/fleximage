@@ -23,6 +23,7 @@ const {
   PROVIDER_POLL_HARD_TIMEOUT_MS,
   PROVIDER_POLL_QA_RETRY_EXTRA_MS,
   refundGenerationCreditsIfCharged,
+  chargeGenerationCreditsIfNotYetCharged,
   extractImageUrls,
   toAssetList,
   toClientStatus,
@@ -357,8 +358,12 @@ module.exports = async function handler(req, res) {
       } = require("../video-studio-kickoff");
       const kickMeta =
         larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+      const isVideoUltra = kickMeta.workflow === "video_ultra";
       const kickoffDone = readVideoApiCallCount(kickMeta) >= 1;
       if (!kickoffDone && !kickMeta.video_kickoff_failed) {
+        const kickoffTimeoutMessage = kickMeta.defer_credit_charge
+          ? "La génération a pris trop de temps. Réessaie."
+          : VIDEO_TIMEOUT_USER_MESSAGE;
         // Safety-net timeout: a generation must never stay "processing"
         // indefinitely without ever reaching aleph_*/kling_*/video_*. 3 min
         // is well above the ~1.5s normally needed to kick off the provider.
@@ -367,14 +372,15 @@ module.exports = async function handler(req, res) {
             supabase,
             userId,
             larp,
-            VIDEO_TIMEOUT_USER_MESSAGE,
+            kickoffTimeoutMessage,
+            { skipRefund: kickMeta.defer_credit_charge === true },
           );
           res.status(200).json({
             larpId: larp.id,
             ...statusTimingFields(larp),
             status: "fail",
             resultUrls: [],
-            failMessage: VIDEO_TIMEOUT_USER_MESSAGE,
+            failMessage: kickoffTimeoutMessage,
             costTime: null,
             isSubscriber: false,
             requiresPaywall: false,
@@ -383,7 +389,13 @@ module.exports = async function handler(req, res) {
           return;
         }
         if (ageInMs >= 1_500) {
-          const kick = await kickoffVideoStudioProvider(supabase, larp, userId);
+          const kick = isVideoUltra
+            ? await require("../video-ultra-kickoff").kickoffVideoUltraProvider(
+                supabase,
+                larp,
+                userId,
+              )
+            : await kickoffVideoStudioProvider(supabase, larp, userId);
           if (kick.failed) {
             res.status(200).json({
               larpId: larp.id,
@@ -496,12 +508,64 @@ module.exports = async function handler(req, res) {
     const isAvatarTask = activeTaskId.startsWith("avatar_");
     const isAlephTask = activeTaskId.startsWith("aleph_");
     const isKlingTask = activeTaskId.startsWith("kling_");
+    const isOmniTask = activeTaskId.startsWith("omni_");
     let apiStatus = "waiting";
     let apiResultJson = null;
     let apiFailMsg = null;
     let apiCostTime = null;
 
-    if (isKlingTask) {
+    if (isOmniTask) {
+      const {
+        getKlingOmniRef2VStatus,
+        mapKlingOmniRef2VState,
+        extractKlingOmniRef2VVideoUrl,
+        extractKlingOmniRef2VFailMessage,
+      } = require("../kie-kling-omni-ref2v");
+      const omniTaskId = activeTaskId.replace("omni_", "");
+      try {
+        const omniData = await getKlingOmniRef2VStatus(omniTaskId);
+        const state = mapKlingOmniRef2VState(omniData);
+        const videoUrl = extractKlingOmniRef2VVideoUrl(omniData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg = formatVideoFailForClient(
+            extractKlingOmniRef2VFailMessage(omniData),
+            "Échec Transformation Pro",
+          );
+        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          apiStatus = "fail";
+          apiFailMsg = pollMeta.defer_credit_charge
+            ? "La génération a pris trop de temps. Réessaie."
+            : VIDEO_TIMEOUT_USER_MESSAGE;
+        }
+      } catch (err) {
+        console.error("Failed to poll Omni Ref2V", err);
+        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+          const stage = mapStudioStage(pollMeta, "generating");
+          res.status(200).json({
+            larpId: larp.id,
+            ...statusTimingFields(larp),
+            status: "waiting",
+            studioStage: stage,
+            studioStageLabel: studioStageLabel(stage),
+            resultUrls: [],
+            failMessage: null,
+            costTime: null,
+            isSubscriber: false,
+            requiresPaywall: false,
+            resultType,
+          });
+          return;
+        }
+        apiStatus = "fail";
+        apiFailMsg = "Erreur de suivi vidéo — réessaie dans un instant.";
+      }
+    } else if (isKlingTask) {
       const {
         getKlingMotionStatus,
         mapKlingMotionState,
@@ -1231,6 +1295,32 @@ module.exports = async function handler(req, res) {
               ...(resultType === "video" ? { studio_stage: "COMPLETED" } : {}),
             }
           : pollMeta;
+
+      if (
+        apiStatus === "success" &&
+        resultType === "video" &&
+        pollMeta.defer_credit_charge === true &&
+        resultUrls.length > 0
+      ) {
+        const billableCost = Number(larp.credit_cost) || 0;
+        const chargeErr = await chargeGenerationCreditsIfNotYetCharged(supabase, {
+          userId,
+          creditCost: billableCost,
+          generationId: larp.id,
+          metadata: {
+            source: "video_ultra",
+            phase: "post_success",
+            video_request_id: pollMeta.video_request_id || null,
+          },
+        });
+        if (chargeErr) {
+          console.error("[status] ultra credit charge failed", chargeErr);
+          apiStatus = "fail";
+          apiFailMsg =
+            "Impossible de débiter tes jetons — contacte le support si le problème persiste.";
+          resultUrls = [];
+        }
+      }
 
       await supabase
         .from("generations")

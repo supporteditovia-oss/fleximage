@@ -101,6 +101,29 @@ async function deductGenerationCredits(supabase, params) {
   return error;
 }
 
+async function generationCreditsAlreadyCharged(supabase, generationId) {
+  const { data: charges, error: chargeFetchErr } = await supabase
+    .from("credit_ledger")
+    .select("delta")
+    .eq("generation_id", generationId)
+    .eq("reason", "generation_charge");
+
+  if (chargeFetchErr) throw chargeFetchErr;
+
+  return (charges || []).some((entry) => Number(entry.delta) < 0);
+}
+
+/** Débit différé (ex. Transformation Pro) — idempotent via clé ledger. */
+async function chargeGenerationCreditsIfNotYetCharged(supabase, params) {
+  if (params.creditCost === 0) return null;
+  const already = await generationCreditsAlreadyCharged(
+    supabase,
+    params.generationId,
+  );
+  if (already) return null;
+  return deductGenerationCredits(supabase, params);
+}
+
 async function refundGenerationCreditsIfCharged(supabase, params) {
   const { data: charges, error: chargeFetchErr } = await supabase
     .from("credit_ledger")
@@ -291,6 +314,8 @@ module.exports = {
   getBillableCreditCost,
   applyCreditDelta,
   deductGenerationCredits,
+  chargeGenerationCreditsIfNotYetCharged,
+  generationCreditsAlreadyCharged,
   refundGenerationCreditsIfCharged,
   recordGeneration,
   extractImageUrls,

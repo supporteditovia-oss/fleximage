@@ -94,7 +94,9 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   const isModelesPage = pathname === "/modeles" || pathname.startsWith("/modeles/");
   const isStudioNavPage =
     variant === "app" &&
-    (pathname === "/create" || pathname === "/video-ia");
+    (pathname === "/create" ||
+      pathname === "/video-ia" ||
+      pathname === "/transformation-pro");
   const activeStudioMode: StudioMode =
     studioModeFromPath(pathname) ?? studioMode;
 

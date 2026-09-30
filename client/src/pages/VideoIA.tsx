@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Redirect, useLocation } from "wouter";
+import { Link, Redirect, useLocation } from "wouter";
 import {
   Film,
   ImageIcon,
@@ -697,6 +697,11 @@ export default function VideoIA() {
             Admin · grille v2 · I2V {adminBurn.videoI2V} cr
           </span>
         </div>
+        <p className="mt-4 text-sm text-[var(--lx-muted)]">
+          <Link href="/transformation-pro" className="underline underline-offset-2">
+            Transformation Pro (Kling 3.0 Omni) — décor &amp; luxe, voix conservée →
+          </Link>
+        </p>
       </header>
 
       <div className="via-mode-grid">

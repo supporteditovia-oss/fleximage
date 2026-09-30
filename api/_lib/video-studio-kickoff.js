@@ -33,15 +33,23 @@ function readKickoffLock(meta) {
   return age >= 0 && age < 120_000;
 }
 
-async function markVideoKickoffFailed(supabase, userId, larp, message) {
+async function markVideoKickoffFailed(
+  supabase,
+  userId,
+  larp,
+  message,
+  options = {},
+) {
   const failMessage = String(message || "Échec envoi studio").slice(0, 240);
+  const meta =
+    larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
   await supabase
     .from("generations")
     .update({
       status: "failed",
       fail_message: failMessage,
       metadata: {
-        ...(larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {}),
+        ...meta,
         studio_stage: "FAILED",
         video_kickoff_failed: true,
       },
@@ -49,12 +57,16 @@ async function markVideoKickoffFailed(supabase, userId, larp, message) {
       completed_at: new Date().toISOString(),
     })
     .eq("id", larp.id);
-  await refundGenerationCreditsIfCharged(supabase, {
-    userId,
-    generationId: larp.id,
-    source: "video_kickoff_failed",
-    failMessage,
-  }).catch((err) => console.error("refund failed", err));
+  const skipRefund =
+    options.skipRefund === true || meta.defer_credit_charge === true;
+  if (!skipRefund) {
+    await refundGenerationCreditsIfCharged(supabase, {
+      userId,
+      generationId: larp.id,
+      source: "video_kickoff_failed",
+      failMessage,
+    }).catch((err) => console.error("refund failed", err));
+  }
 }
 
 /**
@@ -245,4 +257,5 @@ module.exports = {
   kickoffVideoStudioProvider,
   markVideoKickoffFailed,
   readVideoApiCallCount,
+  readKickoffLock,
 };

@@ -140,7 +140,12 @@ export function studioPathForMode(mode: StudioMode): string {
 
 /** Mode actif déduit de l'URL courante. */
 export function studioModeFromPath(pathname: string): StudioMode | null {
-  if (pathname === "/video-ia" || pathname.startsWith("/video-ia/")) {
+  if (
+    pathname === "/video-ia" ||
+    pathname.startsWith("/video-ia/") ||
+    pathname === "/transformation-pro" ||
+    pathname.startsWith("/transformation-pro/")
+  ) {
     return "video";
   }
   if (pathname === "/create" || pathname.startsWith("/create/")) {
