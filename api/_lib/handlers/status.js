@@ -34,6 +34,7 @@ const {
 } = require("../generation");
 const { videoTimingFieldsForLarp } = require("../video-status-timing");
 const { mapVideoProviderMessage } = require("../video-user-errors");
+const { mapImageProviderMessage } = require("../image-user-errors");
 const { readApiCallCount } = require("../generation-idempotency");
 
 /** Image bloquée sans livrable → fail + remboursement jetons (facturation DeepInfra séparée). */
@@ -1018,10 +1019,14 @@ module.exports = async function handler(req, res) {
       } else if (isCustomApiFailed) {
         // OneShot: never spawn a 2nd paid job on poll failure — user must start a new action.
         apiStatus = "fail";
-        apiFailMsg = toUserFailMessage(
+        const rawOneshotFail = toUserFailMessage(
           customStatus && customStatus.error,
           "Échec de la génération. Clique sur « Nouvelle génération » pour réessayer.",
         );
+        apiFailMsg =
+          (resultType === "image"
+            ? mapImageProviderMessage(rawOneshotFail, "fr")
+            : null) || rawOneshotFail;
         console.warn("[status] oneshot poll failed — no auto-retry", {
           larpId: larp.id,
           generationRequestId:

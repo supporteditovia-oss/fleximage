@@ -577,8 +577,15 @@ module.exports = async function handler(req, res) {
         providerErr && providerErr.message
           ? String(providerErr.message).slice(0, 240)
           : "erreur moteur image";
+      const { mapImageProviderMessage } = require("../image-user-errors");
       const failMessage = isGoogleAiPromptFlagged(providerErr)
-        ? "Échec provider (filtre). Reformule ta demande — jetons remboursés."
+        ? mapImageProviderMessage(
+            providerErr && providerErr.message ? providerErr.message : providerErr,
+            uiLocale,
+          ) ||
+          (uiLocale === "es"
+            ? "Filtro del proveedor. Reformula — créditos reembolsados."
+            : "Échec provider (filtre). Reformule ta demande — jetons remboursés.")
         : providerErr && providerErr.code === "ONESHOT_CREDITS_EXHAUSTED"
           ? String(providerErr.message)
           : `Échec de la génération (${detail}). Jetons remboursés.`;

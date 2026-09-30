@@ -280,7 +280,7 @@ export function GenerationProgress({
         ? data.failMessage
         : t("progress.generationFailedDefault");
     const isPolicyFail =
-      /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito/i.test(
+      /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito|safety policy|rejected by the model|content policy|laboratorio de ia|laboratoire ia|filtre du proveedor|filtre provider|cr[eé]ditos reembolsados|jetons sont rembours/i.test(
         failMessage,
       );
     toast({
