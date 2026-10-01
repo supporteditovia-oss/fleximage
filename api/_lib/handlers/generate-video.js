@@ -20,6 +20,7 @@ const {
   buildV2VProviderPrompt,
   buildAlephSubmitPrompt,
   resolveV2VProviderForStudio,
+  v2vEngineFamilyForProvider,
   isVehicleDrivingPrompt,
   validateVoiceText,
   stripVoiceInstructionsFromPrompt,
@@ -634,6 +635,9 @@ module.exports = async function handler(req, res) {
       preserve_source_audio: preserveSourceAudio,
       v2v_resolution: v2vResolution,
       v2v_provider: v2vProvider,
+      v2v_engine_family: v2vProvider
+        ? v2vEngineFamilyForProvider(v2vProvider)
+        : null,
       aleph_submit_prompt: alephSubmitPrompt,
       motion_reference_source: motionReferenceSource,
       v2v_max_duration_sec: VIDEO_V2V_MAX_DURATION_SEC,

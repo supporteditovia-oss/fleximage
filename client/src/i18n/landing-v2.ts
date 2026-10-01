@@ -57,10 +57,8 @@ export const landingV2Resources = {
       titleLine1: "Le mouvement,",
       titleLine2: "en cinq secondes.",
       lead:
-        "Trois ateliers vidéo : photo animée, clip transformé (décor, corps, danse…) et transformation premium avec ta voix conservée.",
-      specs: "Image · Vidéo · Transformation Pro · 720p à 4K",
-      modesIntro:
-        "Choisis l’atelier qui correspond à ton idée — même studio, trois parcours clairs.",
+        "Deux ateliers : photo animée, ou clip transformé — danse & corps, ou décor & voiture — le studio choisit le moteur adapté.",
+      specs: "Image → Vidéo · Vidéo → Vidéo · 720p à 4K",
       cta: "Ouvrir le studio vidéo",
       tabsAria: "Ateliers vidéo",
       hint:
@@ -80,22 +78,11 @@ export const landingV2Resources = {
         title: "Séquence transformée",
         tech: "Vidéo → Vidéo",
         description:
-          "Votre plan filmé au smartphone, réinventé — décor, corps, tenue, danse ou véhicule — le mouvement reste le vôtre.",
+          "Votre clip smartphone : danse et changement de corps, ou décor, luxe et véhicule — un seul bouton, le bon moteur est choisi pour vous.",
         beforeLabel: "Clip smartphone",
         beforeAlt: "Vidéo source filmée au smartphone",
         afterLabel: "Séquence transformée",
         afterAlt: "Aperçu séquence Vidéo vers Vidéo",
-        staticTag: "Vidéo",
-      },
-      pro: {
-        title: "Transformation Pro",
-        tech: "Premium · voix conservée",
-        description:
-          "Même clip source, rendu luxe cinéma — durée et qualité au choix, jetons débités seulement si la vidéo est prête.",
-        beforeLabel: "Clip source",
-        beforeAlt: "Vidéo smartphone avant transformation premium",
-        afterLabel: "Rendu Pro",
-        afterAlt: "Aperçu transformation premium",
         staticTag: "Vidéo",
       },
     },
@@ -210,10 +197,8 @@ export const landingV2Resources = {
       titleLine1: "Motion,",
       titleLine2: "in five seconds.",
       lead:
-        "Three video workshops: animated photo, transformed clip (setting, body, dance…) and premium transform with your voice kept.",
-      specs: "Image · Video · Transformation Pro · 720p to 4K",
-      modesIntro:
-        "Pick the workshop that fits your idea — one studio, three clear paths.",
+        "Two workshops: animated photo, or transformed clip — dance & body, or setting & car — we pick the right engine.",
+      specs: "Image → Video · Video → Video · 720p to 4K",
       cta: "Open video studio",
       tabsAria: "Video workshops",
       hint:
@@ -233,22 +218,11 @@ export const landingV2Resources = {
         title: "Transformed sequence",
         tech: "Video → Video",
         description:
-          "Your smartphone clip, reinvented — setting, body, outfit, dance or vehicle — your motion stays yours.",
+          "Your smartphone clip: dance and body swap, or luxury setting and vehicle — one button, the right engine for your prompt.",
         beforeLabel: "Smartphone clip",
         beforeAlt: "Source video filmed on smartphone",
         afterLabel: "Transformed sequence",
         afterAlt: "Video to Video sequence preview",
-        staticTag: "Video",
-      },
-      pro: {
-        title: "Transformation Pro",
-        tech: "Premium · voice kept",
-        description:
-          "Same source clip, luxury cinematic render — pick duration and quality; credits charged only when the video is ready.",
-        beforeLabel: "Source clip",
-        beforeAlt: "Smartphone video before premium transform",
-        afterLabel: "Pro render",
-        afterAlt: "Premium transformation preview",
         staticTag: "Video",
       },
     },
@@ -363,10 +337,8 @@ export const landingV2Resources = {
       titleLine1: "El movimiento,",
       titleLine2: "en cinco segundos.",
       lead:
-        "Tres talleres de vídeo: foto animada, clip transformado (escenario, cuerpo, baile…) y transformación premium con tu voz conservada.",
-      specs: "Imagen · Vídeo · Transformation Pro · 720p a 4K",
-      modesIntro:
-        "Elige el taller que encaje con tu idea — un estudio, tres caminos claros.",
+        "Dos talleres: foto animada o clip transformado — baile y cuerpo, o escenario y coche — el estudio elige el motor.",
+      specs: "Imagen → Vídeo · Vídeo → Vídeo · 720p a 4K",
       cta: "Abrir estudio de vídeo",
       tabsAria: "Talleres de vídeo",
       hint:
@@ -386,22 +358,11 @@ export const landingV2Resources = {
         title: "Secuencia transformada",
         tech: "Vídeo → Vídeo",
         description:
-          "Tu plano grabado con el móvil, reinventado — escenario, cuerpo, outfit, baile o vehículo — tu movimiento se mantiene.",
+          "Tu clip del móvil: baile y cambio de cuerpo, o escenario de lujo y vehículo — un solo botón, motor automático.",
         beforeLabel: "Clip smartphone",
         beforeAlt: "Vídeo origen grabado con smartphone",
         afterLabel: "Secuencia transformada",
         afterAlt: "Vista previa secuencia Vídeo a Vídeo",
-        staticTag: "Vídeo",
-      },
-      pro: {
-        title: "Transformation Pro",
-        tech: "Premium · voz conservada",
-        description:
-          "Mismo clip origen, render lujo cine — duración y calidad a elegir; créditos solo si el vídeo está listo.",
-        beforeLabel: "Clip origen",
-        beforeAlt: "Vídeo smartphone antes de transformación premium",
-        afterLabel: "Render Pro",
-        afterAlt: "Vista previa transformación premium",
         staticTag: "Vídeo",
       },
     },

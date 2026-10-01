@@ -27,11 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
-import {
-  isVideoWorkflow,
-  pathForVideoStudioMode,
-  type VideoStudioMode,
-} from "@/lib/video-studio-modes";
+import { pathForVideoStudioMode, type VideoStudioMode } from "@/lib/video-studio-modes";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
@@ -194,18 +190,11 @@ export default function VideoIA() {
   }, []);
 
   const handleStudioModeSelect = (mode: VideoStudioMode) => {
-    if (mode === "transformation_pro") {
-      setLocation("/transformation-pro");
-      return;
+    setWorkflow(mode);
+    if (mode === "video_to_video") {
+      setAspectRatio("16:9");
     }
-    if (isVideoWorkflow(mode)) {
-      setWorkflow(mode);
-      if (mode === "video_to_video") {
-        setAspectRatio("16:9");
-      }
-      const next = pathForVideoStudioMode(mode);
-      window.history.replaceState(null, "", next);
-    }
+    window.history.replaceState(null, "", pathForVideoStudioMode(mode));
   };
 
   /** iOS Safari : lancer la lecture dès que le blob est prêt (évite écran noir). */
@@ -738,7 +727,7 @@ export default function VideoIA() {
       <VideoStudioModePicker
         active={workflow}
         onSelect={handleStudioModeSelect}
-        intro="Trois façons de créer : photo animée, clip transformé (décor, corps, danse…), ou transformation premium avec ta voix."
+        intro="Photo animée, ou clip transformé : danse / nouveau corps, ou décor & voiture — le studio choisit le bon moteur tout seul."
       />
 
       <div key={workflow} className="via-panel via-panel-enter">
@@ -954,7 +943,9 @@ export default function VideoIA() {
               {videoDurationSec
                 ? ` (${v2vBillingDurationSec} s)`
                 : " (5 s par défaut avant import)"}
-              . Le studio conserve ta caméra et tes mouvements. Par défaut la
+              . Le studio conserve ta caméra et tes mouvements, et choisit
+              automatiquement le bon moteur (danse / corps vs décor / voiture)
+              selon ton prompt — tu n&apos;as rien à sélectionner. Par défaut la
               vidéo est <strong>muette</strong> — active l&apos;option voix (+
               {adminBurn.videoVoiceExtra} crédits) pour garder ta voix filmée.
             </p>

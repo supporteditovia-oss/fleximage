@@ -249,16 +249,26 @@ describe("video-studio", () => {
     assert.match(generic, /OEM key fob/i);
   });
 
-  it("resolveV2VProviderForStudio routes cockpit/vehicle to Kling first", () => {
+  it("resolveV2VProviderForStudio routes dance to motion, decor to transform", () => {
+    assert.equal(
+      resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),
+      "kling_motion",
+    );
     assert.equal(
       resolveV2VProviderForStudio(
-        "Remplace l'intérieur par Urus OEM, même volant",
+        "Fais danser cette personne comme sur la vidéo source",
       ),
       "kling_motion",
     );
     assert.equal(
-      resolveV2VProviderForStudio("Danse sur la plage, même mouvement"),
-      "kling_motion",
+      resolveV2VProviderForStudio(
+        "Remplace l'intérieur par Urus OEM, même volant",
+      ),
+      "runway_aleph",
+    );
+    assert.equal(
+      resolveV2VProviderForStudio("Transporte-moi à Dubai Marina la nuit"),
+      "runway_aleph",
     );
   });
 

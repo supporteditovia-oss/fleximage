@@ -60,13 +60,6 @@ export function LandingVideoShowcase() {
             beforePoster: "/assets/landing-v2/portrait-car-original.jpg",
             afterPoster: "/assets/landing-v2/portrait-car-generated.jpg",
           },
-          {
-            id: "pro" as const,
-            index: "03",
-            prefix: "pro",
-            beforePoster: "/assets/landing-v2/dubai-original.jpg",
-            afterPoster: "/assets/landing-v2/dubai-generated.jpg",
-          },
         ] as const
       ).map((item) => ({
         id: item.id,

@@ -169,12 +169,12 @@ html.luxeflexia-video-page .floating-header::before {
   margin: 0 0 1.35rem;
 }
 
-.via-mode-grid--triple {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.via-mode-grid--studio {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (max-width: 900px) {
-  .via-mode-grid--triple {
+@media (max-width: 640px) {
+  .via-mode-grid--studio {
     grid-template-columns: 1fr;
   }
 }
@@ -193,17 +193,17 @@ html.luxeflexia-video-page .floating-header::before {
   }
 }
 
-.via-mode-grid--triple .via-mode-card {
+.via-mode-grid--studio .via-mode-card {
   padding: 0.95rem 0.75rem 0.9rem;
 }
 
-.via-mode-grid--triple .via-mode-card__label {
-  font-size: 0.82rem;
+.via-mode-grid--studio .via-mode-card__label {
+  font-size: 0.88rem;
   line-height: 1.25;
 }
 
-.via-mode-grid--triple .via-mode-card__hint {
-  font-size: 0.68rem;
+.via-mode-grid--studio .via-mode-card__hint {
+  font-size: 0.72rem;
   line-height: 1.35;
 }
 

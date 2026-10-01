@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Film, ImageIcon, Loader2, Upload, Video } from "lucide-react";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
-import {
-  pathForVideoStudioMode,
-  type VideoStudioMode,
-} from "@/lib/video-studio-modes";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { compressImageForGeneration } from "@/lib/compress-image";
@@ -77,14 +73,6 @@ export function LandingVideoPanel() {
     }
   };
 
-  const handleStudioModeSelect = (mode: VideoStudioMode) => {
-    if (mode === "transformation_pro") {
-      navigate(user ? "/transformation-pro" : "/register");
-      return;
-    }
-    setWorkflow(mode);
-  };
-
   const handleGenerate = async () => {
     if (busy) return;
     if (workflow === "image_to_video" && !canGenerateI2V) return;
@@ -107,7 +95,10 @@ export function LandingVideoPanel() {
 
   return (
     <div className="via-studio landing-video-panel pb-4">
-      <VideoStudioModePicker active={workflow} onSelect={handleStudioModeSelect} />
+      <VideoStudioModePicker
+        active={workflow}
+        onSelect={(mode) => setWorkflow(mode)}
+      />
 
       <div key={workflow} className="via-panel via-panel-enter">
         {workflow === "image_to_video" ? (

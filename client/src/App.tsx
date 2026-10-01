@@ -278,7 +278,9 @@ function ProtectedAppRoutes() {
           <Route path="/bibliotheque" component={Bibliotheque} />
           <Route path="/generate" component={GenerateRoute} />
           <Route path="/video-ia" component={VideoIARoute} />
-          <Route path="/transformation-pro" component={VideoUltraRoute} />
+          <Route path="/transformation-pro">
+            <Redirect to="/video-ia?workflow=video_to_video" />
+          </Route>
           <Route path="/image-prete" component={ImagePrete} />
           <Route path="/voix-prete" component={VoixPrete} />
           <Route path="/video-prete" component={VideoPrete} />

@@ -37,14 +37,26 @@ export function isVehicleDrivingPrompt(text: string): boolean {
 }
 
 const V2V_PROMPT_TRANSFORM_PATTERN =
-  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule)\b/i;
+  /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|dubai|yacht|marina|jet|luxe|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule|marque|oem|badge|logo)\b/i;
+
+const V2V_MOTION_BODY_PATTERN =
+  /\b(danse|danser|danseur|danseuse|chor[eé]graph|tiktok|challenge|meme|m[eê]me mouvement|same move|body swap|swap body|corps|fais danser|fait danser|remplace.*personne|remplace.*moi|new person|another person|hip hop|breakdance|groove|vibe dance)\b/i;
 
 /** Miroir de api/_lib/video-studio.js resolveV2VProviderForStudio */
 export function resolveV2VProviderForStudio(userPrompt: string): "runway_aleph" | "kling_motion" {
   const prompt = String(userPrompt || "").trim();
   if (!prompt) return "kling_motion";
-  if (isVehicleDrivingPrompt(prompt)) return "runway_aleph";
-  if (V2V_PROMPT_TRANSFORM_PATTERN.test(prompt)) return "runway_aleph";
+  const motion = V2V_MOTION_BODY_PATTERN.test(prompt);
+  const transform =
+    isVehicleDrivingPrompt(prompt) || V2V_PROMPT_TRANSFORM_PATTERN.test(prompt);
+  if (motion && !transform) return "kling_motion";
+  if (transform && !motion) return "runway_aleph";
+  if (motion && transform) {
+    if (/\b(danse|danser|chor[eé]|tiktok|meme|m[eê]me mouvement)\b/i.test(prompt)) {
+      return "kling_motion";
+    }
+    return "runway_aleph";
+  }
   return "kling_motion";
 }
 

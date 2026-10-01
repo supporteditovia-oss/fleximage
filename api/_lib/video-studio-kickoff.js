@@ -15,10 +15,9 @@ const {
   buildAlephSubmitPrompt,
   buildV2VProviderPrompt,
   isVehicleDrivingPrompt,
+  v2vEngineFamilyForProvider,
 } = require("./video-studio");
 const {
-  isKlingCharacterRejection,
-  isRetryableKlingError,
   isRetryableAlephError,
   resetVideoProviderClaim,
 } = require("./v2v-provider-errors");
@@ -173,8 +172,15 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         });
       };
 
+      const engineFamily =
+        meta.v2v_engine_family ||
+        v2vEngineFamilyForProvider(finalV2vProvider);
+
       try {
-        if (v2vResolution === "4k" || v2vResolution === "1080p") {
+        const useOmniTransform =
+          finalV2vProvider === "runway_aleph" &&
+          (v2vResolution === "4k" || v2vResolution === "1080p");
+        if (useOmniTransform) {
           const videoUrl = await ensureKieAccessibleMediaUrl(
             sourceAssetUrl,
             "video",
@@ -203,26 +209,12 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         }
       } catch (firstErr) {
         await resetVideoProviderClaim(supabase, larp.id, meta);
-        if (
-          finalV2vProvider === "kling_motion" &&
-          (isKlingCharacterRejection(firstErr) || isRetryableKlingError(firstErr))
-        ) {
-          finalV2vProvider = "runway_aleph";
-          await runAleph(sourceAssetUrl, referenceImageUrl);
-        } else if (
+        const sameFamilyRetry =
+          engineFamily === "transform" &&
           finalV2vProvider === "runway_aleph" &&
-          isRetryableAlephError(firstErr)
-        ) {
-          finalV2vProvider = "kling_motion";
-          const videoUrl = await resolveKlingMotionSourceVideoUrl(
-            sourceAssetUrl,
-            userId,
-          );
-          let imageUrl = referenceImageUrl;
-          if (!imageUrl) {
-            imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
-          }
-          await runKling(videoUrl, imageUrl);
+          isRetryableAlephError(firstErr);
+        if (sameFamilyRetry) {
+          await runAleph(sourceAssetUrl, referenceImageUrl);
         } else {
           throw firstErr;
         }

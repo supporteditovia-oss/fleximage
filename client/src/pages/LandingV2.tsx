@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Gem } from "lucide-react";
 import { writeStudioMode } from "@/lib/v2-experience";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { SocialProofLine } from "@/components/marketing/SocialProofLine";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,11 +17,6 @@ import { LandingClientHeroWidget } from "@/components/landing/LandingClientHeroW
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
-import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
-import {
-  pathForVideoStudioMode,
-  type VideoStudioMode,
-} from "@/lib/video-studio-modes";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
 import "./landing-v2.css";
 import "@/pages/video-ia-page.css";
@@ -50,19 +45,9 @@ function BrandLink({ className = "" }: { className?: string }) {
 export default function LandingV2() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
-  const [, navigate] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
   const loggedIn = Boolean(user);
   const appHref = loggedIn ? (adminPreview ? "/create" : "/generate") : "/register";
-
-  const openVideoStudioMode = (mode: VideoStudioMode) => {
-    writeStudioMode("video");
-    if (!loggedIn) {
-      navigate("/register");
-      return;
-    }
-    navigate(pathForVideoStudioMode(mode));
-  };
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr") as UiLocale;
 
@@ -209,23 +194,6 @@ export default function LandingV2() {
           <i />
           {t("landing:transform.captionDecor")}
         </p>
-      </section>
-
-      <section
-        className="landing-video-modes via-studio"
-        id="video-studio-modes"
-        aria-labelledby="landing-video-modes-title"
-      >
-        <div className="landing-video-modes__inner">
-          <p className="section-kicker">{t("landing:video.kicker")}</p>
-          <h2 id="landing-video-modes-title" className="landing-video-modes__title">
-            {t("landing:video.modesIntro")}
-          </h2>
-          <VideoStudioModePicker
-            active="image_to_video"
-            onSelect={openVideoStudioMode}
-          />
-        </div>
       </section>
 
       {adminPreview ? (

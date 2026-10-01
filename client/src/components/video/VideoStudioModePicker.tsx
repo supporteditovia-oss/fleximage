@@ -19,7 +19,7 @@ export function VideoStudioModePicker({
     <div className="via-mode-picker">
       {intro ? <p className="via-mode-picker__intro">{intro}</p> : null}
       <div
-        className="via-mode-grid via-mode-grid--triple"
+        className="via-mode-grid via-mode-grid--studio"
         role="tablist"
         aria-label="Type de création vidéo"
       >
