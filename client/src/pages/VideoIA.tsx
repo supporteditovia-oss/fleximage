@@ -796,7 +796,6 @@ export default function VideoIA() {
       v2vPresets={v2vActivePresets}
       onPreset={(p) => setSwapPrompt(appendV2VPromptSuffix(p))}
       refImageIsCustom={refImageIsCustom}
-      refImagePreview={refImagePreview}
       onRefImageUpload={handleRefImageUpload}
       preserveSourceVoice={preserveSourceVoice}
       onPreserveSourceVoice={setPreserveSourceVoice}

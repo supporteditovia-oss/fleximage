@@ -1,24 +1,26 @@
 import type { ReactNode } from "react";
 
 type VideoStudioProLayoutProps = {
-  controls: ReactNode;
-  preview: ReactNode;
-  actionBar: ReactNode;
+  head: ReactNode;
+  media: ReactNode;
+  editor: ReactNode;
+  foot: ReactNode;
 };
 
-/** Desktop : contrôles à gauche, preview à droite. Mobile : stack compact. */
 export function VideoStudioProLayout({
-  controls,
-  preview,
-  actionBar,
+  head,
+  media,
+  editor,
+  foot,
 }: VideoStudioProLayoutProps) {
   return (
-    <div className="via-studio-pro">
-      <div className="via-studio-pro__grid">
-        <div className="via-studio-pro__controls">{controls}</div>
-        <div className="via-studio-pro__preview">{preview}</div>
+    <div className="via-studio-canvas">
+      <div className="via-studio-canvas__head">{head}</div>
+      <div className="via-studio-canvas__body">
+        <div className="via-studio-canvas__media">{media}</div>
+        <div className="via-studio-canvas__editor">{editor}</div>
       </div>
-      <div className="via-studio-pro__action-bar">{actionBar}</div>
+      <div className="via-studio-canvas__foot">{foot}</div>
     </div>
   );
 }
