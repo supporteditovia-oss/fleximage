@@ -61,14 +61,30 @@ describe("video-ultra-pricing", () => {
     );
   });
 
-  it("V2V motion (danse) uses motion COGS grid, no 4K surcharge", () => {
+  it("V2V motion (danse) — crédits ronds + montée par seconde", () => {
     assert.equal(
       computeV2VStudioCreditCost({
-        sourceVideoDurationSec: 8,
+        sourceVideoDurationSec: 5,
         resolution: "720p",
         v2vProvider: "kling_motion",
       }),
-      95,
+      60,
+    );
+    assert.equal(
+      computeV2VStudioCreditCost({
+        sourceVideoDurationSec: 5,
+        resolution: "1080p",
+        v2vProvider: "kling_motion",
+      }),
+      90,
+    );
+    assert.equal(
+      computeV2VStudioCreditCost({
+        sourceVideoDurationSec: 6,
+        resolution: "720p",
+        v2vProvider: "kling_motion",
+      }),
+      70,
     );
     assert.equal(
       computeV2VStudioCreditCost({
@@ -77,7 +93,7 @@ describe("video-ultra-pricing", () => {
         preserveSourceAudio: true,
         v2vProvider: "kling_motion",
       }),
-      64,
+      65,
     );
     assert.equal(
       computeV2VStudioCreditCost({
@@ -85,7 +101,7 @@ describe("video-ultra-pricing", () => {
         resolution: "4k",
         v2vProvider: "kling_motion",
       }),
-      89,
+      90,
     );
   });
 

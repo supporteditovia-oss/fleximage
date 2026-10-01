@@ -10,8 +10,16 @@ const VIDEO_ULTRA_CREDIT_GRID = {
   8: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 128, "4k": 320 },
 };
 
-const V2V_MOTION_8S_720P_CREDITS = 95;
-const V2V_MOTION_1080P_FACTOR = 1.5;
+const V2V_MOTION_CREDIT_GRID = {
+  3: { "720p": 55, "1080p": 85 },
+  4: { "720p": 55, "1080p": 85 },
+  5: { "720p": 60, "1080p": 90 },
+  6: { "720p": 70, "1080p": 110 },
+  7: { "720p": 80, "1080p": 120 },
+  8: { "720p": 90, "1080p": 135 },
+};
+
+const V2V_MOTION_8S_720P_CREDITS = 90;
 
 function normalizeVideoUltraDuration(raw) {
   const n = Math.round(Number(raw));
@@ -40,12 +48,7 @@ function computeV2VMotionCreditCost(params) {
   const duration = normalizeVideoUltraDuration(params.durationSec ?? 5);
   let resolution = normalizeVideoUltraResolution(params.resolution);
   if (resolution === "4k") resolution = "1080p";
-  let credits = Math.round(V2V_MOTION_8S_720P_CREDITS * (duration / 8));
-  credits = Math.max(36, credits);
-  if (resolution === "1080p") {
-    credits = Math.ceil(credits * V2V_MOTION_1080P_FACTOR);
-  }
-  return credits;
+  return V2V_MOTION_CREDIT_GRID[duration][resolution];
 }
 
 function computeV2VTransformCreditCost(params) {
@@ -84,6 +87,7 @@ function computeV2VStudioCreditCost(params) {
 module.exports = {
   VIDEO_ULTRA_CREDIT_GRID,
   V2V_TRANSFORM_720P_FIXED_CREDITS,
+  V2V_MOTION_CREDIT_GRID,
   V2V_MOTION_8S_720P_CREDITS,
   normalizeVideoUltraDuration,
   normalizeVideoUltraResolution,

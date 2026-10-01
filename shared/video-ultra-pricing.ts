@@ -54,11 +54,24 @@ export function computeVideoUltraCreditCost(params: {
   return VIDEO_ULTRA_CREDIT_GRID[duration][resolution];
 }
 
-/** Motion Control (danse / corps) — 8 s 720p ≈ COGS 1,01 $ → 95 cr (pricing-economics). */
-export const V2V_MOTION_8S_720P_CREDITS = 95;
+/**
+ * Motion Control (danse / corps) — crédits arrondis (×5), +10 cr / s en 720p à partir de 5 s.
+ * Réf. COGS ~1,01 $ / 8 s 720p ; 5 s = 60 / 90 cr (pas de 59/89).
+ */
+export const V2V_MOTION_CREDIT_GRID: Record<
+  VideoUltraDurationSec,
+  Record<"720p" | "1080p", number>
+> = {
+  3: { "720p": 55, "1080p": 85 },
+  4: { "720p": 55, "1080p": 85 },
+  5: { "720p": 60, "1080p": 90 },
+  6: { "720p": 70, "1080p": 110 },
+  7: { "720p": 80, "1080p": 120 },
+  8: { "720p": 90, "1080p": 135 },
+};
 
-/** Motion 1080p ~×1,5 vs 720p (pas de 4K côté API). */
-export const V2V_MOTION_1080P_FACTOR = 1.5;
+/** @deprecated Référence PnL — préférer V2V_MOTION_CREDIT_GRID */
+export const V2V_MOTION_8S_720P_CREDITS = 90;
 
 export type V2VStudioEngineFamily = "motion" | "transform";
 
@@ -75,12 +88,7 @@ export function computeV2VMotionCreditCost(params: {
   const duration = normalizeVideoUltraDuration(params.durationSec ?? 5);
   let resolution = normalizeVideoUltraResolution(params.resolution);
   if (resolution === "4k") resolution = "1080p";
-  let credits = Math.round(V2V_MOTION_8S_720P_CREDITS * (duration / 8));
-  credits = Math.max(36, credits);
-  if (resolution === "1080p") {
-    credits = Math.ceil(credits * V2V_MOTION_1080P_FACTOR);
-  }
-  return credits;
+  return V2V_MOTION_CREDIT_GRID[duration][resolution];
 }
 
 /** Transform (décor / voiture) : grille Omni / Aleph — 720p → 4K. */
