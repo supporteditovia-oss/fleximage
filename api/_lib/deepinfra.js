@@ -91,19 +91,21 @@ async function generateDeepInfraImage(params) {
     : [];
 
   if (refUrls.length > 0) {
-    const { buffer: inputBuffer, mimeType: inputMime } =
-      await fetchHttpImageBuffer(refUrls[0]);
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", size);
     form.append("n", "1");
     form.append("response_format", "b64_json");
-    form.append(
-      "image",
-      new Blob([inputBuffer], { type: inputMime }),
-      "reference.jpg",
-    );
+    const editUrls = refUrls.slice(0, 4);
+    for (let i = 0; i < editUrls.length; i += 1) {
+      const { buffer, mimeType } = await fetchHttpImageBuffer(editUrls[i]);
+      form.append(
+        "image",
+        new Blob([buffer], { type: mimeType }),
+        i === 0 ? "reference.jpg" : `reference-${i + 1}.jpg`,
+      );
+    }
 
     const response = await fetch(DEEPINFRA_IMAGES_EDITS_URL, {
       method: "POST",

@@ -137,12 +137,8 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
-    // Admin DeepInfra : pas d'enrichissement (latence + POST déjà long).
-    if (
-      !templateId &&
-      (!admin || adminImageProvider === "oneshot")
-    ) {
+    // Gemini 2.5 Flash — enrich free prompts (clients + admin DeepInfra image).
+    if (!templateId) {
       const enriched = await enrichPromptForGeneration(prompt, {
         locale: uiLocale,
       });

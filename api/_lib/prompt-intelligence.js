@@ -23,6 +23,9 @@ Rules:
 - If physical car doors look closed, instrument cluster / MMI must NOT show open-door warnings (no red door highlight on the white car graphic). Rebuild OEM UI for the target model; do not copy wrong door alerts from the source car.
 - Spanish prompts (convierte el interior, mismo ángulo): same locks as French/English interior swap.
 - Keep French model names verbatim in English prompt (brand + model + generation).
+- Vehicles: preserve EXACT model and body style (Lamborghini Urus = SUV; Rolls-Royce Coachbuild Droptail La Rose Noire = two-seat boat-tail roadster, NOT a four-door sedan). Use standard automotive search terms (brand, model, year, color, widebody kit if named).
+- Real places: if user names Dubai (or Marina, Palm, Burj), pick ONE coherent real sub-location — do NOT invent impossible geography mixing unrelated landmarks in one frame unless user asked for montage.
+- Photoreal: natural light, subtle smartphone grain, believable shadows — avoid plastic 3D render look. Avoid deformed hands, illegible text, perfect symmetry.
 - Add cinematic composition, premium lighting, photorealism, natural depth of field, 35mm lens feel, ultra-realistic textures, vertical 9:16 when lifestyle/social is implied.
 - No text overlays, no watermarks, no logos unless user explicitly asked.
 - Output ONLY the optimized prompt plain text (no JSON, no markdown, no quotes wrapper).

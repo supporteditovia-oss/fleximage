@@ -19,5 +19,7 @@ describe("prompt-intelligence video modes", () => {
   it("resolveSystemInstruction keeps image default", () => {
     const text = resolveSystemInstruction("image");
     assert.match(text, /image-generation/i);
+    assert.match(text, /Droptail/i);
+    assert.match(text, /Dubai/i);
   });
 });
