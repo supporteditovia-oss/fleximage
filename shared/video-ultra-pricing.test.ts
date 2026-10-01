@@ -9,8 +9,16 @@ import {
 describe("video-ultra-pricing", () => {
   it("matches credit grid", () => {
     assert.equal(
+      computeVideoUltraCreditCost({ durationSec: 3, resolution: "720p" }),
+      85,
+    );
+    assert.equal(
       computeVideoUltraCreditCost({ durationSec: 5, resolution: "720p" }),
-      60,
+      85,
+    );
+    assert.equal(
+      computeVideoUltraCreditCost({ durationSec: 8, resolution: "720p" }),
+      85,
     );
     assert.equal(
       computeVideoUltraCreditCost({ durationSec: 5, resolution: "1080p" }),
@@ -27,6 +35,14 @@ describe("video-ultra-pricing", () => {
   });
 
   it("V2V transform (décor) uses ultra grid", () => {
+    assert.equal(
+      computeV2VStudioCreditCost({
+        sourceVideoDurationSec: 3,
+        resolution: "720p",
+        v2vProvider: "runway_aleph",
+      }),
+      85,
+    );
     assert.equal(
       computeV2VStudioCreditCost({
         sourceVideoDurationSec: 5,

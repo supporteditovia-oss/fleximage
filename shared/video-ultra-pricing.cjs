@@ -1,11 +1,13 @@
 /** Miroir Node de video-ultra-pricing.ts */
+const V2V_TRANSFORM_720P_FIXED_CREDITS = 85;
+
 const VIDEO_ULTRA_CREDIT_GRID = {
-  3: { "720p": 36, "1080p": 48, "4k": 120 },
-  4: { "720p": 48, "1080p": 64, "4k": 160 },
-  5: { "720p": 60, "1080p": 80, "4k": 200 },
-  6: { "720p": 72, "1080p": 96, "4k": 240 },
-  7: { "720p": 84, "1080p": 112, "4k": 280 },
-  8: { "720p": 96, "1080p": 128, "4k": 320 },
+  3: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 48, "4k": 120 },
+  4: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 64, "4k": 160 },
+  5: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 80, "4k": 200 },
+  6: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 96, "4k": 240 },
+  7: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 112, "4k": 280 },
+  8: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 128, "4k": 320 },
 };
 
 const V2V_MOTION_8S_720P_CREDITS = 95;
@@ -81,6 +83,7 @@ function computeV2VStudioCreditCost(params) {
 
 module.exports = {
   VIDEO_ULTRA_CREDIT_GRID,
+  V2V_TRANSFORM_720P_FIXED_CREDITS,
   V2V_MOTION_8S_720P_CREDITS,
   normalizeVideoUltraDuration,
   normalizeVideoUltraResolution,

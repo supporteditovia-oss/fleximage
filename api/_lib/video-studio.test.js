@@ -120,9 +120,10 @@ describe("video-studio", () => {
         workflow: "video_to_video",
         sourceVideoDurationSec: 5,
         v2vResolution: "720p",
+        v2vProvider: "runway_aleph",
         isAdmin: false,
       }),
-      60,
+      85,
     );
     assert.equal(
       computeVideoCreditCost({
@@ -141,10 +142,11 @@ describe("video-studio", () => {
         workflow: "video_to_video",
         sourceVideoDurationSec: 5,
         v2vResolution: "720p",
+        v2vProvider: "runway_aleph",
         preserveSourceAudio: true,
         isAdmin: false,
       }),
-      65,
+      90,
     );
   });
 
