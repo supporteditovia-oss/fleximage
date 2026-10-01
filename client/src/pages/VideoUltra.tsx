@@ -278,7 +278,7 @@ export default function VideoUltra() {
         <div className="via-hero__shine" aria-hidden />
         <p className="via-hero__eyebrow">
           <Crown className="h-3.5 w-3.5" aria-hidden />
-          Kling 3.0 Omni
+          Studio premium
         </p>
         <h1 className="via-hero__title">Transformation Pro</h1>
         <p className="via-hero__sub">
@@ -287,7 +287,7 @@ export default function VideoUltra() {
           d&apos;origine.
         </p>
         <div className="via-capabilities">
-          <span className="via-capability">Reference → Vidéo</span>
+          <span className="via-capability">Vidéo source → clip transformé</span>
           <span className="via-capability">3–8 s · 720p · 1080p · 4K</span>
           <span className="via-capability">Débit à la réussite</span>
         </div>
@@ -393,6 +393,9 @@ export default function VideoUltra() {
               onClick={() => setResolution(res)}
             >
               {resolutionLabel(res)}
+              <span className="via-orient-toggle__hint">
+                {computeVideoUltraCreditCost({ durationSec, resolution: res })} cr
+              </span>
             </button>
           ))}
         </div>
@@ -403,8 +406,8 @@ export default function VideoUltra() {
         Étape 2 — Prompt
       </p>
       <p className="via-step-desc">
-        Décris la transformation souhaitée. Le studio ajoute automatiquement la
-        référence <strong>@Video1</strong> pour ancrer ta vidéo source.
+        Décris la transformation souhaitée — le studio ancre automatiquement ta
+        vidéo importée pour garder tes mouvements.
       </p>
       <textarea
         value={prompt}

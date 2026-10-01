@@ -2,8 +2,13 @@ const {
   generateVideoOnce,
   generateVideoV2VOnce,
   generateKlingMotionOnce,
+  generateOmniRef2VOnce,
   readVideoApiCallCount,
 } = require("./generate-video-once");
+const {
+  normalizeVideoUltraDuration,
+  normalizeVideoUltraResolution,
+} = require("../../shared/video-ultra-pricing.cjs");
 const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
@@ -131,13 +136,29 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
 
   try {
     if (workflow === "video_to_video") {
+      const v2vResolution = normalizeVideoUltraResolution(
+        meta.v2v_resolution || "720p",
+      );
+      const omniDurationSec = normalizeVideoUltraDuration(
+        meta.source_video_duration_sec ?? 5,
+      );
+
+      const runOmniStudio = async (videoUrl) =>
+        generateOmniRef2VOnce(supabase, {
+          generationId: larp.id,
+          prompt: userPrompt || providerPrompt,
+          videoUrl,
+          durationSec: omniDurationSec,
+          resolution: v2vResolution === "4k" ? "4k" : "1080p",
+        });
+
       const runKling = async (videoUrl, imageUrl) =>
         generateKlingMotionOnce(supabase, {
           generationId: larp.id,
           prompt: providerPrompt,
           imageUrl,
           videoUrl,
-          mode: "720p",
+          mode: v2vResolution === "1080p" ? "1080p" : "720p",
         });
       const runAleph = async (videoUrl, refImage) => {
         const omitRef =
@@ -153,7 +174,13 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       };
 
       try {
-        if (finalV2vProvider === "runway_aleph") {
+        if (v2vResolution === "4k" || v2vResolution === "1080p") {
+          const videoUrl = await ensureKieAccessibleMediaUrl(
+            sourceAssetUrl,
+            "video",
+          );
+          await runOmniStudio(videoUrl);
+        } else if (finalV2vProvider === "runway_aleph") {
           await runAleph(sourceAssetUrl, referenceImageUrl);
         } else {
           let videoUrl = await resolveKlingMotionSourceVideoUrl(

@@ -53,6 +53,8 @@ export interface VideoStudioGenerateInput {
   overlay_text?: string;
   video_request_id?: string;
   source?: string;
+  /** Vidéo → Vidéo : 720p | 1080p | 4k */
+  v2v_resolution?: string;
 }
 
 export interface VideoStudioGenerateResponse {

@@ -114,22 +114,24 @@ describe("video-studio", () => {
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });
 
-  it("computeVideoCreditCost flat for video_to_video", () => {
+  it("computeVideoCreditCost V2V uses duration × resolution grid", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
-        sourceVideoDurationSec: 6,
+        sourceVideoDurationSec: 5,
+        v2vResolution: "720p",
         isAdmin: false,
       }),
-      VIDEO_V2V_CREDIT_COST,
+      60,
     );
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
         sourceVideoDurationSec: 8,
+        v2vResolution: "4k",
         isAdmin: false,
       }),
-      VIDEO_V2V_CREDIT_COST,
+      320,
     );
   });
 
@@ -137,10 +139,12 @@ describe("video-studio", () => {
     assert.equal(
       computeVideoCreditCost({
         workflow: "video_to_video",
+        sourceVideoDurationSec: 5,
+        v2vResolution: "720p",
         preserveSourceAudio: true,
         isAdmin: false,
       }),
-      VIDEO_V2V_CREDIT_COST + 5,
+      65,
     );
   });
 

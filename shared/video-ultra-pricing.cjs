@@ -27,9 +27,23 @@ function computeVideoUltraCreditCost(params) {
   return VIDEO_ULTRA_CREDIT_GRID[duration][resolution];
 }
 
+function computeV2VStudioCreditCost(params) {
+  const duration = normalizeVideoUltraDuration(
+    params.sourceVideoDurationSec ?? 5,
+  );
+  let cost = computeVideoUltraCreditCost({
+    durationSec: duration,
+    resolution: params.resolution,
+  });
+  const voiceExtra = params.voiceExtraCredit ?? 5;
+  if (params.preserveSourceAudio) cost += voiceExtra;
+  return cost;
+}
+
 module.exports = {
   VIDEO_ULTRA_CREDIT_GRID,
   normalizeVideoUltraDuration,
   normalizeVideoUltraResolution,
   computeVideoUltraCreditCost,
+  computeV2VStudioCreditCost,
 };

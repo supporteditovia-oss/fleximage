@@ -47,3 +47,22 @@ export function computeVideoUltraCreditCost(params: {
   const resolution = normalizeVideoUltraResolution(params.resolution);
   return VIDEO_ULTRA_CREDIT_GRID[duration][resolution];
 }
+
+/** Vidéo → Vidéo (studio) : grille durée × qualité + option voix source. */
+export function computeV2VStudioCreditCost(params: {
+  sourceVideoDurationSec?: number | null;
+  resolution?: unknown;
+  preserveSourceAudio?: boolean;
+  voiceExtraCredit?: number;
+}): number {
+  const duration = normalizeVideoUltraDuration(
+    params.sourceVideoDurationSec ?? 5,
+  );
+  let cost = computeVideoUltraCreditCost({
+    durationSec: duration,
+    resolution: params.resolution,
+  });
+  const voiceExtra = params.voiceExtraCredit ?? 5;
+  if (params.preserveSourceAudio) cost += voiceExtra;
+  return cost;
+}

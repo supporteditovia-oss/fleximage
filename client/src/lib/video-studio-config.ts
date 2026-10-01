@@ -5,6 +5,7 @@ import {
   VIDEO_VOICE_EXTRA_CREDIT,
 } from "@shared/credit-costs";
 import { computeImageToVideoCreditCost } from "@shared/video-i2v-pricing";
+import { computeV2VStudioCreditCost } from "@shared/video-ultra-pricing";
 
 export type VideoWorkflow = "image_to_video" | "video_to_video";
 
@@ -179,12 +180,19 @@ export const VIDEO_VOICE_SCRIPT_PRESETS = [
 ];
 
 export function computeV2VCreditCost(
-  _sourceVideoDurationSec?: number | null,
+  sourceVideoDurationSec?: number | null,
+  resolution?: unknown,
+  preserveSourceAudio?: boolean,
 ): number {
-  return VIDEO_V2V_CREDIT_COST;
+  return computeV2VStudioCreditCost({
+    sourceVideoDurationSec,
+    resolution,
+    preserveSourceAudio,
+    voiceExtraCredit: VIDEO_VOICE_EXTRA_CREDIT,
+  });
 }
 
-/** I2V : durée + qualité + voix ; V2V : forfait + voix source. */
+/** I2V : durée + qualité + voix ; V2V : durée clip × 720p/1080p/4K + voix source. */
 export function computeVideoCreditCost(params: {
   durationSec?: VideoDuration;
   quality?: VideoQuality;
@@ -192,11 +200,14 @@ export function computeVideoCreditCost(params: {
   preserveSourceAudio?: boolean;
   workflow?: VideoWorkflow;
   sourceVideoDurationSec?: number | null;
+  v2vResolution?: unknown;
 }): number {
   if (params.workflow === "video_to_video") {
-    let cost = computeV2VCreditCost(params.sourceVideoDurationSec);
-    if (params.preserveSourceAudio) cost += VIDEO_VOICE_EXTRA_CREDIT;
-    return cost;
+    return computeV2VCreditCost(
+      params.sourceVideoDurationSec,
+      params.v2vResolution,
+      params.preserveSourceAudio,
+    );
   }
   return computeImageToVideoCreditCost({
     durationSec: params.durationSec,

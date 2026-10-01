@@ -14,6 +14,7 @@ const {
   validateSourceVideoDuration,
 } = require("../video-limits");
 const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.cjs");
+const { normalizeVideoUltraResolution } = require("../../../shared/video-ultra-pricing.cjs");
 const {
   computeVideoCreditCost,
   buildV2VProviderPrompt,
@@ -338,6 +339,10 @@ module.exports = async function handler(req, res) {
         ? body.aspect_ratio
         : "9:16";
     const quality = body.quality === "high" ? "high" : "standard";
+    const v2vResolution =
+      workflow === "video_to_video"
+        ? normalizeVideoUltraResolution(body.v2v_resolution)
+        : null;
     const voiceEnabled =
       workflow === "image_to_video" &&
       Boolean(body.voice_enabled) &&
@@ -411,6 +416,7 @@ module.exports = async function handler(req, res) {
       preserveSourceAudio,
       isAdmin,
       sourceVideoDurationSec,
+      v2vResolution,
     });
 
     const limitResult = await checkGenerationLimits(supabase, userId);
@@ -626,6 +632,7 @@ module.exports = async function handler(req, res) {
       source_video_url:
         workflow === "video_to_video" ? sourceAssetUrl : null,
       preserve_source_audio: preserveSourceAudio,
+      v2v_resolution: v2vResolution,
       v2v_provider: v2vProvider,
       aleph_submit_prompt: alephSubmitPrompt,
       motion_reference_source: motionReferenceSource,

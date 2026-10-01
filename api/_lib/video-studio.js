@@ -1,4 +1,3 @@
-const { computeV2VCreditCost } = require("./video-limits");
 const {
   VIDEO_FLAT_CREDIT_COST,
   VIDEO_I2V_CREDIT_COST,
@@ -6,6 +5,7 @@ const {
   VIDEO_VOICE_EXTRA_CREDIT,
 } = require("./credit-costs");
 const { computeImageToVideoCreditCost } = require("../../shared/video-i2v-pricing.cjs");
+const { computeV2VStudioCreditCost } = require("../../shared/video-ultra-pricing.cjs");
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",
@@ -33,11 +33,12 @@ function computeVideoCreditCost(options) {
   if (options.isAdmin) return 0;
 
   if (options.workflow === "video_to_video") {
-    let cost = computeV2VCreditCost(options.sourceVideoDurationSec, false);
-    if (options.preserveSourceAudio) {
-      cost += VIDEO_VOICE_EXTRA_CREDIT;
-    }
-    return cost;
+    return computeV2VStudioCreditCost({
+      sourceVideoDurationSec: options.sourceVideoDurationSec,
+      resolution: options.v2vResolution,
+      preserveSourceAudio: options.preserveSourceAudio,
+      voiceExtraCredit: VIDEO_VOICE_EXTRA_CREDIT,
+    });
   }
 
   return computeImageToVideoCreditCost({

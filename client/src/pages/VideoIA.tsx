@@ -52,6 +52,12 @@ import {
   type VideoWorkflow,
 } from "@/lib/video-studio-config";
 import {
+  computeV2VStudioCreditCost,
+  normalizeVideoUltraDuration,
+  VIDEO_ULTRA_RESOLUTION_OPTIONS,
+  type VideoUltraResolution,
+} from "@shared/video-ultra-pricing";
+import {
   finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
   isVehicleDrivingPrompt,
@@ -104,10 +110,15 @@ const WORKFLOW_OPTIONS: {
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: `${ADMIN_VIDEO_BURN.videoV2V} cr · 3–8 s · 720p`,
+    hint: "3–8 s · 720p / 1080p / 4K · prix selon durée",
     icon: Wand2,
   },
 ];
+
+function v2vResolutionLabel(res: VideoUltraResolution): string {
+  if (res === "4k") return "4K";
+  return res;
+}
 
 export default function VideoIA() {
   const [, setLocation] = useLocation();
@@ -152,6 +163,8 @@ export default function VideoIA() {
   /** false = vignette auto extraite de la vidéo (cachée en UI, utilisée côté serveur). */
   const [refImageIsCustom, setRefImageIsCustom] = useState(false);
   const [swapPrompt, setSwapPrompt] = useState("");
+  const [v2vResolution, setV2vResolution] =
+    useState<VideoUltraResolution>("720p");
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
@@ -217,13 +230,27 @@ export default function VideoIA() {
   const i2vBillingGrid = adminPreview ? ("admin_v2" as const) : ("prod" as const);
   const i2vExtra5s = i2vDuration5sExtraCredits(i2vBillingGrid);
   const i2vExtra1080 = i2vQuality1080ExtraCredits(i2vBillingGrid);
+  const v2vBillingDurationSec = normalizeVideoUltraDuration(
+    videoDurationSec ?? 5,
+  );
+
+  const v2vCreditsForResolution = (res: VideoUltraResolution) =>
+    adminPreview
+      ? adminPreviewVideoCreditCost({
+          workflow: "video_to_video",
+          durationSec: v2vBillingDurationSec,
+          v2vResolution: res,
+          preserveSourceAudio: preserveSourceVoice,
+        })
+      : computeV2VStudioCreditCost({
+          sourceVideoDurationSec: v2vBillingDurationSec,
+          resolution: res,
+          preserveSourceAudio: preserveSourceVoice,
+        });
+
   const creditCost =
     workflow === "video_to_video"
-      ? computeVideoCreditCost({
-          workflow: "video_to_video",
-          preserveSourceAudio: preserveSourceVoice,
-          sourceVideoDurationSec: videoDurationSec,
-        })
+      ? v2vCreditsForResolution(v2vResolution)
       : adminPreview
         ? adminPreviewVideoCreditCost({
             workflow: "image_to_video",
@@ -565,6 +592,7 @@ export default function VideoIA() {
           : { videos: [source.dataUrl] }),
         vehicle_prompt: sanitizedPrompt,
         source_video_duration_sec: videoDurationSec ?? undefined,
+        v2v_resolution: v2vResolution,
         preserve_source_audio: preserveSourceVoice,
         voice_enabled: false,
         ...(referenceImages?.length
@@ -699,7 +727,7 @@ export default function VideoIA() {
         </div>
         <p className="mt-4 text-sm text-[var(--lx-muted)]">
           <Link href="/transformation-pro" className="underline underline-offset-2">
-            Transformation Pro (Kling 3.0 Omni) — décor &amp; luxe, voix conservée →
+            Transformation Pro — décor premium, ta voix conservée →
           </Link>
         </p>
       </header>
@@ -922,18 +950,43 @@ export default function VideoIA() {
             </p>
             <h2 className="via-step-title">Importe ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton smartphone — conduite, scène, objet ou véhicule…{" "}
+              Filme avec ton smartphone — conduite, danse, scène, objet ou
+              véhicule…{" "}
               <strong>
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
-              </strong>{" "}
-              en <strong>720p</strong> ·{" "}
-              {adminBurn.videoV2V} crédits. Le studio conserve ta caméra et tous
-              les mouvements. Change le décor (Dubai, yacht…),
-              le personnage, la tenue ou l&apos;objet. Par défaut, la vidéo est{" "}
-              <strong>muette</strong> — active l&apos;option voix (+
-              {adminBurn.videoVoiceExtra} crédits)
-              pour garder ta voix filmée.
+              </strong>
+              . Choisis la <strong>qualité</strong> (720p / 1080p / 4K) : le prix
+              s&apos;ajuste selon la durée détectée
+              {videoDurationSec
+                ? ` (${v2vBillingDurationSec} s)`
+                : " (5 s par défaut avant import)"}
+              . Le studio conserve ta caméra et tes mouvements. Par défaut la
+              vidéo est <strong>muette</strong> — active l&apos;option voix (+
+              {adminBurn.videoVoiceExtra} crédits) pour garder ta voix filmée.
             </p>
+
+            <div className="via-option-block via-option-block--prominent">
+              <p className="via-option-block__label">Qualité de sortie</p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Qualité vidéo"
+              >
+                {VIDEO_ULTRA_RESOLUTION_OPTIONS.map((res) => (
+                  <button
+                    key={res}
+                    type="button"
+                    className={`via-orient-toggle__btn ${v2vResolution === res ? "is-active" : ""}`}
+                    onClick={() => setV2vResolution(res)}
+                  >
+                    {v2vResolutionLabel(res)}
+                    <span className="via-orient-toggle__hint">
+                      {v2vCreditsForResolution(res)} cr
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <input
               ref={videoFileRef}
@@ -965,7 +1018,7 @@ export default function VideoIA() {
                     : "Choisir une vidéo"}
               </span>
               <span className="via-upload-zone__meta">
-                Vidéo · 720p · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
+                Vidéo · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
                 {VIDEO_V2V_MAX_SIZE_MB} Mo
                 {videoDurationSec ? ` · ${videoDurationSec}s détectées` : ""}
               </span>

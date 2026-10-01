@@ -4,6 +4,7 @@
  */
 
 import { computeImageToVideoCreditCost } from "./video-i2v-pricing";
+import { computeV2VStudioCreditCost } from "./video-ultra-pricing";
 
 export const ADMIN_PRICING_REFERENCE = {
   version: "v2-preview" as const,
@@ -56,12 +57,16 @@ export function adminPreviewVideoCreditCost(params: {
   quality?: "standard" | "high";
   voiceEnabled?: boolean;
   preserveSourceAudio?: boolean;
+  v2vResolution?: unknown;
 }): number {
   const b = ADMIN_PRICING_REFERENCE.creditBurn;
   if (params.workflow === "video_to_video") {
-    let cost = b.videoV2V;
-    if (params.preserveSourceAudio) cost += b.videoVoiceExtra;
-    return cost;
+    return computeV2VStudioCreditCost({
+      sourceVideoDurationSec: params.durationSec ?? 5,
+      resolution: params.v2vResolution ?? "720p",
+      preserveSourceAudio: params.preserveSourceAudio,
+      voiceExtraCredit: b.videoVoiceExtra,
+    });
   }
   return computeImageToVideoCreditCost({
     durationSec: params.durationSec,
