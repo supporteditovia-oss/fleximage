@@ -6,13 +6,17 @@ export function safeLocale(locale?: string | null): string {
 }
 
 /** Solde crédits toujours en chiffre lisible (jamais « 1 Md » / compact). */
+const CREDITS_DISPLAY_CAP = 999_999;
+
 export function formatCredits(value: number, locale?: string | null): string {
-  const n = Number.isFinite(value) ? value : 0;
+  const raw = Number.isFinite(value) ? value : 0;
+  const capped = Math.min(Math.max(0, raw), CREDITS_DISPLAY_CAP);
   const lang = safeLocale(locale);
   try {
-    return n.toLocaleString(lang);
+    const base = capped.toLocaleString(lang);
+    return raw > CREDITS_DISPLAY_CAP ? `${base}+` : base;
   } catch {
-    return String(n);
+    return raw > CREDITS_DISPLAY_CAP ? `${CREDITS_DISPLAY_CAP}+` : String(capped);
   }
 }
 

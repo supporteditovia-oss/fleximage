@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Redirect, useLocation } from "wouter";
-import {
-  Film,
-  ImageIcon,
-  Loader2,
-  Sparkles,
-  Upload,
-  Video,
-} from "lucide-react";
+import { Redirect } from "wouter";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
 import { useVideoStudioGenerate } from "@/hooks/use-video-studio";
@@ -25,12 +18,8 @@ import { releaseGenerationLoaderTheme } from "@/lib/generation-loader-theme";
 import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
-import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
-import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
-import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
+import { VideoIAStudioView } from "@/pages/video-ia/VideoIAStudioView";
 import { pathForVideoStudioMode, type VideoStudioMode } from "@/lib/video-studio-modes";
-import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
-import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
   adminPreviewVideoCreditCost,
   ADMIN_PRICING_REFERENCE,
@@ -44,7 +33,6 @@ import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
-  VIDEO_I2V_OUTPUT_DURATION_SEC,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MIN_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -63,7 +51,6 @@ import {
 import {
   finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
-  isVehicleDrivingPrompt,
   resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
 import {
@@ -112,7 +99,6 @@ function v2vResolutionLabel(res: VideoUltraResolution): string {
 }
 
 export default function VideoIA() {
-  const [, setLocation] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading } = useV2Access();
   const { user } = useAuth();
@@ -157,6 +143,7 @@ export default function VideoIA() {
   const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
   const [v2vResolution, setV2vResolution] =
     useState<VideoUltraResolution>("720p");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
@@ -756,507 +743,67 @@ export default function VideoIA() {
   }
 
   return (
-    <div className="via-studio pb-28 md:pb-10">
-      <header className="via-hero via-hero--premium">
-        <div className="via-hero__shine" aria-hidden />
-        <p className="via-hero__eyebrow">
-          <Film className="h-3.5 w-3.5" aria-hidden />
-          Studio cinéma
-        </p>
-        <h1 className="via-hero__title">Vidéo IA</h1>
-        <p className="via-hero__sub">
-          Anime ta photo ou transforme ta vidéo smartphone — décor, personnage,
-          objet, lieu. Rendu cinématique prêt pour TikTok &amp; Reels.
-        </p>
-        <div className="via-capabilities">
-          <span className="via-capability">Dubai · Yacht · Jet</span>
-          <span className="via-capability">Personnage · Tenue</span>
-          <span className="via-capability">Objet · Véhicule</span>
-          <span className="via-capability">
-            Admin · grille v2 · I2V {adminBurn.videoI2V} cr
-          </span>
-        </div>
-      </header>
-
-      <VideoStudioModePicker
-        active={workflow}
-        onSelect={handleStudioModeSelect}
-        intro="Photo animée, ou clip transformé : en Vidéo→Vidéo, choisis Mouvement ou Scène & luxe — rendu cinéma automatique."
-      />
-
-      <div key={workflow} className="via-panel via-panel-enter">
-        <VideoCreditSummary creditCost={creditCost} />
-
-        {workflow === "image_to_video" ? (
-          <>
-            <p className="via-step-pill">
-              <ImageIcon className="h-3.5 w-3.5" />
-              Étape 1
-            </p>
-            <h2 className="via-step-title">Importe ta photo</h2>
-            <p className="via-step-desc">
-              JPG ou PNG — ta propre image.               Choisis la <strong>durée</strong> (3 ou{" "}
-              {VIDEO_I2V_OUTPUT_DURATION_SEC} s) et la <strong>qualité</strong>{" "}
-              (720p / 1080p) : le prix se met à jour automatiquement. Le mode{" "}
-              <strong>3 s</strong> reste facturé comme un clip court côté studio
-              (génération 5 s max). Par défaut la vidéo est{" "}
-              <strong>muette</strong> — active l&apos;option voix IA (+
-              {adminBurn.videoVoiceExtra} crédits) pour entendre un texte à
-              lire.
-            </p>
-
-            <input
-              ref={imageFileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) =>
-                void handleImageUpload(e.target.files?.[0] ?? null)
-              }
-            />
-            <button
-              type="button"
-              className={`via-upload-zone via-upload-zone--hero ${
-                imagePreviewUrl ? "has-file has-image" : ""
-              } ${aspectRatio === "16:9" ? "is-landscape" : "is-portrait"}`}
-              onClick={() => imageFileRef.current?.click()}
-            >
-              {imagePreviewUrl ? (
-                <>
-                  <img
-                    className="via-upload-zone__preview"
-                    src={imagePreviewUrl}
-                    alt="Ta photo importée"
-                  />
-                  <span className="via-upload-zone__change-bar">
-                    <Upload className="h-4 w-4" aria-hidden />
-                    Changer l&apos;image
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="via-upload-zone__icon">
-                    <Upload className="h-4 w-4" />
-                  </span>
-                  <span className="via-upload-zone__text">Choisir une image</span>
-                  <span className="via-upload-zone__meta">
-                    JPG · PNG · max 10 Mo
-                  </span>
-                </>
-              )}
-            </button>
-
-            <div className="via-option-block via-option-block--prominent">
-              <p className="via-option-block__label">Durée du clip</p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Durée"
-              >
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${durationSec === 3 ? "is-active" : ""}`}
-                  onClick={() => setDurationSec(3)}
-                >
-                  3 secondes
-                </button>
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${durationSec === 5 ? "is-active" : ""}`}
-                  onClick={() => setDurationSec(5)}
-                >
-                  5 secondes
-                  <span className="via-orient-toggle__hint">
-                    +{i2vExtra5s} cr
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="via-option-block via-option-block--prominent">
-              <p className="via-option-block__label">Qualité</p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Qualité"
-              >
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${videoQuality === "standard" ? "is-active" : ""}`}
-                  onClick={() => setVideoQuality("standard")}
-                >
-                  720p
-                </button>
-                <button
-                  type="button"
-                  className={`via-orient-toggle__btn ${videoQuality === "high" ? "is-active" : ""}`}
-                  onClick={() => setVideoQuality("high")}
-                >
-                  1080p
-                  <span className="via-orient-toggle__hint">
-                    +{i2vExtra1080} cr
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {imagePreviewUrl && (
-              <>
-                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Étape 2 — Mouvement &amp; scène
-                </p>
-                <p className="via-step-desc" style={{ marginTop: "0.35rem" }}>
-                  <strong>Action visuelle seulement</strong> : ce que fait le
-                  corps, la caméra, l&apos;environnement (tomber, sourire,
-                  ralenti…).{" "}
-                  <strong>Pas de paroles ni de cris ici</strong> — sans
-                  l&apos;option voix, la vidéo reste muette même si tu écris
-                  « il parle ». À l&apos;envoi, le studio{" "}
-                  <strong>optimise ton prompt</strong> puis génère le clip
-                  cinématique.
-                </p>
-                <textarea
-                  value={motionPrompt}
-                  onChange={(e) => setMotionPrompt(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Ex. : Il tombe dans l'eau en souriant, caméra lente, éclaboussures…"
-                  className="via-prompt-field"
-                />
-              </>
-            )}
-
-            {imagePreviewUrl ? (
-              <VideoVoiceAddon
-                enabled={voiceEnabled}
-                onEnabledChange={(next) => {
-                  setVoiceEnabled(next);
-                  if (!next) {
-                    setVoiceText("");
-                  }
-                }}
-                text={voiceText}
-                onTextChange={setVoiceText}
-                maxChars={voiceMaxChars}
-                voiceExtraCredit={adminBurn.videoVoiceExtra}
-              />
-            ) : null}
-
-            <div className="via-orient-toggle" role="group" aria-label="Orientation">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${aspectRatio === "9:16" ? "is-active" : ""}`}
-                onClick={() => setAspectRatio("9:16")}
-              >
-                Vertical
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${aspectRatio === "16:9" ? "is-active" : ""}`}
-                onClick={() => setAspectRatio("16:9")}
-              >
-                Paysage
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="via-cta"
-              disabled={!canGenerateI2V || isSubmitting || generateVideo.isPending}
-              onClick={() => void handleGenerateI2V()}
-            >
-              {isSubmitting || generateVideo.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Génération…
-                </>
-              ) : (
-                <>
-                  <Film className="h-4 w-4" />
-                  Générer ma vidéo · {creditCost} crédits
-                </>
-              )}
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="via-step-pill">
-              <Video className="h-3.5 w-3.5" />
-              Étape 1
-            </p>
-            <h2 className="via-step-title">Transforme ta vidéo</h2>
-            <p className="via-step-desc">
-              Clip smartphone{" "}
-              <strong>
-                {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
-              </strong>
-              . Par défaut <strong>muette</strong> — option voix filmée (+
-              {adminBurn.videoVoiceExtra} crédits) en bas de page.
-            </p>
-
-            <V2VIntentPicker
-              active={v2vIntent}
-              onSelect={handleV2vIntentSelect}
-            />
-
-            <input
-              ref={videoFileRef}
-              type="file"
-              accept="video/*"
-              className="hidden"
-              onChange={(e) =>
-                void handleVideoUpload(e.target.files?.[0] ?? null)
-              }
-            />
-            <button
-              type="button"
-              className={`via-upload-zone ${videoPreview ? "has-file" : ""}`}
-              disabled={videoImportBusy}
-              onClick={() => videoFileRef.current?.click()}
-            >
-              <span className="via-upload-zone__icon">
-                {videoImportBusy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </span>
-              <span className="via-upload-zone__text">
-                {videoImportBusy
-                  ? "Lecture de la vidéo…"
-                  : videoPreview
-                    ? "Changer la vidéo"
-                    : "Choisir une vidéo"}
-              </span>
-              <span className="via-upload-zone__meta">
-                Vidéo · {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s · max{" "}
-                {VIDEO_V2V_MAX_SIZE_MB} Mo
-                {videoDurationSec ? ` · ${videoDurationSec}s détectées` : ""}
-              </span>
-            </button>
-
-            {videoPreview && (
-              <div className="via-preview-frame">
-                <video
-                  ref={videoPreviewRef}
-                  src={videoPreview}
-                  poster={refImagePreview ?? undefined}
-                  controls
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  className="via-preview-frame__video"
-                  onLoadedMetadata={(e) => {
-                    const el = e.currentTarget;
-                    try {
-                      if (el.duration > 0.05) {
-                        el.currentTime = Math.min(0.05, el.duration * 0.02);
-                      }
-                      void el.play().catch(() => {});
-                    } catch {
-                      /* iOS blob seek */
-                    }
-                  }}
-                />
-              </div>
-            )}
-            {isVideoCloudSync ? (
-              <p className="via-step-desc" style={{ marginTop: "0.5rem" }}>
-                <Loader2
-                  className="mr-1 inline h-3.5 w-3.5 animate-spin align-[-2px]"
-                  aria-hidden
-                />
-                Préparation serveur en cours… Tu peux remplir le prompt et
-                lancer — envoi final au clic si besoin.
-              </p>
-            ) : null}
-
-            <div className="via-option-block via-option-block--prominent">
-              <p className="via-option-block__label">Qualité de sortie</p>
-              <p className="via-intent-block__lead via-intent-block__lead--tight">
-                {v2vIntent === "motion" ? (
-                  <>
-                    <strong>Mouvement</strong> — 720p ou 1080p. Le 4K est réservé
-                    aux transformations de scène.
-                  </>
-                ) : (
-                  <>
-                    <strong>Scène &amp; luxe</strong> — 720p, 1080p ou 4K selon
-                    ton rendu.
-                  </>
-                )}{" "}
-                Prix pour{" "}
-                {videoDurationSec
-                  ? `${v2vBillingDurationSec} s détectées`
-                  : "5 s (avant import)"}
-                .
-              </p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Qualité vidéo"
-              >
-                {v2vResolutionOptions.map((res) => (
-                  <button
-                    key={res}
-                    type="button"
-                    className={`via-orient-toggle__btn ${v2vResolution === res ? "is-active" : ""}`}
-                    onClick={() => setV2vResolution(res)}
-                  >
-                    {v2vResolutionLabel(res)}
-                    <span className="via-orient-toggle__hint">
-                      {v2vCreditsForResolution(res)} cr
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {videoPreview && (
-              <>
-                <p className="via-step-desc" style={{ marginTop: "0.85rem" }}>
-                  En haut : <strong>ta vidéo source</strong> (mouvements, caméra).
-                  Le studio prépare automatiquement une image à partir de cette
-                  vidéo — tu n&apos;as rien à faire de plus.
-                </p>
-
-                <p className="via-step-pill" style={{ marginTop: "1rem" }}>
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  Photo bonus (optionnel)
-                </p>
-                <p className="via-step-desc" style={{ marginBottom: "0.65rem" }}>
-                  Uniquement si tu veux imposer un look précis (Urus, tenue,
-                  personnage…) en plus de ta vidéo. Sinon, ignore cette étape.
-                </p>
-                <input
-                  ref={refImageFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    void handleRefImageUpload(e.target.files?.[0] ?? null)
-                  }
-                />
-                <button
-                  type="button"
-                  className={`via-upload-zone ${refImageIsCustom ? "has-file" : ""}`}
-                  style={{ minHeight: "4.25rem" }}
-                  onClick={() => refImageFileRef.current?.click()}
-                >
-                  <span className="via-upload-zone__text">
-                    {refImageIsCustom
-                      ? "Changer la photo bonus"
-                      : "Ajouter une photo bonus (optionnel)"}
-                  </span>
-                </button>
-                {refImageIsCustom && refImagePreview ? (
-                  <div className="via-preview-frame" style={{ maxWidth: "8rem" }}>
-                    <img src={refImagePreview} alt="Photo bonus" />
-                  </div>
-                ) : null}
-
-                <p className="via-step-pill" style={{ marginTop: "1.25rem" }}>
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Étape 2 — Prompt
-                </p>
-                <p className="via-step-desc" style={{ marginTop: "0.35rem" }}>
-                  Écris en français librement (comme en Image IA : « remplace
-                  l&apos;intérieur par… », « mets-moi à Dubaï… »). À
-                  l&apos;envoi, le studio <strong>reformule et affûte</strong>{" "}
-                  ton prompt puis applique la transformation sur ta vidéo —
-                  visage non requis.
-                </p>
-                <textarea
-                  value={swapPrompt}
-                  onChange={(e) => setSwapPrompt(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder={v2vIntentPlaceholder(v2vIntent)}
-                  className="via-prompt-field"
-                />
-                {!preserveSourceVoice ? (
-                  <p className="via-voice-blocked-note">
-                    Sans l&apos;option voix (+5 cr), les demandes de voix ou de
-                    son dans le prompt sont ignorées — sortie 100 % muette.
-                  </p>
-                ) : null}
-                {isVehicleDrivingPrompt(swapPrompt) ? (
-                  <p className="via-voice-blocked-note">
-                    Véhicule détecté (<strong>toutes marques</strong>) : swap
-                    complet voiture + <strong>clé OEM du modèle demandé</strong>{" "}
-                    (Purosangue → clé Ferrari, G-Class → clé Mercedes…),
-                    compteur calé, logique réelle P / D / écrans.
-                  </p>
-                ) : null}
-                <div className="via-chips">
-                  {v2vActivePresets.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      className="via-chip"
-                      onClick={() =>
-                        setSwapPrompt(appendV2VPromptSuffix(preset.prompt))
-                      }
-                    >
-                      <span className="via-chip__emoji" aria-hidden>
-                        {preset.emoji}
-                      </span>
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {videoPreview ? (
-              <VideoSourceVoiceAddon
-                enabled={preserveSourceVoice}
-                onEnabledChange={setPreserveSourceVoice}
-                voiceExtraCredit={adminBurn.videoVoiceExtra}
-              />
-            ) : null}
-
-            <button
-              type="button"
-              className="via-cta"
-              disabled={
-                !canGenerateV2V ||
-                isSubmitting ||
-                generateVideo.isPending ||
-                videoImportBusy
-              }
-              onClick={() => void handleGenerateV2V()}
-            >
-              {isVideoCloudSync ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Import en cours…
-                </>
-              ) : isSubmitting || generateVideo.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Remplacement…
-                </>
-              ) : (
-                <>
-                  <Film className="h-4 w-4" />
-                  Transformer ma vidéo · {creditCost} crédits
-                </>
-              )}
-            </button>
-          </>
-        )}
-      </div>
-
-      <p className="via-footer-link">
-        Retrouve tes créations dans{" "}
-        <button type="button" onClick={() => setLocation("/historique")}>
-          Historique → Mes vidéos
-        </button>
-      </p>
-    </div>
+    <VideoIAStudioView
+      key={workflow}
+      workflow={workflow}
+      onModeSelect={handleStudioModeSelect}
+      creditCost={creditCost}
+      advancedOpen={advancedOpen}
+      onAdvancedOpenChange={setAdvancedOpen}
+      imageFileRef={imageFileRef}
+      imagePreviewUrl={imagePreviewUrl}
+      onImageUpload={handleImageUpload}
+      motionPrompt={motionPrompt}
+      onMotionPromptChange={setMotionPrompt}
+      durationSec={durationSec}
+      onDurationSec={setDurationSec}
+      i2vExtra5s={i2vExtra5s}
+      videoQuality={videoQuality}
+      onVideoQuality={setVideoQuality}
+      i2vExtra1080={i2vExtra1080}
+      aspectRatio={aspectRatio}
+      onAspectRatio={setAspectRatio}
+      voiceEnabled={voiceEnabled}
+      onVoiceEnabled={setVoiceEnabled}
+      voiceText={voiceText}
+      onVoiceText={setVoiceText}
+      voiceMaxChars={voiceMaxChars}
+      voiceExtraCredit={adminBurn.videoVoiceExtra}
+      canGenerateI2V={canGenerateI2V}
+      onGenerateI2V={handleGenerateI2V}
+      i2vPending={isSubmitting || generateVideo.isPending}
+      videoFileRef={videoFileRef}
+      refImageFileRef={refImageFileRef}
+      videoPreview={videoPreview}
+      videoPreviewRef={videoPreviewRef}
+      videoImportBusy={videoImportBusy}
+      isVideoCloudSync={isVideoCloudSync}
+      onVideoUpload={handleVideoUpload}
+      videoDurationSec={videoDurationSec}
+      v2vMinSec={VIDEO_V2V_MIN_DURATION_SEC}
+      v2vMaxSec={VIDEO_V2V_MAX_DURATION_SEC}
+      v2vMaxMb={VIDEO_V2V_MAX_SIZE_MB}
+      v2vIntent={v2vIntent}
+      onV2vIntent={handleV2vIntentSelect}
+      v2vResolution={v2vResolution}
+      onV2vResolution={setV2vResolution}
+      v2vResolutionOptions={v2vResolutionOptions}
+      v2vResolutionLabel={v2vResolutionLabel}
+      v2vCreditsForResolution={v2vCreditsForResolution}
+      swapPrompt={swapPrompt}
+      onSwapPrompt={setSwapPrompt}
+      swapPlaceholder={v2vIntentPlaceholder(v2vIntent)}
+      v2vPresets={v2vActivePresets}
+      onPreset={(p) => setSwapPrompt(appendV2VPromptSuffix(p))}
+      refImageIsCustom={refImageIsCustom}
+      refImagePreview={refImagePreview}
+      onRefImageUpload={handleRefImageUpload}
+      preserveSourceVoice={preserveSourceVoice}
+      onPreserveSourceVoice={setPreserveSourceVoice}
+      canGenerateV2V={canGenerateV2V}
+      onGenerateV2V={handleGenerateV2V}
+      v2vPending={isSubmitting || generateVideo.isPending}
+    />
   );
 }
+

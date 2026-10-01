@@ -35,7 +35,7 @@ interface VideoGenerationLoaderProps {
 
 type Copy = {
   eyebrow: Record<VideoLoaderWorkflow, string>;
-  chapters: Record<VideoLoaderWorkflow, [string, string, string, string]>;
+  chapters: Record<VideoLoaderWorkflow, readonly string[]>;
   remaining: string;
   total: (clock: string) => string;
   connecting: string;
@@ -57,10 +57,11 @@ const COPY: Record<"fr" | "en" | "es" | "de", Copy> = {
         "Étalonnage & export",
       ],
       video_to_video: [
-        "Analyse de ta vidéo",
-        "Lecture du mouvement",
-        "Transformation de la scène",
-        "Étalonnage & export",
+        "Analyse",
+        "Optimisation",
+        "Préservation",
+        "Génération",
+        "Finalisation",
       ],
     },
     remaining: "restant",

@@ -6,18 +6,18 @@ import {
 type VideoStudioModePickerProps = {
   active: VideoStudioMode;
   onSelect: (mode: VideoStudioMode) => void;
-  /** Texte sous la grille (optionnel). */
+  /** @deprecated compact par défaut — ignoré */
   intro?: string;
+  variant?: "compact" | "cards";
 };
 
 export function VideoStudioModePicker({
   active,
   onSelect,
-  intro,
+  variant = "compact",
 }: VideoStudioModePickerProps) {
-  return (
-    <div className="via-mode-picker">
-      {intro ? <p className="via-mode-picker__intro">{intro}</p> : null}
+  if (variant === "cards") {
+    return (
       <div
         className="via-mode-grid via-mode-grid--studio"
         role="tablist"
@@ -39,11 +39,34 @@ export function VideoStudioModePicker({
                 <Icon className="h-4 w-4" />
               </span>
               <span className="via-mode-card__label">{option.label}</span>
-              <span className="via-mode-card__hint">{option.hint}</span>
             </button>
           );
         })}
       </div>
+    );
+  }
+
+  return (
+    <div
+      className="via-mode-segment"
+      role="tablist"
+      aria-label="Type de création vidéo"
+    >
+      {VIDEO_STUDIO_MODE_OPTIONS.map((option) => {
+        const isActive = active === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onSelect(option.id)}
+            className={`via-mode-segment__btn ${isActive ? "is-active" : ""}`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

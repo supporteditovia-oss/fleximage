@@ -6,16 +6,16 @@ import {
 type V2VIntentPickerProps = {
   active: V2VStudioIntent;
   onSelect: (intent: V2VStudioIntent) => void;
+  variant?: "compact" | "cards";
 };
 
-export function V2VIntentPicker({ active, onSelect }: V2VIntentPickerProps) {
-  return (
-    <div className="via-intent-block">
-      <p className="via-option-block__label">Type de transformation</p>
-      <p className="via-intent-block__lead">
-        Choisis ton intention — le studio sélectionne le moteur cinéma adapté.
-        Tu n&apos;as pas à connaître la technique.
-      </p>
+export function V2VIntentPicker({
+  active,
+  onSelect,
+  variant = "compact",
+}: V2VIntentPickerProps) {
+  if (variant === "cards") {
+    return (
       <div
         className="via-intent-grid"
         role="tablist"
@@ -37,12 +37,34 @@ export function V2VIntentPicker({ active, onSelect }: V2VIntentPickerProps) {
                 <Icon className="h-4 w-4" strokeWidth={1.75} />
               </span>
               <span className="via-intent-card__label">{option.label}</span>
-              <span className="via-intent-card__hint">{option.hint}</span>
-              <span className="via-intent-card__detail">{option.detail}</span>
             </button>
           );
         })}
       </div>
+    );
+  }
+
+  return (
+    <div
+      className="via-intent-segment"
+      role="tablist"
+      aria-label="Type de transformation"
+    >
+      {V2V_INTENT_OPTIONS.map((option) => {
+        const isActive = active === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            className={`via-intent-segment__btn ${isActive ? "is-active" : ""}`}
+            onClick={() => onSelect(option.id)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

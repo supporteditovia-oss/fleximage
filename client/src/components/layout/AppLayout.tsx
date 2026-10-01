@@ -13,7 +13,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = location.split("?")[0] || location;
   const isModelesRoute =
     pathname === "/modeles" || pathname.startsWith("/modeles/");
-  const isWideStudioPage = pathname === "/bibliotheque" || isModelesRoute;
+  const isVideoIaRoute =
+    pathname === "/video-ia" || pathname.startsWith("/video-ia/");
+  const isWideStudioPage =
+    pathname === "/bibliotheque" || isModelesRoute || isVideoIaRoute;
 
   useEffect(() => {
     document.documentElement.classList.add("luxeflexia-app-shell");
