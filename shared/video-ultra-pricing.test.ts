@@ -21,8 +21,12 @@ describe("video-ultra-pricing", () => {
       85,
     );
     assert.equal(
+      computeVideoUltraCreditCost({ durationSec: 3, resolution: "1080p" }),
+      90,
+    );
+    assert.equal(
       computeVideoUltraCreditCost({ durationSec: 5, resolution: "1080p" }),
-      80,
+      110,
     );
     assert.equal(
       computeVideoUltraCreditCost({ durationSec: 5, resolution: "4k" }),
@@ -45,11 +49,19 @@ describe("video-ultra-pricing", () => {
     );
     assert.equal(
       computeV2VStudioCreditCost({
+        sourceVideoDurationSec: 3,
+        resolution: "1080p",
+        v2vProvider: "runway_aleph",
+      }),
+      90,
+    );
+    assert.equal(
+      computeV2VStudioCreditCost({
         sourceVideoDurationSec: 5,
         resolution: "1080p",
         v2vProvider: "runway_aleph",
       }),
-      80,
+      110,
     );
     assert.equal(
       computeV2VStudioCreditCost({
@@ -103,6 +115,28 @@ describe("video-ultra-pricing", () => {
       }),
       90,
     );
+  });
+
+  it("transform grid keeps 720p < 1080p < 4k for every duration", () => {
+    for (const d of [3, 4, 5, 6, 7, 8] as const) {
+      const p720 = computeVideoUltraCreditCost({
+        durationSec: d,
+        resolution: "720p",
+      });
+      const p1080 = computeVideoUltraCreditCost({
+        durationSec: d,
+        resolution: "1080p",
+      });
+      const p4k = computeVideoUltraCreditCost({
+        durationSec: d,
+        resolution: "4k",
+      });
+      assert.ok(p720 < p1080, `${d}s: 720p ${p720} >= 1080p ${p1080}`);
+      assert.ok(p1080 < p4k, `${d}s: 1080p ${p1080} >= 4k ${p4k}`);
+      assert.equal(p720 % 5, 0);
+      assert.equal(p1080 % 5, 0);
+      assert.equal(p4k % 5, 0);
+    }
   });
 
   it("motion family exposes 720p and 1080p only", () => {

@@ -2,9 +2,9 @@ export type VideoUltraDurationSec = 3 | 4 | 5 | 6 | 7 | 8;
 export type VideoUltraResolution = "720p" | "1080p" | "4k";
 
 /**
- * Crédits LuxeFlexIA — V2V Transform (Omni 1080p/4K) + Vidéo Ultra.
- * 720p : prix FIXE (Runway Aleph ~0,55 $/clip quelle que soit la durée 3–8 s).
- * 1080p / 4K : linéaire (~16 cr/s et ~40 cr/s — Kling Omni facture à la seconde).
+ * V2V Transform (Scène & luxe) + Vidéo Ultra.
+ * 720p : Aleph ~0,55 $/clip → **85 cr** (fixe 3–8 s).
+ * 1080p / 4K : Omni à la seconde — toujours **720p < 1080p < 4K**, crédits ×5.
  */
 export const V2V_TRANSFORM_720P_FIXED_CREDITS = 85;
 
@@ -12,12 +12,12 @@ export const VIDEO_ULTRA_CREDIT_GRID: Record<
   VideoUltraDurationSec,
   Record<VideoUltraResolution, number>
 > = {
-  3: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 48, "4k": 120 },
-  4: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 64, "4k": 160 },
-  5: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 80, "4k": 200 },
-  6: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 96, "4k": 240 },
-  7: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 112, "4k": 280 },
-  8: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 128, "4k": 320 },
+  3: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 90, "4k": 120 },
+  4: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 100, "4k": 160 },
+  5: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 110, "4k": 200 },
+  6: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 120, "4k": 240 },
+  7: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 130, "4k": 280 },
+  8: { "720p": V2V_TRANSFORM_720P_FIXED_CREDITS, "1080p": 140, "4k": 320 },
 };
 
 export const VIDEO_ULTRA_DURATION_OPTIONS: VideoUltraDurationSec[] = [
