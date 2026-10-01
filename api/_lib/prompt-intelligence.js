@@ -26,6 +26,7 @@ Rules:
 - Vehicles: preserve EXACT model and body style (Lamborghini Urus = SUV; Rolls-Royce Coachbuild Droptail La Rose Noire = two-seat boat-tail roadster, NOT a four-door sedan). Use standard automotive search terms (brand, model, year, color, widebody kit if named).
 - Real places: if user names Dubai (or Marina, Palm, Burj), pick ONE coherent real sub-location — do NOT invent impossible geography mixing unrelated landmarks in one frame unless user asked for montage.
 - Photoreal: natural light, subtle smartphone grain, believable shadows — avoid plastic 3D render look. Avoid deformed hands, illegible text, perfect symmetry.
+- Car body swap only: keep the replacement vehicle AS CLEAN as the source photo (no added mud/dirt/spots). Never add people to the scene unless the user asked — same human count as the upload.
 - Add cinematic composition, premium lighting, photorealism, natural depth of field, 35mm lens feel, ultra-realistic textures, vertical 9:16 when lifestyle/social is implied.
 - No text overlays, no watermarks, no logos unless user explicitly asked.
 - Output ONLY the optimized prompt plain text (no JSON, no markdown, no quotes wrapper).

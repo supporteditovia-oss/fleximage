@@ -20,3 +20,15 @@ describe("luxe-vehicle-intelligence", () => {
     assert.match(block, /IMAGE VEHICLE LOCK/i);
   });
 });
+
+describe("prompt-guard vehicle replace locks", () => {
+  it("buildVehicleReplaceCompactHead forbids new people and dirty paint", () => {
+    const { buildVehicleReplaceCompactHead } = require("./prompt-guard");
+    const head = buildVehicleReplaceCompactHead(
+      "Remplace ma voiture par une Rolls-Royce Droptail",
+    );
+    assert.match(head, /ZERO NEW PEOPLE/i);
+    assert.match(head, /PAINT CLEAN/i);
+    assert.match(head, /FORBIDDEN.*Ferrari/i);
+  });
+});
