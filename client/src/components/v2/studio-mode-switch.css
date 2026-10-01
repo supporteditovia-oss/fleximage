@@ -47,6 +47,19 @@
   transform: translateX(200%);
 }
 
+/* 2 onglets (ex. Vidéo IA Image→Vidéo / Vidéo→Vidéo) */
+.lx-studio-switch--duo {
+  width: min(100%, 22.5rem);
+}
+
+.lx-studio-switch--duo .lx-studio-switch__indicator {
+  width: calc((100% - 0.44rem) / 2);
+}
+
+.lx-studio-switch--duo .lx-studio-switch__indicator[data-duo-index="1"] {
+  transform: translateX(100%);
+}
+
 .lx-studio-switch__btn {
   position: relative;
   z-index: 1;

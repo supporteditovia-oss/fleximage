@@ -1,8 +1,9 @@
 import type { RefObject } from "react";
-import { Film, Loader2, Upload } from "lucide-react";
-import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import { Clapperboard, Loader2 } from "lucide-react";
 import { VideoStudioProLayout } from "@/components/video/VideoStudioProLayout";
 import { VideoStudioAdvancedPanel } from "@/components/video/VideoStudioAdvancedPanel";
+import { VideoStudioWorkflowSwitch } from "@/components/video/VideoStudioWorkflowSwitch";
+import { VideoMediaStage } from "@/components/video/VideoMediaStage";
 import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
@@ -23,7 +24,6 @@ export type VideoIAStudioViewProps = {
   creditCost: number;
   advancedOpen: boolean;
   onAdvancedOpenChange: (open: boolean) => void;
-  // I2V
   imageFileRef: RefObject<HTMLInputElement | null>;
   imagePreviewUrl: string | null;
   onImageUpload: (file: File | null) => void;
@@ -46,7 +46,6 @@ export type VideoIAStudioViewProps = {
   canGenerateI2V: boolean;
   onGenerateI2V: () => void;
   i2vPending: boolean;
-  // V2V
   videoFileRef: RefObject<HTMLInputElement | null>;
   refImageFileRef: RefObject<HTMLInputElement | null>;
   videoPreview: string | null;
@@ -71,7 +70,6 @@ export type VideoIAStudioViewProps = {
   v2vPresets: V2VScenePreset[];
   onPreset: (prompt: string) => void;
   refImageIsCustom: boolean;
-  refImagePreview: string | null;
   onRefImageUpload: (file: File | null) => void;
   preserveSourceVoice: boolean;
   onPreserveSourceVoice: (v: boolean) => void;
@@ -80,373 +78,323 @@ export type VideoIAStudioViewProps = {
   v2vPending: boolean;
 };
 
-function PreviewEmpty({ label }: { label: string }) {
+function GenerateFoot(props: {
+  creditCost: number;
+  pending: boolean;
+  cloudSync?: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="via-preview-empty">
-      <span className="via-preview-empty__label">{label}</span>
-    </div>
+    <>
+      <div className="via-studio-foot__meta">
+        <span className="via-studio-foot__label">Cette génération</span>
+        <span className="via-studio-foot__credits">{props.creditCost} crédits</span>
+      </div>
+      <button
+        type="button"
+        className="via-cta via-cta--studio"
+        disabled={props.disabled || props.pending}
+        onClick={() => void props.onClick()}
+      >
+        {props.pending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Génération…
+          </>
+        ) : props.cloudSync ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Envoi…
+          </>
+        ) : (
+          <>
+            <Clapperboard className="h-4 w-4" strokeWidth={2} />
+            Générer · {props.creditCost} cr
+          </>
+        )}
+      </button>
+    </>
   );
 }
 
 export function VideoIAStudioView(props: VideoIAStudioViewProps) {
   const isI2V = props.workflow === "image_to_video";
 
-  const generateBtn = (
-    <button
-      type="button"
-      className="via-cta via-cta--pro"
-      disabled={
-        isI2V
-          ? !props.canGenerateI2V || props.i2vPending
-          : !props.canGenerateV2V || props.v2vPending || props.videoImportBusy
-      }
-      onClick={() =>
-        isI2V ? void props.onGenerateI2V() : void props.onGenerateV2V()
-      }
-    >
-      {props.i2vPending || props.v2vPending ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Génération…
-        </>
-      ) : props.isVideoCloudSync ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Envoi…
-        </>
-      ) : (
-        <>
-          <Film className="h-4 w-4" />
-          Générer · {props.creditCost} crédits
-        </>
-      )}
-    </button>
-  );
-
-  const actionBar = (
-    <>
-      <p className="via-gen-cost">
-        Cette génération : <strong>{props.creditCost} crédits</strong>
-      </p>
-      {generateBtn}
-    </>
+  const foot = (
+    <GenerateFoot
+      creditCost={props.creditCost}
+      pending={isI2V ? props.i2vPending : props.v2vPending}
+      cloudSync={!isI2V && props.isVideoCloudSync}
+      disabled={isI2V ? !props.canGenerateI2V : !props.canGenerateV2V || props.videoImportBusy}
+      onClick={isI2V ? props.onGenerateI2V : props.onGenerateV2V}
+    />
   );
 
   if (isI2V) {
-    const controls = (
-      <>
-        <input
-          ref={props.imageFileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => void props.onImageUpload(e.target.files?.[0] ?? null)}
-        />
-        {!props.imagePreviewUrl ? (
-          <button
-            type="button"
-            className="via-upload-compact"
-            onClick={() => props.imageFileRef.current?.click()}
-          >
-            <Upload className="h-4 w-4" />
-            Importer une image
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="via-upload-compact via-upload-compact--ghost"
-            onClick={() => props.imageFileRef.current?.click()}
-          >
-            Changer l&apos;image
-          </button>
-        )}
-
-        <label className="via-field-label" htmlFor="via-i2v-prompt">
-          Prompt
-        </label>
-        <textarea
-          id="via-i2v-prompt"
-          value={props.motionPrompt}
-          onChange={(e) => props.onMotionPromptChange(e.target.value)}
-          rows={4}
-          maxLength={500}
-          placeholder="Décris le mouvement : chute dans l'eau, marche lente, sourire caméra…"
-          className="via-prompt-field via-prompt-field--pro"
-          disabled={!props.imagePreviewUrl}
-        />
-
-        <VideoStudioAdvancedPanel
-          open={props.advancedOpen}
-          onOpenChange={props.onAdvancedOpenChange}
-        >
-          <p className="via-advanced__hint">Moteur cinéma sélectionné automatiquement.</p>
-          <div className="via-advanced__row">
-            <span className="via-advanced__key">Durée</span>
-            <div className="via-orient-toggle via-orient-toggle--compact" role="group">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.durationSec === 3 ? "is-active" : ""}`}
-                onClick={() => props.onDurationSec(3)}
-              >
-                3 s
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.durationSec === 5 ? "is-active" : ""}`}
-                onClick={() => props.onDurationSec(5)}
-              >
-                5 s (+{props.i2vExtra5s})
-              </button>
-            </div>
-          </div>
-          <div className="via-advanced__row">
-            <span className="via-advanced__key">Résolution</span>
-            <div className="via-orient-toggle via-orient-toggle--compact" role="group">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.videoQuality === "standard" ? "is-active" : ""}`}
-                onClick={() => props.onVideoQuality("standard")}
-              >
-                720p
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.videoQuality === "high" ? "is-active" : ""}`}
-                onClick={() => props.onVideoQuality("high")}
-              >
-                1080p (+{props.i2vExtra1080})
-              </button>
-            </div>
-          </div>
-          <div className="via-advanced__row">
-            <span className="via-advanced__key">Format</span>
-            <div className="via-orient-toggle via-orient-toggle--compact" role="group">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("9:16")}
-              >
-                9:16
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("16:9")}
-              >
-                16:9
-              </button>
-            </div>
-          </div>
-          {props.imagePreviewUrl ? (
-            <VideoVoiceAddon
-              enabled={props.voiceEnabled}
-              onEnabledChange={props.onVoiceEnabled}
-              text={props.voiceText}
-              onTextChange={props.onVoiceText}
-              maxChars={props.voiceMaxChars}
-              voiceExtraCredit={props.voiceExtraCredit}
-            />
-          ) : null}
-        </VideoStudioAdvancedPanel>
-      </>
-    );
-
-    const preview = props.imagePreviewUrl ? (
-      <div
-        className={`via-preview-stage ${props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait"}`}
-      >
-        <img src={props.imagePreviewUrl} alt="Aperçu" />
-      </div>
-    ) : (
-      <PreviewEmpty label="Aperçu image" />
-    );
-
     return (
-      <div className="via-studio via-studio--pro">
-        <VideoStudioModePicker active={props.workflow} onSelect={props.onModeSelect} />
+      <div className="via-studio via-studio--pro studio-route-enter">
         <VideoStudioProLayout
-          controls={controls}
-          preview={preview}
-          actionBar={actionBar}
+          head={
+            <VideoStudioWorkflowSwitch
+              active={props.workflow}
+              onSelect={props.onModeSelect}
+            />
+          }
+          media={
+            <>
+              <input
+                ref={props.imageFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  void props.onImageUpload(e.target.files?.[0] ?? null)
+                }
+              />
+              <VideoMediaStage
+                kind="image"
+                aspect={props.aspectRatio}
+                mediaUrl={props.imagePreviewUrl}
+                onPick={() => props.imageFileRef.current?.click()}
+              />
+            </>
+          }
+          editor={
+            <>
+              <label className="via-field-label" htmlFor="via-i2v-prompt">
+                Prompt
+              </label>
+              <textarea
+                id="via-i2v-prompt"
+                value={props.motionPrompt}
+                onChange={(e) => props.onMotionPromptChange(e.target.value)}
+                rows={4}
+                maxLength={500}
+                placeholder="Décris le mouvement — chute dans l'eau, marche lente, sourire caméra…"
+                className="via-prompt-field via-prompt-field--studio"
+              />
+              <VideoStudioAdvancedPanel
+                open={props.advancedOpen}
+                onOpenChange={props.onAdvancedOpenChange}
+              >
+                <div className="via-advanced__row">
+                  <span className="via-advanced__key">Durée</span>
+                  <div className="via-orient-toggle via-orient-toggle--compact" role="group">
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.durationSec === 3 ? "is-active" : ""}`}
+                      onClick={() => props.onDurationSec(3)}
+                    >
+                      3 s
+                    </button>
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.durationSec === 5 ? "is-active" : ""}`}
+                      onClick={() => props.onDurationSec(5)}
+                    >
+                      5 s (+{props.i2vExtra5s})
+                    </button>
+                  </div>
+                </div>
+                <div className="via-advanced__row">
+                  <span className="via-advanced__key">Résolution</span>
+                  <div className="via-orient-toggle via-orient-toggle--compact" role="group">
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.videoQuality === "standard" ? "is-active" : ""}`}
+                      onClick={() => props.onVideoQuality("standard")}
+                    >
+                      720p
+                    </button>
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.videoQuality === "high" ? "is-active" : ""}`}
+                      onClick={() => props.onVideoQuality("high")}
+                    >
+                      1080p (+{props.i2vExtra1080})
+                    </button>
+                  </div>
+                </div>
+                <div className="via-advanced__row">
+                  <span className="via-advanced__key">Format</span>
+                  <div className="via-orient-toggle via-orient-toggle--compact" role="group">
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
+                      onClick={() => props.onAspectRatio("9:16")}
+                    >
+                      9:16
+                    </button>
+                    <button
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
+                      onClick={() => props.onAspectRatio("16:9")}
+                    >
+                      16:9
+                    </button>
+                  </div>
+                </div>
+                <p className="via-advanced__hint">Moteur cinéma automatique.</p>
+                {props.imagePreviewUrl ? (
+                  <VideoVoiceAddon
+                    enabled={props.voiceEnabled}
+                    onEnabledChange={props.onVoiceEnabled}
+                    text={props.voiceText}
+                    onTextChange={props.onVoiceText}
+                    maxChars={props.voiceMaxChars}
+                    voiceExtraCredit={props.voiceExtraCredit}
+                  />
+                ) : null}
+              </VideoStudioAdvancedPanel>
+            </>
+          }
+          foot={foot}
         />
       </div>
     );
   }
 
-  const controls = (
-    <>
-      <input
-        ref={props.videoFileRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={(e) => void props.onVideoUpload(e.target.files?.[0] ?? null)}
-      />
-      {!props.videoPreview ? (
-        <button
-          type="button"
-          className="via-upload-compact"
-          disabled={props.videoImportBusy}
-          onClick={() => props.videoFileRef.current?.click()}
-        >
-          {props.videoImportBusy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4" />
-          )}
-          Importer une vidéo
-          <span className="via-upload-compact__meta">
-            {props.v2vMinSec}–{props.v2vMaxSec} s · max {props.v2vMaxMb} Mo
-          </span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="via-upload-compact via-upload-compact--ghost"
-          onClick={() => props.videoFileRef.current?.click()}
-        >
-          Changer la vidéo
-          {props.videoDurationSec ? ` · ${props.videoDurationSec} s` : ""}
-        </button>
-      )}
-
-      <label className="via-field-label" htmlFor="via-v2v-prompt">
-        Prompt
-      </label>
-      <textarea
-        id="via-v2v-prompt"
-        value={props.swapPrompt}
-        onChange={(e) => props.onSwapPrompt(e.target.value)}
-        rows={5}
-        maxLength={500}
-        placeholder={props.swapPlaceholder}
-        className="via-prompt-field via-prompt-field--pro"
-        disabled={!props.videoPreview}
-      />
-
-      {props.videoPreview && props.v2vPresets.length > 0 ? (
-        <div className="via-chips via-chips--pro">
-          {props.v2vPresets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className="via-chip"
-              onClick={() => props.onPreset(preset.prompt)}
-            >
-              <span className="via-chip__emoji" aria-hidden>
-                {preset.emoji}
-              </span>
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <VideoStudioAdvancedPanel
-        open={props.advancedOpen}
-        onOpenChange={props.onAdvancedOpenChange}
-      >
-        <div className="via-advanced__row">
-          <span className="via-advanced__key">Transformation</span>
-          <V2VIntentPicker
-            active={props.v2vIntent}
-            onSelect={props.onV2vIntent}
-            variant="compact"
+  return (
+    <div className="via-studio via-studio--pro studio-route-enter">
+      <VideoStudioProLayout
+        head={
+          <VideoStudioWorkflowSwitch
+            active={props.workflow}
+            onSelect={props.onModeSelect}
           />
-        </div>
-        <div className="via-advanced__row">
-          <span className="via-advanced__key">Résolution</span>
-          <div className="via-orient-toggle via-orient-toggle--compact via-orient-toggle--wrap" role="group">
-            {props.v2vResolutionOptions.map((res) => (
-              <button
-                key={res}
-                type="button"
-                className={`via-orient-toggle__btn ${props.v2vResolution === res ? "is-active" : ""}`}
-                onClick={() => props.onV2vResolution(res)}
-              >
-                {props.v2vResolutionLabel(res)}
-                <span className="via-orient-toggle__hint">
-                  {props.v2vCreditsForResolution(res)} cr
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="via-advanced__row">
-          <span className="via-advanced__key">Format</span>
-          <div className="via-orient-toggle via-orient-toggle--compact" role="group">
-            <button
-              type="button"
-              className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
-              onClick={() => props.onAspectRatio("9:16")}
-            >
-              9:16
-            </button>
-            <button
-              type="button"
-              className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
-              onClick={() => props.onAspectRatio("16:9")}
-            >
-              16:9
-            </button>
-          </div>
-        </div>
-        <p className="via-advanced__hint">Moteur cinéma adapté à ton prompt — automatique.</p>
-        {props.videoPreview ? (
+        }
+        media={
           <>
             <input
-              ref={props.refImageFileRef}
+              ref={props.videoFileRef}
               type="file"
-              accept="image/*"
+              accept="video/*"
               className="hidden"
-              onChange={(e) =>
-                void props.onRefImageUpload(e.target.files?.[0] ?? null)
-              }
+              onChange={(e) => void props.onVideoUpload(e.target.files?.[0] ?? null)}
             />
-            <button
-              type="button"
-              className="via-upload-compact via-upload-compact--ghost"
-              onClick={() => props.refImageFileRef.current?.click()}
-            >
-              {props.refImageIsCustom ? "Changer la photo bonus" : "Photo bonus (optionnel)"}
-            </button>
-            <VideoSourceVoiceAddon
-              enabled={props.preserveSourceVoice}
-              onEnabledChange={props.onPreserveSourceVoice}
-              voiceExtraCredit={props.voiceExtraCredit}
+            <VideoMediaStage
+              kind="video"
+              aspect="16:9"
+              busy={props.videoImportBusy}
+              mediaUrl={props.videoPreview}
+              videoRef={props.videoPreviewRef}
+              meta={`${props.v2vMinSec}–${props.v2vMaxSec} s · ${props.v2vMaxMb} Mo max${
+                props.videoDurationSec ? ` · ${props.videoDurationSec} s` : ""
+              }`}
+              onPick={() => props.videoFileRef.current?.click()}
             />
           </>
-        ) : null}
-      </VideoStudioAdvancedPanel>
-    </>
-  );
-
-  const preview = props.videoPreview ? (
-    <div className="via-preview-stage is-video">
-      <video
-        ref={props.videoPreviewRef}
-        src={props.videoPreview}
-        poster={props.refImagePreview ?? undefined}
-        controls
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        className="via-preview-stage__video"
-      />
-    </div>
-  ) : (
-    <PreviewEmpty label="Aperçu vidéo" />
-  );
-
-  return (
-    <div className="via-studio via-studio--pro">
-      <VideoStudioModePicker active={props.workflow} onSelect={props.onModeSelect} />
-      <VideoStudioProLayout
-        controls={controls}
-        preview={preview}
-        actionBar={actionBar}
+        }
+        editor={
+          <>
+            <label className="via-field-label" htmlFor="via-v2v-prompt">
+              Prompt
+            </label>
+            <textarea
+              id="via-v2v-prompt"
+              value={props.swapPrompt}
+              onChange={(e) => props.onSwapPrompt(e.target.value)}
+              rows={5}
+              maxLength={500}
+              placeholder={props.swapPlaceholder}
+              className="via-prompt-field via-prompt-field--studio"
+            />
+            {props.v2vPresets.length > 0 ? (
+              <div className="via-chips via-chips--studio">
+                {props.v2vPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className="via-chip via-chip--studio"
+                    onClick={() => props.onPreset(preset.prompt)}
+                  >
+                    <span className="via-chip__emoji" aria-hidden>
+                      {preset.emoji}
+                    </span>
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <VideoStudioAdvancedPanel
+              open={props.advancedOpen}
+              onOpenChange={props.onAdvancedOpenChange}
+            >
+              <div className="via-advanced__row">
+                <span className="via-advanced__key">Transformation</span>
+                <V2VIntentPicker
+                  active={props.v2vIntent}
+                  onSelect={props.onV2vIntent}
+                  variant="compact"
+                />
+              </div>
+              <div className="via-advanced__row">
+                <span className="via-advanced__key">Résolution</span>
+                <div
+                  className="via-orient-toggle via-orient-toggle--compact via-orient-toggle--wrap"
+                  role="group"
+                >
+                  {props.v2vResolutionOptions.map((res) => (
+                    <button
+                      key={res}
+                      type="button"
+                      className={`via-orient-toggle__btn ${props.v2vResolution === res ? "is-active" : ""}`}
+                      onClick={() => props.onV2vResolution(res)}
+                    >
+                      {props.v2vResolutionLabel(res)}
+                      <span className="via-orient-toggle__hint">
+                        {props.v2vCreditsForResolution(res)} cr
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="via-advanced__row">
+                <span className="via-advanced__key">Format</span>
+                <div className="via-orient-toggle via-orient-toggle--compact" role="group">
+                  <button
+                    type="button"
+                    className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
+                    onClick={() => props.onAspectRatio("9:16")}
+                  >
+                    9:16
+                  </button>
+                  <button
+                    type="button"
+                    className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
+                    onClick={() => props.onAspectRatio("16:9")}
+                  >
+                    16:9
+                  </button>
+                </div>
+              </div>
+              <input
+                ref={props.refImageFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  void props.onRefImageUpload(e.target.files?.[0] ?? null)
+                }
+              />
+              <button
+                type="button"
+                className="via-link-btn"
+                onClick={() => props.refImageFileRef.current?.click()}
+              >
+                {props.refImageIsCustom ? "Changer la photo bonus" : "+ Photo bonus (optionnel)"}
+              </button>
+              <VideoSourceVoiceAddon
+                enabled={props.preserveSourceVoice}
+                onEnabledChange={props.onPreserveSourceVoice}
+                voiceExtraCredit={props.voiceExtraCredit}
+              />
+              <p className="via-advanced__hint">Moteur cinéma adapté à ton prompt.</p>
+            </VideoStudioAdvancedPanel>
+          </>
+        }
+        foot={foot}
       />
     </div>
   );
