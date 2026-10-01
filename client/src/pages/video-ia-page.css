@@ -313,6 +313,104 @@ html.luxeflexia-video-page .floating-header::before {
   color: var(--lx-muted);
 }
 
+.via-intent-block {
+  margin: 0 0 1.25rem;
+}
+
+.via-intent-block__lead {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--lx-muted);
+}
+
+.via-intent-block__lead--tight {
+  margin: 0.25rem 0 0.65rem;
+  font-size: 0.75rem;
+}
+
+.via-intent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .via-intent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.via-intent-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.85rem 0.9rem 0.8rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(201, 162, 39, 0.14);
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 251, 242, 0.72) 100%
+  );
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.25s ease;
+}
+
+.via-intent-card:hover {
+  border-color: rgba(201, 162, 39, 0.32);
+  transform: translateY(-1px);
+}
+
+.via-intent-card.is-active {
+  border-color: rgba(201, 162, 39, 0.55);
+  box-shadow:
+    0 10px 28px rgba(18, 16, 14, 0.07),
+    0 0 0 1px rgba(201, 162, 39, 0.2) inset;
+}
+
+.via-intent-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: rgba(201, 162, 39, 0.12);
+  color: #6b5a32;
+  margin-bottom: 0.15rem;
+}
+
+.via-intent-card.is-active .via-intent-card__icon {
+  background: linear-gradient(135deg, #e8c96a 0%, #c9a227 100%);
+  color: #1a1508;
+}
+
+.via-intent-card__label {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lx-ink);
+}
+
+.via-intent-card__hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8a7340;
+}
+
+.via-intent-card__detail {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--lx-muted);
+}
+
 .via-panel {
   position: relative;
   border-radius: 1.5rem;

@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
 import { pathForVideoStudioMode, type VideoStudioMode } from "@/lib/video-studio-modes";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
@@ -65,6 +66,14 @@ import {
   isVehicleDrivingPrompt,
   resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
+import {
+  appendV2VPromptSuffix,
+  parseV2VIntentFromUrl,
+  resolveV2VBillingProvider,
+  V2V_MOTION_PRESETS,
+  v2vIntentPlaceholder,
+  type V2VStudioIntent,
+} from "@/lib/v2v-studio-intent";
 import {
   formatVideoDurationLabel,
   readVideoDurationSec,
@@ -145,6 +154,7 @@ export default function VideoIA() {
   /** false = vignette auto extraite de la vidéo (cachée en UI, utilisée côté serveur). */
   const [refImageIsCustom, setRefImageIsCustom] = useState(false);
   const [swapPrompt, setSwapPrompt] = useState("");
+  const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
   const [v2vResolution, setV2vResolution] =
     useState<VideoUltraResolution>("720p");
 
@@ -188,14 +198,34 @@ export default function VideoIA() {
     if (raw === "video_to_video" || raw === "image_to_video") {
       setWorkflow(raw);
     }
+    const intentFromUrl = parseV2VIntentFromUrl(params.get("intent"));
+    if (intentFromUrl) setV2vIntent(intentFromUrl);
   }, []);
+
+  const syncV2vUrl = useCallback(
+    (intent: V2VStudioIntent) => {
+      window.history.replaceState(
+        null,
+        "",
+        pathForVideoStudioMode("video_to_video", intent),
+      );
+    },
+    [],
+  );
+
+  const handleV2vIntentSelect = (intent: V2VStudioIntent) => {
+    setV2vIntent(intent);
+    syncV2vUrl(intent);
+  };
 
   const handleStudioModeSelect = (mode: VideoStudioMode) => {
     setWorkflow(mode);
     if (mode === "video_to_video") {
       setAspectRatio("16:9");
+      syncV2vUrl(v2vIntent);
+    } else {
+      window.history.replaceState(null, "", pathForVideoStudioMode(mode));
     }
-    window.history.replaceState(null, "", pathForVideoStudioMode(mode));
   };
 
   /** iOS Safari : lancer la lecture dès que le blob est prêt (évite écran noir). */
@@ -233,9 +263,12 @@ export default function VideoIA() {
   );
 
   const v2vProviderForBilling = useMemo(
-    () => resolveV2VProviderForStudio(swapPrompt),
-    [swapPrompt],
+    () => resolveV2VBillingProvider(v2vIntent, swapPrompt),
+    [v2vIntent, swapPrompt],
   );
+
+  const v2vActivePresets =
+    v2vIntent === "motion" ? V2V_MOTION_PRESETS : VIDEO_V2V_PRESETS;
   const v2vResolutionOptions = useMemo(
     () =>
       v2vResolutionsForEngineFamily(
@@ -748,7 +781,7 @@ export default function VideoIA() {
       <VideoStudioModePicker
         active={workflow}
         onSelect={handleStudioModeSelect}
-        intro="Photo animée, ou clip transformé : danse / nouveau corps, ou décor & voiture — le studio choisit le bon moteur tout seul."
+        intro="Photo animée, ou clip transformé : en Vidéo→Vidéo, choisis Mouvement ou Scène & luxe — rendu cinéma automatique."
       />
 
       <div key={workflow} className="via-panel via-panel-enter">
@@ -952,48 +985,20 @@ export default function VideoIA() {
               <Video className="h-3.5 w-3.5" />
               Étape 1
             </p>
-            <h2 className="via-step-title">Importe ta vidéo</h2>
+            <h2 className="via-step-title">Transforme ta vidéo</h2>
             <p className="via-step-desc">
-              Filme avec ton smartphone — conduite, danse, scène, objet ou
-              véhicule…{" "}
+              Clip smartphone{" "}
               <strong>
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>
-              . Choisis la <strong>qualité</strong> (720p / 1080p
-              {v2vResolutionOptions.includes("4k") ? " / 4K" : ""}) : le prix
-              s&apos;ajuste selon la durée détectée et le type de transformation
-              {videoDurationSec
-                ? ` (${v2vBillingDurationSec} s)`
-                : " (5 s par défaut avant import)"}
-              . Le studio conserve ta caméra et tes mouvements, et choisit
-              automatiquement le bon moteur (danse / corps vs décor / voiture)
-              selon ton prompt — tu n&apos;as rien à sélectionner. Par défaut la
-              vidéo est <strong>muette</strong> — active l&apos;option voix (+
-              {adminBurn.videoVoiceExtra} crédits) pour garder ta voix filmée.
+              . Par défaut <strong>muette</strong> — option voix filmée (+
+              {adminBurn.videoVoiceExtra} crédits) en bas de page.
             </p>
 
-            <div className="via-option-block via-option-block--prominent">
-              <p className="via-option-block__label">Qualité de sortie</p>
-              <div
-                className="via-orient-toggle via-orient-toggle--wide"
-                role="group"
-                aria-label="Qualité vidéo"
-              >
-                {v2vResolutionOptions.map((res) => (
-                  <button
-                    key={res}
-                    type="button"
-                    className={`via-orient-toggle__btn ${v2vResolution === res ? "is-active" : ""}`}
-                    onClick={() => setV2vResolution(res)}
-                  >
-                    {v2vResolutionLabel(res)}
-                    <span className="via-orient-toggle__hint">
-                      {v2vCreditsForResolution(res)} cr
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <V2VIntentPicker
+              active={v2vIntent}
+              onSelect={handleV2vIntentSelect}
+            />
 
             <input
               ref={videoFileRef}
@@ -1069,6 +1074,47 @@ export default function VideoIA() {
               </p>
             ) : null}
 
+            <div className="via-option-block via-option-block--prominent">
+              <p className="via-option-block__label">Qualité de sortie</p>
+              <p className="via-intent-block__lead via-intent-block__lead--tight">
+                {v2vIntent === "motion" ? (
+                  <>
+                    <strong>Mouvement</strong> — 720p ou 1080p. Le 4K est réservé
+                    aux transformations de scène.
+                  </>
+                ) : (
+                  <>
+                    <strong>Scène &amp; luxe</strong> — 720p, 1080p ou 4K selon
+                    ton rendu.
+                  </>
+                )}{" "}
+                Prix pour{" "}
+                {videoDurationSec
+                  ? `${v2vBillingDurationSec} s détectées`
+                  : "5 s (avant import)"}
+                .
+              </p>
+              <div
+                className="via-orient-toggle via-orient-toggle--wide"
+                role="group"
+                aria-label="Qualité vidéo"
+              >
+                {v2vResolutionOptions.map((res) => (
+                  <button
+                    key={res}
+                    type="button"
+                    className={`via-orient-toggle__btn ${v2vResolution === res ? "is-active" : ""}`}
+                    onClick={() => setV2vResolution(res)}
+                  >
+                    {v2vResolutionLabel(res)}
+                    <span className="via-orient-toggle__hint">
+                      {v2vCreditsForResolution(res)} cr
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {videoPreview && (
               <>
                 <p className="via-step-desc" style={{ marginTop: "0.85rem" }}>
@@ -1128,7 +1174,7 @@ export default function VideoIA() {
                   onChange={(e) => setSwapPrompt(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Ex. : Remplace ma voiture et ma clé par le modèle exact demandé (clé OEM incluse) — ex. Purosangue, G-Class, RS6…"
+                  placeholder={v2vIntentPlaceholder(v2vIntent)}
                   className="via-prompt-field"
                 />
                 {!preserveSourceVoice ? (
@@ -1146,15 +1192,13 @@ export default function VideoIA() {
                   </p>
                 ) : null}
                 <div className="via-chips">
-                  {VIDEO_V2V_PRESETS.map((preset) => (
+                  {v2vActivePresets.map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       className="via-chip"
                       onClick={() =>
-                        setSwapPrompt(
-                          `${preset.prompt} Garde le décor, le sol, les reflets et les mouvements de caméra identiques.`,
-                        )
+                        setSwapPrompt(appendV2VPromptSuffix(preset.prompt))
                       }
                     >
                       <span className="via-chip__emoji" aria-hidden>
