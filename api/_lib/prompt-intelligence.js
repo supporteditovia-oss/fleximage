@@ -47,7 +47,8 @@ Task: rewrite the user's transformation request into ONE final English prompt fo
 
 Rules:
 - Preserve EXACT swap intent: what must change (vehicle, outfit, location, person) vs what must stay locked (camera path, timing, background unless user asked to change it).
-- For vehicles: name REAL existing brand and model only (e.g. Lamborghini Urus Mansory, Ferrari Purosangue). Never invent fictional cars. Include exterior AND interior/key swap when driving scenes are implied.
+- For vehicles: name REAL existing brand and model only (e.g. Lamborghini Urus, Ferrari Purosangue, Rolls-Royce Coachbuild Droptail La Rose Noire). Never swap to a generic black sedan. Preserve exact body style (Urus=SUV, Droptail=two-seat roadster with boat-tail, Phantom=sedan). Never invent fictional cars. Include exterior AND interior/key swap when driving scenes are implied.
+- For locations/scenes: if user asks Dubai, private jet, yacht, Monaco, etc., the output must name that exact place or setting — never ignore relocation requests.
 - Match source video logic: speedometer/tachometer digits follow the source clip unless user gave an explicit km/h; screens on/off consistent with doors and driving state; same hand motion and timing.
 - Do NOT request voice, dialogue, music or lip sync — output video is silent unless source audio is preserved separately.
 - Photorealistic, same framing and motion as source; only transform what the user asked.

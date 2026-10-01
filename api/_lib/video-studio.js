@@ -151,14 +151,20 @@ function buildAlephSubmitPrompt(
       "No wrong-brand logos."
     ).slice(0, 900);
   }
+  const exteriorHint =
+    vehicle?.exterior && !isVehicleInteriorPrompt(prompt)
+      ? ` Exterior: ${vehicle.exterior}`
+      : "";
   const vehicleHint = vehicle
-    ? ` Apply ${vehicle.model} OEM interior, steering wheel, keys and badges. ${vehicle.interior}`
+    ? isVehicleInteriorPrompt(prompt)
+      ? ` Apply ${vehicle.model} OEM interior, steering wheel, keys and badges. ${vehicle.interior}`
+      : ` Replace visible car with ${vehicle.model}. ${exteriorHint || vehicle.interior}`
     : "";
   const base =
     prompt.length >= 5
       ? prompt
       : "Transform the video as described while keeping camera motion identical.";
-  const combined = `${base}.${vehicleHint} Photorealistic, same framing and motion.`;
+  const combined = `${base}.${vehicleHint} Photorealistic, same framing and motion. Never substitute a generic car.`;
   return combined.length <= 1900 ? combined : combined.slice(0, 1900);
 }
 
@@ -169,10 +175,98 @@ function extractMentionedSpeedKmh(text) {
   return loose ? loose[1] : null;
 }
 
+function normalizeVehicleSearchText(text) {
+  return String(text || "")
+    .replace(/\bmontesori\b/gi, "Mansory")
+    .replace(/\bmansori\b/gi, "Mansory")
+    .replace(/\bmontessori\b/gi, "Mansory")
+    .replace(/\broll\s*royce\b/gi, "Rolls-Royce")
+    .replace(/\brolls\s+royce\b/gi, "Rolls-Royce")
+    .replace(/\brose\s+noir(e)?\b/gi, "Rose Noire")
+    .replace(/\bla\s+rose\s+noire\b/gi, "La Rose Noire")
+    .replace(/\bdrop\s*tail\b/gi, "Droptail")
+    .replace(/\bblack\s+badge\b/gi, "Black Badge")
+    .replace(/\bmercedes\s+benz\b/gi, "Mercedes-Benz")
+    .replace(/\bgt\s*3\b/gi, "GT3")
+    .replace(/\bgt\s*4\b/gi, "GT4");
+}
+
+function isVehicleInteriorPrompt(text) {
+  return /\b(int[ée]rieur|interior|habitacle|cockpit|volant|steering|dashboard|tableau\s+de\s+bord|compteur|speedometer|tachometer|cl[ée]|clef|key\s*fob|keyfob|t[ée]l[ée]commande|remote|badge|si[eè]ge|plafond|headliner|console\s*centrale)\b/i.test(
+    String(text || ""),
+  );
+}
+
+/** @typedef {{ pattern: RegExp, model: string, interior: string, key: string, exterior?: string }} VehicleCatalogEntry */
+
+/** @type {VehicleCatalogEntry[]} — ordre = du plus spécifique au plus générique */
 const VEHICLE_MODEL_CATALOG = [
+  {
+    pattern:
+      /\b(la\s+rose\s+noire|rose\s+noire)\b[\s\S]{0,40}\b(droptail)\b|\b(droptail)\b[\s\S]{0,40}\b(la\s+rose\s+noire|rose\s+noire)\b/i,
+    model: "Rolls-Royce Coachbuild Droptail La Rose Noire",
+    exterior:
+      "Authentic Rolls-Royce Coachbuild Droptail La Rose Noire: bespoke ultra-limited TWO-SEAT roadster with dramatic tapered boat-tail rear (NOT a four-door sedan, NOT Phantom/Ghost). Pantheon grille, coachbuilt droptail silhouette, La Rose Noire dark cherry and magnolia bespoke livery when visible.",
+    interior:
+      "authentic Rolls-Royce Droptail La Rose Noire OEM cabin: two-seat coachbuild layout, Rolls-Royce starlight optional, Spirit of Ecstasy rotary controls, bespoke Rose Noire materials — never a generic luxury sedan interior.",
+    key: "Rolls-Royce heavy rectangular key fob with Spirit of Ecstasy badge — Droptail OEM",
+  },
+  {
+    pattern: /\b(droptail)\b/i,
+    model: "Rolls-Royce Coachbuild Droptail",
+    exterior:
+      "Authentic Rolls-Royce Coachbuild Droptail: ultra-exclusive two-seat roadster, tapered boat-tail rear, open-top droptail body — never substitute a four-door Rolls-Royce sedan or generic black car.",
+    interior:
+      "authentic Rolls-Royce Droptail coachbuild cabin — two seats, Rolls-Royce infotainment, bespoke coachbuild trim.",
+    key: "Rolls-Royce Spirit of Ecstasy key fob — Droptail OEM",
+  },
+  {
+    pattern: /\b(black\s+badge)\b[\s\S]{0,30}\b(ghost|phantom|wraith|dawn|cullinan|spectre)\b/i,
+    model: "Rolls-Royce Black Badge (named model)",
+    exterior:
+      "Rolls-Royce Black Badge edition of the exact sub-model named by the user — dark chrome, Black Badge wheels and trim, correct body style (sedan/coupe/SUV) for that model.",
+    interior:
+      "Rolls-Royce Black Badge OEM cabin with darkened chrome and Black Badge instrumentation.",
+    key: "Rolls-Royce Black Badge key fob with Spirit of Ecstasy",
+  },
+  {
+    pattern: /\b(phantom)\b/i,
+    model: "Rolls-Royce Phantom",
+    exterior:
+      "Rolls-Royce Phantom VIII extended luxury sedan: tall Pantheon grille, rectangular headlamps, upright stately proportions — not a Droptail roadster.",
+    interior:
+      "authentic Rolls-Royce Phantom OEM rear/front cabin, gallery fascia, Spirit of Ecstasy details.",
+    key: "Rolls-Royce rectangular key with Spirit of Ecstasy",
+  },
+  {
+    pattern: /\b(ghost)\b/i,
+    model: "Rolls-Royce Ghost",
+    exterior:
+      "Rolls-Royce Ghost luxury sedan: subtle illuminated grille, clean modern Rolls proportions — not SUV, not Droptail.",
+    interior: "authentic Rolls-Royce Ghost OEM cabin, Planar dashboard, Ghost infotainment.",
+    key: "Rolls-Royce Ghost key fob — OEM",
+  },
+  {
+    pattern: /\b(spectre)\b/i,
+    model: "Rolls-Royce Spectre",
+    exterior:
+      "Rolls-Royce Spectre electric luxury coupe: fastback coupe silhouette, split headlamps, EV Rolls-Royce body — not a sedan Droptail.",
+    interior: "Rolls-Royce Spectre EV OEM interior, Starlight doors, Spectre UI.",
+    key: "Rolls-Royce Spectre key — OEM",
+  },
+  {
+    pattern: /\b(wraith|dawn)\b/i,
+    model: "Rolls-Royce Wraith or Dawn",
+    exterior:
+      "Rolls-Royce Wraith coupe or Dawn convertible as named — correct two-door Rolls body, suicide coach doors, never a random four-door sedan.",
+    interior: "authentic Rolls-Royce Wraith/Dawn OEM cabin.",
+    key: "Rolls-Royce key fob with Spirit of Ecstasy",
+  },
   {
     pattern: /\b(urus)\b/i,
     model: "Lamborghini Urus",
+    exterior:
+      "Lamborghini Urus performance luxury SUV: angular Lambo body, hexagonal wheel arches, Urus front fascia — not a sedan, not BMW, not generic SUV.",
     interior:
       "authentic Lamborghini Urus OEM cabin: Urus steering wheel with Lamborghini badge, dual digital screens with Urus UI, Urus center console and air vents — not a generic SUV.",
     key: "Lamborghini hexagonal key fob with bull logo and Urus-appropriate remote design",
@@ -265,26 +359,168 @@ const VEHICLE_MODEL_CATALOG = [
     interior: "authentic Maserati OEM cabin — Maserati trident steering wheel and infotainment.",
     key: "Maserati trident key fob — exact OEM for the requested model",
   },
+  {
+    pattern: /\b(bugatti|chiron|mistral|veyron)\b/i,
+    model: "Bugatti (named model)",
+    exterior:
+      "Authentic Bugatti hypercar body (Chiron/Mistral/Veyron as named): horseshoe grille, C-line, correct Bugatti silhouette — never a generic coupe.",
+    interior: "Bugatti OEM cabin with horseshoe wheel and Bugatti cluster.",
+    key: "Bugatti oval key — OEM",
+  },
+  {
+    pattern: /\b(mclaren|720s|765|p1|artura)\b/i,
+    model: "McLaren (named model)",
+    exterior: "McLaren supercar body with dihedral doors and McLaren proportions as named.",
+    interior: "McLaren OEM cockpit, vertical central screen.",
+    key: "McLaren shaped key — OEM",
+  },
+  {
+    pattern: /\b(aston\s*martin|db11|db12|vantage|dbx)\b/i,
+    model: "Aston Martin (named model)",
+    exterior: "Aston Martin grille and British GT proportions for the named model.",
+    interior: "Aston Martin OEM interior, bridge console.",
+    key: "Aston Martin key — OEM",
+  },
+  {
+    pattern: /\b(range\s*rover|defender|rr\s*sport)\b/i,
+    model: "Range Rover (named variant)",
+    exterior: "Land Rover Range Rover or Defender body as named — correct SUV silhouette.",
+    interior: "Range Rover OEM cabin, Pivi Pro.",
+    key: "Range Rover smart key — OEM",
+  },
 ];
 
+const LOCATION_SCENE_CATALOG = [
+  {
+    pattern: /\b(dubai|dubaï|burj\s*khalifa|marina\s*dubai|palm\s*jumeirah|jumeirah)\b/i,
+    label: "Dubai, UAE",
+    scene:
+      "Photorealistic Dubai UAE: Burj Khalifa skyline, Marina towers, desert luxury light, or Palm Jumeirah as context — iconic Dubai architecture, never a generic European city.",
+  },
+  {
+    pattern: /\b(jet\s*priv[ée]|private\s*jet|bizjet|g650|g700|global\s*7500|falcon\s*8x|tarmac|piste\s*d['’]?avion)\b/i,
+    label: "Private jet / tarmac",
+    scene:
+      "Private aviation: FBO tarmac, luxury business jet fuselage and stairs, premium airport apron lighting — never a car wash or random garage.",
+  },
+  {
+    pattern: /\b(yacht|superyacht|bateau|ponton|deck\s*yacht|mediterran[ée]e)\b/i,
+    label: "Yacht",
+    scene: "Luxury superyacht deck or marina berth, teak deck, azure water, premium nautical lifestyle.",
+  },
+  {
+    pattern: /\b(maldives|bora\s*bora|st\s*tropez|monaco|marrakech|mykonos)\b/i,
+    label: "Luxury destination",
+    scene: "Ultra-luxury travel destination as named — photorealistic iconic scenery for that location.",
+  },
+];
+
+function extractRollsRoyceModelPhrase(source) {
+  const normalized = normalizeVehicleSearchText(source);
+  const match = normalized.match(
+    /\bRolls-Royce\b(?:\s+(?:Coachbuild\s+)?(?:Droptail|La Rose Noire|Black Badge|Phantom|Ghost|Spectre|Cullinan|Wraith|Dawn|[A-Za-z0-9][\w\s-]{0,40}))?/i,
+  );
+  if (match) return match[0].replace(/\s+/g, " ").trim();
+  return "Rolls-Royce (exact model named by the user)";
+}
+
 function extractRequestedVehicleModel(text) {
-  const source = String(text || "")
-    .replace(/\bmontesori\b/gi, "Mansory")
-    .replace(/\bmansori\b/gi, "Mansory")
-    .replace(/\bmontessori\b/gi, "Mansory");
+  const source = normalizeVehicleSearchText(text);
   if (/\b(mansory)\b/i.test(source) && /\b(urus)\b/i.test(source)) {
     return {
       pattern: /\b(urus)\b/i,
       model: "Lamborghini Urus Mansory",
+      exterior:
+        "Lamborghini Urus with Mansory widebody kit, Mansory carbon aero and wheels — still unmistakably Urus-based, not a sedan.",
       interior:
         "authentic Lamborghini Urus cabin with Mansory tuning: Mansory carbon fiber dash and console trim, Mansory steering wheel accents, Urus dual digital screens with Lamborghini UI, alcantara/carbon luxury finish — never BMW roundel, never generic SUV.",
       key: "Lamborghini hexagonal key fob with bull logo — Urus OEM remote",
     };
   }
   for (const entry of VEHICLE_MODEL_CATALOG) {
+    if (entry.pattern.test(source)) {
+      if (entry.model === "Rolls-Royce Black Badge (named model)") {
+        return {
+          ...entry,
+          model: extractRollsRoyceModelPhrase(source).includes("Black Badge")
+            ? extractRollsRoyceModelPhrase(source)
+            : `Rolls-Royce Black Badge ${source.match(/\b(ghost|phantom|wraith|dawn|cullinan|spectre)\b/i)?.[1] || ""}`.trim(),
+        };
+      }
+      if (entry.model === "Bugatti (named model)") {
+        const sub = source.match(/\b(chiron|mistral|veyron|bolide)\b/i)?.[1];
+        return { ...entry, model: sub ? `Bugatti ${sub}` : "Bugatti (exact model named)" };
+      }
+      return entry;
+    }
+  }
+  if (/\bRolls-Royce\b/i.test(source)) {
+    return {
+      pattern: /\bRolls-Royce\b/i,
+      model: extractRollsRoyceModelPhrase(source),
+      exterior:
+        "Authentic Rolls-Royce OEM exterior for the exact model phrase above — correct body style (sedan, SUV, coupe, Droptail roadster). NEVER replace with a generic black luxury sedan or wrong Rolls model.",
+      interior:
+        "authentic Rolls-Royce OEM cabin matching that exact model — Spirit of Ecstasy, Rolls infotainment, correct seat count and layout.",
+      key: "Rolls-Royce Spirit of Ecstasy key fob — OEM for that model",
+    };
+  }
+  return null;
+}
+
+function isSceneRelocationPrompt(text) {
+  const source = String(text || "");
+  if (!LOCATION_SCENE_CATALOG.some((e) => e.pattern.test(source))) return false;
+  return /\b(mets?(\s|-)?moi|met(?:tre|s)?(\s|-)?moi|transporte|teleport|place(\s|-)?moi|arri(?:v|ère)|fond|d[ée]cor|background|sc[eè]ne|scene|environment|setting|locatio|à\s+|a\s+dubai|in\s+dubai|sur\s+un)\b/i.test(
+    source,
+  );
+}
+
+function extractRequestedLocationScene(text) {
+  const source = String(text || "");
+  for (const entry of LOCATION_SCENE_CATALOG) {
     if (entry.pattern.test(source)) return entry;
   }
   return null;
+}
+
+function buildV2VLocationLock(userPrompt) {
+  if (!isSceneRelocationPrompt(userPrompt)) return "";
+  const loc = extractRequestedLocationScene(userPrompt);
+  if (!loc) return "";
+  return [
+    " SCENE RELOCATION (mandatory — user asked to change place):",
+    ` Replace the environment with ${loc.scene}`,
+    ` Must read unmistakably as ${loc.label}.`,
+    " Keep the same person/vehicle subject, camera path and timing unless the user asked otherwise.",
+  ].join("");
+}
+
+function buildV2VExteriorVehicleLock(userPrompt) {
+  const source = String(userPrompt || "");
+  const vehicle = extractRequestedVehicleModel(source);
+  const targetModel =
+    vehicle?.model || "the exact vehicle brand and model named in the user prompt";
+  const exterior =
+    vehicle?.exterior ||
+    "Match authentic OEM exterior design, grille, badges, proportions and body style for the requested model — never a generic sedan or wrong brand.";
+  return [
+    " CRITICAL EXTERIOR VEHICLE SWAP (user is replacing the visible car in the clip):",
+    ` Replace the entire source vehicle with ${targetModel}.`,
+    ` ${exterior}`,
+    " Same position, scale, angle, wheel placement and motion as the original car in each frame.",
+    " Never output a random luxury sedan when a specific model was requested (e.g. Droptail must stay a two-seat droptail, Urus must stay an Urus SUV).",
+    buildKeySwapInstruction(vehicle),
+  ].join("");
+}
+
+function prependVehicleTargetDirective(prompt) {
+  const source = String(prompt || "").trim();
+  if (!source || !isVehicleDrivingPrompt(source)) return source;
+  const vehicle = extractRequestedVehicleModel(source);
+  if (!vehicle) return source;
+  const exterior = vehicle.exterior ? ` Exterior lock: ${vehicle.exterior}` : "";
+  return `TARGET VEHICLE (non-negotiable): ${vehicle.model}.${exterior} User instruction: ${source}`;
 }
 
 function buildKeySwapInstruction(vehicle) {
@@ -401,13 +637,20 @@ function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt
   let result = String(prompt || "").trim();
   const source = userPrompt || result;
 
+  const locationLock = buildV2VLocationLock(source);
+  if (locationLock && !/SCENE RELOCATION \(mandatory/i.test(result)) {
+    result += locationLock;
+  }
+
   if (
     isVehicleDrivingPrompt(source) &&
-    !/KEY & ACCESSORY SWAP|INTELLIGENT STATE|vehicle realism lock|CRITICAL vehicle/i.test(
+    !/KEY & ACCESSORY SWAP|INTELLIGENT STATE|vehicle realism lock|CRITICAL vehicle|CRITICAL EXTERIOR VEHICLE/i.test(
       result,
     )
   ) {
-    result += buildV2VCockpitIntelligenceLock(source);
+    result += isVehicleInteriorPrompt(source)
+      ? buildV2VCockpitIntelligenceLock(source)
+      : buildV2VExteriorVehicleLock(source);
   }
 
   return preserveSourceAudio ? result : `${result}${V2V_SILENT_OUTPUT_LOCK}`;
@@ -419,6 +662,8 @@ function buildV2VProviderPrompt(userPrompt, { preserveSourceAudio = false } = {}
   if (!preserveSourceAudio) {
     prompt = stripVoiceInstructionsFromPrompt(prompt);
   }
+
+  prompt = prependVehicleTargetDirective(prompt);
 
   if (prompt.length >= 10) {
     const hasSceneLock =
@@ -563,6 +808,11 @@ module.exports = {
   resolveV2VProviderForStudio,
   buildAlephSubmitPrompt,
   extractRequestedVehicleModel,
+  extractRequestedLocationScene,
+  isVehicleInteriorPrompt,
+  buildV2VExteriorVehicleLock,
+  buildV2VLocationLock,
+  prependVehicleTargetDirective,
   buildKeySwapInstruction,
   buildV2VCockpitIntelligenceLock,
   buildV2VDashboardLockSuffix,
