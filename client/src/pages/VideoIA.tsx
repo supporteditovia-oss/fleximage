@@ -789,16 +789,34 @@ export default function VideoIA() {
             />
             <button
               type="button"
-              className={`via-upload-zone ${imagePreviewUrl ? "has-file" : ""}`}
+              className={`via-upload-zone via-upload-zone--hero ${
+                imagePreviewUrl ? "has-file has-image" : ""
+              } ${aspectRatio === "16:9" ? "is-landscape" : "is-portrait"}`}
               onClick={() => imageFileRef.current?.click()}
             >
-              <span className="via-upload-zone__icon">
-                <Upload className="h-4 w-4" />
-              </span>
-              <span className="via-upload-zone__text">
-                {imagePreviewUrl ? "Changer l'image" : "Choisir une image"}
-              </span>
-              <span className="via-upload-zone__meta">JPG · PNG · max 10 Mo</span>
+              {imagePreviewUrl ? (
+                <>
+                  <img
+                    className="via-upload-zone__preview"
+                    src={imagePreviewUrl}
+                    alt="Ta photo importée"
+                  />
+                  <span className="via-upload-zone__change-bar">
+                    <Upload className="h-4 w-4" aria-hidden />
+                    Changer l&apos;image
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="via-upload-zone__icon">
+                    <Upload className="h-4 w-4" />
+                  </span>
+                  <span className="via-upload-zone__text">Choisir une image</span>
+                  <span className="via-upload-zone__meta">
+                    JPG · PNG · max 10 Mo
+                  </span>
+                </>
+              )}
             </button>
 
             <div className="via-option-block via-option-block--prominent">
@@ -854,14 +872,6 @@ export default function VideoIA() {
                 </button>
               </div>
             </div>
-
-            {imagePreviewUrl && (
-              <div
-                className={`via-preview-frame ${aspectRatio === "16:9" ? "is-landscape" : ""}`}
-              >
-                <img src={imagePreviewUrl} alt="Aperçu" />
-              </div>
-            )}
 
             {imagePreviewUrl && (
               <>
