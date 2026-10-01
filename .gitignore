@@ -8,3 +8,4 @@ vite.config.ts.*
 .cursor/mcp.json
 mcp.json
 graphify-out/
+.vercel

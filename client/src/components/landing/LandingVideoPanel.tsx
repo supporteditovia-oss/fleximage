@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Film, ImageIcon, Loader2, Upload, Video } from "lucide-react";
+import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import {
+  pathForVideoStudioMode,
+  type VideoStudioMode,
+} from "@/lib/video-studio-modes";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
 import { compressImageForGeneration } from "@/lib/compress-image";
@@ -41,23 +46,6 @@ export function LandingVideoPanel() {
     setSwapPrompt(t("landing:videoPanel.swapDefault"));
   }, [i18n.resolvedLanguage, t]);
 
-  const workflowOptions = useMemo(
-    () =>
-      [
-        {
-          id: "image_to_video" as const,
-          label: t("landing:videoPanel.i2vLabel"),
-          hint: t("landing:videoPanel.i2vHint"),
-        },
-        {
-          id: "video_to_video" as const,
-          label: t("landing:videoPanel.v2vLabel"),
-          hint: t("landing:videoPanel.v2vHint"),
-        },
-      ] as const,
-    [t],
-  );
-
   const canGenerateI2V = Boolean(imageFile);
   const canGenerateV2V = Boolean(videoPreview);
 
@@ -89,6 +77,14 @@ export function LandingVideoPanel() {
     }
   };
 
+  const handleStudioModeSelect = (mode: VideoStudioMode) => {
+    if (mode === "transformation_pro") {
+      navigate(user ? "/transformation-pro" : "/register");
+      return;
+    }
+    setWorkflow(mode);
+  };
+
   const handleGenerate = async () => {
     if (busy) return;
     if (workflow === "image_to_video" && !canGenerateI2V) return;
@@ -111,22 +107,7 @@ export function LandingVideoPanel() {
 
   return (
     <div className="via-studio landing-video-panel pb-4">
-      <div className="via-mode-grid">
-        {workflowOptions.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setWorkflow(option.id)}
-            className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
-          >
-            <span className="via-mode-card__emoji" aria-hidden>
-              ◈
-            </span>
-            <span className="via-mode-card__label">{option.label}</span>
-            <span className="via-mode-card__hint">{option.hint}</span>
-          </button>
-        ))}
-      </div>
+      <VideoStudioModePicker active={workflow} onSelect={handleStudioModeSelect} />
 
       <div key={workflow} className="via-panel via-panel-enter">
         {workflow === "image_to_video" ? (

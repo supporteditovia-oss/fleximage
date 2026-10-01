@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Link, Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Crown, Film, Loader2, Sparkles, Upload, Video, Wand2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
@@ -15,6 +15,11 @@ import { defaultVideoLoaderEstimate } from "@/lib/video-generation-timing";
 import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
+import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import {
+  pathForVideoStudioMode,
+  type VideoStudioMode,
+} from "@/lib/video-studio-modes";
 import {
   computeVideoUltraCreditCost,
   VIDEO_ULTRA_DURATION_OPTIONS,
@@ -47,6 +52,7 @@ function resolutionLabel(res: VideoUltraResolution): string {
 }
 
 export default function VideoUltra() {
+  const [, setLocation] = useLocation();
   const { v2Enabled, isLoading: v2Loading } = useV2Access();
   const { user, profile } = useAuth();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
@@ -75,6 +81,11 @@ export default function VideoUltra() {
   );
 
   const creditCost = computeVideoUltraCreditCost({ durationSec, resolution });
+
+  const handleStudioModeSelect = (mode: VideoStudioMode) => {
+    if (mode === "transformation_pro") return;
+    setLocation(pathForVideoStudioMode(mode));
+  };
   const creditsBalance = plan?.credits ?? profile?.credits ?? 0;
   const hasEnoughCredits = creditsBalance >= creditCost;
 
@@ -291,12 +302,13 @@ export default function VideoUltra() {
           <span className="via-capability">3–8 s · 720p · 1080p · 4K</span>
           <span className="via-capability">Débit à la réussite</span>
         </div>
-        <p className="mt-4 text-sm text-[var(--lx-muted)]">
-          <Link href="/video-ia" className="underline underline-offset-2">
-            ← Retour au studio Vidéo IA (Image→Vidéo / V2V classique)
-          </Link>
-        </p>
       </header>
+
+      <VideoStudioModePicker
+        active="transformation_pro"
+        onSelect={handleStudioModeSelect}
+        intro="Mode premium : durée et qualité au choix, jetons débités uniquement quand la vidéo est prête."
+      />
 
       <VideoCreditSummary creditCost={creditCost} />
 

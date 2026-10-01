@@ -3,7 +3,7 @@
  * Remplacer `afterVideo` / `beforeVideo` par vos fichiers quand prêts :
  * ex. `/assets/landing-v2/i2v-demo.mp4`
  */
-export type LandingVideoWorkflow = "i2v" | "v2v";
+export type LandingVideoWorkflow = "i2v" | "v2v" | "pro";
 
 export type LandingVideoShowcaseSlot = {
   label: string;

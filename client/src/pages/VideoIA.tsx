@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Link, Redirect, useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import {
   Film,
   ImageIcon,
@@ -8,7 +8,6 @@ import {
   Sparkles,
   Upload,
   Video,
-  Wand2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentPlan } from "@/hooks/use-billing";
@@ -27,6 +26,12 @@ import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoCreditSummary } from "@/components/video/VideoCreditSummary";
+import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import {
+  isVideoWorkflow,
+  pathForVideoStudioMode,
+  type VideoStudioMode,
+} from "@/lib/video-studio-modes";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import {
@@ -94,26 +99,6 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 const ADMIN_VIDEO_BURN = ADMIN_PRICING_REFERENCE.creditBurn;
-
-const WORKFLOW_OPTIONS: {
-  id: VideoWorkflow;
-  label: string;
-  hint: string;
-  icon: typeof ImageIcon;
-}[] = [
-  {
-    id: "image_to_video",
-    label: "Image → Vidéo",
-    hint: "3–5 s · 720p / 1080p · prix dynamique",
-    icon: ImageIcon,
-  },
-  {
-    id: "video_to_video",
-    label: "Vidéo → Vidéo",
-    hint: "3–8 s · 720p / 1080p / 4K · prix selon durée",
-    icon: Wand2,
-  },
-];
 
 function v2vResolutionLabel(res: VideoUltraResolution): string {
   if (res === "4k") return "4K";
@@ -199,6 +184,29 @@ export default function VideoIA() {
       setPrefillLarpId(prefill.sourceLarpId ?? null);
     }
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("workflow");
+    if (raw === "video_to_video" || raw === "image_to_video") {
+      setWorkflow(raw);
+    }
+  }, []);
+
+  const handleStudioModeSelect = (mode: VideoStudioMode) => {
+    if (mode === "transformation_pro") {
+      setLocation("/transformation-pro");
+      return;
+    }
+    if (isVideoWorkflow(mode)) {
+      setWorkflow(mode);
+      if (mode === "video_to_video") {
+        setAspectRatio("16:9");
+      }
+      const next = pathForVideoStudioMode(mode);
+      window.history.replaceState(null, "", next);
+    }
+  };
 
   /** iOS Safari : lancer la lecture dès que le blob est prêt (évite écran noir). */
   useEffect(() => {
@@ -725,37 +733,13 @@ export default function VideoIA() {
             Admin · grille v2 · I2V {adminBurn.videoI2V} cr
           </span>
         </div>
-        <p className="mt-4 text-sm text-[var(--lx-muted)]">
-          <Link href="/transformation-pro" className="underline underline-offset-2">
-            Transformation Pro — décor premium, ta voix conservée →
-          </Link>
-        </p>
       </header>
 
-      <div className="via-mode-grid">
-        {WORKFLOW_OPTIONS.map((option) => {
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => {
-                setWorkflow(option.id);
-                if (option.id === "video_to_video") {
-                  setAspectRatio("16:9");
-                }
-              }}
-              className={`via-mode-card ${workflow === option.id ? "is-active" : ""}`}
-            >
-              <span className="via-mode-card__icon" aria-hidden>
-                <Icon className="h-4 w-4" />
-              </span>
-              <span className="via-mode-card__label">{option.label}</span>
-              <span className="via-mode-card__hint">{option.hint}</span>
-            </button>
-          );
-        })}
-      </div>
+      <VideoStudioModePicker
+        active={workflow}
+        onSelect={handleStudioModeSelect}
+        intro="Trois façons de créer : photo animée, clip transformé (décor, corps, danse…), ou transformation premium avec ta voix."
+      />
 
       <div key={workflow} className="via-panel via-panel-enter">
         <VideoCreditSummary creditCost={creditCost} />

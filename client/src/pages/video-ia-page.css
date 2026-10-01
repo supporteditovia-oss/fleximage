@@ -169,6 +169,44 @@ html.luxeflexia-video-page .floating-header::before {
   margin: 0 0 1.35rem;
 }
 
+.via-mode-grid--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .via-mode-grid--triple {
+    grid-template-columns: 1fr;
+  }
+}
+
+.via-mode-picker__intro {
+  margin: 0 0 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--lx-muted);
+  text-align: center;
+}
+
+@media (min-width: 901px) {
+  .via-mode-picker__intro {
+    text-align: left;
+  }
+}
+
+.via-mode-grid--triple .via-mode-card {
+  padding: 0.95rem 0.75rem 0.9rem;
+}
+
+.via-mode-grid--triple .via-mode-card__label {
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.via-mode-grid--triple .via-mode-card__hint {
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 .via-mode-card {
   position: relative;
   overflow: hidden;
