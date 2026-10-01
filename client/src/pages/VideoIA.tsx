@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Redirect, useLocation } from "wouter";
 import {
@@ -55,7 +55,8 @@ import {
 import {
   computeV2VStudioCreditCost,
   normalizeVideoUltraDuration,
-  VIDEO_ULTRA_RESOLUTION_OPTIONS,
+  v2vEngineFamilyFromProvider,
+  v2vResolutionsForEngineFamily,
   type VideoUltraResolution,
 } from "@shared/video-ultra-pricing";
 import {
@@ -231,6 +232,24 @@ export default function VideoIA() {
     videoDurationSec ?? 5,
   );
 
+  const v2vProviderForBilling = useMemo(
+    () => resolveV2VProviderForStudio(swapPrompt),
+    [swapPrompt],
+  );
+  const v2vResolutionOptions = useMemo(
+    () =>
+      v2vResolutionsForEngineFamily(
+        v2vEngineFamilyFromProvider(v2vProviderForBilling),
+      ),
+    [v2vProviderForBilling],
+  );
+
+  useEffect(() => {
+    if (workflow !== "video_to_video") return;
+    if (v2vResolutionOptions.includes(v2vResolution)) return;
+    setV2vResolution(v2vResolutionOptions[v2vResolutionOptions.length - 1]!);
+  }, [workflow, v2vResolution, v2vResolutionOptions]);
+
   const v2vCreditsForResolution = (res: VideoUltraResolution) =>
     adminPreview
       ? adminPreviewVideoCreditCost({
@@ -238,11 +257,13 @@ export default function VideoIA() {
           durationSec: v2vBillingDurationSec,
           v2vResolution: res,
           preserveSourceAudio: preserveSourceVoice,
+          v2vProvider: v2vProviderForBilling,
         })
       : computeV2VStudioCreditCost({
           sourceVideoDurationSec: v2vBillingDurationSec,
           resolution: res,
           preserveSourceAudio: preserveSourceVoice,
+          v2vProvider: v2vProviderForBilling,
         });
 
   const creditCost =
@@ -938,8 +959,9 @@ export default function VideoIA() {
               <strong>
                 {VIDEO_V2V_MIN_DURATION_SEC}–{VIDEO_V2V_MAX_DURATION_SEC} s
               </strong>
-              . Choisis la <strong>qualité</strong> (720p / 1080p / 4K) : le prix
-              s&apos;ajuste selon la durée détectée
+              . Choisis la <strong>qualité</strong> (720p / 1080p
+              {v2vResolutionOptions.includes("4k") ? " / 4K" : ""}) : le prix
+              s&apos;ajuste selon la durée détectée et le type de transformation
               {videoDurationSec
                 ? ` (${v2vBillingDurationSec} s)`
                 : " (5 s par défaut avant import)"}
@@ -957,7 +979,7 @@ export default function VideoIA() {
                 role="group"
                 aria-label="Qualité vidéo"
               >
-                {VIDEO_ULTRA_RESOLUTION_OPTIONS.map((res) => (
+                {v2vResolutionOptions.map((res) => (
                   <button
                     key={res}
                     type="button"

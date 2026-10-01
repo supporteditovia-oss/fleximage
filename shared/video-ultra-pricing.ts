@@ -48,20 +48,79 @@ export function computeVideoUltraCreditCost(params: {
   return VIDEO_ULTRA_CREDIT_GRID[duration][resolution];
 }
 
-/** Vidéo → Vidéo (studio) : grille durée × qualité + option voix source. */
+/** Motion Control (danse / corps) — 8 s 720p ≈ COGS 1,01 $ → 95 cr (pricing-economics). */
+export const V2V_MOTION_8S_720P_CREDITS = 95;
+
+/** Motion 1080p ~×1,5 vs 720p (pas de 4K côté API). */
+export const V2V_MOTION_1080P_FACTOR = 1.5;
+
+export type V2VStudioEngineFamily = "motion" | "transform";
+
+export function v2vEngineFamilyFromProvider(
+  provider: string | null | undefined,
+): V2VStudioEngineFamily {
+  return provider === "kling_motion" ? "motion" : "transform";
+}
+
+export function computeV2VMotionCreditCost(params: {
+  durationSec?: unknown;
+  resolution?: unknown;
+}): number {
+  const duration = normalizeVideoUltraDuration(params.durationSec ?? 5);
+  let resolution = normalizeVideoUltraResolution(params.resolution);
+  if (resolution === "4k") resolution = "1080p";
+  let credits = Math.round(V2V_MOTION_8S_720P_CREDITS * (duration / 8));
+  credits = Math.max(36, credits);
+  if (resolution === "1080p") {
+    credits = Math.ceil(credits * V2V_MOTION_1080P_FACTOR);
+  }
+  return credits;
+}
+
+/** Transform (décor / voiture) : grille Omni / Aleph — 720p → 4K. */
+export function computeV2VTransformCreditCost(params: {
+  durationSec?: unknown;
+  resolution?: unknown;
+}): number {
+  return computeVideoUltraCreditCost({
+    durationSec: params.durationSec,
+    resolution: params.resolution,
+  });
+}
+
+export function v2vResolutionsForEngineFamily(
+  family: V2VStudioEngineFamily,
+): VideoUltraResolution[] {
+  return family === "motion"
+    ? ["720p", "1080p"]
+    : ["720p", "1080p", "4k"];
+}
+
+/** Vidéo → Vidéo : tarif selon moteur (motion ≠ transform). */
 export function computeV2VStudioCreditCost(params: {
   sourceVideoDurationSec?: number | null;
   resolution?: unknown;
   preserveSourceAudio?: boolean;
   voiceExtraCredit?: number;
+  engineFamily?: V2VStudioEngineFamily | null;
+  v2vProvider?: string | null;
 }): number {
   const duration = normalizeVideoUltraDuration(
     params.sourceVideoDurationSec ?? 5,
   );
-  let cost = computeVideoUltraCreditCost({
-    durationSec: duration,
-    resolution: params.resolution,
-  });
+  const family =
+    params.engineFamily ??
+    v2vEngineFamilyFromProvider(params.v2vProvider ?? null);
+  let cost =
+    family === "motion"
+      ? computeV2VMotionCreditCost({
+          durationSec: duration,
+          resolution: params.resolution,
+        })
+      : computeV2VTransformCreditCost({
+          durationSec: duration,
+          resolution: params.resolution,
+        });
   const voiceExtra = params.voiceExtraCredit ?? 5;
   if (params.preserveSourceAudio) cost += voiceExtra;
   return cost;

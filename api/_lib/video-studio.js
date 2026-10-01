@@ -38,6 +38,8 @@ function computeVideoCreditCost(options) {
       resolution: options.v2vResolution,
       preserveSourceAudio: options.preserveSourceAudio,
       voiceExtraCredit: VIDEO_VOICE_EXTRA_CREDIT,
+      v2vProvider: options.v2vProvider ?? null,
+      engineFamily: options.v2vEngineFamily ?? null,
     });
   }
 
