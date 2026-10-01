@@ -22,13 +22,19 @@ export const VIDEO_STUDIO_MODE_OPTIONS: VideoStudioModeOption[] = [
   {
     id: "video_to_video",
     label: "Vidéo → Vidéo",
-    hint: "Danse & corps · ou décor & voiture — le studio choisit",
+    hint: "Mouvement ou scène luxe — tu choisis, le studio exécute",
     icon: Wand2,
   },
 ];
 
-export function pathForVideoStudioMode(mode: VideoStudioMode): string {
+export function pathForVideoStudioMode(
+  mode: VideoStudioMode,
+  v2vIntent?: "motion" | "scene" | null,
+): string {
   const workflow =
     mode === "video_to_video" ? "video_to_video" : "image_to_video";
+  if (mode === "video_to_video" && v2vIntent) {
+    return `/video-ia?workflow=${workflow}&intent=${v2vIntent}`;
+  }
   return `/video-ia?workflow=${workflow}`;
 }

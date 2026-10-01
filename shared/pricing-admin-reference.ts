@@ -58,6 +58,7 @@ export function adminPreviewVideoCreditCost(params: {
   voiceEnabled?: boolean;
   preserveSourceAudio?: boolean;
   v2vResolution?: unknown;
+  v2vProvider?: string | null;
 }): number {
   const b = ADMIN_PRICING_REFERENCE.creditBurn;
   if (params.workflow === "video_to_video") {
@@ -66,6 +67,7 @@ export function adminPreviewVideoCreditCost(params: {
       resolution: params.v2vResolution ?? "720p",
       preserveSourceAudio: params.preserveSourceAudio,
       voiceExtraCredit: b.videoVoiceExtra,
+      v2vProvider: params.v2vProvider ?? null,
     });
   }
   return computeImageToVideoCreditCost({

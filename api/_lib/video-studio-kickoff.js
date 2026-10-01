@@ -151,13 +151,16 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
           resolution: v2vResolution === "4k" ? "4k" : "1080p",
         });
 
+      const motionMode =
+        v2vResolution === "1080p" || v2vResolution === "4k" ? "1080p" : "720p";
+
       const runKling = async (videoUrl, imageUrl) =>
         generateKlingMotionOnce(supabase, {
           generationId: larp.id,
           prompt: providerPrompt,
           imageUrl,
           videoUrl,
-          mode: v2vResolution === "1080p" ? "1080p" : "720p",
+          mode: motionMode,
         });
       const runAleph = async (videoUrl, refImage) => {
         const omitRef =
