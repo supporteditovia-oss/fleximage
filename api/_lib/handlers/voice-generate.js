@@ -20,6 +20,7 @@ const {
   lookupCatalogEntryByFishId,
   resolveCatalogTtsSpeed,
 } = require("../voice-catalog");
+const { synthesizeCatalogArtistSpeech } = require("../catalog-voice-tts");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -298,7 +299,10 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     const ttsText = script.fishText;
-    const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
+    const catalogFishId = resolvedFishId || fishReferenceId;
+    const catalogEntry = lookupCatalogEntryByFishId(catalogFishId);
+    const isCatalogOnlyVoice = Boolean(!voiceCloneId && catalogEntry);
+    const catalogTtsSpeed = resolveCatalogTtsSpeed(catalogFishId);
 
     const cloneFidelity = Boolean(voiceCloneId);
 
@@ -329,12 +333,19 @@ module.exports = async function voiceGenerateHandler(req, res) {
     if (!audioBuffer && resolvedFishId) {
       await waitForVoiceModelReady(resolvedFishId);
       try {
-        audioBuffer = await synthesizeSpeech({
-          text: ttsText,
-          referenceId: resolvedFishId,
-          speed: catalogTtsSpeed ?? undefined,
-          cloneFidelity,
-        });
+        if (isCatalogOnlyVoice) {
+          audioBuffer = await synthesizeCatalogArtistSpeech({
+            fishReferenceId: resolvedFishId,
+            text: script.displayText,
+            voiceName,
+          });
+        } else {
+          audioBuffer = await synthesizeSpeech({
+            text: ttsText,
+            referenceId: resolvedFishId,
+            cloneFidelity,
+          });
+        }
       } catch (refErr) {
         console.warn("voice-generate reference_id failed, fallback inline", refErr);
         audioBuffer = await synthesizeInlineFromSample();

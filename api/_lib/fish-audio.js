@@ -28,7 +28,8 @@ const FIDELITY_TTS = {
 };
 
 /** Seuil message vocal « court » — un bloc TTS, prosodie continue. */
-const VOCAL_CONTINUOUS_MAX_CHARS = 520;
+/** Aligné sur la limite Fish — évite les chunks avec silences sur les vocaux longs. */
+const VOCAL_CONTINUOUS_MAX_CHARS = 2000;
 
 function resolveTtsSpeed(text, speedOverride) {
   if (typeof speedOverride === "number" && Number.isFinite(speedOverride)) {
@@ -81,11 +82,11 @@ function buildTtsOptions(text, options = {}) {
   };
 }
 
-/** Dernière passe — aucun appel Fish ne doit envoyer des phrases découpées par « . ». */
+/** Nettoyage minimal — le flux oral est appliqué dans prepareVoiceTtsForFish (évite double passe). */
 function normalizeFishTtsText(text) {
-  const trimmed = String(text || "").trim();
+  const trimmed = String(text || "").trim().replace(/\s+/g, " ");
   if (!trimmed) return "";
-  return flowFrenchVocalDelivery(trimmed).slice(0, 2000);
+  return trimmed.slice(0, 2000);
 }
 
 function cleanEnv(value) {

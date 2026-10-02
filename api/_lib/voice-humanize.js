@@ -44,6 +44,14 @@ function polishFrenchCasualFlow(text) {
     out = out.replace(/^bonjour\b/i, "Bonjour,");
   }
 
+  out = out.replace(
+    /\bsalut\s+(?=(comment|ça|c'est|je|j'|tu|on)\b)/giu,
+    "Salut, ",
+  );
+  out = out.replace(/\bcomment tu vas\b/giu, "comment tu vas");
+  out = out.replace(/\bc'est\s+là\b/giu, "c'est là");
+  out = out.replace(/\baujourd'hui\b/giu, "aujourd'hui");
+
   if (!/[.?!…]$/.test(out)) {
     out += ".";
   }
