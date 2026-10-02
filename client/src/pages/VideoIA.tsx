@@ -50,11 +50,11 @@ import {
 import {
   finalizeI2VMotionPromptForSubmit,
   finalizeV2VPromptForSubmit,
-  resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
 import {
   parseV2VIntentFromUrl,
   resolveV2VBillingProvider,
+  resolveV2VProviderForStudioSubmit,
   type V2VStudioIntent,
 } from "@/lib/v2v-studio-intent";
 import {
@@ -575,7 +575,7 @@ export default function VideoIA() {
     }
     if (!source) return;
 
-    const v2vProvider = resolveV2VProviderForStudio(swapPrompt);
+    const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
 
     let referenceImages: string[] | undefined;
     if (refImageBase64) {
