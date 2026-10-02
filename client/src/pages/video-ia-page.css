@@ -644,8 +644,96 @@ html.luxeflexia-video-page .floating-header::before {
 }
 
 .via-upload-zone--hero:not(.has-image) {
-  min-height: 10.5rem;
+  min-height: unset;
   padding: 1.35rem 1rem;
+}
+
+.via-media-slot {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.via-media-slot.is-portrait {
+  max-width: min(100%, 14.5rem);
+  margin-inline: auto;
+}
+
+.via-media-slot.is-landscape {
+  max-width: min(100%, 28rem);
+  margin-inline: auto;
+}
+
+.via-media-slot.is-portrait .via-upload-zone--hero,
+.via-media-slot.is-portrait .via-preview-frame--interactive {
+  width: 100%;
+}
+
+.via-media-slot.is-landscape .via-upload-zone--hero,
+.via-media-slot.is-landscape .via-preview-frame--interactive {
+  width: 100%;
+}
+
+.via-upload-zone--hero.is-portrait:not(.has-image),
+.via-upload-zone--hero.is-portrait.has-image,
+.via-upload-zone--format.is-portrait {
+  aspect-ratio: 9 / 16;
+  max-height: min(72vh, 36rem);
+}
+
+.via-upload-zone--hero.is-landscape:not(.has-image),
+.via-upload-zone--hero.is-landscape.has-image,
+.via-upload-zone--format.is-landscape {
+  aspect-ratio: 16 / 9;
+  max-width: min(100%, 28rem);
+  max-height: min(50vh, 18rem);
+}
+
+.via-media-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(180, 60, 60, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  color: #9a3030;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.via-media-clear:hover {
+  background: rgba(255, 245, 245, 1);
+  border-color: rgba(180, 60, 60, 0.55);
+}
+
+.via-upload-zone--compact {
+  min-height: 3.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.via-ref-photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.via-preview-frame--thumb {
+  width: 5rem;
+  aspect-ratio: 1;
+  border-radius: 0.65rem;
+  overflow: hidden;
+}
+
+.via-preview-frame--thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .via-upload-zone--hero.has-image {
