@@ -1126,7 +1126,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     <div className="voice-studio-page">
       <div className="voice-studio-page__inner voice-studio-page__inner--wide">
         <p className="voice-studio-page__eyebrow">
-          {guestFunnel ? t("landing:voiceStudioGuest.eyebrow") : "Studio"}
+          {guestFunnel ? t("landing:voiceStudioGuest.eyebrow") : "Preview admin · Clonage IA"}
         </p>
         <h2 className="voice-studio-page__title">
           {guestFunnel ? t("landing:voiceStudioGuest.title") : "Clonage IA"}

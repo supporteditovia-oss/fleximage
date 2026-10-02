@@ -8,6 +8,8 @@ type StudioModeSwitchProps = {
   onChange: (mode: StudioMode) => void;
   className?: string;
   size?: "default" | "compact";
+  /** Clonage IA — onglet voix réservé admin tant que preview fondateur. */
+  voiceTabEnabled?: boolean;
 };
 
 const STUDIO_MODES: { id: StudioMode; labelKey: string; emoji: string }[] = [
@@ -21,8 +23,12 @@ export function StudioModeSwitch({
   onChange,
   className,
   size = "default",
+  voiceTabEnabled = true,
 }: StudioModeSwitchProps) {
   const { t } = useTranslation();
+  const modes = voiceTabEnabled
+    ? STUDIO_MODES
+    : STUDIO_MODES.filter((item) => item.id !== "voice");
   return (
     <div
       className={cn(
@@ -34,7 +40,7 @@ export function StudioModeSwitch({
       aria-label={t("landing:studio.modesAria")}
     >
       <div className="lx-studio-switch__indicator" data-mode={mode} aria-hidden />
-      {STUDIO_MODES.map((item) => {
+      {modes.map((item) => {
         const active = mode === item.id;
         return (
           <button

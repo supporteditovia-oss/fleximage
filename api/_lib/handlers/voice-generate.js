@@ -21,6 +21,7 @@ const {
   resolveCatalogTtsSpeed,
 } = require("../voice-catalog");
 const { synthesizeCatalogArtistSpeech } = require("../catalog-voice-tts");
+const { assertVoiceCloningAdminPreview } = require("../voice-cloning-gate");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -153,6 +154,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
 
   try {
     ({ supabase, userId } = await requireUser(req));
+    await assertVoiceCloningAdminPreview(supabase, userId);
     const body = readBody(req);
     const text = typeof body.text === "string" ? body.text.trim() : "";
     const humanizeEnabled = body.humanize !== false;

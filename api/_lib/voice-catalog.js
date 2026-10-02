@@ -14,7 +14,7 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 8;
+const UNIFIED_PREVIEW_VERSION = 9;
 
 function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
   const locale = normalizeVoiceLocale(localeLike);

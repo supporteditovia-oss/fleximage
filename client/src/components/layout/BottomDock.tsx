@@ -26,6 +26,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useVoiceCloningAccess } from "@/lib/voice-cloning-access";
 import { getAppScrollEl, getAppScrollTop } from "@/lib/app-scroll";
 import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 
@@ -34,6 +35,7 @@ export function BottomDock() {
   const pathname = location.split("?")[0] || location;
   const { user, profile, isAdmin, isLoading, signOut } = useAuth();
   const { v2Enabled } = useV2Access();
+  const voiceCloningAccess = useVoiceCloningAccess();
   const { t } = useTranslation();
   const [hidden, setHidden] = useState(false);
   const [studioMode, setStudioMode] = useState<StudioMode>(() =>
@@ -151,14 +153,14 @@ export function BottomDock() {
   const isActive = (path: string) => pathname === path;
   const v2Ready = !isLoading && v2Enabled;
   const createPath = v2Ready ? "/create" : "/generate";
-  const libraryPath =
-    v2Ready && studioMode === "voice" ? "/bibliotheque" : "/historique";
+  const voiceCatalogDock = v2Ready && voiceCloningAccess && studioMode === "voice";
+  const libraryPath = voiceCatalogDock ? "/bibliotheque" : "/historique";
   const libraryLabel = !v2Ready
     ? t("layout.dock.history")
-    : studioMode === "voice"
+    : voiceCatalogDock
       ? "Catalogue"
       : t("layout.dock.history");
-  const LibraryIcon = v2Ready && studioMode === "voice" ? Library : History;
+  const LibraryIcon = voiceCatalogDock ? Library : History;
 
   const handleCreateClick = () => {
     if (pathname !== createPath) return;

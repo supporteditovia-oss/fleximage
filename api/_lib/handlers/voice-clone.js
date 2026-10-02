@@ -3,6 +3,7 @@ const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require(".
 const { uploadToR2 } = require("../r2");
 const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
 const { isUserAdmin } = require("../admin-access");
+const { assertVoiceCloningAdminPreview } = require("../voice-cloning-gate");
 const { VOICE_CLONE_CREDIT_COST } = require("../credit-costs");
 const { applyCreditDelta } = require("../generation");
 const {
@@ -103,6 +104,7 @@ module.exports = async function voiceCloneHandler(req, res) {
 
   try {
     const { supabase, userId } = await requireUser(req);
+    await assertVoiceCloningAdminPreview(supabase, userId);
     const body = readBody(req);
 
     const name = typeof body.name === "string" ? body.name.trim() : "";

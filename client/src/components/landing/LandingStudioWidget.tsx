@@ -8,11 +8,13 @@ import {
   writeStudioMode,
   type StudioMode,
 } from "@/lib/v2-experience";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import "@/pages/create-page.css";
 import "@/pages/generate-page.css";
 import "./landing-studio-widget.css";
 
 export function LandingStudioWidget() {
+  const adminPreview = useAdminPreviewFeatures();
   const [mode, setMode] = useState<StudioMode>(() => readStudioMode());
 
   useEffect(() => {
@@ -44,9 +46,17 @@ export function LandingStudioWidget() {
   }, [mode]);
 
   const handleMode = (next: StudioMode) => {
+    if (next === "voice" && !adminPreview) return;
     setMode(next);
     writeStudioMode(next);
   };
+
+  useEffect(() => {
+    if (!adminPreview && mode === "voice") {
+      setMode("image");
+      writeStudioMode("image");
+    }
+  }, [adminPreview, mode]);
 
   return (
     <div className="landing-studio-widget">
@@ -55,6 +65,7 @@ export function LandingStudioWidget() {
         onChange={handleMode}
         size="compact"
         className="landing-studio-widget__tabs"
+        voiceTabEnabled={adminPreview}
       />
       <div className="landing-studio-widget__panel" key={mode}>
         {mode === "image" ? (
