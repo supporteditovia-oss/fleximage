@@ -320,7 +320,10 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     text.trim() && !isGenerating && (hasPendingCapture || (activeVoice && !creatingOwnVoice)),
   );
 
-  const voiceGenerateCreditCost = adminPreviewVoiceGenerateCreditCost(hasPendingCapture);
+  const voiceGenerateCreditCost = adminPreviewVoiceGenerateCreditCost(
+    hasPendingCapture,
+    text,
+  );
 
   const setClip = useCallback((next: VoiceClip | null) => {
     setVoiceClip((prev) => {

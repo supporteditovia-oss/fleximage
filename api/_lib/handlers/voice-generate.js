@@ -17,10 +17,9 @@ const {
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
 const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const { computeVoiceGenerationCreditCost } = require("../credit-costs");
 
-const VOICE_CREDIT_COST = 8;
-
-async function checkVoiceCredits(supabase, userId) {
+async function checkVoiceCredits(supabase, userId, creditCost) {
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_subscriber, role, credits")
@@ -35,7 +34,8 @@ async function checkVoiceCredits(supabase, userId) {
     return { allowed: true, isAdmin: true, creditCost: 0 };
   }
 
-  if (profile.credits < VOICE_CREDIT_COST) {
+  const required = Math.max(0, Number(creditCost) || 0);
+  if (profile.credits < required) {
     return {
       allowed: false,
       reason: profile.is_subscriber
@@ -45,7 +45,7 @@ async function checkVoiceCredits(supabase, userId) {
     };
   }
 
-  return { allowed: true, isAdmin: false, creditCost: VOICE_CREDIT_COST };
+  return { allowed: true, isAdmin: false, creditCost: required };
 }
 
 function parseDataUrl(dataUrl) {
@@ -160,17 +160,6 @@ module.exports = async function voiceGenerateHandler(req, res) {
       return;
     }
 
-    const limitResult = await checkVoiceCredits(supabase, userId);
-    if (!limitResult.allowed) {
-      res.status(402).json({
-        message: limitResult.reason || "Crédits insuffisants",
-        code: "insufficient_credits",
-      });
-      return;
-    }
-
-    creditCost = limitResult.creditCost || 0;
-
     const voiceCloneId =
       typeof body.voiceCloneId === "string" ? body.voiceCloneId.trim() : "";
     let fishReferenceId =
@@ -224,6 +213,20 @@ module.exports = async function voiceGenerateHandler(req, res) {
       style: deliveryStyle,
       voiceName,
     });
+
+    creditCost = computeVoiceGenerationCreditCost(script.fishText);
+
+    const limitResult = await checkVoiceCredits(supabase, userId, creditCost);
+    if (!limitResult.allowed) {
+      res.status(402).json({
+        message: limitResult.reason || "Crédits insuffisants",
+        code: "insufficient_credits",
+        creditCost,
+      });
+      return;
+    }
+
+    creditCost = limitResult.creditCost || 0;
 
     const resolvedFishId = await ensureFishReferenceId({
       fishReferenceId,

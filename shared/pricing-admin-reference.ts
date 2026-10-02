@@ -3,6 +3,7 @@
  * La facturation prod reste sur `credit-costs.ts` tant que PRICING_V2_ENABLED ≠ 1.
  */
 
+import { computeVoiceGenerationCreditCost } from "./credit-costs";
 import { computeImageToVideoCreditCost } from "./video-i2v-pricing";
 import { computeV2VStudioCreditCost } from "./video-ultra-pricing";
 
@@ -79,7 +80,14 @@ export function adminPreviewVideoCreditCost(params: {
 }
 
 /** Coût affiché sur « Générer la voix » (grille v2 admin / studio voix). */
-export function adminPreviewVoiceGenerateCreditCost(includesNewClone: boolean): number {
+export function adminPreviewVoiceGenerateCreditCost(
+  includesNewClone: boolean,
+  scriptText?: string,
+): number {
   const b = ADMIN_PRICING_REFERENCE.creditBurn;
-  return b.voicePerMinute + (includesNewClone ? b.voiceClone : 0);
+  const tts =
+    scriptText?.trim().length > 0
+      ? computeVoiceGenerationCreditCost(scriptText)
+      : b.voicePerMinute;
+  return tts + (includesNewClone ? b.voiceClone : 0);
 }
