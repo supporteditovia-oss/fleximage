@@ -18,14 +18,14 @@ export const V2V_INTENT_OPTIONS: V2VIntentOption[] = [
   {
     id: "motion",
     label: "Mouvement",
-    hint: "Danse · meme · autre personnage",
+    hint: "Danse · meme",
     detail: "Garde les gestes et la caméra. Rendu 720p ou 1080p.",
     icon: PersonStanding,
   },
   {
     id: "scene",
     label: "Scène & luxe",
-    hint: "Dubai · yacht · voiture · décor",
+    hint: "Dubai · yacht · auto",
     detail: "Transforme le décor ou l'habitacle. 4K disponible.",
     icon: Car,
   },

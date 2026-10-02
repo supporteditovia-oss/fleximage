@@ -387,11 +387,48 @@ html.luxeflexia-video-page .floating-header::before {
 
 .via-intent-card--compact .via-intent-card__hint {
   font-size: 0.62rem;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
   max-width: 100%;
+}
+
+.via-prompt-compose {
+  margin-top: 0.85rem;
+}
+
+.via-prompt-field--compose {
+  margin-top: 0;
+  min-height: 5.25rem;
+  line-height: 1.55;
+  padding-bottom: 0.85rem;
+}
+
+.via-prompt-compose__bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+}
+
+.via-prompt-shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #8a7340;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.via-prompt-shuffle:hover:not(:disabled) {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.via-prompt-shuffle:disabled {
+  opacity: 0.45;
 }
 
 .via-intent-card {
