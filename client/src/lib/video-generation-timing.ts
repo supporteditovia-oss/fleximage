@@ -7,7 +7,7 @@ const VIDEO_TIMING = {
     hdExtraSec: 30,
     voiceExtraSec: 20,
   },
-  runwayAleph: { baseSec: 120, perSourceSec: 6 },
+  runwayAleph: { baseSec: 240, perSourceSec: 8, prepSec: 15 },
   klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
   sourceAudioMuxSec: 25,
   defaultSourceDurationSec: 8,

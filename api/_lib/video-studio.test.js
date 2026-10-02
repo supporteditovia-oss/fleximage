@@ -9,6 +9,9 @@ const {
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
   resolveV2VProviderForStudio,
+  resolveV2VProviderFromIntent,
+  isAlephTransformEnabled,
+  buildOmniTransformPrompt,
   buildV2VCockpitIntelligenceLock,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,
@@ -272,6 +275,48 @@ describe("video-studio", () => {
       resolveV2VProviderForStudio("Transporte-moi à Dubai Marina la nuit"),
       "runway_aleph",
     );
+  });
+
+  it("resolveV2VProviderFromIntent respects the tab chosen by the client", () => {
+    assert.equal(
+      resolveV2VProviderFromIntent("scene", "Make it look premium and cinematic"),
+      "runway_aleph",
+    );
+    assert.equal(
+      resolveV2VProviderFromIntent("motion", "Remplace ma BMW par une Urus"),
+      "kling_motion",
+    );
+    assert.equal(
+      resolveV2VProviderFromIntent(null, "Remplace ma BMW par une Urus"),
+      "runway_aleph",
+    );
+  });
+
+  it("isAlephTransformEnabled is off unless V2V_ALEPH_ENABLED=1", () => {
+    const prev = process.env.V2V_ALEPH_ENABLED;
+    delete process.env.V2V_ALEPH_ENABLED;
+    assert.equal(isAlephTransformEnabled(), false);
+    process.env.V2V_ALEPH_ENABLED = "1";
+    assert.equal(isAlephTransformEnabled(), true);
+    if (prev === undefined) delete process.env.V2V_ALEPH_ENABLED;
+    else process.env.V2V_ALEPH_ENABLED = prev;
+  });
+
+  it("buildOmniTransformPrompt forces a full brand swap for car prompts", () => {
+    const prompt = buildOmniTransformPrompt(
+      "Remplace la BMW par une Lamborghini Urus",
+    );
+    assert.match(prompt, /^Transform @Video1:/);
+    assert.match(prompt, /Lamborghini Urus/);
+    assert.match(prompt, /steering wheel and its center logo/i);
+    assert.match(prompt, /No original-brand logo/i);
+    assert.ok(prompt.length <= 2500);
+  });
+
+  it("buildOmniTransformPrompt keeps non-car scenes generic", () => {
+    const prompt = buildOmniTransformPrompt("Transporte-moi à Dubai la nuit");
+    assert.match(prompt, /Dubai/);
+    assert.doesNotMatch(prompt, /steering wheel/i);
   });
 
   it("buildV2VCockpitIntelligenceLock includes dynamic key swap", () => {

@@ -44,14 +44,14 @@ test("V2V Kling Motion 8 s + son d'origine", () => {
   );
 });
 
-test("V2V Runway Aleph (legacy) dépend de la durée source", () => {
+test("V2V Transform (Omni) 5 s source ≈ 5 min 20", () => {
   assert.equal(
     estimateVideoGenerationSeconds({
       workflow: "video_to_video",
       v2vProvider: "runway_aleph",
       sourceVideoDurationSec: 5,
     }),
-    175,
+    320,
   );
 });
 

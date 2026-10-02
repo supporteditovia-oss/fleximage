@@ -129,8 +129,59 @@ function resolveV2VProviderForStudio(userPrompt) {
   return "kling_motion";
 }
 
+/**
+ * Onglet choisi par le client (Mouvement / Scène & luxe) — prioritaire sur la détection du prompt,
+ * sinon un prompt Scène traduit ou vague part sur le moteur Mouvement et échoue (« no valid characters »).
+ */
+function resolveV2VProviderFromIntent(intent, userPrompt) {
+  if (intent === "motion") return "kling_motion";
+  if (intent === "scene") return "runway_aleph";
+  return resolveV2VProviderForStudio(userPrompt);
+}
+
 function v2vEngineFamilyForProvider(provider) {
   return provider === "kling_motion" ? "motion" : "transform";
+}
+
+/**
+ * Aleph (Kie runway/gen4-aleph) renvoie « internal error » pour toute vidéo depuis oct. 2026 —
+ * la famille Transform passe par Kling 3.0 Omni sauf réactivation explicite.
+ */
+function isAlephTransformEnabled() {
+  return String(process.env.V2V_ALEPH_ENABLED || "").trim() === "1";
+}
+
+const OMNI_PROMPT_MAX_CHARS = 2500;
+
+function buildOmniTransformPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
+  let prompt = String(userPrompt || "").trim();
+  if (!preserveSourceAudio) {
+    prompt = stripVoiceInstructionsFromPrompt(prompt);
+  }
+  const base =
+    prompt.length >= 5
+      ? prompt
+      : "Transform the scene with premium cinematic realism";
+  const parts = [`Transform @Video1: ${base.replace(/[.\s]+$/, "")}.`];
+
+  if (isVehicleDrivingPrompt(prompt)) {
+    const vehicle = extractRequestedVehicleModel(prompt);
+    const target = vehicle?.model || "the exact vehicle named above";
+    parts.push(
+      `Replace EVERY visible part of the original car with the authentic ${target}: steering wheel and its center logo, instrument cluster, center screens, dashboard, air vents, console and trim.`,
+    );
+    if (vehicle?.interior) parts.push(`Target cabin: ${vehicle.interior}`);
+    parts.push(
+      `No original-brand logo may remain anywhere — only ${target} badges.`,
+      "Keep exactly the same camera path, road, sky, windshield view, hand positions and timing as @Video1.",
+    );
+  } else {
+    parts.push(
+      "Keep the same camera motion, framing, people, gestures and timing as @Video1.",
+    );
+  }
+  parts.push("Photorealistic smartphone footage, natural light, no CGI look.");
+  return parts.join(" ").slice(0, OMNI_PROMPT_MAX_CHARS);
 }
 
 /** Prompt court pour Aleph (jobs API) — évite les locks énormes qui provoquent des 500. */
@@ -561,6 +612,9 @@ module.exports = {
   isV2VMotionBodyPrompt,
   v2vEngineFamilyForProvider,
   resolveV2VProviderForStudio,
+  resolveV2VProviderFromIntent,
+  isAlephTransformEnabled,
+  buildOmniTransformPrompt,
   buildAlephSubmitPrompt,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,

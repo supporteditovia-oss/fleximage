@@ -7,9 +7,15 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   const v2vExhausted = Boolean(options.v2vExhausted);
 
   if (v2vExhausted && afterAlephFallback) {
+    const { isVehicleDrivingPrompt } = require("./video-studio");
+    if (isVehicleDrivingPrompt(options.prompt)) {
+      return locale === "fr"
+        ? "Le studio n’a pas pu transformer ce clip après plusieurs tentatives. Réessaie avec un clip de 4 à 8 s filmé d’une traite (pas un export WhatsApp/Instagram), volant et tableau de bord bien visibles. Jetons remboursés."
+        : "The studio could not transform this clip after several attempts. Try a 4–8 s clip shot in one take (not a WhatsApp/Instagram export) with the wheel and dashboard clearly visible. Credits refunded.";
+    }
     return locale === "fr"
-      ? "Le studio n’a pas pu transformer ce clip après plusieurs tentatives (POV habitacle). Réessaie avec un clip iPhone (MOV ou MP4), 720p, ~5 s, mains + volant bien visibles. Jetons remboursés."
-      : "The studio could not transform this clip after several attempts. Try an iPhone clip (MOV or MP4), 720p, ~5 s, hands and wheel visible. Credits refunded.";
+      ? "Le studio n’a pas pu transformer ce clip après plusieurs tentatives. Réessaie avec un clip de 4 à 8 s filmé d’une traite, sujet bien visible. Jetons remboursés."
+      : "The studio could not transform this clip after several attempts. Try a 4–8 s clip shot in one take with the subject clearly visible. Credits refunded.";
   }
 
   if (/no valid characters detected/i.test(text)) {

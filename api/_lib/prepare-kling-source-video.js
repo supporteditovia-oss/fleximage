@@ -117,6 +117,77 @@ async function resolveKlingMotionSourceVideoUrl(videoUrl, userId) {
   }
 }
 
+const OMNI_READY_SUFFIX = "-omni-ready.mp4";
+
+/** Côté court ramené entre 720 et 1080 px (Omni refuse les sources trop petites, 4K inutile en entrée). */
+const OMNI_SCALE_FILTER =
+  "scale=w='if(lte(iw,ih),min(max(iw,720),1080),-2)':h='if(lte(iw,ih),-2,min(max(ih,720),1080))',setsar=1";
+
+/**
+ * Kling 3.0 Omni : MOV/HEVC/HDR iPhone et clips recompressés → MP4 H.264 8 bits propre.
+ */
+async function resolveOmniSourceVideoUrl(videoUrl, userId) {
+  const url = String(videoUrl || "").trim();
+  if (!url.startsWith("http")) {
+    throw Object.assign(new Error("URL vidéo invalide"), {
+      status: 422,
+      code: "VIDEO_URL_INVALID",
+    });
+  }
+  if (url.includes(OMNI_READY_SUFFIX)) return url;
+  if (!ffmpegPath) return url;
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omni-src-"));
+  const inputPath = path.join(tmpDir, "source.bin");
+  const outputPath = path.join(tmpDir, "omni-ready.mp4");
+  try {
+    await fetchUrlToFile(url, inputPath);
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-y",
+        "-i",
+        inputPath,
+        "-t",
+        String(VIDEO_V2V_MAX_DURATION_SEC),
+        "-vf",
+        OMNI_SCALE_FILTER,
+        "-r",
+        "30",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-ar",
+        "44100",
+        outputPath,
+      ],
+      { timeout: 180_000 },
+    );
+    const outBuffer = await fs.readFile(outputPath);
+    if (!outBuffer.length) {
+      throw Object.assign(new Error("Transcodage vidéo vide"), {
+        status: 422,
+        code: "VIDEO_TRANSCODE_FAILED",
+      });
+    }
+    const key = `inputs/${userId}/${Date.now()}${OMNI_READY_SUFFIX}`;
+    return uploadToR2(key, outBuffer, "video/mp4");
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 async function normalizeMotionReferenceImageUrl(imageUrl, userId) {
   const url = String(imageUrl || "").trim();
   if (!url.startsWith("http")) return imageUrl;
@@ -164,6 +235,9 @@ async function normalizeMotionReferenceImageUrl(imageUrl, userId) {
 
 module.exports = {
   resolveKlingMotionSourceVideoUrl,
+  resolveOmniSourceVideoUrl,
   normalizeMotionReferenceImageUrl,
   KLING_READY_SUFFIX,
+  OMNI_READY_SUFFIX,
+  OMNI_SCALE_FILTER,
 };

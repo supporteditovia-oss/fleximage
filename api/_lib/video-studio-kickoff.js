@@ -6,14 +6,15 @@ const {
   readVideoApiCallCount,
 } = require("./generate-video-once");
 const {
-  normalizeVideoUltraDuration,
   normalizeVideoUltraResolution,
 } = require("../../shared/video-ultra-pricing.cjs");
 const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
+  buildOmniTransformPrompt,
   buildV2VProviderPrompt,
+  isAlephTransformEnabled,
   isVehicleDrivingPrompt,
   v2vEngineFamilyForProvider,
 } = require("./video-studio");
@@ -26,7 +27,10 @@ const {
   getSourceVideoUrlFromLarp,
 } = require("./mux-source-audio");
 const { extractReferenceFrameFromVideoUrl } = require("./extract-video-frame");
-const { resolveKlingMotionSourceVideoUrl } = require("./prepare-kling-source-video");
+const {
+  resolveKlingMotionSourceVideoUrl,
+  resolveOmniSourceVideoUrl,
+} = require("./prepare-kling-source-video");
 const { mapVideoProviderMessage } = require("./video-user-errors");
 const { refundGenerationCreditsIfCharged } = require("./generation");
 
@@ -138,17 +142,13 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       const v2vResolution = normalizeVideoUltraResolution(
         meta.v2v_resolution || "720p",
       );
-      const omniDurationSec = normalizeVideoUltraDuration(
-        meta.source_video_duration_sec ?? 5,
-      );
 
       const runOmniStudio = async (videoUrl) =>
         generateOmniRef2VOnce(supabase, {
           generationId: larp.id,
-          prompt: userPrompt || providerPrompt,
+          prompt: buildOmniTransformPrompt(userPrompt, { preserveSourceAudio }),
           videoUrl,
-          durationSec: omniDurationSec,
-          resolution: v2vResolution === "4k" ? "4k" : "1080p",
+          resolution: v2vResolution,
         });
 
       const motionMode =
@@ -182,12 +182,15 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       try {
         const useOmniTransform =
           finalV2vProvider === "runway_aleph" &&
-          (v2vResolution === "4k" || v2vResolution === "1080p");
+          (!isAlephTransformEnabled() ||
+            v2vResolution === "4k" ||
+            v2vResolution === "1080p");
         if (useOmniTransform) {
-          const videoUrl = await ensureKieAccessibleMediaUrl(
+          const preparedUrl = await resolveOmniSourceVideoUrl(
             sourceAssetUrl,
-            "video",
+            userId,
           );
+          const videoUrl = await ensureKieAccessibleMediaUrl(preparedUrl, "video");
           await runOmniStudio(videoUrl);
         } else if (finalV2vProvider === "runway_aleph") {
           await runAleph(sourceAssetUrl, referenceImageUrl);
@@ -213,6 +216,7 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       } catch (firstErr) {
         await resetVideoProviderClaim(supabase, larp.id, meta);
         const sameFamilyRetry =
+          isAlephTransformEnabled() &&
           engineFamily === "transform" &&
           finalV2vProvider === "runway_aleph" &&
           isRetryableAlephError(firstErr);

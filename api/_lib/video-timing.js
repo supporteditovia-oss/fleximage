@@ -11,7 +11,8 @@ const VIDEO_TIMING = {
     hdExtraSec: 30,
     voiceExtraSec: 20,
   },
-  runwayAleph: { baseSec: 120, perSourceSec: 6 },
+  /** Famille Transform = Kling 3.0 Omni Ref2V (mesuré : 227–327 s pour 3–5 s source) + transcodage. */
+  runwayAleph: { baseSec: 240, perSourceSec: 8, prepSec: 15 },
   /** Kling 3.0 Motion Control 720p — plus long qu'Aleph, surtout 3–8 s source. */
   klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
   sourceAudioMuxSec: 25,

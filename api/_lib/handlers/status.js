@@ -48,6 +48,8 @@ const STUCK_IMAGE_SUCCEEDED_EMPTY_MS = 45 * 1000;
  * row…). Kept intentionally well under any provider's real completion time.
  */
 const VIDEO_PENDING_KICKOFF_TIMEOUT_MS = 3 * 60 * 1000; // still "pending_*"
+/** Omni Ref2V ≈ 4–5 min par job (+ une relance possible) : 3,5 min tuait des rendus encore en cours. */
+const VIDEO_PROVIDER_POLL_HARD_TIMEOUT_MS = 12 * 60 * 1000;
 const VIDEO_TIMEOUT_USER_MESSAGE =
   "La génération a pris trop de temps. Tes crédits ont été remboursés — réessaie.";
 
@@ -228,6 +230,10 @@ module.exports = async function handler(req, res) {
 
     const resultType = larp.generation_type === "video" ? "video" : "image";
     const ageInMs = Date.now() - new Date(larp.created_at).getTime();
+    const pollHardTimeoutMs =
+      resultType === "video"
+        ? VIDEO_PROVIDER_POLL_HARD_TIMEOUT_MS
+        : PROVIDER_POLL_HARD_TIMEOUT_MS;
     const pollMetaEarly =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     const deliveryUrl =
@@ -533,12 +539,60 @@ module.exports = async function handler(req, res) {
             apiResultJson = JSON.stringify({ video_url: videoUrl });
           }
         } else if (state === "fail") {
+          const rawOmniFail = extractKlingOmniRef2VFailMessage(omniData);
+          const { isRetryableProviderFailText } = require("../v2v-provider-errors");
+          const {
+            canLaunchAnotherOmniJob,
+            relaunchOmniV2VFromLarp,
+          } = require("../v2v-poll-omni-relaunch");
+          console.warn("[status] omni poll fail", {
+            larpId: larp.id,
+            omniTaskId,
+            rawOmniFail: String(rawOmniFail).slice(0, 240),
+            ageInMs,
+          });
+          const canRetryOmni =
+            pollMeta.workflow === "video_to_video" &&
+            isRetryableProviderFailText(rawOmniFail || "internal error") &&
+            canLaunchAnotherOmniJob(larp.provider_task_id) &&
+            ageInMs < pollHardTimeoutMs - 5 * 60 * 1000;
+          if (canRetryOmni) {
+            try {
+              const mergedMeta = await relaunchOmniV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                userId,
+                "omni_internal",
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (relaunchErr) {
+              console.error("[status] omni poll relaunch failed", relaunchErr);
+            }
+          }
           apiStatus = "fail";
           apiFailMsg = formatVideoFailForClient(
-            extractKlingOmniRef2VFailMessage(omniData),
-            "Échec Transformation Pro",
+            rawOmniFail,
+            "Échec de la transformation vidéo",
+            pollMeta.workflow === "video_to_video"
+              ? { v2vExhausted: true, afterAlephFallback: true, prompt: larp.prompt }
+              : {},
           );
-        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";
           apiFailMsg = pollMeta.defer_credit_charge
             ? "La génération a pris trop de temps. Réessaie."
@@ -546,7 +600,7 @@ module.exports = async function handler(req, res) {
         }
       } catch (err) {
         console.error("Failed to poll Omni Ref2V", err);
-        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        if (ageInMs < pollHardTimeoutMs) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
             larpId: larp.id,
@@ -596,19 +650,60 @@ module.exports = async function handler(req, res) {
             pollMeta.v2v_aleph_poll_kling_fallback === true;
           const klingInternal = isRetryableProviderFailText(rawKlingFail);
           const { canLaunchAnotherAlephJob } = require("../v2v-aleph-attempts");
+          const { isAlephTransformEnabled } = require("../video-studio");
+          const {
+            canLaunchAnotherOmniJob,
+            relaunchOmniV2VFromLarp,
+          } = require("../v2v-poll-omni-relaunch");
+          const shouldOmniFallback =
+            resultType === "video" &&
+            !isAlephTransformEnabled() &&
+            pollMeta.v2v_omni_poll_fallback !== true &&
+            canLaunchAnotherOmniJob(larp.provider_task_id) &&
+            (charRejection || klingInternal);
           const shouldAlephFallback =
             resultType === "video" &&
+            isAlephTransformEnabled() &&
             !afterAlephKlingRound &&
             !alephFallbackDone &&
             canLaunchAnotherAlephJob(larp.provider_task_id) &&
             (charRejection || klingInternal);
+
+          if (shouldOmniFallback) {
+            try {
+              const mergedMeta = await relaunchOmniV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                userId,
+                charRejection ? "kling_character" : "kling_internal",
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (omniErr) {
+              console.error("[status] kling→omni poll fallback failed", omniErr);
+            }
+          }
 
           if (afterAlephKlingRound) {
             apiStatus = "fail";
             apiFailMsg = formatVideoFailForClient(
               rawKlingFail,
               "Échec de la transformation vidéo",
-              { afterAlephFallback: true, v2vExhausted: true },
+              { afterAlephFallback: true, v2vExhausted: true, prompt: larp.prompt },
             );
           } else if (shouldAlephFallback) {
             try {
@@ -657,13 +752,13 @@ module.exports = async function handler(req, res) {
                 : {},
             );
           }
-        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";
           apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Kling video", err);
-        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        if (ageInMs < pollHardTimeoutMs) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
             larpId: larp.id,
@@ -718,8 +813,47 @@ module.exports = async function handler(req, res) {
                 : null,
             });
           }
+          const {
+            canLaunchAnotherOmniJob,
+            relaunchOmniV2VFromLarp,
+          } = require("../v2v-poll-omni-relaunch");
+          const { isAlephTransformEnabled } = require("../video-studio");
           if (
             resultType === "video" &&
+            pollMeta.v2v_omni_poll_fallback !== true &&
+            canLaunchAnotherOmniJob(larp.provider_task_id) &&
+            (!isAlephTransformEnabled() || alephRetries >= 1)
+          ) {
+            try {
+              const mergedMeta = await relaunchOmniV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                userId,
+                "aleph_fail",
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (omniErr) {
+              console.error("[status] aleph→omni poll fallback failed", omniErr);
+            }
+          }
+          if (
+            resultType === "video" &&
+            isAlephTransformEnabled() &&
             isRetryableProviderFailText(rawAlephFail) &&
             canLaunchAnotherAlephJob(larp.provider_task_id) &&
             ageInMs < 360_000
@@ -753,6 +887,7 @@ module.exports = async function handler(req, res) {
           }
           if (
             resultType === "video" &&
+            isAlephTransformEnabled() &&
             isRetryableProviderFailText(rawAlephFail) &&
             !pollMeta.v2v_aleph_poll_kling_fallback &&
             ageInMs < 360_000
@@ -795,18 +930,18 @@ module.exports = async function handler(req, res) {
             rawAlephFail,
             "Échec transformation vidéo",
             exhausted
-              ? { afterAlephFallback: true, v2vExhausted: true }
+              ? { afterAlephFallback: true, v2vExhausted: true, prompt: larp.prompt }
               : alephRetries >= 1
                 ? { afterAlephFallback: true }
                 : {},
           );
-        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";
           apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Aleph video", err);
-        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        if (ageInMs < pollHardTimeoutMs) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
             larpId: larp.id,
@@ -849,13 +984,13 @@ module.exports = async function handler(req, res) {
             extractAiAvatarProFailMessage(avatarData),
             "Échec de la génération vidéo",
           );
-        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";
           apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Ai Avatar Pro", err);
-        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        if (ageInMs < pollHardTimeoutMs) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
             larpId: larp.id,
@@ -893,13 +1028,13 @@ module.exports = async function handler(req, res) {
             runwayData.failMsg || runwayData.fail_reason,
             "Échec de la génération vidéo",
           );
-        } else if (ageInMs > PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";
           apiFailMsg = VIDEO_TIMEOUT_USER_MESSAGE;
         }
       } catch (err) {
         console.error("Failed to poll Runway video", err);
-        if (ageInMs < PROVIDER_POLL_HARD_TIMEOUT_MS) {
+        if (ageInMs < pollHardTimeoutMs) {
           const stage = mapStudioStage(pollMeta, "generating");
           res.status(200).json({
             larpId: larp.id,
@@ -1091,7 +1226,7 @@ module.exports = async function handler(req, res) {
         console.error("Failed to poll Kie.ai", err);
         if (
           Date.now() - new Date(larp.created_at).getTime() <
-          PROVIDER_POLL_HARD_TIMEOUT_MS
+          pollHardTimeoutMs
         ) {
           res.status(200).json({
             larpId: larp.id,
@@ -1116,7 +1251,7 @@ module.exports = async function handler(req, res) {
       pollMeta.oneshot_soft_retry_count || (pollMeta.oneshot_soft_retry ? 1 : 0),
     );
     const effectiveHardTimeout =
-      PROVIDER_POLL_HARD_TIMEOUT_MS +
+      pollHardTimeoutMs +
       (qaRetryCount + softRetryCount) * PROVIDER_POLL_QA_RETRY_EXTRA_MS;
 
     if (apiStatus === "waiting" && ageInMs > effectiveHardTimeout) {

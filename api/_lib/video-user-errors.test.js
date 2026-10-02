@@ -21,6 +21,26 @@ test("mapVideoProviderMessage — no valid characters", () => {
   assert.match(fr, /POV|studio/i);
 });
 
+test("mapVideoProviderMessage — exhausted car clip gives cockpit tips", () => {
+  const fr = mapVideoProviderMessage("internal error", "fr", {
+    v2vExhausted: true,
+    afterAlephFallback: true,
+    prompt: "Remplace ma BMW par une Urus",
+  });
+  assert.match(fr, /volant et tableau de bord/i);
+  assert.match(fr, /Jetons remboursés/);
+});
+
+test("mapVideoProviderMessage — exhausted non-car clip stays generic", () => {
+  const fr = mapVideoProviderMessage("internal error", "fr", {
+    v2vExhausted: true,
+    afterAlephFallback: true,
+    prompt: "Transporte-moi à Dubai la nuit",
+  });
+  assert.doesNotMatch(fr, /habitacle|volant/i);
+  assert.match(fr, /Jetons remboursés/);
+});
+
 test("resolveKlingCharacterOrientation — ref image → image", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Je veux une Urus à Dubai", true),

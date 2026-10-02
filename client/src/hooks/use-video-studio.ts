@@ -55,6 +55,7 @@ export interface VideoStudioGenerateInput {
   source?: string;
   /** Vidéo → Vidéo : 720p | 1080p | 4k */
   v2v_resolution?: string;
+  v2v_intent?: "motion" | "scene";
 }
 
 export interface VideoStudioGenerateResponse {

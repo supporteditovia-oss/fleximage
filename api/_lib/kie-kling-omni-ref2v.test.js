@@ -29,7 +29,7 @@ describe("kie-kling-omni-ref2v", () => {
     assert.deepEqual(capturedBody.input.video_urls, [
       "https://example.com/v.mp4",
     ]);
-    assert.equal(capturedBody.input.duration, 5);
+    assert.equal("duration" in capturedBody.input, false);
     assert.equal(capturedBody.input.resolution, "1080p");
     assert.equal(capturedBody.input.audio, false);
     assert.match(capturedBody.input.prompt, /@Video1/i);

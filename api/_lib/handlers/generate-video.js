@@ -19,7 +19,7 @@ const {
   computeVideoCreditCost,
   buildV2VProviderPrompt,
   buildAlephSubmitPrompt,
-  resolveV2VProviderForStudio,
+  resolveV2VProviderFromIntent,
   v2vEngineFamilyForProvider,
   isVehicleDrivingPrompt,
   validateVoiceText,
@@ -351,6 +351,10 @@ module.exports = async function handler(req, res) {
       String(body.voice_text || "").trim().length >= 5;
     const preserveSourceAudio =
       workflow === "video_to_video" && Boolean(body.preserve_source_audio);
+    const v2vIntent =
+      body.v2v_intent === "motion" || body.v2v_intent === "scene"
+        ? body.v2v_intent
+        : null;
     const subtitlesEnabled = Boolean(body.subtitles_enabled);
 
     if (workflow === "image_to_video" && !voiceEnabled) {
@@ -411,7 +415,7 @@ module.exports = async function handler(req, res) {
 
     const billingV2vProvider =
       workflow === "video_to_video"
-        ? resolveV2VProviderForStudio(vehicleDescription)
+        ? resolveV2VProviderFromIntent(v2vIntent, vehicleDescription)
         : null;
 
     const creditCost = computeVideoCreditCost({
@@ -537,7 +541,10 @@ module.exports = async function handler(req, res) {
         sourceAssetUrl = sourceBundle.url;
         referenceImageUrl = sourceBundle.ref;
         motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
-        v2vProvider = resolveV2VProviderForStudio(studioVehicleDescription);
+        v2vProvider = resolveV2VProviderFromIntent(
+          v2vIntent,
+          studioVehicleDescription,
+        );
         providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
           preserveSourceAudio,
         });
@@ -641,6 +648,7 @@ module.exports = async function handler(req, res) {
       preserve_source_audio: preserveSourceAudio,
       v2v_resolution: v2vResolution,
       v2v_provider: v2vProvider,
+      v2v_intent: v2vIntent,
       v2v_engine_family: v2vProvider
         ? v2vEngineFamilyForProvider(v2vProvider)
         : null,

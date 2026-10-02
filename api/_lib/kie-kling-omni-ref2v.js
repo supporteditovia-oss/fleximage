@@ -32,17 +32,16 @@ async function createKlingOmniRef2VTask(input) {
     throw Object.assign(new Error("Vidéo source requise."), { status: 422 });
   }
 
-  const duration = Number(input.durationSec);
   const resolution = input.resolution === "1080p" || input.resolution === "4k"
     ? input.resolution
     : "720p";
 
+  /** Kie rejette `duration` (422) dès qu’une vidéo de référence est fournie : la durée suit le clip. */
   const body = {
     model: OMNI_REF2V_MODEL,
     input: {
       prompt: buildOmniReferencePrompt(input.prompt),
       video_urls: [videoUrl],
-      duration: duration >= 3 && duration <= 8 ? duration : 5,
       resolution,
       aspect_ratio: "auto",
       audio: false,

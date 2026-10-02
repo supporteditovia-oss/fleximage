@@ -666,6 +666,7 @@ export default function VideoIA() {
         vehicle_prompt: sanitizedPrompt,
         source_video_duration_sec: videoDurationSec ?? undefined,
         v2v_resolution: v2vResolution,
+        v2v_intent: v2vIntent,
         preserve_source_audio: preserveSourceVoice,
         voice_enabled: false,
         ...(referenceImages?.length
