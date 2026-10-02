@@ -613,10 +613,15 @@ const EXTERIOR_TRAFFIC_REPLACE_GUARD =
 const EXTERIOR_TRAFFIC_CLARIFIER =
   " (TRAFFIC AHEAD LOCK: full-size real vehicle in the road through the windshield — NOT a toy on the dashboard or console. NEVER when user asked to replace the INTERIOR/cockpit.)";
 
+const COCKPIT_CAMERA_FRAMING_LOCK =
+  "COCKPIT CAMERA FRAMING LOCK (mandatory): keep IDENTICAL driver-POV crop, lens distance, horizon height, and steering-wheel rotation angle as the uploaded photo — if the wheel is turned left, it stays turned left; never straighten the wheel, never zoom out, never pull the camera back. " +
+  "Keep ALL exterior traffic/cars through the windshield unchanged unless the user explicitly asked to change them. ";
+
 const COCKPIT_INTERIOR_REPLACE_GUARD =
   "COCKPIT INTERIOR SWAP from driver POV (mandatory). " +
-  "Replace ONLY the cabin/interior of the uploaded driver photo with the EXACT factory cockpit of the named vehicle (brand + model + generation/chassis + trim). " +
-  "Transform: steering wheel, instrument cluster, center screens, console, shifter, seats, door trims, vents, rearview mirror — authentic to THAT generation only. " +
+  `${COCKPIT_CAMERA_FRAMING_LOCK}` +
+  "Replace ONLY the cabin/interior materials and OEM parts of the uploaded driver photo — authentic factory cockpit of the named vehicle (brand + model + generation/chassis + trim). " +
+  "Transform: dashboard, instrument cluster, center screens, console, shifter, seats, door trims, vents, wheel rim design and center badge — but KEEP the steering wheel turned exactly as in the upload (same rotation angle). " +
   "BODY POSE LOCK (absolute): freeze the ENTIRE driver body exactly as the upload — same leg positions (left foot on dashboard/console if present, same knee height and angle), feet, hips, bag/straps on lap, pants, jacket, hands on wheel, head, crop. User asked interior ONLY — NEVER move, straighten, lower, or repose any limb. " +
   "DOOR UI LOCK: if every physical door looks CLOSED, ALL screens (cluster + MMI/virtual cockpit) must show ALL doors closed on the white top-down car graphic — ZERO red open-door highlights, ZERO copied open-door warnings from the source Peugeot/Renault/generic cluster. " +
   "WINDSHIELD TRAFFIC LOCK: freeze ALL exterior vehicles through the windshield — same cars in the same lanes (never delete/remove a gray/white/red car ahead). " +
@@ -632,10 +637,6 @@ const COCKPIT_INTERIOR_REPLACE_CLARIFIER =
 /** Front-load for cockpit-only swaps — survives 2900-char truncation. */
 const COCKPIT_BODY_POSE_FRONT_LOCK =
   "COCKPIT BODY POSE LOCK: freeze legs/feet/knees/bag/hands — interior swap ONLY, zero limb movement. ";
-
-const COCKPIT_CAMERA_FRAMING_LOCK =
-  "COCKPIT CAMERA FRAMING LOCK (mandatory): keep IDENTICAL driver-POV crop, lens distance, horizon height, and steering-wheel rotation angle as the uploaded photo — if the wheel is turned left, it stays turned left; never straighten the wheel, never zoom out, never pull the camera back. " +
-  "Keep ALL exterior traffic/cars through the windshield unchanged (same white Fiat, same pump, same people) unless the user explicitly asked to change them. ";
 
 const COCKPIT_WINDSHIELD_TRAFFIC_FRONT_LOCK =
   "WINDSHIELD TRAFFIC LOCK (absolute): freeze EVERY pixel outside — same road, lanes, sky, trees, buildings, AND every car/truck in traffic (same count, colors, positions, distance). NEVER delete, remove, or erase a vehicle ahead. ";
@@ -1436,8 +1437,6 @@ function isCockpitInteriorReplacePrompt(prompt) {
   if (isYachtPrimaryPrompt(prompt)) return false;
   if (isLifestyleRelocatePrompt(prompt) && isNonCarLifestylePrompt(prompt)) return false;
   const text = normalizePromptText(prompt);
-  const hasTargetVehicle = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
-  if (!hasTargetVehicle) return false;
   const replaceIntent =
     /\b(remplac\w*|replace\w*|swap\w*|change\w*|transforme\w*|transforma\w*|conviert\w*|convert\w*|cambia\w*|cambiar|mets|mettre|put|poner|haz|make)\b/.test(
       text,
@@ -1456,6 +1455,7 @@ function isCockpitInteriorReplacePrompt(prompt) {
     ) && !interiorIntent;
   if (explicitExteriorAhead) return false;
   if (interiorIntent) return true;
+  const hasTargetVehicle = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
   if (
     replaceIntent &&
     /\b(peugeot|clio|renault|megane|208|308|polo|habitacle|habitaculo)\b/.test(text) &&
@@ -1882,25 +1882,21 @@ function isVehicleReplacePrompt(prompt) {
   if (isAddVehiclesToScenePrompt(prompt)) return false;
   if (isPersonSwapPrompt(prompt) || isFacialHairPrompt(prompt)) return false;
   const text = normalizePromptText(prompt);
-  if (/\b(moi|me|je)\b/.test(text) && isInsideNamedCarPrompt(text)) return false;
-  const hasCar = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
-  if (!hasCar) return false;
   const hasReplaceVerb =
     /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne)\b/.test(
       text,
     );
   const mentionsCarNoun =
     /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
-  if (hasReplaceVerb && mentionsCarNoun) return true;
-  if (
-    hasReplaceVerb &&
-    mentionsCarNoun &&
-    /\b(image\s*2|photo\s*2|2e\s+photo|deuxieme\s+photo|second\s+(photo|picture|image))\b/i.test(
+  const mentionsSecondRefImage =
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+image|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|celle\s+de\s+l['']?image\s*2)\b/i.test(
       text,
-    )
-  ) {
-    return true;
-  }
+    );
+  if (hasReplaceVerb && mentionsCarNoun && mentionsSecondRefImage) return true;
+  if (/\b(moi|me|je)\b/.test(text) && isInsideNamedCarPrompt(text)) return false;
+  const hasCar = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
+  if (!hasCar) return false;
+  if (hasReplaceVerb && mentionsCarNoun) return true;
   const spec = parseVehicleSpec(prompt);
   if (spec && hasReplaceVerb) return true;
   if (/\b(moi|me|je)\b/.test(text)) {
@@ -2183,7 +2179,7 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   if (refs < 2) return false;
   const text = normalizePromptText(prompt);
   const mentionsRef =
-    /\b(image\s*2|photo\s*2|2e\s+photo|deuxieme\s+photo|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
       text,
     );
   const mentionsCar =
@@ -2195,8 +2191,8 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
 function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   if (isVehicleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
     return (
-      "Replace ONLY the car in image 1 with the exact vehicle shown in image 2 (color, body, wheels, badges). " +
-      "Keep image 1 background, camera framing, parking pose, plate/decals, and every non-car detail unchanged."
+      "Photoreal edit: transplant the EXACT car from image 2 onto image 1 — same body color, wheels, badges, trim as image 2. " +
+      "Image 1 keeps background, lighting, camera angle, distance, parking pose, plate/decals; only the car body changes."
     ).trim();
   }
   const spec = parseVehicleSpec(userPrompt);
