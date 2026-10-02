@@ -1,5 +1,5 @@
-import { useMemo, type RefObject } from "react";
-import { Film, Loader2, Upload } from "lucide-react";
+import { useMemo, type MouseEvent, type RefObject } from "react";
+import { Film, Loader2, Trash2, Upload } from "lucide-react";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
 import { VideoStudioPromptField } from "@/components/video/VideoStudioPromptField";
 import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
@@ -26,6 +26,9 @@ export type VideoIAStudioViewProps = {
   imageFileRef: RefObject<HTMLInputElement | null>;
   imagePreviewUrl: string | null;
   onImageUpload: (file: File | null) => void;
+  onClearImage: () => void;
+  onClearVideo: () => void;
+  onClearRefImage: () => void;
   motionPrompt: string;
   onMotionPromptChange: (v: string) => void;
   durationSec: VideoI2VDurationSec;
@@ -74,6 +77,23 @@ export type VideoIAStudioViewProps = {
   onGenerateV2V: () => void;
   v2vPending: boolean;
 };
+
+function MediaClearButton(props: {
+  label: string;
+  onClick: (e: MouseEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="via-media-clear"
+      aria-label={props.label}
+      onClick={props.onClick}
+    >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+      Supprimer
+    </button>
+  );
+}
 
 function AspectFormatToggle(props: {
   aspectRatio: VideoAspectRatio;
@@ -146,40 +166,55 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                 void props.onImageUpload(e.target.files?.[0] ?? null)
               }
             />
-            <button
-              type="button"
-              className={`via-upload-zone via-upload-zone--hero ${
-                props.imagePreviewUrl ? "has-file has-image" : ""
-              } ${props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait"}`}
-              onClick={() => props.imageFileRef.current?.click()}
-            >
-              {props.imagePreviewUrl ? (
-                <>
-                  <img
-                    className="via-upload-zone__preview"
-                    src={props.imagePreviewUrl}
-                    alt=""
-                  />
-                  <span className="via-upload-zone__change-bar">
-                    <Upload className="h-4 w-4" aria-hidden />
-                    Changer
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="via-upload-zone__icon">
-                    <Upload className="h-4 w-4" />
-                  </span>
-                  <span className="via-upload-zone__text">Choisir une image</span>
-                  <span className="via-upload-zone__meta">JPG · PNG · 10 Mo</span>
-                </>
-              )}
-            </button>
-
             <AspectFormatToggle
               aspectRatio={props.aspectRatio}
               onAspectRatio={props.onAspectRatio}
             />
+
+            <div
+              className={`via-media-slot ${
+                props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait"
+              }`}
+            >
+              <button
+                type="button"
+                className={`via-upload-zone via-upload-zone--hero ${
+                  props.imagePreviewUrl ? "has-file has-image" : ""
+                } ${props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait"}`}
+                onClick={() => props.imageFileRef.current?.click()}
+              >
+                {props.imagePreviewUrl ? (
+                  <>
+                    <img
+                      className="via-upload-zone__preview"
+                      src={props.imagePreviewUrl}
+                      alt=""
+                    />
+                    <span className="via-upload-zone__change-bar">
+                      <Upload className="h-4 w-4" aria-hidden />
+                      Changer
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="via-upload-zone__icon">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                    <span className="via-upload-zone__text">Choisir une image</span>
+                    <span className="via-upload-zone__meta">JPG · PNG · 10 Mo</span>
+                  </>
+                )}
+              </button>
+              {props.imagePreviewUrl ? (
+                <MediaClearButton
+                  label="Supprimer l'image"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onClearImage();
+                  }}
+                />
+              ) : null}
+            </div>
 
             <div className="via-option-block via-option-block--prominent">
               <p className="via-option-block__label">Durée</p>
@@ -223,26 +258,22 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               </div>
             </div>
 
-            {props.imagePreviewUrl ? (
-              <>
-                <VideoStudioPromptField
-                  value={props.motionPrompt}
-                  onChange={props.onMotionPromptChange}
-                  typewriterIdeas={typewriterIdeas}
-                  onRandom={randomPrompt}
-                  fallbackPlaceholder="Décris le mouvement…"
-                  ariaLabel="Mouvement"
-                />
-                <VideoVoiceAddon
-                  enabled={props.voiceEnabled}
-                  onEnabledChange={props.onVoiceEnabled}
-                  text={props.voiceText}
-                  onTextChange={props.onVoiceText}
-                  maxChars={props.voiceMaxChars}
-                  voiceExtraCredit={props.voiceExtraCredit}
-                />
-              </>
-            ) : null}
+            <VideoStudioPromptField
+              value={props.motionPrompt}
+              onChange={props.onMotionPromptChange}
+              typewriterIdeas={typewriterIdeas}
+              onRandom={randomPrompt}
+              fallbackPlaceholder="Ex. fais-moi marcher, regarde la caméra…"
+              ariaLabel="Mouvement"
+            />
+            <VideoVoiceAddon
+              enabled={props.voiceEnabled}
+              onEnabledChange={props.onVoiceEnabled}
+              text={props.voiceText}
+              onTextChange={props.onVoiceText}
+              maxChars={props.voiceMaxChars}
+              voiceExtraCredit={props.voiceExtraCredit}
+            />
 
             <button
               type="button"
@@ -274,6 +305,11 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               />
             </div>
 
+            <AspectFormatToggle
+              aspectRatio={props.aspectRatio}
+              onAspectRatio={props.onAspectRatio}
+            />
+
             <input
               ref={props.videoFileRef}
               type="file"
@@ -281,58 +317,63 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               className="hidden"
               onChange={(e) => void props.onVideoUpload(e.target.files?.[0] ?? null)}
             />
-            {!props.videoPreview ? (
-              <button
-                type="button"
-                className="via-upload-zone"
-                disabled={props.videoImportBusy}
-                onClick={() => props.videoFileRef.current?.click()}
-              >
-                <span className="via-upload-zone__icon">
-                  {props.videoImportBusy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                </span>
-                <span className="via-upload-zone__text">
-                  {props.videoImportBusy ? "Lecture…" : "Choisir une vidéo"}
-                </span>
-                <span className="via-upload-zone__meta">
-                  {props.v2vMinSec}–{props.v2vMaxSec} s · {props.v2vMaxMb} Mo
-                </span>
-              </button>
-            ) : (
-              <>
-                <AspectFormatToggle
-                  aspectRatio={props.aspectRatio}
-                  onAspectRatio={props.onAspectRatio}
-                />
+            <div className={`via-media-slot ${aspectPreviewClass}`}>
+              {!props.videoPreview ? (
                 <button
                   type="button"
-                  className={`via-preview-frame via-preview-frame--interactive ${aspectPreviewClass}`}
+                  className={`via-upload-zone via-upload-zone--hero via-upload-zone--format ${aspectPreviewClass}`}
+                  disabled={props.videoImportBusy}
                   onClick={() => props.videoFileRef.current?.click()}
                 >
-                  <video
-                    ref={props.videoPreviewRef}
-                    src={props.videoPreview}
-                    poster={props.refImagePreview ?? undefined}
-                    controls
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="auto"
-                    className="via-preview-frame__video"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span className="via-preview-frame__change-bar">
-                    <Upload className="h-3.5 w-3.5" aria-hidden />
-                    Changer
+                  <span className="via-upload-zone__icon">
+                    {props.videoImportBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                  </span>
+                  <span className="via-upload-zone__text">
+                    {props.videoImportBusy ? "Lecture…" : "Choisir une vidéo"}
+                  </span>
+                  <span className="via-upload-zone__meta">
+                    {props.v2vMinSec}–{props.v2vMaxSec} s · {props.v2vMaxMb} Mo
                   </span>
                 </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`via-preview-frame via-preview-frame--interactive ${aspectPreviewClass}`}
+                    onClick={() => props.videoFileRef.current?.click()}
+                  >
+                    <video
+                      ref={props.videoPreviewRef}
+                      src={props.videoPreview}
+                      poster={props.refImagePreview ?? undefined}
+                      controls
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      className="via-preview-frame__video"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="via-preview-frame__change-bar">
+                      <Upload className="h-3.5 w-3.5" aria-hidden />
+                      Changer
+                    </span>
+                  </button>
+                  <MediaClearButton
+                    label="Supprimer la vidéo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onClearVideo();
+                    }}
+                  />
+                </>
+              )}
+            </div>
 
             <div className="via-option-block via-option-block--prominent">
               <p className="via-option-block__label">Qualité</p>
@@ -356,6 +397,15 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               </div>
             </div>
 
+            <VideoStudioPromptField
+              value={props.swapPrompt}
+              onChange={props.onSwapPrompt}
+              typewriterIdeas={typewriterIdeas}
+              onRandom={randomPrompt}
+              fallbackPlaceholder="Ex. danse TikTok, Dubai de nuit, Urus Mansory…"
+              ariaLabel="Transformation"
+            />
+
             {props.videoPreview ? (
               <>
                 <input
@@ -367,34 +417,37 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                     void props.onRefImageUpload(e.target.files?.[0] ?? null)
                   }
                 />
-                <button
-                  type="button"
-                  className={`via-upload-zone ${props.refImageIsCustom ? "has-file" : ""}`}
-                  style={{ minHeight: "3.75rem" }}
-                  onClick={() => props.refImageFileRef.current?.click()}
-                >
-                  <span className="via-upload-zone__text">
-                    {props.refImageIsCustom
-                      ? "Changer ta photo"
-                      : props.v2vIntent === "motion"
-                        ? "+ Ta photo (pour remplacer le danseur)"
-                        : "+ Photo bonus (optionnel)"}
-                  </span>
-                </button>
-                {props.refImageIsCustom && props.refImagePreview ? (
-                  <div className="via-preview-frame" style={{ maxWidth: "8rem" }}>
-                    <img src={props.refImagePreview} alt="" />
-                  </div>
-                ) : null}
-
-                <VideoStudioPromptField
-                  value={props.swapPrompt}
-                  onChange={props.onSwapPrompt}
-                  typewriterIdeas={typewriterIdeas}
-                  onRandom={randomPrompt}
-                  fallbackPlaceholder="Décris la transformation…"
-                  ariaLabel="Transformation"
-                />
+                <div className="via-ref-photo-row">
+                  <button
+                    type="button"
+                    className={`via-upload-zone via-upload-zone--compact ${
+                      props.refImageIsCustom ? "has-file" : ""
+                    }`}
+                    onClick={() => props.refImageFileRef.current?.click()}
+                  >
+                    <span className="via-upload-zone__text">
+                      {props.refImageIsCustom
+                        ? "Changer ta photo"
+                        : props.v2vIntent === "motion"
+                          ? "+ Ta photo (remplacer le danseur)"
+                          : "+ Photo bonus (optionnel)"}
+                    </span>
+                  </button>
+                  {props.refImageIsCustom && props.refImagePreview ? (
+                    <>
+                      <div className="via-preview-frame via-preview-frame--thumb">
+                        <img src={props.refImagePreview} alt="" />
+                      </div>
+                      <MediaClearButton
+                        label="Supprimer la photo bonus"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          props.onClearRefImage();
+                        }}
+                      />
+                    </>
+                  ) : null}
+                </div>
 
                 <VideoSourceVoiceAddon
                   enabled={props.preserveSourceVoice}
@@ -402,13 +455,6 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                   voiceExtraCredit={props.voiceExtraCredit}
                 />
               </>
-            ) : null}
-
-            {!props.videoPreview ? (
-              <AspectFormatToggle
-                aspectRatio={props.aspectRatio}
-                onAspectRatio={props.onAspectRatio}
-              />
             ) : null}
 
             <button

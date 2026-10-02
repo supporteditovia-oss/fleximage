@@ -322,6 +322,48 @@ export default function VideoIA() {
     canAfford &&
     !videoImportBusy;
 
+  const handleClearImage = useCallback(() => {
+    setUploadPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setUploadBase64(null);
+    setPrefillImageUrl(null);
+    setPrefillLarpId(null);
+    if (imageFileRef.current) imageFileRef.current.value = "";
+  }, []);
+
+  const handleClearVideo = useCallback(() => {
+    videoUploadGenRef.current += 1;
+    setVideoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setLocalVideoFile(null);
+    setVideoSource(null);
+    setVideoDurationSec(null);
+    setIsVideoReading(false);
+    setIsVideoCloudSync(false);
+    setRefImageBase64(null);
+    setRefImageIsCustom(false);
+    setRefImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (videoFileRef.current) videoFileRef.current.value = "";
+    if (refImageFileRef.current) refImageFileRef.current.value = "";
+  }, []);
+
+  const handleClearRefImage = useCallback(() => {
+    setRefImageBase64(null);
+    setRefImageIsCustom(false);
+    setRefImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (refImageFileRef.current) refImageFileRef.current.value = "";
+  }, []);
+
   const handleImageUpload = async (file: File | null) => {
     if (!file) return;
     if (!isImageMediaFile(file)) {
@@ -744,6 +786,9 @@ export default function VideoIA() {
       imageFileRef={imageFileRef}
       imagePreviewUrl={imagePreviewUrl}
       onImageUpload={handleImageUpload}
+      onClearImage={handleClearImage}
+      onClearVideo={handleClearVideo}
+      onClearRefImage={handleClearRefImage}
       motionPrompt={motionPrompt}
       onMotionPromptChange={setMotionPrompt}
       durationSec={durationSec}
