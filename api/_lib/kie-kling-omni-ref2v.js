@@ -1,5 +1,6 @@
 const KIE_JOBS_BASE_URL = "https://api.kie.ai/api/v1/jobs";
-const OMNI_REF2V_MODEL = "kling-3.0-omni/reference-to-video";
+/** Vidéo → vidéo (Scène & luxe) : route Kie « transformation », pas reference-to-video (duration 422). */
+const OMNI_REF2V_MODEL = "kling-3.0-omni/transformation";
 
 function getApiKey() {
   const key = process.env.KIE_AI_API_KEY;
@@ -17,6 +18,16 @@ function parseJsonResponse(text, status, context) {
   }
 }
 
+function normalizeOmniTransformPrompt(userPrompt) {
+  const p = String(userPrompt || "").trim();
+  if (!p) {
+    return "Premium cinematic video transformation. Preserve camera motion and timing.";
+  }
+  if (p.length <= 3072) return p;
+  return p.slice(0, 3072);
+}
+
+/** @deprecated reference-to-video — conservé pour tests / legacy */
 function buildOmniReferencePrompt(userPrompt) {
   const p = String(userPrompt || "").trim();
   if (!p) {
@@ -40,7 +51,7 @@ async function createKlingOmniRef2VTask(input) {
   const body = {
     model: OMNI_REF2V_MODEL,
     input: {
-      prompt: buildOmniReferencePrompt(input.prompt),
+      prompt: normalizeOmniTransformPrompt(input.prompt),
       video_urls: [videoUrl],
       resolution,
       aspect_ratio: "auto",
@@ -129,5 +140,6 @@ module.exports = {
   extractKlingOmniRef2VVideoUrl,
   extractKlingOmniRef2VFailMessage,
   buildOmniReferencePrompt,
+  normalizeOmniTransformPrompt,
   isKlingOmniRef2VConfigured,
 };
