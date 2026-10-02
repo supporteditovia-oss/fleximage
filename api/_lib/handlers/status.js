@@ -1321,6 +1321,42 @@ module.exports = async function handler(req, res) {
                 }
               }
             }
+
+            const {
+              shouldRunV2VTransformVisualQa,
+              assessV2VTransformVisualChange,
+            } = require("../v2v-transform-visual-qa");
+            if (
+              shouldRunV2VTransformVisualQa(pollMeta, larp.prompt) &&
+              resultUrls[0]
+            ) {
+              const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
+              const durationSec = Number(pollMeta.source_video_duration_sec);
+              const seekSec =
+                Number.isFinite(durationSec) && durationSec > 0.8
+                  ? Math.min(durationSec * 0.45, durationSec - 0.2)
+                  : 0.45;
+              const visualQa = await withTimeout(
+                assessV2VTransformVisualChange({
+                  sourceVideoUrl,
+                  outputVideoUrl: resultUrls[0],
+                  seekSec,
+                }),
+                120_000,
+                { pass: true, skipped: true, reason: "timeout" },
+              );
+              metadataPatch.v2v_transform_visual_qa = visualQa;
+              if (visualQa && visualQa.pass === false && !visualQa.skipped) {
+                console.warn("[status] v2v transform visual QA rejected", {
+                  larpId: larp.id,
+                  metrics: visualQa.metrics,
+                });
+                apiStatus = "fail";
+                apiFailMsg =
+                  "La vidéo est quasi identique à l'originale (transformation trop faible sur l'habitacle). Jetons remboursés — réessaie avec un autre clip ou contacte le support.";
+                resultUrls = [];
+              }
+            }
           } else {
             resultUrls = extractImageUrls(parsed);
           }

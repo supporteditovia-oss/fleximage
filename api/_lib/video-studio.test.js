@@ -310,8 +310,9 @@ describe("video-studio", () => {
     );
     assert.match(prompt, /^Transform @Video1:/);
     assert.match(prompt, /Lamborghini Urus/);
-    assert.match(prompt, /steering wheel and its center logo/i);
-    assert.match(prompt, /No original-brand logo/i);
+    assert.match(prompt, /MUST CHANGE \(full cabin re-brand/i);
+    assert.match(prompt, /MUST KEEP UNCHANGED \(motion lock only\)/i);
+    assert.match(prompt, /Remove all original-make badges/i);
     assert.ok(prompt.length <= 2500);
   });
 

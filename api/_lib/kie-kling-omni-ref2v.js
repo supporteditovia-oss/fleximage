@@ -47,17 +47,12 @@ async function createKlingOmniRef2VTask(input) {
     ? input.resolution
     : "720p";
 
-  /** Kie rejette `duration` (422) dès qu’une vidéo de référence est fournie : la durée suit le clip. */
-  const body = {
-    model: OMNI_REF2V_MODEL,
-    input: {
-      prompt: normalizeOmniTransformPrompt(input.prompt),
-      video_urls: [videoUrl],
-      resolution,
-      aspect_ratio: "auto",
-      audio: false,
-    },
-  };
+  /** Kie OpenAPI transformation : prompt, video_urls, resolution, aspect_ratio, audio, optional elements[] — pas de strength/guidance. */
+  const body = buildOmniTransformCreateTaskBody({
+    prompt: input.prompt,
+    videoUrl,
+    resolution,
+  });
 
   const response = await fetch(`${KIE_JOBS_BASE_URL}/createTask`, {
     method: "POST",
@@ -132,8 +127,24 @@ function isKlingOmniRef2VConfigured() {
   return Boolean(process.env.KIE_AI_API_KEY && process.env.KIE_AI_API_KEY.trim());
 }
 
+function buildOmniTransformCreateTaskBody({ prompt, videoUrl, resolution = "720p" }) {
+  const res =
+    resolution === "1080p" || resolution === "4k" ? resolution : "720p";
+  return {
+    model: OMNI_REF2V_MODEL,
+    input: {
+      prompt: normalizeOmniTransformPrompt(prompt),
+      video_urls: [String(videoUrl || "").trim()],
+      resolution: res,
+      aspect_ratio: "auto",
+      audio: false,
+    },
+  };
+}
+
 module.exports = {
   OMNI_REF2V_MODEL,
+  buildOmniTransformCreateTaskBody,
   createKlingOmniRef2VTask,
   getKlingOmniRef2VStatus,
   mapKlingOmniRef2VState,

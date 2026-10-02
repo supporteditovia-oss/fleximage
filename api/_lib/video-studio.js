@@ -185,12 +185,12 @@ function buildOmniTransformPrompt(userPrompt, { preserveSourceAudio = false } = 
     const vehicle = extractRequestedVehicleModel(prompt);
     const target = vehicle?.model || "the exact vehicle named above";
     parts.push(
-      `Replace EVERY visible part of the original car with the authentic ${target}: steering wheel and its center logo, instrument cluster, center screens, dashboard, air vents, console and trim.`,
+      `MUST CHANGE (full cabin re-brand — not a cosmetic UI tweak): replace EVERY visible interior surface and OEM detail with authentic ${target} — steering wheel shape and center cap logo, instrument cluster hardware and graphics, center stack screens, dashboard, vents, console, trim, keys or remotes in frame.`,
     );
-    if (vehicle?.interior) parts.push(`Target cabin: ${vehicle.interior}`);
+    if (vehicle?.interior) parts.push(`Target cabin reference: ${vehicle.interior}`);
     parts.push(
-      `No original-brand logo may remain anywhere — only ${target} badges.`,
-      "Keep exactly the same camera path, road, sky, windshield view, hand positions and timing as @Video1.",
+      `Remove all original-make badges and logos (e.g. BMW roundel) — only ${target} branding may appear.`,
+      "MUST KEEP UNCHANGED (motion lock only): camera trajectory, clip duration, timing, hand motion on the wheel, road and sky through the windshield — do NOT treat motion lock as permission to leave the old cabin or old logos.",
     );
   } else {
     parts.push(
