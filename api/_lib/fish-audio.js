@@ -1,4 +1,5 @@
 const { encode } = require("@msgpack/msgpack");
+const { flowFrenchVocalDelivery } = require("./voice-humanize");
 const {
   DEFAULT_TTS_SPEED,
   clampTtsSpeed,
@@ -74,6 +75,13 @@ function buildTtsOptions(text, options = {}) {
       normalize_loudness: false,
     },
   };
+}
+
+/** Dernière passe — aucun appel Fish ne doit envoyer des phrases découpées par « . ». */
+function normalizeFishTtsText(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return "";
+  return flowFrenchVocalDelivery(trimmed).slice(0, 2000);
 }
 
 function cleanEnv(value) {
@@ -290,7 +298,7 @@ async function synthesizeWithReferenceMsgpack({
   speed,
   cloneFidelity,
 }) {
-  const trimmed = String(text || "").trim();
+  const trimmed = normalizeFishTtsText(text);
   const transcript = String(referenceText || "").trim();
   if (!trimmed || !audioBuffer || audioBuffer.length < 1024) {
     throw Object.assign(new Error("Texte et audio requis"), {
@@ -350,7 +358,7 @@ async function synthesizeSpeech({
   speed,
   cloneFidelity,
 }) {
-  const trimmed = String(text || "").trim();
+  const trimmed = normalizeFishTtsText(text);
   if (!trimmed) {
     throw Object.assign(new Error("Texte requis"), {
       status: 400,
@@ -400,6 +408,7 @@ module.exports = {
   createVoiceModel,
   transcribeAudio,
   buildTtsOptions,
+  normalizeFishTtsText,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,
 };

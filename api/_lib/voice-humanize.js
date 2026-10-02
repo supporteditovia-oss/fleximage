@@ -103,11 +103,21 @@ function humanizeVoiceScript(rawText, options = {}) {
     return { displayText: "", fishText: "", humanized: false, pronunciationFixed: false };
   }
 
-  let fishText = expandFrenchChatShorthand(displayText);
-  const afterExpand = fishText;
-  fishText = applyFrenchPronunciationHints(fishText, { voiceName });
-  const pronunciationFixed = fishText !== afterExpand;
-  fishText = naturalizeFrenchCasual(fishText);
+  const humanizeExtras = options.enabled !== false;
+
+  let fishText = displayText;
+  let pronunciationFixed = false;
+  if (humanizeExtras) {
+    fishText = expandFrenchChatShorthand(fishText);
+    const afterExpand = fishText;
+    fishText = applyFrenchPronunciationHints(fishText, { voiceName });
+    pronunciationFixed = fishText !== afterExpand;
+    fishText = naturalizeFrenchCasual(fishText);
+  } else {
+    fishText = fishText.replace(/\s+/g, " ").trim();
+  }
+
+  /** Toujours — catalogue, clone perso, extrait inline (Fish msgpack). */
   fishText = flowFrenchVocalDelivery(fishText);
   const humanized = fishText !== displayText;
 
@@ -119,8 +129,14 @@ function humanizeVoiceScript(rawText, options = {}) {
   };
 }
 
+/** Texte final Fish — même règles pour toutes les voix (rappeurs catalogue + clones). */
+function prepareVoiceTtsForFish(rawText, options = {}) {
+  return humanizeVoiceScript(rawText, { enabled: true, ...options }).fishText;
+}
+
 module.exports = {
   humanizeVoiceScript,
+  prepareVoiceTtsForFish,
   naturalizeFrenchCasual,
   expandFrenchChatShorthand,
   polishFrenchCasualFlow,

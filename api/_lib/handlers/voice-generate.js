@@ -16,7 +16,10 @@ const {
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
-const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const {
+  lookupCatalogEntryByFishId,
+  resolveCatalogTtsSpeed,
+} = require("../voice-catalog");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -151,7 +154,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
     ({ supabase, userId } = await requireUser(req));
     const body = readBody(req);
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    const humanizeEnabled = body.humanize === true;
+    const humanizeEnabled = body.humanize !== false;
     const deliveryStyle =
       typeof body.style === "string" ? body.style.trim().toLowerCase() : "casual";
 
@@ -218,9 +221,12 @@ module.exports = async function voiceGenerateHandler(req, res) {
         voiceName = manifest?.name || null;
       }
     }
+    if (!voiceName && fishReferenceId) {
+      voiceName = lookupCatalogEntryByFishId(fishReferenceId)?.name ?? null;
+    }
 
     const script = humanizeVoiceScript(text, {
-      enabled: humanizeEnabled,
+      enabled: true,
       style: deliveryStyle,
       voiceName,
     });
@@ -248,6 +254,8 @@ module.exports = async function voiceGenerateHandler(req, res) {
       metadata: {
         mode: resolvedFishId ? "reference-id" : "inline-reference",
         humanized: script.humanized,
+        vocal_flow: true,
+        humanize_requested: humanizeEnabled,
         pronunciation_fixed: script.pronunciationFixed,
         delivery_style: deliveryStyle,
         fish_script: script.fishText,
@@ -339,6 +347,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         text: ttsText,
         audioBuffer: referenceAudio,
         referenceText,
+        speed: catalogTtsSpeed,
         cloneFidelity,
       });
     } else {

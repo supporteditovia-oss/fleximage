@@ -1,5 +1,5 @@
 const { synthesizeSpeech } = require("../fish-audio");
-const { humanizeVoiceScript } = require("../voice-humanize");
+const { prepareVoiceTtsForFish } = require("../voice-humanize");
 const { uploadToR2, getR2Config } = require("../r2");
 const {
   buildCatalogSampleLine,
@@ -45,9 +45,10 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
 
     const entry = lookupCatalogEntryByFishId(fishReferenceId);
     const buffer = await synthesizeSpeech({
-      text: humanizeVoiceScript(buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale), {
-        voiceName: entry?.name,
-      }).fishText,
+      text: prepareVoiceTtsForFish(
+        buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale),
+        { voiceName: entry?.name },
+      ),
       referenceId: fishReferenceId,
       format: "mp3",
     });
