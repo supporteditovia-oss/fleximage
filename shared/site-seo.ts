@@ -72,24 +72,6 @@ export const INDEXABLE_SITE_PAGES = [
     ],
   },
   {
-    path: "/generate",
-    title: "Créer une image — LuxeFlexIA",
-    description:
-      "Créez des photos lifestyle hyper-réalistes avec LuxeFlexIA : uploadez une photo et générez votre scène de luxe.",
-    changefreq: "weekly" as const,
-    priority: "0.8",
-    images: [],
-  },
-  {
-    path: "/pricing",
-    title: "Tarifs — LuxeFlexIA",
-    description:
-      "Découvrez les abonnements LuxeFlexIA : Discovery, Essential et Ultimate pour générer vos photos lifestyle par IA.",
-    changefreq: "weekly" as const,
-    priority: "0.8",
-    images: [],
-  },
-  {
     path: "/cgu",
     title: "Conditions Generales d'Utilisation — LuxeFlexIA",
     description:
@@ -151,6 +133,24 @@ export const LEGAL_PUBLIC_PATHS = [
 ] as const;
 
 export type LegalNoindexPath = (typeof LEGAL_NOINDEX_PATHS)[number];
+
+/** App / studio routes — crawl OK, indexation off until pre-render or feature GA. */
+export const SPA_SHELL_NOINDEX_PREFIXES = [
+  "/create",
+  "/modeles",
+  "/video-ia",
+  "/video-ultra",
+  "/transformation-pro",
+  "/generate",
+  "/pricing",
+  "/image-prete",
+  "/voix-prete",
+  "/video-prete",
+  "/welcome",
+  "/bibliotheque",
+  "/en",
+  "/es",
+] as const;
 
 export const APP_NOINDEX_PATHS = [
   "/admin",
@@ -253,8 +253,30 @@ export function normalizeSitePathname(pathname: string): string {
   return withoutTrailingSlash || "/";
 }
 
+export function shouldCrawlerNoindexPathname(pathname: string): boolean {
+  const normalized = normalizeSitePathname(pathname);
+  if ((NOINDEX_SITE_PATHS as readonly string[]).includes(normalized)) {
+    return true;
+  }
+  for (const prefix of SPA_SHELL_NOINDEX_PREFIXES) {
+    if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Unknown /generateur/{slug} — not a built static niche page (soft 404). */
+export function isUnknownGenerateurPath(pathname: string): boolean {
+  const normalized = normalizeSitePathname(pathname);
+  if (!normalized.startsWith("/generateur/")) return false;
+  const slug = parseSeoNicheSlugFromPath(normalized);
+  return !slug || !getSeoNicheBySlug(slug);
+}
+
 export function isIndexableSitePath(pathname: string): boolean {
   const normalized = normalizeSitePathname(pathname);
+  if (shouldCrawlerNoindexPathname(normalized)) return false;
   if (INDEXABLE_SITE_PAGES.some((page) => page.path === normalized)) {
     return true;
   }

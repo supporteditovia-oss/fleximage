@@ -255,8 +255,6 @@ function buildSitemap() {
   const lastmod = new Date().toISOString().slice(0, 10);
   const staticPages = [
     { path: "/", priority: "1.0", changefreq: "daily" },
-    { path: "/generate", priority: "0.9", changefreq: "weekly" },
-    { path: "/pricing", priority: "0.8", changefreq: "weekly" },
     { path: "/cgu", priority: "0.3", changefreq: "yearly" },
     { path: "/confidentialite", priority: "0.3", changefreq: "yearly" },
     { path: "/terms", priority: "0.4", changefreq: "yearly" },

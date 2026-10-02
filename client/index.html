@@ -8,6 +8,22 @@
     <meta name="keywords" content="LuxeFlexIA, Luxeflexia, génération image IA, génération Dimash Lux, génération Dimash Prank, génération Watch Lux, génération restaurant, photo IA réaliste, générateur photo IA, prank IA TikTok, flex luxe IA" />
     <meta name="google-site-verification" content="RkzFaYkZAzqY96sss7Sh4IElV7HCEOp4UQ_pPKRtu_Y" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
+    <script>
+      (function () {
+        try {
+          var p = (location.pathname || "/").replace(/\/+$/, "") || "/";
+          var noindex =
+            /^\/(create|modeles|video-ia|video-ultra|transformation-pro|generate|pricing|image-prete|voix-prete|video-prete|welcome|bibliotheque|login|register|admin|settings|history|historique|resultat|mon-resultat|debug-generate|en|es)(\/|$)/.test(
+              p,
+            ) || p.indexOf("/platform-admin") === 0;
+          if (!noindex) return;
+          var robots = document.querySelector('meta[name="robots"]');
+          if (robots) robots.setAttribute("content", "noindex, nofollow");
+          var canon = document.querySelector('link[rel="canonical"]');
+          if (canon) canon.remove();
+        } catch (e) {}
+      })();
+    </script>
     <link rel="canonical" href="https://www.luxeflexia.com/" />
     <link rel="preconnect" href="https://media.larpking.com" />
     <link rel="dns-prefetch" href="https://media.larpking.com" />
