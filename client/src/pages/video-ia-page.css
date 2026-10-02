@@ -56,6 +56,16 @@ html.luxeflexia-video-page .floating-header::before {
   margin-bottom: 1.5rem;
 }
 
+.via-hero--minimal {
+  margin-bottom: 1.1rem;
+  padding: 1rem 1rem 0.85rem;
+}
+
+.via-hero--minimal .via-hero__title {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
 .via-hero--premium {
   position: relative;
   overflow: hidden;
@@ -181,12 +191,7 @@ html.luxeflexia-video-page .floating-header::before {
 
 .via-mode-grid--studio {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (max-width: 640px) {
-  .via-mode-grid--studio {
-    grid-template-columns: 1fr;
-  }
+  margin-bottom: 1rem;
 }
 
 .via-mode-picker__intro {

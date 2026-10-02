@@ -143,7 +143,6 @@ export default function VideoIA() {
   const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
   const [v2vResolution, setV2vResolution] =
     useState<VideoUltraResolution>("720p");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
@@ -748,8 +747,6 @@ export default function VideoIA() {
       workflow={workflow}
       onModeSelect={handleStudioModeSelect}
       creditCost={creditCost}
-      advancedOpen={advancedOpen}
-      onAdvancedOpenChange={setAdvancedOpen}
       imageFileRef={imageFileRef}
       imagePreviewUrl={imagePreviewUrl}
       onImageUpload={handleImageUpload}
