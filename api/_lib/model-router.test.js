@@ -44,6 +44,21 @@ describe("model-router", () => {
     assert.equal(n, 427);
   });
 
+  it("forces oneshot when multiple reference images (2-photo car swap)", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "999";
+    process.env.DEEPINFRA_API_KEY = "di";
+
+    const route = await resolveImageGenerationProvider(null, {
+      isAdmin: true,
+      adminImageProvider: "deepinfra",
+      referenceImageCount: 2,
+    });
+    assert.equal(route.provider, "oneshot");
+    assert.equal(route.reason, "multi_reference_requires_oneshot");
+  });
+
   it("admin uses deepinfra by default (with or without photo refs)", async () => {
     process.env.ONESHOT_REMAINING_CREDITS = "999";
     process.env.DEEPINFRA_API_KEY = "di";
@@ -103,14 +118,30 @@ describe("model-router", () => {
     assert.equal(route.provider, "oneshot");
   });
 
-  it("fallback deepinfra when oneshot exhausted even with refs", async () => {
+  it("fallback deepinfra when oneshot exhausted with single ref only", async () => {
     process.env.ONESHOT_REMAINING_CREDITS = "0";
     process.env.DEEPINFRA_API_KEY = "di";
 
     const route = await resolveImageGenerationProvider(null, {
       hasReferenceImages: true,
+      referenceImageCount: 1,
     });
     assert.equal(route.provider, "deepinfra");
+  });
+
+  it("throws when multi-ref and oneshot credits exhausted", async () => {
+    process.env.ONESHOT_API_URL = "https://api.oneshot.example";
+    process.env.ONESHOT_API_KEY = "key";
+    process.env.ONESHOT_REMAINING_CREDITS = "0";
+    process.env.DEEPINFRA_API_KEY = "di";
+
+    await assert.rejects(
+      () =>
+        resolveImageGenerationProvider(null, {
+          referenceImageCount: 2,
+        }),
+      /Plusieurs photos de référence/,
+    );
   });
 
   it("admin oneshot setting falls back to deepinfra when credits are 0", async () => {

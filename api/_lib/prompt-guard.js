@@ -2190,9 +2190,15 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
 
 function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   if (isVehicleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
+    const spec = parseVehicleSpec(userPrompt);
+    const named =
+      spec?.label && !/image\s*2|photo\s*2/i.test(spec.label)
+        ? ` Target must match: ${spec.label} (exact color and wheels from image 2).`
+        : "";
     return (
-      "Photoreal edit: transplant the EXACT car from image 2 onto image 1 — same body color, wheels, badges, trim as image 2. " +
-      "Image 1 keeps background, lighting, camera angle, distance, parking pose, plate/decals; only the car body changes."
+      "Photoreal edit: transplant the EXACT car from reference image 2 onto reference image 1 — same body color, wheels, badges, trim as image 2." +
+      named +
+      " Image 1 keeps background, lighting, camera angle, distance, parking pose, plate/decals; only the car body changes."
     ).trim();
   }
   const spec = parseVehicleSpec(userPrompt);

@@ -363,6 +363,13 @@ async function generateImageOnce(supabase, params) {
   }
 
   async function runDeepInfra(reason) {
+    if (Array.isArray(imageUrls) && imageUrls.length > 1) {
+      const err = new Error(
+        "DeepInfra ne supporte qu'une seule image — ajoute OneShot ou n'utilise qu'une photo.",
+      );
+      err.code = "MULTI_REF_DEEPINFRA_UNSUPPORTED";
+      throw err;
+    }
     console.info("[generate-image-once] DeepInfra sync", {
       generationId,
       reason: reason instanceof Error ? reason.message : reason || null,
@@ -453,9 +460,13 @@ async function generateImageOnce(supabase, params) {
     Array.isArray(imageUrls) && imageUrls.length > 0;
   let route;
   try {
+    const referenceImageCount = Array.isArray(imageUrls)
+      ? imageUrls.length
+      : 0;
     route = await resolveImageGenerationProvider(supabase, {
       forceKieAi: appSettings.forceKieAi,
       hasReferenceImages,
+      referenceImageCount,
       isAdmin: adminPreferDeepInfra,
       adminImageProvider: appSettings.adminImageProvider,
     });

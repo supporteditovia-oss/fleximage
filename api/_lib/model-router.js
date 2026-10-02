@@ -117,6 +117,11 @@ async function decrementOneshotCreditIfTracked(supabase) {
  */
 async function resolveImageGenerationProvider(supabase, options = {}) {
   const isAdmin = Boolean(options.isAdmin ?? options.adminPreferDeepInfra);
+  const referenceImageCount = Math.max(
+    0,
+    Number(options.referenceImageCount) || 0,
+  );
+  const requiresMultiReferenceImages = referenceImageCount > 1;
   const adminImageProvider = normalizeAdminImageProvider(
     options.adminImageProvider,
   );
@@ -125,6 +130,27 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
   );
   const deepinfraConfigured = isDeepInfraConfigured();
   const remainingCredits = await getOneshotRemainingCredits(supabase);
+
+  /**
+   * DeepInfra edits = 1 seule image uploadée — la 2e ref (RS3…) est ignorée → swap impossible.
+   */
+  if (requiresMultiReferenceImages) {
+    if (!oneshotConfigured) {
+      throw new Error(
+        "Plusieurs photos de référence : OneShot requis (ONESHOT_API_URL / ONESHOT_API_KEY). DeepInfra ne prend qu'une image.",
+      );
+    }
+    if (remainingCredits !== null && remainingCredits <= 0) {
+      throw new Error(
+        "Plusieurs photos de référence : crédits OneShot épuisés — recharge OneShot (DeepInfra ne peut pas utiliser l'image 2).",
+      );
+    }
+    return {
+      provider: "oneshot",
+      reason: "multi_reference_requires_oneshot",
+      remainingCredits,
+    };
+  }
 
   /** Admin : choix explicite OneShot (marketing) ou DeepInfra (Nano Banana 2). */
   if (isAdmin) {
