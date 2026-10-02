@@ -9,6 +9,10 @@ const {
   buildCelebrityAppearanceInjection,
   hasCelebrityAppearanceInjection,
 } = require("./celebrity-likeness");
+const {
+  extractRequestedVehicleModel,
+  buildImageVehicleIdentityBlock,
+} = require("./luxe-vehicle-intelligence");
 
 const IDENTITY_GUARD =
   "IMAGE EDIT ONLY of the uploaded reference photo (not a new person). " +
@@ -392,7 +396,7 @@ const WEATHER_ATMOSPHERE_CLARIFIER =
 
 /** Shared brand/model tokens for add-cars / count detection (any vehicle the user names). */
 const VEHICLE_NAME_RE =
-  "lamborghini|lambo|svj|svg|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|g90|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|cullinan|bentley|bugatti|chiron|tourbillon|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
+  "lamborghini|lambo|svj|svg|aventador|huracan|revuelto|urus|ferrari|purosangue|sf90|812|296|488|f8|roma|portofino|porsche|911|cayenne|macan|taycan|bmw|m[23458]\\b|x[567]\\b|g90|audi|rs[3567]|r8|mercedes|amg|g[\\-\\s]?wagen|g63|classe\\s*g|clio|clage|tesla|model\\s*[sxy3]|roll[s]?[\\s\\-]?royce|droptail|drop[\\s\\-]?tail|rose\\s*noire|la\\s*rose\\s*noire|phantom|ghost|spectre|wraith|dawn|cullinan|bentley|bugatti|chiron|tourbillon|mclaren|aston|martin|nissan|gtr|gt\\-?r|toyota|honda|supra|renault|peugeot|citroen|volkswagen|vw|golf|ford|mustang|chevrolet|corvette|dodge|challenger|jeep|range\\s*rover|land\\s*rover|maserati|alfa|pagani|koenigsegg|ducati|yamaha|kawasaki|suzuki|harley|ktm|vespa|tmax|tmag|yz125|yz\\s*125|s1000|gsxr|motocross|enduro|scooter|moto|motorcycle|quad|atv|velo|vtt|bicycle|utilitaire|sprinter|camion|truck|van|mansory|voiture|voitures|cars?|supercars?|sportive|berline|suv|coupe";
 
 const VEHICLE_TUNER_RE =
   "mansory|brabus|abt|novitec|alpina|hamann|techart|gemballa|keyvany|lorinser|overfinch|wald|prior\\s*design|liberty\\s*walk|lbwk";
@@ -411,6 +415,15 @@ const VEHICLE_SCENE_MATCH_CLARIFIER =
  * Must NEVER use LARGE/CENTERED local-edit (that re-parks the car and rebuilds shops).
  */
 /** Stickers/plates from source — one physical copy only (fixes floating duplicate apprentice A). */
+const VEHICLE_MULTI_IMAGE_REF_LOCK =
+  " (MULTI-IMAGE ORDER — mandatory when 2+ photos uploaded: image 1 = the photo to edit (person/scene to keep). image 2 = EXACT target vehicle OEM reference — copy its body shape, proportions, grille, lights, color, badges. When swapping a car, image 2 design wins over generic guesses. Never ignore image 2.)";
+
+const VEHICLE_SWAP_PAINT_CLEAN_LOCK =
+  "PAINT CLEAN LOCK — the replacement car must look AS CLEAN and well-kept as the original in the photo: glossy factory paint, no added mud, dirt speckles, dust, rust, rain grime, or weathered patina unless the user explicitly asked for a dirty car. ";
+
+const VEHICLE_SWAP_ZERO_NEW_PEOPLE_LOCK =
+  "ZERO NEW PEOPLE LOCK — car body swap ONLY: do NOT add, invent, or hallucinate ANY person (men, women, staff, customers) in the background or at the pumps. Keep the EXACT same human count as the source photo — if the original had nobody visible, the output has NO new strangers. ";
+
 const VEHICLE_DECAL_SINGLE_COPY_LOCK =
   "DECAL & PLATE LOCK (critical): if the original car had a sticker/decal (French red apprentice letter A, P plates, brand sticker, etc.) or a readable license plate, " +
   "copy it at most ONCE onto the equivalent panel of the NEW body — physically attached, correct perspective, real contact with paint/glass. " +
@@ -428,7 +441,9 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "Copy the original open/closed state of doors and fuel flap. An open filler is a REAL empty factory neck: dark plastic cavity, real cap if the original had one. " +
   "FORBIDDEN inside the tank/filler: yellow blob, orange glow, LED, gold liquid, extra object, invented cap. " +
   "Inherit original night/day light, reflections, grain. " +
-  "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, studio lighting, fake body artifacts. " +
+  `${VEHICLE_SWAP_PAINT_CLEAN_LOCK}` +
+  `${VEHICLE_SWAP_ZERO_NEW_PEOPLE_LOCK}` +
+  "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, inventing pedestrians at a gas station, studio lighting, fake body artifacts, dirty/muddy paint on an originally clean car. " +
   "MODEL LOCK: output the EXACT brand+model the user named — NEVER Nissan Silvia/S15, Skyline, GT-R, R34/R35, Supra, or generic JDM widebody when they asked BMW, Lamborghini, Mercedes, Ferrari, etc.";
 
 const VEHICLE_REPLACE_CLARIFIER =
@@ -690,6 +705,9 @@ const CELEBRITY_COMPANION_CLARIFIER =
 
 const REAL_PLACE_CLARIFIER =
   " (REAL PLACE: the named city must be a REAL existing street of that city — real architecture, real signs, real skyline. Never a fake CGI/generic luxury backdrop.)";
+
+const DUBAI_GEO_COHERENCE_LOCK =
+  " (DUBAI GEO COHERENCE — critical: ONE real place only. Marina/JBR OR Palm/Bluewaters OR Downtown/Burj OR desert highway — never an impossible collage (e.g. Burj Khalifa skyline pasted into a marina yacht basin). If the user did not name a sub-area, stay neutral/generic Gulf luxury street or pick ONE district and commit.)";
 
 const DUBAI_LANDMARK_CLARIFIER =
   " (DUBAI LANDMARKS: background must show real monumental Dubai — Burj Khalifa and/or Downtown Dubai / Sheikh Zayed Road towers clearly recognizable. Not only generic apartment blocks.)";
@@ -1991,6 +2009,10 @@ function parseVehicleSpec(prompt) {
   if (names.includes("rs3") && !/\burus\b/.test(text)) {
     label = /\baudi\b/.test(text) ? "Audi RS3" : "Audi RS3 sportback";
   }
+  const intelLabel = extractRequestedVehicleModel(prompt)?.model;
+  if (intelLabel && intelLabel.length > (label || "").length) {
+    label = intelLabel;
+  }
 
   return {
     hasVehicle: true,
@@ -2035,13 +2057,30 @@ function generationAntimixLine(prompt) {
   if (/\burus\b/.test(t)) {
     return " Urus SUV cabin — NOT Aventador/Huracan/Revuelto cockpit.";
   }
+  if (/\b(droptail|drop[\s-]?tail|rose\s*noire|la\s*rose\s*noire)\b/.test(t)) {
+    return " Rolls-Royce Coachbuild Droptail (La Rose Noire if named) — TWO-SEAT boat-tail roadster. FORBIDDEN: four-door sedan, generic black luxury car, Phantom/Ghost substitute.";
+  }
+  if (/\bRolls-Royce\b/i.test(String(prompt || ""))) {
+    return " Exact Rolls-Royce model named — correct body style (sedan vs SUV vs Droptail roadster). FORBIDDEN: generic sedan when Droptail/coachbuild was requested.";
+  }
   return "";
 }
 
 function vehicleIdentityHint(prompt) {
+  const catalogBlock = buildImageVehicleIdentityBlock(prompt);
   // Always parse the user's raw request — enriched clarifiers mention Urus/MANSORY and poison GEN LOCK.
+  const intel = extractRequestedVehicleModel(prompt);
   const spec = parseVehicleSpec(prompt);
-  if (!spec) return "";
+  if (!spec && !intel) return catalogBlock;
+  if (intel && !spec) {
+    const antimixOnly = generationAntimixLine(prompt);
+    return (
+      `${catalogBlock} (GEN LOCK: ${intel.model} ONLY.` +
+      (intel.exterior ? ` ${intel.exterior}.` : "") +
+      antimixOnly +
+      " Never wrong brand or generic sedan.)"
+    );
+  }
   const antimix = generationAntimixLine(prompt);
   const tunerNote = spec.tuners.length
     ? ` ${spec.tuners.join("/")} kit on that exact base only.`
@@ -2049,11 +2088,16 @@ function vehicleIdentityHint(prompt) {
   const chassisNote = spec.chassis
     ? ` Chassis ${spec.chassis} only — never sibling codes.`
     : " Never a sibling generation or generic brand cabin.";
+  const label = intel?.model && intel.model.length > spec.label.length
+    ? intel.model
+    : spec.label;
   return (
-    ` (GEN LOCK: ${spec.label} ONLY — factory body+interior of THAT generation.` +
+    `${catalogBlock}` +
+    ` (GEN LOCK: ${label} ONLY — factory body+interior of THAT generation.` +
     chassisNote +
     antimix +
     tunerNote +
+    (intel?.exterior ? ` ${intel.exterior}.` : "") +
     " Never invent buttons, logos, or UI.)"
   );
 }
@@ -2110,6 +2154,25 @@ function vehicleForbiddenBrandHint(prompt) {
     ];
   } else if (names.some((n) => /^(bmw|audi|porsche|bentley|bugatti|mclaren)$/.test(n))) {
     forbidden = ["Mercedes", "Lamborghini", "Urus", "Range Rover", "G-Wagen"];
+  } else if (
+    names.some((n) =>
+      /^(rolls|royce|droptail|phantom|ghost|spectre|wraith|dawn|noire|cullinan)$/.test(n),
+    ) ||
+    /\brolls[\s-]?royce\b/i.test(normalizePromptText(prompt)) ||
+    Boolean(extractRequestedVehicleModel(prompt))
+  ) {
+    forbidden = [
+      "Ferrari",
+      "Purosangue",
+      "Lamborghini",
+      "Urus",
+      "Mercedes",
+      "BMW",
+      "Porsche",
+      "Audi",
+      "Bentley",
+      "Maserati",
+    ];
   } else {
     return "";
   }
@@ -2143,8 +2206,11 @@ const VEHICLE_DECAL_FRONT_LOCK =
 
 function buildVehicleReplaceCompactHead(userPrompt) {
   const spec = parseVehicleSpec(userPrompt);
-  if (!spec) return "";
+  const intel = extractRequestedVehicleModel(userPrompt);
+  if (!spec && !intel) return "";
   return (
+    `${VEHICLE_SWAP_PAINT_CLEAN_LOCK}` +
+    `${VEHICLE_SWAP_ZERO_NEW_PEOPLE_LOCK}` +
     `${VEHICLE_DECAL_FRONT_LOCK}` +
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
@@ -2154,12 +2220,15 @@ function buildVehicleReplaceCompactHead(userPrompt) {
 
 function buildVehicleReplaceUserLine(userPrompt) {
   const spec = parseVehicleSpec(userPrompt);
+  const intel = extractRequestedVehicleModel(userPrompt);
   const raw = String(userPrompt || "").trim();
-  const label = spec?.label || raw;
+  const label = intel?.model || spec?.label || raw;
   const antimix = generationAntimixLine(userPrompt).trim();
   const detail = antimix ? ` ${antimix}` : "";
   return (
     `Replace ONLY the existing car with ${label}.${detail} ` +
+    "The new car must be as CLEAN as the original — same gloss, no added dirt or water spots. " +
+    "Do NOT add any people — background human count stays identical to the source (no new men/women at pumps). " +
     "Keep the same license plate and any apprentice/sticker decals from the original — each at most once on the new body, never duplicated floating in the air or on car-wash equipment. " +
     "Keep the same person, pose, outfit, station/building, lighting, and camera framing."
   ).trim();
@@ -2866,6 +2935,14 @@ function sanitizeUserPrompt(prompt) {
       ) {
         cleaned = `${SWIMWEAR_OUTFIT_CLARIFIER}${cleaned}`;
       }
+    }
+    const locEarlyLifestyle = detectPlateLocation(cleaned);
+    if (
+      locEarlyLifestyle &&
+      locEarlyLifestyle.id === "dubai" &&
+      !/DUBAI GEO COHERENCE/i.test(cleaned)
+    ) {
+      cleaned = `${DUBAI_GEO_COHERENCE_LOCK}${cleaned}`;
     }
     if (isDubaiGulfPrompt(cleaned) && !/DUBAI GULF \/ MARINA LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${DUBAI_GULF_CLARIFIER}`;
@@ -4125,9 +4202,19 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const vehicleReplaceHead = vehicleReplaceScene
     ? buildVehicleReplaceCompactHead(userPrompt)
     : "";
-  const effectiveSceneGuard = vehicleReplaceHead
-    ? `${vehicleReplaceHead} ${sceneGuard}`
-    : sceneGuard;
+  const multiRefLock =
+    referenceImageCount >= 2 &&
+    (vehicleReplaceScene ||
+      vehicleScene ||
+      cockpitInteriorReplaceScene ||
+      addVehiclesScene ||
+      exteriorTrafficScene ||
+      vehicleBehindScene)
+      ? VEHICLE_MULTI_IMAGE_REF_LOCK
+      : "";
+  const effectiveSceneGuard = [vehicleReplaceHead, multiRefLock, sceneGuard]
+    .filter(Boolean)
+    .join(" ");
   const core = `${nonCarScenePrefix}${effectiveSceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
   const suffix = qualitySuffix(
@@ -4162,6 +4249,13 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(120, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const compactVehicleReplaceCore = (() => {
+    if (!vehicleReplaceScene) return "";
+    const head = buildVehicleReplaceCompactHead(userPrompt);
+    const userLine = buildVehicleReplaceUserLine(userPrompt);
+    const budget = Math.max(100, MAX_FINAL_PROMPT - head.length - 24);
+    return `${head} ${userLine.slice(0, budget)}`.trim();
+  })();
   const candidates =
     lifestyleScene ||
     jetSkiScene ||
@@ -4183,7 +4277,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
         ? [compactLifestyleCore, core].filter(Boolean)
         : cockpitInteriorReplaceScene
           ? [compactCockpitCore, core].filter(Boolean)
-          : [core]
+          : vehicleReplaceScene
+            ? [compactVehicleReplaceCore, core].filter(Boolean)
+            : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
@@ -4405,6 +4501,7 @@ module.exports = {
   isVehicleDriverPrompt,
   isAddVehiclesToScenePrompt,
   isVehicleReplacePrompt,
+  buildVehicleReplaceCompactHead,
   isMotorcycleRidePrompt,
   isMotorcycleReplacePrompt,
   isMotorcycleSeatedUserPrompt,
