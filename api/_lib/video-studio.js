@@ -5,7 +5,10 @@ const {
   VIDEO_VOICE_EXTRA_CREDIT,
 } = require("./credit-costs");
 const { computeImageToVideoCreditCost } = require("../../shared/video-i2v-pricing.cjs");
-const { computeV2VStudioCreditCost } = require("../../shared/video-ultra-pricing.cjs");
+const {
+  computeV2VStudioCreditCost,
+  normalizeVideoUltraResolution,
+} = require("../../shared/video-ultra-pricing.cjs");
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",
@@ -149,6 +152,20 @@ function v2vEngineFamilyForProvider(provider) {
  */
 function isAlephTransformEnabled() {
   return String(process.env.V2V_ALEPH_ENABLED || "").trim() === "1";
+}
+
+/** Fix Omni Scène & luxe : admin (ou flag env) uniquement tant que le fondateur valide. */
+function isV2VOmniTransformRolloutEnabled(meta) {
+  if (meta && meta.v2v_omni_transform_rollout === true) return true;
+  return String(process.env.V2V_OMNI_TRANSFORM_PUBLIC || "").trim() === "1";
+}
+
+function shouldUseOmniTransformForV2V(meta, v2vResolution, v2vProvider) {
+  if (v2vProvider !== "runway_aleph") return false;
+  if (isAlephTransformEnabled()) return false;
+  const res = normalizeVideoUltraResolution(v2vResolution || "720p");
+  if (isV2VOmniTransformRolloutEnabled(meta)) return true;
+  return res === "1080p" || res === "4k";
 }
 
 const OMNI_PROMPT_MAX_CHARS = 2500;
@@ -614,6 +631,8 @@ module.exports = {
   resolveV2VProviderForStudio,
   resolveV2VProviderFromIntent,
   isAlephTransformEnabled,
+  isV2VOmniTransformRolloutEnabled,
+  shouldUseOmniTransformForV2V,
   buildOmniTransformPrompt,
   buildAlephSubmitPrompt,
   extractRequestedVehicleModel,

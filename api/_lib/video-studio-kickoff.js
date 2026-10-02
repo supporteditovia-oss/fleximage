@@ -15,6 +15,8 @@ const {
   buildOmniTransformPrompt,
   buildV2VProviderPrompt,
   isAlephTransformEnabled,
+  isV2VOmniTransformRolloutEnabled,
+  shouldUseOmniTransformForV2V,
   isVehicleDrivingPrompt,
   v2vEngineFamilyForProvider,
 } = require("./video-studio");
@@ -143,10 +145,13 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         meta.v2v_resolution || "720p",
       );
 
+      const omniRollout = isV2VOmniTransformRolloutEnabled(meta);
       const runOmniStudio = async (videoUrl) =>
         generateOmniRef2VOnce(supabase, {
           generationId: larp.id,
-          prompt: buildOmniTransformPrompt(userPrompt, { preserveSourceAudio }),
+          prompt: omniRollout
+            ? buildOmniTransformPrompt(userPrompt, { preserveSourceAudio })
+            : userPrompt || providerPrompt,
           videoUrl,
           resolution: v2vResolution,
         });
@@ -180,17 +185,18 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         v2vEngineFamilyForProvider(finalV2vProvider);
 
       try {
-        const useOmniTransform =
-          finalV2vProvider === "runway_aleph" &&
-          (!isAlephTransformEnabled() ||
-            v2vResolution === "4k" ||
-            v2vResolution === "1080p");
+        const useOmniTransform = shouldUseOmniTransformForV2V(
+          meta,
+          v2vResolution,
+          finalV2vProvider,
+        );
         if (useOmniTransform) {
-          const preparedUrl = await resolveOmniSourceVideoUrl(
-            sourceAssetUrl,
-            userId,
+          const videoUrl = await ensureKieAccessibleMediaUrl(
+            omniRollout
+              ? await resolveOmniSourceVideoUrl(sourceAssetUrl, userId)
+              : sourceAssetUrl,
+            "video",
           );
-          const videoUrl = await ensureKieAccessibleMediaUrl(preparedUrl, "video");
           await runOmniStudio(videoUrl);
         } else if (finalV2vProvider === "runway_aleph") {
           await runAleph(sourceAssetUrl, referenceImageUrl);

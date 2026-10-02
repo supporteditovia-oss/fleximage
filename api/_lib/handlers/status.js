@@ -553,6 +553,7 @@ module.exports = async function handler(req, res) {
           });
           const canRetryOmni =
             pollMeta.workflow === "video_to_video" &&
+            pollMeta.v2v_omni_transform_rollout === true &&
             isRetryableProviderFailText(rawOmniFail || "internal error") &&
             canLaunchAnotherOmniJob(larp.provider_task_id) &&
             ageInMs < pollHardTimeoutMs - 5 * 60 * 1000;
@@ -657,7 +658,7 @@ module.exports = async function handler(req, res) {
           } = require("../v2v-poll-omni-relaunch");
           const shouldOmniFallback =
             resultType === "video" &&
-            !isAlephTransformEnabled() &&
+            pollMeta.v2v_omni_transform_rollout === true &&
             pollMeta.v2v_omni_poll_fallback !== true &&
             canLaunchAnotherOmniJob(larp.provider_task_id) &&
             (charRejection || klingInternal);
@@ -820,6 +821,7 @@ module.exports = async function handler(req, res) {
           const { isAlephTransformEnabled } = require("../video-studio");
           if (
             resultType === "video" &&
+            pollMeta.v2v_omni_transform_rollout === true &&
             pollMeta.v2v_omni_poll_fallback !== true &&
             canLaunchAnotherOmniJob(larp.provider_task_id) &&
             (!isAlephTransformEnabled() || alephRetries >= 1)

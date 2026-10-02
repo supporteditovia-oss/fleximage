@@ -11,6 +11,8 @@ const {
   resolveV2VProviderForStudio,
   resolveV2VProviderFromIntent,
   isAlephTransformEnabled,
+  isV2VOmniTransformRolloutEnabled,
+  shouldUseOmniTransformForV2V,
   buildOmniTransformPrompt,
   buildV2VCockpitIntelligenceLock,
   extractRequestedVehicleModel,
@@ -311,6 +313,25 @@ describe("video-studio", () => {
     assert.match(prompt, /steering wheel and its center logo/i);
     assert.match(prompt, /No original-brand logo/i);
     assert.ok(prompt.length <= 2500);
+  });
+
+  it("shouldUseOmniTransformForV2V — admin rollout 720p, clients 1080p only", () => {
+    assert.equal(
+      shouldUseOmniTransformForV2V(
+        { v2v_omni_transform_rollout: true },
+        "720p",
+        "runway_aleph",
+      ),
+      true,
+    );
+    assert.equal(
+      shouldUseOmniTransformForV2V({}, "720p", "runway_aleph"),
+      false,
+    );
+    assert.equal(
+      shouldUseOmniTransformForV2V({}, "1080p", "runway_aleph"),
+      true,
+    );
   });
 
   it("buildOmniTransformPrompt keeps non-car scenes generic", () => {
