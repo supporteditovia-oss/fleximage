@@ -74,8 +74,34 @@ export type VideoIAStudioViewProps = {
   v2vPending: boolean;
 };
 
+function AspectFormatToggle(props: {
+  aspectRatio: VideoAspectRatio;
+  onAspectRatio: (r: VideoAspectRatio) => void;
+}) {
+  return (
+    <div className="via-orient-toggle via-orient-toggle--format" role="group" aria-label="Format">
+      <button
+        type="button"
+        className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
+        onClick={() => props.onAspectRatio("9:16")}
+      >
+        9:16
+      </button>
+      <button
+        type="button"
+        className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
+        onClick={() => props.onAspectRatio("16:9")}
+      >
+        16:9
+      </button>
+    </div>
+  );
+}
+
 export function VideoIAStudioView(props: VideoIAStudioViewProps) {
   const isI2V = props.workflow === "image_to_video";
+  const aspectPreviewClass =
+    props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait";
 
   return (
     <div className="via-studio">
@@ -131,6 +157,11 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                 </>
               )}
             </button>
+
+            <AspectFormatToggle
+              aspectRatio={props.aspectRatio}
+              onAspectRatio={props.onAspectRatio}
+            />
 
             <div className="via-option-block via-option-block--prominent">
               <p className="via-option-block__label">Durée</p>
@@ -196,23 +227,6 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               </>
             ) : null}
 
-            <div className="via-orient-toggle" role="group" aria-label="Format">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("9:16")}
-              >
-                9:16
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("16:9")}
-              >
-                16:9
-              </button>
-            </div>
-
             <button
               type="button"
               className="via-cta"
@@ -250,48 +264,58 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               className="hidden"
               onChange={(e) => void props.onVideoUpload(e.target.files?.[0] ?? null)}
             />
-            <button
-              type="button"
-              className={`via-upload-zone ${props.videoPreview ? "has-file" : ""}`}
-              disabled={props.videoImportBusy}
-              onClick={() => props.videoFileRef.current?.click()}
-            >
-              <span className="via-upload-zone__icon">
-                {props.videoImportBusy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </span>
-              <span className="via-upload-zone__text">
-                {props.videoImportBusy
-                  ? "Lecture…"
-                  : props.videoPreview
-                    ? "Changer la vidéo"
-                    : "Choisir une vidéo"}
-              </span>
-              <span className="via-upload-zone__meta">
-                {props.v2vMinSec}–{props.v2vMaxSec} s · {props.v2vMaxMb} Mo
-                {props.videoDurationSec ? ` · ${props.videoDurationSec} s` : ""}
-              </span>
-            </button>
-
-            {props.videoPreview ? (
-              <div className="via-preview-frame">
-                <video
-                  ref={props.videoPreviewRef}
-                  src={props.videoPreview}
-                  poster={props.refImagePreview ?? undefined}
-                  controls
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  className="via-preview-frame__video"
+            {!props.videoPreview ? (
+              <button
+                type="button"
+                className="via-upload-zone"
+                disabled={props.videoImportBusy}
+                onClick={() => props.videoFileRef.current?.click()}
+              >
+                <span className="via-upload-zone__icon">
+                  {props.videoImportBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </span>
+                <span className="via-upload-zone__text">
+                  {props.videoImportBusy ? "Lecture…" : "Choisir une vidéo"}
+                </span>
+                <span className="via-upload-zone__meta">
+                  {props.v2vMinSec}–{props.v2vMaxSec} s · {props.v2vMaxMb} Mo
+                </span>
+              </button>
+            ) : (
+              <>
+                <AspectFormatToggle
+                  aspectRatio={props.aspectRatio}
+                  onAspectRatio={props.onAspectRatio}
                 />
-              </div>
-            ) : null}
+                <button
+                  type="button"
+                  className={`via-preview-frame via-preview-frame--interactive ${aspectPreviewClass}`}
+                  onClick={() => props.videoFileRef.current?.click()}
+                >
+                  <video
+                    ref={props.videoPreviewRef}
+                    src={props.videoPreview}
+                    poster={props.refImagePreview ?? undefined}
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    className="via-preview-frame__video"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="via-preview-frame__change-bar">
+                    <Upload className="h-3.5 w-3.5" aria-hidden />
+                    Changer
+                  </span>
+                </button>
+              </>
+            )}
 
             <div className="via-option-block via-option-block--prominent">
               <p className="via-option-block__label">Qualité</p>
@@ -377,22 +401,12 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               </>
             ) : null}
 
-            <div className="via-orient-toggle" role="group" aria-label="Format">
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "9:16" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("9:16")}
-              >
-                9:16
-              </button>
-              <button
-                type="button"
-                className={`via-orient-toggle__btn ${props.aspectRatio === "16:9" ? "is-active" : ""}`}
-                onClick={() => props.onAspectRatio("16:9")}
-              >
-                16:9
-              </button>
-            </div>
+            {!props.videoPreview ? (
+              <AspectFormatToggle
+                aspectRatio={props.aspectRatio}
+                onAspectRatio={props.onAspectRatio}
+              />
+            ) : null}
 
             <button
               type="button"
