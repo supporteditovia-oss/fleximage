@@ -37,6 +37,7 @@ export function V2VIntentPicker({
                 <Icon className="h-4 w-4" strokeWidth={1.75} />
               </span>
               <span className="via-intent-card__label">{option.label}</span>
+              <span className="via-intent-card__hint">{option.hint}</span>
             </button>
           );
         })}

@@ -83,8 +83,8 @@ export function parseV2VIntentFromUrl(raw: string | null): V2VStudioIntent | nul
 
 export function v2vIntentPlaceholder(intent: V2VStudioIntent): string {
   return intent === "motion"
-    ? "Ex. : Même danse TikTok, remplace-moi par une autre personne — gestes identiques."
-    : "Ex. : Remplace ma voiture par une Urus noire mat — clé OEM, habitacle exact, compteur calé.";
+    ? "Ex. même danse, autre personne…"
+    : "Ex. Urus noire à la place de ma voiture…";
 }
 
 export function appendV2VPromptSuffix(prompt: string): string {
