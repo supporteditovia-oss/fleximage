@@ -1,5 +1,6 @@
 const { uploadToR2 } = require("./r2");
 const { synthesizeSpeech } = require("./fish-audio");
+const { prepareI2VVoiceTextForFish } = require("./i2v-voice-script");
 const catalog = require("../../shared/voice-catalog.json");
 
 const DEFAULT_CATALOG_FISH_ID =
@@ -27,12 +28,13 @@ async function prepareI2VAvatarAudioUrl({ userId, meta }) {
   const referenceId = resolveFishReferenceId(meta);
   const ttsText =
     voiceEnabled && voiceText.length >= 5
-      ? voiceText
+      ? prepareI2VVoiceTextForFish(voiceText)
       : "…";
   const buffer = await synthesizeSpeech({
     text: ttsText,
     referenceId,
     format: "mp3",
+    cloneFidelity: false,
   });
   return uploadAudioBufferToR2(userId, buffer);
 }

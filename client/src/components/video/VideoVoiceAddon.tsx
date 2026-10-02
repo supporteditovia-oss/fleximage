@@ -60,7 +60,7 @@ export function VideoVoiceAddon({
             onChange={(e) => onTextChange(e.target.value)}
             rows={3}
             maxLength={maxChars}
-            placeholder="Ex. : Bonjour les amis, comment vous allez ? — ou pour un cri : Aaaah ! Non non non !"
+            placeholder="Ex. dialogue : Laisse-moi ! — pour un cri : Aaaah ! Non ! (évite AAAAAHHHH sans espaces)"
             className="via-prompt-field"
           />
           <p className="via-voice-addon__hint">
