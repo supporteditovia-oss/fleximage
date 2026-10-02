@@ -24,4 +24,12 @@ describe("catalog TTS text pipeline", () => {
     assert.match(fish, /Tia kola/i);
     assert.doesNotMatch(fish, /\.\s+comment/i);
   });
+
+  it("Louis prénom lisible après je t'aime", () => {
+    const fish = prepareVoiceTtsForFish("salut c'est Tiakola, je t'aime Louis, mon bébé", {
+      voiceName: "Tiakola",
+    });
+    assert.match(fish, /Louie/i);
+    assert.doesNotMatch(fish, /\.\s+Je t'aime/i);
+  });
 });

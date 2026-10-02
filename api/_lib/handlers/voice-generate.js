@@ -9,7 +9,7 @@ const {
 } = require("../fish-audio");
 const { uploadToR2 } = require("../r2");
 const { applyCreditDelta } = require("../generation");
-const { humanizeVoiceScript } = require("../voice-humanize");
+const { buildVoiceGenerationScript } = require("../voice-generation-script");
 const {
   loadVoiceCloneManifest,
   saveVoiceGenerationManifest,
@@ -226,10 +226,12 @@ module.exports = async function voiceGenerateHandler(req, res) {
       voiceName = lookupCatalogEntryByFishId(fishReferenceId)?.name ?? null;
     }
 
-    const script = humanizeVoiceScript(text, {
-      enabled: true,
-      style: deliveryStyle,
+    const script = await buildVoiceGenerationScript(text, {
+      enabled: humanizeEnabled,
+      gemini: humanizeEnabled,
       voiceName,
+      locale: body.locale || body.lang || "fr",
+      style: deliveryStyle,
     });
 
     const resolvedFishId = await ensureFishReferenceId({
@@ -255,6 +257,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
       metadata: {
         mode: resolvedFishId ? "reference-id" : "inline-reference",
         humanized: script.humanized,
+        gemini_punctuation: script.geminiPunctuationApplied === true,
         vocal_flow: true,
         catalog_artist: Boolean(
           !voiceCloneId && lookupCatalogEntryByFishId(resolvedFishId || fishReferenceId),
@@ -304,7 +307,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const isCatalogOnlyVoice = Boolean(!voiceCloneId && catalogEntry);
     const catalogTtsSpeed = resolveCatalogTtsSpeed(catalogFishId);
 
-    const cloneFidelity = Boolean(voiceCloneId);
+    const cloneFidelity = Boolean(
+      voiceCloneId || (referenceAudio && referenceAudio.length > 1024 && !isCatalogOnlyVoice),
+    );
 
     async function synthesizeInlineFromSample() {
       if (!referenceAudio) return null;
@@ -338,6 +343,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
             fishReferenceId: resolvedFishId,
             text: script.displayText,
             voiceName,
+            preparedFishText: ttsText,
           });
         } else {
           audioBuffer = await synthesizeSpeech({

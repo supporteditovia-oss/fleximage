@@ -104,16 +104,20 @@ function flowFrenchVocalDelivery(text) {
  * displayText reste le texte utilisateur (historique / UI).
  */
 function humanizeVoiceScript(rawText, options = {}) {
-  const displayText = String(rawText || "").trim();
+  const workingText = String(rawText || "").trim();
+  const displayText =
+    typeof options.displayTextOverride === "string"
+      ? options.displayTextOverride.trim()
+      : workingText;
   const voiceName = options.voiceName || null;
 
-  if (!displayText) {
+  if (!workingText && !displayText) {
     return { displayText: "", fishText: "", humanized: false, pronunciationFixed: false };
   }
 
   const humanizeExtras = options.enabled !== false;
 
-  let fishText = displayText;
+  let fishText = workingText || displayText;
   let pronunciationFixed = false;
   if (humanizeExtras) {
     fishText = expandFrenchChatShorthand(fishText);

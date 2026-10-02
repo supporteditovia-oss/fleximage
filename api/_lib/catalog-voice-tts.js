@@ -2,7 +2,7 @@
  * Synthèse catalogue — une seule pipeline pour l’aperçu (play) et la génération payante.
  */
 const { synthesizeSpeech } = require("./fish-audio");
-const { prepareVoiceTtsForFish } = require("./voice-humanize");
+const { buildVoiceGenerationScript } = require("./voice-generation-script");
 const {
   lookupCatalogEntryByFishId,
   resolveCatalogTtsSpeed,
@@ -29,7 +29,11 @@ async function synthesizeCatalogArtistSpeech(params) {
   }
 
   const voiceName = resolveCatalogVoiceName(fishReferenceId, params.voiceName);
-  const fishText = prepareVoiceTtsForFish(rawText, { voiceName });
+  const preparedFishText =
+    typeof params.preparedFishText === "string" ? params.preparedFishText.trim() : "";
+  const fishText = preparedFishText
+    ? preparedFishText
+    : (await buildVoiceGenerationScript(rawText, { voiceName, gemini: true })).fishText;
   const speed = resolveCatalogTtsSpeed(fishReferenceId);
 
   return synthesizeSpeech({
