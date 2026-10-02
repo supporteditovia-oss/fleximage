@@ -1,4 +1,4 @@
-const { synthesizeSpeech } = require("../fish-audio");
+const { synthesizeCatalogArtistSpeech } = require("../catalog-voice-tts");
 const { uploadToR2, getR2Config } = require("../r2");
 const {
   buildCatalogSampleLine,
@@ -43,10 +43,10 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     }
 
     const entry = lookupCatalogEntryByFishId(fishReferenceId);
-    const buffer = await synthesizeSpeech({
+    const buffer = await synthesizeCatalogArtistSpeech({
+      fishReferenceId,
       text: buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale),
-      referenceId: fishReferenceId,
-      format: "mp3",
+      voiceName: entry?.name,
     });
 
     if (!buffer || buffer.length < 512) {

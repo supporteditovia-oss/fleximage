@@ -14,7 +14,7 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 4;
+const UNIFIED_PREVIEW_VERSION = 8;
 
 function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
   const locale = normalizeVoiceLocale(localeLike);
@@ -36,22 +36,30 @@ function lookupCatalogEntryByFishId(fishReferenceId) {
 }
 
 /**
- * Débit Fish Audio par voix catalogue (champ rate ou ttsSpeed).
- * Retourne null si voix hors catalogue → débit global par défaut.
+ * Débit Fish Audio par voix catalogue.
+ * `pitch` (UI / Web Speech) × `rate` → vitesse Fish : plus grave = plus lent (Gazo, Booba…).
+ * Retourne null si voix hors catalogue.
  */
 function resolveCatalogTtsSpeed(fishReferenceId) {
   const entry = lookupCatalogEntryByFishId(fishReferenceId);
   if (!entry) return null;
 
-  const raw =
+  const rate =
     typeof entry.ttsSpeed === "number" && Number.isFinite(entry.ttsSpeed)
       ? entry.ttsSpeed
       : typeof entry.rate === "number" && Number.isFinite(entry.rate)
         ? entry.rate
-        : null;
+        : DEFAULT_TTS_SPEED;
+  const pitch =
+    typeof entry.pitch === "number" && Number.isFinite(entry.pitch)
+      ? entry.pitch
+      : 1;
 
-  if (raw == null) return null;
-  return clampTtsSpeed(raw);
+  return clampTtsSpeed(rate * pitch);
+}
+
+function isCatalogFishReferenceId(fishReferenceId) {
+  return Boolean(lookupCatalogEntryByFishId(fishReferenceId));
 }
 
 module.exports = {
@@ -64,5 +72,6 @@ module.exports = {
   isValidFishReferenceId,
   unifiedPreviewCacheKey,
   lookupCatalogEntryByFishId,
+  isCatalogFishReferenceId,
   resolveCatalogTtsSpeed,
 };

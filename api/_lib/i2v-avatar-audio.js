@@ -1,5 +1,7 @@
 const { uploadToR2 } = require("./r2");
 const { synthesizeSpeech } = require("./fish-audio");
+const { prepareVoiceTtsForFish } = require("./voice-humanize");
+const { lookupCatalogEntryByFishId } = require("./voice-catalog");
 const catalog = require("../../shared/voice-catalog.json");
 
 const DEFAULT_CATALOG_FISH_ID =
@@ -25,9 +27,10 @@ async function prepareI2VAvatarAudioUrl({ userId, meta }) {
   const voiceText = String(meta?.voice_text || "").trim();
 
   const referenceId = resolveFishReferenceId(meta);
+  const voiceName = lookupCatalogEntryByFishId(referenceId)?.name ?? null;
   const ttsText =
     voiceEnabled && voiceText.length >= 5
-      ? voiceText
+      ? prepareVoiceTtsForFish(voiceText, { voiceName })
       : "…";
   const buffer = await synthesizeSpeech({
     text: ttsText,

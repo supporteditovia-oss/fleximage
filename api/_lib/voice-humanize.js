@@ -44,6 +44,14 @@ function polishFrenchCasualFlow(text) {
     out = out.replace(/^bonjour\b/i, "Bonjour,");
   }
 
+  out = out.replace(
+    /\bsalut\s+(?=(comment|ça|c'est|je|j'|tu|on)\b)/giu,
+    "Salut, ",
+  );
+  out = out.replace(/\bcomment tu vas\b/giu, "comment tu vas");
+  out = out.replace(/\bc'est\s+là\b/giu, "c'est là");
+  out = out.replace(/\baujourd'hui\b/giu, "aujourd'hui");
+
   if (!/[.?!…]$/.test(out)) {
     out += ".";
   }
@@ -53,6 +61,42 @@ function polishFrenchCasualFlow(text) {
 
 function naturalizeFrenchCasual(text) {
   return polishFrenchCasualFlow(text);
+}
+
+/**
+ * Message vocal continu — évite les pauses Fish entre phrases courtes.
+ * Les « . » internes deviennent des virgules ; une seule fin de phrase.
+ */
+function flowFrenchVocalDelivery(text) {
+  let out = String(text || "").trim();
+  if (!out) return out;
+
+  out = out.replace(/[\r\n]+/g, " ");
+  out = out.replace(/\s+/g, " ");
+  out = out.replace(/\.{3,}/g, "…");
+  out = out.replace(/…+/g, "…");
+
+  const terminal = out.match(/[.?!…]$/)?.[0] || "";
+  let body = terminal ? out.slice(0, -1).trim() : out;
+
+  body = body
+    .replace(/\.\s+/g, ", ")
+    .replace(/!\s+/g, ", ")
+    .replace(/\?\s+/g, ", ")
+    .replace(/…\s+/g, ", ")
+    .replace(/;\s+/g, ", ")
+    .replace(/:\s+/g, ", ");
+
+  body = body.replace(/,\s*,+/g, ", ").replace(/^,\s*/, "").trim();
+
+  out = body;
+  if (terminal && terminal !== ".") {
+    out = `${out}${terminal}`;
+  } else if (out && !/[.?!…]$/.test(out)) {
+    out += ".";
+  }
+
+  return out;
 }
 
 /**
@@ -67,11 +111,22 @@ function humanizeVoiceScript(rawText, options = {}) {
     return { displayText: "", fishText: "", humanized: false, pronunciationFixed: false };
   }
 
-  let fishText = expandFrenchChatShorthand(displayText);
-  const afterExpand = fishText;
-  fishText = applyFrenchPronunciationHints(fishText, { voiceName });
-  const pronunciationFixed = fishText !== afterExpand;
-  fishText = naturalizeFrenchCasual(fishText);
+  const humanizeExtras = options.enabled !== false;
+
+  let fishText = displayText;
+  let pronunciationFixed = false;
+  if (humanizeExtras) {
+    fishText = expandFrenchChatShorthand(fishText);
+    const afterExpand = fishText;
+    fishText = applyFrenchPronunciationHints(fishText, { voiceName });
+    pronunciationFixed = fishText !== afterExpand;
+    fishText = naturalizeFrenchCasual(fishText);
+  } else {
+    fishText = fishText.replace(/\s+/g, " ").trim();
+  }
+
+  /** Toujours — catalogue, clone perso, extrait inline (Fish msgpack). */
+  fishText = flowFrenchVocalDelivery(fishText);
   const humanized = fishText !== displayText;
 
   return {
@@ -82,9 +137,16 @@ function humanizeVoiceScript(rawText, options = {}) {
   };
 }
 
+/** Texte final Fish — même règles pour toutes les voix (rappeurs catalogue + clones). */
+function prepareVoiceTtsForFish(rawText, options = {}) {
+  return humanizeVoiceScript(rawText, { enabled: true, ...options }).fishText;
+}
+
 module.exports = {
   humanizeVoiceScript,
+  prepareVoiceTtsForFish,
   naturalizeFrenchCasual,
   expandFrenchChatShorthand,
   polishFrenchCasualFlow,
+  flowFrenchVocalDelivery,
 };
