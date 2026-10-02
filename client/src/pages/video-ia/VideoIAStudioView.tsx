@@ -1,12 +1,16 @@
-import type { RefObject } from "react";
+import { useMemo, type RefObject } from "react";
 import { Film, Loader2, Upload } from "lucide-react";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
+import { VideoStudioPromptField } from "@/components/video/VideoStudioPromptField";
 import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import type { VideoStudioMode } from "@/lib/video-studio-modes";
-import type { V2VScenePreset } from "@/lib/video-studio-config";
 import type { V2VStudioIntent } from "@/lib/v2v-studio-intent";
+import {
+  pickVideoRandomPrompt,
+  videoTypewriterIdeas,
+} from "@/lib/video-studio-prompt-pools";
 import type {
   VideoAspectRatio,
   VideoQuality,
@@ -61,9 +65,6 @@ export type VideoIAStudioViewProps = {
   v2vCreditsForResolution: (r: VideoUltraResolution) => number;
   swapPrompt: string;
   onSwapPrompt: (v: string) => void;
-  swapPlaceholder: string;
-  v2vPresets: V2VScenePreset[];
-  onPreset: (prompt: string) => void;
   refImageIsCustom: boolean;
   refImagePreview: string | null;
   onRefImageUpload: (file: File | null) => void;
@@ -102,6 +103,23 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
   const isI2V = props.workflow === "image_to_video";
   const aspectPreviewClass =
     props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait";
+
+  const typewriterIdeas = useMemo(
+    () => videoTypewriterIdeas(props.workflow, props.v2vIntent),
+    [props.workflow, props.v2vIntent],
+  );
+
+  const randomPrompt = () => {
+    if (isI2V) {
+      props.onMotionPromptChange(
+        pickVideoRandomPrompt("image_to_video", props.v2vIntent),
+      );
+    } else {
+      props.onSwapPrompt(
+        pickVideoRandomPrompt("video_to_video", props.v2vIntent),
+      );
+    }
+  };
 
   return (
     <div className="via-studio">
@@ -207,14 +225,13 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
 
             {props.imagePreviewUrl ? (
               <>
-                <textarea
+                <VideoStudioPromptField
                   value={props.motionPrompt}
-                  onChange={(e) => props.onMotionPromptChange(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Mouvement (ex. plongeon, marche lente…)"
-                  className="via-prompt-field"
-                  aria-label="Mouvement"
+                  onChange={props.onMotionPromptChange}
+                  typewriterIdeas={typewriterIdeas}
+                  onRandom={randomPrompt}
+                  fallbackPlaceholder="Décris le mouvement…"
+                  ariaLabel="Mouvement"
                 />
                 <VideoVoiceAddon
                   enabled={props.voiceEnabled}
@@ -341,33 +358,6 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
 
             {props.videoPreview ? (
               <>
-                <textarea
-                  value={props.swapPrompt}
-                  onChange={(e) => props.onSwapPrompt(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder={props.swapPlaceholder}
-                  className="via-prompt-field"
-                  aria-label="Transformation"
-                />
-                {props.v2vPresets.length > 0 ? (
-                  <div className="via-chips">
-                    {props.v2vPresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        className="via-chip"
-                        onClick={() => props.onPreset(preset.prompt)}
-                      >
-                        <span className="via-chip__emoji" aria-hidden>
-                          {preset.emoji}
-                        </span>
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
                 <input
                   ref={props.refImageFileRef}
                   type="file"
@@ -384,7 +374,11 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                   onClick={() => props.refImageFileRef.current?.click()}
                 >
                   <span className="via-upload-zone__text">
-                    {props.refImageIsCustom ? "Changer photo bonus" : "+ Photo bonus (optionnel)"}
+                    {props.refImageIsCustom
+                      ? "Changer ta photo"
+                      : props.v2vIntent === "motion"
+                        ? "+ Ta photo (pour remplacer le danseur)"
+                        : "+ Photo bonus (optionnel)"}
                   </span>
                 </button>
                 {props.refImageIsCustom && props.refImagePreview ? (
@@ -392,6 +386,15 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                     <img src={props.refImagePreview} alt="" />
                   </div>
                 ) : null}
+
+                <VideoStudioPromptField
+                  value={props.swapPrompt}
+                  onChange={props.onSwapPrompt}
+                  typewriterIdeas={typewriterIdeas}
+                  onRandom={randomPrompt}
+                  fallbackPlaceholder="Décris la transformation…"
+                  ariaLabel="Transformation"
+                />
 
                 <VideoSourceVoiceAddon
                   enabled={props.preserveSourceVoice}

@@ -36,7 +36,6 @@ import {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MIN_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
-  VIDEO_V2V_PRESETS,
   type VideoAspectRatio,
   type VideoQuality,
   type VideoWorkflow,
@@ -54,11 +53,8 @@ import {
   resolveV2VProviderForStudio,
 } from "@/lib/v2v-prompt";
 import {
-  appendV2VPromptSuffix,
   parseV2VIntentFromUrl,
   resolveV2VBillingProvider,
-  V2V_MOTION_PRESETS,
-  v2vIntentPlaceholder,
   type V2VStudioIntent,
 } from "@/lib/v2v-studio-intent";
 import {
@@ -253,8 +249,6 @@ export default function VideoIA() {
     [v2vIntent, swapPrompt],
   );
 
-  const v2vActivePresets =
-    v2vIntent === "motion" ? V2V_MOTION_PRESETS : VIDEO_V2V_PRESETS;
   const v2vResolutionOptions = useMemo(
     () =>
       v2vResolutionsForEngineFamily(
@@ -789,9 +783,6 @@ export default function VideoIA() {
       v2vCreditsForResolution={v2vCreditsForResolution}
       swapPrompt={swapPrompt}
       onSwapPrompt={setSwapPrompt}
-      swapPlaceholder={v2vIntentPlaceholder(v2vIntent)}
-      v2vPresets={v2vActivePresets}
-      onPreset={(p) => setSwapPrompt(appendV2VPromptSuffix(p))}
       refImageIsCustom={refImageIsCustom}
       refImagePreview={refImagePreview}
       onRefImageUpload={handleRefImageUpload}
