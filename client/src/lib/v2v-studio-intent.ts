@@ -1,8 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Car, PersonStanding } from "lucide-react";
 import type { V2VScenePreset } from "@/lib/video-studio-config";
-import { resolveV2VProviderForStudio } from "@/lib/v2v-prompt";
-
 export type V2VStudioIntent = "motion" | "scene";
 
 export type V2VIntentOption = {
@@ -66,13 +64,18 @@ export function v2vProviderFromIntent(intent: V2VStudioIntent): "kling_motion" |
   return intent === "motion" ? "kling_motion" : "runway_aleph";
 }
 
-/** Aligné serveur dès qu'un prompt est saisi ; sinon l'intention choisie guide prix & qualité. */
+/** Prix & qualités UI : l’onglet Mouvement / Scène choisi (pas le texte aléatoire). */
 export function resolveV2VBillingProvider(
   intent: V2VStudioIntent,
-  userPrompt: string,
+  _userPrompt?: string,
 ): "kling_motion" | "runway_aleph" {
-  const trimmed = String(userPrompt || "").trim();
-  if (trimmed) return resolveV2VProviderForStudio(trimmed);
+  return v2vProviderFromIntent(intent);
+}
+
+/** Moteur à l’envoi — même règle que la UI studio à deux onglets. */
+export function resolveV2VProviderForStudioSubmit(
+  intent: V2VStudioIntent,
+): "kling_motion" | "runway_aleph" {
   return v2vProviderFromIntent(intent);
 }
 
