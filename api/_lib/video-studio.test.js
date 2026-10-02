@@ -224,6 +224,42 @@ describe("video-studio", () => {
     );
   });
 
+  it("extractRequestedVehicleModel resolves Rolls-Royce La Rose Noire Droptail", () => {
+    const prompt =
+      "Remplace ma Golf par une Rolls Royce la rose noire drop tail, même cadrage";
+    const vehicle = extractRequestedVehicleModel(prompt);
+    assert.match(vehicle?.model || "", /La Rose Noire|Droptail/i);
+    assert.match(vehicle?.exterior || "", /two-seat|NOT a four-door/i);
+  });
+
+  it("buildV2VProviderPrompt uses exterior lock for car wash swap (not cockpit-only)", () => {
+    const prompt = buildV2VProviderPrompt(
+      "Remplace ma voiture par une Rolls-Royce La Rose Noire Droptail",
+      { preserveSourceAudio: false },
+    );
+    assert.match(prompt, /TARGET VEHICLE/i);
+    assert.match(prompt, /CRITICAL EXTERIOR VEHICLE/i);
+    assert.match(prompt, /La Rose Noire|Droptail/i);
+    assert.doesNotMatch(prompt, /INTELLIGENT STATE.*Park \(P\)/);
+  });
+
+  it("buildV2VProviderPrompt keeps cockpit lock when interior requested", () => {
+    const prompt = buildV2VProviderPrompt(
+      "Remplace l'intérieur par une Urus, volant OEM, je roule à 100 km/h",
+      { preserveSourceAudio: false },
+    );
+    assert.match(prompt, /INTELLIGENT STATE|vehicle realism lock/i);
+    assert.match(prompt, /100 km\/h/i);
+  });
+
+  it("buildV2VProviderPrompt locks Dubai when user asks relocation", () => {
+    const prompt = buildV2VProviderPrompt("Transporte-moi à Dubai Marina la nuit", {
+      preserveSourceAudio: false,
+    });
+    assert.match(prompt, /SCENE RELOCATION/i);
+    assert.match(prompt, /Dubai/i);
+  });
+
   it("isVehicleDrivingPrompt detects keys and generic car swaps", () => {
     assert.equal(
       isVehicleDrivingPrompt("Je montre ma clé Twingo puis je monte dans la voiture"),

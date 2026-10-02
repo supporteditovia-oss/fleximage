@@ -7,6 +7,8 @@ describe("prompt-intelligence video modes", () => {
     const text = resolveSystemInstruction("video_v2v");
     assert.match(text, /Video-to-Video/i);
     assert.match(text, /speedometer/i);
+    assert.match(text, /Droptail|La Rose Noire/i);
+    assert.match(text, /Dubai/i);
     assert.match(text, /silent/i);
   });
 
