@@ -255,6 +255,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
         mode: resolvedFishId ? "reference-id" : "inline-reference",
         humanized: script.humanized,
         vocal_flow: true,
+        catalog_artist: Boolean(
+          !voiceCloneId && lookupCatalogEntryByFishId(resolvedFishId || fishReferenceId),
+        ),
         humanize_requested: humanizeEnabled,
         pronunciation_fixed: script.pronunciationFixed,
         delivery_style: deliveryStyle,
@@ -329,7 +332,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         audioBuffer = await synthesizeSpeech({
           text: ttsText,
           referenceId: resolvedFishId,
-          speed: catalogTtsSpeed,
+          speed: catalogTtsSpeed ?? undefined,
           cloneFidelity,
         });
       } catch (refErr) {

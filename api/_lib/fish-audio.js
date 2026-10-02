@@ -3,6 +3,7 @@ const { flowFrenchVocalDelivery } = require("./voice-humanize");
 const {
   DEFAULT_TTS_SPEED,
   clampTtsSpeed,
+  isCatalogFishReferenceId,
   resolveCatalogTtsSpeed,
 } = require("./voice-catalog");
 
@@ -42,6 +43,9 @@ function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
+  const catalogArtist = options.catalogArtist === true;
+  /** Voix catalogue (Gazo, Maes…) = même exigence timbre que clone perso. */
+  const timbreLock = cloneFidelity || catalogArtist;
   const vocalContinuous = len > 0 && len <= VOCAL_CONTINUOUS_MAX_CHARS;
 
   if (vocalContinuous) {
@@ -50,11 +54,11 @@ function buildTtsOptions(text, options = {}) {
       chunk_length: Math.max(400, len + 80),
       min_chunk_length: 0,
       condition_on_previous_chunks: true,
-      temperature: cloneFidelity ? 0.48 : 0.58,
-      top_p: cloneFidelity ? 0.72 : 0.76,
-      repetition_penalty: cloneFidelity ? 1.02 : 1.04,
+      temperature: timbreLock ? 0.45 : 0.58,
+      top_p: timbreLock ? 0.68 : 0.76,
+      repetition_penalty: timbreLock ? 1.01 : 1.04,
       prosody: {
-        speed: cloneFidelity ? Math.min(speed, 1) : speed,
+        speed: timbreLock ? speed : speed,
         volume: 0,
         normalize_loudness: false,
       },
@@ -372,9 +376,12 @@ async function synthesizeSpeech({
     });
   }
 
+  const catalogArtist = isCatalogFishReferenceId(referenceId);
   const catalogSpeed = resolveCatalogTtsSpeed(referenceId);
   const resolvedSpeed =
-    typeof speed === "number" && Number.isFinite(speed) ? speed : catalogSpeed;
+    typeof speed === "number" && Number.isFinite(speed)
+      ? speed
+      : catalogSpeed ?? DEFAULT_TTS_SPEED;
 
   const response = await fetch(`${FISH_API_BASE}/v1/tts`, {
     method: "POST",
@@ -386,7 +393,11 @@ async function synthesizeSpeech({
       text: trimmed.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed, { speed: resolvedSpeed, cloneFidelity }),
+      ...buildTtsOptions(trimmed, {
+        speed: resolvedSpeed,
+        cloneFidelity,
+        catalogArtist,
+      }),
     }),
   });
 

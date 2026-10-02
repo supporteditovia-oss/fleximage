@@ -27,18 +27,25 @@ describe("voice-catalog", () => {
   it("builds stable cache keys", () => {
     assert.equal(
       unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004", "fr"),
-      "voice-catalog/unified/v4/fr/6be490a175744894826dd464cf3a5004.mp3",
+      "voice-catalog/unified/v7/fr/6be490a175744894826dd464cf3a5004.mp3",
     );
   });
 
-  it("resolves per-voice Fish TTS speed from catalog rate", () => {
-    assert.equal(
-      resolveCatalogTtsSpeed("3cfa191ad09b4cfea8e4eebc4c31c923"),
-      1.02,
+  it("resolves Fish TTS speed from catalog rate × pitch (grave = plus lent)", () => {
+    assert.ok(
+      Math.abs(
+        resolveCatalogTtsSpeed("3cfa191ad09b4cfea8e4eebc4c31c923") - 0.816,
+      ) < 0.001,
     );
-    assert.equal(
-      resolveCatalogTtsSpeed("22b7c6809d5d405aa6a5ae2402272b53"),
-      0.84,
+    assert.ok(
+      Math.abs(
+        resolveCatalogTtsSpeed("22b7c6809d5d405aa6a5ae2402272b53") - 0.655,
+      ) < 0.001,
+    );
+    assert.ok(
+      Math.abs(
+        resolveCatalogTtsSpeed("0ff4b00e39e2429981b93bd7c6256d98") - 0.684,
+      ) < 0.001,
     );
     assert.equal(resolveCatalogTtsSpeed("not-a-catalog-id"), null);
   });
