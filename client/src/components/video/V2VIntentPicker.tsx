@@ -17,7 +17,7 @@ export function V2VIntentPicker({
   if (variant === "cards") {
     return (
       <div
-        className="via-intent-grid"
+        className="via-intent-grid via-intent-grid--compact"
         role="tablist"
         aria-label="Intention Vidéo vers Vidéo"
       >
@@ -30,14 +30,16 @@ export function V2VIntentPicker({
               type="button"
               role="tab"
               aria-selected={isActive}
-              className={`via-intent-card ${isActive ? "is-active" : ""}`}
+              className={`via-intent-card via-intent-card--compact ${isActive ? "is-active" : ""}`}
               onClick={() => onSelect(option.id)}
             >
               <span className="via-intent-card__icon" aria-hidden>
-                <Icon className="h-4 w-4" strokeWidth={1.75} />
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
               </span>
-              <span className="via-intent-card__label">{option.label}</span>
-              <span className="via-intent-card__hint">{option.hint}</span>
+              <span className="via-intent-card__copy">
+                <span className="via-intent-card__label">{option.label}</span>
+                <span className="via-intent-card__hint">{option.hint}</span>
+              </span>
             </button>
           );
         })}
