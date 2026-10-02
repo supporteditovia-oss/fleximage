@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 interface GenerationEligibility {
   canGenerate: boolean;
   isSubscriber: boolean;
+  isAdmin?: boolean;
   generationCount: number;
   reason?: string;
 }

@@ -153,32 +153,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryFn: async () => {
         if (!user) return null;
 
-        const result = await withTimeout(
+        const fetchOnce = () =>
           supabase
             .from("profiles")
             .select("*")
             .eq("id", user.id)
             .single()
-            .then(({ data, error }) => {
-              if (error) {
-                console.warn(
-                  "Profile not found in database, might be still creating...",
-                  error,
-                );
-                return fallbackProfile(user);
-              }
-              return data as Profile;
-            }),
-          PROFILE_TIMEOUT_MS,
-          fallbackProfile(user),
-        );
+            .then(({ data, error }) => ({ data: data as Profile | null, error }));
 
-        return result;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const result = await withTimeout(
+            fetchOnce(),
+            PROFILE_TIMEOUT_MS,
+            { data: null, error: new Error("profile_timeout") },
+          );
+          if (result.data && !result.error) {
+            return result.data;
+          }
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          }
+        }
+
+        console.warn(
+          "[auth] Profile fetch failed after retries — using provisional fallback",
+        );
+        return fallbackProfile(user);
       },
       enabled: !!user,
       staleTime: 60_000,
-      retry: false,
-      refetchOnWindowFocus: false,
+      retry: 1,
+      refetchOnWindowFocus: true,
     });
 
   useEffect(() => {

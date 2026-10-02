@@ -187,6 +187,20 @@ export default function Generate({
   const isGeneratingRef = useRef(false);
   const autoGenerateFiredRef = useRef(false);
 
+  /** Server truth when client profile is still provisional (timeout fallback). */
+  const privilegedAccount =
+    isAdmin ||
+    Boolean(eligibility?.isAdmin) ||
+    Boolean(profile?.is_subscriber) ||
+    Boolean(eligibility?.isSubscriber);
+
+  useEffect(() => {
+    if (!privilegedAccount) return;
+    clearFakePaywallReached();
+    setShowLuxePaywall(false);
+    setShowFakeOnboardingLoader(false);
+  }, [privilegedAccount]);
+
   // Fond LuxeFlexIA uniquement sur /generate (pas /create — évite overflow clip + fixed cassé)
   useEffect(() => {
     if (basePath === "/create") return;
@@ -554,7 +568,7 @@ export default function Generate({
     if (showFakeOnboardingLoader || taskId || pendingLoading || unlockingLarp) {
       return;
     }
-    if (profile?.is_subscriber || profile?.role === "admin") return;
+    if (privilegedAccount) return;
 
     const resume = getOnboardingResume();
     const paywallPreview = getPaywallImage();
@@ -623,8 +637,7 @@ export default function Generate({
     navigate,
     pendingLoading,
     profile?.id,
-    profile?.is_subscriber,
-    profile?.role,
+    privilegedAccount,
     showFakeOnboardingLoader,
     taskId,
     unlockingLarp,
@@ -802,14 +815,15 @@ export default function Generate({
     }) => {
       void context;
       setPendingLoading(false);
-      const isAdmin = profile?.role === "admin";
-      const subscriber = Boolean(profile?.is_subscriber) && !isAdmin;
+      const subscriber =
+        Boolean(profile?.is_subscriber || eligibility?.isSubscriber) &&
+        !privilegedAccount;
       // Packs + upgrade only for existing subscribers at 0 credits.
       // First-time / non-subscribers → classic subscription paywall only.
       if (subscriber) {
         zeroCreditsDismissedRef.current = false;
         setShowZeroCreditsModal(true);
-      } else if (!isAdmin) {
+      } else if (!privilegedAccount) {
         setShowLuxePaywall(true);
         setPaywallDefaultPlan("essential");
       }
@@ -819,7 +833,7 @@ export default function Generate({
         trackFunnelStep("paywall", { source: "insufficient_credits" });
       });
     },
-    [profile?.is_subscriber, profile?.role],
+    [eligibility?.isSubscriber, privilegedAccount],
   );
 
   const finishFakeOnboardingLoader = useCallback(() => {
@@ -874,8 +888,7 @@ export default function Generate({
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
     const willUseFakeOnboardingLoader =
       profile &&
-      !profile.is_subscriber &&
-      profile.role !== "admin" &&
+      !privilegedAccount &&
       !isReturningFromCheckout &&
       profile.credits < requiredCreditsPreview;
 
@@ -1007,8 +1020,7 @@ export default function Generate({
     // Non-abonnés sans assez de crédits : loader identique aux abonnés → paywall.
     const shouldUseOnboardingPaywall =
       profile &&
-      !profile.is_subscriber &&
-      profile.role !== "admin" &&
+      !privilegedAccount &&
       !isReturningFromCheckout &&
       profile.credits < requiredCredits;
 
@@ -1068,7 +1080,7 @@ export default function Generate({
     if (
       !isReturningFromCheckout &&
       profile &&
-      profile.role !== "admin" &&
+      !privilegedAccount &&
       profile.credits < requiredCredits
     ) {
       setPendingLoading(false);
@@ -1084,13 +1096,30 @@ export default function Generate({
     // Skip client-side eligibility check when returning from checkout:
     // the cached data is stale (user just got credits via Stripe).
     // Server will still validate credits.
-    if (!isReturningFromCheckout && eligibility && !eligibility.canGenerate) {
+    if (
+      !isReturningFromCheckout &&
+      eligibility &&
+      !eligibility.canGenerate &&
+      !eligibility.isAdmin &&
+      !privilegedAccount
+    ) {
       setPendingLoading(false);
       await saveCurrentDraftForCheckout();
       startInsufficientCreditsFlow({
         currentCredits: profile?.credits ?? 0,
         requiredCredits,
         generationMode,
+      });
+      return;
+    }
+
+    if (isAuthLoading) {
+      setPendingLoading(false);
+      setIsStartingGeneration(false);
+      isGeneratingRef.current = false;
+      toast({
+        title: "Un instant",
+        description: "Compte en cours de chargement — réessaie dans une seconde.",
       });
       return;
     }
@@ -1102,7 +1131,7 @@ export default function Generate({
       clearOnboardingResume();
 
       // Instant UI debit so the header diamond updates on click (server still authoritative).
-      if (profile?.role !== "admin" && user?.id) {
+      if (!privilegedAccount && user?.id) {
         const debit = requiredCredits;
         queryClient.setQueryData(["profile", user.id], (old: typeof profile) => {
           if (!old) return old;
@@ -1230,8 +1259,7 @@ export default function Generate({
         (error.code === "VIDEO_PLAN_REQUIRED" ||
           error.code === "SUBSCRIPTION_REQUIRED" ||
           normalizedMessage.includes("video")) &&
-        !profile?.is_subscriber &&
-        profile?.role !== "admin"
+        !privilegedAccount
       ) {
         setPaywallDefaultPlan("essential");
         setFakePaywallReason("onboarding");
@@ -1403,11 +1431,7 @@ export default function Generate({
 
     const requiredCredits =
       generationMode === "video" ? VIDEO_CREDIT_COST : IMAGE_CREDIT_COST;
-    if (
-      profile &&
-      profile.role !== "admin" &&
-      profile.credits < requiredCredits
-    ) {
+    if (profile && !privilegedAccount && profile.credits < requiredCredits) {
       console.log("[Generate] Starting insufficient credits fake flow...");
       startInsufficientCreditsFlow({
         currentCredits: profile.credits,

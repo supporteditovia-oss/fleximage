@@ -431,6 +431,11 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, studio lighting, fake body artifacts. " +
   "MODEL LOCK: output the EXACT brand+model the user named — NEVER Nissan Silvia/S15, Skyline, GT-R, R34/R35, Supra, or generic JDM widebody when they asked BMW, Lamborghini, Mercedes, Ferrari, etc.";
 
+const VEHICLE_BODY_FROM_REFERENCE_GUARD =
+  "TWO-PHOTO VEHICLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, pavement, buildings, people, sky, lighting, camera distance, crop, and the original car's parking pose/angle/wheel direction. " +
+  "Image 2 = target vehicle identity — copy THAT exact body, color, wheels, badges, trim, and proportions from image 2 onto the car in image 1. " +
+  "FORBIDDEN: inventing a different model (Nissan Juke/Silvia, Skyline, random widebody), re-parking, recentering, changing the scene, or ignoring image 2.";
+
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
   "BACKGROUND LOCK: shop/shutters/lights/pump/pavement UNCHANGED. Closed stays closed, open stays open. " +
@@ -627,6 +632,10 @@ const COCKPIT_INTERIOR_REPLACE_CLARIFIER =
 /** Front-load for cockpit-only swaps — survives 2900-char truncation. */
 const COCKPIT_BODY_POSE_FRONT_LOCK =
   "COCKPIT BODY POSE LOCK: freeze legs/feet/knees/bag/hands — interior swap ONLY, zero limb movement. ";
+
+const COCKPIT_CAMERA_FRAMING_LOCK =
+  "COCKPIT CAMERA FRAMING LOCK (mandatory): keep IDENTICAL driver-POV crop, lens distance, horizon height, and steering-wheel rotation angle as the uploaded photo — if the wheel is turned left, it stays turned left; never straighten the wheel, never zoom out, never pull the camera back. " +
+  "Keep ALL exterior traffic/cars through the windshield unchanged (same white Fiat, same pump, same people) unless the user explicitly asked to change them. ";
 
 const COCKPIT_WINDSHIELD_TRAFFIC_FRONT_LOCK =
   "WINDSHIELD TRAFFIC LOCK (absolute): freeze EVERY pixel outside — same road, lanes, sky, trees, buildings, AND every car/truck in traffic (same count, colors, positions, distance). NEVER delete, remove, or erase a vehicle ahead. ";
@@ -1883,6 +1892,15 @@ function isVehicleReplacePrompt(prompt) {
   const mentionsCarNoun =
     /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
   if (hasReplaceVerb && mentionsCarNoun) return true;
+  if (
+    hasReplaceVerb &&
+    mentionsCarNoun &&
+    /\b(image\s*2|photo\s*2|2e\s+photo|deuxieme\s+photo|second\s+(photo|picture|image))\b/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
   const spec = parseVehicleSpec(prompt);
   if (spec && hasReplaceVerb) return true;
   if (/\b(moi|me|je)\b/.test(text)) {
@@ -2141,10 +2159,18 @@ function vehicleWrongModelForbiddenHint(prompt) {
 const VEHICLE_DECAL_FRONT_LOCK =
   "ONE STICKER COPY ONLY — no duplicate/floating A or decals in air or on car-wash brushes. ";
 
-function buildVehicleReplaceCompactHead(userPrompt) {
+function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
+  const fromRef = isVehicleReplaceFromReferencePrompt(
+    userPrompt,
+    referenceImageCount,
+  );
+  const refPrefix = fromRef
+    ? "TWO-PHOTO SWAP: image1=scene+camera lock, image2=exact target car (color/body/wheels/badges) — FORBIDDEN invented Juke/Silvia/Skyline. "
+    : "";
   const spec = parseVehicleSpec(userPrompt);
-  if (!spec) return "";
+  if (!spec) return refPrefix.trim();
   return (
+    `${refPrefix}` +
     `${VEHICLE_DECAL_FRONT_LOCK}` +
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
@@ -2152,7 +2178,27 @@ function buildVehicleReplaceCompactHead(userPrompt) {
   ).trim();
 }
 
-function buildVehicleReplaceUserLine(userPrompt) {
+function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
+  const refs = Math.max(0, Number(referenceImageCount) || 0);
+  if (refs < 2) return false;
+  const text = normalizePromptText(prompt);
+  const mentionsRef =
+    /\b(image\s*2|photo\s*2|2e\s+photo|deuxieme\s+photo|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e)\b/i.test(
+      text,
+    );
+  const mentionsCar =
+    /\b(voiture|car|auto|vehicule|vehicle)\b/i.test(text) ||
+    /\b(remplac\w*|replace\w*|swap\w*)\b/i.test(text);
+  return mentionsRef && mentionsCar;
+}
+
+function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
+  if (isVehicleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
+    return (
+      "Replace ONLY the car in image 1 with the exact vehicle shown in image 2 (color, body, wheels, badges). " +
+      "Keep image 1 background, camera framing, parking pose, plate/decals, and every non-car detail unchanged."
+    ).trim();
+  }
   const spec = parseVehicleSpec(userPrompt);
   const raw = String(userPrompt || "").trim();
   const label = spec?.label || raw;
@@ -2995,6 +3041,9 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${cleaned}${EXTERIOR_TRAFFIC_CLARIFIER}`;
     }
   } else if (cockpitInteriorReplaceRequest) {
+    if (!/COCKPIT CAMERA FRAMING LOCK/i.test(cleaned)) {
+      cleaned = `${COCKPIT_CAMERA_FRAMING_LOCK}${cleaned}`;
+    }
     if (!/WINDSHIELD TRAFFIC LOCK/i.test(cleaned)) {
       cleaned = `${COCKPIT_WINDSHIELD_TRAFFIC_FRONT_LOCK}${cleaned}`;
     }
@@ -4078,7 +4127,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     : animalScene
       ? cleaned
       : vehicleReplaceScene
-        ? buildVehicleReplaceUserLine(userPrompt)
+        ? buildVehicleReplaceUserLine(userPrompt, referenceImageCount)
         : expandImageEditUserRequest(cleaned, {
             allowSceneChange: lifestyleScene || fullRewrite,
             allowCameraChange: cameraChange,
@@ -4122,8 +4171,11 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           isSwimwearBeachOutfitPrompt(userPrompt) ? SWIMWEAR_OUTFIT_CLARIFIER : ""
         }`
       : "";
+  const vehicleReplaceFromRef =
+    vehicleReplaceScene &&
+    isVehicleReplaceFromReferencePrompt(userPrompt, referenceImageCount);
   const vehicleReplaceHead = vehicleReplaceScene
-    ? buildVehicleReplaceCompactHead(userPrompt)
+    ? buildVehicleReplaceCompactHead(userPrompt, referenceImageCount)
     : "";
   const effectiveSceneGuard = vehicleReplaceHead
     ? `${vehicleReplaceHead} ${sceneGuard}`
@@ -4150,10 +4202,24 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 16);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const compactVehicleReplaceCore = (() => {
+    if (!vehicleReplaceScene) return "";
+    const head = [
+      vehicleReplaceHead,
+      vehicleReplaceFromRef ? "Use image 2 as the exact target car." : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const rawUser = buildVehicleReplaceUserLine(userPrompt, referenceImageCount);
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
+    return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  })();
   const compactCockpitCore = (() => {
     if (!cockpitInteriorReplaceScene) return "";
     const genHint = vehicleIdentityHint(userPrompt);
-    const head = [genHint, COCKPIT_INTERIOR_COMPACT_GUARD]
+    const head = [COCKPIT_CAMERA_FRAMING_LOCK, genHint, COCKPIT_INTERIOR_COMPACT_GUARD]
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
@@ -4183,7 +4249,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
         ? [compactLifestyleCore, core].filter(Boolean)
         : cockpitInteriorReplaceScene
           ? [compactCockpitCore, core].filter(Boolean)
-          : [core]
+          : vehicleReplaceScene
+            ? [compactVehicleReplaceCore, core].filter(Boolean)
+            : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
@@ -4211,7 +4279,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   }
 
   // Last resort: keep guards + celeb, trim only the user text.
-  const fixed = `${nonCarScenePrefix}${sceneGuard}${celebInject} User request:`;
+  const fixed = `${nonCarScenePrefix}${effectiveSceneGuard}${celebInject} User request:`;
   const budget = Math.max(40, MAX_FINAL_PROMPT - fixed.length - 1);
   const userForTrim =
     lifestyleScene && isNonCarLifestylePrompt(userPrompt)
