@@ -1061,6 +1061,25 @@ html.luxeflexia-create-page::before {
   margin-bottom: 0.35rem;
 }
 
+.vs-script-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+}
+
+.vs-script-shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #8a7340;
+}
+
 .vs-mode-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;

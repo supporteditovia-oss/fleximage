@@ -6,6 +6,7 @@ import {
   Pause,
   Play,
   Share2,
+  Shuffle,
   Square,
 } from "lucide-react";
 import { LuxePaywallModal } from "@/components/generate/LuxePaywallModal";
@@ -47,6 +48,11 @@ import { VoiceGenerationLoader } from "@/components/v2/VoiceGenerationLoader";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { buildCatalogSampleLine } from "@shared/voice-locale-scripts";
+import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
+import {
+  pickVoiceCloneRandomPrompt,
+  VOICE_CLONE_TYPEWRITER_IDEAS,
+} from "@/lib/voice-clone-prompt-pools";
 import { adminPreviewVoiceGenerateCreditCost } from "@shared/pricing-admin-reference";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
@@ -204,6 +210,11 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   } | null>(() => resolveActiveFromStorage());
 
   const [text, setText] = useState("");
+  const scriptRef = useTypewriterPlaceholder(
+    text,
+    VOICE_CLONE_TYPEWRITER_IDEAS,
+    vsg("textPlaceholder", "Écris ce que tu veux faire dire à la voix…"),
+  );
   const [catalogOpen, setCatalogOpen] = useState(false);
 
   useEffect(() => {
@@ -1092,7 +1103,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           fishReferenceId,
           instantAudioDataUrl,
           style: deliveryStyle,
-          humanize: false,
+          humanize: true,
         });
 
         setResultAudioUrl(result.audioUrl);
@@ -1490,6 +1501,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             {vsg("textLabel", "Ton texte")}
           </label>
           <textarea
+            ref={scriptRef}
             id="vs-script"
             className="studio-field"
             rows={4}
@@ -1501,10 +1513,21 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             )}
           />
 
+          <div className="vs-script-tools">
+            <button
+              type="button"
+              className="vs-script-shuffle"
+              onClick={() => setText(pickVoiceCloneRandomPrompt())}
+            >
+              <Shuffle className="h-3.5 w-3.5" aria-hidden />
+              Aléatoire
+            </button>
+          </div>
+
           <p className="vs-help vs-help--tight">
             {vsg(
               "rapperNamesHint",
-              "Prénoms et noms de rappeurs : écris « Kaaris », « Damso », etc. — la prononciation est corrigée automatiquement.",
+              "SLT, bb, prénoms d'artistes… — on corrige la prononciation automatiquement.",
             )}
           </p>
 
