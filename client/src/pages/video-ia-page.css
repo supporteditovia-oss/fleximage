@@ -25,17 +25,18 @@ html.luxeflexia-video-page .floating-header::before {
   background: var(--lx-page-bg) !important;
 }
 
+/* Même hauteur que /create : logo + crédits + switch Image / Voix / Vidéo */
 .luxeflexia-app[data-route="video-ia"] {
-  --lx-app-header-h: calc(5.25rem + env(safe-area-inset-top, 0px));
+  --lx-app-header-h: calc(7.35rem + env(safe-area-inset-top, 0px));
 }
 
 .luxeflexia-app[data-route="video-ia"] .luxeflexia-app-scroll {
-  padding-top: calc(var(--lx-app-header-h) + 0.15rem);
+  scroll-padding-top: calc(var(--lx-app-header-h) + 0.35rem);
 }
 
 @media (min-width: 768px) {
   .luxeflexia-app[data-route="video-ia"] {
-    --lx-app-header-h: calc(5.5rem + env(safe-area-inset-top, 0px));
+    --lx-app-header-h: calc(7.6rem + env(safe-area-inset-top, 0px));
   }
 }
 
