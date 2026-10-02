@@ -3,11 +3,20 @@ const assert = require("node:assert/strict");
 const {
   humanizeVoiceScript,
   expandFrenchChatShorthand,
+  flowFrenchVocalDelivery,
 } = require("./voice-humanize");
 
 describe("voice-humanize", () => {
   it("expandFrenchChatShorthand decodes SLT and bb", () => {
     assert.equal(expandFrenchChatShorthand("slt cv bb"), "salut ça va bébé");
+  });
+
+  it("flowFrenchVocalDelivery merges phrases without sentence breaks", () => {
+    const raw =
+      "Salut bébé. Je vais penser à toi. Appelle-moi quand tu peux.";
+    const flowed = flowFrenchVocalDelivery(raw);
+    assert.doesNotMatch(flowed, /\.\s+Je/);
+    assert.match(flowed, /Salut bébé, Je vais penser à toi,/i);
   });
 
   it("humanizeVoiceScript keeps display text, fixes fish text for Ninho + bébé", () => {

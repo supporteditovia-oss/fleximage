@@ -13,10 +13,10 @@ const FIDELITY_TTS = {
   temperature: 0.6,
   top_p: 0.78,
   repetition_penalty: 1.06,
-  condition_on_previous_chunks: false,
+  condition_on_previous_chunks: true,
   mp3_bitrate: 192,
-  chunk_length: 300,
-  min_chunk_length: 100,
+  chunk_length: 400,
+  min_chunk_length: 0,
   prosody: {
     speed: 1.02,
     volume: 0,
@@ -25,10 +25,9 @@ const FIDELITY_TTS = {
   features: [],
 };
 
-/**
- * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
- * Plus long → chunks liés pour garder la cohérence.
- */
+/** Seuil message vocal « court » — un bloc TTS, prosodie continue. */
+const VOCAL_CONTINUOUS_MAX_CHARS = 520;
+
 function resolveTtsSpeed(text, speedOverride) {
   if (typeof speedOverride === "number" && Number.isFinite(speedOverride)) {
     return clampTtsSpeed(speedOverride);
@@ -42,16 +41,17 @@ function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
+  const vocalContinuous = len > 0 && len <= VOCAL_CONTINUOUS_MAX_CHARS;
 
-  if (len <= 200) {
+  if (vocalContinuous) {
     return {
       ...FIDELITY_TTS,
-      chunk_length: 300,
-      min_chunk_length: 100,
-      condition_on_previous_chunks: false,
-      temperature: cloneFidelity ? 0.48 : 0.6,
-      top_p: cloneFidelity ? 0.72 : 0.78,
-      repetition_penalty: cloneFidelity ? 1.02 : 1.06,
+      chunk_length: Math.max(400, len + 80),
+      min_chunk_length: 0,
+      condition_on_previous_chunks: true,
+      temperature: cloneFidelity ? 0.48 : 0.58,
+      top_p: cloneFidelity ? 0.72 : 0.76,
+      repetition_penalty: cloneFidelity ? 1.02 : 1.04,
       prosody: {
         speed: cloneFidelity ? Math.min(speed, 1) : speed,
         volume: 0,
@@ -63,7 +63,7 @@ function buildTtsOptions(text, options = {}) {
   return {
     ...FIDELITY_TTS,
     chunk_length: 280,
-    min_chunk_length: 80,
+    min_chunk_length: 60,
     temperature: 0.54,
     top_p: 0.74,
     repetition_penalty: 1.1,

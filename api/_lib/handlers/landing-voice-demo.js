@@ -51,7 +51,7 @@ async function getLandingDemoBuffer(entry, localeLike) {
     text: fishText,
     referenceId: entry.fishId,
     format: "mp3",
-    speed: entry.rate,
+    speed: entry.rate ?? entry.ttsSpeed,
   });
 
   if (!buffer || buffer.length < 512) {

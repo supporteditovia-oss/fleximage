@@ -56,6 +56,42 @@ function naturalizeFrenchCasual(text) {
 }
 
 /**
+ * Message vocal continu — évite les pauses Fish entre phrases courtes.
+ * Les « . » internes deviennent des virgules ; une seule fin de phrase.
+ */
+function flowFrenchVocalDelivery(text) {
+  let out = String(text || "").trim();
+  if (!out) return out;
+
+  out = out.replace(/[\r\n]+/g, " ");
+  out = out.replace(/\s+/g, " ");
+  out = out.replace(/\.{3,}/g, "…");
+  out = out.replace(/…+/g, "…");
+
+  const terminal = out.match(/[.?!…]$/)?.[0] || "";
+  let body = terminal ? out.slice(0, -1).trim() : out;
+
+  body = body
+    .replace(/\.\s+/g, ", ")
+    .replace(/!\s+/g, ", ")
+    .replace(/\?\s+/g, ", ")
+    .replace(/…\s+/g, ", ")
+    .replace(/;\s+/g, ", ")
+    .replace(/:\s+/g, ", ");
+
+  body = body.replace(/,\s*,+/g, ", ").replace(/^,\s*/, "").trim();
+
+  out = body;
+  if (terminal && terminal !== ".") {
+    out = `${out}${terminal}`;
+  } else if (out && !/[.?!…]$/.test(out)) {
+    out += ".";
+  }
+
+  return out;
+}
+
+/**
  * Prépare le texte pour Fish : expansions SMS + prononciation + ponctuation naturelle.
  * displayText reste le texte utilisateur (historique / UI).
  */
@@ -72,6 +108,7 @@ function humanizeVoiceScript(rawText, options = {}) {
   fishText = applyFrenchPronunciationHints(fishText, { voiceName });
   const pronunciationFixed = fishText !== afterExpand;
   fishText = naturalizeFrenchCasual(fishText);
+  fishText = flowFrenchVocalDelivery(fishText);
   const humanized = fishText !== displayText;
 
   return {
@@ -87,4 +124,5 @@ module.exports = {
   naturalizeFrenchCasual,
   expandFrenchChatShorthand,
   polishFrenchCasualFlow,
+  flowFrenchVocalDelivery,
 };
