@@ -141,8 +141,16 @@ async function resolveImageGenerationProvider(supabase, options = {}) {
       );
     }
     if (remainingCredits !== null && remainingCredits <= 0) {
+      if (deepinfraConfigured) {
+        return {
+          provider: "deepinfra",
+          reason: "multi_ref_composite_deepinfra",
+          remainingCredits,
+          dualReferenceComposite: true,
+        };
+      }
       throw new Error(
-        "Plusieurs photos de référence : crédits OneShot épuisés — recharge OneShot (DeepInfra ne peut pas utiliser l'image 2).",
+        "Plusieurs photos de référence : crédits OneShot épuisés — recharge OneShot ou configure DEEPINFRA_API_KEY (planche composite).",
       );
     }
     return {

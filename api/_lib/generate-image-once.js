@@ -15,6 +15,10 @@ const {
   isOneshotCreditsExhaustedError,
   markOneshotCreditsExhausted,
 } = require("./model-router");
+const {
+  buildDualReferenceCompositePng,
+  wrapPromptForDualReferenceComposite,
+} = require("./dual-reference-composite");
 const { resolveGenerationsTableProvider } = require("./generation-provider");
 const { readApiCallCount } = require("./generation-idempotency");
 
@@ -362,24 +366,52 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
-  async function runDeepInfra(reason) {
-    if (Array.isArray(imageUrls) && imageUrls.length > 1) {
+  async function runDeepInfra(reason, routeOptions = {}) {
+    const urls = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
+    const useDualComposite =
+      urls.length >= 2 &&
+      (Boolean(routeOptions.dualReferenceComposite) ||
+        reason === "multi_ref_composite_deepinfra" ||
+        reason === "admin_oneshot_exhausted_deepinfra" ||
+        reason instanceof Error);
+    let deepinfraPrompt = finalPrompt;
+    let referenceImageBuffer = null;
+    let compositeMeta = null;
+
+    if (urls.length > 1 && !useDualComposite) {
       const err = new Error(
-        "DeepInfra ne supporte qu'une seule image — ajoute OneShot ou n'utilise qu'une photo.",
+        "DeepInfra ne supporte qu'une seule image — recharge OneShot ou n'utilise qu'une photo.",
       );
       err.code = "MULTI_REF_DEEPINFRA_UNSUPPORTED";
       throw err;
     }
+
+    if (useDualComposite) {
+      referenceImageBuffer = await buildDualReferenceCompositePng(
+        urls[0],
+        urls[1],
+      );
+      deepinfraPrompt = wrapPromptForDualReferenceComposite(finalPrompt);
+      compositeMeta = { dual_reference_composite: true, ref_count: urls.length };
+      console.info("[generate-image-once] DeepInfra dual-ref composite", {
+        generationId,
+        refCount: urls.length,
+        ...logContext,
+      });
+    }
+
     console.info("[generate-image-once] DeepInfra sync", {
       generationId,
       reason: reason instanceof Error ? reason.message : reason || null,
+      dualComposite: Boolean(referenceImageBuffer),
       ...logContext,
     });
 
     const { buffer, mimeType } = await generateDeepInfraImage({
-      prompt: finalPrompt,
+      prompt: deepinfraPrompt,
       aspectRatio,
-      imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+      imageUrls: referenceImageBuffer ? [] : urls,
+      referenceImageBuffer: referenceImageBuffer || undefined,
     });
 
     const { uploadToR2 } = require("./r2");
@@ -412,6 +444,7 @@ async function generateImageOnce(supabase, params) {
       deepinfra_sync: true,
       provider_duration_ms: Date.now() - startedAt,
       provider_auto_retries: 0,
+      ...(compositeMeta || {}),
     };
 
     const { error: persistErr } = await supabase
@@ -485,7 +518,9 @@ async function generateImageOnce(supabase, params) {
 
   try {
     if (route.provider === "deepinfra") {
-      return await runDeepInfra(route.reason || null);
+      return await runDeepInfra(route.reason || null, {
+        dualReferenceComposite: route.dualReferenceComposite,
+      });
     }
     return await runOneshot();
   } catch (primaryErr) {
@@ -502,7 +537,10 @@ async function generateImageOnce(supabase, params) {
             ...logContext,
           },
         );
-        return await runDeepInfra(primaryErr);
+        return await runDeepInfra(primaryErr, {
+          dualReferenceComposite:
+            Array.isArray(imageUrls) && imageUrls.length > 1,
+        });
       }
       const retryErr = new Error(
         "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY pour le relais automatique.",

@@ -89,10 +89,24 @@ async function generateDeepInfraImage(params) {
   const refUrls = Array.isArray(params.imageUrls)
     ? params.imageUrls.filter((u) => typeof u === "string" && /^https?:\/\//i.test(u))
     : [];
+  const prebuiltBuffer =
+    params.referenceImageBuffer &&
+    Buffer.isBuffer(params.referenceImageBuffer) &&
+    params.referenceImageBuffer.length >= 256
+      ? params.referenceImageBuffer
+      : null;
 
-  if (refUrls.length > 0) {
-    const { buffer: inputBuffer, mimeType: inputMime } =
-      await fetchHttpImageBuffer(refUrls[0]);
+  if (prebuiltBuffer || refUrls.length > 0) {
+    let inputBuffer;
+    let inputMime;
+    if (prebuiltBuffer) {
+      inputBuffer = prebuiltBuffer;
+      inputMime = "image/png";
+    } else {
+      const fetched = await fetchHttpImageBuffer(refUrls[0]);
+      inputBuffer = fetched.buffer;
+      inputMime = fetched.mimeType;
+    }
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
