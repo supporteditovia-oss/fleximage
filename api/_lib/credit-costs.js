@@ -2,20 +2,4 @@
  * Coûts crédits par action — source de vérité backend.
  * Miroir de shared/credit-costs.ts côté client.
  */
-const IMAGE_CREDIT_COST = 10;
-const VOICE_CREDIT_COST = 10;
-const VOICE_CLONE_CREDIT_COST = 30;
-const VIDEO_I2V_CREDIT_COST = 60;
-const VIDEO_V2V_CREDIT_COST = 95;
-const VIDEO_FLAT_CREDIT_COST = VIDEO_I2V_CREDIT_COST;
-const VIDEO_VOICE_EXTRA_CREDIT = 5;
-
-module.exports = {
-  IMAGE_CREDIT_COST,
-  VOICE_CREDIT_COST,
-  VOICE_CLONE_CREDIT_COST,
-  VIDEO_I2V_CREDIT_COST,
-  VIDEO_V2V_CREDIT_COST,
-  VIDEO_FLAT_CREDIT_COST,
-  VIDEO_VOICE_EXTRA_CREDIT,
-};
+module.exports = require("../../shared/credit-costs.cjs");
