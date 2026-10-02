@@ -44,6 +44,7 @@ import TousLesGenerateurs from "@/pages/TousLesGenerateurs";
 import ZeroCreditsPreview from "@/pages/ZeroCreditsPreview";
 import { readStudioMode, type StudioMode } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useVoiceCloningAccess } from "@/lib/voice-cloning-access";
 import { supabase } from "@/lib/supabase";
 import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
 
@@ -180,6 +181,7 @@ function GenerateRoute() {
 
 function HistoriqueRoute() {
   const { v2Enabled, isLoading } = useV2GateWithTimeout();
+  const voiceCloningAccess = useVoiceCloningAccess();
   const [studioMode, setStudioMode] = React.useState<StudioMode>(() =>
     readStudioMode(),
   );
@@ -197,7 +199,7 @@ function HistoriqueRoute() {
 
   if (isLoading) return <AuthResolveShell />;
   // Voix IA : l'onglet mène au catalogue des voix, pas à l'historique images.
-  if (v2Enabled && studioMode === "voice") {
+  if (v2Enabled && voiceCloningAccess && studioMode === "voice") {
     return <Redirect to="/bibliotheque" />;
   }
   return <Historique />;

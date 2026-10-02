@@ -1126,7 +1126,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     <div className="voice-studio-page">
       <div className="voice-studio-page__inner voice-studio-page__inner--wide">
         <p className="voice-studio-page__eyebrow">
-          {guestFunnel ? t("landing:voiceStudioGuest.eyebrow") : "Studio"}
+          {guestFunnel ? t("landing:voiceStudioGuest.eyebrow") : "Preview admin · Clonage IA"}
         </p>
         <h2 className="voice-studio-page__title">
           {guestFunnel ? t("landing:voiceStudioGuest.title") : "Clonage IA"}
@@ -1418,7 +1418,12 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               {recordState === "ready" && voiceClip ? (
                 <VoiceClipPreview clip={voiceClip} />
               ) : null}
-              <p className="vs-help">{vsg("recordHelp", "Interview idéale : 15–20 s où il parle seul, sans musique. Évite le débruitage agressif — garde le grain naturel de la voix.")}</p>
+              <p className="vs-help">
+                {vsg(
+                  "recordHelp",
+                  "Pour un clone fidèle à l'extrait : 15–20 s de voix seule, sans musique ni bruit de fond, bien audible. Évite le débruitage agressif — garde le grain naturel.",
+                )}
+              </p>
             </div>
           ) : (
             <div className="vs-capture">
@@ -1487,7 +1492,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               <p className="vs-help">
                 {vsg(
                   "importHelp",
-                  `MP3, WAV, M4A ou MP4 · max ${MAX_CLIP_SEC} s · glisse les bandes blanches si c'est plus long.`,
+                  `MP3, WAV, M4A ou MP4 · max ${MAX_CLIP_SEC} s · voix claire sans fond sonore · glisse les bandes blanches si c'est plus long.`,
                   { max: MAX_CLIP_SEC },
                 )}
               </p>
@@ -1527,7 +1532,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           <p className="vs-help vs-help--tight">
             {vsg(
               "rapperNamesHint",
-              "SLT, bb, prénoms d'artistes… — on corrige la prononciation automatiquement.",
+              "Ponctuation et prononciation corrigées automatiquement (Gemini + IA voix) — tu peux écrire naturellement, avec ou sans virgules.",
             )}
           </p>
 

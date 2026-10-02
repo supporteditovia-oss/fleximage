@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { Redirect, useLocation } from "wouter";
 import {
   readStudioMode,
+  writeStudioMode,
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { useAuth } from "@/hooks/use-auth";
 import { VoiceStudioMock } from "@/components/v2/VoiceStudioMock";
+import { AdminVoiceCloningGate } from "@/components/v2/AdminVoiceCloningGate";
+import { useVoiceCloningAccess } from "@/lib/voice-cloning-access";
 import { AuthResolveShell } from "@/components/v2/AuthResolveShell";
 import { FakeOnboardingLoader } from "@/components/larp/FakeOnboardingLoader";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
@@ -53,7 +56,14 @@ export default function Create() {
   const { user, profile, isAdmin } = useAuth();
   const [, navigate] = useLocation();
   const mode = useStudioMode();
+  const voiceCloningAccess = useVoiceCloningAccess();
   const [gateTimedOut, setGateTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!voiceCloningAccess && mode === "voice") {
+      writeStudioMode("image");
+    }
+  }, [voiceCloningAccess, mode]);
 
   const { showFakeLoader: showVideoFakeLoader, finishFakeLoader: finishVideoFakeLoader } =
     useOnboardingFakeLoader({
@@ -107,7 +117,11 @@ export default function Create() {
   return (
     <>
       {mode === "image" ? <Generate basePath="/create" /> : null}
-      {mode === "voice" ? <VoiceStudioMock /> : null}
+      {mode === "voice" ? (
+        <AdminVoiceCloningGate>
+          <VoiceStudioMock />
+        </AdminVoiceCloningGate>
+      ) : null}
     </>
   );
 }

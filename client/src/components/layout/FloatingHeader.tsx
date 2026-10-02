@@ -32,6 +32,7 @@ import {
   type StudioMode,
 } from "@/lib/v2-experience";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useVoiceCloningAccess } from "@/lib/voice-cloning-access";
 interface FloatingHeaderProps {
   variant?: "landing" | "app";
 }
@@ -40,6 +41,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
   const [location, navigate] = useLocation();
   const { user, profile, isAdmin, isLoading } = useAuth();
   const { v2Enabled } = useV2Access();
+  const voiceCloningAccess = useVoiceCloningAccess();
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [creditsOpen, setCreditsOpen] = React.useState(false);
@@ -399,6 +401,7 @@ export default function FloatingHeader({ variant = "landing" }: FloatingHeaderPr
             mode={activeStudioMode}
             onChange={handleStudioModeChange}
             size="compact"
+            voiceTabEnabled={voiceCloningAccess}
           />
         </div>
       ) : null}

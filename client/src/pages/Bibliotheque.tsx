@@ -3,6 +3,7 @@ import { Redirect, useLocation } from "wouter";
 import { Loader2, Pause, Play, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useV2Access } from "@/hooks/use-v2-access";
+import { useVoiceCloningAccess } from "@/lib/voice-cloning-access";
 import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
@@ -327,6 +328,7 @@ function VoiceCatalogLibrary() {
 export default function Bibliotheque() {
   const { isLoading: authLoading } = useAuth();
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
+  const voiceCloningAccess = useVoiceCloningAccess();
   const [studioMode, setStudioMode] = useState<StudioMode>(() =>
     readStudioMode(),
   );
@@ -344,13 +346,13 @@ export default function Bibliotheque() {
     };
   }, []);
 
-  const isVoice = studioMode === "voice";
+  const isVoice = studioMode === "voice" && voiceCloningAccess;
 
   if (!authLoading && !gateLoading && !v2Enabled) {
     return <Redirect to="/historique" />;
   }
 
-  if (!isVoice) {
+  if (!voiceCloningAccess || !isVoice) {
     return <Redirect to="/historique" />;
   }
 

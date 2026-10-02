@@ -91,7 +91,7 @@ export async function generateVoice(params: {
       fishReferenceId: params.fishReferenceId,
       instantAudioDataUrl: params.instantAudioDataUrl,
       style: params.style ?? "casual",
-      humanize: params.humanize === true,
+      humanize: params.humanize !== false,
     }),
   });
   return res.json() as Promise<VoiceGenerateResult>;

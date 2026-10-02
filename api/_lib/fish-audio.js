@@ -1,7 +1,9 @@
 const { encode } = require("@msgpack/msgpack");
+const { flowFrenchVocalDelivery } = require("./voice-humanize");
 const {
   DEFAULT_TTS_SPEED,
   clampTtsSpeed,
+  isCatalogFishReferenceId,
   resolveCatalogTtsSpeed,
 } = require("./voice-catalog");
 
@@ -13,10 +15,10 @@ const FIDELITY_TTS = {
   temperature: 0.6,
   top_p: 0.78,
   repetition_penalty: 1.06,
-  condition_on_previous_chunks: false,
+  condition_on_previous_chunks: true,
   mp3_bitrate: 192,
-  chunk_length: 300,
-  min_chunk_length: 100,
+  chunk_length: 400,
+  min_chunk_length: 0,
   prosody: {
     speed: 1.02,
     volume: 0,
@@ -25,10 +27,10 @@ const FIDELITY_TTS = {
   features: [],
 };
 
-/**
- * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
- * Plus long → chunks liés pour garder la cohérence.
- */
+/** Seuil message vocal « court » — un bloc TTS, prosodie continue. */
+/** Aligné sur la limite Fish — évite les chunks avec silences sur les vocaux longs. */
+const VOCAL_CONTINUOUS_MAX_CHARS = 2000;
+
 function resolveTtsSpeed(text, speedOverride) {
   if (typeof speedOverride === "number" && Number.isFinite(speedOverride)) {
     return clampTtsSpeed(speedOverride);
@@ -42,18 +44,22 @@ function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
+  const catalogArtist = options.catalogArtist === true;
+  /** Voix catalogue (Gazo, Maes…) = même exigence timbre que clone perso. */
+  const timbreLock = cloneFidelity || catalogArtist;
+  const vocalContinuous = len > 0 && len <= VOCAL_CONTINUOUS_MAX_CHARS;
 
-  if (len <= 200) {
+  if (vocalContinuous) {
     return {
       ...FIDELITY_TTS,
-      chunk_length: 300,
-      min_chunk_length: 100,
-      condition_on_previous_chunks: false,
-      temperature: cloneFidelity ? 0.48 : 0.6,
-      top_p: cloneFidelity ? 0.72 : 0.78,
-      repetition_penalty: cloneFidelity ? 1.02 : 1.06,
+      chunk_length: Math.max(400, len + 80),
+      min_chunk_length: 0,
+      condition_on_previous_chunks: true,
+      temperature: timbreLock ? 0.45 : 0.58,
+      top_p: timbreLock ? 0.68 : 0.76,
+      repetition_penalty: timbreLock ? 1.01 : 1.04,
       prosody: {
-        speed: cloneFidelity ? Math.min(speed, 1) : speed,
+        speed: timbreLock ? speed : speed,
         volume: 0,
         normalize_loudness: false,
       },
@@ -63,7 +69,7 @@ function buildTtsOptions(text, options = {}) {
   return {
     ...FIDELITY_TTS,
     chunk_length: 280,
-    min_chunk_length: 80,
+    min_chunk_length: 60,
     temperature: 0.54,
     top_p: 0.74,
     repetition_penalty: 1.1,
@@ -74,6 +80,13 @@ function buildTtsOptions(text, options = {}) {
       normalize_loudness: false,
     },
   };
+}
+
+/** Nettoyage minimal — le flux oral est appliqué dans prepareVoiceTtsForFish (évite double passe). */
+function normalizeFishTtsText(text) {
+  const trimmed = String(text || "").trim().replace(/\s+/g, " ");
+  if (!trimmed) return "";
+  return trimmed.slice(0, 2000);
 }
 
 function cleanEnv(value) {
@@ -290,7 +303,7 @@ async function synthesizeWithReferenceMsgpack({
   speed,
   cloneFidelity,
 }) {
-  const trimmed = String(text || "").trim();
+  const trimmed = normalizeFishTtsText(text);
   const transcript = String(referenceText || "").trim();
   if (!trimmed || !audioBuffer || audioBuffer.length < 1024) {
     throw Object.assign(new Error("Texte et audio requis"), {
@@ -350,7 +363,7 @@ async function synthesizeSpeech({
   speed,
   cloneFidelity,
 }) {
-  const trimmed = String(text || "").trim();
+  const trimmed = normalizeFishTtsText(text);
   if (!trimmed) {
     throw Object.assign(new Error("Texte requis"), {
       status: 400,
@@ -364,9 +377,12 @@ async function synthesizeSpeech({
     });
   }
 
+  const catalogArtist = isCatalogFishReferenceId(referenceId);
   const catalogSpeed = resolveCatalogTtsSpeed(referenceId);
   const resolvedSpeed =
-    typeof speed === "number" && Number.isFinite(speed) ? speed : catalogSpeed;
+    typeof speed === "number" && Number.isFinite(speed)
+      ? speed
+      : catalogSpeed ?? DEFAULT_TTS_SPEED;
 
   const response = await fetch(`${FISH_API_BASE}/v1/tts`, {
     method: "POST",
@@ -378,7 +394,11 @@ async function synthesizeSpeech({
       text: trimmed.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed, { speed: resolvedSpeed, cloneFidelity }),
+      ...buildTtsOptions(trimmed, {
+        speed: resolvedSpeed,
+        cloneFidelity,
+        catalogArtist,
+      }),
     }),
   });
 
@@ -400,6 +420,7 @@ module.exports = {
   createVoiceModel,
   transcribeAudio,
   buildTtsOptions,
+  normalizeFishTtsText,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,
 };

@@ -9,14 +9,19 @@ const {
 } = require("../fish-audio");
 const { uploadToR2 } = require("../r2");
 const { applyCreditDelta } = require("../generation");
-const { humanizeVoiceScript } = require("../voice-humanize");
+const { buildVoiceGenerationScript } = require("../voice-generation-script");
 const {
   loadVoiceCloneManifest,
   saveVoiceGenerationManifest,
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
-const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const {
+  lookupCatalogEntryByFishId,
+  resolveCatalogTtsSpeed,
+} = require("../voice-catalog");
+const { synthesizeCatalogArtistSpeech } = require("../catalog-voice-tts");
+const { assertVoiceCloningAdminPreview } = require("../voice-cloning-gate");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -149,9 +154,10 @@ module.exports = async function voiceGenerateHandler(req, res) {
 
   try {
     ({ supabase, userId } = await requireUser(req));
+    await assertVoiceCloningAdminPreview(supabase, userId);
     const body = readBody(req);
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    const humanizeEnabled = body.humanize === true;
+    const humanizeEnabled = body.humanize !== false;
     const deliveryStyle =
       typeof body.style === "string" ? body.style.trim().toLowerCase() : "casual";
 
@@ -218,11 +224,16 @@ module.exports = async function voiceGenerateHandler(req, res) {
         voiceName = manifest?.name || null;
       }
     }
+    if (!voiceName && fishReferenceId) {
+      voiceName = lookupCatalogEntryByFishId(fishReferenceId)?.name ?? null;
+    }
 
-    const script = humanizeVoiceScript(text, {
+    const script = await buildVoiceGenerationScript(text, {
       enabled: humanizeEnabled,
-      style: deliveryStyle,
+      gemini: humanizeEnabled,
       voiceName,
+      locale: body.locale || body.lang || "fr",
+      style: deliveryStyle,
     });
 
     const resolvedFishId = await ensureFishReferenceId({
@@ -248,6 +259,12 @@ module.exports = async function voiceGenerateHandler(req, res) {
       metadata: {
         mode: resolvedFishId ? "reference-id" : "inline-reference",
         humanized: script.humanized,
+        gemini_punctuation: script.geminiPunctuationApplied === true,
+        vocal_flow: true,
+        catalog_artist: Boolean(
+          !voiceCloneId && lookupCatalogEntryByFishId(resolvedFishId || fishReferenceId),
+        ),
+        humanize_requested: humanizeEnabled,
         pronunciation_fixed: script.pronunciationFixed,
         delivery_style: deliveryStyle,
         fish_script: script.fishText,
@@ -287,9 +304,14 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     const ttsText = script.fishText;
-    const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
+    const catalogFishId = resolvedFishId || fishReferenceId;
+    const catalogEntry = lookupCatalogEntryByFishId(catalogFishId);
+    const isCatalogOnlyVoice = Boolean(!voiceCloneId && catalogEntry);
+    const catalogTtsSpeed = resolveCatalogTtsSpeed(catalogFishId);
 
-    const cloneFidelity = Boolean(voiceCloneId);
+    const cloneFidelity = Boolean(
+      voiceCloneId || (referenceAudio && referenceAudio.length > 1024 && !isCatalogOnlyVoice),
+    );
 
     async function synthesizeInlineFromSample() {
       if (!referenceAudio) return null;
@@ -318,12 +340,20 @@ module.exports = async function voiceGenerateHandler(req, res) {
     if (!audioBuffer && resolvedFishId) {
       await waitForVoiceModelReady(resolvedFishId);
       try {
-        audioBuffer = await synthesizeSpeech({
-          text: ttsText,
-          referenceId: resolvedFishId,
-          speed: catalogTtsSpeed,
-          cloneFidelity,
-        });
+        if (isCatalogOnlyVoice) {
+          audioBuffer = await synthesizeCatalogArtistSpeech({
+            fishReferenceId: resolvedFishId,
+            text: script.displayText,
+            voiceName,
+            preparedFishText: ttsText,
+          });
+        } else {
+          audioBuffer = await synthesizeSpeech({
+            text: ttsText,
+            referenceId: resolvedFishId,
+            cloneFidelity,
+          });
+        }
       } catch (refErr) {
         console.warn("voice-generate reference_id failed, fallback inline", refErr);
         audioBuffer = await synthesizeInlineFromSample();
@@ -339,6 +369,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         text: ttsText,
         audioBuffer: referenceAudio,
         referenceText,
+        speed: catalogTtsSpeed,
         cloneFidelity,
       });
     } else {

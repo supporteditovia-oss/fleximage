@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useV2Access } from "@/hooks/use-v2-access";
 
-/** Modèles prêts, catalogue outfits, studio vidéo IA — preview admin uniquement. */
+/** Modèles prêts, catalogue outfits, studio vidéo IA, Clonage IA — preview admin uniquement. */
 export function canAccessAdminPreviewFeatures(input: {
   isAdmin: boolean;
   isAuthLoading: boolean;
