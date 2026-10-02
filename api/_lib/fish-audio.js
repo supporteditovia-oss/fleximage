@@ -41,6 +41,7 @@ function resolveTtsSpeed(text, speedOverride) {
 function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
+  const cloneFidelity = options.cloneFidelity === true;
 
   if (len <= 200) {
     return {
@@ -48,10 +49,14 @@ function buildTtsOptions(text, options = {}) {
       chunk_length: 300,
       min_chunk_length: 100,
       condition_on_previous_chunks: false,
-      temperature: 0.6,
-      top_p: 0.78,
-      repetition_penalty: 1.06,
-      prosody: { speed, volume: 0, normalize_loudness: false },
+      temperature: cloneFidelity ? 0.48 : 0.6,
+      top_p: cloneFidelity ? 0.72 : 0.78,
+      repetition_penalty: cloneFidelity ? 1.02 : 1.06,
+      prosody: {
+        speed: cloneFidelity ? Math.min(speed, 1) : speed,
+        volume: 0,
+        normalize_loudness: false,
+      },
     };
   }
 
@@ -283,6 +288,7 @@ async function synthesizeWithReferenceMsgpack({
   audioBuffer,
   referenceText,
   speed,
+  cloneFidelity,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -308,7 +314,7 @@ async function synthesizeWithReferenceMsgpack({
       },
     ],
     format: "mp3",
-    ...buildTtsOptions(trimmed, { speed }),
+    ...buildTtsOptions(trimmed, { speed, cloneFidelity }),
   };
 
   const body = encode(payload);
@@ -342,6 +348,7 @@ async function synthesizeSpeech({
   referenceId,
   format = "mp3",
   speed,
+  cloneFidelity,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -371,7 +378,7 @@ async function synthesizeSpeech({
       text: trimmed.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed, { speed: resolvedSpeed }),
+      ...buildTtsOptions(trimmed, { speed: resolvedSpeed, cloneFidelity }),
     }),
   });
 

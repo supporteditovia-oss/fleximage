@@ -187,8 +187,8 @@ module.exports = async function voiceCloneHandler(req, res) {
       description: `Clone user ${userId}`,
       audioBuffers: [parsed.buffer],
       texts: referenceTranscript ? [referenceTranscript] : undefined,
-      trainMode: "fast",
-      enhanceAudioQuality: false,
+      trainMode: process.env.FISH_VOICE_TRAIN_MODE || "fast",
+      enhanceAudioQuality: true,
     });
 
     try {

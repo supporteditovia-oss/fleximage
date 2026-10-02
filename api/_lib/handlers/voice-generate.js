@@ -289,32 +289,47 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const ttsText = script.fishText;
     const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
+    const cloneFidelity = Boolean(voiceCloneId);
+
+    async function synthesizeInlineFromSample() {
+      if (!referenceAudio) return null;
+      let referenceText = voiceContext.referenceTranscript;
+      if (!referenceText || referenceText.length < 3) {
+        referenceText = await transcribeAudio(referenceAudio, "fr");
+      }
+      return synthesizeWithReferenceMsgpack({
+        text: ttsText,
+        audioBuffer: referenceAudio,
+        referenceText,
+        speed: catalogTtsSpeed,
+        cloneFidelity,
+      });
+    }
+
     let audioBuffer;
-    if (resolvedFishId) {
+    if (cloneFidelity && referenceAudio) {
+      try {
+        audioBuffer = await synthesizeInlineFromSample();
+      } catch (inlineErr) {
+        console.warn("voice-generate clone inline failed, fallback reference_id", inlineErr);
+      }
+    }
+
+    if (!audioBuffer && resolvedFishId) {
       await waitForVoiceModelReady(resolvedFishId);
       try {
         audioBuffer = await synthesizeSpeech({
           text: ttsText,
           referenceId: resolvedFishId,
           speed: catalogTtsSpeed,
+          cloneFidelity,
         });
       } catch (refErr) {
         console.warn("voice-generate reference_id failed, fallback inline", refErr);
-        if (!referenceAudio) throw refErr;
-
-        let referenceText = voiceContext.referenceTranscript;
-        if (!referenceText || referenceText.length < 3) {
-          referenceText = await transcribeAudio(referenceAudio, "fr");
-        }
-
-        audioBuffer = await synthesizeWithReferenceMsgpack({
-          text: ttsText,
-          audioBuffer: referenceAudio,
-          referenceText,
-          speed: catalogTtsSpeed,
-        });
+        audioBuffer = await synthesizeInlineFromSample();
+        if (!audioBuffer) throw refErr;
       }
-    } else if (referenceAudio) {
+    } else if (!audioBuffer && referenceAudio) {
       let referenceText = voiceContext.referenceTranscript;
       if (!referenceText || referenceText.length < 3) {
         referenceText = await transcribeAudio(referenceAudio, "fr");
@@ -324,6 +339,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         text: ttsText,
         audioBuffer: referenceAudio,
         referenceText,
+        cloneFidelity,
       });
     } else {
       throw Object.assign(new Error("Voix de référence indisponible"), {
