@@ -32,6 +32,43 @@ function getMinMeanAbsDiff() {
   return Number.isFinite(n) && n > 0 && n < 1 ? n : 0.032;
 }
 
+/** Volant / logo : rejeter si cette zone reste quasi identique (écran central seul changé). */
+function getMaxSteeringRegionChangedRatio() {
+  const n = Number(process.env.V2V_TRANSFORM_MAX_STEERING_UNCHANGED_RATIO);
+  return Number.isFinite(n) && n > 0 && n < 1 ? n : 0.045;
+}
+
+function getMaxSteeringRegionMeanAbsDiff() {
+  const n = Number(process.env.V2V_TRANSFORM_MAX_STEERING_UNCHANGED_MAE);
+  return Number.isFinite(n) && n > 0 && n < 1 ? n : 0.018;
+}
+
+/** ROIs normalisées sur frame 320×320 (POV habitacle, conduite à gauche ou à droite). */
+function getSteeringWheelRegions(sampleSize = 320) {
+  const w = sampleSize;
+  const h = sampleSize;
+  const rw = Math.round(w * 0.55);
+  const rh = Math.round(h * 0.55);
+  const top = Math.round(h * 0.32);
+  return [
+    { name: "lower_left", left: 0, top, width: rw, height: rh },
+    {
+      name: "lower_right",
+      left: w - rw,
+      top,
+      width: rw,
+      height: rh,
+    },
+  ];
+}
+
+function regionLooksUnchanged(metrics) {
+  return (
+    metrics.changedPixelRatio < getMaxSteeringRegionChangedRatio() &&
+    metrics.meanAbsDiff < getMaxSteeringRegionMeanAbsDiff()
+  );
+}
+
 function shouldRunV2VTransformVisualQa(meta, userPrompt) {
   if (!isV2VTransformVisualQaEnabled()) return false;
   if (!meta || meta.workflow !== "video_to_video") return false;
@@ -79,6 +116,30 @@ async function extractJpegFrameFromFile(inputPath, outputPath, seekSec) {
  * Compare two JPEG buffers (same scene size after resize).
  * @returns {{ meanAbsDiff: number, changedPixelRatio: number }}
  */
+async function cropJpegRegion(jpegBuf, region, sampleSize = 320) {
+  const sharp = require("sharp");
+  const { left, top, width, height } = region;
+  return sharp(jpegBuf)
+    .resize(sampleSize, sampleSize, { fit: "fill" })
+    .extract({
+      left: Math.max(0, Math.min(left, sampleSize - 1)),
+      top: Math.max(0, Math.min(top, sampleSize - 1)),
+      width: Math.min(width, sampleSize - left),
+      height: Math.min(height, sampleSize - top),
+    })
+    .jpeg()
+    .toBuffer();
+}
+
+async function compareJpegRegion(jpegA, jpegB, region, sampleSize = 320) {
+  const [cropA, cropB] = await Promise.all([
+    cropJpegRegion(jpegA, region, sampleSize),
+    cropJpegRegion(jpegB, region, sampleSize),
+  ]);
+  const side = Math.max(32, Math.min(region.width, region.height, 160));
+  return compareJpegFrames(cropA, cropB, side);
+}
+
 async function compareJpegFrames(jpegA, jpegB, sampleSize = 320) {
   const sharp = require("sharp");
   const size = sampleSize;
@@ -150,15 +211,37 @@ async function assessV2VTransformVisualChange({
       extractJpegFrameFromFile(outPath, outJpg, seekSec),
     ]);
     const metrics = await compareJpegFrames(bufSrc, bufOut);
-    const pass = passesTransformVisualThresholds(metrics);
+    let pass = passesTransformVisualThresholds(metrics);
+    const sampleSize = 320;
+    const steeringRegions = getSteeringWheelRegions(sampleSize);
+    const steeringMetrics = await Promise.all(
+      steeringRegions.map(async (region) => ({
+        name: region.name,
+        metrics: await compareJpegRegion(bufSrc, bufOut, region, sampleSize),
+      })),
+    );
+    let steeringReject = null;
+    if (pass) {
+      const bothWheelZonesStatic = steeringMetrics.every((entry) =>
+        regionLooksUnchanged(entry.metrics),
+      );
+      if (bothWheelZonesStatic) {
+        pass = false;
+        steeringReject = "steering_regions_unchanged_despite_global_pass";
+      }
+    }
     return {
       pass,
       skipped: false,
       seekSec,
       metrics,
+      steeringMetrics,
+      steeringReject,
       thresholds: {
         minChangedPixelRatio: getMinChangedPixelRatio(),
         minMeanAbsDiff: getMinMeanAbsDiff(),
+        maxSteeringUnchangedRatio: getMaxSteeringRegionChangedRatio(),
+        maxSteeringUnchangedMae: getMaxSteeringRegionMeanAbsDiff(),
       },
     };
   } catch (err) {
@@ -173,6 +256,9 @@ module.exports = {
   isV2VTransformVisualQaEnabled,
   shouldRunV2VTransformVisualQa,
   compareJpegFrames,
+  compareJpegRegion,
+  getSteeringWheelRegions,
+  regionLooksUnchanged,
   passesTransformVisualThresholds,
   assessV2VTransformVisualChange,
 };

@@ -1358,10 +1358,14 @@ module.exports = async function handler(req, res) {
                 console.warn("[status] v2v transform visual QA rejected", {
                   larpId: larp.id,
                   metrics: visualQa.metrics,
+                  steeringReject: visualQa.steeringReject || null,
                 });
                 apiStatus = "fail";
                 apiFailMsg =
-                  "La vidéo est quasi identique à l'originale (transformation trop faible sur l'habitacle). Jetons remboursés — réessaie avec un autre clip ou contacte le support.";
+                  visualQa.steeringReject ===
+                  "steering_regions_unchanged_despite_global_pass"
+                    ? "Transformation partielle refusée : l'écran a changé mais le volant / logos semblent identiques à l'original. Jetons remboursés — réessaie avec un autre clip ou contacte le support."
+                    : "La vidéo est quasi identique à l'originale (transformation trop faible sur l'habitacle). Jetons remboursés — réessaie avec un autre clip ou contacte le support.";
                 resultUrls = [];
               }
             }

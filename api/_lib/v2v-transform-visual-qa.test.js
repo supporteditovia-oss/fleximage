@@ -4,6 +4,8 @@ const sharp = require("sharp");
 
 const {
   compareJpegFrames,
+  compareJpegRegion,
+  regionLooksUnchanged,
   passesTransformVisualThresholds,
   shouldRunV2VTransformVisualQa,
 } = require("./v2v-transform-visual-qa");
@@ -48,5 +50,60 @@ describe("v2v-transform-visual-qa", () => {
     const metrics = await compareJpegFrames(a, b);
     assert.ok(metrics.changedPixelRatio > 0.5);
     assert.ok(passesTransformVisualThresholds(metrics));
+  });
+
+  it("steering ROI stays unchanged when only center of frame changes", async () => {
+    const left = await sharp({
+      create: {
+        width: 128,
+        height: 128,
+        channels: 3,
+        background: { r: 30, g: 30, b: 30 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+    const rightA = await sharp({
+      create: {
+        width: 128,
+        height: 128,
+        channels: 3,
+        background: { r: 10, g: 10, b: 200 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+    const rightB = await sharp({
+      create: {
+        width: 128,
+        height: 128,
+        channels: 3,
+        background: { r: 200, g: 10, b: 10 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+    const composite = async (rightBuf) =>
+      sharp({
+        create: {
+          width: 256,
+          height: 256,
+          channels: 3,
+          background: { r: 0, g: 0, b: 0 },
+        },
+      })
+        .composite([
+          { input: left, left: 0, top: 0 },
+          { input: rightBuf, left: 128, top: 0 },
+        ])
+        .jpeg()
+        .toBuffer();
+    const frameA = await composite(rightA);
+    const frameB = await composite(rightB);
+    const global = await compareJpegFrames(frameA, frameB);
+    assert.ok(passesTransformVisualThresholds(global));
+    const region = { name: "lower_left", left: 0, top: 0, width: 128, height: 256 };
+    const wheel = await compareJpegRegion(frameA, frameB, region, 256);
+    assert.ok(regionLooksUnchanged(wheel));
   });
 });
