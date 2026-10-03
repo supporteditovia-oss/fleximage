@@ -9,9 +9,14 @@ const {
   normalizeVideoUltraResolution,
 } = require("../../shared/video-ultra-pricing.cjs");
 const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
+const {
+  I2VVoiceDurationExceedsTargetError,
+  isI2VAvatarPipelineV2Enabled,
+} = require("./i2v-av-sync");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
+  buildI2VAvatarPrompt,
   buildOmniTransformPrompt,
   buildV2VProviderPrompt,
   isAlephTransformEnabled,
@@ -234,17 +239,40 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       }
     } else {
       const imageUrl = await ensureKieAccessibleMediaUrl(sourceAssetUrl, "image");
-      const audioUrl = await prepareI2VAvatarAudioUrl({
+      const audioPrep = await prepareI2VAvatarAudioUrl({
         userId,
         meta,
       });
       const avatarPrompt =
-        String(larp.final_prompt || providerPrompt || larp.prompt || "").trim();
+        String(larp.final_prompt || "").trim() ||
+        (isI2VAvatarPipelineV2Enabled(meta)
+          ? buildI2VAvatarPrompt({
+              motionPrompt: larp.prompt || userPrompt,
+              cameraMovement: meta.camera_movement,
+              motionIntensity: meta.motion_intensity,
+              style: meta.style,
+              voiceEnabled: meta.voice_enabled === true,
+              voiceText: meta.voice_text,
+            }).trim()
+          : "") ||
+        String(providerPrompt || larp.prompt || "").trim();
+      const kickoffMetaPatch = { ...meta };
+      if (isI2VAvatarPipelineV2Enabled(meta)) {
+        kickoffMetaPatch.i2v_input_audio_url = audioPrep.url;
+        kickoffMetaPatch.i2v_target_duration_sec = audioPrep.targetSec;
+      }
+      await supabase
+        .from("generations")
+        .update({
+          metadata: kickoffMetaPatch,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
       await generateVideoOnce(supabase, {
         generationId: larp.id,
         prompt: avatarPrompt,
         imageUrl,
-        audioUrl,
+        audioUrl: audioPrep.url,
       });
     }
 
@@ -271,15 +299,26 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
     return { larp: { ...refreshed, metadata: nextMeta }, started: true, failed: false };
   } catch (err) {
     console.error("[video-studio-kickoff] failed", err);
+    let friendly = null;
+    if (err instanceof I2VVoiceDurationExceedsTargetError) {
+      const target = Math.round(Number(err.targetSec) || 5);
+      const heard = Number(err.audioSec);
+      const heardLabel = Number.isFinite(heard)
+        ? ` (~${heard.toFixed(1).replace(".0", "")} s)`
+        : "";
+      friendly = `Ta voix IA dépasse la durée du clip (${target} s)${heardLabel}. Raccourcis le texte ou choisis une durée plus longue. Jetons remboursés.`;
+    }
     const raw =
       typeof err.apiMsg === "string"
         ? err.apiMsg
         : err instanceof Error
           ? err.message
           : "Échec création vidéo";
-    const friendly =
-      mapVideoProviderMessage(raw, "fr") ||
-      `${String(raw).slice(0, 180)} Jetons remboursés.`;
+    if (!friendly) {
+      friendly =
+        mapVideoProviderMessage(raw, "fr") ||
+        `${String(raw).slice(0, 180)} Jetons remboursés.`;
+    }
     await markVideoKickoffFailed(supabase, userId, larp, friendly);
     return { larp, started: true, failed: true, failMessage: friendly };
   }
