@@ -18,6 +18,24 @@ const execFileAsync = promisify(execFile);
 
 const DEFAULT_MAX_AV_GAP_SEC = 0.3;
 
+/** Fish TTS plus long que duration_sec — on refuse (pas de trim ni atempo). */
+class I2VVoiceDurationExceedsTargetError extends Error {
+  /**
+   * @param {{ audioSec: number, targetSec: number }} details
+   */
+  constructor(details) {
+    const audioSec = Number(details?.audioSec);
+    const targetSec = Number(details?.targetSec);
+    super(
+      `i2v_voice_exceeds_duration:${Number.isFinite(audioSec) ? audioSec.toFixed(2) : "?"}s>${Number.isFinite(targetSec) ? targetSec : "?"}s`,
+    );
+    this.name = "I2VVoiceDurationExceedsTargetError";
+    this.code = "I2V_VOICE_TOO_LONG";
+    this.audioSec = audioSec;
+    this.targetSec = targetSec;
+  }
+}
+
 function getMaxAvGapSec() {
   const n = Number(process.env.I2V_AV_MAX_GAP_SEC);
   return Number.isFinite(n) && n > 0 && n < 2 ? n : DEFAULT_MAX_AV_GAP_SEC;
@@ -113,7 +131,8 @@ async function runFfmpeg(args, timeoutMs = 90_000) {
 }
 
 /**
- * Pad or trim MP3 buffer to target duration (seconds).
+ * Caler la piste voix sur duration_sec : silence en fin si trop court ;
+ * si Fish dépasse la cible → erreur (jamais de coupe ni accélération).
  * @returns {Promise<Buffer>}
  */
 async function fitAudioBufferToDurationSec(mp3Buffer, targetSec) {
@@ -134,18 +153,10 @@ async function fitAudioBufferToDurationSec(mp3Buffer, targetSec) {
     }
 
     if (Number.isFinite(current) && current > target + 0.05) {
-      await runFfmpeg([
-        "-y",
-        "-i",
-        inPath,
-        "-t",
-        String(target),
-        "-c:a",
-        "libmp3lame",
-        "-b:a",
-        "192k",
-        outPath,
-      ]);
+      throw new I2VVoiceDurationExceedsTargetError({
+        audioSec: current,
+        targetSec: target,
+      });
     } else {
       const padSec = Number.isFinite(current)
         ? Math.max(0, target - current)
@@ -400,6 +411,7 @@ async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
 module.exports = {
   DEFAULT_MAX_AV_GAP_SEC,
   getMaxAvGapSec,
+  I2VVoiceDurationExceedsTargetError,
   probeMediaDurations,
   effectiveAvGapSec,
   fitAudioBufferToDurationSec,

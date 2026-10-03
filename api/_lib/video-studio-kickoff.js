@@ -9,6 +9,7 @@ const {
   normalizeVideoUltraResolution,
 } = require("../../shared/video-ultra-pricing.cjs");
 const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
+const { I2VVoiceDurationExceedsTargetError } = require("./i2v-av-sync");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
@@ -292,15 +293,26 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
     return { larp: { ...refreshed, metadata: nextMeta }, started: true, failed: false };
   } catch (err) {
     console.error("[video-studio-kickoff] failed", err);
+    let friendly = null;
+    if (err instanceof I2VVoiceDurationExceedsTargetError) {
+      const target = Math.round(Number(err.targetSec) || 5);
+      const heard = Number(err.audioSec);
+      const heardLabel = Number.isFinite(heard)
+        ? ` (~${heard.toFixed(1).replace(".0", "")} s)`
+        : "";
+      friendly = `Ta voix IA dépasse la durée du clip (${target} s)${heardLabel}. Raccourcis le texte ou choisis une durée plus longue. Jetons remboursés.`;
+    }
     const raw =
       typeof err.apiMsg === "string"
         ? err.apiMsg
         : err instanceof Error
           ? err.message
           : "Échec création vidéo";
-    const friendly =
-      mapVideoProviderMessage(raw, "fr") ||
-      `${String(raw).slice(0, 180)} Jetons remboursés.`;
+    if (!friendly) {
+      friendly =
+        mapVideoProviderMessage(raw, "fr") ||
+        `${String(raw).slice(0, 180)} Jetons remboursés.`;
+    }
     await markVideoKickoffFailed(supabase, userId, larp, friendly);
     return { larp, started: true, failed: true, failMessage: friendly };
   }
