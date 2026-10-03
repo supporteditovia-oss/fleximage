@@ -129,18 +129,19 @@ describe("model-router", () => {
     assert.equal(route.provider, "deepinfra");
   });
 
-  it("uses deepinfra composite when multi-ref and oneshot credits exhausted", async () => {
+  it("throws when multi-ref and oneshot credits exhausted", async () => {
     process.env.ONESHOT_API_URL = "https://api.oneshot.example";
     process.env.ONESHOT_API_KEY = "key";
     process.env.ONESHOT_REMAINING_CREDITS = "0";
     process.env.DEEPINFRA_API_KEY = "di";
 
-    const route = await resolveImageGenerationProvider(null, {
-      referenceImageCount: 2,
-    });
-    assert.equal(route.provider, "deepinfra");
-    assert.equal(route.reason, "multi_ref_composite_deepinfra");
-    assert.equal(route.dualReferenceComposite, true);
+    await assert.rejects(
+      () =>
+        resolveImageGenerationProvider(null, {
+          referenceImageCount: 2,
+        }),
+      /Plusieurs photos de référence/,
+    );
   });
 
   it("admin oneshot setting falls back to deepinfra when credits are 0", async () => {
