@@ -5,6 +5,7 @@ const {
   effectiveAvGapSec,
   passesAvDurationQa,
   getMaxAvGapSec,
+  shouldRunI2VAvDurationQa,
 } = require("./i2v-av-sync");
 
 describe("i2v-av-sync", () => {
@@ -27,5 +28,26 @@ describe("i2v-av-sync", () => {
     assert.equal(passesAvDurationQa(0.25), true);
     assert.equal(passesAvDurationQa(0.902), false);
     assert.equal(getMaxAvGapSec(), 0.3);
+  });
+
+  it("shouldRunI2VAvDurationQa only for admin pipeline v2 I2V", () => {
+    assert.equal(
+      shouldRunI2VAvDurationQa({ workflow: "image_to_video" }),
+      false,
+    );
+    assert.equal(
+      shouldRunI2VAvDurationQa({
+        workflow: "image_to_video",
+        i2v_avatar_pipeline_v2: true,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldRunI2VAvDurationQa({
+        workflow: "video_to_video",
+        i2v_avatar_pipeline_v2: true,
+      }),
+      false,
+    );
   });
 });

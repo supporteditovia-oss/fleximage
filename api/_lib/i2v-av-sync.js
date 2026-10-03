@@ -337,11 +337,19 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
   }
 }
 
+function isI2VAvatarPipelineV2Enabled(meta) {
+  return Boolean(meta && meta.i2v_avatar_pipeline_v2 === true);
+}
+
 function shouldRunI2VAvDurationQa(meta) {
   if (String(process.env.I2V_AV_DURATION_QA || "1").trim() === "0") {
     return false;
   }
-  return meta && meta.workflow === "image_to_video";
+  return (
+    meta &&
+    meta.workflow === "image_to_video" &&
+    isI2VAvatarPipelineV2Enabled(meta)
+  );
 }
 
 function passesAvDurationQa(gapSec) {
@@ -417,6 +425,7 @@ module.exports = {
   fitAudioBufferToDurationSec,
   buildSilentMp3Buffer,
   alignVideoAudioInMp4Buffer,
+  isI2VAvatarPipelineV2Enabled,
   shouldRunI2VAvDurationQa,
   passesAvDurationQa,
   downloadAlignAndStoreI2VVideo,

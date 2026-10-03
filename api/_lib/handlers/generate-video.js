@@ -584,14 +584,18 @@ module.exports = async function handler(req, res) {
         }
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
-        providerPrompt = buildI2VAvatarPrompt({
-          motionPrompt: studioMotionPrompt,
-          cameraMovement: body.camera_movement || "fixed",
-          motionIntensity: body.motion_intensity || "natural",
-          style: body.style || "realistic",
-          voiceEnabled,
-          voiceText: voiceEnabled ? String(body.voice_text || "").trim() : null,
-        }).slice(0, 5000);
+        providerPrompt = isAdmin
+          ? buildI2VAvatarPrompt({
+              motionPrompt: studioMotionPrompt,
+              cameraMovement: body.camera_movement || "fixed",
+              motionIntensity: body.motion_intensity || "natural",
+              style: body.style || "realistic",
+              voiceEnabled,
+              voiceText: voiceEnabled
+                ? String(body.voice_text || "").trim()
+                : null,
+            }).slice(0, 5000)
+          : studioMotionPrompt.slice(0, 5000);
       }
     } catch (srcErr) {
       res.status(srcErr.status || 422).json({
@@ -631,6 +635,7 @@ module.exports = async function handler(req, res) {
         : DEFAULT_CATALOG_FISH_ID,
       lip_sync_enabled: voiceEnabled,
       i2v_provider: "kling_ai_avatar_pro",
+      i2v_avatar_pipeline_v2: isAdmin,
       subtitles_enabled:
         workflow === "image_to_video" ? subtitlesEnabled : false,
       subtitle_style: body.subtitle_style || "minimal_white",

@@ -9,7 +9,10 @@ const {
   normalizeVideoUltraResolution,
 } = require("../../shared/video-ultra-pricing.cjs");
 const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
-const { I2VVoiceDurationExceedsTargetError } = require("./i2v-av-sync");
+const {
+  I2VVoiceDurationExceedsTargetError,
+  isI2VAvatarPipelineV2Enabled,
+} = require("./i2v-av-sync");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
@@ -242,23 +245,26 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       });
       const avatarPrompt =
         String(larp.final_prompt || "").trim() ||
-        buildI2VAvatarPrompt({
-          motionPrompt: larp.prompt || userPrompt,
-          cameraMovement: meta.camera_movement,
-          motionIntensity: meta.motion_intensity,
-          style: meta.style,
-          voiceEnabled: meta.voice_enabled === true,
-          voiceText: meta.voice_text,
-        }).trim() ||
+        (isI2VAvatarPipelineV2Enabled(meta)
+          ? buildI2VAvatarPrompt({
+              motionPrompt: larp.prompt || userPrompt,
+              cameraMovement: meta.camera_movement,
+              motionIntensity: meta.motion_intensity,
+              style: meta.style,
+              voiceEnabled: meta.voice_enabled === true,
+              voiceText: meta.voice_text,
+            }).trim()
+          : "") ||
         String(providerPrompt || larp.prompt || "").trim();
+      const kickoffMetaPatch = { ...meta };
+      if (isI2VAvatarPipelineV2Enabled(meta)) {
+        kickoffMetaPatch.i2v_input_audio_url = audioPrep.url;
+        kickoffMetaPatch.i2v_target_duration_sec = audioPrep.targetSec;
+      }
       await supabase
         .from("generations")
         .update({
-          metadata: {
-            ...meta,
-            i2v_input_audio_url: audioPrep.url,
-            i2v_target_duration_sec: audioPrep.targetSec,
-          },
+          metadata: kickoffMetaPatch,
           updated_at: new Date().toISOString(),
         })
         .eq("id", larp.id);
