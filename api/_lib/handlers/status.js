@@ -1294,20 +1294,48 @@ module.exports = async function handler(req, res) {
               ? JSON.parse(apiResultJson)
               : apiResultJson;
           if (resultType === "video" && parsed && parsed.video_url) {
-            const stored = await withTimeout(
-              downloadAndStoreVideo(larp.id, parsed.video_url),
-              20_000,
-              null,
-            );
-            resultUrls =
-              Array.isArray(stored) && stored.length > 0
-                ? stored
-                : [parsed.video_url];
-
             const meta =
               larp.metadata && typeof larp.metadata === "object"
                 ? larp.metadata
                 : {};
+            const {
+              shouldRunI2VAvDurationQa,
+              downloadAlignAndStoreI2VVideo,
+            } = require("../i2v-av-sync");
+
+            let stored = null;
+            let i2vAvRejected = false;
+            if (shouldRunI2VAvDurationQa(pollMeta)) {
+              const i2vResult = await withTimeout(
+                downloadAlignAndStoreI2VVideo(larp.id, parsed.video_url),
+                120_000,
+                { ok: true, url: null, qa: { skipped: true, reason: "timeout" } },
+              );
+              metadataPatch.i2v_av_duration_qa = i2vResult.qa || null;
+              if (i2vResult.ok === false) {
+                apiStatus = "fail";
+                apiFailMsg =
+                  "La piste audio ne couvre pas toute la vidéo (désynchronisation). Jetons remboursés — réessaie avec un clip plus court ou un texte vocal plus court.";
+                i2vAvRejected = true;
+                resultUrls = [];
+              } else if (i2vResult.url) {
+                stored = [i2vResult.url];
+              }
+            }
+
+            if (!i2vAvRejected) {
+              if (!stored) {
+                stored = await withTimeout(
+                  downloadAndStoreVideo(larp.id, parsed.video_url),
+                  20_000,
+                  null,
+                );
+              }
+              resultUrls =
+                Array.isArray(stored) && stored.length > 0
+                  ? stored
+                  : [parsed.video_url];
+            }
             const shouldPreserveSourceAudio =
               meta.workflow === "video_to_video" &&
               meta.preserve_source_audio === true;

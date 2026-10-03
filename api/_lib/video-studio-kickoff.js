@@ -234,17 +234,28 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       }
     } else {
       const imageUrl = await ensureKieAccessibleMediaUrl(sourceAssetUrl, "image");
-      const audioUrl = await prepareI2VAvatarAudioUrl({
+      const audioPrep = await prepareI2VAvatarAudioUrl({
         userId,
         meta,
       });
       const avatarPrompt =
         String(larp.final_prompt || providerPrompt || larp.prompt || "").trim();
+      await supabase
+        .from("generations")
+        .update({
+          metadata: {
+            ...meta,
+            i2v_input_audio_url: audioPrep.url,
+            i2v_target_duration_sec: audioPrep.targetSec,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", larp.id);
       await generateVideoOnce(supabase, {
         generationId: larp.id,
         prompt: avatarPrompt,
         imageUrl,
-        audioUrl,
+        audioUrl: audioPrep.url,
       });
     }
 

@@ -1,6 +1,11 @@
 const { uploadToR2 } = require("./r2");
 const { synthesizeSpeech } = require("./fish-audio");
 const { prepareI2VVoiceTextForFish } = require("./i2v-voice-script");
+const {
+  fitAudioBufferToDurationSec,
+  buildSilentMp3Buffer,
+} = require("./i2v-av-sync");
+const { normalizeI2VDurationSec } = require("../../shared/video-i2v-pricing.cjs");
 const catalog = require("../../shared/voice-catalog.json");
 
 const DEFAULT_CATALOG_FISH_ID =
@@ -21,26 +26,37 @@ function resolveFishReferenceId(meta) {
 /**
  * Prépare l’audio public pour kling/ai-avatar-pro (TTS ou piste muette).
  */
+function resolveI2VTargetDurationSec(meta) {
+  const raw = meta?.duration_sec ?? meta?.i2v_target_duration_sec ?? 5;
+  return normalizeI2VDurationSec(raw);
+}
+
 async function prepareI2VAvatarAudioUrl({ userId, meta }) {
   const voiceEnabled = meta?.voice_enabled === true;
   const voiceText = String(meta?.voice_text || "").trim();
+  const targetSec = resolveI2VTargetDurationSec(meta);
 
-  const referenceId = resolveFishReferenceId(meta);
-  const ttsText =
-    voiceEnabled && voiceText.length >= 5
-      ? prepareI2VVoiceTextForFish(voiceText)
-      : "…";
-  const buffer = await synthesizeSpeech({
-    text: ttsText,
-    referenceId,
-    format: "mp3",
-    cloneFidelity: false,
-  });
-  return uploadAudioBufferToR2(userId, buffer);
+  let buffer;
+  if (voiceEnabled && voiceText.length >= 5) {
+    const ttsText = prepareI2VVoiceTextForFish(voiceText);
+    const rawBuffer = await synthesizeSpeech({
+      text: ttsText,
+      referenceId: resolveFishReferenceId(meta),
+      format: "mp3",
+      cloneFidelity: false,
+    });
+    buffer = await fitAudioBufferToDurationSec(rawBuffer, targetSec);
+  } else {
+    buffer = await buildSilentMp3Buffer(targetSec);
+  }
+
+  const url = await uploadAudioBufferToR2(userId, buffer);
+  return { url, targetSec, voiceEnabled };
 }
 
 module.exports = {
   prepareI2VAvatarAudioUrl,
   uploadAudioBufferToR2,
+  resolveI2VTargetDurationSec,
   DEFAULT_CATALOG_FISH_ID,
 };
