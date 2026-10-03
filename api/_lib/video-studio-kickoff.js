@@ -12,6 +12,7 @@ const { prepareI2VAvatarAudioUrl } = require("./i2v-avatar-audio");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const {
   buildAlephSubmitPrompt,
+  buildI2VAvatarPrompt,
   buildOmniTransformPrompt,
   buildV2VProviderPrompt,
   isAlephTransformEnabled,
@@ -239,7 +240,16 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         meta,
       });
       const avatarPrompt =
-        String(larp.final_prompt || providerPrompt || larp.prompt || "").trim();
+        String(larp.final_prompt || "").trim() ||
+        buildI2VAvatarPrompt({
+          motionPrompt: larp.prompt || userPrompt,
+          cameraMovement: meta.camera_movement,
+          motionIntensity: meta.motion_intensity,
+          style: meta.style,
+          voiceEnabled: meta.voice_enabled === true,
+          voiceText: meta.voice_text,
+        }).trim() ||
+        String(providerPrompt || larp.prompt || "").trim();
       await supabase
         .from("generations")
         .update({

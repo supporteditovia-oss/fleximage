@@ -569,6 +569,43 @@ function buildCarSwapPrompt(vehicleDescription) {
   );
 }
 
+const I2V_ACTION_MOTION_PATTERN =
+  /\b(courir|cours|court|sprinter|sprint(?:er|e|ing)?|se battre|combat(?:er|te)?|bagarre|boxe(?:r|ur)?|football|frappe|kick(?:ing)?|run(?:ning|s)?|fight(?:ing|s)?|punch(?:ing|es)?|marathon|athl[eè]te|chase|poursuiv(?:re|e)?|saut(?:er|e)?|jump(?:ing|s)?|danse(?:r|use)? rapide|parkour)\b/i;
+
+const I2V_ACTION_MOTION_LOCK =
+  "Fast dynamic motion, real-time speed, no slow motion, no bullet-time, athletic full-speed movement.";
+
+function isActionMotionPrompt(text) {
+  return I2V_ACTION_MOTION_PATTERN.test(String(text || ""));
+}
+
+/**
+ * Prompt Kie Avatar Pro (I2V) : réutilise buildRunwayPrompt (caméra / intensité / style UI).
+ */
+function buildI2VAvatarPrompt(params) {
+  const motionPrompt = String(params.motionPrompt || "").trim();
+  const action = isActionMotionPrompt(motionPrompt);
+  const motionIntensity =
+    action && params.motionIntensity !== "dynamic"
+      ? "dynamic"
+      : params.motionIntensity || "natural";
+
+  let prompt = buildRunwayPrompt({
+    motionPrompt,
+    cameraMovement: params.cameraMovement || "fixed",
+    motionIntensity,
+    style: params.style || "realistic",
+    voiceEnabled: Boolean(params.voiceEnabled),
+    voiceText: params.voiceText,
+  });
+
+  if (action) {
+    prompt = `${prompt} ${I2V_ACTION_MOTION_LOCK}`;
+  }
+
+  return prompt.trim();
+}
+
 function buildRunwayPrompt(params) {
   let motion = String(params.motionPrompt || "").trim();
   if (!params.voiceEnabled) {
@@ -670,6 +707,8 @@ module.exports = {
   V2V_SILENT_OUTPUT_LOCK,
   computeVideoCreditCost,
   buildRunwayPrompt,
+  buildI2VAvatarPrompt,
+  isActionMotionPrompt,
   buildCarSwapPrompt,
   buildV2VTransformPrompt,
   buildV2VProviderPrompt,

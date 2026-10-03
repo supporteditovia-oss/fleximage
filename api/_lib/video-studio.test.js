@@ -4,6 +4,8 @@ const {
   computeVideoCreditCost,
   validateVoiceText,
   buildRunwayPrompt,
+  buildI2VAvatarPrompt,
+  isActionMotionPrompt,
   buildCarSwapPrompt,
   buildV2VProviderPrompt,
   stripVoiceInstructionsFromPrompt,
@@ -99,6 +101,33 @@ describe("video-studio", () => {
     assert.match(prompt, /marche calmement/i);
     assert.match(prompt, /pas de diaporama/i);
     assert.match(prompt, /silent|muette|no voice/i);
+  });
+
+  it("buildI2VAvatarPrompt injects UI camera and intensity", () => {
+    const prompt = buildI2VAvatarPrompt({
+      motionPrompt: "Il marche dans la rue.",
+      cameraMovement: "dolly_in",
+      motionIntensity: "dynamic",
+      style: "cinematic",
+      voiceEnabled: false,
+    });
+    assert.match(prompt, /Travelling avant/i);
+    assert.match(prompt, /dynamique/i);
+    assert.match(prompt, /cinématographique/i);
+  });
+
+  it("buildI2VAvatarPrompt adds fast-motion lock for action verbs", () => {
+    assert.equal(isActionMotionPrompt("Il sprinte sur la plage"), true);
+    const prompt = buildI2VAvatarPrompt({
+      motionPrompt: "Il sprinte sur la plage au coucher du soleil.",
+      cameraMovement: "slow_zoom",
+      motionIntensity: "natural",
+      style: "cinematic",
+      voiceEnabled: false,
+    });
+    assert.match(prompt, /real-time speed/i);
+    assert.match(prompt, /no slow motion/i);
+    assert.match(prompt, /dynamique/i);
   });
 
   it("buildRunwayPrompt strips speech tricks when voice addon off", () => {

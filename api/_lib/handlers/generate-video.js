@@ -17,6 +17,7 @@ const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.c
 const { normalizeVideoUltraResolution } = require("../../../shared/video-ultra-pricing.cjs");
 const {
   computeVideoCreditCost,
+  buildI2VAvatarPrompt,
   buildV2VProviderPrompt,
   buildAlephSubmitPrompt,
   resolveV2VProviderFromIntent,
@@ -583,7 +584,14 @@ module.exports = async function handler(req, res) {
         }
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
-        providerPrompt = studioMotionPrompt.slice(0, 5000);
+        providerPrompt = buildI2VAvatarPrompt({
+          motionPrompt: studioMotionPrompt,
+          cameraMovement: body.camera_movement || "fixed",
+          motionIntensity: body.motion_intensity || "natural",
+          style: body.style || "realistic",
+          voiceEnabled,
+          voiceText: voiceEnabled ? String(body.voice_text || "").trim() : null,
+        }).slice(0, 5000);
       }
     } catch (srcErr) {
       res.status(srcErr.status || 422).json({
