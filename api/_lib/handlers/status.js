@@ -551,7 +551,9 @@ module.exports = async function handler(req, res) {
             rawOmniFail: String(rawOmniFail).slice(0, 240),
             ageInMs,
           });
+          const { isOmniTransformEnabled } = require("../video-studio");
           const canRetryOmni =
+            isOmniTransformEnabled() &&
             pollMeta.workflow === "video_to_video" &&
             pollMeta.v2v_omni_transform_rollout === true &&
             isRetryableProviderFailText(rawOmniFail || "internal error") &&
@@ -656,7 +658,9 @@ module.exports = async function handler(req, res) {
             canLaunchAnotherOmniJob,
             relaunchOmniV2VFromLarp,
           } = require("../v2v-poll-omni-relaunch");
+          const { isOmniTransformEnabled: omniEnabledKling } = require("../video-studio");
           const shouldOmniFallback =
+            omniEnabledKling() &&
             resultType === "video" &&
             pollMeta.v2v_omni_transform_rollout === true &&
             pollMeta.v2v_omni_poll_fallback !== true &&
@@ -818,8 +822,12 @@ module.exports = async function handler(req, res) {
             canLaunchAnotherOmniJob,
             relaunchOmniV2VFromLarp,
           } = require("../v2v-poll-omni-relaunch");
-          const { isAlephTransformEnabled } = require("../video-studio");
+          const {
+            isAlephTransformEnabled,
+            isOmniTransformEnabled: omniEnabledAleph,
+          } = require("../video-studio");
           if (
+            omniEnabledAleph() &&
             resultType === "video" &&
             pollMeta.v2v_omni_transform_rollout === true &&
             pollMeta.v2v_omni_poll_fallback !== true &&

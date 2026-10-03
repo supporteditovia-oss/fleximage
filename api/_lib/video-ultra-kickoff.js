@@ -1,6 +1,14 @@
-const { generateOmniRef2VOnce, readVideoApiCallCount } = require("./generate-video-once");
+const {
+  generateOmniRef2VOnce,
+  generateVideoV2VOnce,
+  readVideoApiCallCount,
+} = require("./generate-video-once");
 const { ensureKieAccessibleMediaUrl } = require("./kie-file-upload");
 const { resolveKlingMotionSourceVideoUrl } = require("./prepare-kling-source-video");
+const {
+  buildAlephSubmitPrompt,
+  isOmniTransformEnabled,
+} = require("./video-studio");
 const { getSourceVideoUrlFromLarp } = require("./mux-source-audio");
 const { mapVideoProviderMessage } = require("./video-user-errors");
 const {
@@ -61,13 +69,22 @@ async function kickoffVideoUltraProvider(supabase, larp, userId) {
     );
     const kieVideoUrl = await ensureKieAccessibleMediaUrl(preparedUrl, "video");
 
-    await generateOmniRef2VOnce(supabase, {
-      generationId: larp.id,
-      prompt: userPrompt,
-      videoUrl: kieVideoUrl,
-      durationSec,
-      resolution,
-    });
+    if (isOmniTransformEnabled()) {
+      await generateOmniRef2VOnce(supabase, {
+        generationId: larp.id,
+        prompt: userPrompt,
+        videoUrl: kieVideoUrl,
+        durationSec,
+        resolution,
+      });
+    } else {
+      await generateVideoV2VOnce(supabase, {
+        generationId: larp.id,
+        prompt: buildAlephSubmitPrompt(userPrompt),
+        videoUrl: sourceAssetUrl,
+        aspectRatio: larp.aspect_ratio || meta.aleph_aspect_ratio || "16:9",
+      });
+    }
 
     const { data: refreshed, error } = await supabase
       .from("generations")

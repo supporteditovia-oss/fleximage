@@ -147,25 +147,34 @@ function v2vEngineFamilyForProvider(provider) {
 }
 
 /**
- * Aleph (Kie runway/gen4-aleph) renvoie « internal error » pour toute vidéo depuis oct. 2026 —
- * la famille Transform passe par Kling 3.0 Omni sauf réactivation explicite.
+ * Scène & luxe (Transform) : Runway Aleph via Kie — moteur par défaut.
+ * Désactiver uniquement si besoin : V2V_ALEPH_DISABLED=1
  */
 function isAlephTransformEnabled() {
-  return String(process.env.V2V_ALEPH_ENABLED || "").trim() === "1";
+  return String(process.env.V2V_ALEPH_DISABLED || "").trim() !== "1";
 }
 
-/** Fix Omni Scène & luxe : admin (ou flag env) uniquement tant que le fondateur valide. */
+/** Legacy opt-in — Kling 3.0 Omni transformation (désactivé par défaut). */
+function isOmniTransformEnabled() {
+  return String(process.env.V2V_OMNI_TRANSFORM_ENABLED || "").trim() === "1";
+}
+
+/** @deprecated rollout admin Omni — ignoré si Omni désactivé */
 function isV2VOmniTransformRolloutEnabled(meta) {
+  if (!isOmniTransformEnabled()) return false;
   if (meta && meta.v2v_omni_transform_rollout === true) return true;
   return String(process.env.V2V_OMNI_TRANSFORM_PUBLIC || "").trim() === "1";
 }
 
 function shouldUseOmniTransformForV2V(meta, v2vResolution, v2vProvider) {
+  if (!isOmniTransformEnabled()) return false;
   if (v2vProvider !== "runway_aleph") return false;
-  if (isAlephTransformEnabled()) return false;
-  const res = normalizeVideoUltraResolution(v2vResolution || "720p");
-  if (isV2VOmniTransformRolloutEnabled(meta)) return true;
-  return res === "1080p" || res === "4k";
+  if (!isAlephTransformEnabled()) {
+    const res = normalizeVideoUltraResolution(v2vResolution || "720p");
+    if (isV2VOmniTransformRolloutEnabled(meta)) return true;
+    return res === "1080p" || res === "4k";
+  }
+  return false;
 }
 
 const OMNI_PROMPT_MAX_CHARS = 2500;
@@ -201,7 +210,23 @@ function buildOmniTransformPrompt(userPrompt, { preserveSourceAudio = false } = 
   return parts.join(" ").slice(0, OMNI_PROMPT_MAX_CHARS);
 }
 
-/** Prompt court pour Aleph (jobs API) — évite les locks énormes qui provoquent des 500. */
+function promptHasTimelineBeats(text) {
+  return /\b\d+\s*(?:s|sec|secondes?)\b/i.test(String(text || ""));
+}
+
+function promptRequestsObjectInsert(text) {
+  const s = String(text || "");
+  return (
+    /\b(ajoute|ajouter|add|place|insère|insert|met[s]?\s+(?:moi|une?))\b/i.test(
+      s,
+    ) &&
+    /\b(voiture|car|vehicle|lambo|lamborghini|urus|sac|bag|objet|object|personne|person)\b/i.test(
+      s,
+    )
+  );
+}
+
+/** Prompt Aleph (jobs API, max ~2000 car.) — priorité au texte utilisateur + locks compacts. */
 function buildAlephSubmitPrompt(
   userPrompt,
   { preserveSourceAudio = false, minimal = false } = {},
@@ -219,15 +244,39 @@ function buildAlephSubmitPrompt(
       "No wrong-brand logos."
     ).slice(0, 900);
   }
-  const vehicleHint = vehicle
-    ? ` Apply ${vehicle.model} OEM interior, steering wheel, keys and badges. ${vehicle.interior}`
-    : "";
+
   const base =
     prompt.length >= 5
       ? prompt
       : "Transform the video as described while keeping camera motion identical.";
-  const combined = `${base}.${vehicleHint} Photorealistic, same framing and motion.`;
-  return combined.length <= 1900 ? combined : combined.slice(0, 1900);
+
+  const parts = [];
+  if (promptHasTimelineBeats(prompt)) {
+    parts.push(
+      "Multi-beat edit on this clip: honor each timestamp in the user instructions — apply each change only when that moment appears in the source video; leave other segments unchanged until their beat.",
+    );
+  }
+  parts.push(base);
+
+  if (vehicle) {
+    parts.push(
+      `Vehicle/cabin target: authentic OEM ${vehicle.model} — full swap (body, interior, badges, keys) where visible. ${vehicle.interior}`,
+    );
+  }
+
+  if (promptRequestsObjectInsert(prompt)) {
+    parts.push(
+      "Inserted objects and vehicles must match camera perspective, ground contact, scale, shadows and motion blur — photoreal, never floating or pasted.",
+    );
+  }
+
+  parts.push(
+    "Photorealistic smartphone footage. Keep the same camera path, gestures and real-time speed as the source (no slow motion unless explicitly requested).",
+    "Change backgrounds, architecture, people, props and vehicles exactly as described — not cosmetic UI-only tweaks.",
+  );
+
+  const combined = parts.join(" ");
+  return combined.length <= 1980 ? combined : combined.slice(0, 1980);
 }
 
 function extractMentionedSpeedKmh(text) {
@@ -631,9 +680,11 @@ module.exports = {
   resolveV2VProviderForStudio,
   resolveV2VProviderFromIntent,
   isAlephTransformEnabled,
+  isOmniTransformEnabled,
   isV2VOmniTransformRolloutEnabled,
   shouldUseOmniTransformForV2V,
   buildOmniTransformPrompt,
+  promptHasTimelineBeats,
   buildAlephSubmitPrompt,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,

@@ -14,6 +14,7 @@ const {
   isV2VOmniTransformRolloutEnabled,
   shouldUseOmniTransformForV2V,
   buildOmniTransformPrompt,
+  buildAlephSubmitPrompt,
   buildV2VCockpitIntelligenceLock,
   extractRequestedVehicleModel,
   buildKeySwapInstruction,
@@ -294,14 +295,14 @@ describe("video-studio", () => {
     );
   });
 
-  it("isAlephTransformEnabled is off unless V2V_ALEPH_ENABLED=1", () => {
-    const prev = process.env.V2V_ALEPH_ENABLED;
-    delete process.env.V2V_ALEPH_ENABLED;
-    assert.equal(isAlephTransformEnabled(), false);
-    process.env.V2V_ALEPH_ENABLED = "1";
+  it("isAlephTransformEnabled is on unless V2V_ALEPH_DISABLED=1", () => {
+    const prev = process.env.V2V_ALEPH_DISABLED;
+    delete process.env.V2V_ALEPH_DISABLED;
     assert.equal(isAlephTransformEnabled(), true);
-    if (prev === undefined) delete process.env.V2V_ALEPH_ENABLED;
-    else process.env.V2V_ALEPH_ENABLED = prev;
+    process.env.V2V_ALEPH_DISABLED = "1";
+    assert.equal(isAlephTransformEnabled(), false);
+    if (prev === undefined) delete process.env.V2V_ALEPH_DISABLED;
+    else process.env.V2V_ALEPH_DISABLED = prev;
   });
 
   it("buildOmniTransformPrompt forces a full brand swap for car prompts", () => {
@@ -316,7 +317,19 @@ describe("video-studio", () => {
     assert.ok(prompt.length <= 2500);
   });
 
-  it("shouldUseOmniTransformForV2V — admin rollout 720p, clients 1080p only", () => {
+  it("shouldUseOmniTransformForV2V is off unless V2V_OMNI_TRANSFORM_ENABLED=1", () => {
+    const prev = process.env.V2V_OMNI_TRANSFORM_ENABLED;
+    delete process.env.V2V_OMNI_TRANSFORM_ENABLED;
+    assert.equal(
+      shouldUseOmniTransformForV2V(
+        { v2v_omni_transform_rollout: true },
+        "720p",
+        "runway_aleph",
+      ),
+      false,
+    );
+    process.env.V2V_OMNI_TRANSFORM_ENABLED = "1";
+    process.env.V2V_ALEPH_DISABLED = "1";
     assert.equal(
       shouldUseOmniTransformForV2V(
         { v2v_omni_transform_rollout: true },
@@ -325,14 +338,17 @@ describe("video-studio", () => {
       ),
       true,
     );
-    assert.equal(
-      shouldUseOmniTransformForV2V({}, "720p", "runway_aleph"),
-      false,
+    if (prev === undefined) delete process.env.V2V_OMNI_TRANSFORM_ENABLED;
+    else process.env.V2V_OMNI_TRANSFORM_ENABLED = prev;
+    delete process.env.V2V_ALEPH_DISABLED;
+  });
+
+  it("buildAlephSubmitPrompt adds timeline wrapper when seconds mentioned", () => {
+    const prompt = buildAlephSubmitPrompt(
+      "À 4 s maison → villa. À 15 s Twingo → Urus.",
     );
-    assert.equal(
-      shouldUseOmniTransformForV2V({}, "1080p", "runway_aleph"),
-      true,
-    );
+    assert.match(prompt, /Multi-beat edit/i);
+    assert.match(prompt, /4 s|Twingo/i);
   });
 
   it("buildOmniTransformPrompt keeps non-car scenes generic", () => {
