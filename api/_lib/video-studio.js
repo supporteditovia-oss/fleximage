@@ -185,15 +185,19 @@ function isSeedanceTransformEnabled() {
   return String(process.env.V2V_SEEDANCE_TRANSFORM_ENABLED || "").trim() === "1";
 }
 
+function isAdminSeedanceRollout(meta) {
+  return Boolean(meta && meta.v2v_seedance_transform_rollout === true);
+}
+
 function isV2VSeedanceTransformRolloutEnabled(meta) {
+  if (isAdminSeedanceRollout(meta)) return true;
   if (!isSeedanceTransformEnabled()) return false;
-  if (meta && meta.v2v_seedance_transform_rollout === true) return true;
   return String(process.env.V2V_SEEDANCE_TRANSFORM_PUBLIC || "").trim() === "1";
 }
 
 function shouldUseSeedanceTransformForV2V(meta, v2vResolution, v2vProvider) {
-  if (!isSeedanceTransformEnabled()) return false;
   if (v2vProvider !== "runway_aleph") return false;
+  if (!isAdminSeedanceRollout(meta) && !isSeedanceTransformEnabled()) return false;
   const res = normalizeVideoUltraResolution(v2vResolution || "720p");
   if (isV2VSeedanceTransformRolloutEnabled(meta)) return true;
   if (!isAlephTransformEnabled()) return true;

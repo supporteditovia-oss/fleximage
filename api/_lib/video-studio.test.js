@@ -390,6 +390,29 @@ describe("video-studio", () => {
     else process.env.V2V_OMNI_TRANSFORM_ENABLED = prevOmni;
   });
 
+  it("admin Scène & luxe uses Seedance without V2V_SEEDANCE_TRANSFORM_ENABLED", () => {
+    const prevSeed = process.env.V2V_SEEDANCE_TRANSFORM_ENABLED;
+    delete process.env.V2V_SEEDANCE_TRANSFORM_ENABLED;
+    assert.equal(
+      shouldUseSeedanceTransformForV2V(
+        { v2v_seedance_transform_rollout: true },
+        "720p",
+        "runway_aleph",
+      ),
+      true,
+    );
+    assert.equal(
+      shouldUseSeedanceTransformForV2V(
+        { v2v_seedance_transform_rollout: false },
+        "720p",
+        "runway_aleph",
+      ),
+      false,
+    );
+    if (prevSeed === undefined) delete process.env.V2V_SEEDANCE_TRANSFORM_ENABLED;
+    else process.env.V2V_SEEDANCE_TRANSFORM_ENABLED = prevSeed;
+  });
+
   it("shouldUseOmniTransformForV2V is off unless V2V_OMNI_TRANSFORM_ENABLED=1", () => {
     const prev = process.env.V2V_OMNI_TRANSFORM_ENABLED;
     delete process.env.V2V_OMNI_TRANSFORM_ENABLED;
