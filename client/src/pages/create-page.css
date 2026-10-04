@@ -1071,13 +1071,23 @@ html.luxeflexia-create-page::before {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.38rem 0.7rem;
+  padding: 0.38rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.28);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: rgba(255, 255, 255, 0.85);
   font-size: 0.75rem;
   font-weight: 650;
   color: #8a7340;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.vs-script-shuffle:hover:not(:disabled) {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.vs-script-shuffle:disabled {
+  opacity: 0.45;
 }
 
 .vs-mode-toggle {
