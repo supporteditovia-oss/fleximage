@@ -457,6 +457,15 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               </>
             ) : null}
 
+            {props.v2vIntent === "motion" ? (
+              <p className="via-motion-scope-notice" role="note">
+                <strong>1 photo = 1 personnage remplacé dans la vidéo.</strong>{" "}
+                La scène, la caméra et les mouvements restent ceux de ta vidéo
+                source. Avec plusieurs personnes dans le clip, une seule est
+                remplacée (souvent la plus visible).
+              </p>
+            ) : null}
+
             <button
               type="button"
               className="via-cta"

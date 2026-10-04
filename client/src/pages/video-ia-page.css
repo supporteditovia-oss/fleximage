@@ -723,6 +723,22 @@ html.luxeflexia-video-page .floating-header::before {
   gap: 0.65rem;
 }
 
+.via-motion-scope-notice {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: rgba(201, 162, 39, 0.06);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #5c4f38;
+}
+
+.via-motion-scope-notice strong {
+  color: #3d3424;
+  font-weight: 650;
+}
+
 .via-preview-frame--thumb {
   width: 5rem;
   aspect-ratio: 1;
