@@ -81,12 +81,16 @@ export async function authFetch(
       const isVoice =
         typeof url === "string" &&
         (url.includes("/voice/clone") || url.includes("/voice/generate"));
+      const isVideoGenerate =
+        typeof url === "string" && url.includes("/larps/generate-video");
       message = isVoice
         ? "Extrait audio trop lourd à envoyer. Resserre la sélection (~20 s) ou réessaie — on compresse automatiquement."
-        : i18n.t("errors.generic.payloadTooLarge", {
-            defaultValue:
-              "Image trop lourde. Réessaie — on compresse automatiquement, ou choisis une photo plus légère.",
-          });
+        : isVideoGenerate
+          ? "Vidéo trop lourde pour l'envoi. Attends la fin de la préparation (upload cloud) ou filme en 720p, clip 3–8 s."
+          : i18n.t("errors.generic.payloadTooLarge", {
+              defaultValue:
+                "Image trop lourde. Réessaie — on compresse automatiquement, ou choisis une photo plus légère.",
+            });
       code = "FUNCTION_PAYLOAD_TOO_LARGE";
     } else if (text) {
       try {

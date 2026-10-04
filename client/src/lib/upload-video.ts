@@ -5,8 +5,11 @@ import {
   withNormalizedVideoFile,
 } from "@/lib/media-file-detect";
 
-/** Sous ce seuil, repli base64 via l'API si l'upload direct R2 échoue (CORS mobile). */
-export const VIDEO_INLINE_FALLBACK_MAX_BYTES = 18 * 1024 * 1024;
+/**
+ * Repli base64 si l'upload direct R2 échoue.
+ * Plafond bas : Vercel rejette les corps HTTP ~4,5 Mo (vidéo base64 ≈ ×1,33).
+ */
+export const VIDEO_INLINE_FALLBACK_MAX_BYTES = 3 * 1024 * 1024;
 
 const R2_PUT_TIMEOUT_MS = 45_000;
 
@@ -19,11 +22,6 @@ type PresignedVideoUpload = {
 export type StudioVideoUpload =
   | { mode: "url"; videoUrl: string }
   | { mode: "inline"; dataUrl: string };
-
-function isMobileUploadUa(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-}
 
 async function fetchWithTimeout(
   url: string,
@@ -121,15 +119,6 @@ export async function prepareVideoFileForStudio(
   const normalized = withNormalizedVideoFile(file);
   const canInline = normalized.size <= VIDEO_INLINE_FALLBACK_MAX_BYTES;
 
-  // iPhone / Android : évite le PUT R2 qui reste souvent bloqué (CORS / réseau).
-  if (canInline && isMobileUploadUa()) {
-    try {
-      return await uploadInlineDataUrl(normalized);
-    } catch {
-      /* repli R2 ci-dessous */
-    }
-  }
-
   try {
     const videoUrl = await uploadVideoDirectToR2(normalized);
     return { mode: "url", videoUrl };
@@ -144,7 +133,9 @@ export async function prepareVideoFileForStudio(
     const message =
       directErr instanceof Error && directErr.message !== "UPLOAD_DIRECT_FAILED"
         ? directErr.message
-        : "Envoi direct refusé. Filme en 1080p (pas 4K) ou compresse la vidéo avant import.";
+        : normalized.size > VIDEO_INLINE_FALLBACK_MAX_BYTES
+          ? `Vidéo trop lourde pour l'envoi sécurisé (max ~${Math.round(VIDEO_INLINE_FALLBACK_MAX_BYTES / (1024 * 1024))} Mo sans upload cloud). Filme en 720p ou attends la fin de l'upload.`
+          : "Envoi direct refusé. Réessaie en Wi‑Fi ou filme en 720p (pas 4K).";
     throw new Error(message);
   }
 }

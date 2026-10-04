@@ -617,15 +617,28 @@ export default function VideoIA() {
     }
     if (!source) return;
 
+    if (source.mode === "inline") {
+      const approxBytes = Math.floor((source.dataUrl.length * 3) / 4);
+      if (approxBytes > 3.5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Vidéo trop lourde",
+          description:
+            "L'envoi direct n'a pas abouti. Réessaie en Wi‑Fi (upload cloud) ou avec une vidéo plus légère en 720p.",
+        });
+        return;
+      }
+    }
+
     const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
 
     let referenceImages: string[] | undefined;
-    if (refImageBase64) {
+    if (v2vProvider === "kling_motion" && refImageBase64) {
       referenceImages = [refImageBase64];
     } else if (
       localVideoFile &&
       !refImageIsCustom &&
-      v2vProvider !== "runway_aleph"
+      v2vProvider === "kling_motion"
     ) {
       try {
         const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
