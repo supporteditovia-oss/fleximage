@@ -316,11 +316,14 @@ export default function VideoIA() {
     canAfford;
   const hasVideoReady = Boolean(videoSource || localVideoFile);
   const videoImportBusy = isVideoReading && !videoPreview;
+  const motionRefReady =
+    v2vIntent !== "motion" || Boolean(refImageBase64 || refImagePreview);
   const canGenerateV2V =
     hasVideoReady &&
     swapPrompt.trim().length >= 5 &&
     canAfford &&
-    !videoImportBusy;
+    !videoImportBusy &&
+    motionRefReady;
 
   const handleClearImage = useCallback(() => {
     setUploadPreview((prev) => {
@@ -485,6 +488,7 @@ export default function VideoIA() {
       try {
         const prepared = await prepareVideoFileForStudioWithTimeout(
           fileReadyForCloud,
+          60_000,
         );
         if (videoUploadGenRef.current !== uploadGen) return;
         setVideoSource(prepared);
@@ -633,23 +637,26 @@ export default function VideoIA() {
     const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
 
     let referenceImages: string[] | undefined;
-    if (v2vProvider === "kling_motion" && refImageBase64) {
-      referenceImages = [refImageBase64];
-    } else if (
-      localVideoFile &&
-      !refImageIsCustom &&
-      v2vProvider === "kling_motion"
-    ) {
+    let motionRefB64 = refImageBase64;
+    if (v2vIntent === "motion" && !motionRefB64 && localVideoFile) {
       try {
         const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
         const frameCompressed = await compressImageForGeneration(frameFile);
-        const frameB64 = await fileToBase64(frameCompressed);
-        setRefImageBase64(frameB64);
+        motionRefB64 = await fileToBase64(frameCompressed);
+        setRefImageBase64(motionRefB64);
         setRefImageIsCustom(false);
-        referenceImages = [frameB64];
       } catch {
-        /* Kling seulement — Aleph n'a pas besoin de frame avant envoi */
+        toast({
+          variant: "destructive",
+          title: "Photo requise",
+          description:
+            "Pour Mouvement, ajoute ta photo (+ Ta photo) ou réimporte la vidéo.",
+        });
+        return;
       }
+    }
+    if (v2vProvider === "kling_motion" && motionRefB64) {
+      referenceImages = [motionRefB64];
     }
 
     releaseGenerationLoaderTheme();

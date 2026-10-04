@@ -1,4 +1,5 @@
 import { authFetch } from "@/lib/api";
+import { compressVideoForStudioUpload } from "@/lib/compress-video-studio";
 import {
   fileToVideoDataUrl,
   resolveVideoMimeType,
@@ -37,6 +38,37 @@ async function fetchWithTimeout(
   }
 }
 
+function normalizeUploadError(err: unknown): Error {
+  if (!(err instanceof Error)) {
+    return new Error("Impossible d'envoyer la vidéo.");
+  }
+  const msg = err.message || "";
+  if (/load failed|failed to fetch|networkerror|network error/i.test(msg)) {
+    return new Error(
+      "Upload cloud bloqué (réseau ou navigateur). On réessaie via le serveur…",
+    );
+  }
+  return err;
+}
+
+async function uploadVideoViaApi(file: File): Promise<string> {
+  const normalized = withNormalizedVideoFile(file);
+  const dataUrl = await fileToVideoDataUrl(normalized);
+  const res = await authFetch("/api/larps/upload-input-video", {
+    method: "POST",
+    body: JSON.stringify({ video: dataUrl }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(err?.message || "Échec envoi vidéo via le serveur");
+  }
+  const json = (await res.json()) as { videoUrl?: string };
+  if (!json.videoUrl?.startsWith("http")) {
+    throw new Error("URL vidéo invalide après upload");
+  }
+  return json.videoUrl;
+}
+
 async function uploadVideoDirectToR2(file: File): Promise<string> {
   const normalized = withNormalizedVideoFile(file);
   const contentType = resolveVideoMimeType(normalized);
@@ -69,7 +101,7 @@ async function uploadVideoDirectToR2(file: File): Promise<string> {
     if (err instanceof DOMException && err.name === "AbortError") {
       throw new Error("UPLOAD_DIRECT_FAILED");
     }
-    throw err;
+    throw normalizeUploadError(err);
   }
 
   if (!putRes.ok) {
@@ -116,7 +148,10 @@ async function uploadInlineDataUrl(file: File): Promise<StudioVideoUpload> {
 export async function prepareVideoFileForStudio(
   file: File,
 ): Promise<StudioVideoUpload> {
-  const normalized = withNormalizedVideoFile(file);
+  let normalized = withNormalizedVideoFile(file);
+  if (normalized.size > VIDEO_INLINE_FALLBACK_MAX_BYTES) {
+    normalized = await compressVideoForStudioUpload(normalized);
+  }
   const canInline = normalized.size <= VIDEO_INLINE_FALLBACK_MAX_BYTES;
 
   try {
@@ -125,9 +160,14 @@ export async function prepareVideoFileForStudio(
   } catch (directErr) {
     if (canInline) {
       try {
-        return await uploadInlineDataUrl(normalized);
+        const videoUrl = await uploadVideoViaApi(normalized);
+        return { mode: "url", videoUrl };
       } catch {
-        /* message d'erreur ci-dessous */
+        try {
+          return await uploadInlineDataUrl(normalized);
+        } catch {
+          /* message d'erreur ci-dessous */
+        }
       }
     }
     const message =
