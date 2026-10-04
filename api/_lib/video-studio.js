@@ -607,6 +607,27 @@ function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt
   return preserveSourceAudio ? result : `${result}${V2V_SILENT_OUTPUT_LOCK}`;
 }
 
+/** Mouvement (Kling Motion Control) — identité image, scène + chorégraphie vidéo. */
+function buildKlingMotionStudioPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
+  let prompt = String(userPrompt || "").trim();
+  if (!preserveSourceAudio) {
+    prompt = stripVoiceInstructionsFromPrompt(prompt);
+  }
+  const userPart =
+    prompt.length >= 5
+      ? prompt
+      : "Replace the dancer with the person from the reference photo.";
+  const lock =
+    " Keep the original video background, camera, lighting and timing unchanged. " +
+    "Copy dance moves and body motion exactly from the source video. " +
+    "The reference photo supplies identity only — not the environment.";
+  let result = `${userPart}.${lock}`;
+  if (!preserveSourceAudio) {
+    result += V2V_SILENT_OUTPUT_LOCK;
+  }
+  return result.slice(0, 2000);
+}
+
 function buildV2VProviderPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
   let prompt = String(userPrompt || "").trim();
 
@@ -789,6 +810,7 @@ module.exports = {
   buildCarSwapPrompt,
   buildV2VTransformPrompt,
   buildV2VProviderPrompt,
+  buildKlingMotionStudioPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
   isV2VMotionBodyPrompt,

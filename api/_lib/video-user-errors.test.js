@@ -41,14 +41,10 @@ test("mapVideoProviderMessage — exhausted non-car clip stays generic", () => {
   assert.match(fr, /Jetons remboursés/);
 });
 
-test("resolveKlingCharacterOrientation — ref image → image", () => {
+test("resolveKlingCharacterOrientation — toujours video (mouvements depuis la clip)", () => {
   assert.equal(
-    resolveKlingCharacterOrientation("Je veux une Urus à Dubai", true),
-    "image",
-  );
-  assert.equal(
-    resolveKlingCharacterOrientation("Paysage calme", true),
-    "image",
+    resolveKlingCharacterOrientation("Remplace le danseur", true),
+    "video",
   );
   assert.equal(resolveKlingCharacterOrientation("Urus", false), "video");
 });

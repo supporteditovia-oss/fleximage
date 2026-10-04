@@ -19,6 +19,7 @@ const {
   computeVideoCreditCost,
   buildI2VAvatarPrompt,
   buildV2VProviderPrompt,
+  buildKlingMotionStudioPrompt,
   buildAlephSubmitPrompt,
   resolveV2VProviderFromIntent,
   v2vEngineFamilyForProvider,
@@ -509,7 +510,8 @@ module.exports = async function handler(req, res) {
     let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
-        const skipV2VEnrichment = isVehicleDrivingPrompt(vehiclePromptRaw);
+        const skipV2VEnrichment =
+          v2vIntent === "motion" || isVehicleDrivingPrompt(vehiclePromptRaw);
         const [enrichedDesc, sourceBundle] = await Promise.all([
           studioVehicleDescription && !skipV2VEnrichment
             ? enrichPromptForGeneration(studioVehicleDescription, {
@@ -546,9 +548,14 @@ module.exports = async function handler(req, res) {
           v2vIntent,
           studioVehicleDescription,
         );
-        providerPrompt = buildV2VProviderPrompt(studioVehicleDescription, {
-          preserveSourceAudio,
-        });
+        providerPrompt =
+          v2vProvider === "kling_motion"
+            ? buildKlingMotionStudioPrompt(studioVehicleDescription, {
+                preserveSourceAudio,
+              })
+            : buildV2VProviderPrompt(studioVehicleDescription, {
+                preserveSourceAudio,
+              });
         alephSubmitPrompt = buildAlephSubmitPrompt(vehiclePromptRaw || studioVehicleDescription, {
           preserveSourceAudio,
         });

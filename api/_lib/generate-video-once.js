@@ -346,7 +346,7 @@ async function generateKlingMotionOnce(supabase, params) {
     params.prompt,
     Boolean(params.imageUrl),
   );
-  const backgroundSource = resolveKlingBackgroundSource(params.prompt);
+  const backgroundSource = "input_video";
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
   const kieImageUrl = await ensureKieAccessibleMediaUrl(params.imageUrl, "image");
   const kling = await createKlingMotionTask({

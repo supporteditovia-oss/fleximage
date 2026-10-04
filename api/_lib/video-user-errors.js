@@ -44,19 +44,12 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   return null;
 }
 
-function resolveKlingCharacterOrientation(_prompt, hasReferenceImage) {
-  return hasReferenceImage ? "image" : "video";
+/** Doc Kie : « video » recommandé — mouvements/cadrage depuis la vidéo ; l’image = identité seulement. */
+function resolveKlingCharacterOrientation(_prompt, _hasReferenceImage) {
+  return "video";
 }
 
-function resolveKlingBackgroundSource(prompt) {
-  const p = String(prompt || "").toLowerCase();
-  if (
-    /int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|voiture|vehicle|swap|remplace/.test(
-      p,
-    )
-  ) {
-    return "input_video";
-  }
+function resolveKlingBackgroundSource(_prompt) {
   return "input_video";
 }
 

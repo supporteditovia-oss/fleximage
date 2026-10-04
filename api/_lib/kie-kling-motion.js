@@ -119,13 +119,18 @@ function extractKlingMotionVideoUrl(data) {
 
 function buildKlingMotionPrompt(userPrompt) {
   const base = String(userPrompt || "").trim();
-  const lock =
-    " Keep camera motion identical. Photorealistic vehicle/interior swap as described. No distortion.";
+  const locks = [
+    "Motion control body swap.",
+    "Use the reference IMAGE only for the person's face and body identity (who they are).",
+    "Use the reference VIDEO for ALL motion: choreography, timing, gestures, pose rhythm, and camera path.",
+    "Keep the entire background, environment, lighting, and set EXACTLY from the reference video — never use the static photo as the scene or backdrop.",
+    "Replace only the moving person in the video with the person from the image; photorealistic, no distortion, no pasted cutout look.",
+  ].join(" ");
   if (!base) {
-    return "No distortion, the character's movements are consistent with the video.";
+    return locks.slice(0, 2500);
   }
-  const combined = `${base}.${lock}`;
-  return combined.length <= 1200 ? combined : base.slice(0, 1200);
+  const combined = `${base}. ${locks}`;
+  return combined.length <= 2500 ? combined : `${base.slice(0, 900)}. ${locks}`.slice(0, 2500);
 }
 
 module.exports = {
