@@ -516,12 +516,40 @@ module.exports = async function handler(req, res) {
     const isAlephTask = activeTaskId.startsWith("aleph_");
     const isKlingTask = activeTaskId.startsWith("kling_");
     const isOmniTask = activeTaskId.startsWith("omni_");
+    const isSeedanceTask = activeTaskId.startsWith("seedance_");
     let apiStatus = "waiting";
     let apiResultJson = null;
     let apiFailMsg = null;
     let apiCostTime = null;
 
-    if (isOmniTask) {
+    if (isSeedanceTask) {
+      const {
+        getSeedanceTransformStatus,
+        mapSeedanceTransformState,
+        extractSeedanceTransformVideoUrl,
+        extractSeedanceTransformFailMessage,
+      } = require("../kie-seedance-transform");
+      const seedanceTaskId = activeTaskId.replace("seedance_", "");
+      try {
+        const seedanceData = await getSeedanceTransformStatus(seedanceTaskId);
+        const state = mapSeedanceTransformState(seedanceData);
+        const videoUrl = extractSeedanceTransformVideoUrl(seedanceData);
+        if (state === "success") {
+          apiStatus = "success";
+          if (videoUrl) {
+            apiResultJson = JSON.stringify({ video_url: videoUrl });
+          }
+        } else if (state === "fail") {
+          apiStatus = "fail";
+          apiFailMsg =
+            extractSeedanceTransformFailMessage(seedanceData) ||
+            "Échec transformation vidéo (Seedance).";
+        }
+      } catch (seedancePollErr) {
+        console.error("[status] seedance poll error", seedancePollErr);
+        apiStatus = "waiting";
+      }
+    } else if (isOmniTask) {
       const {
         getKlingOmniRef2VStatus,
         mapKlingOmniRef2VState,

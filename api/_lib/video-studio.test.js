@@ -15,6 +15,9 @@ const {
   isAlephTransformEnabled,
   isV2VOmniTransformRolloutEnabled,
   shouldUseOmniTransformForV2V,
+  shouldUseSeedanceTransformForV2V,
+  isSeedanceTransformEnabled,
+  buildSeedanceTransformPrompt,
   buildOmniTransformPrompt,
   buildAlephSubmitPrompt,
   buildV2VCockpitIntelligenceLock,
@@ -344,6 +347,47 @@ describe("video-studio", () => {
     assert.match(prompt, /MUST KEEP UNCHANGED \(motion lock only\)/i);
     assert.match(prompt, /Remove all original-make badges/i);
     assert.ok(prompt.length <= 2500);
+  });
+
+  it("buildSeedanceTransformPrompt locks OEM cabin and motion", () => {
+    const prompt = buildSeedanceTransformPrompt(
+      "Remplace ma BMW par une Lamborghini Urus au volant, 120 km/h",
+      { preserveSourceAudio: false },
+    );
+    assert.match(prompt, /MUST CHANGE/i);
+    assert.match(prompt, /MUST KEEP EXACT/i);
+    assert.match(prompt, /Lamborghini Urus/i);
+    assert.match(prompt, /120 km\/h/i);
+    assert.match(prompt, /Door mechanisms/i);
+    assert.match(prompt, /Reflections/i);
+  });
+
+  it("shouldUseSeedanceTransformForV2V replaces Omni when seedance enabled", () => {
+    const prevSeed = process.env.V2V_SEEDANCE_TRANSFORM_ENABLED;
+    const prevOmni = process.env.V2V_OMNI_TRANSFORM_ENABLED;
+    process.env.V2V_SEEDANCE_TRANSFORM_ENABLED = "1";
+    process.env.V2V_OMNI_TRANSFORM_ENABLED = "1";
+    assert.equal(isSeedanceTransformEnabled(), true);
+    assert.equal(
+      shouldUseSeedanceTransformForV2V(
+        { v2v_seedance_transform_rollout: true },
+        "720p",
+        "runway_aleph",
+      ),
+      true,
+    );
+    assert.equal(
+      shouldUseOmniTransformForV2V(
+        { v2v_seedance_transform_rollout: true },
+        "1080p",
+        "runway_aleph",
+      ),
+      false,
+    );
+    if (prevSeed === undefined) delete process.env.V2V_SEEDANCE_TRANSFORM_ENABLED;
+    else process.env.V2V_SEEDANCE_TRANSFORM_ENABLED = prevSeed;
+    if (prevOmni === undefined) delete process.env.V2V_OMNI_TRANSFORM_ENABLED;
+    else process.env.V2V_OMNI_TRANSFORM_ENABLED = prevOmni;
   });
 
   it("shouldUseOmniTransformForV2V is off unless V2V_OMNI_TRANSFORM_ENABLED=1", () => {

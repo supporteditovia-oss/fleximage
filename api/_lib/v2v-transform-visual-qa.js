@@ -1,6 +1,7 @@
 /**
  * Reject V2V vehicle/cabin transforms that are nearly identical to the source
  * (e.g. only a gauge UI tweak while BMW logos remain).
+ * Applies to Aleph, Seedance transform, and legacy Omni — any `video_to_video` vehicle prompt.
  */
 const { execFile } = require("child_process");
 const { promisify } = require("util");

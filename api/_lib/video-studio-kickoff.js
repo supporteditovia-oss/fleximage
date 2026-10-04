@@ -3,6 +3,7 @@ const {
   generateVideoV2VOnce,
   generateKlingMotionOnce,
   generateOmniRef2VOnce,
+  generateSeedanceTransformOnce,
   readVideoApiCallCount,
 } = require("./generate-video-once");
 const {
@@ -18,10 +19,13 @@ const {
   buildAlephSubmitPrompt,
   buildI2VAvatarPrompt,
   buildOmniTransformPrompt,
+  buildSeedanceTransformPrompt,
   buildV2VProviderPrompt,
   isAlephTransformEnabled,
   isV2VOmniTransformRolloutEnabled,
+  isV2VSeedanceTransformRolloutEnabled,
   shouldUseOmniTransformForV2V,
+  shouldUseSeedanceTransformForV2V,
   isVehicleDrivingPrompt,
   v2vEngineFamilyForProvider,
 } = require("./video-studio");
@@ -150,7 +154,19 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         meta.v2v_resolution || "720p",
       );
 
+      const seedanceRollout = isV2VSeedanceTransformRolloutEnabled(meta);
       const omniRollout = isV2VOmniTransformRolloutEnabled(meta);
+      const runSeedanceStudio = async (videoUrl) =>
+        generateSeedanceTransformOnce(supabase, {
+          generationId: larp.id,
+          prompt: buildSeedanceTransformPrompt(userPrompt, {
+            preserveSourceAudio,
+          }),
+          videoUrl,
+          resolution: v2vResolution,
+          durationSec: meta.source_video_duration_sec,
+          preserveSourceAudio,
+        });
       const runOmniStudio = async (videoUrl) =>
         generateOmniRef2VOnce(supabase, {
           generationId: larp.id,
@@ -190,12 +206,26 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         v2vEngineFamilyForProvider(finalV2vProvider);
 
       try {
+        const useSeedanceTransform = shouldUseSeedanceTransformForV2V(
+          meta,
+          v2vResolution,
+          finalV2vProvider,
+        );
         const useOmniTransform = shouldUseOmniTransformForV2V(
           meta,
           v2vResolution,
           finalV2vProvider,
         );
-        if (useOmniTransform) {
+        if (useSeedanceTransform) {
+          const videoUrl = await ensureKieAccessibleMediaUrl(
+            seedanceRollout
+              ? await resolveOmniSourceVideoUrl(sourceAssetUrl, userId)
+              : sourceAssetUrl,
+            "video",
+          );
+          await runSeedanceStudio(videoUrl);
+          finalV2vProvider = "seedance_transform";
+        } else if (useOmniTransform) {
           const videoUrl = await ensureKieAccessibleMediaUrl(
             omniRollout
               ? await resolveOmniSourceVideoUrl(sourceAssetUrl, userId)

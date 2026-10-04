@@ -65,7 +65,8 @@ async function claimVideoProviderCall(supabase, generationId) {
           p.startsWith("avatar_") ||
           p.startsWith("aleph_") ||
           p.startsWith("kling_") ||
-          p.startsWith("omni_"),
+          p.startsWith("omni_") ||
+          p.startsWith("seedance_"),
       ) || parts[parts.length - 1];
     return { allowed: false, generation: row, apiCallCount: count, externalTaskId: videoPart };
   }
@@ -106,7 +107,8 @@ async function claimVideoProviderCall(supabase, generationId) {
             p.startsWith("avatar_") ||
             p.startsWith("aleph_") ||
             p.startsWith("kling_") ||
-            p.startsWith("omni_"),
+            p.startsWith("omni_") ||
+          p.startsWith("seedance_"),
         ) || null,
     };
   }
@@ -414,6 +416,89 @@ async function generateKlingMotionOnce(supabase, params) {
 }
 
 /**
+ * Scène & luxe — ByteDance Seedance reference-to-video (remplace Omni).
+ */
+async function generateSeedanceTransformOnce(supabase, params) {
+  const { createSeedanceTransformTask } = require("./kie-seedance-transform");
+  const claim = await claimVideoProviderCall(supabase, params.generationId);
+  if (!claim.allowed) {
+    console.info("[generate-seedance-once] skipped duplicate provider call", {
+      generationId: params.generationId,
+      apiCallCount: claim.apiCallCount,
+    });
+    return {
+      ok: true,
+      deduplicated: true,
+      externalTaskId: claim.externalTaskId,
+      apiCallCount: claim.apiCallCount,
+    };
+  }
+
+  const startedAt = Date.now();
+  const seedance = await createSeedanceTransformTask({
+    prompt: params.prompt,
+    videoUrl: params.videoUrl,
+    resolution: params.resolution,
+    durationSec: params.durationSec,
+    preserveSourceAudio: params.preserveSourceAudio,
+  });
+
+  const externalTaskId = `seedance_${seedance.taskId}`;
+  const durationMs = Date.now() - startedAt;
+  const prevAttempts = Array.isArray(claim.generation.provider_attempts)
+    ? claim.generation.provider_attempts
+    : [];
+
+  const nextMeta = {
+    ...(claim.generation.metadata || {}),
+    video_api_call_count: 1,
+    video_provider_completed_at: new Date().toISOString(),
+    v2v_seedance_model: seedance.model,
+    seedance_task_id: seedance.taskId,
+    video_provider_duration_ms: durationMs,
+  };
+
+  await supabase
+    .from("generations")
+    .update({
+      provider: "kie",
+      provider_task_id: appendProviderTaskId(
+        claim.generation.provider_task_id,
+        externalTaskId,
+      ),
+      metadata: nextMeta,
+      provider_attempts: [
+        ...prevAttempts,
+        {
+          provider: "seedance_transform",
+          model: seedance.model,
+          taskId: seedance.taskId,
+          externalTaskId,
+          durationMs,
+        },
+      ],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.generationId);
+
+  console.info("[generate-seedance-once] job created", {
+    generationId: params.generationId,
+    seedanceTaskId: seedance.taskId,
+    model: seedance.model,
+    durationMs,
+  });
+
+  return {
+    ok: true,
+    deduplicated: false,
+    externalTaskId,
+    apiCallCount: 1,
+    seedanceTaskId: seedance.taskId,
+    durationMs,
+  };
+}
+
+/**
  * Transformation Pro — Kling 3.0 Omni Reference To Video (single provider call).
  */
 async function generateOmniRef2VOnce(supabase, params) {
@@ -497,6 +582,7 @@ module.exports = {
   generateVideoV2VOnce,
   generateKlingMotionOnce,
   generateOmniRef2VOnce,
+  generateSeedanceTransformOnce,
   claimVideoProviderCall,
   readVideoApiCallCount,
   appendProviderTaskId,

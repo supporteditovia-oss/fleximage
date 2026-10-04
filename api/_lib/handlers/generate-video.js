@@ -663,6 +663,7 @@ module.exports = async function handler(req, res) {
       v2v_provider: v2vProvider,
       v2v_intent: v2vIntent,
       v2v_omni_transform_rollout: isAdmin,
+      v2v_seedance_transform_rollout: isAdmin,
       v2v_engine_family: v2vProvider
         ? v2vEngineFamilyForProvider(v2vProvider)
         : null,

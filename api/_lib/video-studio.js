@@ -167,6 +167,9 @@ function isV2VOmniTransformRolloutEnabled(meta) {
 }
 
 function shouldUseOmniTransformForV2V(meta, v2vResolution, v2vProvider) {
+  if (shouldUseSeedanceTransformForV2V(meta, v2vResolution, v2vProvider)) {
+    return false;
+  }
   if (!isOmniTransformEnabled()) return false;
   if (v2vProvider !== "runway_aleph") return false;
   if (!isAlephTransformEnabled()) {
@@ -177,7 +180,77 @@ function shouldUseOmniTransformForV2V(meta, v2vResolution, v2vProvider) {
   return false;
 }
 
+/** Seedance 2.0/2.5 remplace Omni (Scène & luxe transform). */
+function isSeedanceTransformEnabled() {
+  return String(process.env.V2V_SEEDANCE_TRANSFORM_ENABLED || "").trim() === "1";
+}
+
+function isV2VSeedanceTransformRolloutEnabled(meta) {
+  if (!isSeedanceTransformEnabled()) return false;
+  if (meta && meta.v2v_seedance_transform_rollout === true) return true;
+  return String(process.env.V2V_SEEDANCE_TRANSFORM_PUBLIC || "").trim() === "1";
+}
+
+function shouldUseSeedanceTransformForV2V(meta, v2vResolution, v2vProvider) {
+  if (!isSeedanceTransformEnabled()) return false;
+  if (v2vProvider !== "runway_aleph") return false;
+  const res = normalizeVideoUltraResolution(v2vResolution || "720p");
+  if (isV2VSeedanceTransformRolloutEnabled(meta)) return true;
+  if (!isAlephTransformEnabled()) return true;
+  return res === "1080p" || res === "4k";
+}
+
+const SEEDANCE_PROMPT_MAX_CHARS = 8000;
 const OMNI_PROMPT_MAX_CHARS = 2500;
+
+function buildSeedanceTransformPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
+  let prompt = String(userPrompt || "").trim();
+  if (!preserveSourceAudio) {
+    prompt = stripVoiceInstructionsFromPrompt(prompt);
+  }
+  const base =
+    prompt.length >= 5
+      ? prompt
+      : "Transform the scene with premium cinematic realism";
+  const vehicle = extractRequestedVehicleModel(prompt);
+  const target = vehicle?.model || "the exact vehicle model named in the request";
+  const speed = extractMentionedSpeedKmh(prompt);
+  const parts = [
+    `Edit the reference video: ${base.replace(/[.\s]+$/, "")}.`,
+    "Object-level / reference-to-video: replace subjects and cabin as described while preserving the original camera recording.",
+  ];
+
+  if (isVehicleDrivingPrompt(prompt)) {
+    parts.push(
+      `MUST CHANGE (full re-brand — not a UI reskin): replace EVERY visible interior and exterior vehicle surface with authentic OEM ${target} — steering wheel shape and center cap logo, instrument cluster hardware and graphics, center stack screen shape and UI layout, buttons, vents, console, trim, keys or remotes in frame.`,
+      vehicle?.interior
+        ? `Target cabin OEM reference: ${vehicle.interior}`
+        : `Match real-world ${target} geometry, badges, dashboard and controls — no generic SUV interpretation.`,
+      "Real model fidelity: reproduce exact center-screen aspect ratio, button positions, and constructor badge — not an approximate lookalike.",
+      "Door mechanisms: if doors or hands interact, use the target vehicle's real mechanism (e.g. Lamborghini scissor/dihedral vs conventional SUV pull) — do NOT copy the source car's door motion if the target brand differs; adapt the hand gesture to the correct handle/latch motion.",
+    );
+    parts.push(buildKeySwapInstruction(vehicle));
+    parts.push(buildV2VCockpitIntelligenceLock(prompt));
+  } else {
+    parts.push(
+      "MUST CHANGE: all elements described in the user request with photoreal OEM/detail accuracy.",
+    );
+  }
+
+  parts.push(
+    "MUST KEEP EXACT: camera trajectory, framing, clip timing, hand positions and paths on the wheel/controls, body motion rhythm — motion lock is mandatory.",
+    "Instrument coherence: speedometer/tachometer digits and needles must track visible acceleration/deceleration and road motion in the source clip — never frozen or contradicting movement.",
+    "Gear/shift state: if the vehicle is clearly driving, show consistent Drive (D) / engaged gear — never Park (P) or Neutral while moving.",
+    speed
+      ? `When moving, speedometer must read approximately ${speed} km/h whenever the cluster is visible.`
+      : "Preserve speedometer/tachometer dynamics consistent with source motion frame-by-frame.",
+    "Lighting coherence: if the source is night driving with headlights or reflections, keep night exposure and target-model headlight shape, color temperature, and intensity realistic.",
+    "Reflections: keep driver face in mirror and windshield reflections, adapted to the new cabin materials — do not erase reflections.",
+    "Photorealistic smartphone footage, natural motion blur, no CGI paste look.",
+  );
+
+  return parts.join(" ").slice(0, SEEDANCE_PROMPT_MAX_CHARS);
+}
 
 function buildOmniTransformPrompt(userPrompt, { preserveSourceAudio = false } = {}) {
   let prompt = String(userPrompt || "").trim();
@@ -722,6 +795,10 @@ module.exports = {
   isOmniTransformEnabled,
   isV2VOmniTransformRolloutEnabled,
   shouldUseOmniTransformForV2V,
+  isSeedanceTransformEnabled,
+  isV2VSeedanceTransformRolloutEnabled,
+  shouldUseSeedanceTransformForV2V,
+  buildSeedanceTransformPrompt,
   buildOmniTransformPrompt,
   promptHasTimelineBeats,
   buildAlephSubmitPrompt,
