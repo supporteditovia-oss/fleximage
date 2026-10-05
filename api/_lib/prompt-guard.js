@@ -2016,6 +2016,201 @@ function parseVehicleSpec(prompt) {
   };
 }
 
+/** Known OEM / marketing paint names (user text wins over model default white/silver). */
+const VEHICLE_OEM_PAINT_PATTERNS = [
+  { re: /\bkyalami(?:\s*(?:green|vert))?\b|\b(?:green|vert)\s*kyalami\b/, label: "Kyalami Green (Audi OEM metallic green)" },
+  { re: /\bnardo(?:\s*(?:gr[ae]y|gris))?\b|\b(?:gr[ae]y|gris)\s*nardo\b/, label: "Nardo Grey (Audi OEM matte grey)" },
+  { re: /\bdaytona(?:\s*(?:gr[ae]y|gris))?\b/, label: "Daytona Grey" },
+  { re: /\bmiami\s*blue\b|\bbleu\s*miami\b/, label: "Miami Blue (BMW OEM)" },
+  { re: /\bisle\s*of\s*man\s*green\b|\bvert\s*isle\s*of\s*man\b/, label: "Isle of Man Green (BMW OEM)" },
+  { re: /\bBritish\s*racing\s*green\b|\bvert\s*British\s*racing\b|\bvert\s*anglais\b/, label: "British Racing Green" },
+  { re: /\brosso\s*corsa\b|\brouge\s*ferrari\b/, label: "Rosso Corsa (Ferrari red)" },
+  { re: /\bgiallo\s*modena\b|\bjaune\s*modena\b/, label: "Giallo Modena (Ferrari yellow)" },
+  { re: /\bverde\s*mantis\b|\bvert\s*mantis\b/, label: "Verde Mantis (Lamborghini green)" },
+  { re: /\bviola\s*pasifae\b|\bviolet\s*pasifae\b/, label: "Viola Pasifae (Lamborghini purple)" },
+  { re: /\bchalk\b|\bcraie\b/, label: "Chalk (Porsche matte light grey)" },
+  { re: /\bguards\s*red\b|\brouge\s*guards\b/, label: "Guards Red (Porsche)" },
+  { re: /\bmakalu\s*grey\b|\bgr[ae]y\s*makalu\b/, label: "Makalu Grey" },
+  { re: /\bsantorini\s*black\b|\bnoir\s*santorini\b/, label: "Santorini Black" },
+  { re: /\bverde\s*british\b/, label: "Verde British (Lamborghini green)" },
+  { re: /\bblanc\s*ibis\b|\bibis\s*white\b/, label: "Ibis White (Audi)" },
+  { re: /\bnoir\s*panther\b|\bpanther\s*black\b/, label: "Panther Black" },
+];
+
+const GENERIC_PAINT_COLOR_BASE =
+  "vert|green|bleu|blue|rouge|red|noir|black|blanc|white|gris|grey|gray|jaune|yellow|orange|violet|purple|marron|brown|rose|pink|argent|silver|dore|gold|bordeaux|burgundy|turquoise|cyan|beige|ivoire|ivory|cuivre|copper|bronze|mauve|lila|lilac|menthe|mint|olive|kaki|khaki|ecru|nacre|pearl";
+
+const GENERIC_PAINT_COLOR_MODIFIER =
+  "fonc[eé]|fonce|clair[e]?|mat[e]?|mate|metallis[eé]|metallic|nacr[eé]|nacree|pearl|marine|navy|satin|brillant|gloss|matt|pastel|vif|fluo|neon";
+
+function prettyGenericPaintToken(base, mod) {
+  const b = String(base || "").trim();
+  const m = String(mod || "").trim();
+  if (!b) return "";
+  const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
+  const baseMap = {
+    vert: "green",
+    green: "green",
+    bleu: "blue",
+    blue: "blue",
+    rouge: "red",
+    red: "red",
+    noir: "black",
+    black: "black",
+    blanc: "white",
+    white: "white",
+    gris: "grey",
+    grey: "grey",
+    gray: "grey",
+    jaune: "yellow",
+    yellow: "yellow",
+    violet: "purple",
+    purple: "purple",
+    marron: "brown",
+    brown: "brown",
+    rose: "pink",
+    pink: "pink",
+    argent: "silver",
+    silver: "silver",
+    dore: "gold",
+    gold: "gold",
+    bordeaux: "burgundy",
+    burgundy: "burgundy",
+  };
+  const en = baseMap[b.toLowerCase()] || b;
+  const modClean = m.replace(/e$/, "").replace(/é/, "e");
+  let label = cap(en);
+  if (m) {
+    if (/marine|navy/i.test(m)) label = "Navy blue";
+    else if (/fonc|fonce|dark/i.test(m)) label = `Dark ${label.toLowerCase()}`;
+    else if (/clair|light/i.test(m)) label = `Light ${label.toLowerCase()}`;
+    else if (/mat|mate|matt/i.test(m)) label = `Matte ${label.toLowerCase()}`;
+    else if (/metall|metallis|metallic/i.test(m)) label = `Metallic ${label.toLowerCase()}`;
+    else if (/nacr|pearl/i.test(m)) label = `Pearl ${label.toLowerCase()}`;
+    else label = `${cap(modClean)} ${label.toLowerCase()}`;
+  }
+  return label.trim();
+}
+
+/**
+ * Extract user-requested exterior paint from free text (FR/EN + OEM names).
+ * Returns null when no explicit paint intent (do not guess from scene).
+ */
+function parseVehiclePaintColor(prompt) {
+  const text = normalizePromptText(prompt);
+  const hasVehicleCue =
+    Boolean(parseVehicleSpec(prompt)) ||
+    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
+  if (!hasVehicleCue) return null;
+
+  for (const oem of VEHICLE_OEM_PAINT_PATTERNS) {
+    if (oem.re.test(text)) {
+      return { label: oem.label, kind: "oem" };
+    }
+  }
+
+  const baseRe = GENERIC_PAINT_COLOR_BASE;
+  const modRe = GENERIC_PAINT_COLOR_MODIFIER;
+  const paintIntent =
+    /\b(couleur|color|colour|teinte|peinture|paint|peins|peindre|peinte|painted|laque|finish)\b/.test(
+      text,
+    ) ||
+    new RegExp(`\\b(?:en|in)\\s+(?:${baseRe})\\b`).test(text) ||
+    new RegExp(`\\b(?:${baseRe})\\s+(?:${modRe})\\b`).test(text);
+
+  const tryMatch = (re) => {
+    const m = text.match(re);
+    if (!m) return null;
+    const label = prettyGenericPaintToken(m[1], m[2]);
+    return label ? { label, kind: "generic" } : null;
+  };
+
+  let hit =
+    tryMatch(
+      new RegExp(
+        `\\b(?:couleur|color|colour|teinte|peinture|paint)\\s*(?:de|en|:)?\\s*(${baseRe})(?:\\s+(${modRe}))?\\b`,
+        "i",
+      ),
+    ) ||
+    tryMatch(
+      new RegExp(
+        `\\b(?:peins|peindre|peinte|painted|paint)\\s+(?:en\\s+|in\\s+)?(${baseRe})(?:\\s+(${modRe}))?\\b`,
+        "i",
+      ),
+    ) ||
+    tryMatch(new RegExp(`\\b(?:en|in)\\s+(${baseRe})(?:\\s+(${modRe}))?\\b`, "i")) ||
+    tryMatch(new RegExp(`\\b(${baseRe})\\s+(${modRe})\\b`, "i"));
+
+  if (!hit && paintIntent) {
+    hit = tryMatch(
+      new RegExp(
+        `\\b(?:voiture|car|auto|rs3|urus|bmw|audi|lambo|lamborghini|mercedes|porsche|ferrari|m5|m3|g63)\\b[\\s\\S]{0,40}\\b(${baseRe})(?:\\s+(${modRe}))?\\b`,
+        "i",
+      ),
+    );
+  }
+  if (!hit && paintIntent) {
+    hit = tryMatch(
+      new RegExp(
+        `\\b(${baseRe})(?:\\s+(${modRe}))?\\b[\\s\\S]{0,40}\\b(?:voiture|car|auto|rs3|urus|bmw|audi|lambo|lamborghini|mercedes|porsche|ferrari|m5|m3|g63)\\b`,
+        "i",
+      ),
+    );
+  }
+
+  if (!hit) return null;
+  if (!paintIntent && hit.kind === "generic") {
+    const nearCar =
+      new RegExp(
+        `\\b(?:voiture|car|auto|rs3|urus|bmw|audi|lambo|lamborghini|mercedes|porsche|ferrari|m5|m3|g63|remplac|replace|swap|mets|mettre)\\b[\\s\\S]{0,50}\\b(${baseRe})\\b`,
+        "i",
+      ).test(text) ||
+      new RegExp(
+        `\\b(${baseRe})\\b[\\s\\S]{0,50}\\b(?:rs3|urus|bmw|audi|lambo|lamborghini|mercedes|porsche|ferrari|m5|m3|g63|voiture|car)\\b`,
+        "i",
+      ).test(text);
+    if (!nearCar) return null;
+  }
+  return hit;
+}
+
+function vehiclePaintColorHint(prompt, referenceImageCount = 0) {
+  const paint = parseVehiclePaintColor(prompt);
+  if (!paint) return "";
+  const fromRef = isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount);
+  if (fromRef && !paint) return "";
+  const userPaintWins =
+    paint &&
+    (!fromRef ||
+      /\b(couleur|color|peinture|paint|kyalami|nardo|miami|chalk|rosso|verde|giallo|viola|British\s*racing)\b/i.test(
+        String(prompt || ""),
+      ) ||
+      new RegExp(`\\b(?:${GENERIC_PAINT_COLOR_BASE})\\b`, "i").test(
+        normalizePromptText(prompt),
+      ));
+  if (fromRef && !userPaintWins) return "";
+  const wrongDefault =
+    paint.kind === "oem" || /green|vert|Kyalami|blue|bleu|red|rouge|black|noir|yellow|jaune|purple|violet|pink|rose|gold|dore/i.test(
+      paint.label,
+    )
+      ? "white, silver, grey, black, or any other OEM color"
+      : "a different hue or finish than requested";
+  return (
+    ` (PAINT LOCK — mandatory: exterior body paint MUST be ${paint.label}. ` +
+    `Match correct hue, saturation, metallic/matte/pearl finish for that name. ` +
+    `FORBIDDEN: default press-car ${wrongDefault} when user specified this paint. ` +
+    `Never keep the original car color from image 1 unless user asked for it.)`
+  );
+}
+
+function vehiclePaintColorFrontLock(prompt, referenceImageCount = 0) {
+  const paint = parseVehiclePaintColor(prompt);
+  if (!paint) return "";
+  const hint = vehiclePaintColorHint(prompt, referenceImageCount);
+  if (!hint) return "";
+  return `PAINT=${paint.label} ONLY — NOT default white/silver. `;
+}
+
 function isNamedVehiclePrompt(prompt) {
   return Boolean(parseVehicleSpec(prompt));
 }
@@ -2167,10 +2362,12 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
   if (!spec) return refPrefix.trim();
   return (
     `${refPrefix}` +
+    `${vehiclePaintColorFrontLock(userPrompt, referenceImageCount)}` +
     `${VEHICLE_DECAL_FRONT_LOCK}` +
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
-    `${vehicleIdentityHint(userPrompt)}`
+    `${vehicleIdentityHint(userPrompt)}` +
+    `${vehiclePaintColorHint(userPrompt, referenceImageCount)}`
   ).trim();
 }
 
@@ -2191,12 +2388,23 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
 function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   if (isVehicleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
     const spec = parseVehicleSpec(userPrompt);
+    const paint = parseVehiclePaintColor(userPrompt);
+    const paintFromUser =
+      paint && vehiclePaintColorHint(userPrompt, referenceImageCount)
+        ? ` Exterior paint MUST be ${paint.label} as written by the user (not default white).`
+        : "";
     const named =
       spec?.label && !/image\s*2|photo\s*2/i.test(spec.label)
-        ? ` Target must match: ${spec.label} (exact color and wheels from image 2).`
-        : "";
+        ? paintFromUser
+          ? ` Target model: ${spec.label}.${paintFromUser}`
+          : ` Target must match: ${spec.label} (exact color and wheels from image 2).`
+        : paintFromUser;
+    const colorSource = paintFromUser
+      ? paintFromUser
+      : " same body color, wheels, badges, trim as image 2.";
     return (
-      "Photoreal edit: transplant the EXACT car from reference image 2 onto reference image 1 — same body color, wheels, badges, trim as image 2." +
+      "Photoreal edit: transplant the EXACT car from reference image 2 onto reference image 1 —" +
+      colorSource +
       named +
       " Image 1 keeps background, lighting, camera angle, distance, parking pose, plate/decals; only the car body changes."
     ).trim();
@@ -2206,8 +2414,13 @@ function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   const label = spec?.label || raw;
   const antimix = generationAntimixLine(userPrompt).trim();
   const detail = antimix ? ` ${antimix}` : "";
+  const paint = parseVehiclePaintColor(userPrompt);
+  const paintLine =
+    paint && vehiclePaintColorHint(userPrompt, referenceImageCount)
+      ? ` Factory paint color: ${paint.label} (mandatory — not default white/silver).`
+      : "";
   return (
-    `Replace ONLY the existing car with ${label}.${detail} ` +
+    `Replace ONLY the existing car with ${label}.${detail}${paintLine} ` +
     "Keep the same license plate and any apprentice/sticker decals from the original — each at most once on the new body, never duplicated floating in the air or on car-wash equipment. " +
     "Keep the same person, pose, outfit, station/building, lighting, and camera framing."
   ).trim();
@@ -4493,6 +4706,8 @@ module.exports = {
   isVehicleCockpitRefinePrompt,
   isNamedVehiclePrompt,
   parseVehicleSpec,
+  parseVehiclePaintColor,
+  vehiclePaintColorHint,
   vehicleIdentityHint,
   vehicleForbiddenBrandHint,
   needsProModelVariant,

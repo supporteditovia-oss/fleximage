@@ -7,7 +7,7 @@ test("two-photo car swap uses image 2 reference guard", () => {
     "Remplace ma voiture par l'image 2",
     { referenceImageCount: 2 },
   );
-  assert.match(prompt, /transplant the EXACT car from image 2/i);
+  assert.match(prompt, /transplant the EXACT car from reference image 2/i);
 });
 
 test("par l'image 2 without brand name still routes to vehicle swap", () => {
@@ -38,4 +38,34 @@ test("cockpit swap keeps camera framing lock", () => {
   assert.match(prompt, /COCKPIT CAMERA FRAMING LOCK/i);
   assert.match(prompt, /steering-wheel rotation/i);
   assert.match(prompt, /windshield traffic|never delete\/remove/i);
+});
+
+test("vehicle swap locks OEM Kyalami green paint (not default white RS3)", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace ma voiture par une Audi RS3 vert Kyalami",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /PAINT LOCK/i);
+  assert.match(prompt, /Kyalami Green/i);
+  assert.match(prompt, /NOT default white|default press-car white/i);
+  assert.match(prompt, /Factory paint color:.*Kyalami/i);
+});
+
+test("vehicle swap locks generic bleu marine", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la voiture par une BMW M3 couleur bleu marine",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /PAINT LOCK/i);
+  assert.match(prompt, /Navy blue|bleu marine/i);
+});
+
+test("two-photo swap with explicit paint keeps user color lock", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace ma voiture par une RS3 vert Kyalami avec l'image 2",
+    { referenceImageCount: 2 },
+  );
+  assert.match(prompt, /PAINT LOCK/i);
+  assert.match(prompt, /Kyalami/i);
+  assert.match(prompt, /not default white/i);
 });
