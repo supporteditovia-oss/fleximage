@@ -135,6 +135,10 @@ export default function VideoIA() {
   const [refImageBase64, setRefImageBase64] = useState<string | null>(null);
   /** false = vignette auto extraite de la vidéo (cachée en UI, utilisée côté serveur). */
   const [refImageIsCustom, setRefImageIsCustom] = useState(false);
+  const refImageIsCustomRef = useRef(false);
+  useEffect(() => {
+    refImageIsCustomRef.current = refImageIsCustom;
+  }, [refImageIsCustom]);
   const [swapPrompt, setSwapPrompt] = useState("");
   const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
   const [v2vResolution, setV2vResolution] =
@@ -466,12 +470,16 @@ export default function VideoIA() {
 
     void (async () => {
       try {
+        if (refImageIsCustomRef.current) return;
         const frameFile = await extractVideoFrameAsJpegFile(fileReadyForCloud);
         if (videoUploadGenRef.current !== uploadGen) return;
+        if (refImageIsCustomRef.current) return;
         const frameCompressed = await compressImageForGeneration(frameFile);
         if (videoUploadGenRef.current !== uploadGen) return;
+        if (refImageIsCustomRef.current) return;
         const frameB64 = await fileToBase64(frameCompressed);
         if (videoUploadGenRef.current !== uploadGen) return;
+        if (refImageIsCustomRef.current) return;
         setRefImageBase64(frameB64);
         setRefImageIsCustom(false);
         setRefImagePreview((prev) => {
@@ -582,6 +590,7 @@ export default function VideoIA() {
       const compressed = await compressImageForGeneration(file);
       const b64 = await fileToBase64(compressed);
       setRefImageBase64(b64);
+      refImageIsCustomRef.current = true;
       setRefImageIsCustom(true);
       setRefImagePreview((prev) => {
         if (prev) URL.revokeObjectURL(prev);

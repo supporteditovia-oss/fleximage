@@ -429,7 +429,7 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                       {props.refImageIsCustom
                         ? "Changer ta photo"
                         : props.v2vIntent === "motion"
-                          ? "+ Ta photo (remplacer le danseur)"
+                          ? "+ Ta photo (visage / corps à mettre dans la vidéo)"
                           : "+ Photo bonus (optionnel)"}
                     </span>
                   </button>

@@ -23,6 +23,11 @@ function parseJsonResponse(text, status, context) {
  * @see https://docs.kie.ai (kling-3.0/motion-control)
  */
 async function createKlingMotionTask(input) {
+  const backgroundSource =
+    input.backgroundSource === "input_image" ? "input_image" : "input_video";
+  const characterOrientation =
+    input.characterOrientation === "image" ? "image" : "video";
+
   const body = {
     model: KLING_MOTION_MODEL,
     input: {
@@ -32,8 +37,8 @@ async function createKlingMotionTask(input) {
       ).slice(0, 2500),
       input_urls: input.inputUrls,
       video_urls: input.videoUrls,
-      character_orientation: input.characterOrientation || "video",
-      background_source: input.backgroundSource || "input_video",
+      character_orientation: characterOrientation,
+      background_source: backgroundSource,
       mode: input.mode === "1080p" ? "1080p" : "720p",
     },
   };
@@ -117,20 +122,36 @@ function extractKlingMotionVideoUrl(data) {
   return null;
 }
 
-function buildKlingMotionPrompt(userPrompt) {
-  const base = String(userPrompt || "").trim();
-  const locks = [
-    "Motion control body swap.",
-    "Use the reference IMAGE only for the person's face and body identity (who they are).",
-    "Use the reference VIDEO for ALL motion: choreography, timing, gestures, pose rhythm, and camera path.",
-    "Keep the entire background, environment, lighting, and set EXACTLY from the reference video — never use the static photo as the scene or backdrop.",
-    "Replace only the moving person in the video with the person from the image; photorealistic, no distortion, no pasted cutout look.",
-  ].join(" ");
-  if (!base) {
-    return locks.slice(0, 2500);
+function normalizeMotionUserPromptForKling(userPrompt) {
+  const s = String(userPrompt || "").trim();
+  if (!s) {
+    return "Replace the dancer in the reference video with the person from the reference image.";
   }
-  const combined = `${base}. ${locks}`;
-  return combined.length <= 2500 ? combined : `${base.slice(0, 900)}. ${locks}`.slice(0, 2500);
+  if (
+    /remplace.*(?:personne|danseur|danseuse).*?(?:photo|image)|par celle de ma photo|par ma photo|body swap|même mouvement/i.test(
+      s,
+    )
+  ) {
+    return (
+      "In the reference VIDEO clip, replace the moving person with the person from the reference IMAGE. " +
+      "Keep the video room, background, lighting and camera exactly. " +
+      "The IMAGE is identity only — never animate on the photo or use the photo as the scene."
+    );
+  }
+  return s;
+}
+
+function buildKlingMotionPrompt(userPrompt) {
+  const locks =
+    "CRITICAL MOTION CONTROL RULES (must follow): " +
+    "Output = reference VIDEO environment + reference VIDEO choreography. " +
+    "input_urls IMAGE = face/body identity ONLY. " +
+    "video_urls VIDEO = motion driver + background (background_source input_video). " +
+    "FORBIDDEN: dancing on the static photo; photo as backdrop; I2V-style animation of the image file. " +
+    "Replace the performer inside the video clip with the image person; same dance, same room.";
+  const userLine = normalizeMotionUserPromptForKling(userPrompt);
+  const combined = `${locks} User intent: ${userLine}`;
+  return combined.slice(0, 2500);
 }
 
 module.exports = {

@@ -8,8 +8,16 @@ const {
 test("buildKlingMotionPrompt verrouille fond vidéo et identité image", () => {
   const p = buildKlingMotionPrompt("Replace the dancer with my photo");
   assert.match(p, /reference VIDEO/i);
-  assert.match(p, /never use the static photo as the scene/i);
-  assert.match(p, /reference IMAGE/i);
+  assert.match(p, /FORBIDDEN.*static photo/i);
+  assert.match(p, /input_urls IMAGE/i);
+});
+
+test("buildKlingMotionPrompt traduit le swap FR courant", () => {
+  const p = buildKlingMotionPrompt(
+    "Remplace la personne qui danse par celle de ma photo",
+  );
+  assert.match(p, /reference VIDEO clip/i);
+  assert.match(p, /never animate on the photo/i);
 });
 
 test("extractKlingFailMessage lit failMsg et resultJson", () => {

@@ -349,6 +349,14 @@ async function generateKlingMotionOnce(supabase, params) {
   const backgroundSource = "input_video";
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
   const kieImageUrl = await ensureKieAccessibleMediaUrl(params.imageUrl, "image");
+  console.info("[generate-kling-once] motion control payload", {
+    generationId: params.generationId,
+    characterOrientation,
+    backgroundSource,
+    imageHost: kieImageUrl?.split("/").slice(-1)[0],
+    videoHost: kieVideoUrl?.split("/").slice(-1)[0],
+  });
+
   const kling = await createKlingMotionTask({
     prompt: klingPrompt,
     inputUrls: [kieImageUrl],
