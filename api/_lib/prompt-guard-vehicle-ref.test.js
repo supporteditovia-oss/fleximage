@@ -40,6 +40,17 @@ test("cockpit swap keeps camera framing lock", () => {
   assert.match(prompt, /windshield traffic|never delete\/remove/i);
 });
 
+test("kyalima typo + Golf white inherit forbidden", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "remplace ma voiture en RS3 vert kyalima",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /PAINT LOCK/i);
+  assert.match(prompt, /Kyalami Green/i);
+  assert.match(prompt, /white Golf|original photo car paint/i);
+  assert.match(prompt, /white Golf|original photo car paint/i);
+});
+
 test("vehicle swap locks OEM Kyalami green paint (not default white RS3)", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace ma voiture par une Audi RS3 vert Kyalami",

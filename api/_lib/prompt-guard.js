@@ -406,6 +406,11 @@ const GENERIC_VEHICLE_WORDS_RE =
 const VEHICLE_SCENE_MATCH_CLARIFIER =
   " (SCENE MATCH: freeze original crop, driver, hands, road, traffic, sky unless asked otherwise. The vehicle inherits original light, exposure, shadows, reflections, color temp, depth, grain — no studio-lit cabin on a dark road photo.)";
 
+/** When user names a paint color — scene lighting yes, original Golf/Clio body color NO. */
+const VEHICLE_SCENE_MATCH_LIGHT_ONLY_CLARIFIER =
+  " (SCENE MATCH: freeze crop, driver, hands, road, traffic, sky. Inherit scene LIGHTING only — exposure, shadow direction, reflections, white balance, grain on the new body. " +
+  "FORBIDDEN: keeping the original car's body paint (white Golf, grey Clio, etc.) — full new factory paint as requested. Lighting match ≠ same paint color.)";
+
 /**
  * Replace the car already in the uploaded photo — keep parking pose + whole background.
  * Must NEVER use LARGE/CENTERED local-edit (that re-parks the car and rebuilds shops).
@@ -2018,7 +2023,10 @@ function parseVehicleSpec(prompt) {
 
 /** Known OEM / marketing paint names (user text wins over model default white/silver). */
 const VEHICLE_OEM_PAINT_PATTERNS = [
-  { re: /\bkyalami(?:\s*(?:green|vert))?\b|\b(?:green|vert)\s*kyalami\b/, label: "Kyalami Green (Audi OEM metallic green)" },
+  {
+    re: /\bkyalam[iy][ae]?(?:\s*(?:green|vert))?\b|\b(?:green|vert)\s*kyalam[iy][ae]?\b|\bkyalim[aae]?\b/,
+    label: "Kyalami Green (Audi OEM metallic green)",
+  },
   { re: /\bnardo(?:\s*(?:gr[ae]y|gris))?\b|\b(?:gr[ae]y|gris)\s*nardo\b/, label: "Nardo Grey (Audi OEM matte grey)" },
   { re: /\bdaytona(?:\s*(?:gr[ae]y|gris))?\b/, label: "Daytona Grey" },
   { re: /\bmiami\s*blue\b|\bbleu\s*miami\b/, label: "Miami Blue (BMW OEM)" },
@@ -2103,6 +2111,13 @@ function parseVehiclePaintColor(prompt) {
     /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
   if (!hasVehicleCue) return null;
 
+  if (
+    (/\bkyalam[iy][ae]?\b/.test(text) || /\bkyalim[aae]?\b/.test(text)) &&
+    (/\bvert\b/.test(text) || /\bgreen\b/.test(text))
+  ) {
+    return { label: "Kyalami Green (Audi OEM metallic green)", kind: "oem" };
+  }
+
   for (const oem of VEHICLE_OEM_PAINT_PATTERNS) {
     if (oem.re.test(text)) {
       return { label: oem.label, kind: "oem" };
@@ -2116,7 +2131,10 @@ function parseVehiclePaintColor(prompt) {
       text,
     ) ||
     new RegExp(`\\b(?:en|in)\\s+(?:${baseRe})\\b`).test(text) ||
-    new RegExp(`\\b(?:${baseRe})\\s+(?:${modRe})\\b`).test(text);
+    new RegExp(`\\b(?:${baseRe})\\s+(?:${modRe})\\b`).test(text) ||
+    new RegExp(`\\b(?:rs3|m3|m5|urus|g63|911|992)\\s+(?:${baseRe})\\b`).test(text) ||
+    new RegExp(`\\b(?:${baseRe})\\s+kyalam\\w*\\b`).test(text) ||
+    new RegExp(`\\b(?:${baseRe})\\s+kyalim\\w*\\b`).test(text);
 
   const tryMatch = (re) => {
     const m = text.match(re);
@@ -2139,7 +2157,12 @@ function parseVehiclePaintColor(prompt) {
       ),
     ) ||
     tryMatch(new RegExp(`\\b(?:en|in)\\s+(${baseRe})(?:\\s+(${modRe}))?\\b`, "i")) ||
-    tryMatch(new RegExp(`\\b(${baseRe})\\s+(${modRe})\\b`, "i"));
+    tryMatch(new RegExp(`\\b(${baseRe})\\s+(${modRe})\\b`, "i")) ||
+    tryMatch(
+      new RegExp(`\\b(?:rs3|m3|m5|urus|g63|911|992)\\s+(${baseRe})(?:\\s+(${modRe}))?\\b`, "i"),
+    ) ||
+    tryMatch(new RegExp(`\\b(${baseRe})\\s+kyalam\\w*\\b`, "i")) ||
+    tryMatch(new RegExp(`\\b(${baseRe})\\s+kyalim\\w*\\b`, "i"));
 
   if (!hit && paintIntent) {
     hit = tryMatch(
@@ -2199,6 +2222,7 @@ function vehiclePaintColorHint(prompt, referenceImageCount = 0) {
     ` (PAINT LOCK — mandatory: exterior body paint MUST be ${paint.label}. ` +
     `Match correct hue, saturation, metallic/matte/pearl finish for that name. ` +
     `FORBIDDEN: default press-car ${wrongDefault} when user specified this paint. ` +
+    `FORBIDDEN: copying the original photo car paint (white Golf, grey Clio, silver sedan, etc.) — replace body color completely. ` +
     `Never keep the original car color from image 1 unless user asked for it.)`
   );
 }
@@ -2208,7 +2232,7 @@ function vehiclePaintColorFrontLock(prompt, referenceImageCount = 0) {
   if (!paint) return "";
   const hint = vehiclePaintColorHint(prompt, referenceImageCount);
   if (!hint) return "";
-  return `PAINT=${paint.label} ONLY — NOT default white/silver. `;
+  return `PAINT=${paint.label} ONLY — NOT original photo car white/grey, NOT default press white/silver. `;
 }
 
 function isNamedVehiclePrompt(prompt) {
@@ -2367,7 +2391,12 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
     `${vehicleIdentityHint(userPrompt)}` +
-    `${vehiclePaintColorHint(userPrompt, referenceImageCount)}`
+    `${vehiclePaintColorHint(userPrompt, referenceImageCount)}` +
+    `${
+      parseVehiclePaintColor(userPrompt)
+        ? VEHICLE_SCENE_MATCH_LIGHT_ONLY_CLARIFIER
+        : ""
+    }`
   ).trim();
 }
 
@@ -3245,8 +3274,25 @@ function sanitizeUserPrompt(prompt) {
     if (!/PARK LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_REPLACE_CLARIFIER}`;
     }
+    const paintLockEarly =
+      parseVehiclePaintColor(prompt) || parseVehiclePaintColor(cleaned);
+    if (paintLockEarly) {
+      const front =
+        vehiclePaintColorFrontLock(prompt) || vehiclePaintColorFrontLock(cleaned);
+      const hint =
+        vehiclePaintColorHint(prompt) || vehiclePaintColorHint(cleaned);
+      if (front && !/PAINT=/i.test(cleaned)) {
+        cleaned = `${front}${hint}${cleaned}`;
+      } else if (hint && !/PAINT LOCK/i.test(cleaned)) {
+        cleaned = `${hint}${cleaned}`;
+      }
+    }
     if (!/SCENE MATCH:/i.test(cleaned)) {
-      cleaned = `${cleaned}${VEHICLE_SCENE_MATCH_CLARIFIER}`;
+      cleaned = `${cleaned}${
+        paintLockEarly
+          ? VEHICLE_SCENE_MATCH_LIGHT_ONLY_CLARIFIER
+          : VEHICLE_SCENE_MATCH_CLARIFIER
+      }`;
     }
   } else if (exteriorTrafficRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
