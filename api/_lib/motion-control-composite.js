@@ -5,7 +5,9 @@ const path = require("path");
 const os = require("os");
 const sharp = require("sharp");
 const { uploadToR2 } = require("./r2");
-const { removeBackgroundBria } = require("./background-remove-bria");
+const {
+  removeBackgroundBriaOptional,
+} = require("./background-remove-bria");
 
 let ffmpegPath = null;
 try {
@@ -223,36 +225,71 @@ async function prepareMotionControlCompositeImage({
   }
 
   const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
-  const [frameCutout, subjectCutout] = await Promise.all([
-    removeBackgroundBria(frameJpeg),
-    removeBackgroundBria(subjectUrl),
-  ]);
+  const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_frame");
+  const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
 
   const frameMeta = await sharp(frameJpeg).metadata();
   const canvasW = frameMeta.width || 720;
   const canvasH = frameMeta.height || 1280;
 
-  const subjectBox =
-    (await alphaBoundingBoxFromPng(
+  let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+  if (frameCutout) {
+    const boxFromFrame = await alphaBoundingBoxFromPng(
       await sharp(frameCutout)
         .resize(canvasW, canvasH, { fit: "fill" })
         .png()
         .toBuffer(),
-    )) || computeDefaultSubjectBox(canvasW, canvasH);
+    );
+    if (boxFromFrame) subjectBox = boxFromFrame;
+  }
 
-  const plate = await buildScenePlateWithoutOriginalSubject(frameJpeg, frameCutout);
-  const placed = await resizeSubjectIntoBox(subjectCutout, subjectBox, canvasW, canvasH);
+  const plate = frameCutout
+    ? await buildScenePlateWithoutOriginalSubject(frameJpeg, frameCutout)
+    : frameJpeg;
 
-  const compositePng = await sharp(plate)
-    .composite([
-      {
-        input: placed.buffer,
-        left: Math.max(0, placed.left),
-        top: Math.max(0, placed.top),
-      },
-    ])
-    .png()
-    .toBuffer();
+  let compositePng;
+  if (subjectCutout) {
+    const placed = await resizeSubjectIntoBox(
+      subjectCutout,
+      subjectBox,
+      canvasW,
+      canvasH,
+    );
+    compositePng = await sharp(plate)
+      .composite([
+        {
+          input: placed.buffer,
+          left: Math.max(0, placed.left),
+          top: Math.max(0, placed.top),
+        },
+      ])
+      .png()
+      .toBuffer();
+  } else {
+    const subjectRes = await fetch(subjectUrl);
+    if (!subjectRes.ok) {
+      throw Object.assign(new Error("Impossible de lire la photo personnage"), {
+        status: 422,
+      });
+    }
+    const subjectBuf = Buffer.from(await subjectRes.arrayBuffer());
+    const placed = await resizeSubjectIntoBox(
+      await sharp(subjectBuf).png().toBuffer(),
+      subjectBox,
+      canvasW,
+      canvasH,
+    );
+    compositePng = await sharp(plate)
+      .composite([
+        {
+          input: placed.buffer,
+          left: Math.max(0, placed.left),
+          top: Math.max(0, placed.top),
+        },
+      ])
+      .png()
+      .toBuffer();
+  }
 
   const key = `inputs/${uid}/${Date.now()}-motion-composite.png`;
   const publicUrl = await uploadToR2(key, compositePng, "image/png");
@@ -263,6 +300,8 @@ async function prepareMotionControlCompositeImage({
     canvasH,
     box: subjectBox,
     bytes: compositePng.length,
+    briaFrame: Boolean(frameCutout),
+    briaSubject: Boolean(subjectCutout),
   });
 
   return publicUrl;

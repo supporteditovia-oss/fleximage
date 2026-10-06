@@ -356,13 +356,26 @@ async function generateKlingMotionOnce(supabase, params) {
 
   let motionImageUrl = params.imageUrl;
   let motionCompositeApplied = false;
+  let motionCompositeFallback = null;
   if (shouldApplyMotionComposite(params)) {
-    motionImageUrl = await prepareMotionControlCompositeImage({
-      userId: params.userId,
-      subjectImageUrl: params.imageUrl,
-      videoUrl: params.videoUrl,
-    });
-    motionCompositeApplied = true;
+    try {
+      motionImageUrl = await prepareMotionControlCompositeImage({
+        userId: params.userId,
+        subjectImageUrl: params.imageUrl,
+        videoUrl: params.videoUrl,
+      });
+      motionCompositeApplied = true;
+    } catch (compositeErr) {
+      motionCompositeFallback = String(compositeErr?.message || compositeErr).slice(
+        0,
+        200,
+      );
+      console.warn("[generate-kling-once] motion composite failed — raw image fallback", {
+        generationId: params.generationId,
+        message: motionCompositeFallback,
+      });
+      motionImageUrl = params.imageUrl;
+    }
   }
 
   const kieImageUrl = await ensureKieAccessibleMediaUrl(motionImageUrl, "image");
@@ -399,6 +412,9 @@ async function generateKlingMotionOnce(supabase, params) {
     video_auto_retries: 0,
     v2v_provider: "kling_motion",
     motion_composite_applied: motionCompositeApplied,
+    ...(motionCompositeFallback
+      ? { motion_composite_fallback: motionCompositeFallback }
+      : {}),
     ...(motionCompositeApplied && motionImageUrl
       ? { motion_composite_image_url: motionImageUrl }
       : {}),
