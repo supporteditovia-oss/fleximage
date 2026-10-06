@@ -1,26 +1,7 @@
 /**
- * Temps restant affiché pendant le poll vidéo — calé pour ne pas tomber à 0 avant la fin réelle.
- * Utilisé par status.js (remainingSeconds) ; le client interpole entre deux polls.
+ * Temps restant poll vidéo (status API) — linéaire, aligné sur generation-display-timing.
  */
-
-function computeVideoPollRemainingSeconds(estimatedSeconds, elapsedSec, phase = "generating") {
-  const E = Math.max(30, Math.round(Number(estimatedSeconds) || 0));
-  const elapsed = Math.max(0, Math.floor(Number(elapsedSec) || 0));
-
-  if (phase === "done") return 0;
-  if (phase === "finalize") {
-    return Math.max(3, Math.min(12, 10 - Math.floor(elapsed / 4)));
-  }
-
-  if (elapsed < E) {
-    const ratio = Math.max(0, 1 - elapsed / E);
-    const curved = Math.pow(ratio, 0.72) * E;
-    return Math.max(1, Math.round(curved));
-  }
-
-  const overtime = elapsed - E;
-  return Math.max(5, Math.round(48 - overtime / 2.5));
-}
+const { computePollRemainingSeconds } = require("./generation-display-timing");
 
 function videoTimingFieldsForLarp(larp) {
   const meta =
@@ -33,12 +14,16 @@ function videoTimingFieldsForLarp(larp) {
   if (estimatedSeconds == null || !larp?.created_at) {
     return { estimatedSeconds, remainingSeconds: null };
   }
+  const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
+  const videoRetries = Number(meta.video_auto_retries || 0);
+  const effectiveEstimate =
+    estimatedSeconds + qaRetryCount * 28 + videoRetries * 35;
   const elapsed = Math.max(
     0,
     Math.floor((Date.now() - new Date(larp.created_at).getTime()) / 1000),
   );
-  const remainingSeconds = computeVideoPollRemainingSeconds(
-    estimatedSeconds,
+  const remainingSeconds = computePollRemainingSeconds(
+    effectiveEstimate,
     elapsed,
     "generating",
   );
@@ -46,6 +31,6 @@ function videoTimingFieldsForLarp(larp) {
 }
 
 module.exports = {
-  computeVideoPollRemainingSeconds,
+  computePollRemainingSeconds,
   videoTimingFieldsForLarp,
 };

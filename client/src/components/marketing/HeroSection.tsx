@@ -475,7 +475,7 @@ export default function HeroSection() {
             <GenerationLoader
               taskId="hero-pending"
               status="connecting"
-              estimatedSeconds={generationEstimateSeconds ?? 50}
+              estimatedSeconds={generationEstimateSeconds ?? 38}
               inputImageUrl={images[0]?.url}
             />,
             document.body,

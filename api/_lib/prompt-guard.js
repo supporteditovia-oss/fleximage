@@ -2466,34 +2466,33 @@ function needsProModelVariant(prompt) {
   );
 }
 
-/** Honest client countdown — provider pass + typical vision QA / one corrective regen. */
+/** Compte à rebours client — p90 réel (1 passe provider + marge QA légère). */
 function estimateGenerationSeconds(prompt, options = {}) {
   const refs = Math.max(0, Number(options.referenceImageCount) || 0);
   const pro = needsProModelVariant(prompt);
-  let providerSec = pro ? 50 : 34;
-  if (refs >= 2) providerSec += 8;
-  if (refs >= 3) providerSec += 6;
-  if (isVehicleReplacePrompt(prompt)) providerSec += 12;
+  let providerSec = pro ? 38 : 26;
+  if (refs >= 2) providerSec += 6;
+  if (refs >= 3) providerSec += 5;
+  if (isVehicleReplacePrompt(prompt)) providerSec += 10;
   if (isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt)) {
-    providerSec += 8;
-  }
-  if (isLifestyleRelocatePrompt(prompt)) providerSec += 10;
-  if (isNamedVehiclePrompt(prompt) && !isNonCarLifestylePrompt(prompt)) {
     providerSec += 6;
   }
-  if (isFictionalVehiclePrompt(prompt)) providerSec += 6;
-  if (isAddAnimalPrompt(prompt)) providerSec += 8;
+  if (isLifestyleRelocatePrompt(prompt)) providerSec += 8;
+  if (isNamedVehiclePrompt(prompt) && !isNonCarLifestylePrompt(prompt)) {
+    providerSec += 5;
+  }
+  if (isFictionalVehiclePrompt(prompt)) providerSec += 5;
+  if (isAddAnimalPrompt(prompt)) providerSec += 6;
   const vehicleReplace = isVehicleReplacePrompt(prompt);
   const moto =
     isMotorcycleReplacePrompt(prompt) || isMotorcycleRidePrompt(prompt);
   const lifestyleCar =
     isLifestyleRelocatePrompt(prompt) && isNamedVehiclePrompt(prompt);
-  // Swaps with QA retry budget (vehicle replace skips QA — fast path).
   const needsFullRetryBudget =
     !vehicleReplace &&
     (moto || lifestyleCar || isFictionalVehiclePrompt(prompt));
-  const qaSec = needsFullRetryBudget ? providerSec + 10 : 14;
-  return Math.min(110, Math.max(25, providerSec + qaSec));
+  const qaSec = needsFullRetryBudget ? 18 : 8;
+  return Math.min(85, Math.max(22, providerSec + qaSec));
 }
 
 function detectCockpitVehicleModel(prompt) {

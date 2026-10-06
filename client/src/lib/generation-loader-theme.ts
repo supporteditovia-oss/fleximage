@@ -81,7 +81,7 @@ export function acquireGenerationLoaderTheme(
     isContinuation,
     countdownSessionId,
     countdownStartedAtMs,
-    countdownEstimateSeconds: countdownEstimateSeconds ?? 50,
+    countdownEstimateSeconds: countdownEstimateSeconds ?? 38,
   };
 }
 
@@ -92,7 +92,7 @@ export function peekGenerationLoaderTiming(): {
 } | null {
   if (countdownStartedAtMs === null) return null;
   return {
-    estimate: countdownEstimateSeconds ?? 50,
+    estimate: countdownEstimateSeconds ?? 38,
     startedAtMs: countdownStartedAtMs,
   };
 }

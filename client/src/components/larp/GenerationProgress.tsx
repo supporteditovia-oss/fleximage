@@ -325,8 +325,8 @@ export function GenerationProgress({
                 durationSec: 5,
               })
             : referenceImageCount >= 2
-              ? 62
-              : 50;
+              ? 46
+              : 38;
     return polled ?? fallback;
   })();
 

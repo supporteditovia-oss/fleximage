@@ -4,21 +4,21 @@
  * Miroir client : client/src/lib/video-generation-timing.ts
  */
 const VIDEO_TIMING = {
-  overheadSec: 25,
+  overheadSec: 18,
   i2v: {
-    render5sSec: 105,
-    render10sSec: 165,
-    hdExtraSec: 30,
-    voiceExtraSec: 20,
+    render5sSec: 88,
+    render10sSec: 132,
+    hdExtraSec: 22,
+    voiceExtraSec: 16,
   },
-  /** Famille Transform = Kling 3.0 Omni Ref2V (mesuré : 227–327 s pour 3–5 s source) + transcodage. */
-  runwayAleph: { baseSec: 240, perSourceSec: 8, prepSec: 15 },
-  /** Kling 3.0 Motion Control 720p — plus long qu'Aleph, surtout 3–8 s source. */
-  klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
-  sourceAudioMuxSec: 25,
+  /** Transform / Scène & luxe (Omni Ref2V + transcodage). */
+  runwayAleph: { baseSec: 175, perSourceSec: 5, prepSec: 10 },
+  /** Mouvement — Kling Motion Control 720p (p90 observé, pas worst-case marketing). */
+  klingMotion: { baseSec: 98, perSourceSec: 9, prepSec: 8 },
+  sourceAudioMuxSec: 18,
   defaultSourceDurationSec: 8,
-  minSec: 90,
-  maxSec: 480,
+  minSec: 65,
+  maxSec: 360,
 };
 
 function roundUpTo5(value) {

@@ -37,7 +37,7 @@ interface GenerationLoaderProps {
   onRevealComplete?: () => void;
 }
 
-const DEFAULT_ESTIMATE_SECONDS = 50;
+const DEFAULT_ESTIMATE_SECONDS = 38;
 const MESSAGE_INTERVAL_MS = 1800;
 const EXIT_FADE_MS = 400;
 /** Périmètre approx. du cadre 9:16 arrondi (viewBox 100×160). */
@@ -100,10 +100,8 @@ export function GenerationLoader({
   const lockedEstimate = useRef(Math.max(25, Math.round(estimatedSeconds)));
 
   useEffect(() => {
-    lockedEstimate.current = Math.max(
-      lockedEstimate.current,
-      Math.max(25, Math.round(estimatedSeconds)),
-    );
+    const next = Math.max(22, Math.round(estimatedSeconds));
+    lockedEstimate.current = Math.min(lockedEstimate.current, next);
   }, [estimatedSeconds]);
 
   const effectiveStartedAtMs = startedAtMs ?? countdownStartedAtMs;

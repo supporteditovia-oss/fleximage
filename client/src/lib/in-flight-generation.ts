@@ -116,8 +116,11 @@ export function mergeGenerationTimingLock(
     return { estimate: est, startedAtMs: start ?? Date.now() };
   }
 
+  const nextEstimate =
+    est != null ? Math.min(locked.estimate, est) : locked.estimate;
+
   return {
-    estimate: locked.estimate,
+    estimate: nextEstimate,
     startedAtMs:
       start != null ? Math.min(locked.startedAtMs, start) : locked.startedAtMs,
   };

@@ -1508,7 +1508,7 @@ export default function Generate({
           taskId="pending"
           status="connecting"
           estimatedSeconds={
-            generationMode === "video" ? 150 : 50
+            generationMode === "video" ? 110 : 38
           }
           inputImageUrl={loaderInputImageUrl}
         />,

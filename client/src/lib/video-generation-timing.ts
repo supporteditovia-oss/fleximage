@@ -1,18 +1,18 @@
 /** Miroir de api/_lib/video-timing.js — garder les deux synchronisés. */
 const VIDEO_TIMING = {
-  overheadSec: 25,
+  overheadSec: 18,
   i2v: {
-    render5sSec: 105,
-    render10sSec: 165,
-    hdExtraSec: 30,
-    voiceExtraSec: 20,
+    render5sSec: 88,
+    render10sSec: 132,
+    hdExtraSec: 22,
+    voiceExtraSec: 16,
   },
-  runwayAleph: { baseSec: 240, perSourceSec: 8, prepSec: 15 },
-  klingMotion: { baseSec: 180, perSourceSec: 18, prepSec: 10 },
-  sourceAudioMuxSec: 25,
+  runwayAleph: { baseSec: 175, perSourceSec: 5, prepSec: 10 },
+  klingMotion: { baseSec: 98, perSourceSec: 9, prepSec: 8 },
+  sourceAudioMuxSec: 18,
   defaultSourceDurationSec: 8,
-  minSec: 90,
-  maxSec: 480,
+  minSec: 65,
+  maxSec: 360,
 } as const;
 
 export type VideoTimingInput = {
@@ -77,35 +77,7 @@ export function formatClock(totalSeconds: number): string {
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
-/** Miroir de api/_lib/video-status-timing.js — ETA poll vidéo (courbe + overtime). */
-export function computeVideoPollRemainingSeconds(
-  estimatedSeconds: number,
-  elapsedSec: number,
-  phase: "generating" | "finalize" | "done" = "generating",
-): number {
-  const E = Math.max(30, Math.round(estimatedSeconds));
-  const elapsed = Math.max(0, Math.floor(elapsedSec));
-
-  if (phase === "done") return 0;
-  if (phase === "finalize") {
-    return Math.max(3, Math.min(12, 10 - Math.floor(elapsed / 4)));
-  }
-
-  if (elapsed < E) {
-    const ratio = Math.max(0, 1 - elapsed / E);
-    const curved = ratio ** 0.72 * E;
-    return Math.max(1, Math.round(curved));
-  }
-
-  const overtime = elapsed - E;
-  return Math.max(5, Math.round(48 - overtime / 2.5));
-}
-
-export function videoPollRemainingFromStart(
-  estimatedSeconds: number,
-  startedAtMs: number,
-  nowMs: number = Date.now(),
-): number {
-  const elapsed = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
-  return computeVideoPollRemainingSeconds(estimatedSeconds, elapsed, "generating");
-}
+export {
+  computePollRemainingSeconds as computeVideoPollRemainingSeconds,
+  pollRemainingFromStart as videoPollRemainingFromStart,
+} from "./generation-display-timing";

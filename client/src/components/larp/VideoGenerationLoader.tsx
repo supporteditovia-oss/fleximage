@@ -255,6 +255,10 @@ export function VideoGenerationLoader({
     sessionRef.current;
 
   const lockedEstimate = useRef(Math.max(30, Math.round(estimatedSeconds)));
+  useEffect(() => {
+    const next = Math.max(30, Math.round(estimatedSeconds));
+    lockedEstimate.current = Math.min(lockedEstimate.current, next);
+  }, [estimatedSeconds]);
   const effectiveStartedAtMs = startedAtMs ?? countdownStartedAtMs;
   const isSuccess = status === "success";
 

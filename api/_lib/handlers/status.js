@@ -159,16 +159,24 @@ function statusTimingFields(larp) {
       ? Number(estimatedRaw)
       : null;
   const qaRetryCount = Number(meta.vision_qa_retry_count || 0);
+  const videoRetries =
+    larp?.generation_type === "video"
+      ? Number(meta.video_auto_retries || 0)
+      : 0;
   let remainingSeconds = null;
-  if (larp?.generation_type === "video") {
-    const videoTiming = videoTimingFieldsForLarp(larp);
-    remainingSeconds = videoTiming.remainingSeconds;
-  } else if (estimatedSeconds != null && larp && larp.created_at) {
+  if (estimatedSeconds != null && larp?.created_at) {
+    const { computePollRemainingSeconds } = require("../generation-display-timing");
+    const effectiveEstimate =
+      estimatedSeconds + qaRetryCount * 28 + videoRetries * 35;
     const elapsed = Math.max(
       0,
       Math.floor((Date.now() - new Date(larp.created_at).getTime()) / 1000),
     );
-    remainingSeconds = Math.max(0, estimatedSeconds - elapsed);
+    remainingSeconds = computePollRemainingSeconds(
+      effectiveEstimate,
+      elapsed,
+      "generating",
+    );
   }
   return { estimatedSeconds, qaRetryCount, remainingSeconds, createdAt: larp.created_at || null };
 }

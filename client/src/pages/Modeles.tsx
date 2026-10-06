@@ -544,8 +544,8 @@ export default function Modeles() {
           Number.isFinite(result.estimatedSeconds)
           ? result.estimatedSeconds
           : userImages.length >= 2
-            ? 62
-            : 50,
+            ? 46
+            : 38,
       );
     } catch (error: any) {
       generationLockRef.current = false;
@@ -627,7 +627,7 @@ export default function Modeles() {
       <GenerationLoader
         taskId="modeles-pending"
         status="connecting"
-        estimatedSeconds={pendingUserPhoto ? 62 : 50}
+        estimatedSeconds={pendingUserPhoto ? 46 : 38}
         inputImageUrl={
           pendingUserPhoto
             ? pendingUserPhoto.startsWith("data:")
