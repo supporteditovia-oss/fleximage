@@ -5,11 +5,11 @@ const {
   buildKlingMotionPrompt,
 } = require("./kie-kling-motion");
 
-test("buildKlingMotionPrompt verrouille fond vidéo et identité image", () => {
+test("buildKlingMotionPrompt verrouille corps entier et interdit face-swap", () => {
   const p = buildKlingMotionPrompt("Replace the dancer with my photo");
-  assert.match(p, /reference VIDEO/i);
-  assert.match(p, /FORBIDDEN.*static photo/i);
-  assert.match(p, /input_urls IMAGE/i);
+  assert.match(p, /FULL BODY|ENTIRE performer/i);
+  assert.match(p, /FORBIDDEN.*face-swap/i);
+  assert.match(p, /choreography|skeleton/i);
 });
 
 test("buildKlingMotionPrompt traduit le swap FR courant", () => {

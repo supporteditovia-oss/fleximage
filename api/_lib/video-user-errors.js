@@ -53,12 +53,17 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   return null;
 }
 
-/** Doc Kie : « video » recommandé — mouvements/cadrage depuis la vidéo ; l’image = identité seulement. */
-function resolveKlingCharacterOrientation(_prompt, _hasReferenceImage) {
+/**
+ * Kie Motion Control — « image » = corps / tenue / cheveux depuis la photo ;
+ * « video » garde trop la silhouette vestimentaire de la clip (face-swap).
+ */
+function resolveKlingCharacterOrientation(_prompt, hasReferenceImage) {
+  if (hasReferenceImage) return "image";
   return "video";
 }
 
-function resolveKlingBackgroundSource(_prompt) {
+function resolveKlingBackgroundSource(options = {}) {
+  if (options.motionCompositeApplied === true) return "input_image";
   return "input_video";
 }
 

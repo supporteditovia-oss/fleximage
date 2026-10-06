@@ -337,16 +337,10 @@ async function generateKlingMotionOnce(supabase, params) {
   }
 
   const startedAt = Date.now();
-  const klingPrompt = buildKlingMotionPrompt(params.prompt);
   const {
     resolveKlingCharacterOrientation,
     resolveKlingBackgroundSource,
   } = require("./video-user-errors");
-  const characterOrientation = resolveKlingCharacterOrientation(
-    params.prompt,
-    Boolean(params.imageUrl),
-  );
-  const backgroundSource = "input_video";
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
 
   const {
@@ -357,6 +351,7 @@ async function generateKlingMotionOnce(supabase, params) {
   let motionImageUrl = params.imageUrl;
   let motionCompositeApplied = false;
   let motionCompositeFallback = null;
+  const uploadedSubject = params.motionReferenceSource === "uploaded";
   if (shouldApplyMotionComposite(params)) {
     try {
       motionImageUrl = await prepareMotionControlCompositeImage({
@@ -370,6 +365,14 @@ async function generateKlingMotionOnce(supabase, params) {
         0,
         200,
       );
+      if (uploadedSubject) {
+        throw Object.assign(
+          new Error(
+            "Impossible de préparer le corps entier sur la scène — réessaie avec une photo nette (corps visible).",
+          ),
+          { status: 422, code: "MOTION_COMPOSITE_REQUIRED", cause: compositeErr },
+        );
+      }
       console.warn("[generate-kling-once] motion composite failed — raw image fallback", {
         generationId: params.generationId,
         message: motionCompositeFallback,
@@ -377,6 +380,25 @@ async function generateKlingMotionOnce(supabase, params) {
       motionImageUrl = params.imageUrl;
     }
   }
+
+  let promptForKling = params.prompt;
+  if (uploadedSubject && params.imageUrl) {
+    const { buildMotionFullBodyPromptLock } = require("./motion-subject-prompt");
+    const bodyLock = await buildMotionFullBodyPromptLock({
+      imageUrl: params.imageUrl,
+      userPrompt: params.prompt,
+    });
+    promptForKling = `${params.prompt}\n${bodyLock}`;
+  }
+
+  const klingPrompt = buildKlingMotionPrompt(promptForKling);
+  const characterOrientation = resolveKlingCharacterOrientation(
+    params.prompt,
+    Boolean(params.imageUrl && uploadedSubject),
+  );
+  const backgroundSource = resolveKlingBackgroundSource({
+    motionCompositeApplied,
+  });
 
   const kieImageUrl = await ensureKieAccessibleMediaUrl(motionImageUrl, "image");
   console.info("[generate-kling-once] motion control payload", {
@@ -412,6 +434,8 @@ async function generateKlingMotionOnce(supabase, params) {
     video_auto_retries: 0,
     v2v_provider: "kling_motion",
     motion_composite_applied: motionCompositeApplied,
+    kling_character_orientation: characterOrientation,
+    kling_background_source: backgroundSource,
     ...(motionCompositeFallback
       ? { motion_composite_fallback: motionCompositeFallback }
       : {}),

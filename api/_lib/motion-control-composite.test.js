@@ -5,6 +5,7 @@ const {
   shouldApplyMotionComposite,
   alphaBoundingBoxFromPng,
   computeDefaultSubjectBox,
+  expandBoxForFullBodyReplacement,
 } = require("./motion-control-composite");
 
 test("shouldApplyMotionComposite only for uploaded user photo", () => {
@@ -51,6 +52,13 @@ test("alphaBoundingBoxFromPng finds opaque region", async () => {
 
 test("computeDefaultSubjectBox centers lower body", () => {
   const box = computeDefaultSubjectBox(720, 1280);
-  assert.ok(box.top > 200);
+  assert.ok(box.top > 150);
   assert.ok(box.width < 720);
+});
+
+test("expandBoxForFullBodyReplacement enlarges small head crops", () => {
+  const small = { left: 300, top: 100, width: 120, height: 180 };
+  const expanded = expandBoxForFullBodyReplacement(small, 720, 1280);
+  assert.ok(expanded.height >= Math.round(1280 * 0.58));
+  assert.ok(expanded.top + expanded.height >= 1280 * 0.95);
 });

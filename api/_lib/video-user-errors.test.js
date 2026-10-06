@@ -53,10 +53,16 @@ test("mapVideoProviderMessage — exhausted motion tab never shows cockpit tips"
   assert.match(fr, /Jetons remboursés/);
 });
 
-test("resolveKlingCharacterOrientation — toujours video (mouvements depuis la clip)", () => {
+test("resolveKlingCharacterOrientation — image quand photo uploadée (corps entier)", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Remplace le danseur", true),
-    "video",
+    "image",
   );
   assert.equal(resolveKlingCharacterOrientation("Urus", false), "video");
+});
+
+test("resolveKlingBackgroundSource — composite → input_image", () => {
+  const { resolveKlingBackgroundSource } = require("./video-user-errors");
+  assert.equal(resolveKlingBackgroundSource({ motionCompositeApplied: true }), "input_image");
+  assert.equal(resolveKlingBackgroundSource({}), "input_video");
 });

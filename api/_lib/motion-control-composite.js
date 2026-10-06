@@ -146,11 +146,11 @@ async function buildScenePlateWithoutOriginalSubject(frameJpeg, frameCutoutPng) 
     .resize(w, h, { fit: "fill" })
     .ensureAlpha()
     .extractChannel("alpha")
-    .blur(8)
+    .blur(14)
     .raw()
     .toBuffer();
 
-  const blurredRgb = await sharp(frameJpeg).blur(22).removeAlpha().raw().toBuffer();
+  const blurredRgb = await sharp(frameJpeg).blur(32).removeAlpha().raw().toBuffer();
 
   const channels = 3;
   const out = Buffer.from(await sharp(frameJpeg).removeAlpha().raw().toBuffer());
@@ -173,14 +173,29 @@ async function buildScenePlateWithoutOriginalSubject(frameJpeg, frameCutoutPng) 
 }
 
 function computeDefaultSubjectBox(canvasW, canvasH) {
-  const width = Math.round(canvasW * 0.46);
-  const height = Math.round(canvasH * 0.78);
+  const width = Math.round(canvasW * 0.58);
+  const height = Math.round(canvasH * 0.82);
   return {
     left: Math.round((canvasW - width) / 2),
-    top: Math.round(canvasH - height - canvasH * 0.04),
+    top: Math.round(canvasH - height - canvasH * 0.03),
     width,
     height,
   };
+}
+
+/** Évite un petit crop « tête seule » — le remplacement doit couvrir tout le corps dans la clip. */
+function expandBoxForFullBodyReplacement(box, canvasW, canvasH) {
+  const minH = Math.round(canvasH * 0.58);
+  const minW = Math.round(canvasW * 0.42);
+  let { left, top, width, height } = box;
+  if (height < minH) {
+    const centerX = left + width / 2;
+    height = minH;
+    width = Math.max(width, minW);
+    left = Math.round(Math.max(0, Math.min(canvasW - width, centerX - width / 2)));
+    top = Math.round(Math.max(0, canvasH - height - canvasH * 0.03));
+  }
+  return { left, top, width, height };
 }
 
 async function resizeSubjectIntoBox(subjectCutoutPng, box, canvasW, canvasH) {
@@ -240,7 +255,9 @@ async function prepareMotionControlCompositeImage({
         .png()
         .toBuffer(),
     );
-    if (boxFromFrame) subjectBox = boxFromFrame;
+    if (boxFromFrame) {
+      subjectBox = expandBoxForFullBodyReplacement(boxFromFrame, canvasW, canvasH);
+    }
   }
 
   const plate = frameCutout
@@ -312,5 +329,6 @@ module.exports = {
   prepareMotionControlCompositeImage,
   alphaBoundingBoxFromPng,
   computeDefaultSubjectBox,
+  expandBoxForFullBodyReplacement,
   extractVideoFrameZeroBuffer,
 };

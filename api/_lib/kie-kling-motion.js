@@ -143,13 +143,12 @@ function normalizeMotionUserPromptForKling(userPrompt) {
 
 function buildKlingMotionPrompt(userPrompt) {
   const locks =
-    "CRITICAL MOTION CONTROL RULES (must follow): " +
-    "Output = reference VIDEO environment + reference VIDEO choreography. " +
-    "input_urls IMAGE = face/body identity ONLY. " +
-    "video_urls VIDEO = motion driver + background (background_source input_video). " +
-    "FORBIDDEN: dancing on the static photo; photo as backdrop; I2V-style animation of the image file. " +
-    "Replace the performer inside the video clip with the image person; same dance, same room. " +
-    "When the reference IMAGE already shows the person standing IN the video room/background, keep that room — do not revert to the photo's original outdoor/indoor background.";
+    "CRITICAL FULL-BODY MOTION CONTROL (must follow): " +
+    "Replace the ENTIRE performer in the video — full body, clothes, hair, skin, morphology from reference IMAGE. " +
+    "Video clip = skeleton / choreography / camera / room ONLY — never copy the original dancer outfit, ponytail, or body. " +
+    "FORBIDDEN: face-swap; head on original body; keeping source dancer t-shirt, dress, or hairstyle. " +
+    "FORBIDDEN: dancing on the static photo backdrop; I2V-style animation of the photo file alone. " +
+    "When input IMAGE is a composite of the person already standing in the video room, preserve that room and the full-body subject.";
   const userLine = normalizeMotionUserPromptForKling(userPrompt);
   const combined = `${locks} User intent: ${userLine}`;
   return combined.slice(0, 2500);
