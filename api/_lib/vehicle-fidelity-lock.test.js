@@ -5,6 +5,7 @@ const {
   buildVehicleStickerPolicyClause,
   buildVehicleFidelityPromptBlock,
   isVehicleExteriorBodySwapPrompt,
+  ensureVehicleReplacePromptForImageProvider,
 } = require("./vehicle-fidelity-lock");
 const { buildIdentityPreservingPrompt } = require("./prompt-guard");
 
@@ -46,4 +47,12 @@ test("buildVehicleFidelityPromptBlock includes system injection", () => {
   const block = buildVehicleFidelityPromptBlock("swap car");
   assert.match(block, /if the car was empty/i);
   assert.match(block, /Negative prompt:/i);
+});
+
+test("ensureVehicleReplacePromptForImageProvider prepends block when missing", () => {
+  const user = "Remplace la voiture garée par une Ferrari F8";
+  const bare = "Replace the car with Ferrari F8.";
+  const out = ensureVehicleReplacePromptForImageProvider(bare, user);
+  assert.match(out, /Strictly match the occupancy state/i);
+  assert.match(out, /Replace the car with Ferrari/i);
 });

@@ -31,6 +31,7 @@ const {
   heuristicAnalysis,
 } = require("../subject-analysis");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
+const { ensureVehicleReplacePromptForImageProvider } = require("../vehicle-fidelity-lock");
 const {
   isDisallowedAdultPrompt,
   contentPolicyResponse,
@@ -515,10 +516,13 @@ module.exports = async function handler(req, res) {
         ? buildBuiltinTemplateFaceSwapPrompt(effectivePrompt, {
             subjectPoseBlock,
           })
-        : buildIdentityPreservingPrompt(effectivePrompt, {
-            referenceImageCount: imageUrls.length,
-            subjectPoseBlock,
-          });
+        : ensureVehicleReplacePromptForImageProvider(
+            buildIdentityPreservingPrompt(effectivePrompt, {
+              referenceImageCount: imageUrls.length,
+              subjectPoseBlock,
+            }),
+            effectivePrompt,
+          );
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,

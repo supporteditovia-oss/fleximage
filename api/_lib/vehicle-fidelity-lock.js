@@ -126,9 +126,34 @@ function isVehicleExteriorBodySwapPrompt(prompt) {
   return true;
 }
 
+const IMAGE_PROMPT_MAX_CHARS = 2900;
+
+/** DeepInfra (Nano Banana 2) + OneShot partagent buildIdentityPreservingPrompt — ce garde-fou prepends si tronqué. */
+function ensureVehicleReplacePromptForImageProvider(finalPrompt, userPrompt) {
+  const text = String(finalPrompt || "");
+  const raw = String(userPrompt || "").trim();
+  if (!raw) return text;
+
+  const { isVehicleReplacePrompt } = require("./prompt-guard");
+  if (!isVehicleReplacePrompt(raw)) return text;
+
+  if (
+    /Strictly match the occupancy state|OCCUPANCY LOCK|BACKGROUND \/ INPAINT LOCK|PRISTINE FINISH LOCK/i.test(
+      text,
+    )
+  ) {
+    return text;
+  }
+
+  const block = buildVehicleFidelityPromptBlock(raw);
+  const combined = `${block} ${text}`.replace(/\s+/g, " ").trim();
+  return combined.slice(0, IMAGE_PROMPT_MAX_CHARS);
+}
+
 module.exports = {
   VEHICLE_ANTI_HALLUCINATION_NEGATIVE,
   VEHICLE_SYSTEM_INJECTION,
+  IMAGE_PROMPT_MAX_CHARS,
   isVehicleStickerRemovalPrompt,
   userRequestsKeepVehicleDecals,
   userRequestsVehicleOccupants,
@@ -138,4 +163,5 @@ module.exports = {
   buildVehicleFidelityPromptBlock,
   buildV2VVehicleFidelityBlock,
   isVehicleExteriorBodySwapPrompt,
+  ensureVehicleReplacePromptForImageProvider,
 };

@@ -71,6 +71,7 @@ function parseDeepInfraImageResponse(text, status) {
 
 /**
  * Génération / édition synchrone DeepInfra (google/nano-banana-2).
+ * Le prompt est construit par prompt-guard (generate-direct) — pas de chemin OneShot séparé.
  * @returns {Promise<{ buffer: Buffer, mimeType: string, revisedPrompt?: string }>}
  */
 async function generateDeepInfraImage(params) {

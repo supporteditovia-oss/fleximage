@@ -372,6 +372,8 @@ async function generateImageOnce(supabase, params) {
     }
     console.info("[generate-image-once] DeepInfra sync", {
       generationId,
+      model: getDeepInfraModel(),
+      promptChars: String(finalPrompt || "").length,
       reason: reason instanceof Error ? reason.message : reason || null,
       ...logContext,
     });
