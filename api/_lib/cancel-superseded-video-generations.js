@@ -1,4 +1,4 @@
-const { refundGenerationCreditsIfCharged } = require("./generation");
+const { ensureGenerationCreditsRefunded } = require("./generation");
 
 const CANCEL_MESSAGE_FR =
   "Génération annulée — tu as relancé une nouvelle vidéo. Jetons remboursés si débités.";
@@ -47,7 +47,7 @@ async function cancelSupersededVideoGenerations(supabase, userId, options = {}) 
       .eq("id", row.id)
       .eq("status", "processing");
 
-    await refundGenerationCreditsIfCharged(supabase, {
+    await ensureGenerationCreditsRefunded(supabase, {
       userId,
       generationId: row.id,
       source: "video_superseded_cancel",

@@ -283,12 +283,20 @@ export function GenerationProgress({
       /non autoris|not allowed|nicht erlaubt|no est[aá] permitido|nudit|pornograph|aucun jeton|no credits|keine credits|ning[uú]n cr[eé]dito|safety policy|rejected by the model|content policy|laboratorio de ia|laboratoire ia|filtre du proveedor|filtre provider|cr[eé]ditos reembolsados|jetons sont rembours/i.test(
         failMessage,
       );
+    const refunded =
+      typeof data.creditsRefunded === "number" && data.creditsRefunded > 0
+        ? data.creditsRefunded
+        : 0;
     toast({
       variant: "destructive",
       title: isPolicyFail ? t("progress.policyFail") : t("progress.generationFailed"),
-      description: failMessage,
+      description:
+        refunded > 0
+          ? `${failMessage} (+${refunded} jetons recrédités sur ton solde.)`
+          : failMessage,
     });
     void queryClient.invalidateQueries({ queryKey: ["profile"] });
+    void queryClient.invalidateQueries({ queryKey: ["current-plan"] });
     handleReset();
   }, [
     data?.status,

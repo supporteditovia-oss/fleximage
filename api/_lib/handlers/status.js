@@ -23,6 +23,8 @@ const {
   PROVIDER_POLL_HARD_TIMEOUT_MS,
   PROVIDER_POLL_QA_RETRY_EXTRA_MS,
   refundGenerationCreditsIfCharged,
+  ensureGenerationCreditsRefunded,
+  reconcileFailMessageWithRefund,
   chargeGenerationCreditsIfNotYetCharged,
   extractImageUrls,
   toAssetList,
@@ -325,13 +327,17 @@ module.exports = async function handler(req, res) {
     }
 
     if (larp.status === "succeeded" || larp.status === "failed") {
+      let cachedRefund = null;
       if (larp.status === "failed") {
-        await refundGenerationCreditsIfCharged(supabase, {
+        cachedRefund = await ensureGenerationCreditsRefunded(supabase, {
           userId,
           generationId: larp.id,
           source: "cached_failed_status",
           failMessage: larp.fail_message,
-        }).catch((err) => console.error("refund failed", err));
+        }).catch((err) => {
+          console.error("refund failed", err);
+          return { ok: false, hadCharge: true, refundedAmount: 0, error: err };
+        });
       }
 
       const { data: profile } = await supabase
@@ -351,17 +357,29 @@ module.exports = async function handler(req, res) {
             ? originals
             : watermarkedList;
 
+      const cachedFailMessage =
+        larp.status === "failed" && cachedRefund
+          ? reconcileFailMessageWithRefund(larp.fail_message, cachedRefund)
+          : larp.fail_message;
+
       res.status(200).json({
         larpId: larp.id,
         ...statusTimingFields(larp),
         status: toClientStatus(larp.status),
         resultUrls: resolvedUrls,
         watermarkedUrls: watermarkedList,
-        failMessage: larp.fail_message,
+        failMessage: cachedFailMessage,
         costTime: larp.cost_time == null ? null : Number(larp.cost_time),
         isSubscriber,
         requiresPaywall: false,
         resultType,
+        creditsRefunded:
+          cachedRefund && cachedRefund.refundedAmount > 0
+            ? cachedRefund.refundedAmount
+            : 0,
+        creditRefundPending: Boolean(
+          cachedRefund?.hadCharge && !cachedRefund?.ok,
+        ),
       });
       return;
     }
@@ -507,9 +525,20 @@ module.exports = async function handler(req, res) {
     const pollMeta =
       larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
     if (resultType === "video" && pollMeta.studio_cancelled === true) {
-      const cancelledMsg =
+      const cancelledRefund = await ensureGenerationCreditsRefunded(supabase, {
+        userId,
+        generationId: larp.id,
+        source: "studio_cancelled_poll",
+        failMessage: larp.fail_message,
+      }).catch((err) => {
+        console.error("refund cancelled video failed", err);
+        return { ok: false, hadCharge: true, refundedAmount: 0, error: err };
+      });
+      const cancelledMsg = reconcileFailMessageWithRefund(
         larp.fail_message ||
-        "Génération annulée. Lance une nouvelle vidéo si besoin.";
+          "Génération annulée. Lance une nouvelle vidéo si besoin.",
+        cancelledRefund,
+      );
       res.status(200).json({
         larpId: larp.id,
         ...statusTimingFields(larp),
@@ -520,6 +549,11 @@ module.exports = async function handler(req, res) {
         isSubscriber: false,
         requiresPaywall: false,
         resultType,
+        creditsRefunded:
+          cancelledRefund.refundedAmount > 0 ? cancelledRefund.refundedAmount : 0,
+        creditRefundPending: Boolean(
+          cancelledRefund.hadCharge && !cancelledRefund.ok,
+        ),
       });
       return;
     }
@@ -1605,7 +1639,7 @@ module.exports = async function handler(req, res) {
         profile?.is_subscriber || profile?.role === "admin",
       );
 
-      const terminalMeta =
+      let terminalMeta =
         apiStatus === "success"
           ? {
               ...pollMeta,
@@ -1640,16 +1674,51 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      let refundResult = null;
+      let clientFailMessage =
+        resultType === "video"
+          ? formatVideoFailForClient(
+              apiFailMsg,
+              null,
+              apiStatus === "fail" ? v2vClientFailOptions(larp, pollMeta) : {},
+            )
+          : toUserFailMessage(apiFailMsg, null) || apiFailMsg;
+
+      if (apiStatus === "fail") {
+        refundResult = await ensureGenerationCreditsRefunded(supabase, {
+          userId,
+          generationId: larp.id,
+          source: "failed_generation",
+          failMessage: clientFailMessage,
+        }).catch((err) => {
+          console.error("refund failed", err);
+          return { ok: false, hadCharge: true, refundedAmount: 0, error: err };
+        });
+        clientFailMessage = reconcileFailMessageWithRefund(
+          clientFailMessage,
+          refundResult,
+        );
+        if (refundResult.ok && refundResult.refundedAmount > 0) {
+          terminalMeta = {
+            ...terminalMeta,
+            credit_refund_amount: refundResult.refundedAmount,
+            credit_refund_confirmed: true,
+          };
+        } else if (refundResult.hadCharge && !refundResult.ok) {
+          terminalMeta = {
+            ...terminalMeta,
+            credit_refund_pending: true,
+          };
+        }
+      }
+
       await supabase
         .from("generations")
         .update({
           status: toDbStatus(apiStatus),
           output_assets: resultUrls,
           watermarked_assets: [],
-          fail_message:
-            resultType === "video"
-              ? formatVideoFailForClient(apiFailMsg, null)
-              : toUserFailMessage(apiFailMsg, null) || null,
+          fail_message: clientFailMessage || null,
           cost_time: apiCostTime == null ? null : Number(apiCostTime),
           metadata: terminalMeta,
           updated_at: new Date().toISOString(),
@@ -1657,32 +1726,24 @@ module.exports = async function handler(req, res) {
         })
         .eq("id", larp.id);
 
-      if (apiStatus === "fail") {
-        await refundGenerationCreditsIfCharged(supabase, {
-          userId,
-          generationId: larp.id,
-          source: "failed_generation",
-          failMessage:
-            resultType === "video"
-              ? formatVideoFailForClient(apiFailMsg, null)
-              : toUserFailMessage(apiFailMsg, null) || apiFailMsg,
-        }).catch((err) => console.error("refund failed", err));
-      }
-
       res.status(200).json({
         larpId: larp.id,
         ...statusTimingFields(larp),
         status: apiStatus,
         resultUrls,
         watermarkedUrls: [],
-        failMessage:
-          resultType === "video"
-            ? formatVideoFailForClient(apiFailMsg, null)
-            : toUserFailMessage(apiFailMsg, null) || apiFailMsg,
+        failMessage: clientFailMessage || apiFailMsg,
         costTime: apiCostTime == null ? null : Number(apiCostTime),
         isSubscriber,
         requiresPaywall: false,
         resultType,
+        creditsRefunded:
+          refundResult && refundResult.refundedAmount > 0
+            ? refundResult.refundedAmount
+            : 0,
+        creditRefundPending: Boolean(
+          refundResult?.hadCharge && !refundResult?.ok,
+        ),
       });
       return;
     }

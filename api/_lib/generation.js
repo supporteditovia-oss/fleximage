@@ -124,25 +124,60 @@ async function chargeGenerationCreditsIfNotYetCharged(supabase, params) {
   return deductGenerationCredits(supabase, params);
 }
 
-async function refundGenerationCreditsIfCharged(supabase, params) {
+async function getGenerationChargeTotal(supabase, generationId) {
   const { data: charges, error: chargeFetchErr } = await supabase
     .from("credit_ledger")
     .select("delta")
-    .eq("generation_id", params.generationId)
+    .eq("generation_id", generationId)
     .eq("reason", "generation_charge");
 
   if (chargeFetchErr) throw chargeFetchErr;
 
-  const refundAmount = (charges || []).reduce((total, entry) => {
+  return (charges || []).reduce((total, entry) => {
     const delta = Number(entry.delta);
     return delta < 0 ? total + Math.abs(delta) : total;
   }, 0);
+}
 
-  if (refundAmount === 0) return null;
+async function generationRefundTotal(supabase, generationId) {
+  const { data: refunds, error: refundFetchErr } = await supabase
+    .from("credit_ledger")
+    .select("delta")
+    .eq("generation_id", generationId)
+    .eq("reason", "refund");
+
+  if (refundFetchErr) throw refundFetchErr;
+
+  return (refunds || []).reduce((total, entry) => {
+    const delta = Number(entry.delta);
+    return delta > 0 ? total + delta : total;
+  }, 0);
+}
+
+async function refundGenerationCreditsIfCharged(supabase, params) {
+  const chargeTotal = await getGenerationChargeTotal(
+    supabase,
+    params.generationId,
+  );
+  if (chargeTotal === 0) return null;
+
+  const alreadyRefunded = await generationRefundTotal(
+    supabase,
+    params.generationId,
+  );
+  if (alreadyRefunded >= chargeTotal) return null;
+  if (alreadyRefunded > 0 && alreadyRefunded < chargeTotal) {
+    console.error("[credits] partial refund on generation — manual review", {
+      generationId: params.generationId,
+      chargeTotal,
+      alreadyRefunded,
+    });
+    return null;
+  }
 
   const { error } = await applyCreditDelta(supabase, {
     userId: params.userId,
-    delta: refundAmount,
+    delta: chargeTotal,
     reason: "refund",
     generationId: params.generationId,
     idempotencyKey: `generation:${params.generationId}:refund`,
@@ -153,6 +188,95 @@ async function refundGenerationCreditsIfCharged(supabase, params) {
     },
   });
   return error;
+}
+
+function sleepMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Remboursement idempotent avec retries — échec génération vidéo/image sans livrable.
+ */
+async function ensureGenerationCreditsRefunded(supabase, params) {
+  const chargeTotal = await getGenerationChargeTotal(
+    supabase,
+    params.generationId,
+  );
+  if (chargeTotal === 0) {
+    return { ok: true, hadCharge: false, refundedAmount: 0, chargeTotal: 0 };
+  }
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const before = await generationRefundTotal(supabase, params.generationId);
+      if (before >= chargeTotal) {
+        return {
+          ok: true,
+          hadCharge: true,
+          refundedAmount: before,
+          chargeTotal,
+          alreadyIssued: true,
+        };
+      }
+
+      const err = await refundGenerationCreditsIfCharged(supabase, params);
+      if (err) {
+        lastError = err;
+        console.error("[credits] refund attempt failed", {
+          attempt,
+          generationId: params.generationId,
+          message: err.message || String(err),
+        });
+        if (attempt < 3) await sleepMs(350 * attempt);
+        continue;
+      }
+
+      const after = await generationRefundTotal(supabase, params.generationId);
+      return {
+        ok: after >= chargeTotal,
+        hadCharge: true,
+        refundedAmount: after,
+        chargeTotal,
+      };
+    } catch (err) {
+      lastError = err;
+      console.error("[credits] refund attempt threw", {
+        attempt,
+        generationId: params.generationId,
+        err,
+      });
+      if (attempt < 3) await sleepMs(350 * attempt);
+    }
+  }
+
+  const partial = await generationRefundTotal(supabase, params.generationId).catch(
+    () => 0,
+  );
+  return {
+    ok: partial >= chargeTotal,
+    hadCharge: true,
+    refundedAmount: partial,
+    chargeTotal,
+    error: lastError,
+  };
+}
+
+function reconcileFailMessageWithRefund(failMessage, refundResult) {
+  const msg = String(failMessage || "").trim();
+  if (!refundResult?.hadCharge) return msg;
+  if (refundResult.ok && refundResult.refundedAmount > 0) {
+    if (/rembours|reembols|refund/i.test(msg)) return msg;
+    return msg ? `${msg} Jetons remboursés.` : "Jetons remboursés.";
+  }
+  const withoutFalsePromise = msg
+    .replace(/\s*Jetons remboursés\.?/gi, "")
+    .replace(/\s*Tes crédits ont été remboursés[^.]*\.?/gi, "")
+    .trim();
+  return (
+    withoutFalsePromise +
+    " Tes jetons n’ont pas pu être recrédités automatiquement — écris à support.luxeflexia@gmail.com avec l’heure de la génération, on te les remet sous 24 h."
+  ).trim();
 }
 
 async function recordGeneration(supabase, userId) {
@@ -316,7 +440,11 @@ module.exports = {
   deductGenerationCredits,
   chargeGenerationCreditsIfNotYetCharged,
   generationCreditsAlreadyCharged,
+  getGenerationChargeTotal,
+  generationRefundTotal,
   refundGenerationCreditsIfCharged,
+  ensureGenerationCreditsRefunded,
+  reconcileFailMessageWithRefund,
   recordGeneration,
   extractImageUrls,
   toAssetList,

@@ -163,6 +163,8 @@ interface LarpStatusResponse {
   isSubscriber?: boolean;
   requiresPaywall?: boolean;
   resultType?: "image" | "video";
+  creditsRefunded?: number;
+  creditRefundPending?: boolean;
 }
 
 interface LarpHistoryItem {

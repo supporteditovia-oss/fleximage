@@ -43,7 +43,7 @@ const {
   resolveOmniSourceVideoUrl,
 } = require("./prepare-kling-source-video");
 const { mapVideoProviderMessage } = require("./video-user-errors");
-const { refundGenerationCreditsIfCharged } = require("./generation");
+const { ensureGenerationCreditsRefunded } = require("./generation");
 
 function readKickoffLock(meta) {
   const started = meta?.video_kickoff_started_at;
@@ -79,7 +79,7 @@ async function markVideoKickoffFailed(
   const skipRefund =
     options.skipRefund === true || meta.defer_credit_charge === true;
   if (!skipRefund) {
-    await refundGenerationCreditsIfCharged(supabase, {
+    await ensureGenerationCreditsRefunded(supabase, {
       userId,
       generationId: larp.id,
       source: "video_kickoff_failed",
