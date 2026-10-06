@@ -63,9 +63,11 @@ async function kickoffVideoUltraProvider(supabase, larp, userId) {
   const userPrompt = String(larp.prompt || larp.final_prompt || "").trim();
 
   try {
+    const preserveSourceAudio = meta.preserve_source_audio === true;
     const preparedUrl = await resolveKlingMotionSourceVideoUrl(
       sourceAssetUrl,
       userId,
+      { preserveSourceAudio },
     );
     const kieVideoUrl = await ensureKieAccessibleMediaUrl(preparedUrl, "video");
 

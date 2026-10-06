@@ -41,43 +41,44 @@ function isLikelyKlingReadyMp4(url) {
   return text.includes(KLING_READY_SUFFIX) && /\.mp4(\?|#|$)/i.test(text);
 }
 
-async function transcodeVideoForKlingMotion(inputPath, outputPath) {
+async function transcodeVideoForKlingMotion(
+  inputPath,
+  outputPath,
+  { preserveSourceAudio = false } = {},
+) {
   if (!ffmpegPath) {
     throw Object.assign(
       new Error("Préparation vidéo indisponible (ffmpeg)."),
       { status: 503, code: "FFMPEG_UNAVAILABLE" },
     );
   }
-  await execFileAsync(
-    ffmpegPath,
-    [
-      "-y",
-      "-i",
-      inputPath,
-      "-t",
-      String(VIDEO_V2V_MAX_DURATION_SEC),
-      "-vf",
-      "scale='min(720,iw)':-2",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-crf",
-      "23",
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      "-c:a",
-      "aac",
-      "-b:a",
-      "128k",
-      "-ar",
-      "44100",
-      outputPath,
-    ],
-    { timeout: 180_000 },
-  );
+  const args = [
+    "-y",
+    "-i",
+    inputPath,
+    "-t",
+    String(VIDEO_V2V_MAX_DURATION_SEC),
+    "-vf",
+    "scale='min(720,iw)':-2",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    "23",
+    "-pix_fmt",
+    "yuv420p",
+    "-movflags",
+    "+faststart",
+  ];
+  if (preserveSourceAudio) {
+    args.push("-c:a", "aac", "-b:a", "128k", "-ar", "44100");
+  } else {
+    args.push("-an");
+  }
+  args.push(outputPath);
+
+  await execFileAsync(ffmpegPath, args, { timeout: 180_000 });
   const stat = await fs.stat(outputPath);
   if (!stat.size) {
     throw Object.assign(new Error("Transcodage vidéo vide"), {
@@ -90,7 +91,11 @@ async function transcodeVideoForKlingMotion(inputPath, outputPath) {
 /**
  * KIE Motion Control n'accepte pas les MOV/HEVC iPhone tels quels — MP4 H.264 720p.
  */
-async function resolveKlingMotionSourceVideoUrl(videoUrl, userId) {
+async function resolveKlingMotionSourceVideoUrl(
+  videoUrl,
+  userId,
+  { preserveSourceAudio = false } = {},
+) {
   const url = String(videoUrl || "").trim();
   if (!url.startsWith("http")) {
     throw Object.assign(new Error("URL vidéo invalide"), {
@@ -108,7 +113,9 @@ async function resolveKlingMotionSourceVideoUrl(videoUrl, userId) {
 
   try {
     await fetchUrlToFile(url, inputPath);
-    await transcodeVideoForKlingMotion(inputPath, outputPath);
+    await transcodeVideoForKlingMotion(inputPath, outputPath, {
+      preserveSourceAudio,
+    });
     const outBuffer = await fs.readFile(outputPath);
     const key = `inputs/${userId}/${Date.now()}${KLING_READY_SUFFIX}`;
     return uploadToR2(key, outBuffer, "video/mp4");

@@ -90,6 +90,55 @@ async function sourceHasAudioStream(sourcePath) {
  * Colle la piste audio de la vidéo source (ta voix) sur la vidéo générée.
  * Retourne l'URL R2 muxée ou null si échec / pas d'audio source.
  */
+/**
+ * Supprime toute piste audio de la vidéo générée (V2V sans option « voix filmée »).
+ */
+async function stripAudioFromVideoUrl({ videoUrl, larpId }) {
+  if (!ffmpegPath) {
+    console.warn("[mux-source-audio] ffmpeg-static indisponible (strip)");
+    return null;
+  }
+  if (!videoUrl || !larpId) return null;
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "v2v-strip-"));
+  const inPath = path.join(tmpDir, "input.mp4");
+  const outPath = path.join(tmpDir, "output.mp4");
+
+  try {
+    await downloadToFile(videoUrl, inPath);
+
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-y",
+        "-i",
+        inPath,
+        "-map",
+        "0:v:0",
+        "-c:v",
+        "copy",
+        "-an",
+        "-movflags",
+        "+faststart",
+        outPath,
+      ],
+      { timeout: 90_000, maxBuffer: 10 * 1024 * 1024 },
+    );
+
+    const outBuffer = await fs.readFile(outPath);
+    if (outBuffer.length < 2048) return null;
+
+    const { uploadToR2 } = require("./r2");
+    const key = `larps/${larpId}/video-silent.mp4`;
+    return await uploadToR2(key, outBuffer, "video/mp4");
+  } catch (err) {
+    console.error("[mux-source-audio] strip failed", { larpId, err });
+    return null;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 async function muxSourceAudioOntoVideo({
   sourceVideoUrl,
   generatedVideoUrl,
@@ -163,4 +212,5 @@ module.exports = {
   getReferenceImageUrlFromLarp,
   isLikelyVideoAssetUrl,
   muxSourceAudioOntoVideo,
+  stripAudioFromVideoUrl,
 };

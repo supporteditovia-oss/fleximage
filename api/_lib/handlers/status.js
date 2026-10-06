@@ -3,6 +3,7 @@ const { downloadAndStoreImages, downloadAndStoreVideo } = require("../r2");
 const {
   getSourceVideoUrlFromLarp,
   muxSourceAudioOntoVideo,
+  stripAudioFromVideoUrl,
 } = require("../mux-source-audio");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
@@ -1478,9 +1479,9 @@ module.exports = async function handler(req, res) {
                   ? stored
                   : [parsed.video_url];
             }
+            const isV2VWorkflow = meta.workflow === "video_to_video";
             const shouldPreserveSourceAudio =
-              meta.workflow === "video_to_video" &&
-              meta.preserve_source_audio === true;
+              isV2VWorkflow && meta.preserve_source_audio === true;
             if (shouldPreserveSourceAudio && resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
               if (sourceVideoUrl) {
@@ -1497,6 +1498,19 @@ module.exports = async function handler(req, res) {
                   resultUrls = [muxedUrl];
                   metadataPatch.source_audio_muxed = true;
                 }
+              }
+            } else if (isV2VWorkflow && resultUrls[0]) {
+              const silentUrl = await withTimeout(
+                stripAudioFromVideoUrl({
+                  videoUrl: resultUrls[0],
+                  larpId: larp.id,
+                }),
+                90_000,
+                null,
+              );
+              if (silentUrl) {
+                resultUrls = [silentUrl];
+                metadataPatch.source_audio_stripped = true;
               }
             }
 

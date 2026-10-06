@@ -241,6 +241,7 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
           let videoUrl = await resolveKlingMotionSourceVideoUrl(
             sourceAssetUrl,
             userId,
+            { preserveSourceAudio },
           );
           let imageUrl = referenceImageUrl;
           const motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";

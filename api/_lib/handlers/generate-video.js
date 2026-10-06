@@ -563,6 +563,7 @@ module.exports = async function handler(req, res) {
           sourceAssetUrl = await resolveKlingMotionSourceVideoUrl(
             sourceAssetUrl,
             userId,
+            { preserveSourceAudio },
           );
           if (!referenceImageUrl) {
             referenceImageUrl = await extractReferenceFrameFromVideoUrl(

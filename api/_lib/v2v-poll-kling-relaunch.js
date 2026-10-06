@@ -41,6 +41,7 @@ async function relaunchKlingV2VFromLarp(
   const videoUrl = await resolveKlingMotionSourceVideoUrl(
     sourceVideoUrl,
     userId,
+    { preserveSourceAudio },
   );
   let imageUrl = getReferenceImageUrlFromLarp(larp);
   const motionReferenceSource = imageUrl ? "uploaded" : "auto_frame";
