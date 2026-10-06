@@ -6,6 +6,9 @@ const {
   alphaBoundingBoxFromPng,
   computeDefaultSubjectBox,
   expandBoxForFullBodyReplacement,
+  alignSubjectBoxToOriginalDancer,
+  SUBJECT_OCCUPANCY_MIN,
+  SUBJECT_OCCUPANCY_MAX,
 } = require("./motion-control-composite");
 
 test("shouldApplyMotionComposite only for uploaded user photo", () => {
@@ -46,8 +49,8 @@ test("alphaBoundingBoxFromPng finds opaque region", async () => {
   const box = await alphaBoundingBoxFromPng(png);
   assert.ok(box.width >= 70);
   assert.ok(box.height >= 130);
-  assert.ok(box.left >= 52 && box.left <= 64);
-  assert.ok(box.top >= 72 && box.top <= 84);
+  assert.ok(box.left >= 48 && box.left <= 68);
+  assert.ok(box.top >= 64 && box.top <= 88);
 });
 
 test("computeDefaultSubjectBox centers lower body", () => {
@@ -61,4 +64,26 @@ test("expandBoxForFullBodyReplacement enlarges small head crops", () => {
   const expanded = expandBoxForFullBodyReplacement(small, 720, 1280);
   assert.ok(expanded.height >= Math.round(1280 * 0.58));
   assert.ok(expanded.top + expanded.height >= 1280 * 0.95);
+});
+
+test("alignSubjectBoxToOriginalDancer lifts tiny detections to ~70% height", () => {
+  const tinyFeet = { left: 280, top: 980, width: 160, height: 260 };
+  const aligned = alignSubjectBoxToOriginalDancer(tinyFeet, 720, 1280);
+  assert.ok(aligned.occupancy >= SUBJECT_OCCUPANCY_MIN - 0.01);
+  assert.ok(aligned.occupancy <= SUBJECT_OCCUPANCY_MAX + 0.01);
+  assert.ok(aligned.top + aligned.height >= 1280 * 0.97);
+});
+
+test("alignSubjectBoxToOriginalDancer preserves tall dancer bbox", () => {
+  const dancer = { left: 200, top: 180, width: 320, height: 1020 };
+  const aligned = alignSubjectBoxToOriginalDancer(dancer, 720, 1280);
+  assert.ok(aligned.height >= Math.round(1280 * 0.78));
+  assert.ok(aligned.occupancy <= SUBJECT_OCCUPANCY_MAX + 0.02);
+});
+
+test("computeDefaultSubjectBox targets ~80% canvas height", () => {
+  const box = computeDefaultSubjectBox(720, 1280);
+  const occ = box.height / 1280;
+  assert.ok(occ >= SUBJECT_OCCUPANCY_MIN);
+  assert.ok(occ <= SUBJECT_OCCUPANCY_MAX);
 });
