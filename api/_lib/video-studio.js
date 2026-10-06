@@ -9,6 +9,10 @@ const {
   computeV2VStudioCreditCost,
   normalizeVideoUltraResolution,
 } = require("../../shared/video-ultra-pricing.cjs");
+const {
+  buildV2VVehicleFidelityBlock,
+  isVehicleExteriorBodySwapPrompt,
+} = require("./vehicle-fidelity-lock");
 
 const CAMERA_PROMPTS = {
   fixed: "Caméra stable, plan fixe.",
@@ -258,6 +262,10 @@ function buildSeedanceTransformPrompt(userPrompt, { preserveSourceAudio = false 
     );
   }
 
+  if (isVehicleExteriorBodySwapPrompt(prompt)) {
+    parts.push(buildV2VVehicleFidelityBlock(prompt));
+  }
+
   parts.push(
     "MUST KEEP EXACT: camera trajectory, framing, clip timing, hand positions and paths on the wheel/controls, body motion rhythm — motion lock is mandatory.",
     "Instrument coherence: speedometer/tachometer digits and needles must track visible acceleration/deceleration and road motion in the source clip — never frozen or contradicting movement.",
@@ -299,6 +307,9 @@ function buildOmniTransformPrompt(userPrompt, { preserveSourceAudio = false } = 
     parts.push(
       "Keep the same camera motion, framing, people, gestures and timing as @Video1.",
     );
+    if (isVehicleExteriorBodySwapPrompt(prompt)) {
+      parts.push(buildV2VVehicleFidelityBlock(prompt));
+    }
   }
   parts.push("Photorealistic smartphone footage, natural light, no CGI look.");
   return parts.join(" ").slice(0, OMNI_PROMPT_MAX_CHARS);
@@ -364,10 +375,22 @@ function buildAlephSubmitPrompt(
     );
   }
 
+  if (isVehicleExteriorBodySwapPrompt(prompt)) {
+    parts.push(buildV2VVehicleFidelityBlock(prompt));
+  }
+
   parts.push(
     "Photorealistic smartphone footage. Keep the same camera path, gestures and real-time speed as the source (no slow motion unless explicitly requested).",
-    "Change backgrounds, architecture, people, props and vehicles exactly as described — not cosmetic UI-only tweaks.",
   );
+  if (isVehicleExteriorBodySwapPrompt(prompt)) {
+    parts.push(
+      "Replace only the vehicle body/cabin as described; strictly preserve original background, car-wash equipment, and occupancy state frame-by-frame — no invented drivers, arms, or stickers.",
+    );
+  } else {
+    parts.push(
+      "Change backgrounds, architecture, people, props and vehicles exactly as described — not cosmetic UI-only tweaks.",
+    );
+  }
 
   const combined = parts.join(" ");
   return combined.length <= 1980 ? combined : combined.slice(0, 1980);
@@ -579,6 +602,9 @@ function buildV2VCockpitIntelligenceLock(userPrompt) {
   parts.push(
     " • Never incoherent: no bright driving UI while parked, no open doors while driving fast, no Drive gear in a parked scene, no wrong model interior.",
   );
+  parts.push(
+    " • Empty cabin in source: no visible driver, no lowered window, no arm or hand outside — swapped vehicle stays empty with closed/tinted glass; never invent a driver or passenger unless explicitly requested.",
+  );
 
   if (speed) {
     parts.push(
@@ -619,6 +645,13 @@ function appendV2VRealismLocks(prompt, { preserveSourceAudio = false, userPrompt
     )
   ) {
     result += buildV2VCockpitIntelligenceLock(source);
+  }
+
+  if (
+    isVehicleExteriorBodySwapPrompt(source) &&
+    !/OCCUPANCY LOCK|PRISTINE FINISH|BACKGROUND \/ INPAINT/i.test(result)
+  ) {
+    result += ` ${buildV2VVehicleFidelityBlock(source)}`;
   }
 
   return preserveSourceAudio ? result : `${result}${V2V_SILENT_OUTPUT_LOCK}`;
@@ -669,12 +702,16 @@ function buildV2VProviderPrompt(userPrompt, { preserveSourceAudio = false } = {}
 
 function buildV2VTransformPrompt(description) {
   const subject = String(description || "").trim();
-  return [
+  const lines = [
     subject ||
       "Transform the subject, object or environment in the video as described.",
     "Keep the background, ground, reflections, camera movement, lighting and framing exactly unchanged.",
     "Photorealistic render, consistent shadows and natural motion.",
-  ].join(" ");
+  ];
+  if (isVehicleExteriorBodySwapPrompt(subject)) {
+    lines.push(buildV2VVehicleFidelityBlock(subject));
+  }
+  return lines.join(" ");
 }
 
 /** @deprecated use buildV2VTransformPrompt */
