@@ -116,6 +116,18 @@ function formatVideoFailForClient(
   return mapVideoProviderMessage(raw, "fr", options) || raw;
 }
 
+function v2vClientFailOptions(larp, pollMeta, extra = {}) {
+  const meta =
+    pollMeta && typeof pollMeta === "object" ? pollMeta : {};
+  return {
+    prompt: larp?.prompt,
+    v2vIntent: meta.v2v_intent,
+    v2vProvider: meta.v2v_provider,
+    v2vEngineFamily: meta.v2v_engine_family,
+    ...extra,
+  };
+}
+
 function toUserFailMessage(value, fallback = "Échec de la génération") {
   if (value == null || value === "") return fallback;
   if (typeof value === "string") {
@@ -620,7 +632,10 @@ module.exports = async function handler(req, res) {
             rawOmniFail,
             "Échec de la transformation vidéo",
             pollMeta.workflow === "video_to_video"
-              ? { v2vExhausted: true, afterAlephFallback: true, prompt: larp.prompt }
+              ? v2vClientFailOptions(larp, pollMeta, {
+                  v2vExhausted: true,
+                  afterAlephFallback: true,
+                })
               : {},
           );
         } else if (ageInMs > pollHardTimeoutMs) {
@@ -687,7 +702,11 @@ module.exports = async function handler(req, res) {
             relaunchOmniV2VFromLarp,
           } = require("../v2v-poll-omni-relaunch");
           const { isOmniTransformEnabled: omniEnabledKling } = require("../video-studio");
+          const { isV2VMotionStudioJob } = require("../video-studio");
+          const motionStudioJob = isV2VMotionStudioJob(pollMeta);
+          const klingMotionRetries = Number(pollMeta.video_auto_retries) || 0;
           const shouldOmniFallback =
+            !motionStudioJob &&
             omniEnabledKling() &&
             resultType === "video" &&
             pollMeta.v2v_omni_transform_rollout === true &&
@@ -695,12 +714,19 @@ module.exports = async function handler(req, res) {
             canLaunchAnotherOmniJob(larp.provider_task_id) &&
             (charRejection || klingInternal);
           const shouldAlephFallback =
+            !motionStudioJob &&
             resultType === "video" &&
             isAlephTransformEnabled() &&
             !afterAlephKlingRound &&
             !alephFallbackDone &&
             canLaunchAnotherAlephJob(larp.provider_task_id) &&
             (charRejection || klingInternal);
+          const canRetryKlingMotion =
+            motionStudioJob &&
+            !afterAlephKlingRound &&
+            (charRejection || klingInternal) &&
+            klingMotionRetries < 2 &&
+            ageInMs < pollHardTimeoutMs - 90_000;
 
           if (shouldOmniFallback) {
             try {
@@ -731,12 +757,49 @@ module.exports = async function handler(req, res) {
             }
           }
 
+          if (canRetryKlingMotion) {
+            try {
+              const { relaunchKlingV2VFromLarp } = require("../v2v-poll-kling-relaunch");
+              const mergedMeta = await relaunchKlingV2VFromLarp(
+                supabase,
+                larp,
+                pollMeta,
+                userId,
+                charRejection ? "kling_character" : "kling_internal",
+                { motionStudio: true, afterAlephFallback: false },
+              );
+              const stage = mapStudioStage(mergedMeta, "generating");
+              res.status(200).json({
+                larpId: larp.id,
+                ...statusTimingFields(larp),
+                status: "waiting",
+                studioStage: stage,
+                studioStageLabel: studioStageLabel(stage),
+                resultUrls: [],
+                failMessage: null,
+                costTime: null,
+                isSubscriber: false,
+                requiresPaywall: false,
+                resultType,
+              });
+              return;
+            } catch (motionRetryErr) {
+              console.error(
+                "[status] kling motion poll retry failed",
+                motionRetryErr,
+              );
+            }
+          }
+
           if (afterAlephKlingRound) {
             apiStatus = "fail";
             apiFailMsg = formatVideoFailForClient(
               rawKlingFail,
               "Échec de la transformation vidéo",
-              { afterAlephFallback: true, v2vExhausted: true, prompt: larp.prompt },
+              v2vClientFailOptions(larp, pollMeta, {
+                afterAlephFallback: true,
+                v2vExhausted: true,
+              }),
             );
           } else if (shouldAlephFallback) {
             try {
@@ -780,9 +843,11 @@ module.exports = async function handler(req, res) {
             apiFailMsg = formatVideoFailForClient(
               rawKlingFail,
               "Échec de la transformation vidéo",
-              charRejection && alephFallbackDone
-                ? { afterAlephFallback: true }
-                : {},
+              v2vClientFailOptions(larp, pollMeta, {
+                afterAlephFallback:
+                  motionStudioJob || (charRejection && alephFallbackDone),
+                v2vExhausted: motionStudioJob,
+              }),
             );
           }
         } else if (ageInMs > pollHardTimeoutMs) {
@@ -938,6 +1003,10 @@ module.exports = async function handler(req, res) {
                 pollMeta,
                 userId,
                 "aleph_internal_exhausted",
+                {
+                  motionStudio: pollMeta.v2v_intent === "motion",
+                  afterAlephFallback: true,
+                },
               );
               const stage = mapStudioStage(mergedMeta, "generating");
               res.status(200).json({
@@ -968,10 +1037,13 @@ module.exports = async function handler(req, res) {
             rawAlephFail,
             "Échec transformation vidéo",
             exhausted
-              ? { afterAlephFallback: true, v2vExhausted: true, prompt: larp.prompt }
-              : alephRetries >= 1
-                ? { afterAlephFallback: true }
-                : {},
+              ? v2vClientFailOptions(larp, pollMeta, {
+                  afterAlephFallback: true,
+                  v2vExhausted: true,
+                })
+              : v2vClientFailOptions(larp, pollMeta, {
+                  afterAlephFallback: alephRetries >= 1,
+                }),
           );
         } else if (ageInMs > pollHardTimeoutMs) {
           apiStatus = "fail";

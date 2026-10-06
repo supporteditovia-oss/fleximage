@@ -41,6 +41,18 @@ test("mapVideoProviderMessage — exhausted non-car clip stays generic", () => {
   assert.match(fr, /Jetons remboursés/);
 });
 
+test("mapVideoProviderMessage — exhausted motion tab never shows cockpit tips", () => {
+  const fr = mapVideoProviderMessage("internal error", "fr", {
+    v2vExhausted: true,
+    afterAlephFallback: true,
+    v2vIntent: "motion",
+    prompt: "Remplace le danseur par la personne de ma photo",
+  });
+  assert.doesNotMatch(fr, /volant|tableau de bord/i);
+  assert.match(fr, /animer ce clip/i);
+  assert.match(fr, /Jetons remboursés/);
+});
+
 test("resolveKlingCharacterOrientation — toujours video (mouvements depuis la clip)", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Remplace le danseur", true),

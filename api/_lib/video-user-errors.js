@@ -7,6 +7,15 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   const v2vExhausted = Boolean(options.v2vExhausted);
 
   if (v2vExhausted && afterAlephFallback) {
+    const motionJob =
+      options.v2vIntent === "motion" ||
+      options.v2vProvider === "kling_motion" ||
+      options.v2vEngineFamily === "motion";
+    if (motionJob) {
+      return locale === "fr"
+        ? "Le studio n’a pas pu animer ce clip après plusieurs tentatives. Réessaie avec un clip de 3 à 8 s (danse ou mouvement visible), une photo nette du visage/corps, filmé d’une traite (pas un export WhatsApp/Instagram). Jetons remboursés."
+        : "The studio could not animate this clip after several attempts. Try a 3–8 s clip with clear body motion, a sharp face/body photo, shot in one take (not a WhatsApp/Instagram export). Credits refunded.";
+    }
     const { isVehicleDrivingPrompt } = require("./video-studio");
     if (isVehicleDrivingPrompt(options.prompt)) {
       return locale === "fr"

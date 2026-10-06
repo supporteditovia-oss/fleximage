@@ -3,22 +3,35 @@ const {
   getReferenceImageUrlFromLarp,
 } = require("./mux-source-audio");
 const { resetVideoProviderClaim } = require("./v2v-provider-errors");
-const { buildV2VProviderPrompt } = require("./video-studio");
+const {
+  buildV2VProviderPrompt,
+  buildKlingMotionStudioPrompt,
+  isV2VMotionStudioJob,
+} = require("./video-studio");
 const { extractReferenceFrameFromVideoUrl } = require("./extract-video-frame");
 const { resolveKlingMotionSourceVideoUrl } = require("./prepare-kling-source-video");
 
 /**
  * Relance Kling Motion après échecs Aleph poll (internal error) — sans re-débit.
  */
-async function relaunchKlingV2VFromLarp(supabase, larp, pollMeta, userId, reason) {
+async function relaunchKlingV2VFromLarp(
+  supabase,
+  larp,
+  pollMeta,
+  userId,
+  reason,
+  relaunchOptions = {},
+) {
   const { generateKlingMotionOnce } = require("./generate-video-once");
   const preserveSourceAudio = pollMeta.preserve_source_audio === true;
   const userPrompt = String(
     larp.prompt || pollMeta.vehicle_prompt || "",
   ).trim();
-  const providerPrompt = buildV2VProviderPrompt(userPrompt, {
-    preserveSourceAudio,
-  });
+  const motionStudio =
+    relaunchOptions.motionStudio === true || isV2VMotionStudioJob(pollMeta);
+  const providerPrompt = motionStudio
+    ? buildKlingMotionStudioPrompt(userPrompt, { preserveSourceAudio })
+    : buildV2VProviderPrompt(userPrompt, { preserveSourceAudio });
   const sourceVideoUrl =
     pollMeta.source_video_url || getSourceVideoUrlFromLarp(larp);
   if (!sourceVideoUrl) {
@@ -56,11 +69,15 @@ async function relaunchKlingV2VFromLarp(supabase, larp, pollMeta, userId, reason
     .single();
 
   const prevRetries = Number(pollMeta.video_auto_retries) || 0;
+  const afterAleph = relaunchOptions.afterAlephFallback === true;
   const mergedMeta = {
     ...(refreshed?.metadata && typeof refreshed.metadata === "object"
       ? refreshed.metadata
       : pollMeta),
-    v2v_aleph_poll_kling_fallback: true,
+    ...(afterAleph ? { v2v_aleph_poll_kling_fallback: true } : {}),
+    ...(motionStudio && !afterAleph
+      ? { v2v_kling_motion_poll_retry: true }
+      : {}),
     v2v_provider: "kling_motion",
     studio_stage: "GENERATING",
     video_auto_retries: prevRetries + 1,

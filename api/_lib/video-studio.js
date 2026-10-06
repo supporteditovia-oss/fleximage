@@ -95,10 +95,6 @@ function buildV2VSceneLockSuffix() {
 const VEHICLE_CONTEXT_PATTERN =
   /\b(voiture|voitures|car|cars|auto|autos|v[ée]hicule|v[ée]hicules|vehicle|vehicles|moto|scooter|cl[ée]|clef|key\s*fob|keyfob|telecommande|remote|badge|volant|steering|wheel|habitacle|cockpit|interieur|interior|dashboard|compteur|speedometer|tachometer|condui|driv|au volant|behind the wheel|acc[ée]l|rpm|km\/h|kmh|remplace|remplacer|swap|change|transforme|twingo|clio|renault|peugeot|citro[eë]n|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|amg|audi|bentley|rolls|maserati|tesla|mustang|supercar|suv|berline|4x4)\b/i;
 
-function isVehicleDrivingPrompt(text) {
-  return VEHICLE_CONTEXT_PATTERN.test(String(text || ""));
-}
-
 const V2V_PROMPT_TRANSFORM_PATTERN =
   /\b(int[ée]rieur|interior|habitacle|cockpit|dashboard|d[ée]cor|background|dubai|yacht|marina|jet|luxe|remplace|remplacer|swap|change|transforme|transformer|mets|mettre|habille|habiller|style|look|tenue|outfit|objet|vehicle|voiture|v[ée]hicule|marque|oem|badge|logo)\b/i;
 
@@ -108,6 +104,27 @@ const V2V_MOTION_BODY_PATTERN =
 
 function isV2VMotionBodyPrompt(text) {
   return V2V_MOTION_BODY_PATTERN.test(String(text || ""));
+}
+
+const VEHICLE_STRONG_CONTEXT_PATTERN =
+  /\b(voiture|voitures|car|cars|auto|autos|v[ée]hicule|v[ée]hicules|vehicle|vehicles|moto|scooter|cl[ée]|clef|key\s*fob|keyfob|volant|steering|wheel|habitacle|cockpit|interieur|interior|dashboard|compteur|speedometer|tachometer|condui|driv|au volant|behind the wheel|acc[ée]l|rpm|km\/h|kmh|twingo|clio|renault|peugeot|citro[eë]n|urus|lambo|lamborghini|ferrari|porsche|bmw|mercedes|amg|audi|bentley|rolls|maserati|tesla|mustang|supercar|suv|berline|4x4)\b/i;
+
+function isVehicleDrivingPrompt(text) {
+  const s = String(text || "");
+  if (!VEHICLE_CONTEXT_PATTERN.test(s)) return false;
+  if (isV2VMotionBodyPrompt(s) && !VEHICLE_STRONG_CONTEXT_PATTERN.test(s)) {
+    return false;
+  }
+  return true;
+}
+
+/** Job studio V2V onglet Mouvement (Kling Motion Control uniquement). */
+function isV2VMotionStudioJob(meta) {
+  if (!meta || typeof meta !== "object") return false;
+  if (meta.v2v_intent === "motion") return true;
+  if (meta.v2v_provider === "kling_motion") return true;
+  if (meta.v2v_engine_family === "motion") return true;
+  return false;
 }
 
 /**
@@ -813,6 +830,7 @@ module.exports = {
   buildKlingMotionStudioPrompt,
   stripVoiceInstructionsFromPrompt,
   isVehicleDrivingPrompt,
+  isV2VMotionStudioJob,
   isV2VMotionBodyPrompt,
   v2vEngineFamilyForProvider,
   resolveV2VProviderForStudio,

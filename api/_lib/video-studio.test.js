@@ -227,6 +227,10 @@ describe("video-studio", () => {
       true,
     );
     assert.equal(isVehicleDrivingPrompt("Transporte-moi à Dubai"), false);
+    assert.equal(
+      isVehicleDrivingPrompt("Remplace le danseur par la personne de ma photo"),
+      false,
+    );
   });
 
   it("buildV2VProviderPrompt locks dashboard speed for vehicle prompts", () => {
