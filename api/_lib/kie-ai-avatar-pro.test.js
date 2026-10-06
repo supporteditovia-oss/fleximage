@@ -30,4 +30,22 @@ describe("kie-ai-avatar-pro", () => {
 
     global.fetch = originalFetch;
   });
+
+  it("extractAiAvatarProVideoUrl supports resultUrls and video_url", () => {
+    const { extractAiAvatarProVideoUrl } = require("./kie-ai-avatar-pro");
+    assert.equal(
+      extractAiAvatarProVideoUrl({
+        resultJson: JSON.stringify({
+          resultUrls: ["https://cdn.example/v.mp4"],
+        }),
+      }),
+      "https://cdn.example/v.mp4",
+    );
+    assert.equal(
+      extractAiAvatarProVideoUrl({
+        resultJson: JSON.stringify({ video_url: "https://cdn.example/b.mp4" }),
+      }),
+      "https://cdn.example/b.mp4",
+    );
+  });
 });

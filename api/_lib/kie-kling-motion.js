@@ -111,15 +111,8 @@ function extractKlingFailMessage(data) {
 }
 
 function extractKlingMotionVideoUrl(data) {
-  if (!data?.resultJson) return null;
-  try {
-    const result = JSON.parse(data.resultJson);
-    const urls = result?.resultUrls;
-    if (Array.isArray(urls) && urls[0]) return urls[0];
-  } catch {
-    /* ignore */
-  }
-  return null;
+  const { extractKieJobsVideoUrl } = require("./kie-jobs-result");
+  return extractKieJobsVideoUrl(data);
 }
 
 function normalizeMotionUserPromptForKling(userPrompt) {

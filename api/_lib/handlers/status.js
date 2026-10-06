@@ -590,9 +590,24 @@ module.exports = async function handler(req, res) {
         const state = mapSeedanceTransformState(seedanceData);
         const videoUrl = extractSeedanceTransformVideoUrl(seedanceData);
         if (state === "success") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] seedance success missing video url", {
+              larpId: larp.id,
+              seedanceTaskId,
+              resultJsonPreview: String(seedanceData?.resultJson || "").slice(
+                0,
+                500,
+              ),
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg =
+                extractSeedanceTransformFailMessage(seedanceData) ||
+                "Vidéo Seedance terminée sans URL — réessaie.";
+            }
           }
         } else if (state === "fail") {
           apiStatus = "fail";
@@ -617,9 +632,21 @@ module.exports = async function handler(req, res) {
         const state = mapKlingOmniRef2VState(omniData);
         const videoUrl = extractKlingOmniRef2VVideoUrl(omniData);
         if (state === "success") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] omni success missing video url", {
+              larpId: larp.id,
+              omniTaskId,
+              resultJsonPreview: String(omniData?.resultJson || "").slice(0, 500),
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg =
+                extractKlingOmniRef2VFailMessage(omniData) ||
+                "Vidéo Omni terminée sans URL — réessaie.";
+            }
           }
         } else if (state === "fail") {
           const rawOmniFail = extractKlingOmniRef2VFailMessage(omniData);
@@ -721,9 +748,19 @@ module.exports = async function handler(req, res) {
         const state = mapKlingMotionState(klingData);
         const videoUrl = extractKlingMotionVideoUrl(klingData);
         if (state === "success") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] kling motion success missing video url", {
+              larpId: larp.id,
+              klingTaskId,
+              resultJsonPreview: String(klingData?.resultJson || "").slice(0, 500),
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg = "Vidéo Kling terminée sans URL — réessaie.";
+            }
           }
         } else if (state === "fail") {
           const { extractKlingFailMessage } = require("../kie-kling-motion");
@@ -931,9 +968,19 @@ module.exports = async function handler(req, res) {
         const state = mapAlephState(alephData);
         const videoUrl = extractAlephVideoUrl(alephData);
         if (state === "success") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] aleph success missing video url", {
+              larpId: larp.id,
+              alephTaskId,
+              resultJsonPreview: String(alephData?.resultJson || "").slice(0, 500),
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg = "Vidéo Aleph terminée sans URL — réessaie.";
+            }
           }
         } else if (state === "fail") {
           const { extractAlephFailMessage } = require("../kie-runway-aleph");
@@ -1127,9 +1174,25 @@ module.exports = async function handler(req, res) {
         const state = mapAiAvatarProState(avatarData);
         const videoUrl = extractAiAvatarProVideoUrl(avatarData);
         if (state === "success") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] ai-avatar-pro success missing video url", {
+              larpId: larp.id,
+              avatarTaskId,
+              resultJsonPreview: String(avatarData?.resultJson || "").slice(
+                0,
+                500,
+              ),
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg = formatVideoFailForClient(
+                extractAiAvatarProFailMessage(avatarData),
+                "Vidéo Kling terminée sans lien téléchargeable — réessaie dans un instant.",
+              );
+            }
           }
         } else if (state === "fail") {
           apiStatus = "fail";
@@ -1171,9 +1234,19 @@ module.exports = async function handler(req, res) {
         const videoUrl =
           runwayData.videoInfo?.videoUrl ?? runwayData.video_url ?? null;
         if (state === "success" || state === "completed") {
-          apiStatus = "success";
           if (videoUrl) {
+            apiStatus = "success";
             apiResultJson = JSON.stringify({ video_url: videoUrl });
+          } else {
+            console.warn("[status] runway video success missing video url", {
+              larpId: larp.id,
+              runwayTaskId,
+              state,
+            });
+            if (ageInMs > pollHardTimeoutMs) {
+              apiStatus = "fail";
+              apiFailMsg = "Vidéo Runway terminée sans URL — réessaie.";
+            }
           }
         } else if (state === "fail" || state === "failed") {
           apiStatus = "fail";
@@ -1589,11 +1662,23 @@ module.exports = async function handler(req, res) {
         }
 
         if (resultUrls.length === 0) {
+          const providerMarkedSuccess = apiStatus === "success";
           apiStatus = "fail";
-          apiFailMsg =
-            resultType === "video"
-              ? "Aucune vidéo dans le résultat"
-              : "Aucune image dans le résultat";
+          if (resultType === "video") {
+            apiFailMsg =
+              apiFailMsg ||
+              (providerMarkedSuccess
+                ? "Aucune vidéo dans le résultat (URL provider introuvable)"
+                : "Aucune vidéo dans le résultat");
+            console.error("[status] video poll ended without deliverable url", {
+              larpId: larp.id,
+              providerTaskId: larp.provider_task_id,
+              hadResultJson: Boolean(apiResultJson),
+              providerMarkedSuccess,
+            });
+          } else {
+            apiFailMsg = "Aucune image dans le résultat";
+          }
         } else if (larp.generation_type !== "video") {
           // Vision QA: skip modèles prêts (builtin) — one image only, no auto-retry.
           const meta =

@@ -1,4 +1,8 @@
 const KIE_JOBS_BASE_URL = "https://api.kie.ai/api/v1/jobs";
+const {
+  extractKieJobsVideoUrl,
+  extractKieJobsFailMessage,
+} = require("./kie-jobs-result");
 
 const AI_AVATAR_PRO_MODEL = "kling/ai-avatar-pro";
 
@@ -45,6 +49,13 @@ async function createAiAvatarProTask(input) {
     },
   };
 
+  console.info("[kie-ai-avatar-pro] createTask", {
+    model: AI_AVATAR_PRO_MODEL,
+    imageHost: imageUrl.split("/").slice(-1)[0],
+    audioHost: audioUrl.split("/").slice(-1)[0],
+    promptChars: prompt.length,
+  });
+
   const response = await fetch(`${KIE_JOBS_BASE_URL}/createTask`, {
     method: "POST",
     headers: {
@@ -59,6 +70,12 @@ async function createAiAvatarProTask(input) {
   const taskId = parsed?.data?.taskId;
 
   if (!response.ok || parsed.code !== 200 || !taskId) {
+    console.error("[kie-ai-avatar-pro] createTask rejected", {
+      httpStatus: response.status,
+      apiCode: parsed?.code,
+      apiMsg: parsed?.msg,
+      bodyPreview: text.slice(0, 400),
+    });
     const err = new Error(parsed.msg || "Ai Avatar Pro API error");
     err.status = response.status;
     err.apiCode = parsed.code;
@@ -98,21 +115,11 @@ function mapAiAvatarProState(data) {
 }
 
 function extractAiAvatarProFailMessage(data) {
-  const direct = String(data?.failMsg || data?.errorMessage || "").trim();
-  if (direct) return direct;
-  return "";
+  return extractKieJobsFailMessage(data);
 }
 
 function extractAiAvatarProVideoUrl(data) {
-  if (!data?.resultJson) return null;
-  try {
-    const result = JSON.parse(data.resultJson);
-    const urls = result?.resultUrls;
-    if (Array.isArray(urls) && urls[0]) return urls[0];
-  } catch {
-    /* ignore */
-  }
-  return null;
+  return extractKieJobsVideoUrl(data);
 }
 
 function isAiAvatarProConfigured() {

@@ -135,6 +135,13 @@ async function generateVideoOnce(supabase, params) {
   }
 
   const startedAt = Date.now();
+  console.info("[generate-video-once] ai-avatar-pro kickoff", {
+    generationId: params.generationId,
+    imageHost: String(params.imageUrl || "").split("/").slice(-1)[0],
+    audioHost: String(params.audioUrl || "").split("/").slice(-1)[0],
+    promptChars: String(params.prompt || "").length,
+  });
+
   const avatar = await createAiAvatarProTask({
     prompt: params.prompt,
     imageUrl: params.imageUrl,
