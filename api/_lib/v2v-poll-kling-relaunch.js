@@ -30,6 +30,7 @@ async function relaunchKlingV2VFromLarp(supabase, larp, pollMeta, userId, reason
     userId,
   );
   let imageUrl = getReferenceImageUrlFromLarp(larp);
+  const motionReferenceSource = imageUrl ? "uploaded" : "auto_frame";
   if (!imageUrl) {
     imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
   }
@@ -44,6 +45,8 @@ async function relaunchKlingV2VFromLarp(supabase, larp, pollMeta, userId, reason
     imageUrl,
     videoUrl,
     mode: "720p",
+    userId,
+    motionReferenceSource,
   });
 
   const { data: refreshed } = await supabase

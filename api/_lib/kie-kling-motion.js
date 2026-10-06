@@ -148,7 +148,8 @@ function buildKlingMotionPrompt(userPrompt) {
     "input_urls IMAGE = face/body identity ONLY. " +
     "video_urls VIDEO = motion driver + background (background_source input_video). " +
     "FORBIDDEN: dancing on the static photo; photo as backdrop; I2V-style animation of the image file. " +
-    "Replace the performer inside the video clip with the image person; same dance, same room.";
+    "Replace the performer inside the video clip with the image person; same dance, same room. " +
+    "When the reference IMAGE already shows the person standing IN the video room/background, keep that room — do not revert to the photo's original outdoor/indoor background.";
   const userLine = normalizeMotionUserPromptForKling(userPrompt);
   const combined = `${locks} User intent: ${userLine}`;
   return combined.slice(0, 2500);

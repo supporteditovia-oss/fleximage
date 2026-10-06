@@ -180,13 +180,15 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       const motionMode =
         v2vResolution === "1080p" || v2vResolution === "4k" ? "1080p" : "720p";
 
-      const runKling = async (videoUrl, imageUrl) =>
+      const runKling = async (videoUrl, imageUrl, motionReferenceSource = "auto_frame") =>
         generateKlingMotionOnce(supabase, {
           generationId: larp.id,
           prompt: providerPrompt,
           imageUrl,
           videoUrl,
           mode: motionMode,
+          userId,
+          motionReferenceSource,
         });
       const runAleph = async (videoUrl, refImage) => {
         const omitRef =
@@ -241,6 +243,7 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
             userId,
           );
           let imageUrl = referenceImageUrl;
+          const motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
           if (!imageUrl) {
             imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
           }
@@ -252,7 +255,7 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
               { status: 422 },
             );
           }
-          await runKling(videoUrl, imageUrl);
+          await runKling(videoUrl, imageUrl, motionReferenceSource);
         }
       } catch (firstErr) {
         await resetVideoProviderClaim(supabase, larp.id, meta);

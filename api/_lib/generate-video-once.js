@@ -348,11 +348,29 @@ async function generateKlingMotionOnce(supabase, params) {
   );
   const backgroundSource = "input_video";
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
-  const kieImageUrl = await ensureKieAccessibleMediaUrl(params.imageUrl, "image");
+
+  const {
+    shouldApplyMotionComposite,
+    prepareMotionControlCompositeImage,
+  } = require("./motion-control-composite");
+
+  let motionImageUrl = params.imageUrl;
+  let motionCompositeApplied = false;
+  if (shouldApplyMotionComposite(params)) {
+    motionImageUrl = await prepareMotionControlCompositeImage({
+      userId: params.userId,
+      subjectImageUrl: params.imageUrl,
+      videoUrl: params.videoUrl,
+    });
+    motionCompositeApplied = true;
+  }
+
+  const kieImageUrl = await ensureKieAccessibleMediaUrl(motionImageUrl, "image");
   console.info("[generate-kling-once] motion control payload", {
     generationId: params.generationId,
     characterOrientation,
     backgroundSource,
+    motionCompositeApplied,
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
@@ -380,6 +398,10 @@ async function generateKlingMotionOnce(supabase, params) {
     video_provider_duration_ms: durationMs,
     video_auto_retries: 0,
     v2v_provider: "kling_motion",
+    motion_composite_applied: motionCompositeApplied,
+    ...(motionCompositeApplied && motionImageUrl
+      ? { motion_composite_image_url: motionImageUrl }
+      : {}),
   };
 
   await supabase
