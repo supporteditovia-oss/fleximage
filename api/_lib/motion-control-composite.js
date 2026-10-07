@@ -583,9 +583,97 @@ async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 1.1) {
     .toBuffer();
 }
 
+async function finalizeMotionCompositeJpeg(
+  scenePlate,
+  subjectPng,
+  subjectBox,
+  canvasW,
+  canvasH,
+) {
+  const plateRgb = await sharp(scenePlate)
+    .resize(canvasW, canvasH, { fit: "fill" })
+    .removeAlpha()
+    .jpeg({ quality: 94, mozjpeg: true })
+    .toBuffer();
+  const placed = await resizeSubjectFeetLockedToBox(
+    subjectPng,
+    subjectBox,
+    canvasW,
+    1.05,
+  );
+  return {
+    jpeg: await sharp(plateRgb)
+      .composite([
+        {
+          input: placed.buffer,
+          left: Math.max(0, placed.left),
+          top: Math.max(0, placed.top),
+        },
+      ])
+      .jpeg({ quality: 94, mozjpeg: true })
+      .toBuffer(),
+    placed,
+  };
+}
+
+async function loadSubjectPngForComposite(subjectUrl, subjectCutout) {
+  let subjectRawBuf = null;
+  if (subjectCutout) {
+    try {
+      return {
+        subjectPng: await featherSubjectCutoutAlpha(subjectCutout),
+        subjectRawBuf: null,
+      };
+    } catch (err) {
+      console.warn("[motion-clean-composite] feather fail — raw cutout", err);
+      return { subjectPng: subjectCutout, subjectRawBuf: null };
+    }
+  }
+  const subjectRes = await fetch(subjectUrl);
+  if (!subjectRes.ok) {
+    throw Object.assign(new Error("Impossible de lire la photo personnage"), {
+      status: 422,
+    });
+  }
+  subjectRawBuf = Buffer.from(await subjectRes.arrayBuffer());
+  let subjectPng = await sharp(subjectRawBuf).png().toBuffer();
+  try {
+    subjectPng = await featherSubjectCutoutAlpha(subjectPng);
+  } catch {
+    /* keep rgb png */
+  }
+  return { subjectPng, subjectRawBuf };
+}
+
+/** Fallback : frame_0 brute + sujet centré bas, sans inpaint. */
+async function prepareMotionCleanCompositeDirectFallback({
+  userId,
+  subjectImageUrl,
+  videoUrl,
+}) {
+  const uid = String(userId || "anon").trim() || "anon";
+  const subjectUrl = String(subjectImageUrl || "").trim();
+  const motionVideoUrl = String(videoUrl || "").trim();
+  const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
+  const frameMeta = await sharp(frameJpeg).metadata();
+  const canvasW = frameMeta.width || 720;
+  const canvasH = frameMeta.height || 1280;
+  const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
+  const { subjectPng } = await loadSubjectPngForComposite(subjectUrl, subjectCutout);
+  const subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+  const { jpeg } = await finalizeMotionCompositeJpeg(
+    frameJpeg,
+    subjectPng,
+    subjectBox,
+    canvasW,
+    canvasH,
+  );
+  const key = `inputs/${uid}/${Date.now()}-motion-composite-fallback.jpg`;
+  return uploadToR2(key, jpeg, "image/jpeg");
+}
+
 /**
- * Kling Motion 3.0 : frame_0 vidéo nette + sujet détouré à l'échelle du danseur → JPEG opaque.
- * Aucun inpaint flou / aucun fond transparent.
+ * Kling Motion 3.0 : frame_0 vidéo nette + sujet détouré à l'échelle du danseur → JPEG RGB opaque.
  */
 async function prepareMotionCleanCompositeImage({
   userId,
@@ -601,119 +689,123 @@ async function prepareMotionCleanCompositeImage({
     });
   }
 
-  const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
-  const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_bbox");
-  const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
+  try {
+    const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
+    const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_bbox");
+    const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
 
-  const frameMeta = await sharp(frameJpeg).metadata();
-  const canvasW = frameMeta.width || 720;
-  const canvasH = frameMeta.height || 1280;
+    const frameMeta = await sharp(frameJpeg).metadata();
+    const canvasW = frameMeta.width || 720;
+    const canvasH = frameMeta.height || 1280;
 
-  let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
-  let scenePlate = frameJpeg;
-  if (frameCutout) {
-    subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
-    scenePlate = await buildScenePlateTightDancerInpaint(
-      frameJpeg,
-      frameCutout,
-      canvasW,
-      canvasH,
-    );
-  }
-
-  let subjectRawBuf = null;
-  let subjectPng;
-  if (subjectCutout) {
-    subjectPng = await featherSubjectCutoutAlpha(subjectCutout);
-  } else {
-    const subjectRes = await fetch(subjectUrl);
-    if (!subjectRes.ok) {
-      throw Object.assign(new Error("Impossible de lire la photo personnage"), {
-        status: 422,
-      });
+    let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+    let scenePlate = frameJpeg;
+    let inpaintApplied = false;
+    if (frameCutout) {
+      try {
+        subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
+        scenePlate = await buildScenePlateTightDancerInpaint(
+          frameJpeg,
+          frameCutout,
+          canvasW,
+          canvasH,
+        );
+        inpaintApplied = true;
+      } catch (inpaintErr) {
+        console.warn("[motion-clean-composite] inpaint skipped — direct overlay", {
+          message: String(inpaintErr?.message || inpaintErr).slice(0, 200),
+        });
+        try {
+          subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
+        } catch {
+          subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+        }
+        scenePlate = frameJpeg;
+      }
     }
-    subjectRawBuf = Buffer.from(await subjectRes.arrayBuffer());
-    subjectPng = await featherSubjectCutoutAlpha(
-      await sharp(subjectRawBuf).png().toBuffer(),
+
+    const { subjectPng, subjectRawBuf } = await loadSubjectPngForComposite(
+      subjectUrl,
+      subjectCutout,
     );
-  }
 
-  const photoVerticalOcc = await measureSubjectPhotoVerticalOccupancy(
-    subjectCutout || subjectPng,
-    subjectRawBuf,
-  );
+    const photoVerticalOcc = await measureSubjectPhotoVerticalOccupancy(
+      subjectCutout || subjectPng,
+      subjectRawBuf,
+    );
 
-  let placed = await resizeSubjectFeetLockedToBox(
-    subjectPng,
-    subjectBox,
-    canvasW,
-    1.05,
-  );
-  let subjectOccupancyRatio = placed.targetH / canvasH;
-
-  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
-    const fallbackBox = alignSubjectBoxToOriginalDancer(
-      computeDefaultSubjectBox(canvasW, canvasH),
+    let { jpeg: compositeJpeg, placed } = await finalizeMotionCompositeJpeg(
+      scenePlate,
+      subjectPng,
+      subjectBox,
       canvasW,
       canvasH,
     );
-    placed = await resizeSubjectFeetLockedToBox(
-      subjectPng,
-      fallbackBox,
+    let subjectOccupancyRatio = placed.targetH / canvasH;
+
+    if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
+      const fallbackBox = alignSubjectBoxToOriginalDancer(
+        computeDefaultSubjectBox(canvasW, canvasH),
+        canvasW,
+        canvasH,
+      );
+      ({ jpeg: compositeJpeg, placed } = await finalizeMotionCompositeJpeg(
+        scenePlate,
+        subjectPng,
+        fallbackBox,
+        canvasW,
+        canvasH,
+      ));
+      subjectBox = fallbackBox;
+      subjectOccupancyRatio = placed.targetH / canvasH;
+    }
+
+    const fullBodyPhotoLikely =
+      photoVerticalOcc != null && photoVerticalOcc >= SUBJECT_OCCUPANCY_OUTPUT_MIN;
+
+    if (
+      subjectOccupancyRatio < SUBJECT_OCCUPANCY_HARD_REJECT &&
+      !fullBodyPhotoLikely
+    ) {
+      console.warn("[motion-clean-composite] scale soft-fail — using default box", {
+        subjectOccupancyRatio,
+      });
+      const fallbackBox = computeDefaultSubjectBox(canvasW, canvasH);
+      ({ jpeg: compositeJpeg, placed } = await finalizeMotionCompositeJpeg(
+        frameJpeg,
+        subjectPng,
+        fallbackBox,
+        canvasW,
+        canvasH,
+      ));
+      subjectBox = fallbackBox;
+      subjectOccupancyRatio = placed.targetH / canvasH;
+    }
+
+    const key = `inputs/${uid}/${Date.now()}-motion-composite-clean.jpg`;
+    const publicUrl = await uploadToR2(key, compositeJpeg, "image/jpeg");
+
+    console.info("[motion-clean-composite] prepared", {
+      userId: uid,
       canvasW,
-      1.05,
-    );
-    subjectOccupancyRatio = placed.targetH / canvasH;
-  }
+      canvasH,
+      box: subjectBox,
+      subjectOccupancyRatio: Number(subjectOccupancyRatio.toFixed(3)),
+      bytes: compositeJpeg.length,
+      briaFrame: Boolean(frameCutout),
+      briaSubject: Boolean(subjectCutout),
+      inpaintApplied,
+    });
 
-  const fullBodyPhotoLikely =
-    photoVerticalOcc != null && photoVerticalOcc >= SUBJECT_OCCUPANCY_OUTPUT_MIN;
-
-  if (
-    subjectOccupancyRatio < SUBJECT_OCCUPANCY_HARD_REJECT &&
-    !fullBodyPhotoLikely
-  ) {
-    throw Object.assign(
-      new Error(
-        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
-      ),
-      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
-    );
-  }
-
-  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN && fullBodyPhotoLikely) {
-    console.warn("[motion-clean-composite] soft scale — full-body photo accepted", {
-      subjectOccupancyRatio,
-      photoVerticalOcc,
+    return publicUrl;
+  } catch (err) {
+    console.error("[motion-clean-composite] primary failed — direct fallback", err);
+    return prepareMotionCleanCompositeDirectFallback({
+      userId,
+      subjectImageUrl,
+      videoUrl,
     });
   }
-
-  const compositeJpeg = await sharp(scenePlate)
-    .composite([
-      {
-        input: placed.buffer,
-        left: Math.max(0, placed.left),
-        top: Math.max(0, placed.top),
-      },
-    ])
-    .jpeg({ quality: 94, mozjpeg: true })
-    .toBuffer();
-
-  const key = `inputs/${uid}/${Date.now()}-motion-composite-clean.jpg`;
-  const publicUrl = await uploadToR2(key, compositeJpeg, "image/jpeg");
-
-  console.info("[motion-clean-composite] prepared", {
-    userId: uid,
-    canvasW,
-    canvasH,
-    box: subjectBox,
-    subjectOccupancyRatio: Number(subjectOccupancyRatio.toFixed(3)),
-    bytes: compositeJpeg.length,
-    briaFrame: Boolean(frameCutout),
-    briaSubject: Boolean(subjectCutout),
-  });
-
-  return publicUrl;
 }
 
 /**
@@ -986,6 +1078,8 @@ async function prepareMotionControlCompositeImage({
 module.exports = {
   shouldApplyMotionCleanComposite,
   prepareMotionCleanCompositeImage,
+  prepareMotionCleanCompositeDirectFallback,
+  finalizeMotionCompositeJpeg,
   shouldApplyMotionComposite: shouldApplyMotionCleanComposite,
   shouldApplyMotionSubjectScale,
   prepareMotionSubjectReferenceImage,

@@ -353,6 +353,7 @@ async function generateKlingMotionOnce(supabase, params) {
   const {
     shouldApplyMotionCleanComposite,
     prepareMotionCleanCompositeImage,
+    prepareMotionCleanCompositeDirectFallback,
   } = require("./motion-control-composite");
 
   let motionImageUrl = params.imageUrl;
@@ -372,22 +373,22 @@ async function generateKlingMotionOnce(supabase, params) {
         0,
         200,
       );
-      if (uploadedSubject) {
-        const { mapMotionCompositeUserMessage } = require("./video-user-errors");
-        throw Object.assign(
-          new Error(mapMotionCompositeUserMessage(compositeErr, "fr")),
-          {
-            status: 422,
-            code: "MOTION_COMPOSITE_REQUIRED",
-            cause: compositeErr,
-          },
-        );
+      try {
+        motionImageUrl = await prepareMotionCleanCompositeDirectFallback({
+          userId: params.userId,
+          subjectImageUrl: params.imageUrl,
+          videoUrl: params.videoUrl,
+        });
+        motionCleanCompositeApplied = true;
+        motionCompositeFallback = `direct_fallback:${motionCompositeFallback}`;
+      } catch (fallbackErr) {
+        console.warn("[generate-kling-once] motion composite fallback failed — raw photo", {
+          generationId: params.generationId,
+          primary: motionCompositeFallback,
+          fallback: String(fallbackErr?.message || fallbackErr).slice(0, 200),
+        });
+        motionImageUrl = params.imageUrl;
       }
-      console.warn("[generate-kling-once] motion clean composite failed — raw image", {
-        generationId: params.generationId,
-        message: motionCompositeFallback,
-      });
-      motionImageUrl = params.imageUrl;
     }
   }
 

@@ -1,12 +1,14 @@
 /** Limites rentables — Kling Motion Control (720p), plafond 8s. */
 
 const VIDEO_V2V_MAX_DURATION_SEC = 8;
+/** Validation client upload (clips 3–10 s acceptés ; transcode serveur plafonne à 8 s). */
+const VIDEO_V2V_VALIDATE_MAX_SEC = 10;
 /** Marge metadata smartphone : une vidéo « 8s » vaut souvent 8,03–8,15s réelles. */
 const VIDEO_V2V_MAX_DURATION_SLACK_SEC = 0.5;
 const VIDEO_V2V_MIN_DURATION_SEC = 3;
 
 function getVideoDurationUploadLimitSec() {
-  return VIDEO_V2V_MAX_DURATION_SEC + VIDEO_V2V_MAX_DURATION_SLACK_SEC;
+  return VIDEO_V2V_VALIDATE_MAX_SEC + VIDEO_V2V_MAX_DURATION_SLACK_SEC;
 }
 /** iPhone 8s en 4K peut dépasser 20 Mo — upload direct R2 jusqu'à 100 Mo. */
 const VIDEO_V2V_MAX_SIZE_BYTES = 100 * 1024 * 1024;
@@ -19,16 +21,11 @@ const { VIDEO_V2V_CREDIT_COST } = require("./credit-costs");
 const VIDEO_I2V_OUTPUT_DURATION_SEC = 5;
 
 function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
-  const dur = Number(durationSec);
+  let dur = Number(durationSec);
+  let durationInferred = false;
   if (!Number.isFinite(dur) || dur <= 0) {
-    return {
-      ok: false,
-      code: "VIDEO_DURATION_REQUIRED",
-      message:
-        uiLocale === "fr"
-          ? "Impossible de lire la durée de la vidéo. Réessaie avec un MP4 plus court."
-          : "Could not read video duration. Try a shorter MP4.",
-    };
+    dur = 5;
+    durationInferred = true;
   }
   if (dur < VIDEO_V2V_MIN_DURATION_SEC) {
     return {
@@ -46,11 +43,11 @@ function validateSourceVideoDuration(durationSec, uiLocale = "fr") {
       code: "VIDEO_TOO_LONG",
       message:
         uiLocale === "fr"
-          ? `Vidéo trop longue (max ${VIDEO_V2V_MAX_DURATION_SEC}s). Coupe ta vidéo avant de l'importer.`
-          : `Video too long (max ${VIDEO_V2V_MAX_DURATION_SEC}s). Trim before upload.`,
+          ? `Vidéo trop longue (max ${VIDEO_V2V_VALIDATE_MAX_SEC}s). Coupe ta vidéo avant de l'importer.`
+          : `Video too long (max ${VIDEO_V2V_VALIDATE_MAX_SEC}s). Trim before upload.`,
     };
   }
-  return { ok: true, durationSec: dur };
+  return { ok: true, durationSec: dur, durationInferred };
 }
 
 function computeV2VCreditCost(_durationSec, isAdmin = false) {
@@ -60,6 +57,7 @@ function computeV2VCreditCost(_durationSec, isAdmin = false) {
 
 module.exports = {
   VIDEO_V2V_MAX_DURATION_SEC,
+  VIDEO_V2V_VALIDATE_MAX_SEC,
   VIDEO_V2V_MAX_DURATION_SLACK_SEC,
   VIDEO_V2V_MIN_DURATION_SEC,
   getVideoDurationUploadLimitSec,

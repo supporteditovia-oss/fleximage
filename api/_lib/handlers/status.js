@@ -765,6 +765,27 @@ module.exports = async function handler(req, res) {
         } else if (state === "fail") {
           const { extractKlingFailMessage } = require("../kie-kling-motion");
           const rawKlingFail = extractKlingFailMessage(klingData);
+          console.error("[status] kling motion provider fail", {
+            larpId: larp.id,
+            kling_error_response: rawKlingFail,
+            kling_state: klingData?.state,
+            resultJsonPreview: String(klingData?.resultJson || "").slice(0, 800),
+          });
+          try {
+            await supabase
+              .from("generations")
+              .update({
+                metadata: {
+                  ...pollMeta,
+                  kling_error_response: String(rawKlingFail || "").slice(0, 500),
+                  kling_error_logged_at: new Date().toISOString(),
+                },
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", larp.id);
+          } catch (logMetaErr) {
+            console.warn("[status] kling_error_response metadata skip", logMetaErr);
+          }
           const {
             isKlingCharacterRejectionFromText,
             isRetryableProviderFailText,
