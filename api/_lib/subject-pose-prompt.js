@@ -115,7 +115,13 @@ function buildSubjectPosePromptBlock(input = {}) {
   const parts = [];
 
   if (analysis) {
-    parts.push(buildAnalysisPromptBlock(analysis));
+    parts.push(
+      buildAnalysisPromptBlock(
+        analysis,
+        input.userPrompt || "",
+        input.sceneContext || "",
+      ),
+    );
   } else {
     parts.push(
       buildAnalysisPromptBlock(
@@ -123,6 +129,8 @@ function buildSubjectPosePromptBlock(input = {}) {
           input.userPrompt || "",
           input.sceneContext || "",
         ),
+        input.userPrompt || "",
+        input.sceneContext || "",
       ),
     );
   }
