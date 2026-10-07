@@ -174,9 +174,9 @@ function alphaBoundingBoxFromPng(pngBuffer) {
  */
 /** Marge pour que le remplaçant recouvre 100 % de la silhouette (zéro jambe fantôme). */
 function expandBoxForOcclusionCover(box, canvasW, canvasH) {
-  const padX = Math.max(8, Math.round(box.width * 0.11));
-  const padTop = Math.max(6, Math.round(box.height * 0.05));
-  const padBottom = Math.max(10, Math.round(box.height * 0.04));
+  const padX = Math.max(10, Math.round(box.width * 0.13));
+  const padTop = Math.max(8, Math.round(box.height * 0.06));
+  const padBottom = Math.max(12, Math.round(box.height * 0.05));
   const left = Math.max(0, box.left - padX);
   const top = Math.max(0, box.top - padTop);
   const width = Math.min(canvasW - left, box.width + padX * 2);
@@ -420,15 +420,31 @@ async function buildScenePlateWithoutOriginalSubject(
     .toBuffer();
 }
 
-function computeDefaultSubjectBox(canvasW, canvasH) {
+function dancerAnchorCenterX(box) {
+  return box.left + box.width / 2;
+}
+
+/** Box par défaut calée sur la position horizontale du danseur (ne pas « recoller » au centre). */
+function computeSubjectBoxAtAnchor(canvasW, canvasH, anchorCenterX) {
   const height = Math.round(canvasH * 0.8);
   const width = Math.round(canvasW * 0.55);
+  const centerX =
+    typeof anchorCenterX === "number" && Number.isFinite(anchorCenterX)
+      ? anchorCenterX
+      : canvasW / 2;
+  const left = Math.round(
+    Math.max(0, Math.min(canvasW - width, centerX - width / 2)),
+  );
   return {
-    left: Math.round((canvasW - width) / 2),
+    left,
     top: Math.round(canvasH - height - canvasH * 0.02),
     width,
     height,
   };
+}
+
+function computeDefaultSubjectBox(canvasW, canvasH) {
+  return computeSubjectBoxAtAnchor(canvasW, canvasH, canvasW / 2);
 }
 
 /** Évite un petit crop « tête seule » — le remplacement doit couvrir tout le corps dans la clip. */
@@ -602,7 +618,7 @@ async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 0.45) {
 }
 
 /** Échelle de recouvrement — le sujet doit masquer toute l'ancienne silhouette. */
-const SUBJECT_OCCLUSION_COVER_SCALE = 1.14;
+const SUBJECT_OCCLUSION_COVER_SCALE = 1.17;
 
 async function finalizeMotionCompositeJpeg(
   scenePlate,
@@ -720,23 +736,26 @@ async function prepareMotionCleanCompositeImage({
     const canvasW = frameMeta.width || 720;
     const canvasH = frameMeta.height || 1280;
 
+    let dancerAnchorX = canvasW / 2;
     let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
     const scenePlate = frameJpeg;
     if (frameCutout) {
       try {
         subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
+        dancerAnchorX = dancerAnchorCenterX(subjectBox);
       } catch (boxErr) {
         console.warn("[motion-clean-composite] dancer box fallback", {
           message: String(boxErr?.message || boxErr).slice(0, 160),
         });
         subjectBox = expandBoxForOcclusionCover(
-          computeDefaultSubjectBox(canvasW, canvasH),
+          computeSubjectBoxAtAnchor(canvasW, canvasH, dancerAnchorX),
           canvasW,
           canvasH,
         );
       }
     } else {
       subjectBox = expandBoxForOcclusionCover(subjectBox, canvasW, canvasH);
+      dancerAnchorX = dancerAnchorCenterX(subjectBox);
     }
 
     const { subjectPng, subjectRawBuf } = await loadSubjectPngForComposite(
@@ -760,7 +779,7 @@ async function prepareMotionCleanCompositeImage({
 
     if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
       const fallbackBox = alignSubjectBoxToOriginalDancer(
-        computeDefaultSubjectBox(canvasW, canvasH),
+        computeSubjectBoxAtAnchor(canvasW, canvasH, dancerAnchorX),
         canvasW,
         canvasH,
       );
@@ -785,7 +804,11 @@ async function prepareMotionCleanCompositeImage({
       console.warn("[motion-clean-composite] scale soft-fail — using default box", {
         subjectOccupancyRatio,
       });
-      const fallbackBox = computeDefaultSubjectBox(canvasW, canvasH);
+      const fallbackBox = computeSubjectBoxAtAnchor(
+        canvasW,
+        canvasH,
+        dancerAnchorX,
+      );
       ({ jpeg: compositeJpeg, placed } = await finalizeMotionCompositeJpeg(
         frameJpeg,
         subjectPng,
@@ -811,6 +834,7 @@ async function prepareMotionCleanCompositeImage({
       briaSubject: Boolean(subjectCutout),
       inpaintApplied: false,
       coverScale: SUBJECT_OCCLUSION_COVER_SCALE,
+      dancerAnchorX: Math.round(dancerAnchorX),
       pipeline: "sharp_overlay_zero_blur",
     });
 
@@ -1104,6 +1128,8 @@ module.exports = {
   featherSubjectCutoutAlpha,
   alphaBoundingBoxFromPng,
   computeDefaultSubjectBox,
+  computeSubjectBoxAtAnchor,
+  dancerAnchorCenterX,
   expandBoxForFullBodyReplacement,
   alignSubjectBoxToOriginalDancer,
   cropPngToAlphaBounds,

@@ -97,6 +97,14 @@ test("expandBoxForOcclusionCover widens dancer box", () => {
   assert.ok(out.height >= inner.height);
 });
 
+test("computeSubjectBoxAtAnchor keeps dancer horizontal position", () => {
+  const { computeSubjectBoxAtAnchor } = require("./motion-control-composite");
+  const anchored = computeSubjectBoxAtAnchor(720, 1280, 520);
+  const centered = computeSubjectBoxAtAnchor(720, 1280, 360);
+  assert.ok(anchored.left > centered.left);
+  assert.ok(Math.abs(anchored.left + anchored.width / 2 - 520) < 2);
+});
+
 test("measureSubjectPhotoVerticalOccupancy accepts tall portrait segmentation", async () => {
   const { measureSubjectPhotoVerticalOccupancy } = require("./motion-control-composite");
   const w = 400;

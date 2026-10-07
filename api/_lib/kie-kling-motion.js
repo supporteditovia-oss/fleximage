@@ -136,15 +136,17 @@ function normalizeMotionUserPromptForKling(userPrompt) {
 
 const MOTION_ENVIRONMENT_LOCK =
   "Single subject only — the person from the reference photo dancing with full realism. " +
-  "Crisp sharp photorealistic corridor background unchanged, authentic tiled floor friction, solid foot placement, " +
+  "The original video performer is completely deleted from reality: zero visible head, arms, legs, shoes or body silhouette from the source dancer in any frame. " +
+  "Replacement occupies the exact same screen position, scale, and depth in the room as the original dancer (if she was toward the back, stay toward the back — never jump in front of furniture or toward the camera). " +
+  "Crisp sharp photorealistic background unchanged, authentic tiled floor friction, solid foot placement on every step, " +
   "realistic shadows under shoes, perfect anatomy and facial likeness, cinema lighting. " +
   "The reference IMAGE is the starting frame (sharp room + new performer only). " +
-  "Reference VIDEO supplies motion and choreography only — original dancer must not appear.";
+  "Reference VIDEO supplies motion and choreography only.";
 
 const MOTION_NEGATIVE_LOCK =
   "NEGATIVE (must avoid): blur box, blurred background, blurry artifact, ghost limbs, duplicate person, second dancer, " +
-  "background woman silhouette, sliding feet floating in air, floating person, duplicate legs behind, " +
-  "mismatched floor perspective, blurry face, black background, dark void, inpainting seams, ghosting artifacts, " +
+  "background woman silhouette, original dancer body visible, sliding feet floating in air, floating person, duplicate legs behind, " +
+  "wrong depth, performer moved closer to camera, mismatched floor perspective, blurry face, black background, dark void, inpainting seams, ghosting artifacts, " +
   "deformed body, rectangular artifact, distorted background, face swap mismatch, pasted overlay, low quality.";
 
 function buildKlingMotionPrompt(userPrompt) {
