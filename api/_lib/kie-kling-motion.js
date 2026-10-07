@@ -134,14 +134,23 @@ function normalizeMotionUserPromptForKling(userPrompt) {
   return s;
 }
 
+const MOTION_ENVIRONMENT_LOCK =
+  "Sharp crisp background, maintain exact environment and lighting from reference video, " +
+  "seamless realistic body motion, no blur boxes, no ghosting, no bounding box artifacts, photorealistic footage. " +
+  "Keep original motion and choreography 100% from the reference video on the new body.";
+
+const MOTION_NEGATIVE_LOCK =
+  "NEGATIVE (must avoid): blur box, rectangular artifact, ghosting silhouette, distorted background, " +
+  "low resolution, blurry environment, face swap mismatch, pasted overlay, static photo backdrop animation.";
+
 function buildKlingMotionPrompt(userPrompt) {
   const locks =
-    "CRITICAL FULL-BODY MOTION CONTROL (must follow): " +
-    "Replace the ENTIRE performer in the video — full body, clothes, hair, skin, morphology from reference IMAGE. " +
-    "Video clip = skeleton / choreography / camera / room ONLY — never copy the original dancer outfit, ponytail, or body. " +
-    "FORBIDDEN: face-swap; head on original body; keeping source dancer t-shirt, dress, or hairstyle. " +
-    "FORBIDDEN: dancing on the static photo backdrop; I2V-style animation of the photo file alone. " +
-    "When input IMAGE is a composite of the person already standing in the video room, preserve that room and the full-body subject.";
+    "CRITICAL FULL-BODY MOTION TRANSFER (must follow): " +
+    "Replace the ENTIRE performer in the VIDEO with the person from the reference IMAGE — full body, clothes, hair, skin, morphology. " +
+    "VIDEO = motion skeleton, choreography, camera path, room, walls, furniture, lighting ONLY. " +
+    "IMAGE = identity and outfit only — never use the photo as the scene or background. " +
+    "FORBIDDEN: face-swap on original body; keeping source dancer clothes or hairstyle; mini overlay at bottom of frame. " +
+    `${MOTION_ENVIRONMENT_LOCK} ${MOTION_NEGATIVE_LOCK}`;
   const userLine = normalizeMotionUserPromptForKling(userPrompt);
   const combined = `${locks} User intent: ${userLine}`;
   return combined.slice(0, 2500);

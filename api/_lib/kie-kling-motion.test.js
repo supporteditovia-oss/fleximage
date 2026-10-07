@@ -10,6 +10,8 @@ test("buildKlingMotionPrompt verrouille corps entier et interdit face-swap", () 
   assert.match(p, /FULL BODY|ENTIRE performer/i);
   assert.match(p, /FORBIDDEN.*face-swap/i);
   assert.match(p, /choreography|skeleton/i);
+  assert.match(p, /Sharp crisp background/i);
+  assert.match(p, /blur box/i);
 });
 
 test("buildKlingMotionPrompt traduit le swap FR courant", () => {

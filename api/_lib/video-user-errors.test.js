@@ -63,9 +63,9 @@ test("resolveKlingCharacterOrientation — image quand photo uploadée (corps en
   assert.equal(resolveKlingCharacterOrientation("Urus", false), "video");
 });
 
-test("resolveKlingBackgroundSource — composite → input_image", () => {
+test("resolveKlingBackgroundSource — always input_video (décor natif clip)", () => {
   const { resolveKlingBackgroundSource } = require("./video-user-errors");
-  assert.equal(resolveKlingBackgroundSource({ motionCompositeApplied: true }), "input_image");
+  assert.equal(resolveKlingBackgroundSource({ motionCompositeApplied: true }), "input_video");
   assert.equal(resolveKlingBackgroundSource({}), "input_video");
 });
 

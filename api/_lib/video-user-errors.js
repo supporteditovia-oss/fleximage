@@ -62,8 +62,8 @@ function resolveKlingCharacterOrientation(_prompt, hasReferenceImage) {
   return "video";
 }
 
-function resolveKlingBackgroundSource(options = {}) {
-  if (options.motionCompositeApplied === true) return "input_image";
+/** Décor toujours depuis la vidéo source — jamais depuis un composite frame 0 inpainté. */
+function resolveKlingBackgroundSource(_options = {}) {
   return "input_video";
 }
 

@@ -11,9 +11,21 @@ const {
   SUBJECT_OCCUPANCY_MAX,
 } = require("./motion-control-composite");
 
-test("shouldApplyMotionComposite only for uploaded user photo", () => {
+test("shouldApplyMotionComposite disabled (inpaint frame0 interdit)", () => {
   assert.equal(
     shouldApplyMotionComposite({
+      imageUrl: "https://cdn/a.jpg",
+      videoUrl: "https://cdn/b.mp4",
+      motionReferenceSource: "uploaded",
+    }),
+    false,
+  );
+});
+
+test("shouldApplyMotionSubjectScale for uploaded photo only", () => {
+  const { shouldApplyMotionSubjectScale } = require("./motion-control-composite");
+  assert.equal(
+    shouldApplyMotionSubjectScale({
       imageUrl: "https://cdn/a.jpg",
       videoUrl: "https://cdn/b.mp4",
       motionReferenceSource: "uploaded",
@@ -21,20 +33,12 @@ test("shouldApplyMotionComposite only for uploaded user photo", () => {
     true,
   );
   assert.equal(
-    shouldApplyMotionComposite({
+    shouldApplyMotionSubjectScale({
       imageUrl: "https://cdn/a.jpg",
       videoUrl: "https://cdn/b.mp4",
       motionReferenceSource: "auto_frame",
     }),
     false,
-  );
-  assert.equal(
-    shouldApplyMotionComposite({
-      imageUrl: "https://cdn/a.jpg",
-      videoUrl: "https://cdn/b.mp4",
-    }),
-    false,
-    "sans motionReferenceSource uploaded, pas de composite (évite fallback Kling mini overlay)",
   );
 });
 

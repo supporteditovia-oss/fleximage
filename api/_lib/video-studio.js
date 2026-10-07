@@ -668,7 +668,8 @@ function buildKlingMotionStudioPrompt(userPrompt, { preserveSourceAudio = false 
       ? prompt
       : "Replace the dancer with the person from the reference photo.";
   const lock =
-    " Keep the original video background, camera, lighting and timing unchanged. " +
+    " Sharp crisp background from the reference video — no blur boxes or ghost rectangles. " +
+    "Keep the original video background, camera, lighting and timing unchanged. " +
     "Copy dance moves and body motion exactly from the source video (motion capture only). " +
     "The reference photo supplies the FULL BODY: face, hair, skin, outfit, and body shape — not a face-swap on the original dancer.";
   let result = `${userPart}.${lock}`;
