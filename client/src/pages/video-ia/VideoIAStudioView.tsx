@@ -305,6 +305,29 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               />
             </div>
 
+            {props.v2vIntent === "motion" ? (
+              <div className="via-motion-scope-notice" role="note">
+                <p className="via-motion-scope-notice__lead">
+                  <strong>Avant d’importer</strong> — pour limiter les artefacts
+                  (fantômes, pieds flottants) :
+                </p>
+                <ul className="via-motion-tips">
+                  <li>
+                    <strong>Photo</strong> : une personne, de préférence{" "}
+                    <strong>en pied</strong>, proportions proches de la vidéo.
+                  </li>
+                  <li>
+                    <strong>Vidéo</strong> : 3–8 s, <strong>plan fixe</strong>,
+                    une danseuse visible, peu de déplacement dans la pièce.
+                  </li>
+                  <li>
+                    Pas de réexport <strong>WhatsApp / Instagram</strong> — MP4
+                    720p filmé ou exporté d’une traite.
+                  </li>
+                </ul>
+              </div>
+            ) : null}
+
             <AspectFormatToggle
               aspectRatio={props.aspectRatio}
               onAspectRatio={props.onAspectRatio}
@@ -458,11 +481,9 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
             ) : null}
 
             {props.v2vIntent === "motion" ? (
-              <p className="via-motion-scope-notice" role="note">
-                <strong>1 photo = 1 personnage remplacé dans la vidéo.</strong>{" "}
-                La scène, la caméra et les mouvements restent ceux de ta vidéo
-                source. Avec plusieurs personnes dans le clip, une seule est
-                remplacée (souvent la plus visible).
+              <p className="via-motion-scope-notice via-motion-scope-notice--compact" role="note">
+                <strong>1 photo = 1 personnage remplacé.</strong> Scène, caméra et
+                gestes = ta vidéo source.
               </p>
             ) : null}
 
