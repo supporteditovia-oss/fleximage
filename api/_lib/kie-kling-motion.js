@@ -135,13 +135,13 @@ function normalizeMotionUserPromptForKling(userPrompt) {
 }
 
 const MOTION_ENVIRONMENT_LOCK =
-  "Sharp crisp background, maintain exact environment and lighting from reference video, " +
-  "seamless realistic body motion, no blur boxes, no ghosting, no bounding box artifacts, photorealistic footage. " +
-  "Keep original motion and choreography 100% from the reference video on the new body.";
+  "Full body realistic dance motion, sharp clean background, seamless lighting integration, photorealistic footage. " +
+  "The reference IMAGE is the starting scene (real room from video frame 0 + new performer). " +
+  "Reference VIDEO supplies motion and choreography only.";
 
 const MOTION_NEGATIVE_LOCK =
-  "NEGATIVE (must avoid): blur box, rectangular artifact, ghosting silhouette, distorted background, " +
-  "low resolution, blurry environment, face swap mismatch, pasted overlay, static photo backdrop animation.";
+  "NEGATIVE (must avoid): black background, dark void, blur box, inpainting seams, ghosting artifacts, " +
+  "deformed body, rectangular artifact, distorted background, face swap mismatch, pasted overlay.";
 
 function buildKlingMotionPrompt(userPrompt) {
   const locks =

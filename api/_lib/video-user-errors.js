@@ -62,8 +62,12 @@ function resolveKlingCharacterOrientation(_prompt, hasReferenceImage) {
   return "video";
 }
 
-/** Décor toujours depuis la vidéo source — jamais depuis un composite frame 0 inpainté. */
-function resolveKlingBackgroundSource(_options = {}) {
+/**
+ * Kling 3.0 Motion : `input_image` quand l'image composite = frame vidéo nette + personnage.
+ * `input_video` seulement sans composite (frame auto).
+ */
+function resolveKlingBackgroundSource(options = {}) {
+  if (options.motionCleanCompositeApplied === true) return "input_image";
   return "input_video";
 }
 

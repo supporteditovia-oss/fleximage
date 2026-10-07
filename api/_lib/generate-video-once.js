@@ -351,30 +351,41 @@ async function generateKlingMotionOnce(supabase, params) {
   const kieVideoUrl = await ensureKieAccessibleMediaUrl(params.videoUrl, "video");
 
   const {
-    shouldApplyMotionSubjectScale,
-    prepareMotionSubjectReferenceImage,
+    shouldApplyMotionCleanComposite,
+    prepareMotionCleanCompositeImage,
   } = require("./motion-control-composite");
 
   let motionImageUrl = params.imageUrl;
-  let motionSubjectScaleApplied = false;
-  let motionSubjectScaleFallback = null;
+  let motionCleanCompositeApplied = false;
+  let motionCompositeFallback = null;
   const uploadedSubject = params.motionReferenceSource === "uploaded";
-  if (shouldApplyMotionSubjectScale(params)) {
+  if (shouldApplyMotionCleanComposite(params)) {
     try {
-      motionImageUrl = await prepareMotionSubjectReferenceImage({
+      motionImageUrl = await prepareMotionCleanCompositeImage({
         userId: params.userId,
         subjectImageUrl: params.imageUrl,
         videoUrl: params.videoUrl,
       });
-      motionSubjectScaleApplied = true;
-    } catch (scaleErr) {
-      motionSubjectScaleFallback = String(scaleErr?.message || scaleErr).slice(
+      motionCleanCompositeApplied = true;
+    } catch (compositeErr) {
+      motionCompositeFallback = String(compositeErr?.message || compositeErr).slice(
         0,
         200,
       );
-      console.warn("[generate-kling-once] motion subject scale failed — raw photo", {
+      if (uploadedSubject) {
+        const { mapMotionCompositeUserMessage } = require("./video-user-errors");
+        throw Object.assign(
+          new Error(mapMotionCompositeUserMessage(compositeErr, "fr")),
+          {
+            status: 422,
+            code: "MOTION_COMPOSITE_REQUIRED",
+            cause: compositeErr,
+          },
+        );
+      }
+      console.warn("[generate-kling-once] motion clean composite failed — raw image", {
         generationId: params.generationId,
-        message: motionSubjectScaleFallback,
+        message: motionCompositeFallback,
       });
       motionImageUrl = params.imageUrl;
     }
@@ -395,15 +406,17 @@ async function generateKlingMotionOnce(supabase, params) {
     params.prompt,
     Boolean(params.imageUrl && uploadedSubject),
   );
-  const backgroundSource = resolveKlingBackgroundSource();
+  const backgroundSource = resolveKlingBackgroundSource({
+    motionCleanCompositeApplied,
+  });
 
   const kieImageUrl = await ensureKieAccessibleMediaUrl(motionImageUrl, "image");
   console.info("[generate-kling-once] motion control payload", {
     generationId: params.generationId,
     characterOrientation,
     backgroundSource,
-    motionSubjectScaleApplied,
-    motionPipeline: "native_transfer_v2",
+    motionCleanCompositeApplied,
+    motionPipeline: "kling30_clean_composite",
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
@@ -431,16 +444,16 @@ async function generateKlingMotionOnce(supabase, params) {
     video_provider_duration_ms: durationMs,
     video_auto_retries: 0,
     v2v_provider: "kling_motion",
-    motion_composite_applied: false,
-    motion_subject_scale_applied: motionSubjectScaleApplied,
-    motion_pipeline: "native_transfer_v2",
+    motion_composite_applied: motionCleanCompositeApplied,
+    motion_clean_composite: motionCleanCompositeApplied,
+    motion_pipeline: "kling30_clean_composite",
     kling_character_orientation: characterOrientation,
     kling_background_source: backgroundSource,
-    ...(motionSubjectScaleFallback
-      ? { motion_subject_scale_fallback: motionSubjectScaleFallback }
+    ...(motionCompositeFallback
+      ? { motion_composite_fallback: motionCompositeFallback }
       : {}),
-    ...(motionSubjectScaleApplied && motionImageUrl
-      ? { motion_subject_ref_image_url: motionImageUrl }
+    ...(motionCleanCompositeApplied && motionImageUrl
+      ? { motion_composite_image_url: motionImageUrl }
       : {}),
   };
 

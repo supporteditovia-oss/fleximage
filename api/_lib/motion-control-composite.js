@@ -379,11 +379,19 @@ async function resizeSubjectIntoBox(subjectCutoutPng, box) {
   return { buffer: resized, left, top, targetW, targetH };
 }
 
-/** @deprecated Inpaint frame 0 désactivé — provoque des rectangles flous dans toute la clip. */
-function shouldApplyMotionComposite(_params = {}) {
-  if (process.env.MOTION_COMPOSITE_LEGACY === "1") {
-    const params = _params;
-    if (params.skipMotionComposite === true) return false;
+/** Composite frame 0 propre requis pour photo uploadée (Kling 3.0 — image = scène de départ). */
+function shouldApplyMotionCleanComposite(params = {}) {
+  if (params.skipMotionComposite === true) return false;
+  if (process.env.MOTION_CLEAN_COMPOSITE_DISABLED === "1") return false;
+  if (!params.imageUrl || !params.videoUrl) return false;
+  if (params.motionReferenceSource === "auto_frame") return false;
+  return params.motionReferenceSource === "uploaded";
+}
+
+/** @deprecated — transparent PNG → fond noir chez Kling */
+function shouldApplyMotionSubjectScale(params = {}) {
+  if (process.env.MOTION_SUBJECT_SCALE_LEGACY === "1") {
+    if (process.env.MOTION_SUBJECT_SCALE_DISABLED === "1") return false;
     if (!params.imageUrl || !params.videoUrl) return false;
     if (params.motionReferenceSource === "auto_frame") return false;
     return params.motionReferenceSource === "uploaded";
@@ -391,17 +399,122 @@ function shouldApplyMotionComposite(_params = {}) {
   return false;
 }
 
-/** Mise à l'échelle du sujet sur canvas transparent (sans pixels vidéo / sans inpaint). */
-function shouldApplyMotionSubjectScale(params = {}) {
-  if (process.env.MOTION_SUBJECT_SCALE_DISABLED === "1") return false;
-  if (!params.imageUrl || !params.videoUrl) return false;
-  if (params.motionReferenceSource === "auto_frame") return false;
-  return params.motionReferenceSource === "uploaded";
+/** Légère adoucissement du canal alpha (bords sujet), sans toucher au décor. */
+async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 1.1) {
+  const meta = await sharp(pngBuffer).metadata();
+  const w = meta.width || 512;
+  const h = meta.height || 512;
+  const alpha = await sharp(pngBuffer)
+    .ensureAlpha()
+    .extractChannel("alpha")
+    .blur(blurSigma)
+    .toBuffer();
+  const rgb = await sharp(pngBuffer).removeAlpha().raw().toBuffer();
+  return sharp(rgb, { raw: { width: w, height: h, channels: 3 } })
+    .joinChannel(alpha)
+    .png()
+    .toBuffer();
 }
 
 /**
- * Photo personnage redimensionnée selon la bbox danseur — fond transparent uniquement.
- * Le décor reste 100 % côté API (background_source: input_video).
+ * Kling Motion 3.0 : frame_0 vidéo nette + sujet détouré à l'échelle du danseur → JPEG opaque.
+ * Aucun inpaint flou / aucun fond transparent.
+ */
+async function prepareMotionCleanCompositeImage({
+  userId,
+  subjectImageUrl,
+  videoUrl,
+}) {
+  const uid = String(userId || "anon").trim() || "anon";
+  const subjectUrl = String(subjectImageUrl || "").trim();
+  const motionVideoUrl = String(videoUrl || "").trim();
+  if (!subjectUrl.startsWith("http") || !motionVideoUrl.startsWith("http")) {
+    throw Object.assign(new Error("URLs composite motion invalides"), {
+      status: 422,
+    });
+  }
+
+  const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
+  const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_bbox");
+  const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
+
+  const frameMeta = await sharp(frameJpeg).metadata();
+  const canvasW = frameMeta.width || 720;
+  const canvasH = frameMeta.height || 1280;
+
+  let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+  if (frameCutout) {
+    const boxFromFrame = await alphaBoundingBoxFromPng(
+      await sharp(frameCutout)
+        .resize(canvasW, canvasH, { fit: "fill" })
+        .png()
+        .toBuffer(),
+    );
+    if (boxFromFrame) {
+      subjectBox = alignSubjectBoxToOriginalDancer(
+        expandBoxForFullBodyReplacement(boxFromFrame, canvasW, canvasH),
+        canvasW,
+        canvasH,
+      );
+    }
+  }
+
+  let subjectPng;
+  if (subjectCutout) {
+    subjectPng = await featherSubjectCutoutAlpha(subjectCutout);
+  } else {
+    const subjectRes = await fetch(subjectUrl);
+    if (!subjectRes.ok) {
+      throw Object.assign(new Error("Impossible de lire la photo personnage"), {
+        status: 422,
+      });
+    }
+    subjectPng = await featherSubjectCutoutAlpha(
+      await sharp(Buffer.from(await subjectRes.arrayBuffer())).png().toBuffer(),
+    );
+  }
+
+  const placed = await resizeSubjectIntoBox(subjectPng, subjectBox);
+  const compositeJpeg = await sharp(frameJpeg)
+    .composite([
+      {
+        input: placed.buffer,
+        left: Math.max(0, placed.left),
+        top: Math.max(0, placed.top),
+      },
+    ])
+    .jpeg({ quality: 94, mozjpeg: true })
+    .toBuffer();
+
+  const subjectOccupancyRatio = placed.targetH / canvasH;
+  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
+    throw Object.assign(
+      new Error(
+        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
+      ),
+      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
+    );
+  }
+
+  const key = `inputs/${uid}/${Date.now()}-motion-composite-clean.jpg`;
+  const publicUrl = await uploadToR2(key, compositeJpeg, "image/jpeg");
+
+  console.info("[motion-clean-composite] prepared", {
+    userId: uid,
+    canvasW,
+    canvasH,
+    box: subjectBox,
+    subjectOccupancyRatio: Number(subjectOccupancyRatio.toFixed(3)),
+    bytes: compositeJpeg.length,
+    briaFrame: Boolean(frameCutout),
+    briaSubject: Boolean(subjectCutout),
+  });
+
+  return publicUrl;
+}
+
+/**
+ * @deprecated Photo sur fond transparent — provoque fond noir Kling 3.0
  */
 async function prepareMotionSubjectReferenceImage({
   userId,
@@ -668,10 +781,13 @@ async function prepareMotionControlCompositeImage({
 }
 
 module.exports = {
-  shouldApplyMotionComposite,
+  shouldApplyMotionCleanComposite,
+  prepareMotionCleanCompositeImage,
+  shouldApplyMotionComposite: shouldApplyMotionCleanComposite,
   shouldApplyMotionSubjectScale,
   prepareMotionSubjectReferenceImage,
   prepareMotionControlCompositeImage,
+  featherSubjectCutoutAlpha,
   alphaBoundingBoxFromPng,
   computeDefaultSubjectBox,
   expandBoxForFullBodyReplacement,

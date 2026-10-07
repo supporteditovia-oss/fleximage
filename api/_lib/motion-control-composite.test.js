@@ -11,21 +11,10 @@ const {
   SUBJECT_OCCUPANCY_MAX,
 } = require("./motion-control-composite");
 
-test("shouldApplyMotionComposite disabled (inpaint frame0 interdit)", () => {
+test("shouldApplyMotionCleanComposite for uploaded photo only", () => {
+  const { shouldApplyMotionCleanComposite } = require("./motion-control-composite");
   assert.equal(
-    shouldApplyMotionComposite({
-      imageUrl: "https://cdn/a.jpg",
-      videoUrl: "https://cdn/b.mp4",
-      motionReferenceSource: "uploaded",
-    }),
-    false,
-  );
-});
-
-test("shouldApplyMotionSubjectScale for uploaded photo only", () => {
-  const { shouldApplyMotionSubjectScale } = require("./motion-control-composite");
-  assert.equal(
-    shouldApplyMotionSubjectScale({
+    shouldApplyMotionCleanComposite({
       imageUrl: "https://cdn/a.jpg",
       videoUrl: "https://cdn/b.mp4",
       motionReferenceSource: "uploaded",
@@ -33,7 +22,7 @@ test("shouldApplyMotionSubjectScale for uploaded photo only", () => {
     true,
   );
   assert.equal(
-    shouldApplyMotionSubjectScale({
+    shouldApplyMotionCleanComposite({
       imageUrl: "https://cdn/a.jpg",
       videoUrl: "https://cdn/b.mp4",
       motionReferenceSource: "auto_frame",
