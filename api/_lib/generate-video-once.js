@@ -411,6 +411,7 @@ async function generateKlingMotionOnce(supabase, params) {
   const characterOrientation = resolveKlingCharacterOrientation(
     params.prompt,
     Boolean(params.imageUrl && uploadedSubject),
+    params.characterOrientationOverride,
   );
   const backgroundSource = resolveKlingBackgroundSource({
     motionCleanCompositeApplied,
