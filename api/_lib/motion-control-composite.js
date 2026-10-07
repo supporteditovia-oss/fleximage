@@ -172,6 +172,21 @@ function alphaBoundingBoxFromPng(pngBuffer) {
 /**
  * Bbox danseuse ancrée au sol (talons = yBottom) pour caler le remplaçant.
  */
+/** Marge pour que le remplaçant recouvre 100 % de la silhouette (zéro jambe fantôme). */
+function expandBoxForOcclusionCover(box, canvasW, canvasH) {
+  const padX = Math.max(8, Math.round(box.width * 0.11));
+  const padTop = Math.max(6, Math.round(box.height * 0.05));
+  const padBottom = Math.max(10, Math.round(box.height * 0.04));
+  const left = Math.max(0, box.left - padX);
+  const top = Math.max(0, box.top - padTop);
+  const width = Math.min(canvasW - left, box.width + padX * 2);
+  const height = Math.min(
+    canvasH - top,
+    box.height + padTop + padBottom,
+  );
+  return { left, top, width, height };
+}
+
 async function detectDancerPlacementBox(frameCutoutPng, canvasW, canvasH) {
   const png = await sharp(frameCutoutPng)
     .resize(canvasW, canvasH, { fit: "fill" })
@@ -179,20 +194,23 @@ async function detectDancerPlacementBox(frameCutoutPng, canvasW, canvasH) {
     .png()
     .toBuffer();
   const box = await alphaBoundingBoxFromPng(png);
+  let placement;
   const occ = box.height / canvasH;
   if (occ >= 0.52 && occ <= 0.9) {
-    return {
+    placement = {
       left: box.left,
       top: box.top,
       width: box.width,
       height: box.height,
     };
+  } else {
+    placement = alignSubjectBoxToOriginalDancer(
+      expandBoxForFullBodyReplacement(box, canvasW, canvasH),
+      canvasW,
+      canvasH,
+    );
   }
-  return alignSubjectBoxToOriginalDancer(
-    expandBoxForFullBodyReplacement(box, canvasW, canvasH),
-    canvasW,
-    canvasH,
-  );
+  return expandBoxForOcclusionCover(placement, canvasW, canvasH);
 }
 
 /** Masque serré sur la silhouette (pas de rectangle géant). */
@@ -566,8 +584,8 @@ function shouldApplyMotionSubjectScale(params = {}) {
   return false;
 }
 
-/** Légère adoucissement du canal alpha (bords sujet), sans toucher au décor. */
-async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 1.1) {
+/** Bords alpha minimaux — pas de halo visible sur carrelage net. */
+async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 0.45) {
   const meta = await sharp(pngBuffer).metadata();
   const w = meta.width || 512;
   const h = meta.height || 512;
@@ -583,12 +601,16 @@ async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 1.1) {
     .toBuffer();
 }
 
+/** Échelle de recouvrement — le sujet doit masquer toute l'ancienne silhouette. */
+const SUBJECT_OCCLUSION_COVER_SCALE = 1.14;
+
 async function finalizeMotionCompositeJpeg(
   scenePlate,
   subjectPng,
   subjectBox,
   canvasW,
   canvasH,
+  coverScale = SUBJECT_OCCLUSION_COVER_SCALE,
 ) {
   const plateRgb = await sharp(scenePlate)
     .resize(canvasW, canvasH, { fit: "fill" })
@@ -599,7 +621,7 @@ async function finalizeMotionCompositeJpeg(
     subjectPng,
     subjectBox,
     canvasW,
-    1.05,
+    coverScale,
   );
   return {
     jpeg: await sharp(plateRgb)
@@ -699,29 +721,22 @@ async function prepareMotionCleanCompositeImage({
     const canvasH = frameMeta.height || 1280;
 
     let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
-    let scenePlate = frameJpeg;
-    let inpaintApplied = false;
+    const scenePlate = frameJpeg;
     if (frameCutout) {
       try {
         subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
-        scenePlate = await buildScenePlateTightDancerInpaint(
-          frameJpeg,
-          frameCutout,
+      } catch (boxErr) {
+        console.warn("[motion-clean-composite] dancer box fallback", {
+          message: String(boxErr?.message || boxErr).slice(0, 160),
+        });
+        subjectBox = expandBoxForOcclusionCover(
+          computeDefaultSubjectBox(canvasW, canvasH),
           canvasW,
           canvasH,
         );
-        inpaintApplied = true;
-      } catch (inpaintErr) {
-        console.warn("[motion-clean-composite] inpaint skipped — direct overlay", {
-          message: String(inpaintErr?.message || inpaintErr).slice(0, 200),
-        });
-        try {
-          subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
-        } catch {
-          subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
-        }
-        scenePlate = frameJpeg;
       }
+    } else {
+      subjectBox = expandBoxForOcclusionCover(subjectBox, canvasW, canvasH);
     }
 
     const { subjectPng, subjectRawBuf } = await loadSubjectPngForComposite(
@@ -794,7 +809,9 @@ async function prepareMotionCleanCompositeImage({
       bytes: compositeJpeg.length,
       briaFrame: Boolean(frameCutout),
       briaSubject: Boolean(subjectCutout),
-      inpaintApplied,
+      inpaintApplied: false,
+      coverScale: SUBJECT_OCCLUSION_COVER_SCALE,
+      pipeline: "sharp_overlay_zero_blur",
     });
 
     return publicUrl;
@@ -1096,7 +1113,9 @@ module.exports = {
   SUBJECT_OCCUPANCY_OUTPUT_MIN,
   measureSubjectPhotoVerticalOccupancy,
   detectDancerPlacementBox,
+  expandBoxForOcclusionCover,
   resizeSubjectFeetLockedToBox,
+  SUBJECT_OCCLUSION_COVER_SCALE,
   buildScenePlateTightDancerInpaint,
   buildScenePlateErasingSubjectBox,
 };

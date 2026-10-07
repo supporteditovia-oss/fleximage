@@ -417,7 +417,7 @@ async function generateKlingMotionOnce(supabase, params) {
     characterOrientation,
     backgroundSource,
     motionCleanCompositeApplied,
-    motionPipeline: "kling30_clean_composite_v2",
+    motionPipeline: "kling30_sharp_overlay_v3",
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
