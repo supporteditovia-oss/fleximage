@@ -365,6 +365,7 @@ async function generateKlingMotionOnce(supabase, params) {
         userId: params.userId,
         subjectImageUrl: params.imageUrl,
         videoUrl: params.videoUrl,
+        requireFullReplacement: uploadedSubject,
       });
       motionCompositeApplied = true;
     } catch (compositeErr) {

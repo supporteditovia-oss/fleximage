@@ -56,6 +56,8 @@ export interface VideoStudioGenerateInput {
   /** Vidéo → Vidéo : 720p | 1080p | 4k */
   v2v_resolution?: string;
   v2v_intent?: "motion" | "scene";
+  /** Mouvement : photo utilisateur vs frame auto extraite de la vidéo */
+  motion_reference_source?: "uploaded" | "auto_frame";
 }
 
 export interface VideoStudioGenerateResponse {

@@ -244,7 +244,13 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
             { preserveSourceAudio },
           );
           let imageUrl = referenceImageUrl;
-          const motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
+          const motionReferenceSource =
+            meta.motion_reference_source === "uploaded" ||
+            meta.motion_reference_source === "auto_frame"
+              ? meta.motion_reference_source
+              : referenceImageUrl
+                ? "uploaded"
+                : "auto_frame";
           if (!imageUrl) {
             imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
           }

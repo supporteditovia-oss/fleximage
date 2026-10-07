@@ -701,6 +701,13 @@ export default function VideoIA() {
         ...(referenceImages?.length
           ? { reference_images: referenceImages }
           : {}),
+        ...(v2vIntent === "motion" && referenceImages?.length
+          ? {
+              motion_reference_source: refImageIsCustom
+                ? ("uploaded" as const)
+                : ("auto_frame" as const),
+            }
+          : {}),
         source: "video_studio",
       });
       setTaskId(result.taskId);

@@ -543,7 +543,14 @@ module.exports = async function handler(req, res) {
         }
         sourceAssetUrl = sourceBundle.url;
         referenceImageUrl = sourceBundle.ref;
-        motionReferenceSource = referenceImageUrl ? "uploaded" : "auto_frame";
+        const clientMotionRef =
+          body.motion_reference_source === "uploaded" ||
+          body.motion_reference_source === "auto_frame"
+            ? body.motion_reference_source
+            : null;
+        motionReferenceSource =
+          clientMotionRef ??
+          (referenceImageUrl ? "uploaded" : "auto_frame");
         v2vProvider = resolveV2VProviderFromIntent(
           v2vIntent,
           studioVehicleDescription,

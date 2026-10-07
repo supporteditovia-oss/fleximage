@@ -28,6 +28,14 @@ test("shouldApplyMotionComposite only for uploaded user photo", () => {
     }),
     false,
   );
+  assert.equal(
+    shouldApplyMotionComposite({
+      imageUrl: "https://cdn/a.jpg",
+      videoUrl: "https://cdn/b.mp4",
+    }),
+    false,
+    "sans motionReferenceSource uploaded, pas de composite (évite fallback Kling mini overlay)",
+  );
 });
 
 test("alphaBoundingBoxFromPng finds opaque region", async () => {

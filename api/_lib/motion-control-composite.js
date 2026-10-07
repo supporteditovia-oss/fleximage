@@ -20,6 +20,8 @@ const execFileAsync = promisify(execFile);
 
 const SUBJECT_OCCUPANCY_MIN = 0.7;
 const SUBJECT_OCCUPANCY_MAX = 0.85;
+/** Rejet composite si le sujet uploadé occupe moins que ça (évite le « mini personnage en bas »). */
+const SUBJECT_OCCUPANCY_OUTPUT_MIN = 0.65;
 
 async function downloadToFile(url, destPath, timeoutMs = 90_000) {
   const controller = new AbortController();
@@ -187,6 +189,52 @@ async function buildInpaintMaskRaw(frameCutoutPng, canvasW, canvasH, subjectBox)
 /**
  * Efface le sujet original (masque RMBG dilaté) en floutant la zone sous le personnage.
  */
+/** Efface la zone danseur même sans détourage Bria (fallback strict). */
+async function buildScenePlateErasingSubjectBox(frameJpeg, subjectBox) {
+  const frameMeta = await sharp(frameJpeg).metadata();
+  const w = frameMeta.width || 720;
+  const h = frameMeta.height || 1280;
+  const box = subjectBox || computeDefaultSubjectBox(w, h);
+  const padX = Math.round(box.width * 0.14);
+  const padY = Math.round(box.height * 0.06);
+  const x0 = Math.max(0, box.left - padX);
+  const y0 = Math.max(0, box.top - padY);
+  const x1 = Math.min(w - 1, box.left + box.width + padX);
+  const y1 = Math.min(h - 1, box.top + box.height + padY);
+  const maskRaw = Buffer.alloc(w * h);
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const rx = (x1 - x0) / 2;
+  const ry = (y1 - y0) / 2;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = (x - cx) / Math.max(1, rx);
+      const ny = (y - cy) / Math.max(1, ry);
+      if (nx * nx + ny * ny <= 1.05) {
+        maskRaw[y * w + x] = 255;
+      }
+    }
+  }
+  const blurredRgb = await sharp(frameJpeg).blur(52).removeAlpha().raw().toBuffer();
+  const channels = 3;
+  const out = Buffer.from(await sharp(frameJpeg).removeAlpha().raw().toBuffer());
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const pi = y * w + x;
+      const alpha = maskRaw[pi] / 255;
+      if (alpha <= 0.02) continue;
+      const oi = pi * channels;
+      const bi = pi * channels;
+      out[oi] = Math.round(out[oi] * (1 - alpha) + blurredRgb[bi] * alpha);
+      out[oi + 1] = Math.round(out[oi + 1] * (1 - alpha) + blurredRgb[bi + 1] * alpha);
+      out[oi + 2] = Math.round(out[oi + 2] * (1 - alpha) + blurredRgb[bi + 2] * alpha);
+    }
+  }
+  return sharp(out, { raw: { width: w, height: h, channels: 3 } })
+    .jpeg({ quality: 93 })
+    .toBuffer();
+}
+
 async function buildScenePlateWithoutOriginalSubject(
   frameJpeg,
   frameCutoutPng,
@@ -310,7 +358,7 @@ function shouldApplyMotionComposite(params = {}) {
   if (process.env.MOTION_COMPOSITE_DISABLED === "1") return false;
   if (!params.imageUrl || !params.videoUrl) return false;
   if (params.motionReferenceSource === "auto_frame") return false;
-  return true;
+  return params.motionReferenceSource === "uploaded";
 }
 
 /**
@@ -320,6 +368,7 @@ async function prepareMotionControlCompositeImage({
   userId,
   subjectImageUrl,
   videoUrl,
+  requireFullReplacement = false,
 }) {
   const uid = String(userId || "anon").trim() || "anon";
   const subjectUrl = String(subjectImageUrl || "").trim();
@@ -331,7 +380,11 @@ async function prepareMotionControlCompositeImage({
   }
 
   const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
-  const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_frame");
+  const { removeBackgroundBria } = require("./background-remove-bria");
+  let frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_frame");
+  if (requireFullReplacement && !frameCutout) {
+    frameCutout = await removeBackgroundBria(frameJpeg);
+  }
   const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
 
   const frameMeta = await sharp(frameJpeg).metadata();
@@ -363,13 +416,18 @@ async function prepareMotionControlCompositeImage({
     }
   }
 
-  const plate = frameCutout
-    ? await buildScenePlateWithoutOriginalSubject(
-        frameJpeg,
-        frameCutout,
-        subjectBox,
-      )
-    : frameJpeg;
+  let plate;
+  if (frameCutout) {
+    plate = await buildScenePlateWithoutOriginalSubject(
+      frameJpeg,
+      frameCutout,
+      subjectBox,
+    );
+  } else if (requireFullReplacement) {
+    plate = await buildScenePlateErasingSubjectBox(frameJpeg, subjectBox);
+  } else {
+    plate = frameJpeg;
+  }
 
   let placed = null;
   let compositePng;
@@ -412,6 +470,18 @@ async function prepareMotionControlCompositeImage({
   const subjectOccupancyRatio = placed
     ? placed.targetH / canvasH
     : detectedOccupancy;
+
+  if (
+    requireFullReplacement &&
+    subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN
+  ) {
+    throw Object.assign(
+      new Error(
+        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
+      ),
+      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
+    );
+  }
 
   const key = `inputs/${uid}/${Date.now()}-motion-composite.png`;
   const publicUrl = await uploadToR2(key, compositePng, "image/png");
@@ -461,4 +531,6 @@ module.exports = {
   extractVideoFrameZeroBuffer,
   SUBJECT_OCCUPANCY_MIN,
   SUBJECT_OCCUPANCY_MAX,
+  SUBJECT_OCCUPANCY_OUTPUT_MIN,
+  buildScenePlateErasingSubjectBox,
 };

@@ -44,7 +44,13 @@ async function relaunchKlingV2VFromLarp(
     { preserveSourceAudio },
   );
   let imageUrl = getReferenceImageUrlFromLarp(larp);
-  const motionReferenceSource = imageUrl ? "uploaded" : "auto_frame";
+  const motionReferenceSource =
+    pollMeta.motion_reference_source === "uploaded" ||
+    pollMeta.motion_reference_source === "auto_frame"
+      ? pollMeta.motion_reference_source
+      : imageUrl
+        ? "uploaded"
+        : "auto_frame";
   if (!imageUrl) {
     imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
   }
