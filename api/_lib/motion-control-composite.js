@@ -163,8 +163,109 @@ function alphaBoundingBoxFromPng(pngBuffer) {
         top: minY,
         width: maxX - minX + 1,
         height: maxY - minY + 1,
+        yBottom: maxY,
+        xCenter: (minX + maxX) / 2,
       };
     });
+}
+
+/**
+ * Bbox danseuse ancrée au sol (talons = yBottom) pour caler le remplaçant.
+ */
+async function detectDancerPlacementBox(frameCutoutPng, canvasW, canvasH) {
+  const png = await sharp(frameCutoutPng)
+    .resize(canvasW, canvasH, { fit: "fill" })
+    .ensureAlpha()
+    .png()
+    .toBuffer();
+  const box = await alphaBoundingBoxFromPng(png);
+  const occ = box.height / canvasH;
+  if (occ >= 0.52 && occ <= 0.9) {
+    return {
+      left: box.left,
+      top: box.top,
+      width: box.width,
+      height: box.height,
+    };
+  }
+  return alignSubjectBoxToOriginalDancer(
+    expandBoxForFullBodyReplacement(box, canvasW, canvasH),
+    canvasW,
+    canvasH,
+  );
+}
+
+/** Masque serré sur la silhouette (pas de rectangle géant). */
+async function buildTightDancerInpaintMaskRaw(
+  frameCutoutPng,
+  canvasW,
+  canvasH,
+  dilatePx = 16,
+) {
+  const dilatedAlpha = await sharp(frameCutoutPng)
+    .resize(canvasW, canvasH, { fit: "fill" })
+    .ensureAlpha()
+    .extractChannel("alpha")
+    .blur(6)
+    .linear(1.15, -10)
+    .raw()
+    .toBuffer();
+
+  const mask = Buffer.alloc(canvasW * canvasH);
+  for (let i = 0; i < mask.length; i++) {
+    mask[i] = dilatedAlpha[i] > 38 ? 255 : 0;
+  }
+  if (dilatePx > 0) {
+    const base = Buffer.from(mask);
+    for (let y = 0; y < canvasH; y++) {
+      for (let x = 0; x < canvasW; x++) {
+        if (base[y * canvasW + x] === 0) continue;
+        for (let dy = -dilatePx; dy <= dilatePx; dy++) {
+          for (let dx = -dilatePx; dx <= dilatePx; dx++) {
+            const ny = y + dy;
+            const nx = x + dx;
+            if (ny >= 0 && ny < canvasH && nx >= 0 && nx < canvasW) {
+              mask[ny * canvasW + nx] = 255;
+            }
+          }
+        }
+      }
+    }
+  }
+  return mask;
+}
+
+/** Efface la danseuse originale localement (flou léger, masque silhouette uniquement). */
+async function buildScenePlateTightDancerInpaint(
+  frameJpeg,
+  frameCutoutPng,
+  canvasW,
+  canvasH,
+) {
+  const maskRaw = await buildTightDancerInpaintMaskRaw(
+    frameCutoutPng,
+    canvasW,
+    canvasH,
+    18,
+  );
+  const blurredRgb = await sharp(frameJpeg).blur(14).removeAlpha().raw().toBuffer();
+  const channels = 3;
+  const out = Buffer.from(await sharp(frameJpeg).removeAlpha().raw().toBuffer());
+  for (let y = 0; y < canvasH; y++) {
+    for (let x = 0; x < canvasW; x++) {
+      const pi = y * canvasW + x;
+      const alpha = maskRaw[pi] / 255;
+      if (alpha <= 0.03) continue;
+      const oi = pi * channels;
+      const bi = pi * channels;
+      out[oi] = Math.round(out[oi] * (1 - alpha) + blurredRgb[bi] * alpha);
+      out[oi + 1] = Math.round(out[oi + 1] * (1 - alpha) + blurredRgb[bi + 1] * alpha);
+      out[oi + 2] = Math.round(out[oi + 2] * (1 - alpha) + blurredRgb[bi + 2] * alpha);
+    }
+  }
+  return sharp(out, { raw: { width: canvasW, height: canvasH, channels: 3 } })
+    .jpeg({ quality: 94 })
+    .toBuffer();
 }
 
 async function cropPngToAlphaBounds(pngBuffer) {
@@ -388,6 +489,36 @@ async function resizeSubjectIntoBox(subjectCutoutPng, box, canvasW = null) {
   return { buffer: resized, left, top, targetW, targetH };
 }
 
+/** Pieds du remplaçant calés sur le bas de la bbox danseuse (y_bottom). */
+async function resizeSubjectFeetLockedToBox(
+  subjectCutoutPng,
+  box,
+  canvasW,
+  coverScale = 1.05,
+) {
+  const cropped = await cropPngToAlphaBounds(subjectCutoutPng);
+  const meta = await sharp(cropped).metadata();
+  const sw = meta.width || 512;
+  const sh = meta.height || 512;
+
+  const targetH = Math.max(32, Math.round(box.height * coverScale));
+  const scale = targetH / sh;
+  const targetW = Math.max(32, Math.round(sw * scale));
+
+  const resized = await sharp(cropped)
+    .resize(targetW, targetH, { fit: "fill" })
+    .png()
+    .toBuffer();
+
+  const centerX = box.left + box.width / 2;
+  let left = Math.round(centerX - targetW / 2);
+  if (canvasW) {
+    left = Math.max(0, Math.min(canvasW - targetW, left));
+  }
+  const top = Math.round(box.top + box.height - targetH);
+  return { buffer: resized, left, top, targetW, targetH };
+}
+
 /**
  * Part du sujet (masque alpha ou image) sur la hauteur — valide les photos plein pied.
  */
@@ -479,20 +610,15 @@ async function prepareMotionCleanCompositeImage({
   const canvasH = frameMeta.height || 1280;
 
   let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
+  let scenePlate = frameJpeg;
   if (frameCutout) {
-    const boxFromFrame = await alphaBoundingBoxFromPng(
-      await sharp(frameCutout)
-        .resize(canvasW, canvasH, { fit: "fill" })
-        .png()
-        .toBuffer(),
+    subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
+    scenePlate = await buildScenePlateTightDancerInpaint(
+      frameJpeg,
+      frameCutout,
+      canvasW,
+      canvasH,
     );
-    if (boxFromFrame) {
-      subjectBox = alignSubjectBoxToOriginalDancer(
-        expandBoxForFullBodyReplacement(boxFromFrame, canvasW, canvasH),
-        canvasW,
-        canvasH,
-      );
-    }
   }
 
   let subjectRawBuf = null;
@@ -517,7 +643,12 @@ async function prepareMotionCleanCompositeImage({
     subjectRawBuf,
   );
 
-  let placed = await resizeSubjectIntoBox(subjectPng, subjectBox, canvasW);
+  let placed = await resizeSubjectFeetLockedToBox(
+    subjectPng,
+    subjectBox,
+    canvasW,
+    1.05,
+  );
   let subjectOccupancyRatio = placed.targetH / canvasH;
 
   if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
@@ -526,7 +657,12 @@ async function prepareMotionCleanCompositeImage({
       canvasW,
       canvasH,
     );
-    placed = await resizeSubjectIntoBox(subjectPng, fallbackBox, canvasW);
+    placed = await resizeSubjectFeetLockedToBox(
+      subjectPng,
+      fallbackBox,
+      canvasW,
+      1.05,
+    );
     subjectOccupancyRatio = placed.targetH / canvasH;
   }
 
@@ -552,7 +688,7 @@ async function prepareMotionCleanCompositeImage({
     });
   }
 
-  const compositeJpeg = await sharp(frameJpeg)
+  const compositeJpeg = await sharp(scenePlate)
     .composite([
       {
         input: placed.buffer,
@@ -865,5 +1001,8 @@ module.exports = {
   SUBJECT_OCCUPANCY_MAX,
   SUBJECT_OCCUPANCY_OUTPUT_MIN,
   measureSubjectPhotoVerticalOccupancy,
+  detectDancerPlacementBox,
+  resizeSubjectFeetLockedToBox,
+  buildScenePlateTightDancerInpaint,
   buildScenePlateErasingSubjectBox,
 };

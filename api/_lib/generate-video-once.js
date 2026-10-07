@@ -416,7 +416,7 @@ async function generateKlingMotionOnce(supabase, params) {
     characterOrientation,
     backgroundSource,
     motionCleanCompositeApplied,
-    motionPipeline: "kling30_clean_composite",
+    motionPipeline: "kling30_clean_composite_v2",
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
@@ -446,7 +446,7 @@ async function generateKlingMotionOnce(supabase, params) {
     v2v_provider: "kling_motion",
     motion_composite_applied: motionCleanCompositeApplied,
     motion_clean_composite: motionCleanCompositeApplied,
-    motion_pipeline: "kling30_clean_composite",
+    motion_pipeline: "kling30_clean_composite_v2",
     kling_character_orientation: characterOrientation,
     kling_background_source: backgroundSource,
     ...(motionCompositeFallback

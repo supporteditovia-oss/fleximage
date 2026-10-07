@@ -10,7 +10,7 @@ test("buildKlingMotionPrompt verrouille corps entier et interdit face-swap", () 
   assert.match(p, /FULL BODY|ENTIRE performer/i);
   assert.match(p, /FORBIDDEN.*face-swap/i);
   assert.match(p, /choreography|skeleton/i);
-  assert.match(p, /sharp clean background/i);
+  assert.match(p, /perfectly grounded feet/i);
   assert.match(p, /black background/i);
 });
 
