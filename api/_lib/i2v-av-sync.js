@@ -341,14 +341,20 @@ function isI2VAvatarPipelineV2Enabled(meta) {
   return Boolean(meta && meta.i2v_avatar_pipeline_v2 === true);
 }
 
+/** Voix / lip-sync explicite — pas les animations I2V muettes (piste silencieuse pour Kling uniquement). */
+function isI2VVoiceTrackRequested(meta) {
+  if (!meta || meta.workflow !== "image_to_video") return false;
+  if (meta.voice_enabled !== true) return false;
+  const voiceText = String(meta.voice_text || "").trim();
+  return voiceText.length >= 5;
+}
+
 function shouldRunI2VAvDurationQa(meta) {
   if (String(process.env.I2V_AV_DURATION_QA || "1").trim() === "0") {
     return false;
   }
   return (
-    meta &&
-    meta.workflow === "image_to_video" &&
-    isI2VAvatarPipelineV2Enabled(meta)
+    isI2VAvatarPipelineV2Enabled(meta) && isI2VVoiceTrackRequested(meta)
   );
 }
 
@@ -426,6 +432,7 @@ module.exports = {
   buildSilentMp3Buffer,
   alignVideoAudioInMp4Buffer,
   isI2VAvatarPipelineV2Enabled,
+  isI2VVoiceTrackRequested,
   shouldRunI2VAvDurationQa,
   passesAvDurationQa,
   downloadAlignAndStoreI2VVideo,

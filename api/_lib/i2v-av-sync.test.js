@@ -30,7 +30,7 @@ describe("i2v-av-sync", () => {
     assert.equal(getMaxAvGapSec(), 0.3);
   });
 
-  it("shouldRunI2VAvDurationQa only for admin pipeline v2 I2V", () => {
+  it("shouldRunI2VAvDurationQa only for pipeline v2 I2V with explicit voice", () => {
     assert.equal(
       shouldRunI2VAvDurationQa({ workflow: "image_to_video" }),
       false,
@@ -40,12 +40,23 @@ describe("i2v-av-sync", () => {
         workflow: "image_to_video",
         i2v_avatar_pipeline_v2: true,
       }),
+      false,
+    );
+    assert.equal(
+      shouldRunI2VAvDurationQa({
+        workflow: "image_to_video",
+        i2v_avatar_pipeline_v2: true,
+        voice_enabled: true,
+        voice_text: "Bonjour, ceci est un test vocal.",
+      }),
       true,
     );
     assert.equal(
       shouldRunI2VAvDurationQa({
         workflow: "video_to_video",
         i2v_avatar_pipeline_v2: true,
+        voice_enabled: true,
+        voice_text: "Hello world test voice",
       }),
       false,
     );
