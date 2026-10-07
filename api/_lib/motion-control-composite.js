@@ -20,8 +20,10 @@ const execFileAsync = promisify(execFile);
 
 const SUBJECT_OCCUPANCY_MIN = 0.7;
 const SUBJECT_OCCUPANCY_MAX = 0.85;
-/** Rejet composite si le sujet uploadé occupe moins que ça (évite le « mini personnage en bas »). */
-const SUBJECT_OCCUPANCY_OUTPUT_MIN = 0.65;
+/** Seuil souple — photos plein pied ne doivent pas être bloquées (faux positifs larges). */
+const SUBJECT_OCCUPANCY_OUTPUT_MIN = 0.5;
+/** Blocage uniquement si le sujet est clairement trop petit (portrait serré). */
+const SUBJECT_OCCUPANCY_HARD_REJECT = 0.35;
 
 async function downloadToFile(url, destPath, timeoutMs = 90_000) {
   const controller = new AbortController();
@@ -355,7 +357,7 @@ function alignSubjectBoxToOriginalDancer(box, canvasW, canvasH) {
   return { left, top, width, height, occupancy };
 }
 
-async function resizeSubjectIntoBox(subjectCutoutPng, box) {
+async function resizeSubjectIntoBox(subjectCutoutPng, box, canvasW = null) {
   const cropped = await cropPngToAlphaBounds(subjectCutoutPng);
   const meta = await sharp(cropped).metadata();
   const sw = meta.width || 512;
@@ -364,19 +366,53 @@ async function resizeSubjectIntoBox(subjectCutoutPng, box) {
   let scale = box.height / sh;
   let targetW = Math.max(32, Math.round(sw * scale));
   let targetH = Math.max(32, Math.round(sh * scale));
+  let fitBox = { ...box };
   if (targetW > box.width) {
-    scale = box.width / sw;
-    targetW = Math.max(32, Math.round(sw * scale));
-    targetH = Math.max(32, Math.round(sh * scale));
+    const maxW = canvasW ? Math.min(canvasW, Math.round(targetW * 1.08)) : targetW;
+    fitBox = {
+      ...box,
+      left: Math.max(
+        0,
+        Math.round(box.left + box.width / 2 - maxW / 2),
+      ),
+      width: maxW,
+    };
   }
 
   const resized = await sharp(cropped)
     .resize(targetW, targetH, { fit: "fill" })
     .png()
     .toBuffer();
-  const left = Math.round(box.left + (box.width - targetW) / 2);
-  const top = Math.round(box.top + box.height - targetH);
+  const left = Math.round(fitBox.left + (fitBox.width - targetW) / 2);
+  const top = Math.round(fitBox.top + fitBox.height - targetH);
   return { buffer: resized, left, top, targetW, targetH };
+}
+
+/**
+ * Part du sujet (masque alpha ou image) sur la hauteur — valide les photos plein pied.
+ */
+async function measureSubjectPhotoVerticalOccupancy(subjectPng, originalBuffer = null) {
+  try {
+    const meta = await sharp(subjectPng).metadata();
+    const imgH = meta.height || 1;
+    const imgW = meta.width || 1;
+    const box = await alphaBoundingBoxFromPng(
+      meta.hasAlpha
+        ? subjectPng
+        : await sharp(subjectPng).ensureAlpha().png().toBuffer(),
+    );
+    const occ = box.height / imgH;
+    if (occ >= 0.45) return occ;
+  } catch {
+    /* fall through */
+  }
+  if (originalBuffer) {
+    const meta = await sharp(originalBuffer).metadata();
+    const h = meta.height || 1;
+    const w = meta.width || 1;
+    if (h / w >= 1.15) return 0.72;
+  }
+  return null;
 }
 
 /** Composite frame 0 propre requis pour photo uploadée (Kling 3.0 — image = scène de départ). */
@@ -459,6 +495,7 @@ async function prepareMotionCleanCompositeImage({
     }
   }
 
+  let subjectRawBuf = null;
   let subjectPng;
   if (subjectCutout) {
     subjectPng = await featherSubjectCutoutAlpha(subjectCutout);
@@ -469,12 +506,52 @@ async function prepareMotionCleanCompositeImage({
         status: 422,
       });
     }
+    subjectRawBuf = Buffer.from(await subjectRes.arrayBuffer());
     subjectPng = await featherSubjectCutoutAlpha(
-      await sharp(Buffer.from(await subjectRes.arrayBuffer())).png().toBuffer(),
+      await sharp(subjectRawBuf).png().toBuffer(),
     );
   }
 
-  const placed = await resizeSubjectIntoBox(subjectPng, subjectBox);
+  const photoVerticalOcc = await measureSubjectPhotoVerticalOccupancy(
+    subjectCutout || subjectPng,
+    subjectRawBuf,
+  );
+
+  let placed = await resizeSubjectIntoBox(subjectPng, subjectBox, canvasW);
+  let subjectOccupancyRatio = placed.targetH / canvasH;
+
+  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
+    const fallbackBox = alignSubjectBoxToOriginalDancer(
+      computeDefaultSubjectBox(canvasW, canvasH),
+      canvasW,
+      canvasH,
+    );
+    placed = await resizeSubjectIntoBox(subjectPng, fallbackBox, canvasW);
+    subjectOccupancyRatio = placed.targetH / canvasH;
+  }
+
+  const fullBodyPhotoLikely =
+    photoVerticalOcc != null && photoVerticalOcc >= SUBJECT_OCCUPANCY_OUTPUT_MIN;
+
+  if (
+    subjectOccupancyRatio < SUBJECT_OCCUPANCY_HARD_REJECT &&
+    !fullBodyPhotoLikely
+  ) {
+    throw Object.assign(
+      new Error(
+        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
+      ),
+      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
+    );
+  }
+
+  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN && fullBodyPhotoLikely) {
+    console.warn("[motion-clean-composite] soft scale — full-body photo accepted", {
+      subjectOccupancyRatio,
+      photoVerticalOcc,
+    });
+  }
+
   const compositeJpeg = await sharp(frameJpeg)
     .composite([
       {
@@ -485,16 +562,6 @@ async function prepareMotionCleanCompositeImage({
     ])
     .jpeg({ quality: 94, mozjpeg: true })
     .toBuffer();
-
-  const subjectOccupancyRatio = placed.targetH / canvasH;
-  if (subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN) {
-    throw Object.assign(
-      new Error(
-        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
-      ),
-      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
-    );
-  }
 
   const key = `inputs/${uid}/${Date.now()}-motion-composite-clean.jpg`;
   const publicUrl = await uploadToR2(key, compositeJpeg, "image/jpeg");
@@ -797,5 +864,6 @@ module.exports = {
   SUBJECT_OCCUPANCY_MIN,
   SUBJECT_OCCUPANCY_MAX,
   SUBJECT_OCCUPANCY_OUTPUT_MIN,
+  measureSubjectPhotoVerticalOccupancy,
   buildScenePlateErasingSubjectBox,
 };

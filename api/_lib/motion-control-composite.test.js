@@ -88,3 +88,21 @@ test("computeDefaultSubjectBox targets ~80% canvas height", () => {
   assert.ok(occ >= SUBJECT_OCCUPANCY_MIN);
   assert.ok(occ <= SUBJECT_OCCUPANCY_MAX);
 });
+
+test("measureSubjectPhotoVerticalOccupancy accepts tall portrait segmentation", async () => {
+  const { measureSubjectPhotoVerticalOccupancy } = require("./motion-control-composite");
+  const w = 400;
+  const h = 900;
+  const raw = Buffer.alloc(w * h * 4, 0);
+  for (let y = 80; y < 860; y++) {
+    for (let x = 100; x < 300; x++) {
+      const i = (y * w + x) * 4;
+      raw[i + 3] = 255;
+    }
+  }
+  const png = await sharp(raw, { raw: { width: w, height: h, channels: 4 } })
+    .png()
+    .toBuffer();
+  const occ = await measureSubjectPhotoVerticalOccupancy(png);
+  assert.ok(occ != null && occ >= 0.5);
+});
