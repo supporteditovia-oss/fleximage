@@ -55,6 +55,16 @@ test("mapVideoProviderMessage — exhausted motion tab never shows cockpit tips"
   assert.match(fr, /Jetons remboursés/);
 });
 
+test("mapVideoProviderMessage — motion fail before retries exhausted", () => {
+  const fr = mapVideoProviderMessage("task failed", "fr", {
+    v2vExhausted: false,
+    afterAlephFallback: false,
+    v2vIntent: "motion",
+  });
+  assert.match(fr, /réessaie automatiquement/i);
+  assert.doesNotMatch(fr, /3 à 8 s/);
+});
+
 test("resolveKlingCharacterOrientation — image quand photo uploadée (corps entier)", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Remplace le danseur", true),

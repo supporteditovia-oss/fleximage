@@ -271,8 +271,37 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
           engineFamily === "transform" &&
           finalV2vProvider === "runway_aleph" &&
           isRetryableAlephError(firstErr);
+        const motionKlingKickoffRetry =
+          finalV2vProvider === "kling_motion" &&
+          engineFamily === "motion" &&
+          !meta.video_kickoff_motion_retry;
         if (sameFamilyRetry) {
           await runAleph(sourceAssetUrl, referenceImageUrl);
+        } else if (motionKlingKickoffRetry) {
+          await supabase
+            .from("generations")
+            .update({
+              metadata: { ...meta, video_kickoff_motion_retry: true },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", larp.id);
+          let videoUrl = await resolveKlingMotionSourceVideoUrl(
+            sourceAssetUrl,
+            userId,
+            { preserveSourceAudio },
+          );
+          let imageUrl = referenceImageUrl;
+          const motionReferenceSource =
+            meta.motion_reference_source === "uploaded" ||
+            meta.motion_reference_source === "auto_frame"
+              ? meta.motion_reference_source
+              : referenceImageUrl
+                ? "uploaded"
+                : "auto_frame";
+          if (!imageUrl) {
+            imageUrl = await extractReferenceFrameFromVideoUrl(videoUrl, userId);
+          }
+          await runKling(videoUrl, imageUrl, motionReferenceSource);
         } else {
           throw firstErr;
         }

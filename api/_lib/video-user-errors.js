@@ -44,6 +44,16 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
       : "The video engine had a temporary issue. Try again in 1–2 minutes — credits refunded if generation failed.";
   }
 
+  const motionJob =
+    options.v2vIntent === "motion" ||
+    options.v2vProvider === "kling_motion" ||
+    options.v2vEngineFamily === "motion";
+  if (motionJob && !options.v2vExhausted) {
+    return locale === "fr"
+      ? "L’animation n’a pas abouti cette fois (incident côté moteur). Relance la même génération — le studio réessaie automatiquement. Jetons remboursés si l’échec est confirmé."
+      : "Animation did not complete (engine issue). Launch again — the studio retries automatically. Credits refunded if it still fails.";
+  }
+
   if (/file type not supported/i.test(text)) {
     return locale === "fr"
       ? "Format vidéo incompatible. Réessaie avec un clip 3–8 s (720p). Jetons remboursés."

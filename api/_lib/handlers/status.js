@@ -805,6 +805,11 @@ module.exports = async function handler(req, res) {
           const { isOmniTransformEnabled: omniEnabledKling } = require("../video-studio");
           const { isV2VMotionStudioJob } = require("../video-studio");
           const motionStudioJob = isV2VMotionStudioJob(pollMeta);
+          const {
+            isNonRetryableMotionKlingFail,
+            motionKlingClientFailOptions,
+            MOTION_KLING_MAX_AUTO_RETRIES,
+          } = require("../v2v-provider-errors");
           const klingMotionRetries = Number(pollMeta.video_auto_retries) || 0;
           const shouldOmniFallback =
             !motionStudioJob &&
@@ -825,8 +830,8 @@ module.exports = async function handler(req, res) {
           const canRetryKlingMotion =
             motionStudioJob &&
             !afterAlephKlingRound &&
-            (charRejection || klingInternal) &&
-            klingMotionRetries < 2 &&
+            !isNonRetryableMotionKlingFail(rawKlingFail) &&
+            klingMotionRetries < MOTION_KLING_MAX_AUTO_RETRIES &&
             ageInMs < pollHardTimeoutMs - 90_000;
 
           if (shouldOmniFallback) {
@@ -941,14 +946,23 @@ module.exports = async function handler(req, res) {
             }
           } else {
             apiStatus = "fail";
+            const motionFailOpts = motionStudioJob
+              ? motionKlingClientFailOptions(pollMeta, {
+                  motionStudioJob: true,
+                  afterAlephFallback: charRejection && alephFallbackDone,
+                })
+              : v2vClientFailOptions(larp, pollMeta, {
+                  afterAlephFallback: charRejection && alephFallbackDone,
+                  v2vExhausted: false,
+                });
             apiFailMsg = formatVideoFailForClient(
               rawKlingFail,
               "Échec de la transformation vidéo",
-              v2vClientFailOptions(larp, pollMeta, {
-                afterAlephFallback:
-                  motionStudioJob || (charRejection && alephFallbackDone),
-                v2vExhausted: motionStudioJob,
-              }),
+              {
+                ...v2vClientFailOptions(larp, pollMeta),
+                ...motionFailOpts,
+                prompt: larp?.prompt,
+              },
             );
           }
         } else if (ageInMs > pollHardTimeoutMs) {
