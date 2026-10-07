@@ -374,11 +374,14 @@ async function generateKlingMotionOnce(supabase, params) {
         200,
       );
       if (uploadedSubject) {
+        const { mapMotionCompositeUserMessage } = require("./video-user-errors");
         throw Object.assign(
-          new Error(
-            "Impossible de préparer le corps entier sur la scène — réessaie avec une photo nette (corps visible).",
-          ),
-          { status: 422, code: "MOTION_COMPOSITE_REQUIRED", cause: compositeErr },
+          new Error(mapMotionCompositeUserMessage(compositeErr, "fr")),
+          {
+            status: 422,
+            code: "MOTION_COMPOSITE_REQUIRED",
+            cause: compositeErr,
+          },
         );
       }
       console.warn("[generate-kling-once] motion composite failed — raw image fallback", {

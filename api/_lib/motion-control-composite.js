@@ -42,6 +42,38 @@ async function downloadToFile(url, destPath, timeoutMs = 90_000) {
 /**
  * Première frame de la vidéo de mouvement (décor cible).
  */
+async function runFfmpegExtractFrame(inputPath, framePath, seekSec) {
+  await execFileAsync(
+    ffmpegPath,
+    [
+      "-y",
+      "-ss",
+      String(seekSec),
+      "-i",
+      inputPath,
+      "-frames:v",
+      "1",
+      "-q:v",
+      "2",
+      "-vf",
+      "scale='min(1280,iw)':-2",
+      framePath,
+    ],
+    { timeout: 90_000 },
+  );
+  const jpeg = await fs.readFile(framePath);
+  if (!jpeg.length) {
+    throw Object.assign(new Error("Frame vidéo vide"), {
+      status: 422,
+      code: "VIDEO_FRAME_EXTRACT_FAILED",
+    });
+  }
+  return jpeg;
+}
+
+/**
+ * Première frame utile de la vidéo de mouvement (décor cible).
+ */
 async function extractVideoFrameZeroBuffer(videoUrl) {
   if (!ffmpegPath) {
     throw Object.assign(new Error("ffmpeg indisponible"), {
@@ -51,7 +83,10 @@ async function extractVideoFrameZeroBuffer(videoUrl) {
   }
   const url = String(videoUrl || "").trim();
   if (!url.startsWith("http")) {
-    throw Object.assign(new Error("URL vidéo invalide"), { status: 422 });
+    throw Object.assign(new Error("URL vidéo invalide"), {
+      status: 422,
+      code: "VIDEO_URL_INVALID",
+    });
   }
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "motion-frame0-"));
@@ -59,30 +94,21 @@ async function extractVideoFrameZeroBuffer(videoUrl) {
   const framePath = path.join(tmpDir, "frame0.jpg");
 
   try {
-    await downloadToFile(url, inputPath);
-    await execFileAsync(
-      ffmpegPath,
-      [
-        "-y",
-        "-ss",
-        "0",
-        "-i",
-        inputPath,
-        "-frames:v",
-        "1",
-        "-q:v",
-        "2",
-        "-vf",
-        "scale='min(1280,iw)':-2",
-        framePath,
-      ],
-      { timeout: 90_000 },
-    );
-    const jpeg = await fs.readFile(framePath);
-    if (!jpeg.length) {
-      throw Object.assign(new Error("Frame 0 vide"), { status: 422 });
+    await downloadToFile(url, inputPath, 120_000);
+    const seeks = [0, 0.35, 0.75];
+    let lastErr;
+    for (const seek of seeks) {
+      try {
+        return await runFfmpegExtractFrame(inputPath, framePath, seek);
+      } catch (err) {
+        lastErr = err;
+        await fs.unlink(framePath).catch(() => {});
+      }
     }
-    return jpeg;
+    throw Object.assign(
+      lastErr || new Error("Impossible d'extraire une image de la vidéo"),
+      { status: 422, code: "VIDEO_FRAME_EXTRACT_FAILED" },
+    );
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -380,11 +406,7 @@ async function prepareMotionControlCompositeImage({
   }
 
   const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
-  const { removeBackgroundBria } = require("./background-remove-bria");
   let frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_frame");
-  if (requireFullReplacement && !frameCutout) {
-    frameCutout = await removeBackgroundBria(frameJpeg);
-  }
   const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
 
   const frameMeta = await sharp(frameJpeg).metadata();
@@ -475,12 +497,40 @@ async function prepareMotionControlCompositeImage({
     requireFullReplacement &&
     subjectOccupancyRatio < SUBJECT_OCCUPANCY_OUTPUT_MIN
   ) {
-    throw Object.assign(
-      new Error(
-        `Personnage trop petit sur la scène (${Math.round(subjectOccupancyRatio * 100)} % hauteur)`,
-      ),
-      { status: 422, code: "MOTION_COMPOSITE_SCALE" },
+    const fallbackBox = alignSubjectBoxToOriginalDancer(
+      computeDefaultSubjectBox(canvasW, canvasH),
+      canvasW,
+      canvasH,
     );
+    placed = await resizeSubjectIntoBox(
+      subjectCutout
+        ? subjectCutout
+        : await sharp(
+            Buffer.from(await (await fetch(subjectUrl)).arrayBuffer()),
+          )
+            .png()
+            .toBuffer(),
+      fallbackBox,
+    );
+    compositePng = await sharp(
+      frameCutout
+        ? await buildScenePlateWithoutOriginalSubject(
+            frameJpeg,
+            frameCutout,
+            fallbackBox,
+          )
+        : await buildScenePlateErasingSubjectBox(frameJpeg, fallbackBox),
+    )
+      .composite([
+        {
+          input: placed.buffer,
+          left: Math.max(0, placed.left),
+          top: Math.max(0, placed.top),
+        },
+      ])
+      .png()
+      .toBuffer();
+    subjectBox = fallbackBox;
   }
 
   const key = `inputs/${uid}/${Date.now()}-motion-composite.png`;

@@ -67,8 +67,50 @@ function resolveKlingBackgroundSource(options = {}) {
   return "input_video";
 }
 
+function inferMotionReferenceSource(referenceImageUrl, clientMotionRef) {
+  if (clientMotionRef === "uploaded" || clientMotionRef === "auto_frame") {
+    return clientMotionRef;
+  }
+  const url = String(referenceImageUrl || "").trim();
+  if (!url) return "auto_frame";
+  if (/-motion-ref\.jpg/i.test(url)) return "auto_frame";
+  return "uploaded";
+}
+
+/** Message utilisateur quand le composite Mouvement échoue (photo uploadée). */
+function mapMotionCompositeUserMessage(compositeErr, locale = "fr") {
+  const code =
+    compositeErr?.code ||
+    compositeErr?.cause?.code ||
+    compositeErr?.cause?.cause?.code;
+  if (
+    code === "VIDEO_FRAME_EXTRACT_FAILED" ||
+    code === "FFMPEG_UNAVAILABLE" ||
+    code === "VIDEO_SOURCE_FETCH_FAILED"
+  ) {
+    return locale === "fr"
+      ? "Impossible de lire ta vidéo pour préparer le remplacement. Réessaie avec un clip de 3 à 8 s en 720p, filmé d'une traite (évite les exports WhatsApp / Instagram)."
+      : "Could not read your video to prepare the replacement. Try a 3–8 s 720p clip shot in one take (avoid WhatsApp/Instagram exports).";
+  }
+  if (code === "BGRM_UNAVAILABLE" || code === "DEEPINFRA") {
+    return locale === "fr"
+      ? "Le détourage est indisponible pour l'instant. Réessaie dans 1–2 minutes."
+      : "Background removal is temporarily unavailable. Try again in 1–2 minutes.";
+  }
+  if (code === "MOTION_COMPOSITE_SCALE") {
+    return locale === "fr"
+      ? "Ta photo ne permet pas un remplacement corps entier. Utilise une photo debout, pieds à tête, bien nette."
+      : "Your photo cannot fill a full-body replacement. Use a sharp full-body standing photo.";
+  }
+  return locale === "fr"
+    ? "Impossible de préparer le corps entier sur la scène — réessaie avec une photo nette (corps visible, pieds à tête)."
+    : "Could not prepare a full-body replacement on the scene — retry with a sharp full-body photo.";
+}
+
 module.exports = {
   mapVideoProviderMessage,
+  mapMotionCompositeUserMessage,
+  inferMotionReferenceSource,
   resolveKlingCharacterOrientation,
   resolveKlingBackgroundSource,
 };

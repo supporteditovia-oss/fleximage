@@ -2,6 +2,8 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   mapVideoProviderMessage,
+  mapMotionCompositeUserMessage,
+  inferMotionReferenceSource,
   resolveKlingCharacterOrientation,
 } = require("./video-user-errors");
 
@@ -65,4 +67,29 @@ test("resolveKlingBackgroundSource — composite → input_image", () => {
   const { resolveKlingBackgroundSource } = require("./video-user-errors");
   assert.equal(resolveKlingBackgroundSource({ motionCompositeApplied: true }), "input_image");
   assert.equal(resolveKlingBackgroundSource({}), "input_video");
+});
+
+test("inferMotionReferenceSource — frame auto vs photo upload", () => {
+  assert.equal(
+    inferMotionReferenceSource(
+      "https://cdn/inputs/u/123-motion-ref.jpg",
+      null,
+    ),
+    "auto_frame",
+  );
+  assert.equal(
+    inferMotionReferenceSource("https://cdn/inputs/u/photo.jpg", null),
+    "uploaded",
+  );
+  assert.equal(
+    inferMotionReferenceSource("https://cdn/x.jpg", "uploaded"),
+    "uploaded",
+  );
+});
+
+test("mapMotionCompositeUserMessage — vidéo illisible", () => {
+  const msg = mapMotionCompositeUserMessage({
+    code: "VIDEO_FRAME_EXTRACT_FAILED",
+  });
+  assert.match(msg, /720p/i);
 });

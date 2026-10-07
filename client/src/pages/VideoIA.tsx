@@ -703,7 +703,7 @@ export default function VideoIA() {
           : {}),
         ...(v2vIntent === "motion" && referenceImages?.length
           ? {
-              motion_reference_source: refImageIsCustom
+              motion_reference_source: refImageIsCustomRef.current
                 ? ("uploaded" as const)
                 : ("auto_frame" as const),
             }
