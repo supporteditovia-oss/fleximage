@@ -3,7 +3,8 @@ const KIE_JOBS_BASE_URL = "https://api.kie.ai/api/v1/jobs";
 const KLING_MOTION_MODEL = "kling-3.0/motion-control";
 
 function getApiKey() {
-  const key = process.env.KIE_AI_API_KEY;
+  const key =
+    process.env.KIE_AI_API_KEY || process.env.KIEAI_API_KEY || "";
   if (!key) {
     throw Object.assign(new Error("KIE_AI_API_KEY manquant"), { status: 503 });
   }
@@ -80,12 +81,15 @@ async function getKlingMotionStatus(taskId) {
   const parsed = parseJsonResponse(text, response.status, "recordInfo");
 
   if (!response.ok || parsed.code !== 200) {
+    if (/recordInfo is null/i.test(String(parsed.msg || ""))) {
+      return { state: "waiting" };
+    }
     const err = new Error(parsed.msg || "Kling status error");
     err.status = response.status;
     throw err;
   }
 
-  return parsed.data || {};
+  return parsed.data || { state: "waiting" };
 }
 
 function mapKlingMotionState(data) {
@@ -140,8 +144,8 @@ const MOTION_ENVIRONMENT_LOCK =
   "Replacement occupies the exact same screen position, scale, and depth in the room as the original dancer (if she was toward the back, stay toward the back — never jump in front of furniture or toward the camera). " +
   "Crisp sharp photorealistic background unchanged, authentic tiled floor friction, solid foot placement on every step, " +
   "realistic shadows under shoes, perfect anatomy and facial likeness, cinema lighting. " +
-  "The reference IMAGE is the starting frame (sharp room + new performer only). " +
-  "Reference VIDEO supplies motion and choreography only.";
+  "The reference IMAGE is the prepared starting frame: same room as the video with ONLY the new performer(s) visible — original dancers already removed. " +
+  "Reference VIDEO supplies motion and choreography only; do not resurrect original performers from the video.";
 
 const MOTION_NEGATIVE_LOCK =
   "NEGATIVE (must avoid): blur box, blurred background, blurry artifact, ghost limbs, duplicate person, second dancer, " +
@@ -154,7 +158,7 @@ function buildKlingMotionPrompt(userPrompt) {
     "CRITICAL FULL-BODY MOTION TRANSFER (must follow): " +
     "Replace the ENTIRE performer in the VIDEO with the person from the reference IMAGE — full body, clothes, hair, skin, morphology. " +
     "VIDEO = motion skeleton, choreography, camera path, room, walls, furniture, lighting ONLY. " +
-    "IMAGE = identity and outfit only — never use the photo as the scene or background. " +
+    "IMAGE = prepared first frame (scene + new performer already placed) — match this layout while animating. " +
     "FORBIDDEN: face-swap on original body; keeping source dancer clothes or hairstyle; mini overlay at bottom of frame. " +
     `${MOTION_ENVIRONMENT_LOCK} ${MOTION_NEGATIVE_LOCK}`;
   const userLine = normalizeMotionUserPromptForKling(userPrompt);

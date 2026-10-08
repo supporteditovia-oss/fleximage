@@ -286,6 +286,74 @@ async function buildScenePlateTightDancerInpaint(
     .toBuffer();
 }
 
+/**
+ * Retire la danseuse en recopiant des pixels voisins (carrelage/mur nets — pas de flou décor).
+ */
+async function buildScenePlateSharpDancerErase(
+  frameJpeg,
+  frameCutoutPng,
+  canvasW,
+  canvasH,
+) {
+  const maskRaw = await buildTightDancerInpaintMaskRaw(
+    frameCutoutPng,
+    canvasW,
+    canvasH,
+    12,
+  );
+  const { data: src, info } = await sharp(frameJpeg)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const w = info.width;
+  const h = info.height;
+  const channels = 3;
+  const out = Buffer.from(src);
+  const masked = (x, y) => maskRaw[y * w + x] > 127;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!masked(x, y)) continue;
+      let sx = -1;
+      let sy = y;
+      for (let dx = 1; dx < w; dx++) {
+        if (x - dx >= 0 && !masked(x - dx, y)) {
+          sx = x - dx;
+          break;
+        }
+        if (x + dx < w && !masked(x + dx, y)) {
+          sx = x + dx;
+          break;
+        }
+      }
+      if (sx < 0) {
+        for (let dy = 1; dy <= 48; dy++) {
+          if (y - dy >= 0 && !masked(x, y - dy)) {
+            sx = x;
+            sy = y - dy;
+            break;
+          }
+          if (y + dy < h && !masked(x, y + dy)) {
+            sx = x;
+            sy = y + dy;
+            break;
+          }
+        }
+      }
+      if (sx < 0) continue;
+      const si = (sy * w + sx) * channels;
+      const oi = (y * w + x) * channels;
+      out[oi] = src[si];
+      out[oi + 1] = src[si + 1];
+      out[oi + 2] = src[si + 2];
+    }
+  }
+
+  return sharp(out, { raw: { width: w, height: h, channels: 3 } })
+    .jpeg({ quality: 94, mozjpeg: true })
+    .toBuffer();
+}
+
 async function cropPngToAlphaBounds(pngBuffer) {
   const box = await alphaBoundingBoxFromPng(pngBuffer);
   const meta = await sharp(pngBuffer).metadata();
@@ -618,7 +686,7 @@ async function featherSubjectCutoutAlpha(pngBuffer, blurSigma = 0.45) {
 }
 
 /** Échelle de recouvrement — le sujet doit masquer toute l'ancienne silhouette. */
-const SUBJECT_OCCLUSION_COVER_SCALE = 1.17;
+const SUBJECT_OCCLUSION_COVER_SCALE = 1.2;
 
 async function finalizeMotionCompositeJpeg(
   scenePlate,
@@ -693,14 +761,28 @@ async function prepareMotionCleanCompositeDirectFallback({
   const subjectUrl = String(subjectImageUrl || "").trim();
   const motionVideoUrl = String(videoUrl || "").trim();
   const frameJpeg = await extractVideoFrameZeroBuffer(motionVideoUrl);
+  const frameCutout = await removeBackgroundBriaOptional(frameJpeg, "video_bbox");
   const frameMeta = await sharp(frameJpeg).metadata();
   const canvasW = frameMeta.width || 720;
   const canvasH = frameMeta.height || 1280;
+  let scenePlate = frameJpeg;
+  if (frameCutout) {
+    try {
+      scenePlate = await buildScenePlateSharpDancerErase(
+        frameJpeg,
+        frameCutout,
+        canvasW,
+        canvasH,
+      );
+    } catch {
+      /* keep raw frame */
+    }
+  }
   const subjectCutout = await removeBackgroundBriaOptional(subjectUrl, "user_photo");
   const { subjectPng } = await loadSubjectPngForComposite(subjectUrl, subjectCutout);
   const subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
   const { jpeg } = await finalizeMotionCompositeJpeg(
-    frameJpeg,
+    scenePlate,
     subjectPng,
     subjectBox,
     canvasW,
@@ -738,15 +820,36 @@ async function prepareMotionCleanCompositeImage({
 
     let dancerAnchorX = canvasW / 2;
     let subjectBox = computeDefaultSubjectBox(canvasW, canvasH);
-    const scenePlate = frameJpeg;
+    let scenePlate = frameJpeg;
+    let dancerErasedSharp = false;
     if (frameCutout) {
       try {
         subjectBox = await detectDancerPlacementBox(frameCutout, canvasW, canvasH);
         dancerAnchorX = dancerAnchorCenterX(subjectBox);
+        scenePlate = await buildScenePlateSharpDancerErase(
+          frameJpeg,
+          frameCutout,
+          canvasW,
+          canvasH,
+        );
+        dancerErasedSharp = true;
       } catch (boxErr) {
         console.warn("[motion-clean-composite] dancer box fallback", {
           message: String(boxErr?.message || boxErr).slice(0, 160),
         });
+        try {
+          scenePlate = await buildScenePlateSharpDancerErase(
+            frameJpeg,
+            frameCutout,
+            canvasW,
+            canvasH,
+          );
+          dancerErasedSharp = true;
+        } catch (eraseErr) {
+          console.warn("[motion-clean-composite] sharp erase fallback skip", {
+            message: String(eraseErr?.message || eraseErr).slice(0, 120),
+          });
+        }
         subjectBox = expandBoxForOcclusionCover(
           computeSubjectBoxAtAnchor(canvasW, canvasH, dancerAnchorX),
           canvasW,
@@ -810,7 +913,7 @@ async function prepareMotionCleanCompositeImage({
         dancerAnchorX,
       );
       ({ jpeg: compositeJpeg, placed } = await finalizeMotionCompositeJpeg(
-        frameJpeg,
+        scenePlate,
         subjectPng,
         fallbackBox,
         canvasW,
@@ -832,10 +935,12 @@ async function prepareMotionCleanCompositeImage({
       bytes: compositeJpeg.length,
       briaFrame: Boolean(frameCutout),
       briaSubject: Boolean(subjectCutout),
-      inpaintApplied: false,
+      inpaintApplied: dancerErasedSharp,
+      inpaintMode: dancerErasedSharp ? "sharp_neighbor_erase" : "none",
       coverScale: SUBJECT_OCCLUSION_COVER_SCALE,
       dancerAnchorX: Math.round(dancerAnchorX),
-      pipeline: "sharp_overlay_zero_blur",
+      pipeline: "motion_two_step_prep_v5",
+      motionTwoStepPrep: true,
     });
 
     return publicUrl;

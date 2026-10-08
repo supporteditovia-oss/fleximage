@@ -382,12 +382,17 @@ async function generateKlingMotionOnce(supabase, params) {
         motionCleanCompositeApplied = true;
         motionCompositeFallback = `direct_fallback:${motionCompositeFallback}`;
       } catch (fallbackErr) {
-        console.warn("[generate-kling-once] motion composite fallback failed — raw photo", {
+        console.error("[generate-kling-once] motion two-step prep failed", {
           generationId: params.generationId,
           primary: motionCompositeFallback,
           fallback: String(fallbackErr?.message || fallbackErr).slice(0, 200),
         });
-        motionImageUrl = params.imageUrl;
+        throw Object.assign(
+          new Error(
+            "Impossible de préparer la scène (remplacement personnage). Réessaie avec une vidéo 720p 3–8 s et une photo en pied.",
+          ),
+          { status: 422, code: "MOTION_TWO_STEP_PREP_FAILED" },
+        );
       }
     }
   }
@@ -423,7 +428,7 @@ async function generateKlingMotionOnce(supabase, params) {
     characterOrientation,
     backgroundSource,
     motionCleanCompositeApplied,
-    motionPipeline: "kling30_sharp_overlay_v3_1",
+    motionPipeline: "motion_two_step_prep_v5",
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
@@ -466,7 +471,8 @@ async function generateKlingMotionOnce(supabase, params) {
     v2v_provider: "kling_motion",
     motion_composite_applied: motionCleanCompositeApplied,
     motion_clean_composite: motionCleanCompositeApplied,
-    motion_pipeline: "kling30_sharp_overlay_v3_1",
+    motion_pipeline: "motion_two_step_prep_v5",
+    motion_two_step_prep: motionCleanCompositeApplied,
     kling_character_orientation: characterOrientation,
     kling_background_source: backgroundSource,
     ...(motionCompositeFallback

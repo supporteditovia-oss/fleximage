@@ -65,9 +65,13 @@ test("mapVideoProviderMessage — motion fail before retries exhausted", () => {
   assert.doesNotMatch(fr, /3 à 8 s/);
 });
 
-test("resolveKlingCharacterOrientation — image quand photo uploadée (corps entier)", () => {
+test("resolveKlingCharacterOrientation — video quand photo uploadée (A/B motion)", () => {
   assert.equal(
     resolveKlingCharacterOrientation("Remplace le danseur", true),
+    "video",
+  );
+  assert.equal(
+    resolveKlingCharacterOrientation("Remplace le danseur", true, "image"),
     "image",
   );
   assert.equal(resolveKlingCharacterOrientation("Urus", false), "video");

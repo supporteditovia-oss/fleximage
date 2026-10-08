@@ -308,8 +308,9 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
             {props.v2vIntent === "motion" ? (
               <div className="via-motion-scope-notice" role="note">
                 <p className="via-motion-scope-notice__lead">
-                  <strong>Avant d’importer</strong> — pour limiter les artefacts
-                  (fantômes, pieds flottants) :
+                  <strong>Avant d’importer</strong> — le studio prépare la scène
+                  (personne d’origine retirée, ta photo dans la pièce) puis
+                  applique la danse, comme sur les clips IA pro :
                 </p>
                 <ul className="via-motion-tips">
                   <li>

@@ -64,8 +64,8 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
 }
 
 /**
- * Kie Motion Control — « image » = corps / tenue / cheveux depuis la photo ;
- * « video » garde trop la silhouette vestimentaire de la clip (face-swap).
+ * Kie Motion Control — photo uploadée : « video » (A/B prod — génère + ancrage mouvement).
+ * « image » réservé aux overrides / tests.
  */
 function resolveKlingCharacterOrientation(
   _prompt,
@@ -73,7 +73,7 @@ function resolveKlingCharacterOrientation(
   override = null,
 ) {
   if (override === "video" || override === "image") return override;
-  if (hasReferenceImage) return "image";
+  if (hasReferenceImage) return "video";
   return "video";
 }
 
