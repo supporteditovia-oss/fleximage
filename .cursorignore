@@ -1,0 +1,20 @@
+﻿# Exclure les médias lourds de l'indexation
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Exclure les dossiers de build et cache
+node_modules/
+.next/
+dist/
+build/
+.cache/
+coverage/
+output/
+tmp/

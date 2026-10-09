@@ -442,6 +442,7 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "If a shop/store/station is CLOSED (shutters/rideaux down, dark interior), it STAYS CLOSED — never open the windows, never light the shop, never invent shelves or merchandise. If it was open, it stays open. " +
   "If a fuel nozzle is plugged in, keep that same hose path and plug it into the new car on the same side. " +
   "Copy the original open/closed state of doors and fuel flap. An open filler is a REAL empty factory neck: dark plastic cavity, real cap if the original had one. " +
+  "STEERING WHEEL SIDE LOCK: if the steering wheel is visible through the windshield, keep the SAME handedness as the original photo (RHD stays right-hand, LHD stays left-hand) — never mirror-flip the cabin. " +
   "FORBIDDEN inside the tank/filler: yellow blob, orange glow, LED, gold liquid, extra object, invented cap. " +
   "Inherit original night/day light, reflections, grain. " +
   "FORBIDDEN: moving/rotating the vehicle, opening or closing shutters, rebuilding the gas station, changing the background, adding/removing people, inventing drivers or arms, studio lighting, fake body artifacts, invented learner stickers. " +
@@ -1911,6 +1912,12 @@ function isVehicleReplacePrompt(prompt) {
     );
   if (hasReplaceVerb && mentionsCarNoun && mentionsSecondRefImage) return true;
   if (/\b(moi|me|je)\b/.test(text) && isInsideNamedCarPrompt(text)) return false;
+  const blackRecolor =
+    parseVehiclePaintColor(prompt) &&
+    /\b(en\s+noir|full\s+noir|couleur\s+noir|peinture\s+noir|mets\s+.*\s+noir|met\s+.*\s+noir|refais\s+.*\s+noir|regener\w*\s+.*\s+noir)\b/.test(
+      text,
+    );
+  if (blackRecolor) return true;
   const hasCar = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "i").test(text);
   if (!hasCar) return false;
   if (hasReplaceVerb && mentionsCarNoun) return true;
@@ -2116,12 +2123,45 @@ function prettyGenericPaintToken(base, mod) {
  * Extract user-requested exterior paint from free text (FR/EN + OEM names).
  * Returns null when no explicit paint intent (do not guess from scene).
  */
+const BLACK_BODY_PAINT_LABEL =
+  "Jet black solid body paint (achromatic — zero blue/green tint on panels)";
+
+const BLACK_PAINT_DRIFT_FORBIDDEN =
+  " FORBIDDEN when user asked black: Miami Blue, Portimao Blue, Tanzanite Blue, Marina Bay Blue, Frozen Blue, Brooklyn Grey read as blue, Isle of Man Green, British Racing Green, Kyalami Green, Verde, or any blue/green/grey-blue BMW/Audi hero press color — body must read clearly BLACK in daylight.";
+
 function parseVehiclePaintColor(prompt) {
   const text = normalizePromptText(prompt);
   const hasVehicleCue =
     Boolean(parseVehicleSpec(prompt)) ||
-    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
+    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter|bmw|mercedes|audi|porsche|lambo|lamborghini|ferrari|m5|g90|urus|911)\b/.test(
+      text,
+    ) ||
+    /\b(en\s+noir|full\s+noir|couleur\s+noir|peinture\s+noir|mets\s+la\s+en\s+noir|met\s+la\s+en\s+noir)\b/.test(
+      text,
+    );
   if (!hasVehicleCue) return null;
+
+  if (
+    /\bfull\s+noir\b|\bfull\s+black\b|\btout\s+noir\b|\ball\s+black\b|\bnoir\s+integral\b|\b100\s*%\s*noir\b/.test(
+      text,
+    )
+  ) {
+    return {
+      label: BLACK_BODY_PAINT_LABEL,
+      kind: "generic",
+    };
+  }
+
+  if (
+    /\ben\s+noir\b|\bin\s+black\b|\bcouleur\s+noir\b|\bpeinture\s+noir(?:e)?\b|\b(?:mets|met|mettre|refais|regener)\w*\s+(?:la\s+)?(?:voiture\s+)?en\s+noir\b/.test(
+      text,
+    )
+  ) {
+    return {
+      label: BLACK_BODY_PAINT_LABEL,
+      kind: "generic",
+    };
+  }
 
   if (
     (/\bkyalam[iy][ae]?\b/.test(text) || /\bkyalim[aae]?\b/.test(text)) &&
@@ -2194,6 +2234,9 @@ function parseVehiclePaintColor(prompt) {
   }
 
   if (!hit) return null;
+  if (hit.kind === "generic" && /black|noir|jet/i.test(hit.label)) {
+    hit = { label: BLACK_BODY_PAINT_LABEL, kind: "generic" };
+  }
   if (!paintIntent && hit.kind === "generic") {
     const nearCar =
       new RegExp(
@@ -2230,12 +2273,20 @@ function vehiclePaintColorHint(prompt, referenceImageCount = 0) {
     )
       ? "white, silver, grey, black, or any other OEM color"
       : "a different hue or finish than requested";
+  const blackDrift =
+    /black|noir|jet\s+black/i.test(paint.label) ? BLACK_PAINT_DRIFT_FORBIDDEN : "";
   return (
     ` (PAINT LOCK — mandatory: exterior body paint MUST be ${paint.label}. ` +
     `Match correct hue, saturation, metallic/matte/pearl finish for that name. ` +
     `FORBIDDEN: default press-car ${wrongDefault} when user specified this paint. ` +
     `FORBIDDEN: copying the original photo car paint (white Golf, grey Clio, silver sedan, etc.) — replace body color completely. ` +
-    `Never keep the original car color from image 1 unless user asked for it.)`
+    `Never keep the original car color from image 1 unless user asked for it.${blackDrift})`
+  );
+}
+
+function vehicleSteeringSideLockHint() {
+  return (
+    " (STEERING SIDE: visible wheel through glass keeps original photo handedness — RHD right, LHD left; no mirror flip.)"
   );
 }
 
@@ -2244,6 +2295,12 @@ function vehiclePaintColorFrontLock(prompt, referenceImageCount = 0) {
   if (!paint) return "";
   const hint = vehiclePaintColorHint(prompt, referenceImageCount);
   if (!hint) return "";
+  if (/black|noir|jet\s+black/i.test(paint.label)) {
+    return (
+      "PAINT=JET BLACK SOLID ONLY — NOT blue, NOT green, NOT grey-blue, NOT Miami/Portimao hero color. " +
+      "NOT original photo car white/grey. "
+    );
+  }
   return `PAINT=${paint.label} ONLY — NOT original photo car white/grey, NOT default press white/silver. `;
 }
 
@@ -2254,7 +2311,15 @@ function isNamedVehiclePrompt(prompt) {
 function generationAntimixLine(prompt) {
   const t = normalizePromptText(prompt);
   if (/\bbmw\b/.test(t) && /\bg90\b/.test(t)) {
-    return " BMW M5 G90 2024+ luxury sedan — large kidney grille, modern LCI body, curved iDrive screens. FORBIDDEN: Nissan Silvia/S15, Skyline, GT-R, R34, generic JDM widebody, 3 Series, F90 M5.";
+    const paint = parseVehiclePaintColor(prompt);
+    const blackLock =
+      paint && /black|noir|jet/i.test(paint.label)
+        ? " Body paint MUST be jet black as requested — FORBIDDEN Miami Blue, Portimao Blue, Isle of Man Green, or any blue/green BMW hero color."
+        : "";
+    return (
+      " BMW M5 G90 2024+ luxury sedan — large kidney grille, modern LCI body, curved iDrive screens. FORBIDDEN: Nissan Silvia/S15, Skyline, GT-R, R34, generic JDM widebody, 3 Series, F90 M5." +
+      blackLock
+    );
   }
   if (
     /\b(lamborghini|lambo|aventador)\b/.test(t) &&
@@ -2395,22 +2460,29 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
     ? "TWO-PHOTO SWAP: image1=scene+camera lock, image2=exact target car (color/body/wheels/badges) — FORBIDDEN invented Juke/Silvia/Skyline. "
     : "";
   const spec = parseVehicleSpec(userPrompt);
-  if (!spec) return refPrefix.trim();
+  const paintOnly = parseVehiclePaintColor(userPrompt);
+  if (!spec && !paintOnly) return refPrefix.trim();
   const stickerPolicy = buildVehicleStickerPolicyClause(userPrompt);
+  const paintBlock =
+    `${vehiclePaintColorFrontLock(userPrompt, referenceImageCount)}` +
+    `${vehiclePaintColorHint(userPrompt, referenceImageCount)}` +
+    `${vehicleSteeringSideLockHint()}` +
+    `${
+      paintOnly ? VEHICLE_SCENE_MATCH_LIGHT_ONLY_CLARIFIER : ""
+    }`;
+  if (!spec) {
+    return (
+      `${refPrefix}${VEHICLE_DECAL_FRONT_LOCK}${paintBlock}`
+    ).trim();
+  }
   return (
     `${refPrefix}` +
     `${VEHICLE_DECAL_FRONT_LOCK}` +
     `${stickerPolicy ? ` ${stickerPolicy}` : ""} ` +
-    `${vehiclePaintColorFrontLock(userPrompt, referenceImageCount)}` +
+    paintBlock +
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
-    `${vehicleIdentityHint(userPrompt)}` +
-    `${vehiclePaintColorHint(userPrompt, referenceImageCount)}` +
-    `${
-      parseVehiclePaintColor(userPrompt)
-        ? VEHICLE_SCENE_MATCH_LIGHT_ONLY_CLARIFIER
-        : ""
-    }`
+    `${vehicleIdentityHint(userPrompt)}`
   ).trim();
 }
 
@@ -2453,6 +2525,22 @@ function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
     ).trim();
   }
   const spec = parseVehicleSpec(userPrompt);
+  const paintRecolorOnly =
+    !spec &&
+    parseVehiclePaintColor(userPrompt) &&
+    /\b(en\s+noir|full\s+noir|couleur|peinture|color|paint|mets\s+la|met\s+la|refais|regener)\b/i.test(
+      String(userPrompt || ""),
+    );
+  if (paintRecolorOnly) {
+    const paint = parseVehiclePaintColor(userPrompt);
+    const paintHint = vehiclePaintColorHint(userPrompt, referenceImageCount);
+    return (
+      `Recolor ONLY the existing car in the photo — same model, wheels, badges, background, camera, parking pose. ` +
+      `New exterior paint: ${paint.label}.${paintHint} ` +
+      `${buildVehicleOccupancyLock(userPrompt)} ` +
+      "Inpaint body panels only — no blue or green hero OEM color unless user asked."
+    ).trim();
+  }
   const raw = String(userPrompt || "").trim();
   const label = spec?.label || raw;
   const antimix = generationAntimixLine(userPrompt).trim();
@@ -2468,6 +2556,7 @@ function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
     `Replace ONLY the existing car with ${label}.${detail}${paintLine} ` +
     `${stickerLine} ${occupancyLine} ` +
     "Strictly preserve the original background (car wash, parking, walls, brushes) and camera framing — inpaint only the vehicle volume. " +
+    "If the steering wheel is visible through the windshield, keep the same RHD/LHD side as the original photo. " +
     "Keep the same person, pose, outfit, station/building, and lighting unless the user asked otherwise."
   ).trim();
 }

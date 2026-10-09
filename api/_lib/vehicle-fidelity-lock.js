@@ -86,13 +86,30 @@ function buildVehicleBackgroundInpaintLock() {
   );
 }
 
+function buildVehiclePaintNegativeExtension(userPrompt) {
+  let { parseVehiclePaintColor } = require("./prompt-guard");
+  const paint = parseVehiclePaintColor(userPrompt);
+  if (!paint || !/black|noir|jet/i.test(paint.label)) return "";
+  return (
+    ", blue car body paint, green car body paint, metallic blue body, turquoise body, " +
+    "Miami Blue, Portimao Blue, grey-blue body, BMW hero blue, navy body color"
+  );
+}
+
+function buildVehicleAntiHallucinationNegative(userPrompt) {
+  return (
+    VEHICLE_ANTI_HALLUCINATION_NEGATIVE +
+    buildVehiclePaintNegativeExtension(userPrompt)
+  );
+}
+
 function buildVehicleFidelityPromptBlock(userPrompt) {
   const parts = [
     VEHICLE_SYSTEM_INJECTION,
     buildVehicleBackgroundInpaintLock(),
     buildVehicleOccupancyLock(userPrompt),
     buildVehicleStickerPolicyClause(userPrompt),
-    `Negative prompt: ${VEHICLE_ANTI_HALLUCINATION_NEGATIVE}.`,
+    `Negative prompt: ${buildVehicleAntiHallucinationNegative(userPrompt)}.`,
   ].filter(Boolean);
   return parts.join(" ");
 }

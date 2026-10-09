@@ -62,6 +62,25 @@ test("vehicle swap locks OEM Kyalami green paint (not default white RS3)", () =>
   assert.match(prompt, /Factory paint color:.*Kyalami/i);
 });
 
+test("vehicle swap locks full noir on BMW M5 G90", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace ma voiture par une BMW M5 G90 full noir",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /PAINT LOCK/i);
+  assert.match(prompt, /JET BLACK|jet black|black|noir/i);
+  assert.match(prompt, /Miami Blue|Portimao|FORBIDDEN.*blue/i);
+  assert.match(prompt, /STEERING|RHD|handedness|mirror/i);
+});
+
+test("vehicle recolor en noir adds jet black lock and blue negative", () => {
+  const prompt = buildIdentityPreservingPrompt("Mets la en noir", {
+    referenceImageCount: 1,
+  });
+  assert.match(prompt, /JET BLACK|PAINT LOCK/i);
+  assert.match(prompt, /Miami Blue|Portimao|PAINT=JET BLACK|PAINT LOCK/i);
+});
+
 test("vehicle swap locks generic bleu marine", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace la voiture par une BMW M3 couleur bleu marine",
