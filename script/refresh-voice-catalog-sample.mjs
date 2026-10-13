@@ -6,14 +6,15 @@
  * Repli : extrait par défaut du modèle Fish.
  *
  * Usage:
- *   node script/refresh-voice-catalog-sample.mjs niska 6be490a175744894826dd464cf3a5004
+ *   node script/refresh-voice-catalog-sample.mjs niska <fish_model_id>
  */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { CATALOG_SAMPLE_LINE } = require("../api/_lib/voice-catalog.js");
+const { buildCatalogSampleLine } = require("../api/_lib/voice-catalog.js");
+const catalogSampleLine = buildCatalogSampleLine("LuxeFlexIA", "fr");
 const { synthesizeSpeech } = require("../api/_lib/fish-audio.js");
 
 const [slug, fishId] = process.argv.slice(2);
@@ -35,7 +36,7 @@ let source = "fish-default-sample";
 
 try {
   buffer = await synthesizeSpeech({
-    text: CATALOG_SAMPLE_LINE,
+    text: catalogSampleLine,
     referenceId: fishId,
     format: "mp3",
   });
