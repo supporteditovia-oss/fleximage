@@ -6,9 +6,25 @@ const {
   passesAvDurationQa,
   getMaxAvGapSec,
   shouldRunI2VAvDurationQa,
+  resolveI2VTargetDeliverSec,
 } = require("./i2v-av-sync");
 
 describe("i2v-av-sync", () => {
+  it("resolveI2VTargetDeliverSec — 3 s demandées, Kie 5 s → livrer 3 s", () => {
+    assert.equal(
+      resolveI2VTargetDeliverSec(3, { hasAudio: true, audioSec: 2.1 }),
+      3,
+    );
+    assert.equal(
+      resolveI2VTargetDeliverSec(3, { hasAudio: true, audioSec: 5.2 }),
+      5.2,
+    );
+    assert.equal(
+      resolveI2VTargetDeliverSec(5, { hasAudio: true, audioSec: 2 }),
+      5,
+    );
+  });
+
   it("effectiveAvGapSec computes absolute difference", () => {
     const gap = effectiveAvGapSec({ videoSec: 2.133, audioSec: 1.231 });
     assert.ok(Math.abs(gap - 0.902) < 0.001);
@@ -30,7 +46,7 @@ describe("i2v-av-sync", () => {
     assert.equal(getMaxAvGapSec(), 0.3);
   });
 
-  it("shouldRunI2VAvDurationQa only for pipeline v2 I2V with explicit voice", () => {
+  it("shouldRunI2VAvDurationQa for avatar I2V with explicit voice", () => {
     assert.equal(
       shouldRunI2VAvDurationQa({ workflow: "image_to_video" }),
       false,
@@ -38,14 +54,7 @@ describe("i2v-av-sync", () => {
     assert.equal(
       shouldRunI2VAvDurationQa({
         workflow: "image_to_video",
-        i2v_avatar_pipeline_v2: true,
-      }),
-      false,
-    );
-    assert.equal(
-      shouldRunI2VAvDurationQa({
-        workflow: "image_to_video",
-        i2v_avatar_pipeline_v2: true,
+        i2v_provider: "kling_ai_avatar_pro",
         voice_enabled: true,
         voice_text: "Bonjour, ceci est un test vocal.",
       }),

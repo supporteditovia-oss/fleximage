@@ -19,11 +19,40 @@ import "@/components/larp/generation-loader.css";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageForGeneration } from "@/lib/compress-image";
 import { VideoIAStudioView } from "@/pages/video-ia/VideoIAStudioView";
+import {
+  isMotionStagingToggleUiVisible,
+  motionStagingTogglePayload,
+  readMotionStagingFfmpegPostprocessOn,
+  readMotionStagingPromptIntelligenceOn,
+  readMotionStagingV2ContactShadowOn,
+  readMotionStagingV2EdgeBlendOn,
+  readMotionStagingV2EraseOn,
+  readMotionStagingV2LightMatchOn,
+  setMotionStagingFfmpegPostprocessOn,
+  setMotionStagingPromptIntelligenceOn,
+  setMotionStagingV2ContactShadowOn as persistMotionStagingV2Shadow,
+  setMotionStagingV2EdgeBlendOn as persistMotionStagingV2Edge,
+  setMotionStagingV2EraseOn as persistMotionStagingV2Erase,
+  setMotionStagingV2LightMatchOn as persistMotionStagingV2Light,
+} from "@/lib/motion-staging-toggles";
 import { pathForVideoStudioMode, type VideoStudioMode } from "@/lib/video-studio-modes";
+import {
+  createEmptySceneLuxeSlots,
+  newSceneLuxePhotoId,
+  sceneLuxeFilledPhotos,
+  SCENE_LUXE_MAX_PHOTOS,
+  type SceneLuxePhotoRef,
+  type SceneLuxePhotoSlots,
+} from "@/lib/scene-luxe-reference-photos";
 import {
   adminPreviewVideoCreditCost,
   ADMIN_PRICING_REFERENCE,
 } from "@shared/pricing-admin-reference";
+import {
+  computePreviewV3V2VTransformCredits,
+  PREVIEW_V3_CREDIT_BURN,
+} from "@shared/subscription-preview-v3";
+import { fetchI2vSoundDetect } from "@/lib/i2v-sound-auto-detect";
 import {
   i2vDuration5sExtraCredits,
   i2vQuality1080ExtraCredits,
@@ -52,6 +81,7 @@ import {
   finalizeV2VPromptForSubmit,
 } from "@/lib/v2v-prompt";
 import {
+  coerceV2VStudioIntent,
   parseV2VIntentFromUrl,
   resolveV2VBillingProvider,
   resolveV2VProviderForStudioSubmit,
@@ -98,7 +128,10 @@ export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading } = useV2Access();
   const { user } = useAuth();
+  /** Voix/son I2V avancés — admin preview uniquement (pas les clients). */
+  const i2vAdminStudioEnabled = adminPreview;
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
+  const subscriptionPreviewV3Active = Boolean(plan?.subscriptionPreviewV3Active);
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
 
@@ -140,12 +173,63 @@ export default function VideoIA() {
     refImageIsCustomRef.current = refImageIsCustom;
   }, [refImageIsCustom]);
   const [swapPrompt, setSwapPrompt] = useState("");
+  const [sceneLuxeSlots, setSceneLuxeSlots] = useState<SceneLuxePhotoSlots>(
+    createEmptySceneLuxeSlots,
+  );
+  const sceneLuxeSlotsRef = useRef<SceneLuxePhotoSlots>(createEmptySceneLuxeSlots());
+  const scenePhotoAddChainRef = useRef<Promise<void>>(Promise.resolve());
+  const [scenePhotosBusy, setScenePhotosBusy] = useState(false);
+  useEffect(() => {
+    sceneLuxeSlotsRef.current = sceneLuxeSlots;
+  }, [sceneLuxeSlots]);
+  const sceneLuxePhotos = useMemo(
+    () => sceneLuxeFilledPhotos(sceneLuxeSlots),
+    [sceneLuxeSlots],
+  );
   const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
+  const showMotionStagingToggles = isMotionStagingToggleUiVisible();
+  const [motionStagingPromptOn, setMotionStagingPromptOn] = useState(() =>
+    readMotionStagingPromptIntelligenceOn(),
+  );
+  const [motionStagingFfmpegOn, setMotionStagingFfmpegOn] = useState(() =>
+    readMotionStagingFfmpegPostprocessOn(),
+  );
+  const [motionStagingV2EraseOn, setMotionStagingV2EraseOn] = useState(() =>
+    readMotionStagingV2EraseOn(),
+  );
+  const [motionStagingV2EdgeOn, setMotionStagingV2EdgeOn] = useState(() =>
+    readMotionStagingV2EdgeBlendOn(),
+  );
+  const [motionStagingV2LightOn, setMotionStagingV2LightOn] = useState(() =>
+    readMotionStagingV2LightMatchOn(),
+  );
+  const [motionStagingV2ShadowOn, setMotionStagingV2ShadowOn] = useState(() =>
+    readMotionStagingV2ContactShadowOn(),
+  );
   const [v2vResolution, setV2vResolution] =
     useState<VideoUltraResolution>("720p");
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
+  const [i2vVoiceId, setI2vVoiceId] = useState<string | null>(null);
+  const [suggestedVoiceFilter, setSuggestedVoiceFilter] = useState<
+    "all" | "homme" | "femme" | null
+  >(null);
+  const [i2vAmbience, setI2vAmbience] = useState<
+    "none" | "street" | "crowd_protest"
+  >("none");
+  const [i2vSfx, setI2vSfx] = useState<
+    import("@shared/i2v-sfx").I2VSfx
+  >("none");
+  const [i2vSfxMoment, setI2vSfxMoment] = useState<
+    import("@shared/i2v-sfx").I2VSfxMoment
+  >("middle");
+  const [i2vSoundAutoOn, setI2vSoundAutoOn] = useState(true);
+  const [i2vSoundManualOverride, setI2vSoundManualOverride] = useState(false);
+  const [i2vSoundDetectLabel, setI2vSoundDetectLabel] = useState<string | null>(
+    null,
+  );
+  const [i2vSoundDetectPending, setI2vSoundDetectPending] = useState(false);
   const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -188,6 +272,50 @@ export default function VideoIA() {
     if (intentFromUrl) setV2vIntent(intentFromUrl);
   }, []);
 
+  useEffect(() => {
+    setV2vIntent((prev) => coerceV2VStudioIntent(prev));
+  }, []);
+
+  /** Prod : admin + compte test preview ; clients après I2V_SOUND_STUDIO=1. */
+  const i2vSoundStudioEnabled = i2vAdminStudioEnabled;
+
+  useEffect(() => {
+    if (!i2vSoundStudioEnabled || !voiceEnabled || !i2vSoundAutoOn) return;
+    const prompt = motionPrompt.trim();
+    if (prompt.length < 5) {
+      setI2vSoundDetectLabel(null);
+      return;
+    }
+
+    setI2vSoundManualOverride(false);
+    setI2vSoundDetectPending(true);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const detection = await fetchI2vSoundDetect({ motionPrompt: prompt });
+        setI2vSoundDetectPending(false);
+        if (!detection) return;
+        setI2vSoundDetectLabel(detection.label_fr || null);
+        setI2vAmbience(detection.ambiance);
+        setI2vSfx(
+          detection.sfx
+            ? (detection.sfx as import("@shared/i2v-sfx").I2VSfx)
+            : "none",
+        );
+        setI2vSfxMoment(detection.sfx_moment);
+        const vf = detection.suggested_voice_filter;
+        if (vf === "homme" || vf === "femme") {
+          setSuggestedVoiceFilter(vf);
+        } else {
+          setSuggestedVoiceFilter(null);
+        }
+      })();
+    }, 650);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [motionPrompt, voiceEnabled, i2vSoundAutoOn, i2vSoundStudioEnabled]);
+
   const syncV2vUrl = useCallback(
     (intent: V2VStudioIntent) => {
       window.history.replaceState(
@@ -200,8 +328,9 @@ export default function VideoIA() {
   );
 
   const handleV2vIntentSelect = (intent: V2VStudioIntent) => {
-    setV2vIntent(intent);
-    syncV2vUrl(intent);
+    const next = coerceV2VStudioIntent(intent);
+    setV2vIntent(next);
+    syncV2vUrl(next);
   };
 
   const handleStudioModeSelect = (mode: VideoStudioMode) => {
@@ -238,7 +367,11 @@ export default function VideoIA() {
 
   const voiceReady =
     !voiceEnabled ||
-    (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
+    (i2vAdminStudioEnabled
+      ? Boolean(i2vVoiceId) &&
+        voiceText.trim().length >= 5 &&
+        voiceText.length <= voiceMaxChars
+      : voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
   const i2vBillingGrid = adminPreview ? ("admin_v2" as const) : ("prod" as const);
@@ -267,8 +400,15 @@ export default function VideoIA() {
     setV2vResolution(v2vResolutionOptions[v2vResolutionOptions.length - 1]!);
   }, [workflow, v2vResolution, v2vResolutionOptions]);
 
-  const v2vCreditsForResolution = (res: VideoUltraResolution) =>
-    adminPreview
+  const v2vCreditsForResolution = (res: VideoUltraResolution) => {
+    const transformFamily =
+      v2vEngineFamilyFromProvider(v2vProviderForBilling) === "transform";
+    if (subscriptionPreviewV3Active && transformFamily) {
+      let cost = computePreviewV3V2VTransformCredits(res);
+      if (preserveSourceVoice) cost += PREVIEW_V3_CREDIT_BURN.videoVoiceExtra;
+      return cost;
+    }
+    return adminPreview
       ? adminPreviewVideoCreditCost({
           workflow: "video_to_video",
           durationSec: v2vBillingDurationSec,
@@ -282,6 +422,7 @@ export default function VideoIA() {
           preserveSourceAudio: preserveSourceVoice,
           v2vProvider: v2vProviderForBilling,
         });
+  };
 
   const creditCost =
     workflow === "video_to_video"
@@ -300,15 +441,28 @@ export default function VideoIA() {
             voiceEnabled,
           });
 
-  const buildVoicePayload = () =>
-    voiceEnabled
-      ? {
-          voice_enabled: true,
-          voice_mode: "catalog" as const,
-          voice_text: voiceText.trim(),
-          voice_consent: true,
-        }
-      : { voice_enabled: false };
+  const buildVoicePayload = () => {
+    if (!voiceEnabled) return { voice_enabled: false };
+    if (!i2vAdminStudioEnabled) {
+      return {
+        voice_enabled: true,
+        voice_mode: "catalog" as const,
+        voice_text: voiceText.trim(),
+        voice_consent: true,
+      };
+    }
+    if (!i2vVoiceId) return { voice_enabled: false };
+    const isClone = i2vVoiceId.startsWith("clone:");
+    const cloneId = isClone ? i2vVoiceId.slice("clone:".length) : undefined;
+    return {
+      voice_enabled: true,
+      voice_mode: isClone ? ("cloned" as const) : ("catalog" as const),
+      voice_clone_id: cloneId,
+      i2v_voice_id: i2vVoiceId,
+      voice_text: voiceText.trim(),
+      voice_consent: true,
+    };
+  };
 
   const creditBalance = plan?.credits ?? 0;
   const canAfford = creditBalance >= creditCost;
@@ -322,9 +476,14 @@ export default function VideoIA() {
   const videoImportBusy = isVideoReading && !videoPreview;
   const motionRefReady =
     v2vIntent !== "motion" || Boolean(refImageBase64 || refImagePreview);
+  const sceneLuxeReady =
+    v2vIntent !== "scene" ||
+    swapPrompt.trim().length >= 5 ||
+    sceneLuxePhotos.length > 0;
   const canGenerateV2V =
     hasVideoReady &&
-    swapPrompt.trim().length >= 5 &&
+    sceneLuxeReady &&
+    (v2vIntent !== "scene" ? swapPrompt.trim().length >= 5 : true) &&
     canAfford &&
     !videoImportBusy &&
     motionRefReady;
@@ -338,6 +497,15 @@ export default function VideoIA() {
     setPrefillImageUrl(null);
     setPrefillLarpId(null);
     if (imageFileRef.current) imageFileRef.current.value = "";
+  }, []);
+
+  const clearSceneLuxePhotos = useCallback(() => {
+    setSceneLuxeSlots((prev) => {
+      for (const p of prev) {
+        if (p) URL.revokeObjectURL(p.previewUrl);
+      }
+      return createEmptySceneLuxeSlots();
+    });
   }, []);
 
   const handleClearVideo = useCallback(() => {
@@ -357,9 +525,10 @@ export default function VideoIA() {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    clearSceneLuxePhotos();
     if (videoFileRef.current) videoFileRef.current.value = "";
     if (refImageFileRef.current) refImageFileRef.current.value = "";
-  }, []);
+  }, [clearSceneLuxePhotos]);
 
   const handleClearRefImage = useCallback(() => {
     setRefImageBase64(null);
@@ -548,7 +717,7 @@ export default function VideoIA() {
           variant: "destructive",
           title: "Voix non activée",
           description:
-            "Sans l'option voix (+5 crédits), le prompt ne peut pas demander de parole ou de son. Active « Ajouter une voix IA » ou décris seulement le mouvement visuel.",
+            "Sans l'option voix (+5 crédits), le prompt ne peut pas demander de parole ou de son. Active « Faire parler la vidéo » ou décris seulement le mouvement visuel.",
         });
         setIsSubmitting(false);
         return;
@@ -565,6 +734,16 @@ export default function VideoIA() {
         quality: videoQuality,
         subtitles_enabled: false,
         ...buildVoicePayload(),
+        ...(voiceEnabled && i2vSoundStudioEnabled
+          ? {
+              i2v_sound_auto: i2vSoundAutoOn,
+              i2v_sound_manual_override: i2vSoundManualOverride,
+              ...(i2vAmbience !== "none" ? { i2v_ambience: i2vAmbience } : {}),
+              ...(i2vSfx !== "none"
+                ? { i2v_sfx: i2vSfx, i2v_sfx_moment: i2vSfxMoment }
+                : {}),
+            }
+          : {}),
         ...(uploadBase64
           ? { images: [uploadBase64] }
           : {
@@ -604,6 +783,131 @@ export default function VideoIA() {
       });
     }
   };
+
+  const ingestScenePhotoFile = async (file: File): Promise<SceneLuxePhotoRef> => {
+    const compressed = await compressImageForGeneration(file);
+    const base64 = await fileToBase64(compressed);
+    return {
+      id: newSceneLuxePhotoId(),
+      previewUrl: URL.createObjectURL(compressed),
+      base64,
+      role: "",
+    };
+  };
+
+  const runScenePhotoImport = (task: () => Promise<void>) => {
+    scenePhotoAddChainRef.current = scenePhotoAddChainRef.current
+      .then(task)
+      .catch(() => {});
+    return scenePhotoAddChainRef.current;
+  };
+
+  const handleScenePhotoAddAtSlot = (slotIndex: number, file: File) => {
+    void runScenePhotoImport(async () => {
+      if (slotIndex < 0 || slotIndex >= SCENE_LUXE_MAX_PHOTOS) return;
+      if (sceneLuxeSlotsRef.current[slotIndex]) return;
+
+      setScenePhotosBusy(true);
+      try {
+        const photo = await ingestScenePhotoFile(file);
+        setSceneLuxeSlots((prev) => {
+          if (prev[slotIndex]) {
+            URL.revokeObjectURL(photo.previewUrl);
+            return prev;
+          }
+          const next = [...prev] as SceneLuxePhotoSlots;
+          next[slotIndex] = photo;
+          return next;
+        });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Import impossible",
+          description: "Choisis une image JPG ou PNG valide.",
+        });
+      } finally {
+        setScenePhotosBusy(false);
+      }
+    });
+  };
+
+  const handleScenePhotosAddMany = (files: File[]) => {
+    if (files.length === 0) return;
+    void runScenePhotoImport(async () => {
+      const emptyIndices: number[] = [];
+      const slots = sceneLuxeSlotsRef.current;
+      for (let i = 0; i < SCENE_LUXE_MAX_PHOTOS; i++) {
+        if (!slots[i]) emptyIndices.push(i);
+      }
+      const batch = files.slice(0, emptyIndices.length);
+      if (batch.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Maximum 9 photos",
+          description: "Supprime une photo pour en ajouter une autre.",
+        });
+        return;
+      }
+      if (files.length > batch.length) {
+        toast({
+          title: "Maximum 9 photos",
+          description: `Seules ${batch.length} photo(s) ont été ajoutées.`,
+        });
+      }
+
+      setScenePhotosBusy(true);
+      try {
+        const pairs: { index: number; photo: SceneLuxePhotoRef }[] = [];
+        for (let j = 0; j < batch.length; j++) {
+          pairs.push({
+            index: emptyIndices[j]!,
+            photo: await ingestScenePhotoFile(batch[j]!),
+          });
+        }
+        setSceneLuxeSlots((prev) => {
+          const next = [...prev] as SceneLuxePhotoSlots;
+          for (const { index, photo } of pairs) {
+            if (next[index]) URL.revokeObjectURL(photo.previewUrl);
+            else next[index] = photo;
+          }
+          return next;
+        });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Import impossible",
+          description: "Choisis des images JPG ou PNG valides.",
+        });
+      } finally {
+        setScenePhotosBusy(false);
+      }
+    });
+  };
+
+  const handleScenePhotoRemove = useCallback((id: string) => {
+    setSceneLuxeSlots((prev) => {
+      const next = [...prev] as SceneLuxePhotoSlots;
+      for (let i = 0; i < next.length; i++) {
+        if (next[i]?.id === id) {
+          URL.revokeObjectURL(next[i]!.previewUrl);
+          next[i] = null;
+          break;
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const handleScenePhotoRoleChange = useCallback((id: string, role: string) => {
+    setSceneLuxeSlots((prev) => {
+      const next = [...prev] as SceneLuxePhotoSlots;
+      for (let i = 0; i < next.length; i++) {
+        const p = next[i];
+        if (p?.id === id) next[i] = { ...p, role };
+      }
+      return next;
+    });
+  }, []);
 
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
@@ -664,7 +968,9 @@ export default function VideoIA() {
         return;
       }
     }
-    if (v2vProvider === "kling_motion" && motionRefB64) {
+    if (v2vIntent === "scene" && sceneLuxePhotos.length > 0) {
+      referenceImages = sceneLuxePhotos.map((p) => p.base64);
+    } else if (v2vProvider === "kling_motion" && motionRefB64) {
       referenceImages = [motionRefB64];
     }
 
@@ -701,6 +1007,11 @@ export default function VideoIA() {
         ...(referenceImages?.length
           ? { reference_images: referenceImages }
           : {}),
+        ...(v2vIntent === "scene" && sceneLuxePhotos.length
+          ? {
+              reference_photo_roles: sceneLuxePhotos.map((p) => p.role.trim()),
+            }
+          : {}),
         ...(v2vIntent === "motion" && referenceImages?.length
           ? {
               motion_reference_source: refImageIsCustomRef.current
@@ -708,6 +1019,7 @@ export default function VideoIA() {
                 : ("auto_frame" as const),
             }
           : {}),
+        ...(v2vIntent === "motion" ? motionStagingTogglePayload() : {}),
         source: "video_studio",
       });
       setTaskId(result.taskId);
@@ -840,8 +1152,37 @@ export default function VideoIA() {
       onVoiceEnabled={setVoiceEnabled}
       voiceText={voiceText}
       onVoiceText={setVoiceText}
+      i2vVoiceId={i2vVoiceId}
+      onI2vVoiceId={setI2vVoiceId}
+      suggestedVoiceFilter={suggestedVoiceFilter}
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
+      i2vAmbience={i2vAmbience}
+      onI2vAmbience={setI2vAmbience}
+      i2vSfx={i2vSfx}
+      onI2vSfx={setI2vSfx}
+      i2vSfxMoment={i2vSfxMoment}
+      onI2vSfxMoment={setI2vSfxMoment}
+      onI2vSoundManualAdjust={() => {
+        setI2vSoundAutoOn(false);
+        setI2vSoundManualOverride(true);
+      }}
+      i2vSoundAutoOn={i2vSoundAutoOn}
+      onI2vSoundAutoOn={(on) => {
+        setI2vSoundAutoOn(on);
+        if (on) {
+          setI2vSoundManualOverride(false);
+          return;
+        }
+        setI2vAmbience("none");
+        setI2vSfx("none");
+        setI2vSfxMoment("middle");
+        setI2vSoundDetectLabel(null);
+        setI2vSoundManualOverride(false);
+      }}
+      i2vSoundDetectLabel={i2vSoundDetectLabel}
+      i2vSoundDetectPending={i2vSoundDetectPending}
+      i2vSoundStudioEnabled={i2vSoundStudioEnabled}
       canGenerateI2V={canGenerateI2V}
       onGenerateI2V={handleGenerateI2V}
       i2vPending={isSubmitting || generateVideo.isPending}
@@ -868,11 +1209,48 @@ export default function VideoIA() {
       refImageIsCustom={refImageIsCustom}
       refImagePreview={refImagePreview}
       onRefImageUpload={handleRefImageUpload}
+      sceneLuxeSlots={sceneLuxeSlots}
+      scenePhotosBusy={scenePhotosBusy}
+      onScenePhotoAddAtSlot={handleScenePhotoAddAtSlot}
+      onScenePhotosAddMany={handleScenePhotosAddMany}
+      onScenePhotoRemove={handleScenePhotoRemove}
+      onScenePhotoRoleChange={handleScenePhotoRoleChange}
       preserveSourceVoice={preserveSourceVoice}
       onPreserveSourceVoice={setPreserveSourceVoice}
       canGenerateV2V={canGenerateV2V}
       onGenerateV2V={handleGenerateV2V}
       v2vPending={isSubmitting || generateVideo.isPending}
+      showMotionStagingToggles={showMotionStagingToggles}
+      motionStagingPromptOn={motionStagingPromptOn}
+      onMotionStagingPromptOn={(on) => {
+        setMotionStagingPromptOn(on);
+        setMotionStagingPromptIntelligenceOn(on);
+      }}
+      motionStagingFfmpegOn={motionStagingFfmpegOn}
+      onMotionStagingFfmpegOn={(on) => {
+        setMotionStagingFfmpegOn(on);
+        setMotionStagingFfmpegPostprocessOn(on);
+      }}
+      motionStagingV2EraseOn={motionStagingV2EraseOn}
+      onMotionStagingV2EraseOn={(on) => {
+        setMotionStagingV2EraseOn(on);
+        persistMotionStagingV2Erase(on);
+      }}
+      motionStagingV2EdgeOn={motionStagingV2EdgeOn}
+      onMotionStagingV2EdgeOn={(on) => {
+        setMotionStagingV2EdgeOn(on);
+        persistMotionStagingV2Edge(on);
+      }}
+      motionStagingV2LightOn={motionStagingV2LightOn}
+      onMotionStagingV2LightOn={(on) => {
+        setMotionStagingV2LightOn(on);
+        persistMotionStagingV2Light(on);
+      }}
+      motionStagingV2ShadowOn={motionStagingV2ShadowOn}
+      onMotionStagingV2ShadowOn={(on) => {
+        setMotionStagingV2ShadowOn(on);
+        persistMotionStagingV2Shadow(on);
+      }}
     />
   );
 }

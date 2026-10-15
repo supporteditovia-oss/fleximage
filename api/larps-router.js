@@ -51,6 +51,11 @@ module.exports = async function handler(req, res) {
     return templatesHandler(req, res);
   }
 
+  if (parts[0] === "kie" && parts[1] === "jobs-callback") {
+    const kieJobsCallback = require("./_lib/handlers/kie-jobs-callback");
+    return kieJobsCallback(req, res);
+  }
+
   if (parts[0] === "generate-direct") {
     return generateDirect(req, res);
   }
@@ -74,6 +79,21 @@ module.exports = async function handler(req, res) {
   if (parts[0] === "analyze-subject") {
     const analyzeSubject = require("./_lib/handlers/analyze-subject");
     return analyzeSubject(req, res);
+  }
+
+  if (parts[0] === "i2v-sound-detect") {
+    const i2vSoundDetect = require("./_lib/handlers/i2v-sound-detect");
+    return i2vSoundDetect(req, res);
+  }
+
+  if (parts[0] === "i2v-voices") {
+    const i2vVoices = require("./_lib/handlers/i2v-voices");
+    return i2vVoices(req, res);
+  }
+
+  if (parts[0] === "i2v-voice" && parts[1] === "preview") {
+    const i2vVoicePreview = require("./_lib/handlers/i2v-voice-preview");
+    return i2vVoicePreview(req, res);
   }
 
   if (parts[0] === "can-generate") {

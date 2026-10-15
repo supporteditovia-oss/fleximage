@@ -4,6 +4,10 @@ import { currentPlanQueryKey, useCurrentPlan } from "@/hooks/use-billing";
 import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { AdminPricingReferenceCard } from "@/components/admin/AdminPricingReferenceCard";
+import { AdminSubscriptionPreviewV3Panel } from "@/components/admin/AdminSubscriptionPreviewV3Panel";
+import { AdminSubscriptionPreviewV3Diagnostics } from "@/components/admin/AdminSubscriptionPreviewV3Diagnostics";
+import { AdminPostExperienceQuizStatsPanel } from "@/components/admin/AdminPostExperienceQuizStatsPanel";
+import { AdminI2VVoiceLibraryPanel } from "@/components/admin/AdminI2VVoiceLibraryPanel";
 import { LanguageSwitch } from "@/components/layout/LanguageSwitch";
 import {
   Select,
@@ -92,7 +96,7 @@ export default function Settings() {
   const [adminPlanLoading, setAdminPlanLoading] = useState(false);
   const { data: currentPlan } = useCurrentPlan({ enabled: !!profile?.id });
   const adminSelectedPlan = resolveAdminSelectablePlan(currentPlan?.planType);
-
+  const showAdminSection = isAdmin || currentPlan?.planType === "admin";
   const subscriptionPrice = (() => {
     if (!currentPlan) return t("settings.subscription.price");
     if (currentPlan.planType === "admin") return t("billing.plans.admin");
@@ -434,11 +438,12 @@ export default function Settings() {
         </div>
       </section>
 
-      {isAdmin ? (
+      {showAdminSection ? (
         <section className="space-y-4">
           <h2 className="px-1 text-sm font-semibold uppercase text-muted-foreground/70">
             {t("settings.admin.sectionTitle")}
           </h2>
+          <AdminSubscriptionPreviewV3Diagnostics />
           <div className="overflow-hidden rounded-xl border border-[var(--lx-gold)]/35 bg-[var(--lx-surface-2)]/95 backdrop-blur">
             <div className="flex items-center gap-3 px-4 py-3.5">
               <Shield className="h-4.5 w-4.5 shrink-0 text-muted-foreground/60" />
@@ -486,6 +491,9 @@ export default function Settings() {
             </div>
           </div>
           <AdminPricingReferenceCard />
+          <AdminSubscriptionPreviewV3Panel />
+          <AdminPostExperienceQuizStatsPanel />
+          <AdminI2VVoiceLibraryPanel />
         </section>
       ) : null}
 

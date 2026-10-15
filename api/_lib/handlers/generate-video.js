@@ -7,7 +7,7 @@ const {
   isOwnedR2PublicUrl,
 } = require("../r2");
 const { isAiAvatarProConfigured } = require("../kie-ai-avatar-pro");
-const { DEFAULT_CATALOG_FISH_ID } = require("../i2v-avatar-audio");
+const { resolveI2VVoiceForGeneration } = require("../i2v-voice-library");
 const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
@@ -34,6 +34,7 @@ const {
   recordGeneration,
   translateLimitReason,
 } = require("../generation");
+const { shouldBillCreditsForUser } = require("../subscription-preview-v3");
 const {
   findRecentInFlightGeneration,
   buildDedupGenerateResponse,
@@ -176,21 +177,39 @@ async function resolveSourceVideoUrl(userId, body) {
   return uploaded;
 }
 
-async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
+const SEEDANCE_MAX_REFERENCE_PHOTOS = 9;
+
+function parseReferencePhotoRoles(body) {
+  const raw = body.reference_photo_roles;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => (typeof r === "string" ? r.trim() : "")).slice(0, SEEDANCE_MAX_REFERENCE_PHOTOS);
+}
+
+async function resolveOptionalReferenceImageUrls(supabase, userId, body) {
   const refImages = Array.isArray(body.reference_images)
     ? body.reference_images
     : [];
+  if (refImages.length > SEEDANCE_MAX_REFERENCE_PHOTOS) {
+    throw Object.assign(
+      new Error("Maximum 9 photos"),
+      { status: 422, code: "REFERENCE_PHOTOS_MAX" },
+    );
+  }
   if (refImages.length > 0) {
-    const uploaded = await uploadInputImagesToR2(userId, refImages);
-    return uploaded[0] || null;
+    return uploadInputImagesToR2(userId, refImages);
   }
   if (
     typeof body.reference_image_url === "string" &&
     body.reference_image_url.startsWith("http")
   ) {
-    return body.reference_image_url;
+    return [body.reference_image_url];
   }
-  return null;
+  return [];
+}
+
+async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
+  const urls = await resolveOptionalReferenceImageUrls(supabase, userId, body);
+  return urls[0] || null;
 }
 
 function resolveVehicleDescription(body) {
@@ -206,7 +225,13 @@ function resolveVehicleDescription(body) {
 }
 
 
-async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
+async function validateVoiceOwnership(
+  supabase,
+  userId,
+  body,
+  uiLocale,
+  isAdmin = false,
+) {
   if (!body.voice_enabled) return null;
 
   if (body.voice_mode === "none") return null;
@@ -238,24 +263,34 @@ async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
     });
   }
 
-  if (body.voice_mode === "cloned" && body.voice_clone_id) {
-    const { data: clone, error } = await supabase
-      .from("voice_clones")
-      .select("id, user_id, name, fish_reference_id")
-      .eq("id", body.voice_clone_id)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!clone) {
-      throw Object.assign(new Error("Voix clonée introuvable"), {
-        status: 403,
-        code: "VOICE_NOT_AUTHORIZED",
-      });
+  const { isI2VAdminStudioEnabled } = require("../i2v-admin-studio");
+  if (!isI2VAdminStudioEnabled({ isAdmin })) {
+    if (body.i2v_voice_id || body.i2v_ambience || body.i2v_sfx) {
+      throw Object.assign(
+        new Error("Voix I2V avancée réservée aux comptes admin."),
+        { status: 403, code: "I2V_ADMIN_ONLY" },
+      );
     }
-    return clone;
+    if (body.voice_mode === "cloned" && body.voice_clone_id) {
+      const { data: clone, error } = await supabase
+        .from("voice_clones")
+        .select("id, user_id, name, fish_reference_id")
+        .eq("id", body.voice_clone_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!clone) {
+        throw Object.assign(new Error("Voix clonée introuvable"), {
+          status: 403,
+          code: "VOICE_NOT_AUTHORIZED",
+        });
+      }
+      return clone;
+    }
+    return { id: null, name: "Voix IA", fish_reference_id: null };
   }
 
-  return { id: null, name: "Voix IA", fish_reference_id: null };
+  return resolveI2VVoiceForGeneration(supabase, userId, body);
 }
 
 module.exports = async function handler(req, res) {
@@ -296,7 +331,52 @@ module.exports = async function handler(req, res) {
         return;
       }
     } else {
-      if (!vehicleDescription || vehicleDescription.length > 500) {
+      const refCount = Array.isArray(body.reference_images)
+        ? body.reference_images.length
+        : 0;
+      if (refCount > SEEDANCE_MAX_REFERENCE_PHOTOS) {
+        res.status(422).json({
+          code: "REFERENCE_PHOTOS_MAX",
+          message: copy(
+            uiLocale,
+            "Maximum 9 photos",
+            "Maximum 9 photos",
+          ),
+        });
+        return;
+      }
+      const v2vIntentEarly =
+        body.v2v_intent === "motion" || body.v2v_intent === "scene"
+          ? body.v2v_intent
+          : "scene";
+      const sceneMultiref =
+        v2vIntentEarly === "scene" &&
+        (refCount > 0 || (vehicleDescription && vehicleDescription.length >= 5));
+      if (v2vIntentEarly === "scene" && sceneMultiref) {
+        if (vehicleDescription && vehicleDescription.length > 2000) {
+          res.status(400).json({
+            message: copy(
+              uiLocale,
+              "Texte trop long (2000 caractères max).",
+              "Text too long (2000 characters max).",
+            ),
+          });
+          return;
+        }
+        if (
+          refCount === 0 &&
+          (!vehicleDescription || vehicleDescription.length < 5)
+        ) {
+          res.status(400).json({
+            message: copy(
+              uiLocale,
+              "Décris ce que tu veux ou ajoute au moins une photo.",
+              "Describe what you want or add at least one photo.",
+            ),
+          });
+          return;
+        }
+      } else if (!vehicleDescription || vehicleDescription.length > 500) {
         res.status(400).json({
           message: copy(
             uiLocale,
@@ -306,7 +386,7 @@ module.exports = async function handler(req, res) {
         });
         return;
       }
-      if (isDisallowedAdultPrompt(vehicleDescription)) {
+      if (vehicleDescription && isDisallowedAdultPrompt(vehicleDescription)) {
         res.status(422).json(contentPolicyResponse(uiLocale));
         return;
       }
@@ -315,7 +395,7 @@ module.exports = async function handler(req, res) {
     const admin = await isUserAdmin(supabase, userId);
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_subscriber, credits")
+      .select("role, is_subscriber, credits, email")
       .eq("id", userId)
       .single();
     const isAdmin = admin || profile?.role === "admin";
@@ -439,7 +519,8 @@ module.exports = async function handler(req, res) {
       });
       return;
     }
-    if (!isAdmin && profile.credits < creditCost) {
+    const billCredits = shouldBillCreditsForUser({ isAdmin });
+    if (billCredits && (profile?.credits ?? 0) < creditCost) {
       res.status(403).json({
         message: copy(
           uiLocale,
@@ -489,10 +570,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let voiceClone = null;
+    let i2vVoice = null;
     if (voiceEnabled) {
       try {
-        voiceClone = await validateVoiceOwnership(supabase, userId, body, uiLocale);
+        i2vVoice = await validateVoiceOwnership(
+          supabase,
+          userId,
+          body,
+          uiLocale,
+          isAdmin,
+        );
       } catch (voiceErr) {
         res.status(voiceErr.status || 422).json({
           code: voiceErr.code || "VOICE_VALIDATION_FAILED",
@@ -504,14 +591,19 @@ module.exports = async function handler(req, res) {
 
     let sourceAssetUrl;
     let referenceImageUrl = null;
+    let referenceImageUrlsStored = [];
+    let referencePhotoRolesStored = [];
     let v2vProvider = null;
     let motionReferenceSource = null;
     let providerPrompt;
     let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
+        const referencePhotoRolesFr = parseReferencePhotoRoles(body);
         const skipV2VEnrichment =
-          v2vIntent === "motion" || isVehicleDrivingPrompt(vehiclePromptRaw);
+          v2vIntent === "motion" ||
+          v2vIntent === "scene" ||
+          isVehicleDrivingPrompt(vehiclePromptRaw);
         const [enrichedDesc, sourceBundle] = await Promise.all([
           studioVehicleDescription && !skipV2VEnrichment
             ? enrichPromptForGeneration(studioVehicleDescription, {
@@ -521,12 +613,12 @@ module.exports = async function handler(req, res) {
             : Promise.resolve(studioVehicleDescription),
           (async () => {
             const url = await resolveSourceVideoUrl(userId, body);
-            const ref = await resolveOptionalReferenceImageUrl(
+            const refs = await resolveOptionalReferenceImageUrls(
               supabase,
               userId,
               body,
             );
-            return { url, ref };
+            return { url, refs };
           })(),
         ]);
         if (
@@ -542,7 +634,16 @@ module.exports = async function handler(req, res) {
           });
         }
         sourceAssetUrl = sourceBundle.url;
-        referenceImageUrl = sourceBundle.ref;
+        const referenceImageUrls = sourceBundle.refs || [];
+        referenceImageUrlsStored = referenceImageUrls;
+        referencePhotoRolesStored = referencePhotoRolesFr.slice(
+          0,
+          referenceImageUrls.length,
+        );
+        while (referencePhotoRolesStored.length < referenceImageUrls.length) {
+          referencePhotoRolesStored.push("");
+        }
+        referenceImageUrl = referenceImageUrls[0] || null;
         const { inferMotionReferenceSource } = require("../video-user-errors");
         motionReferenceSource = inferMotionReferenceSource(
           referenceImageUrl,
@@ -617,6 +718,83 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (
+      workflow === "video_to_video" &&
+      v2vProvider === "kling_motion" &&
+      referenceImageUrl
+    ) {
+      const {
+        assessMotionSubjectImageForKling,
+        isMotionInputQualityGateEnabled,
+        shouldSkipMotionInputQualityGateForAdmin,
+      } = require("../motion-subject-input-quality");
+      const { mapMotionSubjectInputQualityMessage } = require("../video-user-errors");
+      if (
+        isMotionInputQualityGateEnabled() &&
+        !shouldSkipMotionInputQualityGateForAdmin(isAdmin)
+      ) {
+        try {
+          const quality = await assessMotionSubjectImageForKling(
+            referenceImageUrl,
+            { motionReferenceSource },
+          );
+          if (!quality.ok) {
+            res.status(422).json({
+              code: quality.code || "MOTION_SUBJECT_INPUT_QUALITY",
+              message: mapMotionSubjectInputQualityMessage(quality, uiLocale),
+            });
+            return;
+          }
+        } catch (gateErr) {
+          console.warn("[generate-video] motion input quality gate error", {
+            userId,
+            message: gateErr?.message,
+          });
+        }
+      }
+    }
+
+    const { parseStagingTogglesFromBody } = require("../motion-staging-toggles");
+    const motionStagingToggles =
+      v2vIntent === "motion" ? parseStagingTogglesFromBody(body) : null;
+
+    let i2vResolvedAmbience = "none";
+    let i2vResolvedSfx = "none";
+    let i2vResolvedSfxMoment = "middle";
+    let i2vSoundAutoMeta = null;
+
+    const { isI2VSoundStudioEnabledForUser } = require("../i2v-sound-rollout");
+    const i2vSoundStudioEnabled = isI2VSoundStudioEnabledForUser({ isAdmin });
+
+    if (workflow === "image_to_video" && voiceEnabled && i2vSoundStudioEnabled) {
+      const { resolveI2VSoundForGeneration } = require("../i2v-sound-auto");
+      const soundAutoEnabled = body.i2v_sound_auto !== false;
+      const imageDescription =
+        typeof body.image_scene_description === "string"
+          ? body.image_scene_description.trim()
+          : "";
+      const resolved = await resolveI2VSoundForGeneration({
+        motionPrompt: promptUserRaw,
+        imageDescription,
+        soundAutoEnabled,
+        manualOverride: body.i2v_sound_manual_override === true,
+        clientAmbience: body.i2v_ambience,
+        clientSfx: body.i2v_sfx,
+        clientSfxMoment: body.i2v_sfx_moment,
+      });
+      i2vResolvedAmbience = resolved.ambience;
+      i2vResolvedSfx = resolved.sfx;
+      i2vResolvedSfxMoment = resolved.sfxMoment;
+      i2vSoundAutoMeta = resolved.soundAutoMeta;
+      console.info("[generate-video] i2v-sound-auto", {
+        userId,
+        enabled: soundAutoEnabled,
+        overridden: resolved.soundAutoMeta?.overridden,
+        applied: resolved.soundAutoMeta?.applied,
+        confidence: resolved.soundAutoMeta?.detection?.confidence,
+      });
+    }
+
     const pendingTaskId = `pending_${randomUUID()}`;
     const studioMetadata = {
       video_request_id: videoRequestId,
@@ -636,18 +814,40 @@ module.exports = async function handler(req, res) {
       motion_intensity: body.motion_intensity || "natural",
       style: body.style || "realistic",
       voice_enabled: voiceEnabled,
-      voice_mode: voiceEnabled ? body.voice_mode || "catalog" : "none",
-      voice_clone_id: voiceClone?.id || null,
+      voice_mode: voiceEnabled ? i2vVoice?.voiceMode || "catalog" : "none",
+      voice_clone_id: voiceEnabled ? i2vVoice?.voiceCloneId || null : null,
+      i2v_voice_id: voiceEnabled ? i2vVoice?.i2vVoiceId || null : null,
+      i2v_library_entry_id: voiceEnabled
+        ? i2vVoice?.libraryEntryId || null
+        : null,
       voice_text: voiceEnabled
         ? String(body.voice_text || "").trim()
         : null,
       voice_consent: Boolean(body.voice_consent),
       voice_fish_reference_id: voiceEnabled
-        ? voiceClone?.fish_reference_id || DEFAULT_CATALOG_FISH_ID
-        : DEFAULT_CATALOG_FISH_ID,
+        ? i2vVoice?.fishReferenceId || null
+        : null,
       lip_sync_enabled: voiceEnabled,
       i2v_provider: "kling_ai_avatar_pro",
-      i2v_avatar_pipeline_v2: isAdmin,
+      i2v_avatar_pipeline_v2:
+        workflow === "image_to_video" && (voiceEnabled || isAdmin),
+      i2v_target_duration_sec:
+        workflow === "image_to_video" ? durationSec : null,
+      i2v_ambience:
+        workflow === "image_to_video" && voiceEnabled && i2vSoundStudioEnabled
+          ? i2vResolvedAmbience
+          : "none",
+      i2v_sfx:
+        workflow === "image_to_video" && voiceEnabled && i2vSoundStudioEnabled
+          ? i2vResolvedSfx
+          : "none",
+      i2v_sfx_moment:
+        workflow === "image_to_video" && voiceEnabled && i2vSoundStudioEnabled
+          ? i2vResolvedSfxMoment
+          : "middle",
+      i2v_sound_auto: i2vSoundStudioEnabled ? i2vSoundAutoMeta : null,
+      i2v_sound_studio_admin_only:
+        process.env.I2V_SOUND_STUDIO !== "1",
       subtitles_enabled:
         workflow === "image_to_video" ? subtitlesEnabled : false,
       subtitle_style: body.subtitle_style || "minimal_white",
@@ -674,6 +874,12 @@ module.exports = async function handler(req, res) {
       v2v_resolution: v2vResolution,
       v2v_provider: v2vProvider,
       v2v_intent: v2vIntent,
+      reference_photo_roles_fr:
+        workflow === "video_to_video" && v2vIntent === "scene"
+          ? referencePhotoRolesStored
+          : null,
+      seedance_scene_luxe_multiref:
+        workflow === "video_to_video" && v2vIntent === "scene",
       v2v_omni_transform_rollout: isAdmin,
       v2v_seedance_transform_rollout: isAdmin,
       v2v_engine_family: v2vProvider
@@ -692,6 +898,7 @@ module.exports = async function handler(req, res) {
         sourceVideoDurationSec,
         preserveSourceAudio,
       }),
+      ...(motionStagingToggles || {}),
     };
 
     const userPrompt =
@@ -713,7 +920,7 @@ module.exports = async function handler(req, res) {
         aspect_ratio: aspectRatio,
         input_assets:
           workflow === "video_to_video"
-            ? [referenceImageUrl, sourceAssetUrl].filter(Boolean)
+            ? [...referenceImageUrlsStored, sourceAssetUrl].filter(Boolean)
             : [sourceAssetUrl],
         credit_cost: creditCost,
         metadata: studioMetadata,
@@ -759,6 +966,9 @@ module.exports = async function handler(req, res) {
       })
       .eq("id", larp.id);
 
+    // Kickoff provider dans GET /status (larps-router, max 120s) — pas de
+    // waitUntil ici (max 60s) qui coupait la prep composite avec api_call_count=1.
+
     res.status(201).json({
       id: larp.id,
       taskId: pendingTaskId,
@@ -780,5 +990,5 @@ module.exports.config = {
   api: {
     bodyParser: { sizeLimit: "25mb" },
   },
-  maxDuration: 60,
+  maxDuration: 120,
 };
