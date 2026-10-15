@@ -59,6 +59,16 @@ module.exports = async function i2vVoicePreviewHandler(req, res) {
         res.status(404).json({ code: "voice_not_found", message: "Voix introuvable." });
         return;
       }
+      const staticPreview =
+        typeof entry.previewPath === "string" ? entry.previewPath.trim() : "";
+      if (staticPreview.startsWith("/assets/i2v-voice-library/")) {
+        res.status(200).json({
+          audioUrl: staticPreview,
+          cached: true,
+          source: "static",
+        });
+        return;
+      }
       fishId = entry.fishId;
       libraryEntryId = entry.id;
       cacheKey = previewCacheKey(entry.id);

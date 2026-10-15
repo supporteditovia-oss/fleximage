@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { playAudioUrl } from "@/lib/play-audio-url";
 
 type AdminVoiceEntry = {
   id: string;
@@ -107,45 +108,38 @@ export function AdminI2VVoiceLibraryPanel() {
       return;
     }
     stop();
-    const el = audioRef.current ?? new Audio();
-    audioRef.current = el;
+    const el = audioRef.current;
+    if (!el) return;
+
     el.onended = () => setPlayingId(null);
-    setPlayingId(entry.id);
-
-    const version = data?.version ?? 1;
-    const local = previewSrc(entry, version);
-    if (local) {
-      el.src = local;
-      try {
-        await el.play();
-        return;
-      } catch {
-        /* repli API */
-      }
-    }
-
-    const res = await authFetch(
-      `/api/larps/i2v-voice/preview?id=${encodeURIComponent(entry.id)}`,
-    );
-    if (!res.ok) {
+    el.onerror = () => {
       setPlayingId(null);
       toast({
         variant: "destructive",
         title: "Aperçu",
-        description: "Synthèse indisponible pour cette voix.",
+        description: "Fichier audio introuvable ou illisible.",
       });
-      return;
-    }
-    const json = (await res.json()) as { audioUrl?: string };
-    if (!json.audioUrl) {
+    };
+
+    setPlayingId(entry.id);
+
+    const version = data?.version ?? 1;
+    const local = previewSrc(entry, version);
+    if (!local) {
       setPlayingId(null);
       return;
     }
-    el.src = json.audioUrl;
+
     try {
-      await el.play();
+      await playAudioUrl(el, local, 3500);
     } catch {
       setPlayingId(null);
+      toast({
+        variant: "destructive",
+        title: "Aperçu",
+        description:
+          "Impossible de lire l’extrait local. Vérifie le déploiement des MP3 sous /assets/i2v-voice-library/.",
+      });
     }
   };
 

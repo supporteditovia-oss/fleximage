@@ -14,6 +14,7 @@ import {
   type I2VVoiceGenderFilter,
 } from "@/lib/i2v-voice-prefs";
 import { VideoI2VVoiceClonePanel } from "@/components/video/VideoI2VVoiceClonePanel";
+import { playAudioUrl } from "@/lib/play-audio-url";
 
 type VoiceRow = {
   id: string;
@@ -188,14 +189,16 @@ export function VideoI2VVoiceSelect({
       setPreviewLoadingId(null);
       return;
     }
-    const audio = audioRef.current ?? new Audio();
-    audioRef.current = audio;
+    const audio = audioRef.current;
+    if (!audio) {
+      setPreviewLoadingId(null);
+      return;
+    }
     audio.onended = () => setPreviewLoadingId(null);
     audio.onerror = () => setPreviewLoadingId(null);
-    audio.src = url;
     setPreviewLoadingId(voiceId);
     try {
-      await audio.play();
+      await playAudioUrl(audio, url, 4000);
     } catch {
       setPreviewLoadingId(null);
     }
