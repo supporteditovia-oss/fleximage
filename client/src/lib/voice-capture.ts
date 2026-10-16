@@ -3,8 +3,12 @@ import { isVideoMediaFile as detectVideoFile } from "@/lib/media-file-detect";
 export const MAX_CLIP_SEC = 25;
 /** Durée cible pour un clone très fidèle (Fish Audio). */
 export const IDEAL_CLIP_SEC = 20;
+/** Conseil UX — en dessous, le clone est souvent moins stable. */
+export const RECOMMENDED_MIN_CLIP_SEC = 15;
 /** Minimum technique pour lancer un clone. */
 export const MIN_CLIP_SEC = 2;
+/** Durée max au micro (alignée sur l’interview idéale 15–20 s). */
+export const MAX_RECORD_SEC = IDEAL_CLIP_SEC;
 
 export type VoiceClipSource = "record" | "import";
 
@@ -255,7 +259,49 @@ function normalizeMeasuredDuration(raw: number, fallbackSec: number): number {
   return 0;
 }
 
-export async function getAudioDurationSec(blob: Blob): Promise<number> {
+async function decodeBlobDurationSec(blob: Blob): Promise<number> {
+  const ctx = new AudioContext();
+  try {
+    const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
+    return normalizeDuration(buffer.duration);
+  } catch {
+    return 0;
+  } finally {
+    await ctx.close();
+  }
+}
+
+function metadataDurationLooksWrong(
+  metadataSec: number,
+  decodedSec: number,
+  fallbackSec: number,
+): boolean {
+  if (decodedSec <= 0) return false;
+  if (metadataSec <= 0) return true;
+  if (metadataSec + 1.25 < decodedSec) return true;
+  if (metadataSec > decodedSec + 1.25) return true;
+  if (
+    fallbackSec >= RECOMMENDED_MIN_CLIP_SEC - 1 &&
+    metadataSec < MIN_CLIP_SEC &&
+    decodedSec >= MIN_CLIP_SEC - 0.05
+  ) {
+    return true;
+  }
+  if (
+    fallbackSec >= RECOMMENDED_MIN_CLIP_SEC - 1 &&
+    metadataSec + 2 < fallbackSec &&
+    decodedSec + 1 >= fallbackSec
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export async function getAudioDurationSec(
+  blob: Blob,
+  options?: { fallbackSec?: number },
+): Promise<number> {
+  const fallbackSec = options?.fallbackSec ?? 0;
   const url = URL.createObjectURL(blob);
   try {
     const fromMetadata = await new Promise<number>((resolve) => {
@@ -268,7 +314,8 @@ export async function getAudioDurationSec(blob: Blob): Promise<number> {
         resolve(value);
       };
       const onMeta = () => {
-        finish(Number.isFinite(audio.duration) ? audio.duration : 0);
+        const raw = Number.isFinite(audio.duration) ? audio.duration : 0;
+        finish(normalizeDuration(raw));
       };
       const onErr = () => finish(0);
       audio.addEventListener("loadedmetadata", onMeta);
@@ -276,21 +323,26 @@ export async function getAudioDurationSec(blob: Blob): Promise<number> {
       audio.addEventListener("error", onErr);
       audio.src = url;
       window.setTimeout(() => {
-        finish(Number.isFinite(audio.duration) ? audio.duration : 0);
+        const raw = Number.isFinite(audio.duration) ? audio.duration : 0;
+        finish(normalizeDuration(raw));
       }, 3000);
     });
 
-    if (fromMetadata > 0) return fromMetadata;
+    const fromDecode = await decodeBlobDurationSec(blob);
 
-    const ctx = new AudioContext();
-    try {
-      const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
-      return buffer.duration;
-    } catch {
-      return 0;
-    } finally {
-      await ctx.close();
+    if (
+      fromDecode > 0 &&
+      metadataDurationLooksWrong(fromMetadata, fromDecode, fallbackSec)
+    ) {
+      return normalizeMeasuredDuration(fromDecode, fallbackSec);
     }
+    if (fromMetadata > 0) {
+      return normalizeMeasuredDuration(fromMetadata, fallbackSec);
+    }
+    if (fromDecode > 0) {
+      return normalizeMeasuredDuration(fromDecode, fallbackSec);
+    }
+    return normalizeMeasuredDuration(0, fallbackSec);
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -450,11 +502,12 @@ export async function buildVoiceClipFromBuffer(
   );
   const blob = await sliceAudioBufferToBlob(buffer, startSec, windowSec);
   const url = URL.createObjectURL(blob);
-  const measuredSec = await getAudioDurationSec(blob);
+  const measuredSec = await getAudioDurationSec(blob, { fallbackSec: windowSec });
+  const durationSec = normalizeMeasuredDuration(measuredSec, windowSec);
   return {
     blob,
     url,
-    durationSec: measuredSec,
+    durationSec,
     source,
     fileName,
   };
@@ -564,10 +617,57 @@ export async function buildVoiceClipFromBlob(
   blob: Blob,
   source: VoiceClipSource,
   fileName?: string,
+  durationHintSec?: number,
 ): Promise<VoiceClip> {
   const url = URL.createObjectURL(blob);
-  const durationSec = await getAudioDurationSec(blob);
+  const measuredSec = await getAudioDurationSec(blob, {
+    fallbackSec: durationHintSec ?? 0,
+  });
+  const durationSec = normalizeMeasuredDuration(
+    measuredSec,
+    durationHintSec ?? 0,
+  );
+  if (durationSec <= 0) {
+    URL.revokeObjectURL(url);
+    throw new Error("Extrait audio vide");
+  }
   return { blob, url, durationSec, source, fileName };
+}
+
+/**
+ * Enregistrement micro : WebM MediaRecorder ment souvent sur la durée metadata.
+ * On décode → WAV mono pour Fish et une durée fiable (hint = chrono UI).
+ */
+export async function buildVoiceClipFromRecordedBlob(
+  blob: Blob,
+  durationHintSec: number,
+): Promise<VoiceClip> {
+  if (blob.size <= 0) {
+    throw new Error("Enregistrement vide");
+  }
+  const ctx = new AudioContext();
+  try {
+    const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+    const durationSec = normalizeMeasuredDuration(
+      decoded.duration,
+      durationHintSec,
+    );
+    if (durationSec <= 0) {
+      throw new Error("Enregistrement trop court");
+    }
+    const wav = await audioBufferToWavBlob(decoded);
+    const url = URL.createObjectURL(wav);
+    return {
+      blob: wav,
+      url,
+      durationSec,
+      source: "record",
+    };
+  } catch {
+    return buildVoiceClipFromBlob(blob, "record", undefined, durationHintSec);
+  } finally {
+    await ctx.close();
+  }
 }
 
 export function clampTrimStart(totalSec: number, startSec: number): number {

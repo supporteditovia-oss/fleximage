@@ -120,7 +120,7 @@ export const landingWidgetResources = {
       file: "Fichier",
       audioSourceAria: "Source audio",
       startRecording: "Lancer l'enregistrement",
-      stopRecording: "Stop · {{timer}} / 0:25",
+      stopRecording: "Stop · {{timer}} / {{max}}",
       recordingReady: "Enregistrement prêt",
       redo: "Refaire",
       recordHelp:
@@ -282,7 +282,7 @@ export const landingWidgetResources = {
       file: "File",
       audioSourceAria: "Audio source",
       startRecording: "Start recording",
-      stopRecording: "Stop · {{timer}} / 0:25",
+      stopRecording: "Stop · {{timer}} / {{max}}",
       recordingReady: "Recording ready",
       redo: "Redo",
       recordHelp:
@@ -443,7 +443,7 @@ export const landingWidgetResources = {
       file: "Archivo",
       audioSourceAria: "Fuente de audio",
       startRecording: "Iniciar grabación",
-      stopRecording: "Parar · {{timer}} / 0:25",
+      stopRecording: "Parar · {{timer}} / {{max}}",
       recordingReady: "Grabación lista",
       redo: "Repetir",
       recordHelp:

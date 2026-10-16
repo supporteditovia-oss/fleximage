@@ -54,6 +54,7 @@ import {
   VOICE_CLONE_TYPEWRITER_IDEAS,
 } from "@/lib/voice-clone-prompt-pools";
 import { adminPreviewVoiceGenerateCreditCost } from "@shared/pricing-admin-reference";
+import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
 import { markFakePaywallReached } from "@/lib/fake-paywall-state";
@@ -76,9 +77,10 @@ import {
 } from "@/lib/media-file-detect";
 import {
   MAX_CLIP_SEC,
+  MAX_RECORD_SEC,
   MIN_CLIP_SEC,
-  IDEAL_CLIP_SEC,
   buildDefaultVideoImportClip,
+  buildVoiceClipFromRecordedBlob,
   buildVoiceClipFromBlob,
   buildVoiceClipFromFile,
   defaultTrimRange,
@@ -97,8 +99,8 @@ type RecordState = "idle" | "recording" | "ready";
 
 const FAKE_GEN_MS = VOICE_FAKE_GEN_MS;
 
-function formatTimer(ms: number) {
-  const s = Math.min(MAX_CLIP_SEC, Math.floor(ms / 1000));
+function formatTimer(ms: number, maxSec = MAX_CLIP_SEC) {
+  const s = Math.min(maxSec, Math.floor(ms / 1000));
   return `0:${String(s).padStart(2, "0")}`;
 }
 
@@ -162,6 +164,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const fileInputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const recordTimerRef = useRef<number | null>(null);
+  const recordElapsedMsRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordChunksRef = useRef<Blob[]>([]);
@@ -177,6 +180,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
   const [, navigate] = useLocation();
   const { user, isAdmin, profile } = useAuth();
+  const adminVoiceRecordFix = useAdminPreviewFeatures();
+  const recordLimitSec = adminVoiceRecordFix ? MAX_RECORD_SEC : MAX_CLIP_SEC;
+  const recordLimitClock = `0:${String(recordLimitSec).padStart(2, "0")}`;
   const { toast } = useToast();
   const { data: plan } = useCurrentPlan();
   const hasPaidAccess = Boolean(
@@ -541,12 +547,25 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const finalizeRecording = async (blob: Blob) => {
     const capped =
       blob.size > 0 ? blob : new Blob([], { type: "audio/webm" });
-    const clip = await buildVoiceClipFromBlob(capped, "record");
-    if (clip.durationSec > MAX_CLIP_SEC + 0.05) {
-      setCaptureError(`Extrait limité à ${MAX_CLIP_SEC} secondes.`);
+    const durationHintSec = recordElapsedMsRef.current / 1000;
+    try {
+      const clip = adminVoiceRecordFix
+        ? await buildVoiceClipFromRecordedBlob(capped, durationHintSec)
+        : await buildVoiceClipFromBlob(capped, "record", undefined, durationHintSec);
+      const maxAllowed = adminVoiceRecordFix ? MAX_RECORD_SEC : MAX_CLIP_SEC;
+      if (clip.durationSec > maxAllowed + 0.05) {
+        setCaptureError(`Extrait limité à ${maxAllowed} secondes.`);
+      } else {
+        setCaptureError(null);
+      }
+      setClip(clip);
+      setRecordState("ready");
+    } catch {
+      setCaptureError(
+        "Impossible de lire l’enregistrement. Réessaie en parlant 15–20 s sans coupure.",
+      );
+      setRecordState("idle");
     }
-    setClip(clip);
-    setRecordState("ready");
   };
 
   const stopRecording = useCallback(() => {
@@ -593,12 +612,14 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
       recorder.start(200);
       setRecordState("recording");
       setRecordMs(0);
+      recordElapsedMsRef.current = 0;
       const started = Date.now();
       recordTimerRef.current = window.setInterval(() => {
         const elapsed = Date.now() - started;
-        const capped = Math.min(elapsed, MAX_CLIP_SEC * 1000);
+        const capped = Math.min(elapsed, recordLimitSec * 1000);
+        recordElapsedMsRef.current = capped;
         setRecordMs(capped);
-        if (elapsed >= MAX_CLIP_SEC * 1000) stopRecording();
+        if (elapsed >= recordLimitSec * 1000) stopRecording();
       }, 100);
     } catch {
       setCaptureError("Autorise l’accès au micro pour enregistrer.");
@@ -1396,8 +1417,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   onClick={stopRecording}
                 >
                   <Square className="h-4 w-4" aria-hidden />
-                  {vsg("stopRecording", `Stop · ${formatTimer(recordMs)} / 0:25`, {
-                    timer: formatTimer(recordMs),
+                  {vsg("stopRecording", `Stop · ${formatTimer(recordMs, recordLimitSec)} / ${recordLimitClock}`, {
+                    timer: formatTimer(recordMs, recordLimitSec),
+                    max: recordLimitClock,
                   })}
                 </button>
               )}
@@ -1407,7 +1429,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                     <Check className="h-4 w-4" aria-hidden />
                     <div>
                       <strong>{vsg("recordingReady", "Enregistrement prêt")}</strong>
-                      <span>{formatClipTime(voiceClip.durationSec)} max</span>
+                      <span>{formatClipTime(voiceClip.durationSec)}</span>
                     </div>
                   </div>
                   <button type="button" className="vs-link" onClick={resetCapture}>
