@@ -59,7 +59,7 @@ async function transcodeVideoForKlingMotion(
     "-t",
     String(VIDEO_V2V_MAX_DURATION_SEC),
     "-vf",
-    "scale='min(720,iw)':-2",
+    "scale='if(lt(iw,720),720,min(iw,1280))':-2:flags=lanczos",
     "-c:v",
     "libx264",
     "-preset",

@@ -17,6 +17,22 @@ try {
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_MAX_AV_GAP_SEC = 0.3;
+const { normalizeI2VDurationSec } = require("../../shared/video-i2v-pricing.cjs");
+
+/**
+ * Durée livrée : celle demandée (3 ou 5 s), sauf si la voix dépasse → garder la phrase entière.
+ */
+function resolveI2VTargetDeliverSec(requestedSec, { audioSec, hasAudio }) {
+  const requested = Math.max(0.5, normalizeI2VDurationSec(requestedSec));
+  if (
+    hasAudio &&
+    Number.isFinite(audioSec) &&
+    audioSec > requested + 0.05
+  ) {
+    return Math.max(requested, audioSec);
+  }
+  return requested;
+}
 
 /** Fish TTS plus long que duration_sec — on refuse (pas de trim ni atempo). */
 class I2VVoiceDurationExceedsTargetError extends Error {
@@ -101,17 +117,116 @@ async function probeMediaDurations(filePath) {
   }
 
   const hasVideo = /Video:/i.test(banner);
-  const hasAudio = /Audio:/i.test(banner);
-  const [videoSec, audioSec] = await Promise.all([
+  const hasAudioStream = /Audio:/i.test(banner);
+  const [videoSec, audioSecRaw] = await Promise.all([
     hasVideo ? decodeStreamDuration("0:v:0") : Promise.resolve(null),
-    hasAudio ? decodeStreamDuration("0:a:0") : Promise.resolve(null),
+    hasAudioStream ? decodeStreamDuration("0:a:0") : Promise.resolve(null),
   ]);
+
+  let audioSec = audioSecRaw;
+  if (hasAudioStream && !Number.isFinite(audioSec)) {
+    audioSec = formatSec ?? videoSec ?? null;
+  }
+  if (!hasAudioStream) audioSec = 0;
 
   return {
     formatSec,
     videoSec: videoSec ?? formatSec,
-    audioSec: audioSec ?? (hasAudio ? null : 0),
+    audioSec,
+    hasAudioStream,
   };
+}
+
+/**
+ * Force vidéo + audio à deliverSec (tpad + apad) — corrige écarts post-Kie / trim / mix.
+ */
+async function sealAvToDeliverSecMp4Buffer(mp4Buffer, deliverSec) {
+  const target = Math.max(0.5, Number(deliverSec) || 5);
+  if (!ffmpegPath || !Buffer.isBuffer(mp4Buffer) || mp4Buffer.length < 2048) {
+    return {
+      buffer: mp4Buffer,
+      durationsAfter: null,
+      method: null,
+      skipped: true,
+    };
+  }
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-av-seal-"));
+  const inPath = path.join(tmpDir, "in.mp4");
+  const outPath = path.join(tmpDir, "out.mp4");
+  try {
+    await fs.writeFile(inPath, mp4Buffer);
+    const before = await probeMediaDurations(inPath);
+    if (!before.hasAudioStream) {
+      return {
+        buffer: mp4Buffer,
+        durationsAfter: before,
+        method: null,
+        skipped: true,
+        reason: "no_audio_stream",
+      };
+    }
+
+    const videoSec = Number(before.videoSec ?? before.formatSec) || target;
+    const audioSec = Number.isFinite(Number(before.audioSec))
+      ? Number(before.audioSec)
+      : videoSec;
+    const videoPad = Math.max(0, target - videoSec);
+    const audioPad = Math.max(0, target - audioSec);
+    const t = target.toFixed(3);
+
+    const args = [
+      "-y",
+      "-i",
+      inPath,
+      "-filter_complex",
+      `[0:v]tpad=stop_mode=clone:stop_duration=${videoPad.toFixed(3)},trim=0:${t},setpts=PTS-STARTPTS[v];` +
+        `[0:a]apad=pad_dur=${audioPad.toFixed(3)},atrim=0:${t},asetpts=PTS-STARTPTS[a]`,
+      "-map",
+      "[v]",
+      "-map",
+      "[a]",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "20",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "192k",
+      "-movflags",
+      "+faststart",
+      outPath,
+    ];
+
+    await runFfmpeg(args, 120_000);
+    const outBuf = await fs.readFile(outPath);
+    const after = await probeMediaDurations(outPath);
+    return {
+      buffer: outBuf.length >= 2048 ? outBuf : mp4Buffer,
+      durationsAfter: after,
+      method: "seal_av",
+      skipped: false,
+    };
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function probeMp4BufferDurations(mp4Buffer) {
+  if (!ffmpegPath || !Buffer.isBuffer(mp4Buffer) || mp4Buffer.length < 2048) {
+    return null;
+  }
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-probe-"));
+  const inPath = path.join(tmpDir, "in.mp4");
+  try {
+    await fs.writeFile(inPath, mp4Buffer);
+    return probeMediaDurations(inPath);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 function effectiveAvGapSec(durations) {
@@ -153,10 +268,8 @@ async function fitAudioBufferToDurationSec(mp3Buffer, targetSec) {
     }
 
     if (Number.isFinite(current) && current > target + 0.05) {
-      throw new I2VVoiceDurationExceedsTargetError({
-        audioSec: current,
-        targetSec: target,
-      });
+      // Phrase plus longue que la durée UI : on garde l’audio entier, la vidéo sera étendue en post.
+      return mp3Buffer;
     } else {
       const padSec = Number.isFinite(current)
         ? Math.max(0, target - current)
@@ -214,21 +327,26 @@ async function buildSilentMp3Buffer(durationSec) {
 }
 
 /**
- * Align embedded A/V in an MP4 (pad audio or trim video to the shorter stream).
- * @returns {Promise<{ buffer: Buffer, durationsBefore, durationsAfter, gapBefore, gapAfter, method: string|null }>}
+ * Caler la livraison I2V avatar : durée ≥ demandée, phrase jamais coupée.
+ * @returns {Promise<{ buffer: Buffer, deliverSec: number, durationsBefore, durationsAfter, gapBefore, gapAfter, method: string|null, skipped?: boolean, reason?: string }>}
  */
-async function alignVideoAudioInMp4Buffer(mp4Buffer) {
+async function finalizeI2VAvatarMp4Buffer(mp4Buffer, { requestedSec }) {
+  const requested = Math.max(0.5, normalizeI2VDurationSec(requestedSec));
   if (!ffmpegPath || !Buffer.isBuffer(mp4Buffer) || mp4Buffer.length < 2048) {
     return {
       buffer: mp4Buffer,
+      deliverSec: requested,
       skipped: true,
       reason: "ffmpeg_or_buffer",
       gapBefore: null,
       gapAfter: null,
+      durationsBefore: null,
+      durationsAfter: null,
+      method: null,
     };
   }
 
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-av-align-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "i2v-av-finalize-"));
   const inPath = path.join(tmpDir, "in.mp4");
   const outPath = path.join(tmpDir, "out.mp4");
   try {
@@ -237,26 +355,140 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
     const gapBefore = effectiveAvGapSec(before);
     const videoSec = Number(before.videoSec ?? before.formatSec);
     const audioSec = Number(before.audioSec);
+    const hasAudioStream = before.hasAudioStream === true;
+    const hasAudio =
+      hasAudioStream &&
+      (Number.isFinite(audioSec) ? audioSec > 0.05 : true);
 
-    if (
-      gapBefore == null ||
-      !Number.isFinite(videoSec) ||
-      !Number.isFinite(audioSec)
-    ) {
+    const deliverSec = resolveI2VTargetDeliverSec(requested, {
+      audioSec,
+      hasAudio,
+    });
+
+    const needVideoPad =
+      Number.isFinite(videoSec) && videoSec + 0.04 < deliverSec;
+    const needAudioPad =
+      hasAudio && Number.isFinite(audioSec) && audioSec + 0.04 < deliverSec;
+    const needTrimToTarget =
+      (Number.isFinite(videoSec) && videoSec > deliverSec + 0.04) ||
+      (hasAudio && Number.isFinite(audioSec) && audioSec > deliverSec + 0.04);
+
+    if (needTrimToTarget && !needVideoPad && !needAudioPad) {
+      await runFfmpeg(
+        [
+          "-y",
+          "-i",
+          inPath,
+          "-t",
+          String(deliverSec),
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "20",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "192k",
+          "-movflags",
+          "+faststart",
+          outPath,
+        ],
+        120_000,
+      );
+      let outBuf = await fs.readFile(outPath);
+      let after = await probeMediaDurations(outPath);
+      let gapAfter = effectiveAvGapSec(after);
+      let method = "trim_to_target";
+      if (
+        hasAudioStream &&
+        (gapAfter == null || gapAfter > getMaxAvGapSec())
+      ) {
+        const sealed = await sealAvToDeliverSecMp4Buffer(outBuf, deliverSec);
+        if (sealed.buffer && !sealed.skipped) {
+          outBuf = sealed.buffer;
+          after = sealed.durationsAfter ?? after;
+          gapAfter = effectiveAvGapSec(after);
+          method = "trim_to_target+seal_av";
+        }
+      }
       return {
-        buffer: mp4Buffer,
-        skipped: true,
-        reason: "probe_failed",
+        buffer: outBuf.length >= 2048 ? outBuf : mp4Buffer,
+        deliverSec,
+        skipped: false,
+        aligned: true,
         durationsBefore: before,
+        durationsAfter: after,
         gapBefore,
-        gapAfter: gapBefore,
+        gapAfter,
+        method,
+        kieVideoSec: Number.isFinite(videoSec) ? videoSec : null,
+        kieAudioSec:
+          hasAudioStream && Number.isFinite(audioSec) ? audioSec : null,
       };
     }
 
-    const maxGap = getMaxAvGapSec();
-    if (gapBefore <= maxGap) {
+    if (!needVideoPad && !needAudioPad) {
+      const within =
+        Number.isFinite(videoSec) &&
+        Math.abs(videoSec - deliverSec) <= getMaxAvGapSec() &&
+        (!hasAudio ||
+          !Number.isFinite(audioSec) ||
+          Math.abs(audioSec - deliverSec) <= getMaxAvGapSec());
+      if (within || !Number.isFinite(videoSec)) {
+        return {
+          buffer: mp4Buffer,
+          deliverSec,
+          skipped: false,
+          aligned: false,
+          durationsBefore: before,
+          durationsAfter: before,
+          gapBefore,
+          gapAfter: gapBefore,
+          method: null,
+        };
+      }
+    }
+
+    const videoPadSec = needVideoPad
+      ? Math.max(0, deliverSec - (videoSec || 0))
+      : 0;
+    const audioPadSec = needAudioPad
+      ? Math.max(0, deliverSec - (audioSec || 0))
+      : 0;
+
+    let method = "extend_av";
+    const args = ["-y", "-i", inPath];
+
+    if (needVideoPad && needAudioPad) {
+      method = "extend_video_and_audio";
+      args.push(
+        "-vf",
+        `tpad=stop_mode=clone:stop_duration=${videoPadSec.toFixed(3)}`,
+        "-af",
+        `apad=pad_dur=${audioPadSec.toFixed(3)}`,
+      );
+    } else if (needVideoPad) {
+      method = "extend_video_freeze";
+      args.push(
+        "-vf",
+        `tpad=stop_mode=clone:stop_duration=${videoPadSec.toFixed(3)}`,
+        "-c:a",
+        "copy",
+      );
+    } else if (needAudioPad) {
+      method = "extend_audio_pad";
+      args.push(
+        "-c:v",
+        "copy",
+        "-af",
+        `apad=pad_dur=${audioPadSec.toFixed(3)}`,
+      );
+    } else {
       return {
         buffer: mp4Buffer,
+        deliverSec,
         skipped: false,
         aligned: false,
         durationsBefore: before,
@@ -267,63 +499,31 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
       };
     }
 
-    let method = null;
-    if (audioSec + 0.02 < videoSec) {
-      method = "pad_audio";
-      const padDur = videoSec - audioSec;
-      await runFfmpeg([
-        "-y",
-        "-i",
-        inPath,
-        "-c:v",
-        "copy",
-        "-af",
-        `apad=pad_dur=${padDur.toFixed(3)}`,
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "-movflags",
-        "+faststart",
-        outPath,
-      ]);
-    } else if (videoSec + 0.02 < audioSec) {
-      method = "trim_video";
-      await runFfmpeg([
-        "-y",
-        "-i",
-        inPath,
-        "-t",
-        String(audioSec),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        "-c:a",
-        "copy",
-        "-movflags",
-        "+faststart",
-        outPath,
-      ]);
-    } else {
-      return {
-        buffer: mp4Buffer,
-        skipped: false,
-        aligned: false,
-        durationsBefore: before,
-        gapBefore,
-        gapAfter: gapBefore,
-        method: null,
-      };
+    if (method !== "extend_audio_pad") {
+      args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", "20");
     }
+    if (method !== "extend_video_freeze") {
+      args.push("-c:a", "aac", "-b:a", "192k");
+    }
+    args.push("-t", String(deliverSec), "-movflags", "+faststart", outPath);
 
-    const outBuf = await fs.readFile(outPath);
-    const after = await probeMediaDurations(outPath);
-    const gapAfter = effectiveAvGapSec(after);
+    await runFfmpeg(args, 120_000);
+
+    let outBuf = await fs.readFile(outPath);
+    let after = await probeMediaDurations(outPath);
+    let gapAfter = effectiveAvGapSec(after);
+    if (hasAudioStream && (gapAfter == null || gapAfter > getMaxAvGapSec())) {
+      const sealed = await sealAvToDeliverSecMp4Buffer(outBuf, deliverSec);
+      if (sealed.buffer && !sealed.skipped) {
+        outBuf = sealed.buffer;
+        after = sealed.durationsAfter ?? after;
+        gapAfter = effectiveAvGapSec(after);
+        method = `${method}+seal_av`;
+      }
+    }
     return {
       buffer: outBuf.length >= 2048 ? outBuf : mp4Buffer,
+      deliverSec,
       skipped: false,
       aligned: true,
       durationsBefore: before,
@@ -331,10 +531,18 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
       gapBefore,
       gapAfter,
       method,
+      kieVideoSec: Number.isFinite(videoSec) ? videoSec : null,
+      kieAudioSec:
+        hasAudioStream && Number.isFinite(audioSec) ? audioSec : null,
     };
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** @deprecated — use finalizeI2VAvatarMp4Buffer */
+async function alignVideoAudioInMp4Buffer(mp4Buffer) {
+  return finalizeI2VAvatarMp4Buffer(mp4Buffer, { requestedSec: 5 });
 }
 
 function isI2VAvatarPipelineV2Enabled(meta) {
@@ -353,9 +561,9 @@ function shouldRunI2VAvDurationQa(meta) {
   if (String(process.env.I2V_AV_DURATION_QA || "1").trim() === "0") {
     return false;
   }
-  return (
-    isI2VAvatarPipelineV2Enabled(meta) && isI2VVoiceTrackRequested(meta)
-  );
+  if (!meta || meta.workflow !== "image_to_video") return false;
+  if (meta.i2v_provider !== "kling_ai_avatar_pro") return false;
+  return isI2VVoiceTrackRequested(meta) || meta.voice_enabled === true;
 }
 
 function passesAvDurationQa(gapSec) {
@@ -381,12 +589,36 @@ async function downloadVideoBuffer(url, timeoutMs = 45_000) {
  * Télécharge la vidéo Kie, aligne A/V si besoin, ré-upload R2.
  * @returns {Promise<{ ok: boolean, url: string|null, qa: object }>}
  */
-async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
+async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl, meta = {}) {
   const { uploadToR2 } = require("./r2");
+  const { normalizeI2VDurationSec } = require("../../shared/video-i2v-pricing.cjs");
   try {
     const rawBuffer = await downloadVideoBuffer(sourceUrl);
-    const aligned = await alignVideoAudioInMp4Buffer(rawBuffer);
-    const gapAfter = aligned.gapAfter ?? effectiveAvGapSec(aligned.durationsAfter);
+    const requestedSec = normalizeI2VDurationSec(
+      meta.duration_sec ?? meta.i2v_target_duration_sec ?? 5,
+    );
+    const aligned = await finalizeI2VAvatarMp4Buffer(rawBuffer, {
+      requestedSec,
+    });
+    let gapAfter = aligned.gapAfter ?? effectiveAvGapSec(aligned.durationsAfter);
+    const deliveredSec =
+      aligned.durationsAfter?.videoSec ??
+      aligned.durationsAfter?.formatSec ??
+      aligned.deliverSec ??
+      requestedSec;
+
+    console.info("[i2v-av-sync] kie avatar delivery", {
+      larpId,
+      requestedSec,
+      kieVideoSec: aligned.kieVideoSec ?? aligned.durationsBefore?.videoSec,
+      kieAudioSec: aligned.kieAudioSec ?? aligned.durationsBefore?.audioSec,
+      deliverSec: aligned.deliverSec,
+      deliveredSec,
+      gapBefore: aligned.gapBefore,
+      gapAfter: gapAfter,
+      method: aligned.method,
+    });
+
     const qa = {
       gapBefore: aligned.gapBefore ?? null,
       gapAfter: gapAfter ?? null,
@@ -396,18 +628,112 @@ async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
       reason: aligned.reason || null,
       durationsBefore: aligned.durationsBefore || null,
       durationsAfter: aligned.durationsAfter || null,
+      requestedSec,
+      deliverSec: aligned.deliverSec ?? requestedSec,
+      deliveredSec,
+      kieVideoSec: aligned.kieVideoSec ?? null,
+      kieAudioSec: aligned.kieAudioSec ?? null,
       maxGapSec: getMaxAvGapSec(),
     };
+
+    let outBuffer =
+      aligned.buffer && aligned.buffer.length >= 2048 ? aligned.buffer : rawBuffer;
+
+    if (!passesAvDurationQa(gapAfter)) {
+      const sealed = await sealAvToDeliverSecMp4Buffer(
+        outBuffer,
+        aligned.deliverSec ?? requestedSec,
+      );
+      if (sealed.buffer && !sealed.skipped) {
+        outBuffer = sealed.buffer;
+        const gap2 = effectiveAvGapSec(sealed.durationsAfter);
+        qa.repairPreMix = "seal_av";
+        qa.gapAfterPreMix = gap2;
+        if (passesAvDurationQa(gap2)) {
+          gapAfter = gap2;
+          qa.gapAfter = gap2;
+          qa.durationsAfter = sealed.durationsAfter;
+        }
+      }
+    }
 
     if (!passesAvDurationQa(gapAfter)) {
       return { ok: false, url: null, qa, failReason: "av_duration_gap_exceeded" };
     }
 
-    const outBuffer =
-      aligned.buffer && aligned.buffer.length >= 2048 ? aligned.buffer : rawBuffer;
+    const { mixI2VAudioLayersOnMp4Buffer } = require("./i2v-audio-mix");
+    const mixOpts = {
+      ambience: meta.i2v_ambience,
+      sfx: meta.i2v_sfx,
+      sfxMoment: meta.i2v_sfx_moment,
+      voiceEnabled: meta.voice_enabled === true,
+      deliverSec: deliveredSec,
+    };
+    let audioMix = await mixI2VAudioLayersOnMp4Buffer(outBuffer, mixOpts);
+    const { normalizeI2VAmbience } = require("../../shared/i2v-ambience.cjs");
+    const { normalizeI2VSfx } = require("../../shared/i2v-sfx.cjs");
+    const ambNorm = normalizeI2VAmbience(mixOpts.ambience);
+    const sfxNorm = normalizeI2VSfx(mixOpts.sfx);
+    if (
+      !audioMix.mixed &&
+      (ambNorm !== "none" || sfxNorm !== "none") &&
+      audioMix.reason === "mix_failed"
+    ) {
+      console.warn("[i2v-av-sync] audio mix retry", { larpId });
+      audioMix = await mixI2VAudioLayersOnMp4Buffer(outBuffer, mixOpts);
+      qa.mixRetried = true;
+    }
+    qa.sfx = audioMix.sfx ?? null;
+    if (meta.i2v_sound_auto && typeof meta.i2v_sound_auto === "object") {
+      const sa = meta.i2v_sound_auto;
+      qa.sound_auto = {
+        ambiance: sa.applied?.ambiance ?? null,
+        sfx: sa.applied?.sfx ?? null,
+        moment: sa.applied?.moment ?? null,
+        confidence: sa.detection?.confidence ?? null,
+        overridden: sa.overridden === true,
+        label_fr: sa.detection?.label_fr ?? null,
+      };
+    }
+    if (audioMix.mixed) {
+      outBuffer = audioMix.buffer;
+      if (audioMix.ambience) qa.ambience = audioMix.ambience;
+      if (audioMix.sfxMoment) qa.sfx_moment = audioMix.sfxMoment;
+      const afterMix = await probeMp4BufferDurations(outBuffer);
+      let gapMix = effectiveAvGapSec(afterMix);
+      if (afterMix) qa.durationsAfterMix = afterMix;
+      if (!passesAvDurationQa(gapMix)) {
+        const sealed = await sealAvToDeliverSecMp4Buffer(
+          outBuffer,
+          aligned.deliverSec ?? requestedSec,
+        );
+        if (sealed.buffer && !sealed.skipped) {
+          outBuffer = sealed.buffer;
+          gapMix = effectiveAvGapSec(sealed.durationsAfter);
+          qa.repairPostMix = "seal_av";
+          qa.gapAfterMix = gapMix;
+        }
+      }
+      if (!passesAvDurationQa(gapMix)) {
+        return {
+          ok: false,
+          url: null,
+          qa: { ...qa, gapAfterMix: gapMix, failReason: "av_duration_gap_after_mix" },
+          failReason: "av_duration_gap_exceeded",
+        };
+      }
+    } else {
+      if (audioMix.ambience) {
+        qa.ambience_skipped = audioMix.reason || "not_mixed";
+      }
+      if (audioMix.sfx) {
+        qa.sfx_skipped = audioMix.reason || "not_mixed";
+      }
+    }
+
     const key = `larps/${larpId}/video.mp4`;
     const url = await uploadToR2(key, outBuffer, "video/mp4");
-    return { ok: true, url, qa };
+    return { ok: true, url, qa, deliveredSec };
   } catch (err) {
     console.warn("[i2v-av-sync] downloadAlign failed", {
       larpId,
@@ -425,15 +751,19 @@ async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
 module.exports = {
   DEFAULT_MAX_AV_GAP_SEC,
   getMaxAvGapSec,
+  resolveI2VTargetDeliverSec,
   I2VVoiceDurationExceedsTargetError,
   probeMediaDurations,
   effectiveAvGapSec,
   fitAudioBufferToDurationSec,
   buildSilentMp3Buffer,
+  finalizeI2VAvatarMp4Buffer,
   alignVideoAudioInMp4Buffer,
   isI2VAvatarPipelineV2Enabled,
   isI2VVoiceTrackRequested,
   shouldRunI2VAvDurationQa,
   passesAvDurationQa,
   downloadAlignAndStoreI2VVideo,
+  sealAvToDeliverSecMp4Buffer,
+  probeMp4BufferDurations,
 };

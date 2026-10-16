@@ -382,18 +382,28 @@ async function generateKlingMotionOnce(supabase, params) {
         motionCleanCompositeApplied = true;
         motionCompositeFallback = `direct_fallback:${motionCompositeFallback}`;
       } catch (fallbackErr) {
-        console.warn("[generate-kling-once] motion composite fallback failed — raw photo", {
+        console.error("[generate-kling-once] motion two-step prep failed", {
           generationId: params.generationId,
           primary: motionCompositeFallback,
           fallback: String(fallbackErr?.message || fallbackErr).slice(0, 200),
         });
-        motionImageUrl = params.imageUrl;
+        throw Object.assign(
+          new Error(
+            "Impossible de préparer la scène (remplacement personnage). Réessaie avec une vidéo 720p 3–8 s et une photo en pied.",
+          ),
+          { status: 422, code: "MOTION_TWO_STEP_PREP_FAILED" },
+        );
       }
     }
   }
 
+  const prevAutoRetries =
+    Number(claim.generation.metadata?.video_auto_retries) || 0;
+  const motionPollRelaunch =
+    params.motionPollRelaunch === true || prevAutoRetries > 0;
+
   let promptForKling = params.prompt;
-  if (uploadedSubject && params.imageUrl) {
+  if (uploadedSubject && params.imageUrl && !motionPollRelaunch) {
     const { buildMotionFullBodyPromptLock } = require("./motion-subject-prompt");
     const bodyLock = await buildMotionFullBodyPromptLock({
       imageUrl: params.imageUrl,
@@ -406,6 +416,7 @@ async function generateKlingMotionOnce(supabase, params) {
   const characterOrientation = resolveKlingCharacterOrientation(
     params.prompt,
     Boolean(params.imageUrl && uploadedSubject),
+    params.characterOrientationOverride,
   );
   const backgroundSource = resolveKlingBackgroundSource({
     motionCleanCompositeApplied,
@@ -417,19 +428,32 @@ async function generateKlingMotionOnce(supabase, params) {
     characterOrientation,
     backgroundSource,
     motionCleanCompositeApplied,
-    motionPipeline: "kling30_clean_composite_v2",
+    motionPipeline: "motion_two_step_prep_v5",
     imageHost: kieImageUrl?.split("/").slice(-1)[0],
     videoHost: kieVideoUrl?.split("/").slice(-1)[0],
   });
 
-  const kling = await createKlingMotionTask({
-    prompt: klingPrompt,
-    inputUrls: [kieImageUrl],
-    videoUrls: [kieVideoUrl],
-    characterOrientation,
-    backgroundSource,
-    mode: params.mode || "720p",
-  });
+  const { isRetryableKlingError } = require("./v2v-provider-errors");
+  let kling;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      kling = await createKlingMotionTask({
+        prompt: klingPrompt,
+        inputUrls: [kieImageUrl],
+        videoUrls: [kieVideoUrl],
+        characterOrientation,
+        backgroundSource,
+        mode: params.mode || "720p",
+      });
+      break;
+    } catch (taskErr) {
+      if (attempt < 2 && isRetryableKlingError(taskErr)) {
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      throw taskErr;
+    }
+  }
 
   const externalTaskId = `kling_${kling.taskId}`;
   const durationMs = Date.now() - startedAt;
@@ -447,7 +471,8 @@ async function generateKlingMotionOnce(supabase, params) {
     v2v_provider: "kling_motion",
     motion_composite_applied: motionCleanCompositeApplied,
     motion_clean_composite: motionCleanCompositeApplied,
-    motion_pipeline: "kling30_clean_composite_v2",
+    motion_pipeline: "motion_two_step_prep_v5",
+    motion_two_step_prep: motionCleanCompositeApplied,
     kling_character_orientation: characterOrientation,
     kling_background_source: backgroundSource,
     ...(motionCompositeFallback

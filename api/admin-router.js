@@ -3,6 +3,7 @@ const usersActivityHandler = require("./_lib/handlers/admin-users-activity");
 const creditsHandler = require("./admin/credits");
 const settingsHandler = require("./admin/settings");
 const funnelHandler = require("./_lib/handlers/admin-funnel");
+const postExperienceQuizStatsHandler = require("./_lib/handlers/admin-post-experience-quiz-stats");
 const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
 const cronProviderEnv = require("./_lib/handlers/cron-provider-env");
@@ -72,6 +73,17 @@ module.exports = async function handler(req, res) {
   // GET /api/admin/funnel
   if (parts[0] === "funnel" && !parts[1]) {
     return funnelHandler(req, res);
+  }
+
+  // GET /api/admin/post-experience-quiz-stats
+  if (parts[0] === "post-experience-quiz-stats" && !parts[1]) {
+    return postExperienceQuizStatsHandler(req, res);
+  }
+
+  // GET /api/admin/i2v-voice-library
+  if (parts[0] === "i2v-voice-library" && !parts[1]) {
+    const adminI2VVoiceLibrary = require("./_lib/handlers/admin-i2v-voice-library");
+    return adminI2VVoiceLibrary(req, res);
   }
 
   // GET /api/admin/command-center
