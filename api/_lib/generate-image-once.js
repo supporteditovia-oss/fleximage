@@ -156,6 +156,7 @@ async function generateImageOnce(supabase, params) {
     imageUrls,
     modelVariant = ONESHOT_MODEL_VARIANT,
     adminPreferDeepInfra = false,
+    strictAspectRatio = false,
     logContext = {},
   } = params;
 
@@ -378,11 +379,20 @@ async function generateImageOnce(supabase, params) {
       ...logContext,
     });
 
-    const { buffer, mimeType } = await generateDeepInfraImage({
+    let { buffer, mimeType } = await generateDeepInfraImage({
       prompt: finalPrompt,
       aspectRatio,
       imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
     });
+
+    if (strictAspectRatio) {
+      const { enforceImageAspectRatioBuffer } = require("./aspect-ratio-enforce");
+      const enforced = await enforceImageAspectRatioBuffer(buffer, aspectRatio);
+      if (enforced.enforced) {
+        buffer = enforced.buffer;
+        mimeType = enforced.contentType;
+      }
+    }
 
     const { uploadToR2 } = require("./r2");
     const ext = mimeType.includes("png") ? "png" : "jpg";

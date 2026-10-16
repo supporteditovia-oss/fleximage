@@ -1495,6 +1495,7 @@ export default function Generate({
       resultType={generationMode}
       referenceImageCount={images.filter((img) => img !== null).length}
       initialEstimatedSeconds={generationEstimateSeconds ?? undefined}
+      aspectRatio={aspectRatio}
     />
   ) : null;
 

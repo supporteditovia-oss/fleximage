@@ -39,16 +39,21 @@ import {
   toSnapFriendlyImageFile,
   type SharePlatform,
 } from "@/lib/share-media";
+import {
+  larpFullscreenViewerFrameClass,
+  larpResultFrameClass,
+} from "@shared/generation-aspect-ui";
 
-/** Compact media frame used by the generated result surface. */
-export const LARP_RESULT_FRAME_CLASS =
-  "relative aspect-[9/16] h-[min(62svh,560px)] w-auto max-w-[92vw] shrink-0 overflow-hidden rounded-lg bg-black shadow-xl md:h-[min(76svh,680px)]";
+/** Compact media frame — portrait 9:16 (legacy export). */
+export const LARP_RESULT_FRAME_CLASS = larpResultFrameClass("9:16");
 
-/** Fullscreen portal viewer — same height-first 9:16 constraint */
+/** Fullscreen portal viewer — portrait 9:16 (legacy export). */
 export const LARP_FULLSCREEN_VIEWER_FRAME_CLASS =
-  "relative mx-auto aspect-[9/16] h-[min(80svh,calc(100dvh-8rem))] w-auto max-w-[min(calc(100vw-2rem),100%)] shrink-0 overflow-hidden rounded-2xl bg-black shadow-2xl";
+  larpFullscreenViewerFrameClass("9:16");
 
-const RESULT_MEDIA_CLASS =
+const RESULT_IMAGE_MEDIA_CLASS =
+  "absolute inset-0 h-full w-full object-contain";
+const RESULT_VIDEO_MEDIA_CLASS =
   "absolute inset-0 h-full w-full object-cover";
 const RESULT_ACTIONS_CLASS =
   "absolute inset-x-0 bottom-0 z-[60] flex items-center justify-center gap-3 rounded-b-[inherit] bg-gradient-to-t from-black/70 via-black/35 to-transparent px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14";
@@ -64,6 +69,8 @@ interface LarpResultProps {
   resultType?: "image" | "video";
   /** Reference / input image used as poster for video results */
   posterUrl?: string;
+  /** 9:16 portrait ou 16:9 paysage — aligné sur le bouton choisi à la génération. */
+  aspectRatio?: string | null;
 }
 
 export function LarpResult({
@@ -72,12 +79,14 @@ export function LarpResult({
   hideActions = false,
   resultType = "image",
   posterUrl,
+  aspectRatio,
 }: LarpResultProps) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const adminPreview = useAdminPreviewFeatures();
   const isMobile = useIsMobile();
+  const frameClass = larpResultFrameClass(aspectRatio);
   const [shareDialog, setShareDialog] = useState<{ imageIndex: number } | null>(
     null,
   );
@@ -259,10 +268,7 @@ export function LarpResult({
           const isVideo = resultType === "video" || isVideoResultUrl(url);
 
           return (
-            <div
-              key={index}
-              className={LARP_RESULT_FRAME_CLASS}
-            >
+            <div key={index} className={frameClass}>
               {isVideo ? (
                 <>
                   <VideoResultPlayer
@@ -295,7 +301,7 @@ export function LarpResult({
                   <img
                     src={url}
                     alt={t("result.generatedAlt", { index: index + 1 })}
-                    className={RESULT_MEDIA_CLASS}
+                    className={RESULT_IMAGE_MEDIA_CLASS}
                     loading="lazy"
                   />
                   {!hideActions && (

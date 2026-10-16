@@ -1667,9 +1667,17 @@ module.exports = async function handler(req, res) {
               return u.includes(`/generations/${larp.id}/`);
             });
           if (!alreadyOnR2) {
+            const pollMetaForAspect =
+              larp.metadata && typeof larp.metadata === "object"
+                ? larp.metadata
+                : {};
             try {
               const stored = await withTimeout(
-                downloadAndStoreImages(larp.id, resultUrls),
+                downloadAndStoreImages(larp.id, resultUrls, {
+                  aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
+                  strictAspectRatio:
+                    pollMetaForAspect.strict_aspect_ratio === true,
+                }),
                 4_000,
                 null,
               );
@@ -1865,6 +1873,7 @@ module.exports = async function handler(req, res) {
         isSubscriber,
         requiresPaywall: false,
         resultType,
+        aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
         creditsRefunded:
           refundResult && refundResult.refundedAmount > 0
             ? refundResult.refundedAmount
@@ -1886,6 +1895,7 @@ module.exports = async function handler(req, res) {
       isSubscriber: false,
       requiresPaywall: false,
       resultType,
+      aspectRatio: larp.aspect_ratio || OUTPUT_ASPECT_RATIO,
     });
   } catch (error) {
     console.error("larp status error", error);
