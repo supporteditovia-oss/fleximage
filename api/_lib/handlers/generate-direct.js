@@ -48,6 +48,7 @@ const {
 } = require("../generation-dedup");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
 const { buildAspectRatioPromptSuffix } = require("../aspect-ratio-prompt");
+const { resolvePromptRewriterRouting } = require("../prompt-rewriter-routing");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -115,6 +116,8 @@ module.exports = async function handler(req, res) {
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
     let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    const rawUserPrompt = prompt;
+    const promptIntelligentEnabled = body.prompt_intelligent !== false;
     const images = Array.isArray(body.images) ? body.images : [];
     const aspectRatio = normalizeAspectRatio(body.aspect_ratio);
     const templateId =
@@ -139,20 +142,27 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
-    // Admin DeepInfra : pas d'enrichissement (latence + POST déjà long).
-    if (
-      !templateId &&
-      (!admin || adminImageProvider === "oneshot")
-    ) {
-      const enriched = await enrichPromptForGeneration(prompt, {
-        locale: uiLocale,
+    // Prompt Intelligent (Gemini) — tenues / voitures / qualité uniquement ; bypass si célébrité, ambiance street, ou toggle off.
+    if (!templateId) {
+      const enrichRoute = resolvePromptRewriterRouting({
+        userPrompt: rawUserPrompt,
+        promptIntelligentEnabled,
       });
-      if (enriched && enriched !== prompt) {
-        prompt = enriched.slice(0, 2000);
-        console.info("[generate-direct] prompt-intelligence applied", {
+      if (!enrichRoute.bypass) {
+        const enriched = await enrichPromptForGeneration(prompt, {
+          locale: uiLocale,
+        });
+        if (enriched && enriched !== prompt) {
+          prompt = enriched.slice(0, 2000);
+          console.info("[generate-direct] prompt-intelligence applied", {
+            userId,
+            length: prompt.length,
+          });
+        }
+      } else {
+        console.info("[generate-direct] prompt-intelligence bypassed", {
           userId,
-          length: prompt.length,
+          reason: enrichRoute.reason,
         });
       }
     }
@@ -524,10 +534,14 @@ module.exports = async function handler(req, res) {
             }),
             effectivePrompt,
           );
-    const strictAspectRatio = admin;
-    if (strictAspectRatio) {
-      finalPrompt = `${finalPrompt}${buildAspectRatioPromptSuffix(aspectRatio)}`;
-    }
+    const strictAspectRatio = true;
+    finalPrompt = `${finalPrompt}${buildAspectRatioPromptSuffix(aspectRatio)}`;
+    const rewriterRoute = resolvePromptRewriterRouting({
+      userPrompt: rawUserPrompt,
+      promptIntelligentEnabled,
+      templateId,
+      referenceImageCount: imageUrls.length,
+    });
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
@@ -546,6 +560,11 @@ module.exports = async function handler(req, res) {
       server_prompt_ready_at: new Date().toISOString(),
       strict_aspect_ratio: strictAspectRatio,
       requested_aspect_ratio: aspectRatio,
+      prompt_intelligent_enabled: promptIntelligentEnabled,
+      prompt_rewriter_bypass: rewriterRoute.bypass,
+      prompt_rewriter_bypass_reason: rewriterRoute.reason,
+      deepinfra_use_flux_text: rewriterRoute.useFluxTextToImage,
+      user_prompt_raw: rawUserPrompt.slice(0, 2000),
       ...(templateReferenceId
         ? {
             ...(isBuiltinTemplateId(templateId)
@@ -575,6 +594,7 @@ module.exports = async function handler(req, res) {
         modelVariant: oneshotModelVariant,
         adminPreferDeepInfra: admin,
         strictAspectRatio,
+        useFluxTextToImage: rewriterRoute.useFluxTextToImage,
         logContext: {
           userId,
           source,

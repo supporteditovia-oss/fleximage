@@ -168,6 +168,7 @@ export default function Generate({
     useState<GenerationMode>("image");
   const [aspectRatio, setAspectRatio] =
     useState<GenerationAspectRatio>(OUTPUT_ASPECT_RATIO);
+  const [promptIntelligent, setPromptIntelligent] = useState(true);
   const { toast } = useToast();
   const topRef = useRef<HTMLDivElement>(null);
   const { data: eligibility, refetch: refetchEligibility } =
@@ -1197,6 +1198,7 @@ export default function Generate({
         images: base64Images && base64Images.length > 0 ? base64Images : undefined,
         template_id: selectedOrPendingTemplateId,
         use_face_asset: false,
+        prompt_intelligent: promptIntelligent,
         source: "generate",
         generation_request_id: generationRequestId,
         frontend_timestamp: new Date().toISOString(),
@@ -1691,6 +1693,8 @@ export default function Generate({
                 }
                 aspectRatio={aspectRatio}
                 onAspectRatioChange={setAspectRatio}
+                promptIntelligent={promptIntelligent}
+                onPromptIntelligentChange={setPromptIntelligent}
               />
 
               <TemplateStrip variant="compact" />

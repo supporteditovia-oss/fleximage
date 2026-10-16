@@ -4,6 +4,7 @@ const DEEPINFRA_IMAGES_EDITS_URL =
   "https://api.deepinfra.com/v1/openai/images/edits";
 /** Aligné Kie (nano-banana-2) — surcharge via DEEPINFRA_MODEL. */
 const DEFAULT_MODEL = "google/nano-banana-2";
+const DEFAULT_FLUX_TEXT_MODEL = "black-forest-labs/FLUX-1-schnell";
 
 function getDeepInfraApiKey() {
   return (process.env.DEEPINFRA_API_KEY || "").trim();
@@ -11,6 +12,27 @@ function getDeepInfraApiKey() {
 
 function getDeepInfraModel() {
   return (process.env.DEEPINFRA_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+}
+
+function getFluxTextToImageModel() {
+  const raw = (process.env.DEEPINFRA_FLUX_MODEL || DEFAULT_FLUX_TEXT_MODEL).trim();
+  return raw || DEFAULT_FLUX_TEXT_MODEL;
+}
+
+function resolveDeepInfraImageModel(params = {}) {
+  const refUrls = Array.isArray(params.imageUrls)
+    ? params.imageUrls.filter((u) => typeof u === "string" && /^https?:\/\//i.test(u))
+    : [];
+  if (refUrls.length > 0) {
+    return getDeepInfraModel();
+  }
+  if (params.useFluxTextToImage === true) {
+    return getFluxTextToImageModel();
+  }
+  if (params.modelOverride && String(params.modelOverride).trim()) {
+    return String(params.modelOverride).trim();
+  }
+  return getDeepInfraModel();
 }
 
 function isDeepInfraConfigured() {
@@ -85,11 +107,15 @@ async function generateDeepInfraImage(params) {
     throw new Error("DeepInfra: prompt vide");
   }
 
-  const model = getDeepInfraModel();
-  const size = aspectRatioToSize(params.aspectRatio);
   const refUrls = Array.isArray(params.imageUrls)
     ? params.imageUrls.filter((u) => typeof u === "string" && /^https?:\/\//i.test(u))
     : [];
+  const model = resolveDeepInfraImageModel({
+    imageUrls: refUrls,
+    useFluxTextToImage: params.useFluxTextToImage === true,
+    modelOverride: params.modelOverride,
+  });
+  const size = aspectRatioToSize(params.aspectRatio);
 
   if (refUrls.length > 0) {
     const { buffer: inputBuffer, mimeType: inputMime } =
@@ -164,8 +190,11 @@ async function generateDeepInfraImage(params) {
 
 module.exports = {
   DEFAULT_DEEPINFRA_MODEL: DEFAULT_MODEL,
+  DEFAULT_FLUX_TEXT_MODEL,
   getDeepInfraApiKey,
   getDeepInfraModel,
+  getFluxTextToImageModel,
+  resolveDeepInfraImageModel,
   isDeepInfraConfigured,
   aspectRatioToSize,
   generateDeepInfraImage,

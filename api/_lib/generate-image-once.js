@@ -157,6 +157,7 @@ async function generateImageOnce(supabase, params) {
     modelVariant = ONESHOT_MODEL_VARIANT,
     adminPreferDeepInfra = false,
     strictAspectRatio = false,
+    useFluxTextToImage = false,
     logContext = {},
   } = params;
 
@@ -371,9 +372,15 @@ async function generateImageOnce(supabase, params) {
       err.code = "MULTI_REF_DEEPINFRA_UNSUPPORTED";
       throw err;
     }
+    const { resolveDeepInfraImageModel } = require("./deepinfra");
+    const deepInfraModel = resolveDeepInfraImageModel({
+      imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+      useFluxTextToImage,
+    });
     console.info("[generate-image-once] DeepInfra sync", {
       generationId,
-      model: getDeepInfraModel(),
+      model: deepInfraModel,
+      useFluxTextToImage,
       promptChars: String(finalPrompt || "").length,
       reason: reason instanceof Error ? reason.message : reason || null,
       ...logContext,
@@ -383,6 +390,7 @@ async function generateImageOnce(supabase, params) {
       prompt: finalPrompt,
       aspectRatio,
       imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+      useFluxTextToImage,
     });
 
     if (strictAspectRatio) {
