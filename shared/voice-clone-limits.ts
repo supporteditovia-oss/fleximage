@@ -20,6 +20,15 @@ export function formatVoiceCloneDurationLabel(durationSec: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+/** Évite toute confusion avec VOICE_CLONE_CREDIT_COST (30 jetons). */
+export function resolveVoiceCloneMinSampleSec(minSec?: number): number {
+  const n = Number(minSec);
+  if (!Number.isFinite(n) || n <= 0 || n > 24 || n === 30) {
+    return VOICE_CLONE_MIN_SAMPLE_SEC;
+  }
+  return n;
+}
+
 export function formatVoiceCloneSampleTooShortMessage(
   durationSec: number,
   options?: {
@@ -27,11 +36,50 @@ export function formatVoiceCloneSampleTooShortMessage(
     source?: "record" | "import";
   },
 ): string {
-  const minSec = options?.minSec ?? VOICE_CLONE_MIN_SAMPLE_SEC;
+  const minSec = resolveVoiceCloneMinSampleSec(options?.minSec);
   const source = options?.source ?? "record";
   const label = source === "record" ? "Enregistrement" : "Extrait";
   const attempt = formatVoiceCloneDurationLabel(durationSec);
-  return `${label} trop court (${attempt} s) — minimum ${minSec} s de voix claire.`;
+  return `${label} trop court (${attempt} s) — minimum ${minSec} s de voix claire. Max ${VOICE_CLONE_MAX_IMPORT_SEC} s à l'import, ${VOICE_CLONE_MAX_RECORD_SEC} s au micro.`;
+}
+
+export function formatVoiceCloneSampleTooLongMessage(
+  durationSec: number,
+  options?: {
+    maxSec?: number;
+    source?: "record" | "import";
+  },
+): string {
+  const maxSec =
+    options?.maxSec === VOICE_CLONE_MAX_RECORD_SEC ||
+    options?.maxSec === VOICE_CLONE_MAX_IMPORT_SEC
+      ? options.maxSec
+      : options?.source === "record"
+        ? VOICE_CLONE_MAX_RECORD_SEC
+        : VOICE_CLONE_MAX_IMPORT_SEC;
+  const source = options?.source ?? "import";
+  const label = source === "record" ? "Enregistrement" : "Extrait";
+  const attempt = formatVoiceCloneDurationLabel(durationSec);
+  return `${label} trop long (${attempt} s) — maximum ${maxSec} s pour le clonage.`;
+}
+
+/** Durée effective : mesure WAV + chrono client (WebM mobile ment souvent). */
+export function resolveEffectiveVoiceCloneSampleSec(
+  measuredSec: number,
+  clientHintSec?: number | null,
+): number {
+  const measured = Number(measuredSec) || 0;
+  const hint = Number(clientHintSec) || 0;
+  if (measured <= 0) return hint;
+  if (hint <= 0) return measured;
+  if (
+    hint >= VOICE_CLONE_MIN_SAMPLE_SEC - 1 &&
+    measured < VOICE_CLONE_MIN_SAMPLE_SEC - 0.5 &&
+    hint >= measured + 1.5
+  ) {
+    return hint;
+  }
+  return Math.max(measured, hint);
 }
 
 export function isVoiceCloneSampleLongEnough(

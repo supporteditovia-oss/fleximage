@@ -20,7 +20,7 @@ function estimateWavDurationSec(buffer) {
         if (bytesPerSec <= 0) return 0;
         return chunkSize / bytesPerSec;
       }
-      offset += 8 + chunkSize;
+      offset += 8 + chunkSize + (chunkSize % 2);
     }
   } catch {
     return 0;

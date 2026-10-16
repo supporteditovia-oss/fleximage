@@ -14,6 +14,7 @@ const {
   VOICE_CLONE_MIN_SAMPLE_SEC,
   isVoiceCloneSampleLongEnough,
   formatVoiceCloneSampleTooShortMessage,
+  resolveEffectiveVoiceCloneSampleSec,
 } = require("../voice-clone-limits");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
@@ -177,8 +178,10 @@ module.exports = async function voiceCloneHandler(req, res) {
         : "import";
 
     const measuredSampleSec = estimateWavDurationSec(parsed.buffer);
-    const effectiveSampleSec =
-      measuredSampleSec > 0 ? measuredSampleSec : durationSec || 0;
+    const effectiveSampleSec = resolveEffectiveVoiceCloneSampleSec(
+      measuredSampleSec,
+      durationSec,
+    );
 
     if (
       effectiveSampleSec > 0 &&

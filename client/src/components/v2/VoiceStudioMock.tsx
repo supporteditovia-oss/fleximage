@@ -57,6 +57,7 @@ import { adminPreviewVoiceGenerateCreditCost } from "@shared/pricing-admin-refer
 import {
   formatVoiceCloneSampleTooShortMessage,
   isVoiceCloneSampleLongEnough,
+  resolveEffectiveVoiceCloneSampleSec,
   VOICE_CLONE_MIN_SAMPLE_SEC,
 } from "@shared/voice-clone-limits";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
@@ -1049,9 +1050,13 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         if (hasPendingCapture && voiceClip) {
           const name = voiceName.trim();
           const prepared = await prepareVoiceClipForClone(voiceClip);
-          const measuredSec = await getAudioDurationSec(prepared, {
+          const measuredRaw = await getAudioDurationSec(prepared, {
             fallbackSec: voiceClip.durationSec,
           });
+          const measuredSec = resolveEffectiveVoiceCloneSampleSec(
+            measuredRaw,
+            voiceClip.durationSec,
+          );
           if (!isVoiceCloneSampleLongEnough(measuredSec, cloneMinSec)) {
             throw new Error(
               formatVoiceCloneSampleTooShortMessage(measuredSec, {
