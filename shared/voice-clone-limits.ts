@@ -1,6 +1,6 @@
 /** Durées échantillon clone — alignées sur la consigne UX « 15–20 s » (Fish Audio). */
 
-/** Minimum pour lancer un clone (en dessous, qualité / ASR trop faibles). */
+/** Minimum pour lancer un clone (en dessous, qualité / ASR trop faibles). Ne pas confondre avec VOICE_CLONE_CREDIT_COST (30 jetons). */
 export const VOICE_CLONE_MIN_SAMPLE_SEC = 15;
 
 /** Durée idéale max au micro (interview solo). */

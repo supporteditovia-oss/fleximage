@@ -181,7 +181,6 @@ module.exports = async function voiceCloneHandler(req, res) {
       measuredSampleSec > 0 ? measuredSampleSec : durationSec || 0;
 
     if (
-      isAdmin &&
       effectiveSampleSec > 0 &&
       !isVoiceCloneSampleLongEnough(effectiveSampleSec)
     ) {
