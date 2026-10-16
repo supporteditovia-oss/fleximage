@@ -54,6 +54,11 @@ import {
   VOICE_CLONE_TYPEWRITER_IDEAS,
 } from "@/lib/voice-clone-prompt-pools";
 import { adminPreviewVoiceGenerateCreditCost } from "@shared/pricing-admin-reference";
+import {
+  formatVoiceCloneSampleTooShortMessage,
+  isVoiceCloneSampleLongEnough,
+  VOICE_CLONE_MIN_SAMPLE_SEC,
+} from "@shared/voice-clone-limits";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
 import { useOnboardingFakeLoader } from "@/hooks/use-onboarding-fake-loader";
@@ -85,6 +90,8 @@ import {
   buildVoiceClipFromFile,
   defaultTrimRange,
   decodeMediaFile,
+  getAudioDurationSec,
+  prepareVoiceClipForClone,
   getMediaDurationQuick,
   getMediaDurationFromUrl,
   isVideoMediaFile,
@@ -181,6 +188,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const [, navigate] = useLocation();
   const { user, isAdmin, profile } = useAuth();
   const adminVoiceRecordFix = useAdminPreviewFeatures();
+  const cloneMinSec = adminVoiceRecordFix
+    ? VOICE_CLONE_MIN_SAMPLE_SEC
+    : MIN_CLIP_SEC;
   const recordLimitSec = adminVoiceRecordFix ? MAX_RECORD_SEC : MAX_CLIP_SEC;
   const recordLimitClock = `0:${String(recordLimitSec).padStart(2, "0")}`;
   const { toast } = useToast();
@@ -257,7 +267,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
   const clipAcceptable = Boolean(
     voiceClip &&
-      voiceClip.durationSec >= MIN_CLIP_SEC - 0.05 &&
+      voiceClip.durationSec >= cloneMinSec - 0.5 &&
       voiceClip.durationSec <= MAX_CLIP_SEC + 0.25,
   );
 
@@ -296,11 +306,17 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         "Fichier en cours de lecture — patiente quelques secondes.",
       );
     }
-    if (voiceClip && voiceClip.durationSec < MIN_CLIP_SEC) {
+    if (voiceClip && voiceClip.durationSec < cloneMinSec - 0.5) {
+      if (adminVoiceRecordFix) {
+        return formatVoiceCloneSampleTooShortMessage(voiceClip.durationSec, {
+          source: voiceClip.source,
+          minSec: cloneMinSec,
+        });
+      }
       return vsg(
         "blockClipTooShort",
-        `Extrait trop court : minimum ${MIN_CLIP_SEC} secondes. Élargis la sélection.`,
-        { min: MIN_CLIP_SEC },
+        `Extrait trop court : minimum ${cloneMinSec} secondes. Élargis la sélection.`,
+        { min: cloneMinSec },
       );
     }
     if (voiceClip && voiceClip.durationSec > MAX_CLIP_SEC + 0.25) {
@@ -1045,6 +1061,20 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
         if (hasPendingCapture && voiceClip) {
           const name = voiceName.trim();
+          if (adminVoiceRecordFix) {
+            const prepared = await prepareVoiceClipForClone(voiceClip);
+            const measuredSec = await getAudioDurationSec(prepared, {
+              fallbackSec: voiceClip.durationSec,
+            });
+            if (!isVoiceCloneSampleLongEnough(measuredSec, cloneMinSec)) {
+              throw new Error(
+                formatVoiceCloneSampleTooShortMessage(measuredSec, {
+                  source: voiceClip.source,
+                  minSec: cloneMinSec,
+                }),
+              );
+            }
+          }
           let audioDataUrl: string;
           try {
             audioDataUrl = await voiceClipToDataUrl(voiceClip);

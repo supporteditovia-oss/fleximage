@@ -1,14 +1,21 @@
 import { isVideoMediaFile as detectVideoFile } from "@/lib/media-file-detect";
+import {
+  VOICE_CLONE_IDEAL_MAX_SEC,
+  VOICE_CLONE_MAX_IMPORT_SEC,
+  VOICE_CLONE_MAX_RECORD_SEC,
+  VOICE_CLONE_MIN_SAMPLE_SEC,
+} from "@shared/voice-clone-limits";
 
-export const MAX_CLIP_SEC = 25;
+export const MAX_CLIP_SEC = VOICE_CLONE_MAX_IMPORT_SEC;
 /** Durée cible pour un clone très fidèle (Fish Audio). */
-export const IDEAL_CLIP_SEC = 20;
+export const IDEAL_CLIP_SEC = VOICE_CLONE_IDEAL_MAX_SEC;
 /** Conseil UX — en dessous, le clone est souvent moins stable. */
-export const RECOMMENDED_MIN_CLIP_SEC = 15;
-/** Minimum technique pour lancer un clone. */
+export const RECOMMENDED_MIN_CLIP_SEC = VOICE_CLONE_MIN_SAMPLE_SEC;
+/** Minimum fenêtre trim (technique). Validation clone = {@link VOICE_CLONE_MIN_SAMPLE_SEC}. */
 export const MIN_CLIP_SEC = 2;
 /** Durée max au micro (alignée sur l’interview idéale 15–20 s). */
-export const MAX_RECORD_SEC = IDEAL_CLIP_SEC;
+export const MAX_RECORD_SEC = VOICE_CLONE_MAX_RECORD_SEC;
+export { VOICE_CLONE_MIN_SAMPLE_SEC };
 
 export type VoiceClipSource = "record" | "import";
 

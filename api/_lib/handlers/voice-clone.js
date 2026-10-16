@@ -9,6 +9,12 @@ const {
   getPlanUsageSnapshot,
   assertVoiceClonePlanQuota,
 } = require("../plan-usage-limits");
+const { estimateWavDurationSec } = require("../wav-duration");
+const {
+  VOICE_CLONE_MIN_SAMPLE_SEC,
+  isVoiceCloneSampleLongEnough,
+  formatVoiceCloneSampleTooShortMessage,
+} = require("../voice-clone-limits");
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 const { normalizeVideoDataUrlContentType } = require("../media-buffer-sniff");
@@ -164,6 +170,30 @@ module.exports = async function voiceCloneHandler(req, res) {
       typeof body.durationSec === "number" && body.durationSec > 0
         ? body.durationSec
         : null;
+
+    const sourceTypeEarly =
+      body.sourceType === "record" || body.sourceType === "catalog"
+        ? body.sourceType
+        : "import";
+
+    const measuredSampleSec = estimateWavDurationSec(parsed.buffer);
+    const effectiveSampleSec =
+      measuredSampleSec > 0 ? measuredSampleSec : durationSec || 0;
+
+    if (
+      isAdmin &&
+      effectiveSampleSec > 0 &&
+      !isVoiceCloneSampleLongEnough(effectiveSampleSec)
+    ) {
+      res.status(400).json({
+        code: "sample_too_short",
+        message: formatVoiceCloneSampleTooShortMessage(effectiveSampleSec, {
+          source: sourceTypeEarly === "record" ? "record" : "import",
+          minSec: VOICE_CLONE_MIN_SAMPLE_SEC,
+        }),
+      });
+      return;
+    }
 
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
     const sampleUrl = await uploadToR2(sampleKey, parsed.buffer, parsed.contentType);

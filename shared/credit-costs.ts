@@ -2,7 +2,7 @@
 export const IMAGE_CREDIT_COST = 10;
 /** TTS — 10 crédits / minute (arrondi supérieur côté API). */
 export const VOICE_CREDIT_COST = 10;
-/** Fish clone ~0,50 € — minimum ~28 cr Essentiel ; fixé à 30 cr. */
+/** Fish clone ~0,50 € — minimum ~28 cr Essentiel ; fixé à 30 cr (jetons, pas secondes). */
 export const VOICE_CLONE_CREDIT_COST = 30;
 /** I2V Kling 5 s (~0,39 € API). */
 export const VIDEO_I2V_CREDIT_COST = 60;
