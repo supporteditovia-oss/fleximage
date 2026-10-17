@@ -10,7 +10,7 @@ test("buildTtsOptions deep chest clone — moins de lissage", () => {
   });
   assert.equal(opts.temperature, 0.36);
   assert.equal(opts.top_p, 0.64);
-  assert.equal(opts.prosody.speed, 0.96);
+  assert.equal(opts.prosody.speed, 0.94);
 });
 
 test("buildTtsOptions clone fidelity — paramètres validés", () => {

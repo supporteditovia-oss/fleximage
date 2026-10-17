@@ -71,7 +71,7 @@ const CLONE_DEEP_CHEST_TTS = {
   top_p: 0.64,
   repetition_penalty: 1.0,
   prosody: {
-    speed: 0.96,
+    speed: 0.94,
     volume: 0,
     normalize_loudness: false,
   },
@@ -105,7 +105,7 @@ function buildTtsOptions(text, options = {}) {
       : inlineIdentityClone
         ? CLONE_INLINE_IDENTITY_TTS
         : CLONE_FIDELITY_TTS;
-    const speedCap = deepChestClone ? 0.96 : inlineIdentityClone ? 0.99 : 0.98;
+    const speedCap = deepChestClone ? 0.94 : inlineIdentityClone ? 0.99 : 0.98;
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
         ? Math.min(clampTtsSpeed(speed), speedCap)

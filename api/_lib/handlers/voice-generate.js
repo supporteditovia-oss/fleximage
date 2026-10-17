@@ -287,6 +287,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const deepChestClone =
       cloneFidelity &&
       shouldUseDeepChestClone({
+        generationMode: voiceMode.mode,
+        cloneSourceType,
+        hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
         referenceWavBuffer: referenceAudio,
       });
 

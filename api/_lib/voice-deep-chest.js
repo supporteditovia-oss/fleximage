@@ -43,10 +43,18 @@ function estimateDeepChestFromWav(wavBuffer) {
 
   const rms = Math.sqrt(sumSq / samples.length);
   const zcr = zeroCross / samples.length;
-  return rms >= 650 && zcr <= 0.095;
+  /** Seuil bas + ZCR élargi : voix lourdes nasal-graves (Jul) et très graves (Kaaris). */
+  return rms >= 480 && zcr <= 0.115;
 }
 
-function shouldUseDeepChestClone({ referenceWavBuffer } = {}) {
+function shouldUseDeepChestClone({
+  generationMode,
+  cloneSourceType,
+  hasInstantImport,
+  referenceWavBuffer,
+} = {}) {
+  if (generationMode === "C" || hasInstantImport) return true;
+  if (cloneSourceType === "import") return true;
   if (referenceWavBuffer && estimateDeepChestFromWav(referenceWavBuffer)) return true;
   return false;
 }

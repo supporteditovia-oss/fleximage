@@ -21,7 +21,7 @@ const execFileAsync = promisify(execFile);
 const VOICE_CLONE_AF =
   "silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB," +
   "areverse,silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB,areverse," +
-  "highpass=f=60,lowpass=f=12000," +
+  "highpass=f=55,lowpass=f=12000," +
   "afftdn=nf=-24:nt=w," +
   "acompressor=threshold=-22dB:ratio=2.5:attack=8:release=120:makeup=2.5," +
   "loudnorm=I=-16:TP=-1.5:LRA=10:print_format=none";
@@ -29,9 +29,10 @@ const VOICE_CLONE_AF =
 /**
  * Inline Fish (zero-shot) — préserve nasalité / timbre (Jul…) : pas de denoise ni compresseur agressif.
  */
+/** LRA élevé : garde le creux des basses avant Fish (Kaaris, Jul…). */
 const VOICE_CLONE_INLINE_AF =
-  "highpass=f=60,lowpass=f=14000," +
-  "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=none";
+  "highpass=f=55,lowpass=f=14000," +
+  "loudnorm=I=-16:TP=-1.5:LRA=14:print_format=none";
 
 /**
  * Prépare un échantillon clone (WAV ou autre audio) avant Fish / ASR.
