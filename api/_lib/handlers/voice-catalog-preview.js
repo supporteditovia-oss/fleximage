@@ -29,7 +29,12 @@ function resolvePreviewText(fishReferenceId, i2vEntry, catalogEntry, locale) {
 }
 
 async function loadCachedPreviewBuffer(cacheKey) {
-  const { publicUrl } = getR2Config();
+  let publicUrl;
+  try {
+    publicUrl = getR2Config().publicUrl;
+  } catch {
+    return null;
+  }
   const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
   try {
     const cached = await fetch(cachedUrl);

@@ -1,3 +1,5 @@
+import { staticPreviewPathForFishId } from "@/lib/i2v-voice-library";
+
 type PreviewCallbacks = {
   onLoading?: () => void;
   onPlaying?: () => void;
@@ -118,19 +120,27 @@ export function playI2VVoicePreview(
   callbacks.onLoading?.();
 
   void (async () => {
-    const ok = await preloadUrl(url);
+    let playUrl = url;
+    let ok = await preloadUrl(playUrl);
+    if (!ok) {
+      const fallback = staticPreviewPathForFishId(fishId);
+      if (fallback) {
+        playUrl = `${fallback}?v=${fishId.toLowerCase()}`;
+        ok = await preloadUrl(playUrl);
+      }
+    }
     if (cancelled || token !== activeToken) return;
     if (!ok) {
       callbacks.onError?.();
       return;
     }
 
-    let audio = preloadedByUrl.get(url);
+    let audio = preloadedByUrl.get(playUrl);
     if (!audio) {
       audio = new Audio();
       configureAudio(audio);
-      preloadedByUrl.set(url, audio);
-      audio.src = url;
+      preloadedByUrl.set(playUrl, audio);
+      audio.src = playUrl;
     }
 
     activeAudio = audio;

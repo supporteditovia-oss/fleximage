@@ -4,7 +4,7 @@ const {
   buildLandingVoiceScript,
 } = require("../../shared/voice-locale-scripts.cjs");
 
-const LANDING_VOICE_DEFAULT_SLUG = "gims";
+const LANDING_VOICE_DEFAULT_SLUG = "lf-camille";
 
 const LANDING_VOICE_BY_SLUG = Object.fromEntries(
   catalog.entries.map((entry) => [entry.slug, entry]),

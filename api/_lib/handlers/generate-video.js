@@ -16,7 +16,7 @@ const {
   findI2VLibraryEntryById,
   resolveI2VLibraryFishId,
   listActiveI2VLibraryEntries,
-} = require("../../shared/i2v-voice-library.cjs");
+} = require("../../../shared/i2v-voice-library.cjs");
 const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,

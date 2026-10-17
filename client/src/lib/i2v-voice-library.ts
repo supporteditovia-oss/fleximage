@@ -36,3 +36,13 @@ export function findI2VLibraryVoiceById(id: string | null): I2VLibraryVoice | nu
   if (!id) return null;
   return listActiveI2VLibraryVoices().find((v) => v.id === id) ?? null;
 }
+
+/** Repli local si l’API Fish est lente ou indisponible. */
+export function staticPreviewPathForFishId(fishId: string): string | null {
+  const key = fishId.trim().toLowerCase();
+  if (!key) return null;
+  const entry = (library.entries ?? []).find(
+    (e) => String(e.fishId || "").toLowerCase() === key,
+  );
+  return entry?.previewPath ?? null;
+}
