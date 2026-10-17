@@ -19,6 +19,8 @@ type VideoVoiceAddonProps = {
   voiceExtraCredit?: number;
   /** Catalogue homme / femme — preview admin Vidéo IA. */
   adminVoiceCatalogEnabled?: boolean;
+  /** Compteur incrusté dans le champ — rollout admin uniquement. */
+  adminInlineVoiceCounter?: boolean;
   i2vVoiceId?: string | null;
   onI2vVoiceId?: (voice: AdminVideoVoice) => void;
 };
@@ -32,6 +34,7 @@ export function VideoVoiceAddon({
   durationSec = 5,
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
   adminVoiceCatalogEnabled = false,
+  adminInlineVoiceCounter = false,
   i2vVoiceId = null,
   onI2vVoiceId,
 }: VideoVoiceAddonProps) {
@@ -41,6 +44,7 @@ export function VideoVoiceAddon({
   );
 
   const effectiveMaxChars = maxChars || limits.maxChars;
+  const counterId = "video-voice-script-counter";
 
   return (
     <div className="via-voice-addon">
@@ -85,39 +89,63 @@ export function VideoVoiceAddon({
             bouche, mâchoire et timing réalistes — comme une vraie prise, pas
             une photo figée. Chaque mot doit coller au mouvement des lèvres.
           </p>
-          <textarea
-            id="video-voice-script"
-            value={text}
-            onChange={(e) =>
-              onTextChange(clampVoiceScriptToI2VLimit(e.target.value, durationSec))
-            }
-            rows={3}
-            maxLength={effectiveMaxChars}
-            placeholder="Ex. dialogue : Laisse-moi ! — pour un cri : Aaaah ! Non ! (évite AAAAAHHHH sans espaces)"
-            className="via-prompt-field"
-            aria-describedby="video-voice-script-counter"
-          />
-          <p
-            id="video-voice-script-counter"
-            className={`via-voice-addon__counter${
-              limits.showLimitWarning ? " is-limit" : ""
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            <span>
-              {limits.charCount} / {limits.maxChars} caractères
-            </span>
-            <span className="via-voice-addon__counter-sep" aria-hidden>
-              ·
-            </span>
-            <span>
-              {limits.wordCount} / {limits.maxWords} mots
-            </span>
-            <span className="via-voice-addon__counter-meta">
-              · limite {limits.durationSec} s
-            </span>
-          </p>
+          <div className="via-voice-script-field">
+            <textarea
+              id="video-voice-script"
+              value={text}
+              onChange={(e) =>
+                onTextChange(
+                  clampVoiceScriptToI2VLimit(e.target.value, durationSec),
+                )
+              }
+              rows={3}
+              maxLength={effectiveMaxChars}
+              placeholder="Ex. dialogue : Laisse-moi ! — pour un cri : Aaaah ! Non ! (évite AAAAAHHHH sans espaces)"
+              className={`via-prompt-field${adminInlineVoiceCounter ? " via-prompt-field--voice-script" : ""}`}
+              aria-describedby={counterId}
+            />
+            {adminInlineVoiceCounter ? (
+              <div
+                id={counterId}
+                className={`via-voice-script-counter-float${
+                  limits.showLimitWarning ? " is-limit" : ""
+                }`}
+                role="status"
+                aria-live="polite"
+                aria-label={`${limits.charCount} caractères sur ${limits.maxChars}, ${limits.wordCount} mots sur ${limits.maxWords}, clip ${limits.durationSec} secondes`}
+              >
+                <span className="via-voice-script-counter-float__main">
+                  {limits.charCount} / {limits.maxChars}
+                </span>
+                <span className="via-voice-script-counter-float__sub">
+                  car. · {limits.wordCount}/{limits.maxWords} mots · {limits.durationSec}s
+                </span>
+              </div>
+            ) : null}
+          </div>
+          {!adminInlineVoiceCounter ? (
+            <p
+              id={counterId}
+              className={`via-voice-addon__counter${
+                limits.showLimitWarning ? " is-limit" : ""
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              <span>
+                {limits.charCount} / {limits.maxChars} caractères
+              </span>
+              <span className="via-voice-addon__counter-sep" aria-hidden>
+                ·
+              </span>
+              <span>
+                {limits.wordCount} / {limits.maxWords} mots
+              </span>
+              <span className="via-voice-addon__counter-meta">
+                · limite {limits.durationSec} s
+              </span>
+            </p>
+          ) : null}
           {limits.overCharLimit || limits.overWordLimit ? (
             <p className="via-voice-addon__limit-alert" role="alert">
               {limits.overCharLimit
@@ -125,8 +153,12 @@ export function VideoVoiceAddon({
                 : `Trop de mots pour ${limits.durationSec} s — allège la phrase pour éviter un échec de sync.`}
             </p>
           ) : limits.atCharLimit ? (
-            <p className="via-voice-addon__limit-alert via-voice-addon__limit-alert--soft" role="status">
-              Limite {limits.durationSec} s atteinte — tu peux générer ou raccourcir un peu pour plus de marge.
+            <p
+              className="via-voice-addon__limit-alert via-voice-addon__limit-alert--soft"
+              role="status"
+            >
+              Limite {limits.durationSec} s atteinte — tu peux générer ou
+              raccourcir un peu pour plus de marge.
             </p>
           ) : null}
           <p className="via-voice-addon__hint">

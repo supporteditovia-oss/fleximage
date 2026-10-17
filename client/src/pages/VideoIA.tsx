@@ -876,6 +876,7 @@ export default function VideoIA() {
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
       adminVoiceCatalogEnabled={studioAdmin && adminPreview}
+      adminInlineVoiceCounter={studioAdmin}
       i2vVoiceId={i2vVoiceId}
       onI2vVoiceId={(voice) => setI2vVoiceId(voice.id)}
       canGenerateI2V={canGenerateI2V}

@@ -46,6 +46,7 @@ export type VideoIAStudioViewProps = {
   voiceMaxChars: number;
   voiceExtraCredit: number;
   adminVoiceCatalogEnabled?: boolean;
+  adminInlineVoiceCounter?: boolean;
   i2vVoiceId?: string | null;
   onI2vVoiceId?: (voice: import("@/lib/admin-video-voice-catalog").AdminVideoVoice) => void;
   canGenerateI2V: boolean;
@@ -278,6 +279,7 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               durationSec={props.durationSec}
               voiceExtraCredit={props.voiceExtraCredit}
               adminVoiceCatalogEnabled={props.adminVoiceCatalogEnabled}
+              adminInlineVoiceCounter={props.adminInlineVoiceCounter}
               i2vVoiceId={props.i2vVoiceId}
               onI2vVoiceId={props.onI2vVoiceId}
             />

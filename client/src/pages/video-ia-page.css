@@ -1306,6 +1306,69 @@ html.luxeflexia-video-page .floating-header::before {
   color: var(--lx-muted);
 }
 
+.via-voice-script-field {
+  position: relative;
+  margin-top: 0.85rem;
+}
+
+.via-voice-script-field .via-prompt-field {
+  margin-top: 0;
+}
+
+.via-prompt-field--voice-script {
+  padding-bottom: 2.65rem;
+  padding-right: 0.85rem;
+}
+
+.via-voice-script-counter-float {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.5rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  max-width: calc(100% - 1.2rem);
+  padding: 0.28rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(201, 162, 39, 0.42);
+  background: rgba(255, 252, 245, 0.96);
+  box-shadow:
+    0 1px 3px rgba(18, 16, 14, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  pointer-events: none;
+  text-align: right;
+}
+
+.via-voice-script-counter-float__main {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: rgba(38, 34, 30, 0.92);
+  line-height: 1.15;
+}
+
+.via-voice-script-counter-float__sub {
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(92, 86, 78, 0.88);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.via-voice-script-counter-float.is-limit {
+  border-color: rgba(180, 35, 24, 0.5);
+  background: rgba(254, 242, 242, 0.97);
+}
+
+.via-voice-script-counter-float.is-limit .via-voice-script-counter-float__main,
+.via-voice-script-counter-float.is-limit .via-voice-script-counter-float__sub {
+  color: #b42318;
+}
+
 .via-voice-addon__counter {
   display: flex;
   flex-wrap: wrap;
