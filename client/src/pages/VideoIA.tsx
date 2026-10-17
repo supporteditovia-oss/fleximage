@@ -72,6 +72,8 @@ import {
 import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
+import { defaultI2VCatalogFishReferenceId } from "@/components/video/VideoI2VCatalogVoicePicker";
+import type { MockVoiceProfile } from "@/lib/v2-mock-voice";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
@@ -146,6 +148,9 @@ export default function VideoIA() {
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
+  const [catalogFishReferenceId, setCatalogFishReferenceId] = useState<string | null>(
+    () => defaultI2VCatalogFishReferenceId() || null,
+  );
   const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -307,6 +312,9 @@ export default function VideoIA() {
           voice_mode: "catalog" as const,
           voice_text: voiceText.trim(),
           voice_consent: true,
+          ...(adminPreview && catalogFishReferenceId
+            ? { voice_fish_reference_id: catalogFishReferenceId }
+            : {}),
         }
       : { voice_enabled: false };
 
@@ -842,6 +850,11 @@ export default function VideoIA() {
       onVoiceText={setVoiceText}
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
+      adminVoiceCatalogEnabled={adminPreview}
+      catalogFishReferenceId={catalogFishReferenceId}
+      onCatalogFishReferenceId={(fishId, _voice: MockVoiceProfile) => {
+        setCatalogFishReferenceId(fishId);
+      }}
       canGenerateI2V={canGenerateI2V}
       onGenerateI2V={handleGenerateI2V}
       i2vPending={isSubmitting || generateVideo.isPending}

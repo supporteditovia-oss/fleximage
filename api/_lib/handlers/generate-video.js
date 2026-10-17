@@ -9,6 +9,10 @@ const {
 const { isAiAvatarProConfigured } = require("../kie-ai-avatar-pro");
 const { DEFAULT_CATALOG_FISH_ID } = require("../i2v-avatar-audio");
 const {
+  isValidFishReferenceId,
+  lookupCatalogEntryByFishId,
+} = require("../voice-catalog");
+const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
   validateSourceVideoDuration,
@@ -205,6 +209,16 @@ function resolveVehicleDescription(body) {
   return "";
 }
 
+
+function resolveVideoCatalogFishReferenceId(body, isAdmin) {
+  const raw = String(
+    body.voice_fish_reference_id || body.voiceFishReferenceId || "",
+  ).trim();
+  if (!isAdmin || !isValidFishReferenceId(raw)) {
+    return DEFAULT_CATALOG_FISH_ID;
+  }
+  return lookupCatalogEntryByFishId(raw) ? raw : DEFAULT_CATALOG_FISH_ID;
+}
 
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
   if (!body.voice_enabled) return null;
@@ -643,7 +657,8 @@ module.exports = async function handler(req, res) {
         : null,
       voice_consent: Boolean(body.voice_consent),
       voice_fish_reference_id: voiceEnabled
-        ? voiceClone?.fish_reference_id || DEFAULT_CATALOG_FISH_ID
+        ? voiceClone?.fish_reference_id ||
+          resolveVideoCatalogFishReferenceId(body, isAdmin)
         : DEFAULT_CATALOG_FISH_ID,
       lip_sync_enabled: voiceEnabled,
       i2v_provider: "kling_ai_avatar_pro",

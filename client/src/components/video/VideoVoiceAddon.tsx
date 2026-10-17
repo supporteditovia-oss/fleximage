@@ -1,5 +1,7 @@
 import { Mic } from "lucide-react";
 import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
+import { VideoI2VCatalogVoicePicker } from "@/components/video/VideoI2VCatalogVoicePicker";
+import type { MockVoiceProfile } from "@/lib/v2-mock-voice";
 
 type VideoVoiceAddonProps = {
   enabled: boolean;
@@ -8,6 +10,10 @@ type VideoVoiceAddonProps = {
   onTextChange: (value: string) => void;
   maxChars?: number;
   voiceExtraCredit?: number;
+  /** Catalogue homme / femme — preview admin Vidéo IA. */
+  adminVoiceCatalogEnabled?: boolean;
+  catalogFishReferenceId?: string | null;
+  onCatalogFishReferenceId?: (fishId: string, voice: MockVoiceProfile) => void;
 };
 
 export function VideoVoiceAddon({
@@ -17,6 +23,9 @@ export function VideoVoiceAddon({
   onTextChange,
   maxChars = 200,
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
+  adminVoiceCatalogEnabled = false,
+  catalogFishReferenceId = null,
+  onCatalogFishReferenceId,
 }: VideoVoiceAddonProps) {
   return (
     <div className="via-voice-addon">
@@ -64,10 +73,17 @@ export function VideoVoiceAddon({
             className="via-prompt-field"
           />
           <p className="via-voice-addon__hint">
-            {text.trim().length}/{maxChars} caractères · voix catalogue · le
-            prompt mouvement décrit l&apos;action, ce champ décrit{" "}
+            {text.trim().length}/{maxChars} caractères
+            {adminVoiceCatalogEnabled ? "" : " · voix catalogue"} · le prompt
+            mouvement décrit l&apos;action, ce champ décrit{" "}
             <strong>uniquement</strong> ce qu&apos;on entend
           </p>
+          {adminVoiceCatalogEnabled && onCatalogFishReferenceId ? (
+            <VideoI2VCatalogVoicePicker
+              fishReferenceId={catalogFishReferenceId}
+              onFishReferenceId={onCatalogFishReferenceId}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

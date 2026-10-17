@@ -47,6 +47,7 @@ export interface VideoStudioGenerateInput {
   voice_clone_id?: string;
   voice_text?: string;
   voice_consent?: boolean;
+  voice_fish_reference_id?: string;
   subtitles_enabled?: boolean;
   subtitle_style?: SubtitleStyle;
   subtitle_position?: SubtitlePosition;
