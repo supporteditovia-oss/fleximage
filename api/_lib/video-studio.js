@@ -35,6 +35,21 @@ const STYLE_PROMPTS = {
   luxury_ad: "Publicité luxe, éclairage premium, rendu haut de gamme.",
 };
 
+function isI2VVoiceEnabled({
+  workflow,
+  isAdmin,
+  allowNonAdminPreview = false,
+  body,
+}) {
+  return (
+    workflow === "image_to_video" &&
+    (isAdmin || allowNonAdminPreview) &&
+    Boolean(body?.voice_enabled) &&
+    Boolean(body?.voice_consent) &&
+    String(body?.voice_text || "").trim().length >= 5
+  );
+}
+
 /** V2V = prix fixe ; I2V = durée (3/5 s) + qualité (720p/1080p) + voix optionnelle. */
 function computeVideoCreditCost(options) {
   if (options.isAdmin) return 0;
@@ -868,6 +883,7 @@ module.exports = {
   VIDEO_VOICE_EXTRA_CREDIT,
   V2V_SILENT_OUTPUT_LOCK,
   computeVideoCreditCost,
+  isI2VVoiceEnabled,
   buildRunwayPrompt,
   buildI2VAvatarPrompt,
   isActionMotionPrompt,

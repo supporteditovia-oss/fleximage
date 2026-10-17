@@ -2,6 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   computeVideoCreditCost,
+  isI2VVoiceEnabled,
   validateVoiceText,
   buildRunwayPrompt,
   buildI2VAvatarPrompt,
@@ -30,6 +31,68 @@ const {
 } = require("./video-studio");
 
 describe("video-studio", () => {
+  it("blocks I2V voice for non-admin accounts in production", () => {
+    assert.equal(
+      isI2VVoiceEnabled({
+        workflow: "image_to_video",
+        isAdmin: false,
+        body: {
+          voice_enabled: true,
+          voice_consent: true,
+          voice_text: "Bonjour tout le monde",
+        },
+      }),
+      false,
+    );
+  });
+
+  it("allows valid I2V voice for admins", () => {
+    assert.equal(
+      isI2VVoiceEnabled({
+        workflow: "image_to_video",
+        isAdmin: true,
+        body: {
+          voice_enabled: true,
+          voice_consent: true,
+          voice_text: "Bonjour tout le monde",
+        },
+      }),
+      true,
+    );
+  });
+
+  it("allows non-admin I2V voice only in development preview", () => {
+    assert.equal(
+      isI2VVoiceEnabled({
+        workflow: "image_to_video",
+        isAdmin: false,
+        allowNonAdminPreview: true,
+        body: {
+          voice_enabled: true,
+          voice_consent: true,
+          voice_text: "Bonjour tout le monde",
+        },
+      }),
+      true,
+    );
+  });
+
+  it("blocks I2V voice without consent or enough text", () => {
+    const body = {
+      voice_enabled: true,
+      voice_consent: false,
+      voice_text: "Oui",
+    };
+    assert.equal(
+      isI2VVoiceEnabled({
+        workflow: "image_to_video",
+        isAdmin: true,
+        body,
+      }),
+      false,
+    );
+  });
+
   it("computeVideoCreditCost I2V 5s 720p baseline", () => {
     assert.equal(
       computeVideoCreditCost({

@@ -60,8 +60,6 @@ import {
   isVoiceCloneSampleLongEnough,
   resolveEffectiveVoiceCloneSampleSec,
   VOICE_CLONE_MIN_SAMPLE_SEC,
-  VOICE_CLONE_MAX_IMPORT_SEC,
-  VOICE_CLONE_MAX_RECORD_SEC,
   VOICE_CLONE_IMPORT_IDEAL_HINT_SEC,
   shouldWarnVoiceImportSampleShort,
   formatVoiceImportShortSampleWarning,
@@ -1249,17 +1247,6 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
         <h2 className="voice-studio-page__title">
           {guestFunnel ? t("landing:voiceStudioGuest.title") : "Clonage IA"}
         </h2>
-
-        {adminPreview && !guestFunnel ? (
-          <p
-            className="voice-studio-page__hint mb-2 text-center text-[11px] font-medium text-[var(--lx-gold)]"
-            role="status"
-          >
-            Admin · durées clone : min {VOICE_CLONE_MIN_SAMPLE_SEC} s · micro max{" "}
-            {VOICE_CLONE_MAX_RECORD_SEC} s · import max {VOICE_CLONE_MAX_IMPORT_SEC} s
-            (les 30 sur le bouton = jetons crédits, pas des secondes)
-          </p>
-        ) : null}
 
         {activeVoice ? (
           <VoiceSelectedHero

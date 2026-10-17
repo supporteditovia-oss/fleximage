@@ -26,6 +26,7 @@ const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.c
 const { normalizeVideoUltraResolution } = require("../../../shared/video-ultra-pricing.cjs");
 const {
   computeVideoCreditCost,
+  isI2VVoiceEnabled,
   buildI2VAvatarPrompt,
   buildV2VProviderPrompt,
   buildKlingMotionStudioPrompt,
@@ -390,11 +391,14 @@ module.exports = async function handler(req, res) {
       workflow === "video_to_video"
         ? normalizeVideoUltraResolution(body.v2v_resolution)
         : null;
-    const voiceEnabled =
-      workflow === "image_to_video" &&
-      Boolean(body.voice_enabled) &&
-      Boolean(body.voice_consent) &&
-      String(body.voice_text || "").trim().length >= 5;
+    const voiceEnabled = isI2VVoiceEnabled({
+      workflow,
+      isAdmin,
+      allowNonAdminPreview:
+        process.env.NODE_ENV === "development" ||
+        process.env.NODE_ENV === "test",
+      body,
+    });
     const preserveSourceAudio =
       workflow === "video_to_video" && Boolean(body.preserve_source_audio);
     const v2vIntent =
