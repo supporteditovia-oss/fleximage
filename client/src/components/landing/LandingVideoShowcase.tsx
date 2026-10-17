@@ -1,28 +1,43 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  LandingVideoShowcaseSlot,
-  LandingVideoWorkflow,
+import {
+  LANDING_VIDEO_SHOWCASE_ASSETS,
+  type LandingVideoShowcaseSlot,
+  type LandingVideoWorkflow,
 } from "@/lib/landing-video-showcase";
 
-function ShowcaseMedia({ slot, motion }: { slot: LandingVideoShowcaseSlot; motion?: boolean }) {
+function ShowcaseMedia({
+  slot,
+  motionIfNoVideo,
+}: {
+  slot: LandingVideoShowcaseSlot;
+  motionIfNoVideo?: boolean;
+}) {
+  const [videoFailed, setVideoFailed] = useState(false);
+  const useVideo = Boolean(slot.video) && !videoFailed;
+  const motionPlaceholder = motionIfNoVideo && !useVideo;
+
   return (
-    <div className={`video-showcase-media ${motion ? "video-showcase-media--motion" : ""}`}>
-      {slot.video ? (
+    <div
+      className={`video-showcase-media ${motionPlaceholder ? "video-showcase-media--motion" : ""}`}
+    >
+      {useVideo ? (
         <video
-          src={slot.video}
+          src={slot.video!}
           poster={slot.poster}
           autoPlay
           loop
           muted
           playsInline
+          preload="metadata"
           aria-label={slot.alt}
+          onError={() => setVideoFailed(true)}
         />
       ) : (
         <>
           <img src={slot.poster} alt={slot.alt} loading="lazy" />
           <div className="video-showcase-media__overlay" aria-hidden>
-            {motion ? (
+            {motionPlaceholder ? (
               <>
                 <span className="video-showcase-media__play">▶</span>
                 <span className="video-showcase-media__pulse" />
@@ -44,24 +59,7 @@ export function LandingVideoShowcase() {
 
   const showcases = useMemo(
     () =>
-      (
-        [
-          {
-            id: "i2v" as const,
-            index: "01",
-            prefix: "i2v",
-            beforePoster: "/assets/landing-v2/dubai-original.jpg",
-            afterPoster: "/assets/landing-v2/dubai-generated.jpg",
-          },
-          {
-            id: "v2v" as const,
-            index: "02",
-            prefix: "v2v",
-            beforePoster: "/assets/landing-v2/portrait-car-original.jpg",
-            afterPoster: "/assets/landing-v2/portrait-car-generated.jpg",
-          },
-        ] as const
-      ).map((item) => ({
+      LANDING_VIDEO_SHOWCASE_ASSETS.map((item) => ({
         id: item.id,
         index: item.index,
         title: t(`landing:video.${item.prefix}.title`),
@@ -70,14 +68,14 @@ export function LandingVideoShowcase() {
         before: {
           label: t(`landing:video.${item.prefix}.beforeLabel`),
           poster: item.beforePoster,
-          video: null,
+          video: item.beforeVideo,
           alt: t(`landing:video.${item.prefix}.beforeAlt`),
           staticTag: t(`landing:video.${item.prefix}.staticTag`),
         },
         after: {
           label: t(`landing:video.${item.prefix}.afterLabel`),
           poster: item.afterPoster,
-          video: null,
+          video: item.afterVideo,
           alt: t(`landing:video.${item.prefix}.afterAlt`),
         },
       })),
@@ -117,7 +115,7 @@ export function LandingVideoShowcase() {
         <div className="video-showcase__arrow" aria-hidden>
           →
         </div>
-        <ShowcaseMedia slot={config.after} motion />
+        <ShowcaseMedia slot={config.after} motionIfNoVideo />
       </div>
       <p className="video-showcase__hint">{t("landing:video.hint")}</p>
     </div>

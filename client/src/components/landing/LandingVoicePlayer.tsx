@@ -19,6 +19,14 @@ import {
 
 const WAVE = [10, 16, 9, 22, 14, 27, 17, 11, 23, 31, 18, 12, 25, 19, 8, 17, 29, 20, 12, 24, 14, 9, 19, 12];
 
+function prefersDirectVoicePlayOnSelect(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  );
+}
+
 type LandingVoicePlayerProps = {
   variant?: "widget" | "section";
 };
@@ -253,7 +261,10 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
 
   useEffect(() => {
     for (const voice of LANDING_VOICE_CATALOG) {
-      getAudio(voice.slug);
+      const audio = getAudio(voice.slug);
+      if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+        audio.load();
+      }
     }
   }, [getAudio]);
 
@@ -362,7 +373,29 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     setPlaying(false);
     setCurrentSec(0);
     setError(false);
+    setLoading(true);
     setActiveSlug(slug);
+
+    const recreateForGesture = prefersDirectVoicePlayOnSelect();
+    const audio = getAudio(slug, recreateForGesture);
+    resetAudioPosition(audio);
+    if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+      audio.load();
+    }
+
+    if (recreateForGesture || isAudioReady(audio)) {
+      void tryPlay(audio, slug);
+      return;
+    }
+
+    const onReady = () => {
+      audio.removeEventListener("canplay", onReady);
+      audio.removeEventListener("loadeddata", onReady);
+      if (activeSlugRef.current !== slug || !pendingPlayRef.current) return;
+      void tryPlay(audio, slug);
+    };
+    audio.addEventListener("canplay", onReady);
+    audio.addEventListener("loadeddata", onReady);
   };
 
   const toggle = () => {
