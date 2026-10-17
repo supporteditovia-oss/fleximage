@@ -5,6 +5,7 @@ import {
   speechSynthesisLang,
 } from "@shared/voice-locale-scripts";
 import { APP_LOCALE_STORAGE_KEY } from "@shared/locales";
+import { LANDING_VOICE_DEMO_VERSION } from "@/lib/landing-voice-demo";
 
 export type VoiceCategory =
   | "Rap"
@@ -104,6 +105,11 @@ export function catalogPhotoForSlug(slug: string): string {
   return `/assets/voice-catalog/${slug}.jpg`;
 }
 
+/** MP3 calibrés par rappeur (priorité lecture instantanée Clonage IA). */
+export function catalogBundledSampleUrl(slug: string): string {
+  return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
 export function slugFromCatalogVoiceId(voiceId: string): string | null {
   const match = String(voiceId).match(/^cat-(.+)$/);
   return match?.[1] ?? null;
@@ -152,6 +158,7 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
     accent: seed.accent ?? ACCENTS[index % ACCENTS.length],
     photoUrl: seed.photo ? `/assets/voice-catalog/${seed.photo}` : undefined,
     sampleText: buildCatalogSampleLine(seed.name, "fr"),
+    sampleUrl: catalogBundledSampleUrl(seed.slug),
     pitch: seed.pitch,
     rate: seed.rate,
     fishReferenceId: seed.fishId,
@@ -484,7 +491,7 @@ export function speakCatalogSample(
     void fetchUnifiedCatalogPreviewUrl(profile.fishReferenceId);
   }
 
-  if (profile.sampleUrl) {
+  if (profile.sampleUrl && readActiveVoiceLocale() === "fr") {
     return playCatalogAudio(profile.sampleUrl, callbacks);
   }
 

@@ -7,7 +7,8 @@ const {
   resolveCatalogTtsSpeed,
   unifiedPreviewCacheKey,
 } = require("../voice-catalog");
-const { buildLandingVoiceScript } = require("../../../shared/voice-locale-scripts.cjs");
+const { resolveLandingVoiceEntry } = require("../landing-voice-demo");
+const { getLandingDemoBuffer } = require("../landing-voice-preview-buffer");
 const {
   findI2VLibraryEntryByFishId,
   resolveI2VPreviewPhrase,
@@ -22,13 +23,10 @@ function wantsStreamMedia(req) {
 }
 
 function resolvePreviewText(_fishReferenceId, i2vEntry, catalogEntry, locale) {
-  if (catalogEntry) {
-    return buildLandingVoiceScript(
-      { name: catalogEntry.name, demoKind: catalogEntry.demoKind },
-      locale,
-    );
-  }
   if (i2vEntry) return resolveI2VPreviewPhrase(i2vEntry);
+  if (catalogEntry?.name) {
+    return buildCatalogSampleLine(catalogEntry.name, locale);
+  }
   return buildCatalogSampleLine("LuxeFlexIA", locale);
 }
 
@@ -53,12 +51,17 @@ async function loadCachedPreviewBuffer(cacheKey) {
 async function getCatalogPreviewBuffer(fishReferenceId, locale) {
   const fish = fishReferenceId.toLowerCase();
   const catalogEntry = lookupCatalogEntryByFishId(fish);
+  if (catalogEntry?.slug) {
+    const landingEntry = resolveLandingVoiceEntry(catalogEntry.slug);
+    if (landingEntry) {
+      return getLandingDemoBuffer(landingEntry, locale);
+    }
+  }
+
   const i2vEntry = findI2VLibraryEntryByFishId(fish);
-  const cacheKey = catalogEntry
-    ? unifiedPreviewCacheKey(fish, locale)
-    : i2vEntry
-      ? `voice-catalog/i2v/v4/${String(locale).toLowerCase()}/${fish}.mp3`
-      : unifiedPreviewCacheKey(fish, locale);
+  const cacheKey = i2vEntry
+    ? `voice-catalog/i2v/v4/${String(locale).toLowerCase()}/${fish}.mp3`
+    : unifiedPreviewCacheKey(fish, locale);
 
   const cached = await loadCachedPreviewBuffer(cacheKey);
   if (cached) {
