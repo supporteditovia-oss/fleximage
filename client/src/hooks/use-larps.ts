@@ -119,6 +119,8 @@ interface GenerateDirectInput {
   images?: string[];
   template_id?: string;
   use_face_asset?: boolean;
+  /** false = envoi verbatim, sans rewriter Gemini (Prompt Intelligent). */
+  prompt_intelligent?: boolean;
   subject_type?: SubjectType;
   pose_style?: PoseStyle;
   /** Idempotency key — one per user click (obligatoire). */
@@ -163,6 +165,7 @@ interface LarpStatusResponse {
   isSubscriber?: boolean;
   requiresPaywall?: boolean;
   resultType?: "image" | "video";
+  aspectRatio?: string | null;
   creditsRefunded?: number;
   creditRefundPending?: boolean;
 }

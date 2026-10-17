@@ -2725,6 +2725,7 @@ export async function registerRoutes(
     template_id: z.string().uuid().optional(),
     text_values: z.array(z.string().max(500)).optional(),
     use_face_asset: z.boolean().optional(),
+    prompt_intelligent: z.boolean().optional(),
   });
 
   app.post(
@@ -2827,12 +2828,23 @@ export async function registerRoutes(
           finalPrompt = finalPrompt.replace(/tanas?|92i/gi, "jolies filles");
           finalPrompt = appendProductionPromptRules(finalPrompt);
         } else {
-          const { enrichPromptForGeneration } = await import(
-            "./services/prompt-intelligence.js"
+          const { resolvePromptRewriterRouting } = await import(
+            "../api/_lib/prompt-rewriter-routing.js"
           );
-          const optimizedPrompt = await enrichPromptForGeneration(prompt, {
-            locale,
+          const promptIntelligentEnabled = req.body.prompt_intelligent !== false;
+          const rewriterRoute = resolvePromptRewriterRouting({
+            userPrompt: prompt,
+            promptIntelligentEnabled,
           });
+          let optimizedPrompt = prompt;
+          if (!rewriterRoute.bypass) {
+            const { enrichPromptForGeneration } = await import(
+              "./services/prompt-intelligence.js"
+            );
+            optimizedPrompt = await enrichPromptForGeneration(prompt, {
+              locale,
+            });
+          }
           // Free prompt: hard identity + pose lock + photoreal + system/negative rules.
           finalPrompt = buildIdentityPreservingPrompt(optimizedPrompt);
         }

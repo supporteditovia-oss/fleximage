@@ -6,6 +6,7 @@ import {
   RectangleVertical,
   RectangleHorizontal,
   Mic,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTypewriterPlaceholder } from "@/hooks/use-typewriter";
@@ -39,6 +40,8 @@ interface PromptInputBarProps {
   hideCreditHint?: boolean;
   aspectRatio?: GenerationAspectRatio;
   onAspectRatioChange?: (value: GenerationAspectRatio) => void;
+  promptIntelligent?: boolean;
+  onPromptIntelligentChange?: (enabled: boolean) => void;
 }
 
 const PROMPT_MIN_HEIGHT_PX = 52;
@@ -65,6 +68,8 @@ export function PromptInputBar({
   hideCreditHint = false,
   aspectRatio = OUTPUT_ASPECT_RATIO,
   onAspectRatioChange,
+  promptIntelligent = true,
+  onPromptIntelligentChange,
 }: PromptInputBarProps) {
   const { t, i18n } = useTranslation();
   const { isAdmin } = useAuth();
@@ -162,6 +167,36 @@ export function PromptInputBar({
 
           <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--lx-gold)]/12 pt-2.5">
             <div className="flex min-w-0 items-center gap-1">
+              {onPromptIntelligentChange ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onPromptIntelligentChange(!promptIntelligent)
+                  }
+                  className={`flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 transition-all active:scale-90 ${
+                    promptIntelligent
+                      ? "bg-[var(--lx-gold)]/14 text-[var(--lx-gold)]"
+                      : "text-muted-foreground hover:bg-[var(--lx-gold)]/8 hover:text-foreground"
+                  }`}
+                  title={
+                    promptIntelligent
+                      ? t("promptInput.promptIntelligentOn", {
+                          defaultValue:
+                            "Prompt intelligent activé (tenues, voitures, qualité)",
+                        })
+                      : t("promptInput.promptIntelligentOff", {
+                          defaultValue:
+                            "Prompt brut — votre texte est envoyé tel quel",
+                        })
+                  }
+                  aria-pressed={promptIntelligent}
+                  aria-label={t("promptInput.promptIntelligentToggle", {
+                    defaultValue: "Prompt intelligent",
+                  })}
+                >
+                  <Sparkles className="h-4 w-4" strokeWidth={2} />
+                </button>
+              ) : null}
               {onAspectRatioChange ? (
                 <button
                   type="button"

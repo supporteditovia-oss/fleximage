@@ -156,6 +156,8 @@ async function generateImageOnce(supabase, params) {
     imageUrls,
     modelVariant = ONESHOT_MODEL_VARIANT,
     adminPreferDeepInfra = false,
+    strictAspectRatio = false,
+    useFluxTextToImage = false,
     logContext = {},
   } = params;
 
@@ -370,19 +372,35 @@ async function generateImageOnce(supabase, params) {
       err.code = "MULTI_REF_DEEPINFRA_UNSUPPORTED";
       throw err;
     }
+    const { resolveDeepInfraImageModel } = require("./deepinfra");
+    const deepInfraModel = resolveDeepInfraImageModel({
+      imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+      useFluxTextToImage,
+    });
     console.info("[generate-image-once] DeepInfra sync", {
       generationId,
-      model: getDeepInfraModel(),
+      model: deepInfraModel,
+      useFluxTextToImage,
       promptChars: String(finalPrompt || "").length,
       reason: reason instanceof Error ? reason.message : reason || null,
       ...logContext,
     });
 
-    const { buffer, mimeType } = await generateDeepInfraImage({
+    let { buffer, mimeType } = await generateDeepInfraImage({
       prompt: finalPrompt,
       aspectRatio,
       imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+      useFluxTextToImage,
     });
+
+    if (strictAspectRatio) {
+      const { enforceImageAspectRatioBuffer } = require("./aspect-ratio-enforce");
+      const enforced = await enforceImageAspectRatioBuffer(buffer, aspectRatio);
+      if (enforced.enforced) {
+        buffer = enforced.buffer;
+        mimeType = enforced.contentType;
+      }
+    }
 
     const { uploadToR2 } = require("./r2");
     const ext = mimeType.includes("png") ? "png" : "jpg";

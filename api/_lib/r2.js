@@ -219,8 +219,10 @@ async function uploadInputImagesToR2(userId, images) {
   return uploaded.filter((url) => typeof url === "string");
 }
 
-async function downloadAndStoreImages(larpId, sourceUrls) {
+async function downloadAndStoreImages(larpId, sourceUrls, options = {}) {
   const { enhanceGeneratedImageBuffer } = require("./enhance-image");
+  const aspectRatio = options.aspectRatio;
+  const strictAspectRatio = options.strictAspectRatio === true;
   const r2Urls = [];
   for (let i = 0; i < sourceUrls.length; i++) {
     const sourceUrl = sourceUrls[i];
@@ -239,7 +241,16 @@ async function downloadAndStoreImages(larpId, sourceUrls) {
       const enhanced = await enhanceGeneratedImageBuffer(buffer, contentType);
       buffer = enhanced.buffer;
       contentType = enhanced.contentType;
-      const ext = enhanced.extension;
+      let ext = enhanced.extension;
+      if (strictAspectRatio && aspectRatio) {
+        const { enforceImageAspectRatioBuffer } = require("./aspect-ratio-enforce");
+        const enforced = await enforceImageAspectRatioBuffer(buffer, aspectRatio);
+        if (enforced.enforced) {
+          buffer = enforced.buffer;
+          contentType = enforced.contentType;
+          ext = ".png";
+        }
+      }
       const key = `larps/${larpId}/${i}${ext}`;
       r2Urls.push(await uploadToR2(key, buffer, contentType));
     } catch (err) {

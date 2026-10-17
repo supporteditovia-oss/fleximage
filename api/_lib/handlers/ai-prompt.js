@@ -5,6 +5,7 @@ const {
 } = require("../content-policy");
 const { resolveRequestLocale } = require("../locale-copy");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
+const { resolvePromptRewriterRouting } = require("../prompt-rewriter-routing");
 
 /** POST /api/ai/prompt — Gemini 2.5 Flash prompt optimization (no image generation). */
 module.exports = async function aiPromptHandler(req, res) {
@@ -40,11 +41,27 @@ module.exports = async function aiPromptHandler(req, res) {
       body.mode === "video_i2v" || body.mode === "video_v2v"
         ? body.mode
         : "image";
-    const prompt = await enrichPromptForGeneration(input, {
-      locale: uiLocale,
-      mode,
-      voiceEnabled: Boolean(body.voice_enabled),
-    });
+    const promptIntelligentEnabled = body.prompt_intelligent !== false;
+    let prompt = input;
+    if (mode === "image") {
+      const route = resolvePromptRewriterRouting({
+        userPrompt: input,
+        promptIntelligentEnabled,
+      });
+      if (!route.bypass) {
+        prompt = await enrichPromptForGeneration(input, {
+          locale: uiLocale,
+          mode,
+          voiceEnabled: Boolean(body.voice_enabled),
+        });
+      }
+    } else {
+      prompt = await enrichPromptForGeneration(input, {
+        locale: uiLocale,
+        mode,
+        voiceEnabled: Boolean(body.voice_enabled),
+      });
+    }
     res.status(200).json({ prompt, mode });
   } catch (error) {
     console.error("ai-prompt error", error);
