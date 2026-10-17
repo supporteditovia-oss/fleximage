@@ -55,6 +55,21 @@ function naturalizeFrenchCasual(text) {
   return polishFrenchCasualFlow(text);
 }
 
+/** Flow rap / rappeur — moins de pauses mécaniques sur la ponctuation. */
+function polishFrenchRapFastFlow(text) {
+  let out = String(text || "").trim();
+  if (!out) return out;
+  out = out.replace(/\s+/g, " ");
+  out = out.replace(/…+/g, " ");
+  out = out.replace(/\s—\s/g, ", ");
+  out = out.replace(/,\s{2,}/g, ", ");
+  out = out.replace(/\.{3,}/g, ".");
+  if (!/[.?!]$/.test(out)) {
+    out += ".";
+  }
+  return out;
+}
+
 /**
  * Prépare le texte pour Fish : expansions SMS + prononciation + ponctuation naturelle.
  * displayText reste le texte utilisateur (historique / UI).
@@ -71,7 +86,9 @@ function humanizeVoiceScript(rawText, options = {}) {
   const afterExpand = fishText;
   fishText = applyFrenchPronunciationHints(fishText, { voiceName });
   const pronunciationFixed = fishText !== afterExpand;
-  fishText = naturalizeFrenchCasual(fishText);
+  fishText = options.fastFlow
+    ? polishFrenchRapFastFlow(fishText)
+    : naturalizeFrenchCasual(fishText);
   const humanized = fishText !== displayText;
 
   return {
@@ -87,4 +104,5 @@ module.exports = {
   naturalizeFrenchCasual,
   expandFrenchChatShorthand,
   polishFrenchCasualFlow,
+  polishFrenchRapFastFlow,
 };

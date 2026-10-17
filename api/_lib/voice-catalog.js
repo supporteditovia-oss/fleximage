@@ -60,6 +60,32 @@ function resolveCatalogTtsSpeed(fishReferenceId) {
   return null;
 }
 
+/** Rappeurs au flow rapide / incisif (Mode A studio). */
+function isCatalogFastDelivery(entry) {
+  if (!entry) return false;
+  const pace = String(entry.deliveryPace || "").trim().toLowerCase();
+  if (pace === "fast") return true;
+  if (pace === "steady" || pace === "slow") return false;
+  if (entry.category !== "Rap") return false;
+  const speed = resolveCatalogTtsSpeed(entry.fishId);
+  return typeof speed === "number" && speed >= 1.04;
+}
+
+/**
+ * Profil débit catalogue Mode A — vitesse Fish + flag flow rap (PLK, Jul…).
+ */
+function resolveCatalogDeliveryProfile(fishReferenceId) {
+  const entry = lookupCatalogEntryByFishId(fishReferenceId);
+  if (!entry) {
+    return { ttsSpeed: null, fastFlow: false, entry: null };
+  }
+  return {
+    ttsSpeed: resolveCatalogTtsSpeed(fishReferenceId),
+    fastFlow: isCatalogFastDelivery(entry),
+    entry,
+  };
+}
+
 module.exports = {
   buildCatalogSampleLine,
   normalizeVoiceLocale,
@@ -71,4 +97,6 @@ module.exports = {
   unifiedPreviewCacheKey,
   lookupCatalogEntryByFishId,
   resolveCatalogTtsSpeed,
+  isCatalogFastDelivery,
+  resolveCatalogDeliveryProfile,
 };

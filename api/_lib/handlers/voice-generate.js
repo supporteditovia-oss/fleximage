@@ -16,7 +16,10 @@ const {
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
-const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const {
+  resolveCatalogTtsSpeed,
+  resolveCatalogDeliveryProfile,
+} = require("../voice-catalog");
 const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
 const { applyVoiceCloneWarmthPostprocess } = require("../voice-clone-warmth-postprocess");
 const {
@@ -230,10 +233,16 @@ module.exports = async function voiceGenerateHandler(req, res) {
       }
     }
 
+    const catalogDeliveryHint =
+      !voiceCloneId && fishReferenceId
+        ? resolveCatalogDeliveryProfile(fishReferenceId)
+        : { fastFlow: false };
+
     const script = humanizeVoiceScript(text, {
       enabled: humanizeEnabled,
       style: deliveryStyle,
       voiceName,
+      fastFlow: catalogDeliveryHint.fastFlow,
     });
 
     const resolvedFishId = await ensureFishReferenceId({
@@ -306,7 +315,12 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     const ttsText = script.fishText;
-    const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
+    const catalogDelivery = resolveCatalogDeliveryProfile(
+      resolvedFishId || fishReferenceId,
+    );
+    const catalogTtsSpeed =
+      catalogDelivery.ttsSpeed ??
+      resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
     const isCatalogPresetVoice = voiceMode.isCatalogPresetVoice;
     /** Mode A = catalogue studio (Fish catalogue). B/C = clone inline avec profil fidélité. */
@@ -358,6 +372,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         referenceId: resolvedFishId,
         speed: catalogTtsSpeed,
         cloneFidelity: false,
+        catalogFastFlow: catalogDelivery.fastFlow,
       });
     } else if (cloneFidelity) {
       try {

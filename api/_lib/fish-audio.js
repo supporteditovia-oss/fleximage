@@ -61,6 +61,7 @@ function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
+  const catalogFastFlow = options.catalogFastFlow === true && !cloneFidelity;
 
   if (cloneFidelity) {
     const resolvedSpeed =
@@ -79,6 +80,29 @@ function buildTtsOptions(text, options = {}) {
     };
   }
 
+  const resolvedCatalogSpeed =
+    typeof speed === "number" && Number.isFinite(speed)
+      ? clampTtsSpeed(speed)
+      : DEFAULT_TTS_SPEED;
+
+  if (catalogFastFlow) {
+    const singleTake = len <= 420;
+    return {
+      ...FIDELITY_TTS,
+      temperature: 0.58,
+      top_p: 0.76,
+      repetition_penalty: 1.04,
+      chunk_length: singleTake ? 360 : 300,
+      min_chunk_length: singleTake ? 120 : 100,
+      condition_on_previous_chunks: false,
+      prosody: {
+        speed: resolvedCatalogSpeed,
+        volume: 0,
+        normalize_loudness: false,
+      },
+    };
+  }
+
   if (len <= 200) {
     return {
       ...FIDELITY_TTS,
@@ -86,7 +110,7 @@ function buildTtsOptions(text, options = {}) {
       min_chunk_length: 100,
       condition_on_previous_chunks: false,
       prosody: {
-        speed,
+        speed: resolvedCatalogSpeed,
         volume: 0,
         normalize_loudness: false,
       },
@@ -102,7 +126,7 @@ function buildTtsOptions(text, options = {}) {
     repetition_penalty: 1.1,
     condition_on_previous_chunks: true,
     prosody: {
-      speed: Math.min(speed, 1),
+      speed: Math.min(resolvedCatalogSpeed, 1),
       volume: 0,
       normalize_loudness: false,
     },
@@ -382,6 +406,7 @@ async function synthesizeSpeech({
   format = "mp3",
   speed,
   cloneFidelity,
+  catalogFastFlow,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -411,7 +436,11 @@ async function synthesizeSpeech({
       text: trimmed.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed, { speed: resolvedSpeed, cloneFidelity }),
+      ...buildTtsOptions(trimmed, {
+        speed: resolvedSpeed,
+        cloneFidelity,
+        catalogFastFlow,
+      }),
     }),
   });
 

@@ -17,3 +17,13 @@ test("buildTtsOptions catalogue — débit catalogue sans profil clone", () => {
   assert.equal(opts.temperature, 0.6);
   assert.equal(opts.prosody.speed, 0.84);
 });
+
+test("buildTtsOptions catalogue fast flow — pas de plafond 1.0 ni chunks liés", () => {
+  const opts = buildTtsOptions("Flow rap ".repeat(40), {
+    cloneFidelity: false,
+    catalogFastFlow: true,
+    speed: 1.12,
+  });
+  assert.equal(opts.condition_on_previous_chunks, false);
+  assert.equal(opts.prosody.speed, 1.12);
+});

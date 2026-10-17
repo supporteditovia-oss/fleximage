@@ -54,4 +54,13 @@ describe("voice-catalog", () => {
       1,
     );
   });
+
+  it("PLK — ttsSpeed rapide + deliveryPace fast", () => {
+    const { resolveCatalogDeliveryProfile } = require("./voice-catalog");
+    const plk = resolveCatalogDeliveryProfile(
+      "c9188f639648467f8f1c513b0dbac9f7",
+    );
+    assert.equal(plk.fastFlow, true);
+    assert.equal(plk.ttsSpeed, 1.12);
+  });
 });
