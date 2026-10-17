@@ -37,10 +37,25 @@ function lookupCatalogEntryByFishId(fishReferenceId) {
 }
 
 /**
- * Débit Fish Audio par voix catalogue (champ rate ou ttsSpeed).
- * Retourne null si voix hors catalogue → débit global par défaut.
+ * Débit aperçu catalogue (▶ bibliothèque) — `rate` studio, jamais le boost génération.
  */
-function resolveCatalogTtsSpeed(fishReferenceId) {
+function resolveCatalogPreviewTtsSpeed(fishReferenceId) {
+  const entry = lookupCatalogEntryByFishId(fishReferenceId);
+  if (entry) {
+    if (typeof entry.previewTtsSpeed === "number" && Number.isFinite(entry.previewTtsSpeed)) {
+      return clampTtsSpeed(entry.previewTtsSpeed);
+    }
+    if (typeof entry.rate === "number" && Number.isFinite(entry.rate)) {
+      return clampTtsSpeed(entry.rate);
+    }
+  }
+  return resolveCatalogGenerationTtsSpeed(fishReferenceId);
+}
+
+/**
+ * Débit génération Mode A (texte utilisateur) — `ttsSpeed` si défini, sinon `rate`.
+ */
+function resolveCatalogGenerationTtsSpeed(fishReferenceId) {
   const entry = lookupCatalogEntryByFishId(fishReferenceId);
   if (entry) {
     const raw =
@@ -58,6 +73,11 @@ function resolveCatalogTtsSpeed(fishReferenceId) {
   }
 
   return null;
+}
+
+/** @deprecated alias génération */
+function resolveCatalogTtsSpeed(fishReferenceId) {
+  return resolveCatalogGenerationTtsSpeed(fishReferenceId);
 }
 
 /** Rappeurs au flow rapide / incisif (Mode A studio). */

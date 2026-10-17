@@ -3,7 +3,7 @@ const path = require("path");
 const { synthesizeSpeech } = require("./fish-audio");
 const { uploadToR2, getR2Config } = require("./r2");
 const { humanizeVoiceScript } = require("./voice-humanize");
-const { resolveCatalogTtsSpeed } = require("./voice-catalog");
+const { resolveCatalogPreviewTtsSpeed } = require("./voice-catalog");
 const {
   buildLandingVoiceScript,
   landingVoiceR2Key,

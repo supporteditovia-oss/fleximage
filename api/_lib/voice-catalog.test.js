@@ -55,12 +55,16 @@ describe("voice-catalog", () => {
     );
   });
 
-  it("PLK — ttsSpeed rapide + deliveryPace fast", () => {
-    const { resolveCatalogDeliveryProfile } = require("./voice-catalog");
-    const plk = resolveCatalogDeliveryProfile(
-      "c9188f639648467f8f1c513b0dbac9f7",
-    );
+  it("PLK — génération rapide, aperçu catalogue plus posé", () => {
+    const {
+      resolveCatalogDeliveryProfile,
+      resolveCatalogPreviewTtsSpeed,
+      resolveCatalogGenerationTtsSpeed,
+    } = require("./voice-catalog");
+    const fish = "c9188f639648467f8f1c513b0dbac9f7";
+    const plk = resolveCatalogDeliveryProfile(fish);
     assert.equal(plk.fastFlow, true);
-    assert.equal(plk.ttsSpeed, 1.12);
+    assert.equal(resolveCatalogGenerationTtsSpeed(fish), 1.08);
+    assert.equal(resolveCatalogPreviewTtsSpeed(fish), 0.98);
   });
 });
