@@ -106,6 +106,22 @@ describe("video-studio", () => {
     assert.match(prompt, /silent|muette|no voice/i);
   });
 
+  it("buildI2VAvatarPrompt never embeds voice script in visual prompt", () => {
+    const script =
+      "Bonjour tout le monde, voici mon message secret pour la vidéo.";
+    const prompt = buildI2VAvatarPrompt({
+      motionPrompt: `${script} Il marche dans la rue.`,
+      cameraMovement: "fixed",
+      motionIntensity: "natural",
+      style: "cinematic",
+      voiceEnabled: true,
+      voiceText: script,
+    });
+    assert.doesNotMatch(prompt, /message secret/i);
+    assert.match(prompt, /no subtitles|aucun texte/i);
+    assert.match(prompt, /audio seulement|audio-only/i);
+  });
+
   it("buildI2VAvatarPrompt injects UI camera and intensity", () => {
     const prompt = buildI2VAvatarPrompt({
       motionPrompt: "Il marche dans la rue.",
