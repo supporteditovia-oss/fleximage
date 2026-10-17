@@ -28,6 +28,34 @@ export type PlanCardPrice = {
   showCurrencyCode: boolean;
 };
 
+export const PLAN_MONTHLY_CREDITS: Record<BillingPlan, number> = {
+  discovery: 250,
+  essential: 1200,
+  ultimate: 2850,
+};
+
+const CREDIT_PACK_PRICES: Record<
+  BillingCurrency,
+  Record<CreditPackId, PlanCardPrice>
+> = {
+  eur: {
+    mini: { prefix: "", major: "3", minor: "49", showCurrencyCode: true },
+    standard: { prefix: "", major: "7", minor: "99", showCurrencyCode: true },
+    plus: { prefix: "", major: "14", minor: "99", showCurrencyCode: true },
+  },
+  usd: {
+    mini: { prefix: "$", major: "3", minor: "49", showCurrencyCode: false },
+    standard: { prefix: "$", major: "7", minor: "99", showCurrencyCode: false },
+    plus: { prefix: "$", major: "14", minor: "99", showCurrencyCode: false },
+  },
+};
+
+export const CREDIT_PACK_CREDITS: Record<CreditPackId, number> = {
+  mini: 90,
+  standard: 210,
+  plus: 450,
+};
+
 const PLAN_CARD_PRICES: Record<
   BillingCurrency,
   Record<BillingPlan, PlanCardPrice>
@@ -55,6 +83,15 @@ export function getPaywallPlanCards(currency: BillingCurrency) {
   return (["discovery", "essential", "ultimate"] as const).map((id) => ({
     id,
     price: getPlanCardPrice(id, currency),
+    credits: PLAN_MONTHLY_CREDITS[id],
+  }));
+}
+
+export function getCreditPackCards(currency: BillingCurrency) {
+  return (["mini", "standard", "plus"] as const).map((id) => ({
+    id,
+    price: CREDIT_PACK_PRICES[currency][id],
+    credits: CREDIT_PACK_CREDITS[id],
   }));
 }
 
@@ -67,6 +104,16 @@ export function formatPlanPriceInline(
     return `${p.prefix}${p.major}.${p.minor}`;
   }
   return `${p.major},${p.minor} €`;
+}
+
+export function formatCreditPackPriceInline(
+  pack: CreditPackId,
+  currency: BillingCurrency,
+): string {
+  const p = CREDIT_PACK_PRICES[currency][pack];
+  return currency === "usd"
+    ? `${p.prefix}${p.major}.${p.minor}`
+    : `${p.major},${p.minor} €`;
 }
 
 export function billingLocaleParam(locale: string | null | undefined): UiLocale {

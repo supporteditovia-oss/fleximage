@@ -225,7 +225,7 @@ function VideoUltraRoute() {
 }
 
 function ProtectedAppRoutes() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
   const [location] = useLocation();
   const pathname = location.split("?")[0] || location;
 
@@ -258,6 +258,10 @@ function ProtectedAppRoutes() {
   }
 
   if (!user) return null;
+
+  if (pathname.startsWith("/platform-admin") && !isAdmin) {
+    return <Redirect to="/generate" />;
+  }
 
   if (pathname === "/welcome") {
     return <WelcomeLoader />;
