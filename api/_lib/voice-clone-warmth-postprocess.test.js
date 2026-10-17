@@ -1,24 +1,25 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const {
-  VOICE_CLONE_WARMTH_AF,
-  VOICE_CLONE_WARMTH_DEEP_AF,
-  VOICE_CLONE_WARMTH_IDENTITY_AF,
-} = require("./voice-clone-warmth-postprocess");
+const { applyVoiceCloneWarmthPostprocess } = require("./voice-clone-warmth-postprocess");
 
-test("VOICE_CLONE_WARMTH_AF inclut EQ bas-médiums et atténuation aigu", () => {
-  assert.match(VOICE_CLONE_WARMTH_AF, /equalizer=f=200/);
-  assert.match(VOICE_CLONE_WARMTH_AF, /2800/);
-  assert.match(VOICE_CLONE_WARMTH_AF, /acompressor=/);
+test("clone postprocess returns original MP3 without filtering or re-encoding", async () => {
+  const originalMp3 = Buffer.from([0x49, 0x44, 0x33, 0x01, 0x02]);
+  const result = await applyVoiceCloneWarmthPostprocess(originalMp3, {
+    deepChest: true,
+    identityInline: true,
+  });
+
+  assert.strictEqual(result, originalMp3);
 });
 
-test("VOICE_CLONE_WARMTH_DEEP_AF — coffre 120–200 Hz renforcé", () => {
-  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=120:.*:g=3\.8/);
-  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=150:.*:g=5\.0/);
-  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=200:.*:g=4\.2/);
+test("clone postprocess rejects empty audio", async () => {
+  await assert.rejects(
+    applyVoiceCloneWarmthPostprocess(Buffer.alloc(0)),
+    { code: "empty_audio" },
+  );
 });
 
-test("VOICE_CLONE_WARMTH_IDENTITY_AF — correction légère sans gros boost bas", () => {
-  assert.match(VOICE_CLONE_WARMTH_IDENTITY_AF, /2800/);
-  assert.doesNotMatch(VOICE_CLONE_WARMTH_IDENTITY_AF, /equalizer=f=200/);
+test("clone postprocess preserves existing Uint8Array inputs", async () => {
+  const audio = new Uint8Array([0x49, 0x44, 0x33]);
+  assert.strictEqual(await applyVoiceCloneWarmthPostprocess(audio), audio);
 });

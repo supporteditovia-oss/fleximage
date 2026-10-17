@@ -40,24 +40,36 @@ function resolveI2VCatalogTtsOptions(meta) {
   };
 }
 
+function resolveI2VTtsOptions(meta) {
+  if (meta?.voice_mode === "cloned" && meta?.voice_clone_id) {
+    return {
+      referenceId: resolveFishReferenceId(meta),
+      cloneFidelity: true,
+      speed: 1.02,
+    };
+  }
+
+  const catalogTts = resolveI2VCatalogTtsOptions(meta);
+  return {
+    referenceId: resolveFishReferenceId(meta),
+    cloneFidelity: false,
+    ...catalogTts,
+  };
+}
+
 /** Comportement prod clients (main) — Fish brut, pas de calage durée. */
 async function prepareI2VAvatarAudioUrlLegacy({ userId, meta }) {
   const voiceEnabled = meta?.voice_enabled === true;
   const voiceText = String(meta?.voice_text || "").trim();
-  const referenceId = resolveFishReferenceId(meta);
+  const ttsOptions = resolveI2VTtsOptions(meta);
   const ttsText =
     voiceEnabled && voiceText.length >= 5
       ? prepareI2VVoiceTextForFish(voiceText)
       : "…";
-  const catalogTts = resolveI2VCatalogTtsOptions(meta);
   const buffer = await synthesizeSpeech({
     text: ttsText,
-    referenceId,
+    ...ttsOptions,
     format: "mp3",
-    cloneFidelity: false,
-    speed: catalogTts.speed,
-    catalogFastFlow: catalogTts.catalogFastFlow,
-    catalogIncisiveFlow: catalogTts.catalogIncisiveFlow,
   });
   const url = await uploadAudioBufferToR2(userId, buffer);
   return { url, targetSec: null, voiceEnabled, pipelineV2: false };
@@ -71,15 +83,11 @@ async function prepareI2VAvatarAudioUrlV2({ userId, meta }) {
   let buffer;
   if (voiceEnabled && voiceText.length >= 5) {
     const ttsText = prepareI2VVoiceTextForFish(voiceText);
-    const catalogTts = resolveI2VCatalogTtsOptions(meta);
+    const ttsOptions = resolveI2VTtsOptions(meta);
     const rawBuffer = await synthesizeSpeech({
       text: ttsText,
-      referenceId: resolveFishReferenceId(meta),
+      ...ttsOptions,
       format: "mp3",
-      cloneFidelity: false,
-      speed: catalogTts.speed,
-      catalogFastFlow: catalogTts.catalogFastFlow,
-      catalogIncisiveFlow: catalogTts.catalogIncisiveFlow,
     });
     buffer = await fitAudioBufferToDurationSec(rawBuffer, targetSec);
   } else {
@@ -107,5 +115,6 @@ module.exports = {
   prepareI2VAvatarAudioUrlV2,
   uploadAudioBufferToR2,
   resolveI2VTargetDurationSec,
+  resolveI2VTtsOptions,
   DEFAULT_CATALOG_FISH_ID,
 };

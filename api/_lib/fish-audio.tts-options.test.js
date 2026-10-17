@@ -15,12 +15,23 @@ test("buildTtsOptions deep chest clone — moins de lissage", () => {
 
 test("buildTtsOptions clone fidelity — paramètres validés", () => {
   const opts = buildTtsOptions("Bonjour test clone", { cloneFidelity: true, speed: 1.1 });
-  assert.equal(opts.temperature, 0.46);
-  assert.equal(opts.top_p, 0.72);
-  assert.equal(opts.repetition_penalty, 1.02);
+  assert.equal(opts.temperature, 0.56);
+  assert.equal(opts.top_p, 0.78);
+  assert.equal(opts.repetition_penalty, 1.04);
   assert.equal(opts.mp3_bitrate, 256);
   assert.equal(opts.condition_on_previous_chunks, false);
-  assert.equal(opts.prosody.speed, 0.98);
+  assert.equal(opts.prosody.speed, 1.02);
+});
+
+test("buildTtsOptions clone fidelity — débit expressif et segments liés", () => {
+  const opts = buildTtsOptions("Phrase longue. ".repeat(20), {
+    cloneFidelity: true,
+  });
+
+  assert.equal(opts.temperature, 0.56);
+  assert.equal(opts.top_p, 0.78);
+  assert.equal(opts.condition_on_previous_chunks, true);
+  assert.equal(opts.prosody.speed, 1);
 });
 
 test("buildTtsOptions incisif Mode C — attaque Niska", () => {

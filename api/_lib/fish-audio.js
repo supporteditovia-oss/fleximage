@@ -34,15 +34,15 @@ const FIDELITY_TTS = {
 const CLONE_FIDELITY_TTS = {
   latency: "normal",
   normalize: false,
-  temperature: 0.46,
-  top_p: 0.72,
-  repetition_penalty: 1.02,
+  temperature: 0.56,
+  top_p: 0.78,
+  repetition_penalty: 1.04,
   condition_on_previous_chunks: false,
   mp3_bitrate: 256,
   chunk_length: 300,
   min_chunk_length: 100,
   prosody: {
-    speed: 0.98,
+    speed: 1,
     volume: 0,
     normalize_loudness: false,
   },
@@ -132,7 +132,7 @@ function buildTtsOptions(text, options = {}) {
         ? 1.06
         : inlineIdentityClone
           ? 0.99
-          : 0.98;
+          : 1.02;
     if (incisiveClone && options.incisiveRap === true) {
       speedCap = Math.min(1.1, speedCap + 0.04);
     }
