@@ -158,13 +158,12 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
   }),
 );
 
-export type VoiceCatalogFilter = "Tous" | "Homme" | "Femme" | "Rap";
+export type VoiceCatalogFilter = "Tous" | "Homme" | "Femme";
 
 export const VOICE_CATALOG_FILTERS: VoiceCatalogFilter[] = [
   "Tous",
-  "Homme",
   "Femme",
-  "Rap",
+  "Homme",
 ];
 
 export const MOCK_VOICE_PROFILES: MockVoiceProfile[] = [

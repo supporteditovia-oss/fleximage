@@ -10,7 +10,8 @@ const { normalizeI2VDurationSec } = require("../../shared/video-i2v-pricing.cjs"
 const catalog = require("../../shared/voice-catalog.json");
 
 const DEFAULT_CATALOG_FISH_ID =
-  catalog.entries.find((e) => e.slug === "voix-homme")?.fishId ||
+  catalog.entries.find((e) => e.slug === "lf-marc")?.fishId ||
+  catalog.entries.find((e) => e.gender === "homme")?.fishId ||
   catalog.entries[0]?.fishId;
 
 async function uploadAudioBufferToR2(userId, buffer, contentType = "audio/mpeg") {

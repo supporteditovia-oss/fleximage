@@ -6,11 +6,13 @@ import { useV2Access } from "@/hooks/use-v2-access";
 import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
-  prefetchCatalogPreviews,
-  speakCatalogSample,
-  stopCatalogSample,
   type VoiceCatalogFilter,
 } from "@/lib/v2-mock-voice";
+import {
+  playI2VVoicePreview,
+  prefetchI2VVoicePreviews,
+  stopI2VVoicePreview,
+} from "@/lib/i2v-voice-preview";
 import {
   readSelectedCatalogVoiceId,
   readStudioMode,
@@ -110,7 +112,7 @@ function ImageLibrary() {
 
 function VoiceCatalogLibrary() {
   const [, navigate] = useLocation();
-  const [filter, setFilter] = useState<CatalogFilter>("Tous");
+  const [filter, setFilter] = useState<CatalogFilter>("Femme");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     readSelectedCatalogVoiceId(),
@@ -124,7 +126,6 @@ function VoiceCatalogLibrary() {
     return MOCK_VOICE_CATALOG.filter((v) => {
       if (filter === "Homme" && v.gender !== "homme") return false;
       if (filter === "Femme" && v.gender !== "femme") return false;
-      if (filter === "Rap" && v.category !== "Rap") return false;
       if (!q) return true;
       return (
         v.name.toLowerCase().includes(q) ||
@@ -135,10 +136,12 @@ function VoiceCatalogLibrary() {
   }, [filter, query]);
 
   useEffect(() => {
-    prefetchCatalogPreviews(MOCK_VOICE_CATALOG);
+    prefetchI2VVoicePreviews(
+      MOCK_VOICE_CATALOG.map((v) => v.fishReferenceId).filter(Boolean) as string[],
+    );
     return () => {
       stopSpeakRef.current?.();
-      stopCatalogSample();
+      stopI2VVoicePreview();
     };
   }, []);
 
@@ -157,7 +160,7 @@ function VoiceCatalogLibrary() {
     if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
     if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
     if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
-    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
+    return MOCK_VOICE_CATALOG.length;
   };
 
   const selectVoice = (id: string) => {
@@ -174,7 +177,9 @@ function VoiceCatalogLibrary() {
     setPreviewId(null);
     setLoadingPreviewId(null);
 
-    stopSpeakRef.current = speakCatalogSample(voice, {
+    const fishId = voice.fishReferenceId;
+    if (!fishId) return;
+    stopSpeakRef.current = playI2VVoicePreview(fishId, {
       onLoading: () => setLoadingPreviewId(id),
       onPlaying: () => {
         setLoadingPreviewId(null);
@@ -185,13 +190,17 @@ function VoiceCatalogLibrary() {
         setLoadingPreviewId(null);
         stopSpeakRef.current = null;
       },
+      onError: () => {
+        setPreviewId(null);
+        setLoadingPreviewId(null);
+      },
     });
   };
 
   const useVoice = (id: string) => {
     selectVoice(id);
     stopSpeakRef.current?.();
-    stopCatalogSample();
+    stopI2VVoicePreview();
     navigate("/create");
   };
 
