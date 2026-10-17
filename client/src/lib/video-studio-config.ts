@@ -227,14 +227,22 @@ export function computeVideoCreditCost(params: {
   });
 }
 
-export function maxVoiceCharsForVideoDuration(durationSec?: number | null): number {
-  const d = Number(durationSec) || 5;
-  if (d >= 10) return 280;
-  if (d >= 8) return 200;
-  if (d <= 3) return 100;
-  return 140;
-}
+import {
+  maxVoiceCharsForI2VDuration,
+  maxVoiceWordsForI2VDuration,
+  countSpeakableWords,
+  clampVoiceScriptToI2VLimit,
+  getI2VVoiceScriptLimitStatus,
+} from "@shared/video-i2v-voice-script-limits";
+
+export {
+  maxVoiceCharsForI2VDuration as maxVoiceCharsForVideoDuration,
+  maxVoiceWordsForI2VDuration,
+  countSpeakableWords,
+  clampVoiceScriptToI2VLimit,
+  getI2VVoiceScriptLimitStatus,
+};
 
 export function maxVoiceChars(durationSec: VideoDuration): number {
-  return maxVoiceCharsForVideoDuration(durationSec);
+  return maxVoiceCharsForI2VDuration(durationSec);
 }

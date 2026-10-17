@@ -1,5 +1,10 @@
+import { useMemo } from "react";
 import { Mic } from "lucide-react";
-import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
+import {
+  VIDEO_VOICE_EXTRA_CREDIT,
+  getI2VVoiceScriptLimitStatus,
+  clampVoiceScriptToI2VLimit,
+} from "@/lib/video-studio-config";
 import { VideoI2VCatalogVoicePicker } from "@/components/video/VideoI2VCatalogVoicePicker";
 import type { AdminVideoVoice } from "@/lib/admin-video-voice-catalog";
 
@@ -9,6 +14,8 @@ type VideoVoiceAddonProps = {
   text: string;
   onTextChange: (value: string) => void;
   maxChars?: number;
+  /** Durée clip I2V (3 ou 5 s) — recalcule limites compteur. */
+  durationSec?: number;
   voiceExtraCredit?: number;
   /** Catalogue homme / femme — preview admin Vidéo IA. */
   adminVoiceCatalogEnabled?: boolean;
@@ -22,11 +29,19 @@ export function VideoVoiceAddon({
   text,
   onTextChange,
   maxChars = 200,
+  durationSec = 5,
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
   adminVoiceCatalogEnabled = false,
   i2vVoiceId = null,
   onI2vVoiceId,
 }: VideoVoiceAddonProps) {
+  const limits = useMemo(
+    () => getI2VVoiceScriptLimitStatus(text, durationSec),
+    [text, durationSec],
+  );
+
+  const effectiveMaxChars = maxChars || limits.maxChars;
+
   return (
     <div className="via-voice-addon">
       <button
@@ -73,17 +88,51 @@ export function VideoVoiceAddon({
           <textarea
             id="video-voice-script"
             value={text}
-            onChange={(e) => onTextChange(e.target.value)}
+            onChange={(e) =>
+              onTextChange(clampVoiceScriptToI2VLimit(e.target.value, durationSec))
+            }
             rows={3}
-            maxLength={maxChars}
+            maxLength={effectiveMaxChars}
             placeholder="Ex. dialogue : Laisse-moi ! — pour un cri : Aaaah ! Non ! (évite AAAAAHHHH sans espaces)"
             className="via-prompt-field"
+            aria-describedby="video-voice-script-counter"
           />
+          <p
+            id="video-voice-script-counter"
+            className={`via-voice-addon__counter${
+              limits.showLimitWarning ? " is-limit" : ""
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <span>
+              {limits.charCount} / {limits.maxChars} caractères
+            </span>
+            <span className="via-voice-addon__counter-sep" aria-hidden>
+              ·
+            </span>
+            <span>
+              {limits.wordCount} / {limits.maxWords} mots
+            </span>
+            <span className="via-voice-addon__counter-meta">
+              · limite {limits.durationSec} s
+            </span>
+          </p>
+          {limits.overCharLimit || limits.overWordLimit ? (
+            <p className="via-voice-addon__limit-alert" role="alert">
+              {limits.overCharLimit
+                ? `Texte trop long pour ${limits.durationSec} s — retire des caractères avant de générer.`
+                : `Trop de mots pour ${limits.durationSec} s — allège la phrase pour éviter un échec de sync.`}
+            </p>
+          ) : limits.atCharLimit ? (
+            <p className="via-voice-addon__limit-alert via-voice-addon__limit-alert--soft" role="status">
+              Limite {limits.durationSec} s atteinte — tu peux générer ou raccourcir un peu pour plus de marge.
+            </p>
+          ) : null}
           <p className="via-voice-addon__hint">
-            {text.trim().length}/{maxChars} caractères
             {adminVoiceCatalogEnabled
-              ? " · voix choisie ci-dessus (admin)"
-              : " · voix catalogue"}{" "}
+              ? "Voix choisie ci-dessus (admin)"
+              : "Voix catalogue"}{" "}
             · le prompt mouvement décrit l&apos;action, ce champ décrit{" "}
             <strong>uniquement</strong> ce qu&apos;on entend
           </p>

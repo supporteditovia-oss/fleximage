@@ -275,6 +275,7 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               text={props.voiceText}
               onTextChange={props.onVoiceText}
               maxChars={props.voiceMaxChars}
+              durationSec={props.durationSec}
               voiceExtraCredit={props.voiceExtraCredit}
               adminVoiceCatalogEnabled={props.adminVoiceCatalogEnabled}
               i2vVoiceId={props.i2vVoiceId}

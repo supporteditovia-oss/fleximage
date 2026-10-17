@@ -88,7 +88,7 @@ describe("video-studio", () => {
   });
 
   it("validateVoiceText blocks text too long for duration", () => {
-    const long = "x".repeat(200);
+    const long = "x".repeat(221);
     const result = validateVoiceText(long, 5);
     assert.equal(result.ok, false);
   });
@@ -147,8 +147,8 @@ describe("video-studio", () => {
   });
 
   it("maxVoiceCharsForDuration", () => {
-    assert.equal(maxVoiceCharsForDuration(3), 100);
-    assert.equal(maxVoiceCharsForDuration(5), 140);
+    assert.equal(maxVoiceCharsForDuration(3), 120);
+    assert.equal(maxVoiceCharsForDuration(5), 220);
     assert.equal(maxVoiceCharsForDuration(10), 280);
   });
 

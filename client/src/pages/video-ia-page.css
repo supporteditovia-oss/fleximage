@@ -1306,6 +1306,44 @@ html.luxeflexia-video-page .floating-header::before {
   color: var(--lx-muted);
 }
 
+.via-voice-addon__counter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-muted);
+}
+
+.via-voice-addon__counter.is-limit {
+  color: #b42318;
+}
+
+.via-voice-addon__counter-sep {
+  opacity: 0.45;
+}
+
+.via-voice-addon__counter-meta {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.via-voice-addon__limit-alert {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #b42318;
+}
+
+.via-voice-addon__limit-alert--soft {
+  color: #9a3412;
+  font-weight: 500;
+}
+
 .via-voice-blocked-note {
   margin: 0.55rem 0 0;
   padding: 0.65rem 0.8rem;

@@ -33,6 +33,8 @@ import {
   computeVideoCreditCost,
   DEFAULT_IMAGE_TO_VIDEO_PROMPT,
   maxVoiceCharsForVideoDuration,
+  clampVoiceScriptToI2VLimit,
+  getI2VVoiceScriptLimitStatus,
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MIN_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_MB,
@@ -240,13 +242,26 @@ export default function VideoIA() {
 
   const imagePreviewUrl = uploadPreview || prefillImageUrl;
 
-  const voiceMaxChars = maxVoiceCharsForVideoDuration(
-    workflow === "video_to_video" ? videoDurationSec : durationSec,
+  const voiceDurationForLimits =
+    workflow === "video_to_video" ? videoDurationSec : durationSec;
+
+  const voiceMaxChars = maxVoiceCharsForVideoDuration(voiceDurationForLimits);
+
+  const voiceScriptLimits = useMemo(
+    () => getI2VVoiceScriptLimitStatus(voiceText, voiceDurationForLimits),
+    [voiceText, voiceDurationForLimits],
   );
+
+  useEffect(() => {
+    if (workflow !== "image_to_video") return;
+    setVoiceText((prev) => clampVoiceScriptToI2VLimit(prev, durationSec));
+  }, [durationSec, workflow]);
 
   const voiceReady =
     !voiceEnabled ||
-    (voiceText.trim().length >= 5 && voiceText.length <= voiceMaxChars);
+    (voiceText.trim().length >= 5 &&
+      voiceText.trim().length <= voiceScriptLimits.maxChars &&
+      voiceScriptLimits.wordCount <= voiceScriptLimits.maxWords);
 
   const adminBurn = ADMIN_PRICING_REFERENCE.creditBurn;
   const i2vBillingGrid = adminPreview ? ("admin_v2" as const) : ("prod" as const);

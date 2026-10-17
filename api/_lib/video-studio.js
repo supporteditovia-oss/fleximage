@@ -793,25 +793,33 @@ function buildRunwayPrompt(params) {
   return parts.filter(Boolean).join(" ");
 }
 
+const {
+  maxVoiceCharsForI2VDuration,
+  validateI2VVoiceScript,
+} = require("../../shared/video-i2v-voice-script-limits.cjs");
+
 function maxVoiceCharsForDuration(durationSec) {
   const d = Number(durationSec) || 5;
   if (d >= 10) return 280;
   if (d >= 8) return 200;
-  if (d <= 3) return 100;
-  return 140;
+  return maxVoiceCharsForI2VDuration(d);
 }
 
 function validateVoiceText(text, durationSec) {
-  const max = maxVoiceCharsForDuration(durationSec);
-  const len = String(text || "").trim().length;
-  if (len === 0) return { ok: false, reason: "Texte vocal requis." };
-  if (len > max) {
-    return {
-      ok: false,
-      reason: `Texte trop long pour ${durationSec}s (max ${max} caractères).`,
-    };
+  const d = Number(durationSec) || 5;
+  if (d >= 8) {
+    const max = maxVoiceCharsForDuration(d);
+    const len = String(text || "").trim().length;
+    if (len === 0) return { ok: false, reason: "Texte vocal requis." };
+    if (len > max) {
+      return {
+        ok: false,
+        reason: `Texte trop long pour ${d}s (max ${max} caractères).`,
+      };
+    }
+    return { ok: true, max };
   }
-  return { ok: true, max };
+  return validateI2VVoiceScript(text, d);
 }
 
 function mapStudioStage(metadata, providerState) {
