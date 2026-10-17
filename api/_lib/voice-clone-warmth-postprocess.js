@@ -49,6 +49,10 @@ async function applyVoiceCloneWarmthPostprocess(inputBuffer, options = {}) {
     });
   }
 
+  if (options.incisive === true) {
+    return inputBuffer;
+  }
+
   if (!ffmpegPath) {
     return inputBuffer;
   }

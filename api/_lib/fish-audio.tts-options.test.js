@@ -23,6 +23,18 @@ test("buildTtsOptions clone fidelity — paramètres validés", () => {
   assert.equal(opts.prosody.speed, 0.98);
 });
 
+test("buildTtsOptions incisif Mode C — attaque Niska", () => {
+  const opts = buildTtsOptions("Flow trap", {
+    cloneFidelity: true,
+    incisiveClone: true,
+    speed: 1.08,
+  });
+  assert.equal(opts.temperature, 0.62);
+  assert.equal(opts.top_p, 0.8);
+  assert.equal(opts.repetition_penalty, 1.06);
+  assert.equal(opts.prosody.speed, 1.04);
+});
+
 test("buildTtsOptions inline identity Mode C — timbre marqué", () => {
   const opts = buildTtsOptions("Interview Jul", {
     cloneFidelity: true,

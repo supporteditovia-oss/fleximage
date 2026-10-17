@@ -77,6 +77,21 @@ const CLONE_DEEP_CHEST_TTS = {
   },
 };
 
+/** Mode C — voix incisives / trap (Niska…) : attaque et relief préservés. */
+const CLONE_INCISIVE_TTS = {
+  ...CLONE_FIDELITY_TTS,
+  temperature: 0.62,
+  top_p: 0.8,
+  repetition_penalty: 1.06,
+  chunk_length: 320,
+  min_chunk_length: 110,
+  prosody: {
+    speed: 1.02,
+    volume: 0,
+    normalize_loudness: false,
+  },
+};
+
 /**
  * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
  * Plus long → chunks liés pour garder la cohérence.
@@ -95,37 +110,38 @@ function buildTtsOptions(text, options = {}) {
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
   const deepChestClone = options.deepChestClone === true && cloneFidelity;
+  const incisiveClone = options.incisiveClone === true && cloneFidelity && !deepChestClone;
   const inlineIdentityClone =
-    options.inlineIdentityClone === true && cloneFidelity && !deepChestClone;
+    options.inlineIdentityClone === true &&
+    cloneFidelity &&
+    !deepChestClone &&
+    !incisiveClone;
   const catalogFastFlow = options.catalogFastFlow === true && !cloneFidelity;
 
   if (cloneFidelity) {
     const base = deepChestClone
       ? CLONE_DEEP_CHEST_TTS
-      : inlineIdentityClone
-        ? CLONE_INLINE_IDENTITY_TTS
-        : CLONE_FIDELITY_TTS;
-    const speedCap = deepChestClone ? 0.92 : inlineIdentityClone ? 0.99 : 0.98;
+      : incisiveClone
+        ? CLONE_INCISIVE_TTS
+        : inlineIdentityClone
+          ? CLONE_INLINE_IDENTITY_TTS
+          : CLONE_FIDELITY_TTS;
+    const speedCap = deepChestClone
+      ? 0.92
+      : incisiveClone
+        ? 1.04
+        : inlineIdentityClone
+          ? 0.99
+          : 0.98;
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
         ? Math.min(clampTtsSpeed(speed), speedCap)
         : speedCap;
+    const longForm = incisiveClone || inlineIdentityClone;
     const chunkLength =
-      inlineIdentityClone && len <= 200
-        ? 320
-        : len <= 200
-          ? 300
-          : inlineIdentityClone
-            ? 300
-            : 280;
+      longForm && len <= 200 ? 320 : len <= 200 ? 300 : longForm ? 300 : 280;
     const minChunk =
-      inlineIdentityClone && len <= 200
-        ? 120
-        : len <= 200
-          ? 100
-          : inlineIdentityClone
-            ? 100
-            : 80;
+      longForm && len <= 200 ? 120 : len <= 200 ? 100 : longForm ? 100 : 80;
 
     return {
       ...base,
@@ -407,6 +423,7 @@ async function synthesizeWithReferenceMsgpack({
   cloneFidelity,
   deepChestClone,
   inlineIdentityClone,
+  incisiveClone,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -450,6 +467,7 @@ async function synthesizeWithReferenceMsgpack({
       cloneFidelity,
       deepChestClone,
       inlineIdentityClone,
+      incisiveClone,
     }),
   };
 
@@ -488,6 +506,7 @@ async function synthesizeSpeech({
   catalogFastFlow,
   deepChestClone,
   inlineIdentityClone,
+  incisiveClone,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -523,6 +542,7 @@ async function synthesizeSpeech({
         catalogFastFlow,
         deepChestClone,
         inlineIdentityClone,
+        incisiveClone,
       }),
     }),
   });
@@ -547,6 +567,7 @@ module.exports = {
   buildTtsOptions,
   CLONE_FIDELITY_TTS,
   CLONE_INLINE_IDENTITY_TTS,
+  CLONE_INCISIVE_TTS,
   CLONE_DEEP_CHEST_TTS,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,

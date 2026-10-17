@@ -34,6 +34,11 @@ const VOICE_CLONE_INLINE_AF =
   "highpass=f=50,lowpass=f=14000," +
   "loudnorm=I=-17:TP=-1.2:LRA=16:print_format=none";
 
+/** Mode C incisif (Niska…) — pas de loudnorm : conserve le punch des consonnes. */
+const VOICE_CLONE_INLINE_PUNCH_AF =
+  "highpass=f=50,lowpass=f=15000," +
+  "acompressor=threshold=-9dB:ratio=1.35:attack=2:release=60:makeup=0";
+
 /**
  * Prépare un échantillon clone (WAV ou autre audio) avant Fish / ASR.
  * @param {Buffer} inputBuffer
@@ -87,8 +92,10 @@ async function runFfmpegVoiceFilter(inputBuffer, audioFilter) {
   }
 }
 
-async function prepareVoiceCloneInlineReferenceBuffer(inputBuffer) {
-  return runFfmpegVoiceFilter(inputBuffer, VOICE_CLONE_INLINE_AF);
+async function prepareVoiceCloneInlineReferenceBuffer(inputBuffer, options = {}) {
+  const filter =
+    options.punch === true ? VOICE_CLONE_INLINE_PUNCH_AF : VOICE_CLONE_INLINE_AF;
+  return runFfmpegVoiceFilter(inputBuffer, filter);
 }
 
 async function prepareVoiceCloneSampleBuffer(inputBuffer) {
@@ -171,4 +178,5 @@ module.exports = {
   prepareVoiceSampleForCloneSource,
   VOICE_CLONE_AF,
   VOICE_CLONE_INLINE_AF,
+  VOICE_CLONE_INLINE_PUNCH_AF,
 };

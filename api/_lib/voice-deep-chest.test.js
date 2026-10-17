@@ -2,10 +2,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { shouldUseDeepChestClone } = require("./voice-deep-chest");
 
-test("Mode C import active deep chest (interviews graves)", () => {
+test("Mode C import sans WAV grave — pas de deep chest automatique", () => {
   assert.equal(
     shouldUseDeepChestClone({ generationMode: "C", cloneSourceType: "import" }),
-    true,
+    false,
   );
 });
 

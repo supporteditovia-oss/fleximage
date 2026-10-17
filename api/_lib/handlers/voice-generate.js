@@ -27,7 +27,10 @@ const {
   shouldApplyCloneWarmthPostprocess,
   shouldUseInlineIdentityClone,
 } = require("../voice-generation-modes");
-const { shouldUseDeepChestClone } = require("../voice-deep-chest");
+const {
+  shouldUseDeepChestClone,
+  shouldUseIncisiveClone,
+} = require("../voice-clone-timbre");
 const { synthesizeCatalogPresetSpeech } = require("../catalog-voice-synth");
 const { normalizeVoiceLocale } = require("../landing-voice-demo");
 
@@ -288,23 +291,29 @@ module.exports = async function voiceGenerateHandler(req, res) {
 
     const cloneFidelity = !voiceMode.isCatalogPresetVoice;
 
-    const deepChestClone =
+    const modeCContext = {
+      generationMode: voiceMode.mode,
+      cloneSourceType,
+      hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
+      referenceWavBuffer: referenceAudio,
+    };
+
+    const deepChestClone = cloneFidelity && shouldUseDeepChestClone(modeCContext);
+
+    const incisiveClone =
       cloneFidelity &&
-      shouldUseDeepChestClone({
-        generationMode: voiceMode.mode,
-        cloneSourceType,
-        hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
-        referenceWavBuffer: referenceAudio,
-      });
+      shouldUseIncisiveClone({
+        ...modeCContext,
+        voiceName,
+        deliveryStyle,
+      }) &&
+      !deepChestClone;
 
     const inlineIdentityClone =
       cloneFidelity &&
-      shouldUseInlineIdentityClone({
-        generationMode: voiceMode.mode,
-        cloneSourceType,
-        hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
-      }) &&
-      !deepChestClone;
+      shouldUseInlineIdentityClone(modeCContext) &&
+      !deepChestClone &&
+      !incisiveClone;
 
     const generationPayload = {
       user_id: userId,
@@ -322,6 +331,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         voice_name: voiceName,
         voice_pipeline_mode: voiceMode.mode,
         deep_chest_clone: deepChestClone,
+        incisive_clone: incisiveClone,
         inline_identity_clone: inlineIdentityClone,
       },
     };
@@ -371,13 +381,14 @@ module.exports = async function voiceGenerateHandler(req, res) {
     if (referenceAudio && referenceAudio.length > 1024 && cloneFidelity) {
       const useLightInlinePrep =
         inlineIdentityClone ||
+        incisiveClone ||
         deepChestClone ||
         Boolean(instantAudio && instantAudio.length > 1024);
       if (useLightInlinePrep) {
         const raw = instantAudio && instantAudio.length > 1024 ? instantAudio : referenceAudio;
-        inlineReferenceAudio = await prepareVoiceCloneInlineReferenceBuffer(raw).catch(
-          () => raw,
-        );
+        inlineReferenceAudio = await prepareVoiceCloneInlineReferenceBuffer(raw, {
+          punch: incisiveClone,
+        }).catch(() => raw);
       } else {
         inlineReferenceAudio = referenceAudio;
       }
@@ -398,6 +409,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         cloneFidelity,
         deepChestClone,
         inlineIdentityClone,
+        incisiveClone,
       });
     }
 
@@ -413,6 +425,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         cloneFidelity,
         deepChestClone: cloneFidelity ? deepChestClone : false,
         inlineIdentityClone: cloneFidelity ? inlineIdentityClone : false,
+        incisiveClone: cloneFidelity ? incisiveClone : false,
       });
     }
 
@@ -459,6 +472,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
       audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer, {
         deepChest: deepChestClone,
         identityInline: inlineIdentityClone,
+        incisive: incisiveClone,
       });
     }
 
