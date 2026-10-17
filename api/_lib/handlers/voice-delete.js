@@ -20,18 +20,13 @@ function parseIds(req) {
   return [];
 }
 
-async function purgeVoiceGenerationAssets(userId, generationId, manifest) {
+async function purgeGenerationR2Assets(userId, generationId, manifest) {
   const audioKey =
     manifest?.audio_r2_key ||
     manifest?.audioR2Key ||
     `voice-generations/${userId}/${generationId}.mp3`;
   const manifestKey = `voice-generations/${userId}/${generationId}.json`;
-
   await Promise.allSettled([deleteFromR2(audioKey), deleteFromR2(manifestKey)]);
-
-  const items = await loadVoiceGenerationIndex(userId);
-  const next = items.filter((item) => item.id !== generationId);
-  await saveVoiceGenerationIndex(userId, next);
 }
 
 module.exports = async function voiceDeleteHandler(req, res) {
@@ -55,30 +50,40 @@ module.exports = async function voiceDeleteHandler(req, res) {
     }
 
     const uniqueIds = [...new Set(ids)].slice(0, 50);
-    const deleted = [];
 
-    for (const id of uniqueIds) {
-      const { data: rows, error } = await supabase
-        .from("voice_generations")
-        .select("id, audio_r2_key")
-        .eq("id", id)
-        .eq("user_id", userId)
-        .limit(1);
+    const { data: rows } = await supabase
+      .from("voice_generations")
+      .select("id, audio_r2_key")
+      .eq("user_id", userId)
+      .in("id", uniqueIds);
 
-      if (!error && rows?.length) {
-        const row = rows[0];
-        if (row.audio_r2_key) {
+    const rowById = new Map((rows || []).map((row) => [row.id, row]));
+
+    await Promise.all(
+      uniqueIds.map(async (id) => {
+        const row = rowById.get(id);
+        if (row?.audio_r2_key) {
           await deleteFromR2(row.audio_r2_key).catch(() => undefined);
         }
-        await supabase.from("voice_generations").delete().eq("id", id).eq("user_id", userId);
-      }
+        const manifest = await loadVoiceGenerationManifest(userId, id);
+        await purgeGenerationR2Assets(userId, id, manifest);
+      }),
+    );
 
-      const manifest = await loadVoiceGenerationManifest(userId, id);
-      await purgeVoiceGenerationAssets(userId, id, manifest);
-      deleted.push(id);
-    }
+    await supabase
+      .from("voice_generations")
+      .delete()
+      .eq("user_id", userId)
+      .in("id", uniqueIds);
 
-    res.status(200).json({ success: true, deleted });
+    const items = await loadVoiceGenerationIndex(userId);
+    const idSet = new Set(uniqueIds);
+    await saveVoiceGenerationIndex(
+      userId,
+      items.filter((item) => !idSet.has(item.id)),
+    );
+
+    res.status(200).json({ success: true, deleted: uniqueIds });
   } catch (error) {
     console.error("voice-delete error", error);
     sendError(res, error);

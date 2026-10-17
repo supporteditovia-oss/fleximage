@@ -168,39 +168,29 @@ export function VoiceHistorySection({
     setSelectedIds(new Set());
   };
 
-  const deleteSelected = async () => {
-    const ids = [...selectedIds];
-    if (ids.length === 0) return;
-    try {
-      await deleteGenerations.mutateAsync(ids);
-      if (playingId && ids.includes(playingId)) stopHistoryAudio();
-      exitSelection();
-      toast({
-        title: ids.length > 1 ? "Vocaux supprimés" : "Vocal supprimé",
-      });
-    } catch {
-      toast({
-        title: "Suppression impossible",
-        variant: "destructive",
-      });
-    }
+  const onDeleteError = () => {
+    toast({
+      title: "Suppression impossible",
+      description: "Réessaie dans un instant.",
+      variant: "destructive",
+    });
   };
 
-  const deleteAll = async () => {
+  const deleteSelected = () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (playingId && ids.includes(playingId)) stopHistoryAudio();
+    exitSelection();
+    deleteGenerations.mutate(ids, { onError: onDeleteError });
+  };
+
+  const confirmDeleteAll = () => {
     const ids = items.map((item) => item.id);
     if (ids.length === 0) return;
-    try {
-      await deleteGenerations.mutateAsync(ids);
-      stopHistoryAudio();
-      setDeleteAllOpen(false);
-      exitSelection();
-      toast({ title: "Historique vidé" });
-    } catch {
-      toast({
-        title: "Suppression impossible",
-        variant: "destructive",
-      });
-    }
+    setDeleteAllOpen(false);
+    stopHistoryAudio();
+    exitSelection();
+    deleteGenerations.mutate(ids, { onError: onDeleteError });
   };
 
   if (!enabled) return null;
@@ -335,8 +325,7 @@ export function VoiceHistorySection({
             <button
               type="button"
               className="vs-history-delete"
-              disabled={deleteGenerations.isPending}
-              onClick={() => void deleteSelected()}
+              onClick={deleteSelected}
             >
               <Trash2 className="h-4 w-4" aria-hidden />
               Supprimer
@@ -369,10 +358,9 @@ export function VoiceHistorySection({
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteGenerations.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                void deleteAll();
+                confirmDeleteAll();
               }}
             >
               Tout supprimer
