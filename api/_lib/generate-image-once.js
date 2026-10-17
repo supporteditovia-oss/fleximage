@@ -1,24 +1,16 @@
 const {
   uploadImageUrlsToOneshot,
   createOneshotJob,
-  getAppSettings,
   ONESHOT_MODEL_VARIANT,
 } = require("./oneshot");
 const {
-  generateDeepInfraImage,
-  getDeepInfraModel,
-  isDeepInfraConfigured,
-} = require("./deepinfra");
-const {
   resolveImageGenerationProvider,
-  decrementOneshotCreditIfTracked,
   isOneshotCreditsExhaustedError,
-  markOneshotCreditsExhausted,
 } = require("./model-router");
 const { resolveGenerationsTableProvider } = require("./generation-provider");
 const { readApiCallCount } = require("./generation-idempotency");
 
-/** Dernier taskId actif (OneShot, DeepInfra sync, Kie, …). */
+/** Dernier taskId actif (OneShot ou legacy provider task). */
 function extractProviderExternalTaskId(providerTaskId) {
   const parts = String(providerTaskId || "")
     .split(",")
@@ -144,7 +136,7 @@ function enforceSingleImageResult(oneshotResponse) {
 }
 
 /**
- * Point d'entrée unique image (OneShot, DeepInfra, Kie).
+ * Point d'entrée unique de génération d'image via OneShot.
  * Politique identique OneShot : au plus UN appel API fournisseur par ligne generation
  * (claim api_call_count) — pas de 2e job auto en fallback ; échec → remboursement site.
  */
@@ -155,7 +147,6 @@ async function generateImageOnce(supabase, params) {
     aspectRatio,
     imageUrls,
     modelVariant = ONESHOT_MODEL_VARIANT,
-    adminPreferDeepInfra = false,
     logContext = {},
   } = params;
 
@@ -193,6 +184,7 @@ async function generateImageOnce(supabase, params) {
     claim.generation.metadata && typeof claim.generation.metadata === "object"
       ? claim.generation.metadata
       : {};
+  // Reuse completed DeepInfra generations created before the provider migration.
   const deepinfraStoredUrl =
     meta.deepinfra_sync &&
     typeof meta.deepinfra_output_url === "string"
@@ -242,7 +234,6 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
-  const appSettings = await getAppSettings(supabase);
   const prevAttempts = Array.isArray(claim.generation.provider_attempts)
     ? claim.generation.provider_attempts
     : [];
@@ -338,8 +329,6 @@ async function generateImageOnce(supabase, params) {
       nextMeta,
     });
 
-    await decrementOneshotCreditIfTracked(supabase);
-
     console.info("[generate-image-once] provider call completed", {
       generationId,
       generationRequestId: nextMeta.generation_request_id || null,
@@ -362,152 +351,27 @@ async function generateImageOnce(supabase, params) {
     };
   }
 
-  async function runDeepInfra(reason) {
-    if (Array.isArray(imageUrls) && imageUrls.length > 1) {
-      const err = new Error(
-        "DeepInfra ne supporte qu'une seule image — ajoute OneShot ou n'utilise qu'une photo.",
-      );
-      err.code = "MULTI_REF_DEEPINFRA_UNSUPPORTED";
-      throw err;
-    }
-    console.info("[generate-image-once] DeepInfra sync", {
-      generationId,
-      model: getDeepInfraModel(),
-      promptChars: String(finalPrompt || "").length,
-      reason: reason instanceof Error ? reason.message : reason || null,
-      ...logContext,
-    });
-
-    const { buffer, mimeType } = await generateDeepInfraImage({
-      prompt: finalPrompt,
-      aspectRatio,
-      imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
-    });
-
-    const { uploadToR2 } = require("./r2");
-    const ext = mimeType.includes("png") ? "png" : "jpg";
-    const key = `generations/${generationId}/deepinfra-${Date.now()}.${ext}`;
-    const outputUrl = await uploadToR2(key, buffer, mimeType);
-
-    const externalTaskId = `deepinfra_sync_${generationId}`;
-    const attemptRecord = {
-      provider: "deepinfra",
-      jobId: externalTaskId,
-      externalTaskId,
-      modelVariant: getDeepInfraModel(),
-      requestedAt: claim.generation.metadata?.provider_call_started_at || null,
-      completedAt: new Date().toISOString(),
-      durationMs: Date.now() - startedAt,
-      autoRetry: false,
-      ...(reason
-        ? {
-            fallbackFrom:
-              reason instanceof Error ? reason.message : String(reason),
-          }
-        : {}),
-    };
-    const nextMeta = {
-      ...(claim.generation.metadata || {}),
-      api_call_count: 1,
-      provider_call_completed_at: new Date().toISOString(),
-      deepinfra_output_url: outputUrl,
-      deepinfra_sync: true,
-      provider_duration_ms: Date.now() - startedAt,
-      provider_auto_retries: 0,
-    };
-
-    const { error: persistErr } = await supabase
-      .from("generations")
-      .update({
-        provider: resolveGenerationsTableProvider("deepinfra"),
-        provider_task_id: mergeProviderTaskId(
-          claim.generation.provider_task_id,
-          externalTaskId,
-        ),
-        metadata: nextMeta,
-        provider_attempts: [...prevAttempts, attemptRecord],
-        output_assets: [outputUrl],
-        watermarked_assets: [],
-        status: "succeeded",
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", generationId);
-    if (persistErr) {
-      throw new Error(
-        `DeepInfra: échec enregistrement résultat (${persistErr.message || "db"})`,
-      );
-    }
-
-    console.info("[generate-image-once] DeepInfra sync stored", {
-      generationId,
-      externalTaskId,
-      durationMs: Date.now() - startedAt,
-      ...logContext,
-    });
-
-    return {
-      ok: true,
-      deduplicated: false,
-      externalTaskId,
-      apiCallCount: 1,
-      provider: "deepinfra",
-      outputUrl,
-      syncComplete: true,
-      durationMs: Date.now() - startedAt,
-    };
-  }
-
   const hasReferenceImages =
     Array.isArray(imageUrls) && imageUrls.length > 0;
-  let route;
-  try {
-    const referenceImageCount = Array.isArray(imageUrls)
-      ? imageUrls.length
-      : 0;
-    route = await resolveImageGenerationProvider(supabase, {
-      forceKieAi: appSettings.forceKieAi,
-      hasReferenceImages,
-      referenceImageCount,
-      isAdmin: adminPreferDeepInfra,
-      adminImageProvider: appSettings.adminImageProvider,
-    });
-  } catch (routeErr) {
-    throw routeErr;
-  }
+  const route = await resolveImageGenerationProvider(supabase);
 
   console.info("[generate-image-once] model-router", {
     generationId,
     provider: route.provider,
     reason: route.reason || null,
-    remainingCredits: route.remainingCredits,
     hasReferenceImages,
     ...logContext,
   });
 
   try {
-    if (route.provider === "deepinfra") {
-      return await runDeepInfra(route.reason || null);
-    }
     return await runOneshot();
   } catch (primaryErr) {
     if (
       route.provider === "oneshot" &&
       isOneshotCreditsExhaustedError(primaryErr)
     ) {
-      await markOneshotCreditsExhausted(supabase);
-      if (isDeepInfraConfigured()) {
-        console.warn(
-          "[generate-image-once] OneShot credits exhausted — DeepInfra fallback",
-          {
-            generationId,
-            ...logContext,
-          },
-        );
-        return await runDeepInfra(primaryErr);
-      }
       const retryErr = new Error(
-        "Crédits OneShot épuisés — configure DEEPINFRA_API_KEY pour le relais automatique.",
+        "Crédits OneShot épuisés — recharge le compte OneShot.",
       );
       retryErr.code = "ONESHOT_CREDITS_EXHAUSTED";
       throw retryErr;

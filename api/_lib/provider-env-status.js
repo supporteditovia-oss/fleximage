@@ -1,8 +1,7 @@
 const { getOneshotApiConfig } = require("./oneshot");
-const { isDeepInfraConfigured, getDeepInfraModel } = require("./deepinfra");
+const { isDeepInfraConfigured } = require("./deepinfra");
 const { isKieConfigured } = require("./kie");
 const { isRunwayConfigured } = require("./kie-runway");
-const { getOneshotRemainingCredits } = require("./model-router");
 
 function envPresent(name) {
   const raw = process.env[name];
@@ -22,40 +21,30 @@ function isR2Configured() {
 /**
  * État des variables d'environnement côté runtime Vercel (sans exposer les secrets).
  */
-async function getProviderEnvStatus(supabase) {
+async function getProviderEnvStatus() {
   const oneshot = getOneshotApiConfig();
   const oneshotConfigured = Boolean(oneshot.url && oneshot.key);
-  let oneshotRemainingCredits = null;
-  try {
-    oneshotRemainingCredits = await getOneshotRemainingCredits(supabase);
-  } catch {
-    oneshotRemainingCredits = null;
-  }
 
   const deepinfra = isDeepInfraConfigured();
   const kie = isKieConfigured();
 
-  const imageReady =
-    oneshotConfigured ||
-    deepinfra ||
-    kie;
-
-  const imageWithRefsReady = oneshotConfigured || deepinfra;
+  const imageReady = oneshotConfigured;
+  const imageWithRefsReady = oneshotConfigured;
 
   const videoReady = isRunwayConfigured();
 
   const warnings = [];
+  if (!oneshotConfigured) {
+    warnings.push("OneShot non configuré — génération d'images indisponible.");
+  }
   if (!deepinfra) {
-    warnings.push("DEEPINFRA_API_KEY manquant — pas de Nano Banana 2 (texte sans refs).");
+    warnings.push("DEEPINFRA_API_KEY manquant — détourage Bria indisponible.");
   }
   if (!kie) {
     warnings.push("KIE_AI_API_KEY manquant — pas de vidéo IA / Kling Motion.");
   }
   if (deepinfra && !isR2Configured()) {
-    warnings.push("R2 incomplet — DeepInfra ne pourra pas enregistrer les images.");
-  }
-  if (!oneshotConfigured && !deepinfra && !kie) {
-    warnings.push("Aucun moteur image configuré.");
+    warnings.push("R2 incomplet — le détourage Bria ne pourra pas enregistrer les images.");
   }
   if (!videoReady) {
     warnings.push("Vidéo IA / Kling : KIE_AI_API_KEY requis.");
@@ -69,16 +58,12 @@ async function getProviderEnvStatus(supabase) {
       configured: oneshotConfigured,
       hasUrl: Boolean(oneshot.url),
       hasKey: Boolean(oneshot.key),
-      remainingCredits: oneshotRemainingCredits,
-      remainingCreditsEnvSet: envPresent("ONESHOT_REMAINING_CREDITS"),
     },
     deepinfra: {
       configured: deepinfra,
-      model: getDeepInfraModel(),
     },
     kie: {
       configured: kie,
-      imageModel: "nano-banana-2",
       klingMotionModel: "kling-3.0/motion-control",
       runwayVideo: videoReady,
     },
@@ -87,7 +72,7 @@ async function getProviderEnvStatus(supabase) {
       image: imageReady,
       imageWithReferencePhotos: imageWithRefsReady,
       video: videoReady,
-      deepinfraPipeline: deepinfra && isR2Configured(),
+      briaBackgroundRemoval: deepinfra && isR2Configured(),
       klingMotion: kie && videoReady,
     },
     warnings,

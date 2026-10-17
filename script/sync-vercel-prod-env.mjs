@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Pousse les clés API (DeepInfra, Kie) vers Vercel Production — projet luxeflexia.
+ * Pousse les clés API (OneShot, DeepInfra Bria, Kie) vers Vercel Production — projet luxeflexia.
  * Lit d'abord `.env` à la racine du repo (ton fichier local), puis les variables d'environnement.
  *
  * Usage local (recommandé si tu as tout dans .env) :
  *   node script/sync-vercel-prod-env.mjs
  *
- * Usage agent (secrets Cursor : VERCEL_TOKEN + DEEPINFRA_API_KEY + KIE_AI_API_KEY) :
+ * Usage agent (secrets : VERCEL_TOKEN + ONESHOT_API_KEY + KIE_AI_API_KEY) :
  *   node script/sync-vercel-prod-env.mjs
  */
 import { spawnSync } from "node:child_process";
@@ -24,8 +24,9 @@ const PROJECT = "luxeflexia";
 const TARGET = "production";
 
 const VARS = [
+  { name: "ONESHOT_API_URL", required: false },
+  { name: "ONESHOT_API_KEY", required: false },
   { name: "DEEPINFRA_API_KEY", required: false },
-  { name: "DEEPINFRA_MODEL", required: false, defaultValue: "google/nano-banana-2" },
   { name: "KIE_AI_API_KEY", required: false },
   { name: "ADMIN_EMAIL", required: false },
   { name: "ADMIN_PASSWORD_HASH", required: false },

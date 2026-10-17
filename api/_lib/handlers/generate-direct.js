@@ -3,11 +3,9 @@ const { isUserAdmin } = require("../admin-access");
 const { uploadInputImagesToR2 } = require("../r2");
 const {
   getOneshotApiConfig,
-  getAppSettings,
   isGoogleAiPromptFlagged,
   ONESHOT_MODEL_VARIANT,
 } = require("../oneshot");
-const { isDeepInfraConfigured } = require("../deepinfra");
 const { generateImageOnce } = require("../generate-image-once");
 const {
   normalizeGenerationRequestId,
@@ -26,10 +24,7 @@ const {
   translateLimitReason,
 } = require("../generation");
 const { buildSubjectPosePromptBlock, parseSubjectPoseFromBody } = require("../subject-pose-prompt");
-const {
-  analyzeSubjectContext,
-  heuristicAnalysis,
-} = require("../subject-analysis");
+const { analyzeSubjectContext } = require("../subject-analysis");
 const { buildIdentityPreservingPrompt, buildBuiltinTemplateFaceSwapPrompt, buildBuiltinTemplateFaceSwapWithOutfitPrompt, isShopifyTrophyPrompt, estimateGenerationSeconds } = require("../prompt-guard");
 const { ensureVehicleReplacePromptForImageProvider } = require("../vehicle-fidelity-lock");
 const {
@@ -109,8 +104,6 @@ module.exports = async function handler(req, res) {
   try {
     const { supabase, userId } = await requireUser(req);
     const admin = await isUserAdmin(supabase, userId);
-    const adminAppSettings = admin ? await getAppSettings(supabase) : null;
-    const adminImageProvider = adminAppSettings?.adminImageProvider || "deepinfra";
     const body = readBody(req);
     const uiLocale = resolveRequestLocale(req, body);
     let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
@@ -139,11 +132,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Gemini 2.5 Flash — enrich free prompts only (catalog templates unchanged).
-    // Admin DeepInfra : pas d'enrichissement (latence + POST déjà long).
-    if (
-      !templateId &&
-      (!admin || adminImageProvider === "oneshot")
-    ) {
+    if (!templateId) {
       const enriched = await enrichPromptForGeneration(prompt, {
         locale: uiLocale,
       });
@@ -286,12 +275,9 @@ module.exports = async function handler(req, res) {
     }
 
     const oneshotConfig = getOneshotApiConfig();
-    const hasImageProvider =
-      (oneshotConfig.url && oneshotConfig.key) || isDeepInfraConfigured();
-    if (!hasImageProvider) {
+    if (!oneshotConfig.url || !oneshotConfig.key) {
       res.status(503).json({
-        message:
-          "Aucun moteur d'image configuré (OneShot ou DeepInfra Nano Banana 2).",
+        message: "OneShot non configuré (ONESHOT_API_URL / ONESHOT_API_KEY).",
       });
       return;
     }
@@ -481,22 +467,18 @@ module.exports = async function handler(req, res) {
     const sceneContext = resolvedTemplate?.ok
       ? String(resolvedTemplate.prompt || effectivePrompt || "")
       : "";
-    const adminDeepInfraFastPath =
-      admin && adminImageProvider === "deepinfra" && isDeepInfraConfigured();
-    const subjectAnalysis = adminDeepInfraFastPath
-      ? heuristicAnalysis(effectivePrompt, sceneContext)
-      : await analyzeSubjectContext(
-          referenceImageUrl
-            ? {
-                imageUrl: referenceImageUrl,
-                userPrompt: effectivePrompt,
-                sceneContext,
-              }
-            : {
-                userPrompt: effectivePrompt,
-                sceneContext,
-              },
-        );
+    const subjectAnalysis = await analyzeSubjectContext(
+      referenceImageUrl
+        ? {
+            imageUrl: referenceImageUrl,
+            userPrompt: effectivePrompt,
+            sceneContext,
+          }
+        : {
+            userPrompt: effectivePrompt,
+            sceneContext,
+          },
+    );
 
     const subjectPoseBlock = buildSubjectPosePromptBlock({
       subject,
@@ -566,7 +548,6 @@ module.exports = async function handler(req, res) {
         aspectRatio,
         imageUrls,
         modelVariant: oneshotModelVariant,
-        adminPreferDeepInfra: admin,
         logContext: {
           userId,
           source,
@@ -618,20 +599,10 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const syncOutputUrl =
-      typeof providerResult.outputUrl === "string"
-        ? providerResult.outputUrl.trim()
-        : "";
-    const deepInfraSyncReady =
-      providerResult.provider === "deepinfra" &&
-      Boolean(providerResult.syncComplete) &&
-      syncOutputUrl.startsWith("http");
-
     res.status(201).json({
       id: larp.id,
       taskId: externalTaskId,
-      status: deepInfraSyncReady ? "success" : "waiting",
-      ...(deepInfraSyncReady ? { resultUrls: [syncOutputUrl] } : {}),
+      status: "waiting",
       isSubscriber: limitResult.isSubscriber,
       estimatedSeconds,
       createdAt: larp.created_at,

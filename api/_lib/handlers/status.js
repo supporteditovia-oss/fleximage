@@ -43,7 +43,7 @@ const {
 const { mapImageProviderMessage } = require("../image-user-errors");
 const { readApiCallCount } = require("../generation-idempotency");
 
-/** Image bloquée sans livrable → fail + remboursement jetons (facturation DeepInfra séparée). */
+/** Image bloquée sans livrable → fail + remboursement jetons. */
 const STUCK_IMAGE_PROCESSING_MS = 3 * 60 * 1000;
 const STUCK_IMAGE_SUCCEEDED_EMPTY_MS = 45 * 1000;
 

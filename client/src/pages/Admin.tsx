@@ -1083,16 +1083,15 @@ type ProviderEnvStatus = {
   runtime: string;
   oneshot: {
     configured: boolean;
-    remainingCredits: number | null;
   };
-  deepinfra: { configured: boolean; model: string };
+  deepinfra: { configured: boolean };
   kie: { configured: boolean; runwayVideo: boolean };
   r2: { configured: boolean };
   readiness: {
     image: boolean;
     imageWithReferencePhotos: boolean;
     video: boolean;
-    deepinfraPipeline: boolean;
+    briaBackgroundRemoval: boolean;
     klingMotion: boolean;
   };
   warnings: string[];
@@ -1125,7 +1124,6 @@ function OneshotApiSettings() {
   const { data: settings, isLoading } = useQuery<{
     forceKieAi: boolean;
     fallbackTimeoutMs: number;
-    adminImageProvider?: "oneshot" | "deepinfra";
     providerEnv?: ProviderEnvStatus;
   }>({
     queryKey: ["admin-settings"],
@@ -1141,55 +1139,15 @@ function OneshotApiSettings() {
   });
 
   const [forceKieAi, setForceKieAi] = useState(false);
-  const [adminImageProvider, setAdminImageProvider] = useState<
-    "oneshot" | "deepinfra"
-  >("deepinfra");
   const [timeoutSec, setTimeoutSec] = useState("105");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setForceKieAi(settings.forceKieAi);
-      setAdminImageProvider(settings.adminImageProvider ?? "deepinfra");
       setTimeoutSec(String(Math.round(settings.fallbackTimeoutMs / 1000)));
     }
   }, [settings]);
-
-  const handleAdminImageProvider = async (provider: "oneshot" | "deepinfra") => {
-    if (provider === adminImageProvider) return;
-    const previous = adminImageProvider;
-    setAdminImageProvider(provider);
-    setSaving(true);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const res = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.session?.access_token}`,
-        },
-        body: JSON.stringify({ adminImageProvider: provider }),
-      });
-      if (!res.ok) throw new Error("Failed to update");
-      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
-      toast({
-        title: "Moteur images admin mis à jour",
-        description:
-          provider === "oneshot"
-            ? "Tes générations (Créer, modèles prêts…) passent par OneShot — idéal marketing."
-            : "Tes générations passent par DeepInfra (Nano Banana 2).",
-      });
-    } catch (err: unknown) {
-      setAdminImageProvider(previous);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: err instanceof Error ? err.message : "Mise à jour impossible",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleToggle = async (checked: boolean) => {
     setForceKieAi(checked);
@@ -1266,39 +1224,18 @@ function OneshotApiSettings() {
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
           <div className="space-y-0.5">
             <Label className="text-sm font-medium">
-              Moteur images — ton compte admin
+              Moteur de génération d'images
             </Label>
             <p className="text-xs text-muted-foreground">
-              Choisis où sont prélevés tes crédits API image (Créer, modèles prêts,
-              catalogue). Les <strong>clients</strong> restent toujours sur OneShot.
+              Toutes les générations (Créer, modèles prêts, catalogue et photos de
+              référence multiples) passent par OneShot, pour les admins comme pour
+              les clients.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={adminImageProvider === "oneshot" ? "default" : "outline"}
-              disabled={saving}
-              onClick={() => void handleAdminImageProvider("oneshot")}
-            >
-              OneShot (marketing)
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={adminImageProvider === "deepinfra" ? "default" : "outline"}
-              disabled={saving}
-              onClick={() => void handleAdminImageProvider("deepinfra")}
-            >
-              DeepInfra (Nano Banana 2)
-            </Button>
-          </div>
-          {settings?.providerEnv?.oneshot.remainingCredits != null ? (
-            <p className="text-xs text-muted-foreground">
-              Solde OneShot suivi : {settings.providerEnv.oneshot.remainingCredits}{" "}
-              crédit(s) API
-            </p>
-          ) : null}
+          <ProviderEnvFlag
+            ok={settings?.providerEnv?.oneshot.configured ?? false}
+            label="OneShot"
+          />
         </div>
 
         {/* Legacy — n'affecte plus les images */}
@@ -1306,8 +1243,8 @@ function OneshotApiSettings() {
           <div className="space-y-0.5">
             <Label className="text-sm font-medium">Mode Full Kie AI (legacy)</Label>
             <p className="text-xs text-muted-foreground">
-              Ancien réglage vidéo / fallback — les images admin utilisent le choix
-              ci-dessus.
+              Ancien réglage vidéo / fallback — les générations d'images utilisent
+              OneShot.
             </p>
           </div>
           <Switch
@@ -1320,9 +1257,9 @@ function OneshotApiSettings() {
         {/* Fallback timeout */}
         <div className="rounded-lg border border-border/60 p-4 space-y-3">
           <div className="space-y-0.5">
-            <Label className="text-sm font-medium">Timeout fallback Kie AI</Label>
+            <Label className="text-sm font-medium">Timeout des tâches OneShot</Label>
             <p className="text-xs text-muted-foreground">
-              Durée (en secondes) avant de basculer automatiquement sur Kie AI si OneshotAPI n'a pas répondu.
+              Durée maximale (en secondes) avant de déclarer une tâche image OneShot en échec.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -1360,15 +1297,15 @@ function OneshotApiSettings() {
             <div className="space-y-2">
               <ProviderEnvFlag
                 ok={settings.providerEnv.deepinfra.configured}
-                label={`DeepInfra (${settings.providerEnv.deepinfra.model})`}
+                label="DeepInfra (détourage Bria uniquement)"
               />
               <ProviderEnvFlag
                 ok={settings.providerEnv.kie.configured}
                 label="Kie.ai (vidéo IA + Kling — pas les images)"
               />
               <ProviderEnvFlag
-                ok={settings.providerEnv.readiness.deepinfraPipeline}
-                label="Pipeline DeepInfra + R2"
+                ok={settings.providerEnv.readiness.briaBackgroundRemoval}
+                label="Détourage Bria + R2"
               />
               <ProviderEnvFlag
                 ok={settings.providerEnv.readiness.klingMotion}
@@ -1376,13 +1313,8 @@ function OneshotApiSettings() {
               />
               <ProviderEnvFlag
                 ok={settings.providerEnv.oneshot.configured}
-                label="OneShot (legacy)"
+                label="Génération d'images OneShot"
               />
-              {settings.providerEnv.oneshot.remainingCredits != null ? (
-                <p className="text-xs text-muted-foreground">
-                  Crédits OneShot suivis : {settings.providerEnv.oneshot.remainingCredits}
-                </p>
-              ) : null}
             </div>
             {settings.providerEnv.warnings.length > 0 ? (
               <ul className="list-disc pl-4 text-xs text-destructive space-y-1">
@@ -1392,7 +1324,7 @@ function OneshotApiSettings() {
               </ul>
             ) : (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                Toutes les clés requises pour DeepInfra + Kie sont présentes sur ce déploiement.
+                Les clés OneShot et vidéo Kie sont configurées sur ce déploiement.
               </p>
             )}
           </div>

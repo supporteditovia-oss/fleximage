@@ -128,7 +128,7 @@ function isVehicleExteriorBodySwapPrompt(prompt) {
 
 const IMAGE_PROMPT_MAX_CHARS = 2900;
 
-/** DeepInfra (Nano Banana 2) + OneShot partagent buildIdentityPreservingPrompt — ce garde-fou prepends si tronqué. */
+/** OneShot uses buildIdentityPreservingPrompt — this guard restores it if truncated. */
 function ensureVehicleReplacePromptForImageProvider(finalPrompt, userPrompt) {
   const text = String(finalPrompt || "");
   const raw = String(userPrompt || "").trim();
