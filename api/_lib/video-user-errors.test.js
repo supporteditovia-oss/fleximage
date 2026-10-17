@@ -1,11 +1,32 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  AI_AVATAR_SENSITIVE_PERSON_MESSAGE_FR,
+  isAiAvatarSensitiveModerationError,
   mapVideoProviderMessage,
   mapMotionCompositeUserMessage,
   inferMotionReferenceSource,
   resolveKlingCharacterOrientation,
 } = require("./video-user-errors");
+
+test("isAiAvatarSensitiveModerationError — sensitive information", () => {
+  assert.equal(
+    isAiAvatarSensitiveModerationError(
+      "Generation failed as the content includes sensitive information",
+    ),
+    true,
+  );
+});
+
+test("mapVideoProviderMessage — ai-avatar sensitive person FR", () => {
+  const fr = mapVideoProviderMessage(
+    "Generation failed as the content includes sensitive information",
+    "fr",
+  );
+  assert.equal(fr, AI_AVATAR_SENSITIVE_PERSON_MESSAGE_FR);
+  assert.match(fr, /célébrité/i);
+  assert.doesNotMatch(fr, /Kling|kie/i);
+});
 
 test("mapVideoProviderMessage — internal error", () => {
   const fr = mapVideoProviderMessage(

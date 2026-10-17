@@ -1,8 +1,33 @@
 /** Messages client pour erreurs provider vidéo (sans noms de modèle). */
 
+const AI_AVATAR_SENSITIVE_PERSON_MESSAGE_FR =
+  "Cette image contient une personne réelle identifiable. Pour des raisons légales, notre fournisseur refuse de l'animer. Essaie avec une photo sans célébrité.";
+
+function isAiAvatarSensitiveModerationError(raw) {
+  const text = String(raw || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (!text) return false;
+  return (
+    text.includes("sensitive information") ||
+    text.includes("sensitive content") ||
+    text.includes("identifiable person") ||
+    text.includes("real person") ||
+    text.includes("celebrity") ||
+    text.includes("public figure")
+  );
+}
+
 function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
   const text = String(raw || "").trim();
   if (!text) return null;
+
+  if (isAiAvatarSensitiveModerationError(text)) {
+    return locale === "fr"
+      ? AI_AVATAR_SENSITIVE_PERSON_MESSAGE_FR
+      : "This image shows an identifiable real person. Our provider cannot animate it for legal reasons. Try a photo without a celebrity.";
+  }
   const afterAlephFallback = Boolean(options.afterAlephFallback);
   const v2vExhausted = Boolean(options.v2vExhausted);
 
@@ -112,6 +137,8 @@ function mapMotionCompositeUserMessage(compositeErr, locale = "fr") {
 }
 
 module.exports = {
+  AI_AVATAR_SENSITIVE_PERSON_MESSAGE_FR,
+  isAiAvatarSensitiveModerationError,
   mapVideoProviderMessage,
   mapMotionCompositeUserMessage,
   inferMotionReferenceSource,

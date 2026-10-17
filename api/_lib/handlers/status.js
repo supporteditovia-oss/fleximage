@@ -36,7 +36,10 @@ const {
   withTimeout,
 } = require("../generation");
 const { videoTimingFieldsForLarp } = require("../video-status-timing");
-const { mapVideoProviderMessage } = require("../video-user-errors");
+const {
+  isAiAvatarSensitiveModerationError,
+  mapVideoProviderMessage,
+} = require("../video-user-errors");
 const { mapImageProviderMessage } = require("../image-user-errors");
 const { readApiCallCount } = require("../generation-idempotency");
 
@@ -1216,9 +1219,19 @@ module.exports = async function handler(req, res) {
             }
           }
         } else if (state === "fail") {
+          const rawAvatarFail = extractAiAvatarProFailMessage(avatarData);
+          if (isAiAvatarSensitiveModerationError(rawAvatarFail)) {
+            console.info("[moderation_rejected] ai-avatar-pro poll", {
+              larpId: larp.id,
+              avatarTaskId,
+              failPreview: String(rawAvatarFail).slice(0, 280),
+            });
+            metadataPatch.moderation_rejected = true;
+            metadataPatch.moderation_reason = "sensitive_person";
+          }
           apiStatus = "fail";
           apiFailMsg = formatVideoFailForClient(
-            extractAiAvatarProFailMessage(avatarData),
+            rawAvatarFail,
             "Échec de la génération vidéo",
           );
         } else if (ageInMs > pollHardTimeoutMs) {
@@ -1774,7 +1787,7 @@ module.exports = async function handler(req, res) {
               ...metadataPatch,
               ...(resultType === "video" ? { studio_stage: "COMPLETED" } : {}),
             }
-          : pollMeta;
+          : { ...pollMeta, ...metadataPatch };
 
       if (
         apiStatus === "success" &&
@@ -1813,11 +1826,15 @@ module.exports = async function handler(req, res) {
           : toUserFailMessage(apiFailMsg, null) || apiFailMsg;
 
       if (apiStatus === "fail") {
+        const moderationRejected = Boolean(
+          terminalMeta.moderation_rejected || pollMeta.moderation_rejected,
+        );
         refundResult = await ensureGenerationCreditsRefunded(supabase, {
           userId,
           generationId: larp.id,
-          source: "failed_generation",
+          source: moderationRejected ? "moderation_rejected" : "failed_generation",
           failMessage: clientFailMessage,
+          metadata: moderationRejected ? { moderation_rejected: true } : {},
         }).catch((err) => {
           console.error("refund failed", err);
           return { ok: false, hadCharge: true, refundedAmount: 0, error: err };

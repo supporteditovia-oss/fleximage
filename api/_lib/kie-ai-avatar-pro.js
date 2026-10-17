@@ -3,6 +3,7 @@ const {
   extractKieJobsVideoUrl,
   extractKieJobsFailMessage,
 } = require("./kie-jobs-result");
+const { isAiAvatarSensitiveModerationError } = require("./video-user-errors");
 
 const AI_AVATAR_PRO_MODEL = "kling/ai-avatar-pro";
 
@@ -70,12 +71,21 @@ async function createAiAvatarProTask(input) {
   const taskId = parsed?.data?.taskId;
 
   if (!response.ok || parsed.code !== 200 || !taskId) {
-    console.error("[kie-ai-avatar-pro] createTask rejected", {
-      httpStatus: response.status,
-      apiCode: parsed?.code,
-      apiMsg: parsed?.msg,
-      bodyPreview: text.slice(0, 400),
-    });
+    const rejectMsg = String(parsed?.msg || text || "").trim();
+    if (isAiAvatarSensitiveModerationError(rejectMsg)) {
+      console.info("[moderation_rejected] ai-avatar-pro createTask", {
+        httpStatus: response.status,
+        apiCode: parsed?.code,
+        apiMsg: parsed?.msg,
+      });
+    } else {
+      console.error("[kie-ai-avatar-pro] createTask rejected", {
+        httpStatus: response.status,
+        apiCode: parsed?.code,
+        apiMsg: parsed?.msg,
+        bodyPreview: text.slice(0, 400),
+      });
+    }
     const err = new Error(parsed.msg || "Ai Avatar Pro API error");
     err.status = response.status;
     err.apiCode = parsed.code;

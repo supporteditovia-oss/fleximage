@@ -42,7 +42,10 @@ const {
   resolveKlingMotionSourceVideoUrl,
   resolveOmniSourceVideoUrl,
 } = require("./prepare-kling-source-video");
-const { mapVideoProviderMessage } = require("./video-user-errors");
+const {
+  isAiAvatarSensitiveModerationError,
+  mapVideoProviderMessage,
+} = require("./video-user-errors");
 const { ensureGenerationCreditsRefunded } = require("./generation");
 
 function readKickoffLock(meta) {
@@ -62,6 +65,7 @@ async function markVideoKickoffFailed(
   const failMessage = String(message || "Échec envoi studio").slice(0, 240);
   const meta =
     larp.metadata && typeof larp.metadata === "object" ? larp.metadata : {};
+  const moderationRejected = options.moderationRejected === true;
   await supabase
     .from("generations")
     .update({
@@ -71,6 +75,12 @@ async function markVideoKickoffFailed(
         ...meta,
         studio_stage: "FAILED",
         video_kickoff_failed: true,
+        ...(moderationRejected
+          ? {
+              moderation_rejected: true,
+              moderation_reason: "sensitive_person",
+            }
+          : {}),
       },
       updated_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
@@ -82,8 +92,9 @@ async function markVideoKickoffFailed(
     await ensureGenerationCreditsRefunded(supabase, {
       userId,
       generationId: larp.id,
-      source: "video_kickoff_failed",
+      source: moderationRejected ? "moderation_rejected" : "video_kickoff_failed",
       failMessage,
+      metadata: moderationRejected ? { moderation_rejected: true } : {},
     }).catch((err) => console.error("refund failed", err));
   }
 }
@@ -359,7 +370,17 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
         mapVideoProviderMessage(raw, "fr") ||
         `${String(raw).slice(0, 180)} Jetons remboursés.`;
     }
-    await markVideoKickoffFailed(supabase, userId, larp, friendly);
+    const moderationRejected = isAiAvatarSensitiveModerationError(raw);
+    if (moderationRejected) {
+      console.info("[moderation_rejected] ai-avatar-pro kickoff", {
+        generationId: larp.id,
+        userId,
+        raw: String(raw).slice(0, 280),
+      });
+    }
+    await markVideoKickoffFailed(supabase, userId, larp, friendly, {
+      moderationRejected,
+    });
     return { larp, started: true, failed: true, failMessage: friendly };
   }
 }
