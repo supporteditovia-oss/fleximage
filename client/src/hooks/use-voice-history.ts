@@ -20,8 +20,27 @@ export function useDeleteVoiceGenerations() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (ids: string[]) => deleteVoiceGenerations(ids),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: voiceHistoryQueryKey });
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: voiceHistoryQueryKey });
+      const previous = queryClient.getQueryData<VoiceHistoryItem[]>(voiceHistoryQueryKey);
+      const idSet = new Set(ids);
+      if (previous) {
+        queryClient.setQueryData(
+          voiceHistoryQueryKey,
+          previous.filter((item) => !idSet.has(item.id)),
+        );
+      }
+      return { previous };
+    },
+    onError: (_error, _ids, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(voiceHistoryQueryKey, context.previous);
+      }
+    },
+    onSettled: (_data, error) => {
+      if (error) {
+        void queryClient.invalidateQueries({ queryKey: voiceHistoryQueryKey });
+      }
     },
   });
 }
