@@ -28,6 +28,8 @@ const {
   shouldUseInlineIdentityClone,
 } = require("../voice-generation-modes");
 const { shouldUseDeepChestClone } = require("../voice-deep-chest");
+const { synthesizeCatalogPresetSpeech } = require("../catalog-voice-synth");
+const { normalizeVoiceLocale } = require("../landing-voice-demo");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -193,6 +195,8 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     creditCost = limitResult.creditCost || 0;
+    const isAdmin = limitResult.isAdmin === true;
+    const requestLocale = normalizeVoiceLocale(req.headers["x-locale"]);
 
     const voiceCloneId =
       typeof body.voiceCloneId === "string" ? body.voiceCloneId.trim() : "";
@@ -413,12 +417,11 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     if (isCatalogPresetVoice && catalogStudio?.referenceId) {
-      audioBuffer = await synthesizeSpeech({
-        text: ttsText,
-        referenceId: catalogStudio.referenceId,
-        speed: catalogStudio.speed,
-        cloneFidelity: false,
-        catalogFastFlow: false,
+      audioBuffer = await synthesizeCatalogPresetSpeech({
+        fishReferenceId: resolvedFishId || fishReferenceId,
+        ttsText,
+        localeLike: requestLocale,
+        allowBundledReferenceFallback: isAdmin,
       });
     } else if (cloneFidelity) {
       try {

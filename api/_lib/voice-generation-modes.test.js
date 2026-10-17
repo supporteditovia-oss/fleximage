@@ -23,3 +23,13 @@ test("Mode B — clone enregistré micro", () => {
   assert.equal(r.mode, "B");
   assert.equal(shouldApplyCloneWarmthPostprocess(r), true);
 });
+
+test("catalog Fish id prioritaire sur voiceCloneId résiduel (Niska)", () => {
+  const mode = resolveVoiceGenerationMode({
+    voiceCloneId: "stale-clone-uuid",
+    fishReferenceId: "6be490a175744894826dd464cf3a5004",
+  });
+  assert.equal(mode.mode, "A");
+  assert.equal(mode.isCatalogPresetVoice, true);
+  assert.equal(mode.catalogEntry?.slug, "niska");
+});

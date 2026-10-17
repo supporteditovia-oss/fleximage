@@ -14,7 +14,8 @@ function resolveVoiceGenerationMode({
   const fish = String(fishReferenceId || "").trim();
   const catalogEntry = fish ? lookupCatalogEntryByFishId(fish) : null;
 
-  if (catalogEntry && !voiceCloneId) {
+  /** Fish catalogue prioritaire (ex. Niska) même si un voiceCloneId résiduel est envoyé. */
+  if (catalogEntry && fish) {
     return { mode: "A", catalogEntry, isCatalogPresetVoice: true };
   }
 
