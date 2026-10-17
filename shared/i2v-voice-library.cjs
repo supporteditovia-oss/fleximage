@@ -35,6 +35,8 @@ function findI2VLibraryEntryByFishId(fishReferenceId) {
 }
 
 function resolveI2VPreviewPhrase(entry) {
+  const name = String(entry?.name || "").trim();
+  if (name) return `Bonjour, je suis ${name}.`;
   const short = String(library.previewPhrase || "").trim();
   if (short) return short;
   return String(library.testPhrase || "Bonjour.").trim();

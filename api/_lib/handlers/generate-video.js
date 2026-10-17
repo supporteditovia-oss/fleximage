@@ -216,6 +216,10 @@ function resolveVehicleDescription(body) {
 
 
 function resolveVideoCatalogFishReferenceId(body, isAdmin) {
+  const raw = String(
+    body.voice_fish_reference_id || body.voiceFishReferenceId || "",
+  ).trim();
+
   if (isAdmin) {
     const libraryVoiceId = String(body.i2v_voice_id || body.i2vVoiceId || "").trim();
     if (libraryVoiceId) {
@@ -225,20 +229,25 @@ function resolveVideoCatalogFishReferenceId(body, isAdmin) {
         if (fish) return fish;
       }
     }
+    if (isValidFishReferenceId(raw)) {
+      const inI2V = listActiveI2VLibraryEntries().some(
+        (entry) =>
+          String(entry.fishId || "").toLowerCase() === raw.toLowerCase(),
+      );
+      if (inI2V) return raw.toLowerCase();
+      if (lookupCatalogEntryByFishId(raw)) return raw.toLowerCase();
+    }
   }
 
-  const raw = String(
-    body.voice_fish_reference_id || body.voiceFishReferenceId || "",
-  ).trim();
   if (!isAdmin || !isValidFishReferenceId(raw)) {
     return DEFAULT_CATALOG_FISH_ID;
   }
-  if (lookupCatalogEntryByFishId(raw)) return raw;
+  if (lookupCatalogEntryByFishId(raw)) return raw.toLowerCase();
   const inLibrary = listActiveI2VLibraryEntries().some(
     (entry) =>
       String(entry.fishId || "").toLowerCase() === raw.toLowerCase(),
   );
-  return inLibrary ? raw : DEFAULT_CATALOG_FISH_ID;
+  return inLibrary ? raw.toLowerCase() : DEFAULT_CATALOG_FISH_ID;
 }
 
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {
@@ -681,6 +690,10 @@ module.exports = async function handler(req, res) {
         ? voiceClone?.fish_reference_id ||
           resolveVideoCatalogFishReferenceId(body, isAdmin)
         : DEFAULT_CATALOG_FISH_ID,
+      i2v_voice_id:
+        isAdmin && voiceEnabled
+          ? String(body.i2v_voice_id || body.i2vVoiceId || "").trim() || null
+          : null,
       lip_sync_enabled: voiceEnabled,
       i2v_provider: "kling_ai_avatar_pro",
       i2v_avatar_pipeline_v2: isAdmin,

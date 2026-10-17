@@ -4,6 +4,7 @@ const {
 } = require("../../shared/voice-locale-scripts.cjs");
 
 const catalog = require("../../shared/voice-catalog.json");
+const { findI2VLibraryEntryByFishId } = require("../../shared/i2v-voice-library.cjs");
 
 const MIN_TTS_SPEED = 0.65;
 const MAX_TTS_SPEED = 1.35;
@@ -40,6 +41,11 @@ function lookupCatalogEntryByFishId(fishReferenceId) {
  * Retourne null si voix hors catalogue → débit global par défaut.
  */
 function resolveCatalogTtsSpeed(fishReferenceId) {
+  const i2vEntry = findI2VLibraryEntryByFishId(fishReferenceId);
+  if (i2vEntry && typeof i2vEntry.ttsSpeed === "number") {
+    return clampTtsSpeed(i2vEntry.ttsSpeed);
+  }
+
   const entry = lookupCatalogEntryByFishId(fishReferenceId);
   if (!entry) return null;
 

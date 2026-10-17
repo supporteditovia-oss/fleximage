@@ -35,7 +35,7 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
   try {
     const i2vEntry = findI2VLibraryEntryByFishId(fishReferenceId);
     const cacheKey = i2vEntry
-      ? `voice-catalog/i2v/v2/${String(locale).toLowerCase()}/${fishReferenceId.toLowerCase()}.mp3`
+      ? `voice-catalog/i2v/v3/${String(locale).toLowerCase()}/${fishReferenceId.toLowerCase()}.mp3`
       : unifiedPreviewCacheKey(fishReferenceId, locale);
     const { publicUrl } = getR2Config();
     const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
@@ -43,7 +43,11 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     try {
       const head = await fetch(cachedUrl, { method: "HEAD" });
       if (head.ok) {
-        res.status(200).json({ audioUrl: cachedUrl, cached: true });
+        res.status(200).json({
+          audioUrl: cachedUrl,
+          cached: true,
+          fishId: fishReferenceId.toLowerCase(),
+        });
         return;
       }
     } catch {
@@ -61,7 +65,7 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
 
     const buffer = await synthesizeSpeech({
       text: previewText,
-      referenceId: fishReferenceId,
+      referenceId: fishReferenceId.toLowerCase(),
       format: "mp3",
       speed: ttsSpeed ?? undefined,
     });
@@ -75,7 +79,11 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     }
 
     const audioUrl = await uploadToR2(cacheKey, buffer, "audio/mpeg");
-    res.status(200).json({ audioUrl, cached: false });
+    res.status(200).json({
+      audioUrl,
+      cached: false,
+      fishId: fishReferenceId.toLowerCase(),
+    });
   } catch (error) {
     console.error("[voice-catalog-preview]", error);
     res.status(error.status || 502).json({

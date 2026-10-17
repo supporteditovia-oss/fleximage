@@ -7,10 +7,11 @@ import {
   type I2VLibraryVoice,
 } from "@/lib/i2v-voice-library";
 import {
-  prefetchCatalogPreviews,
-  speakCatalogSample,
-  stopCatalogSample,
-} from "@/lib/v2-mock-voice";
+  playI2VVoicePreview,
+  prefetchI2VVoicePreviews,
+  stopI2VVoicePreview,
+} from "@/lib/i2v-voice-preview";
+import { useToast } from "@/hooks/use-toast";
 
 type GenderFilter = "homme" | "femme";
 
@@ -33,14 +34,13 @@ export function VideoI2VCatalogVoicePicker({
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const stopPreviewRef = useRef<(() => void) | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    prefetchCatalogPreviews(
-      voices.map((voice) => ({ fishReferenceId: voice.fishId })),
-    );
+    prefetchI2VVoicePreviews(voices.map((voice) => voice.fishId));
     return () => {
       stopPreviewRef.current?.();
-      stopCatalogSample();
+      stopI2VVoicePreview();
     };
   }, [voices]);
 
@@ -64,25 +64,26 @@ export function VideoI2VCatalogVoicePicker({
     stopPreviewRef.current?.();
     setLoadingPreviewId(voice.id);
     setPreviewId(null);
-    stopPreviewRef.current = speakCatalogSample(
-      {
-        name: voice.name,
-        fishReferenceId: voice.fishId,
-        pitch: 1,
-        rate: 1,
+    stopPreviewRef.current = playI2VVoicePreview(voice.fishId, {
+      onLoading: () => setLoadingPreviewId(voice.id),
+      onPlaying: () => {
+        setLoadingPreviewId(null);
+        setPreviewId(voice.id);
       },
-      {
-        onLoading: () => setLoadingPreviewId(voice.id),
-        onPlaying: () => {
-          setLoadingPreviewId(null);
-          setPreviewId(voice.id);
-        },
-        onEnd: () => {
-          setPreviewId(null);
-          setLoadingPreviewId(null);
-        },
+      onEnd: () => {
+        setPreviewId(null);
+        setLoadingPreviewId(null);
       },
-    );
+      onError: () => {
+        setPreviewId(null);
+        setLoadingPreviewId(null);
+        toast({
+          variant: "destructive",
+          title: "Aperçu indisponible",
+          description: `Impossible de lire la voix ${voice.name} (Fish). Réessaie dans un instant.`,
+        });
+      },
+    });
   };
 
   return (
@@ -91,8 +92,8 @@ export function VideoI2VCatalogVoicePicker({
         Bibliothèque voix admin ({voices.length})
       </p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-        5 hommes · 5 femmes — ▶ aperçu Fish (phrase courte, préchargé). Choisis
-        une carte puis active « Ajouter une voix IA » pour générer.
+        5 hommes · 5 femmes — ▶ aperçu Fish (une voix par ID, pas la voix du
+        navigateur). Choisis une carte puis active « Ajouter une voix IA ».
       </p>
       <div className="via-i2v-voice-catalog__filters" role="tablist" aria-label="Genre">
         <button

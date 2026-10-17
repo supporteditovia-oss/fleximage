@@ -314,7 +314,7 @@ export default function VideoIA() {
           voice_mode: "catalog" as const,
           voice_text: voiceText.trim(),
           voice_consent: true,
-          ...(adminPreview && i2vVoiceId
+          ...(studioAdmin && i2vVoiceId
             ? {
                 i2v_voice_id: i2vVoiceId,
                 voice_fish_reference_id:
