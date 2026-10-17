@@ -1295,7 +1295,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
               </p>
               <VoiceCatalogPicker
                 selectedId={activeVoice?.kind === "catalog" ? activeVoice.id : null}
-                defaultFilter="Femme"
+                defaultFilter="Rap"
                 onSelect={(voice) => {
                   stopPreview();
                   setActiveVoice({

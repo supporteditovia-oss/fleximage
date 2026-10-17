@@ -27,7 +27,7 @@ export const LANDING_VOICE_DEMO_VERSION = 9;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
-export const LANDING_VOICE_DEFAULT_SLUG = "lf-camille";
+export const LANDING_VOICE_DEFAULT_SLUG = "gims";
 
 export function pickRandomLandingVoiceSlug(): string {
   if (LANDING_VOICE_CATALOG.length === 0) return LANDING_VOICE_DEFAULT_SLUG;

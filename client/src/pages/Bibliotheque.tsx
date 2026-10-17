@@ -112,7 +112,7 @@ function ImageLibrary() {
 
 function VoiceCatalogLibrary() {
   const [, navigate] = useLocation();
-  const [filter, setFilter] = useState<CatalogFilter>("Femme");
+  const [filter, setFilter] = useState<CatalogFilter>("Tous");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     readSelectedCatalogVoiceId(),
@@ -126,6 +126,7 @@ function VoiceCatalogLibrary() {
     return MOCK_VOICE_CATALOG.filter((v) => {
       if (filter === "Homme" && v.gender !== "homme") return false;
       if (filter === "Femme" && v.gender !== "femme") return false;
+      if (filter === "Rap" && v.category !== "Rap") return false;
       if (!q) return true;
       return (
         v.name.toLowerCase().includes(q) ||
@@ -160,7 +161,7 @@ function VoiceCatalogLibrary() {
     if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
     if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
     if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
-    return MOCK_VOICE_CATALOG.length;
+    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
   };
 
   const selectVoice = (id: string) => {

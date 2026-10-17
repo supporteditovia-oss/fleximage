@@ -26,7 +26,7 @@ type VoiceCatalogPickerProps = {
 export function VoiceCatalogPicker({
   selectedId = null,
   onSelect,
-  defaultFilter = "Femme",
+  defaultFilter = "Rap",
   showSearch = true,
   intro,
 }: VoiceCatalogPickerProps) {
@@ -42,6 +42,7 @@ export function VoiceCatalogPicker({
     return MOCK_VOICE_CATALOG.filter((v) => {
       if (filter === "Homme" && v.gender !== "homme") return false;
       if (filter === "Femme" && v.gender !== "femme") return false;
+      if (filter === "Rap" && v.category !== "Rap") return false;
       if (!q) return true;
       return (
         v.name.toLowerCase().includes(q) ||
@@ -65,7 +66,7 @@ export function VoiceCatalogPicker({
     if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
     if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
     if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
-    return MOCK_VOICE_CATALOG.length;
+    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
   };
 
   const previewVoice = (id: string, event: MouseEvent) => {
