@@ -46,7 +46,26 @@ function estimateIncisivePunchFromWav(wavBuffer) {
 function voiceNameHintsIncisive(voiceName) {
   const n = String(voiceName || "").trim().toLowerCase();
   if (!n) return false;
-  return /\bniska\b|plk|gazo|tiakola|sdm/.test(n);
+  return /\bniska\b|plk|gazo|tiakola|sdm|damso|jul\b|sch\b|freeze|kerchak/.test(n);
+}
+
+function isFastFlowDeliveryStyle(deliveryStyle) {
+  const s = String(deliveryStyle || "").trim().toLowerCase();
+  return s === "rap" || s === "hype";
+}
+
+function isPersonalCloneGenerationContext({
+  generationMode,
+  cloneSourceType,
+  hasInstantImport,
+} = {}) {
+  return (
+    generationMode === "B" ||
+    generationMode === "C" ||
+    hasInstantImport === true ||
+    cloneSourceType === "import" ||
+    cloneSourceType === "record"
+  );
 }
 
 function shouldUseDeepChestClone({
@@ -70,15 +89,25 @@ function shouldUseIncisiveClone({
   voiceName,
   deliveryStyle,
 } = {}) {
+  if (referenceWavBuffer && estimateDeepChestFromWav(referenceWavBuffer)) {
+    return false;
+  }
+  if (voiceNameHintsIncisive(voiceName)) return true;
+
+  const personal = isPersonalCloneGenerationContext({
+    generationMode,
+    cloneSourceType,
+    hasInstantImport,
+  });
+  if (personal && isFastFlowDeliveryStyle(deliveryStyle)) return true;
+
   const modeC =
     generationMode === "C" || hasInstantImport || cloneSourceType === "import";
-  if (!modeC) return false;
-  if (referenceWavBuffer && estimateDeepChestFromWav(referenceWavBuffer)) return false;
-  if (voiceNameHintsIncisive(voiceName)) return true;
-  if (deliveryStyle === "rap" && referenceWavBuffer && estimateIncisivePunchFromWav(referenceWavBuffer)) {
+  if (!modeC && generationMode !== "B") return false;
+
+  if (referenceWavBuffer && estimateIncisivePunchFromWav(referenceWavBuffer)) {
     return true;
   }
-  if (referenceWavBuffer && estimateIncisivePunchFromWav(referenceWavBuffer)) return true;
   return false;
 }
 
@@ -87,6 +116,8 @@ module.exports = {
   estimateDeepChestFromWav,
   estimateIncisivePunchFromWav,
   voiceNameHintsIncisive,
+  isFastFlowDeliveryStyle,
+  isPersonalCloneGenerationContext,
   shouldUseDeepChestClone,
   shouldUseIncisiveClone,
 };

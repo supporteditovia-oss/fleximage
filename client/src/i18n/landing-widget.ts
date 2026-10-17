@@ -132,6 +132,13 @@ export const landingWidgetResources = {
       change: "Changer",
       importHelp:
         "MP3, WAV, M4A ou MP4 · max {{max}} s · glisse les bandes blanches si c'est plus long.",
+      importGuidelinesTitle: "Import vidéo ou audio (Mode C)",
+      importGuidelineFidelity:
+        "Pour une fidélité optimale (voix, grain, intonation) : privilégiez un extrait clair d'au moins {{sec}} secondes.",
+      importGuidelineMusic:
+        "Évitez les fonds musicaux puissants ou les voix superposées.",
+      importShortWarn:
+        "Extrait très court : le clonage sera plus fidèle avec une source de 10s+.",
       rapperNamesHint:
         "Prénoms et noms de rappeurs : écris « Kaaris », « Damso », etc. — la prononciation est corrigée automatiquement.",
       previewAfterGenerate: "Aperçu après génération",
@@ -294,6 +301,12 @@ export const landingWidgetResources = {
       change: "Change",
       importHelp:
         "MP3, WAV, M4A or MP4 · max {{max}} s · drag the white handles if it's longer.",
+      importGuidelinesTitle: "Video or audio import (Mode C)",
+      importGuidelineFidelity:
+        "For best fidelity (voice, texture, intonation): use a clear clip of at least {{sec}} seconds.",
+      importGuidelineMusic: "Avoid loud backing music or overlapping voices.",
+      importShortWarn:
+        "Very short clip: cloning works best with a 10s+ source.",
       rapperNamesHint:
         "Rapper names: write « Kaaris », « Damso », etc. — pronunciation is corrected automatically.",
       previewAfterGenerate: "Preview after generation",
@@ -455,6 +468,13 @@ export const landingWidgetResources = {
       change: "Cambiar",
       importHelp:
         "MP3, WAV, M4A o MP4 · máx. {{max}} s · arrastra las bandas blancas si es más largo.",
+      importGuidelinesTitle: "Importar vídeo o audio (Modo C)",
+      importGuidelineFidelity:
+        "Para máxima fidelidad (voz, textura, entonación): usa un clip claro de al menos {{sec}} segundos.",
+      importGuidelineMusic:
+        "Evita música de fondo muy fuerte o voces superpuestas.",
+      importShortWarn:
+        "Clip muy corto: el clonado será más fiel con una fuente de 10s+.",
       rapperNamesHint:
         "Nombres de raperos: escribe « Kaaris », « Damso », etc. — la pronunciación se corrige automáticamente.",
       previewAfterGenerate: "Vista previa tras generar",

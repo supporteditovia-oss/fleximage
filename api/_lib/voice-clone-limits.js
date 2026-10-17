@@ -4,6 +4,8 @@ const VOICE_CLONE_MIN_SAMPLE_SEC = 15;
 const VOICE_CLONE_IDEAL_MAX_SEC = 20;
 const VOICE_CLONE_MAX_RECORD_SEC = VOICE_CLONE_IDEAL_MAX_SEC;
 const VOICE_CLONE_MAX_IMPORT_SEC = 25;
+const VOICE_CLONE_IMPORT_SHORT_WARN_SEC = 4;
+const VOICE_CLONE_IMPORT_IDEAL_HINT_SEC = 10;
 const DURATION_TOLERANCE_SEC = 0.5;
 
 function formatVoiceCloneDurationLabel(durationSec) {
@@ -53,14 +55,35 @@ function isVoiceCloneSampleLongEnough(
   );
 }
 
+function shouldWarnVoiceImportSampleShort(
+  durationSec,
+  thresholdSec = VOICE_CLONE_IMPORT_SHORT_WARN_SEC,
+) {
+  return (
+    Number.isFinite(durationSec) &&
+    durationSec > 0 &&
+    durationSec < thresholdSec
+  );
+}
+
+function formatVoiceImportShortSampleWarning(
+  idealSec = VOICE_CLONE_IMPORT_IDEAL_HINT_SEC,
+) {
+  return `Extrait très court : le clonage sera plus fidèle avec une source de ${idealSec}s+.`;
+}
+
 module.exports = {
   VOICE_CLONE_MIN_SAMPLE_SEC,
   VOICE_CLONE_IDEAL_MAX_SEC,
   VOICE_CLONE_MAX_RECORD_SEC,
   VOICE_CLONE_MAX_IMPORT_SEC,
+  VOICE_CLONE_IMPORT_SHORT_WARN_SEC,
+  VOICE_CLONE_IMPORT_IDEAL_HINT_SEC,
   formatVoiceCloneDurationLabel,
   formatVoiceCloneSampleTooShortMessage,
   resolveVoiceCloneMinSampleSec,
   resolveEffectiveVoiceCloneSampleSec,
   isVoiceCloneSampleLongEnough,
+  shouldWarnVoiceImportSampleShort,
+  formatVoiceImportShortSampleWarning,
 };

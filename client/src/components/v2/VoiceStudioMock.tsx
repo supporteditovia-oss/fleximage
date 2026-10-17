@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Check,
   CloudUpload,
+  Info,
   Mic,
   Pause,
   Play,
@@ -61,6 +62,9 @@ import {
   VOICE_CLONE_MIN_SAMPLE_SEC,
   VOICE_CLONE_MAX_IMPORT_SEC,
   VOICE_CLONE_MAX_RECORD_SEC,
+  VOICE_CLONE_IMPORT_IDEAL_HINT_SEC,
+  shouldWarnVoiceImportSampleShort,
+  formatVoiceImportShortSampleWarning,
 } from "@shared/voice-clone-limits";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { startLandingGuestFunnel } from "@/lib/landing-funnel";
@@ -293,6 +297,32 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   );
 
   const hasPendingCapture = clipAcceptable && voiceName.trim().length >= 2;
+
+  const importSampleDurationSec = useMemo(() => {
+    if (captureMode !== "import") return 0;
+    if (voiceClip?.source === "import" && voiceClip.durationSec > 0) {
+      return voiceClip.durationSec;
+    }
+    if (importTotalSec > 0) {
+      if (needsTrim && trimEndSec > trimStartSec) {
+        return trimEndSec - trimStartSec;
+      }
+      return importTotalSec;
+    }
+    return 0;
+  }, [
+    captureMode,
+    voiceClip,
+    importTotalSec,
+    needsTrim,
+    trimStartSec,
+    trimEndSec,
+  ]);
+
+  const importShortSampleWarning =
+    captureMode === "import" &&
+    importSampleDurationSec > 0 &&
+    shouldWarnVoiceImportSampleShort(importSampleDurationSec);
 
   const generateBlockReason = (() => {
     if (isGenerating) return null;
@@ -1522,6 +1552,29 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
             </div>
           ) : (
             <div className="vs-capture">
+              <div className="vs-import-guidelines" role="note">
+                <Info className="vs-import-guidelines__icon h-4 w-4 shrink-0" aria-hidden />
+                <div className="vs-import-guidelines__body">
+                  <p className="vs-import-guidelines__title">
+                    {vsg("importGuidelinesTitle", "Import vidéo ou audio (Mode C)")}
+                  </p>
+                  <ul className="vs-import-guidelines__list">
+                    <li>
+                      {vsg(
+                        "importGuidelineFidelity",
+                        `Pour une fidélité optimale (voix, grain, intonation) : privilégiez un extrait clair d'au moins ${VOICE_CLONE_IMPORT_IDEAL_HINT_SEC} secondes.`,
+                        { sec: VOICE_CLONE_IMPORT_IDEAL_HINT_SEC },
+                      )}
+                    </li>
+                    <li>
+                      {vsg(
+                        "importGuidelineMusic",
+                        "Évitez les fonds musicaux puissants ou les voix superposées.",
+                      )}
+                    </li>
+                  </ul>
+                </div>
+              </div>
               <input
                 ref={fileRef}
                 id={fileInputId}
@@ -1584,6 +1637,14 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
                   ) : null}
                 </>
               )}
+              {importShortSampleWarning ? (
+                <p className="vs-import-warn" role="status">
+                  {vsg(
+                    "importShortWarn",
+                    formatVoiceImportShortSampleWarning(),
+                  )}
+                </p>
+              ) : null}
               <p className="vs-help">
                 {vsg(
                   "importHelp",

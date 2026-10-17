@@ -1116,6 +1116,58 @@ html.luxeflexia-create-page::before {
   gap: 0.55rem;
 }
 
+.vs-import-guidelines {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  background: linear-gradient(
+    135deg,
+    rgba(201, 162, 39, 0.07) 0%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
+  color: var(--lx-ink);
+}
+
+.vs-import-guidelines__icon {
+  margin-top: 0.1rem;
+  color: rgba(201, 162, 39, 0.95);
+}
+
+.vs-import-guidelines__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--lx-muted);
+}
+
+.vs-import-guidelines__list {
+  margin: 0;
+  padding-left: 1.05rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--lx-ink);
+}
+
+.vs-import-guidelines__list li + li {
+  margin-top: 0.25rem;
+}
+
+.vs-import-warn {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(180, 120, 20, 0.35);
+  background: rgba(255, 193, 70, 0.12);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #6b4a0a;
+}
+
 .vs-capture__action {
   display: inline-flex;
   width: 100%;

@@ -25,3 +25,30 @@ test("Niska (nom) → profil incisif Mode C", () => {
     true,
   );
 });
+
+test("flux rap — incisif pour tout clone perso (Mode B ou C)", () => {
+  assert.equal(
+    shouldUseIncisiveClone({
+      generationMode: "B",
+      cloneSourceType: "record",
+      deliveryStyle: "rap",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseIncisiveClone({
+      generationMode: "C",
+      cloneSourceType: "import",
+      deliveryStyle: "hype",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseIncisiveClone({
+      generationMode: "B",
+      cloneSourceType: "record",
+      deliveryStyle: "casual",
+    }),
+    false,
+  );
+});

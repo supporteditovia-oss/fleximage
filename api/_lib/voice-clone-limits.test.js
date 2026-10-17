@@ -6,6 +6,8 @@ const {
   formatVoiceCloneSampleTooShortMessage,
   resolveVoiceCloneMinSampleSec,
   resolveEffectiveVoiceCloneSampleSec,
+  shouldWarnVoiceImportSampleShort,
+  formatVoiceImportShortSampleWarning,
 } = require("./voice-clone-limits");
 
 describe("voice-clone-limits", () => {
@@ -35,5 +37,11 @@ describe("voice-clone-limits", () => {
   it("resolveEffective prefers client chrono when WAV measure is too low", () => {
     assert.equal(resolveEffectiveVoiceCloneSampleSec(8, 18.5), 18.5);
     assert.equal(resolveEffectiveVoiceCloneSampleSec(18, 18.5), 18.5);
+  });
+
+  it("shouldWarnVoiceImportSampleShort — alerte non bloquante < 4 s", () => {
+    assert.equal(shouldWarnVoiceImportSampleShort(3.2), true);
+    assert.equal(shouldWarnVoiceImportSampleShort(4), false);
+    assert.match(formatVoiceImportShortSampleWarning(), /10s\+/);
   });
 });

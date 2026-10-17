@@ -12,6 +12,12 @@ export const VOICE_CLONE_MAX_RECORD_SEC = VOICE_CLONE_IDEAL_MAX_SEC;
 /** Plafond import / trim (MP3, MP4…). */
 export const VOICE_CLONE_MAX_IMPORT_SEC = 25;
 
+/** Mode C — avertissement UX non bloquant (extrait très court). */
+export const VOICE_CLONE_IMPORT_SHORT_WARN_SEC = 4;
+
+/** Conseil fidélité Mode C (copy UI). */
+export const VOICE_CLONE_IMPORT_IDEAL_HINT_SEC = 10;
+
 const DURATION_TOLERANCE_SEC = 0.5;
 
 export function formatVoiceCloneDurationLabel(durationSec: number): string {
@@ -90,4 +96,21 @@ export function isVoiceCloneSampleLongEnough(
     Number.isFinite(durationSec) &&
     durationSec >= minSec - DURATION_TOLERANCE_SEC
   );
+}
+
+export function shouldWarnVoiceImportSampleShort(
+  durationSec: number,
+  thresholdSec: number = VOICE_CLONE_IMPORT_SHORT_WARN_SEC,
+): boolean {
+  return (
+    Number.isFinite(durationSec) &&
+    durationSec > 0 &&
+    durationSec < thresholdSec
+  );
+}
+
+export function formatVoiceImportShortSampleWarning(
+  idealSec: number = VOICE_CLONE_IMPORT_IDEAL_HINT_SEC,
+): string {
+  return `Extrait très court : le clonage sera plus fidèle avec une source de ${idealSec}s+.`;
 }
