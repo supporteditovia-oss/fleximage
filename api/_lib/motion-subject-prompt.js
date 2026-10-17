@@ -88,7 +88,9 @@ function heuristicMotionSubjectLock(userPrompt = "") {
   return (
     `FULL BODY REPLACEMENT LOCK: ${desc}. ` +
     "Transfer ONLY dance skeleton/pose timing from the video. " +
-    "FORBIDDEN: face-swap, keeping the original dancer outfit, ponytail, body shape or skin from the video clip."
+    "The original dancer must be fully erased — no ghost body parts. " +
+    "Stay at the same place and depth in the room as the original performer (same screen position, never move toward the camera). " +
+    "FORBIDDEN: face-swap, keeping the original dancer outfit, ponytail, body shape or skin from the video clip; any background blur."
   );
 }
 

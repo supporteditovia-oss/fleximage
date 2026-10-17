@@ -67,6 +67,7 @@ async function relaunchKlingV2VFromLarp(
     mode: "720p",
     userId,
     motionReferenceSource,
+    motionPollRelaunch: true,
   });
 
   const { data: refreshed } = await supabase
