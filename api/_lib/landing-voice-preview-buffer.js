@@ -3,7 +3,10 @@ const path = require("path");
 const { synthesizeSpeech } = require("./fish-audio");
 const { uploadToR2, getR2Config } = require("./r2");
 const { humanizeVoiceScript } = require("./voice-humanize");
-const { resolveCatalogPreviewTtsSpeed } = require("./voice-catalog");
+const {
+  resolveCatalogPreviewTtsSpeed,
+  resolveEffectiveCatalogFishId,
+} = require("./voice-catalog");
 const {
   buildLandingVoiceScript,
   landingVoiceR2Key,
@@ -61,16 +64,16 @@ async function getLandingDemoBuffer(entry, localeLike) {
 
   const script = buildLandingVoiceScript(entry, locale);
   const { fishText } = humanizeVoiceScript(script, { voiceName: entry.name });
-  const fishId = String(entry.fishId || "").trim().toLowerCase();
-  const speed =
-    resolveCatalogTtsSpeed(fishId) ??
-    (typeof entry.rate === "number" ? entry.rate : undefined);
+  const fishId = resolveEffectiveCatalogFishId(entry);
+  const speed = resolveCatalogPreviewTtsSpeed(fishId);
 
   const buffer = await synthesizeSpeech({
     text: fishText,
     referenceId: fishId,
     format: "mp3",
-    speed,
+    speed: speed ?? undefined,
+    cloneFidelity: false,
+    catalogFastFlow: false,
   });
 
   if (!buffer || buffer.length < 512) {

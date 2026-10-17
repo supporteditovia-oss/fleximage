@@ -27,3 +27,13 @@ test("buildTtsOptions catalogue fast flow — pas de plafond 1.0 ni chunks liés
   assert.equal(opts.condition_on_previous_chunks, false);
   assert.equal(opts.prosody.speed, 1.12);
 });
+
+test("buildTtsOptions catalogue studio — débit catalogue sans fast flow", () => {
+  const opts = buildTtsOptions("Salut c'est PLK", {
+    cloneFidelity: false,
+    catalogFastFlow: false,
+    speed: 0.96,
+  });
+  assert.equal(opts.prosody.speed, 0.96);
+  assert.equal(opts.condition_on_previous_chunks, false);
+});

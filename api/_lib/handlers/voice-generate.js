@@ -17,8 +17,8 @@ const {
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
 const {
-  resolveCatalogTtsSpeed,
-  resolveCatalogDeliveryProfile,
+  resolveCatalogStudioSynth,
+  resolveCatalogGenerationTtsSpeed,
 } = require("../voice-catalog");
 const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
 const { applyVoiceCloneWarmthPostprocess } = require("../voice-clone-warmth-postprocess");
@@ -233,16 +233,20 @@ module.exports = async function voiceGenerateHandler(req, res) {
       }
     }
 
-    const catalogDeliveryHint =
+    const catalogStudioHint =
       !voiceCloneId && fishReferenceId
-        ? resolveCatalogDeliveryProfile(fishReferenceId)
-        : { fastFlow: false };
+        ? resolveCatalogStudioSynth(fishReferenceId)
+        : null;
+
+    if (!voiceName && catalogStudioHint?.voiceName) {
+      voiceName = catalogStudioHint.voiceName;
+    }
 
     const script = humanizeVoiceScript(text, {
       enabled: humanizeEnabled,
       style: deliveryStyle,
       voiceName,
-      fastFlow: catalogDeliveryHint.fastFlow,
+      fastFlow: false,
     });
 
     const resolvedFishId = await ensureFishReferenceId({
@@ -315,14 +319,14 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     const ttsText = script.fishText;
-    const catalogDelivery = resolveCatalogDeliveryProfile(
-      resolvedFishId || fishReferenceId,
-    );
-    const catalogTtsSpeed =
-      catalogDelivery.ttsSpeed ??
-      resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
     const isCatalogPresetVoice = voiceMode.isCatalogPresetVoice;
+    const catalogStudio = isCatalogPresetVoice
+      ? resolveCatalogStudioSynth(resolvedFishId || fishReferenceId)
+      : null;
+    const catalogTtsSpeed = isCatalogPresetVoice
+      ? catalogStudio?.speed
+      : resolveCatalogGenerationTtsSpeed(resolvedFishId || fishReferenceId);
     /** Mode A = catalogue studio (Fish catalogue). B/C = clone inline avec profil fidélité. */
     const cloneFidelity = !isCatalogPresetVoice;
 
@@ -366,13 +370,13 @@ module.exports = async function voiceGenerateHandler(req, res) {
       });
     }
 
-    if (isCatalogPresetVoice && resolvedFishId) {
+    if (isCatalogPresetVoice && catalogStudio?.referenceId) {
       audioBuffer = await synthesizeSpeech({
         text: ttsText,
-        referenceId: resolvedFishId,
-        speed: catalogTtsSpeed,
+        referenceId: catalogStudio.referenceId,
+        speed: catalogStudio.speed,
         cloneFidelity: false,
-        catalogFastFlow: catalogDelivery.fastFlow,
+        catalogFastFlow: false,
       });
     } else if (cloneFidelity) {
       try {

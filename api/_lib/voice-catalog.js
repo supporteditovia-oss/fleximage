@@ -31,9 +31,30 @@ function lookupCatalogEntryByFishId(fishReferenceId) {
   if (!id) return null;
   return (
     catalog.entries.find(
+      (entry) => resolveEffectiveCatalogFishId(entry).toLowerCase() === id,
+    ) ??
+    catalog.entries.find(
       (entry) => String(entry.fishId || "").trim().toLowerCase() === id,
-    ) ?? null
+    ) ??
+    null
   );
+}
+
+/** Remplacement fondateur (ex. Niska) via env sans redeploy JSON. */
+function resolveEffectiveCatalogFishId(entry) {
+  const base = String(entry?.fishId || "").trim().toLowerCase();
+  if (!base) return base;
+  if (entry?.slug === "niska") {
+    const override = String(process.env.VOICE_CATALOG_NISKA_FISH_ID || "").trim();
+    if (isValidFishReferenceId(override)) return override.toLowerCase();
+  }
+  return base;
+}
+
+function lookupCatalogEntryBySlug(slug) {
+  const key = String(slug || "").trim().toLowerCase();
+  if (!key) return null;
+  return catalog.entries.find((entry) => entry.slug === key) ?? null;
 }
 
 /**
@@ -100,9 +121,23 @@ function resolveCatalogDeliveryProfile(fishReferenceId) {
     return { ttsSpeed: null, fastFlow: false, entry: null };
   }
   return {
-    ttsSpeed: resolveCatalogTtsSpeed(fishReferenceId),
+    ttsSpeed: resolveCatalogGenerationTtsSpeed(fishReferenceId),
     fastFlow: isCatalogFastDelivery(entry),
     entry,
+  };
+}
+
+/** Mode A — même réglage que l’aperçu catalogue (▶ = génération). */
+function resolveCatalogStudioSynth(fishReferenceId) {
+  const entry = lookupCatalogEntryByFishId(fishReferenceId);
+  const fishId = entry ? resolveEffectiveCatalogFishId(entry) : String(fishReferenceId || "").toLowerCase();
+  return {
+    referenceId: fishId,
+    speed: resolveCatalogPreviewTtsSpeed(fishReferenceId),
+    catalogFastFlow: false,
+    cloneFidelity: false,
+    voiceName: entry?.name ?? null,
+    spokenName: entry?.spokenName ?? null,
   };
 }
 
@@ -117,6 +152,11 @@ module.exports = {
   unifiedPreviewCacheKey,
   lookupCatalogEntryByFishId,
   resolveCatalogTtsSpeed,
+  resolveCatalogPreviewTtsSpeed,
+  resolveCatalogGenerationTtsSpeed,
   isCatalogFastDelivery,
   resolveCatalogDeliveryProfile,
+  resolveCatalogStudioSynth,
+  resolveEffectiveCatalogFishId,
+  lookupCatalogEntryBySlug,
 };

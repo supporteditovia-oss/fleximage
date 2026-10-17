@@ -43,6 +43,8 @@ export type MockVoiceProfile = {
   sampleUrl?: string;
   /** Modele Fish Audio a reutiliser pour generer avec cette voix. */
   fishReferenceId?: string;
+  /** Prononciation TTS (ex. Jul → Joul). */
+  spokenName?: string;
 };
 
 export type MockVoiceGeneration = {
@@ -162,6 +164,10 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
     pitch: seed.pitch,
     rate: seed.rate,
     fishReferenceId: seed.fishId,
+    spokenName:
+      "spokenName" in seed && typeof seed.spokenName === "string"
+        ? seed.spokenName
+        : undefined,
   }),
 );
 

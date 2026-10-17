@@ -4,6 +4,8 @@
  * Pas de tirets : ils forcent une lecture syllabe par syllabe (effet robot).
  */
 
+const catalog = require("../../shared/voice-catalog.json");
+
 /** @type {{ match: RegExp; speak: string }[]} */
 const PRONUNCIATION_ENTRIES = [
   { match: /\bKaaris\b/giu, speak: "Karisse" },
@@ -26,7 +28,7 @@ const PRONUNCIATION_ENTRIES = [
   { match: /\bBadBad\b/giu, speak: "Bad Bad" },
   { match: /\bMaître Gims\b/giu, speak: "Maître Djims" },
   { match: /\bGims\b/giu, speak: "Djims" },
-  { match: /\bJul\b/g, speak: "Jul" },
+  { match: /\bJul\b/g, speak: "JOUL" },
   { match: /\bDadju\b/giu, speak: "Dadju" },
   { match: /\bAya Nakamura\b/giu, speak: "Aya Nakamoura" },
   { match: /\bMbappé\b/giu, speak: "Mbappé" },
@@ -55,6 +57,14 @@ function applyFrenchPronunciationHints(text, options = {}) {
 
   const voiceName = typeof options.voiceName === "string" ? options.voiceName.trim() : "";
   if (voiceName.length >= 2) {
+    const catalogEntry = catalog.entries.find(
+      (e) => String(e.name || "").trim().toLowerCase() === voiceName.toLowerCase(),
+    );
+    if (catalogEntry?.spokenName) {
+      const generic = new RegExp(`\\b${escapeRegExp(voiceName)}\\b`, "giu");
+      out = out.replace(generic, catalogEntry.spokenName);
+    }
+
     const voiceEntry = PRONUNCIATION_ENTRIES.find((entry) =>
       entry.match.test(voiceName),
     );
