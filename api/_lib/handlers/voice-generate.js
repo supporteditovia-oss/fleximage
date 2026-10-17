@@ -20,11 +20,12 @@ const {
   resolveCatalogStudioSynth,
   resolveCatalogGenerationTtsSpeed,
 } = require("../voice-catalog");
-const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
+const { prepareVoiceCloneInlineReferenceBuffer } = require("../voice-sample-prepare");
 const { applyVoiceCloneWarmthPostprocess } = require("../voice-clone-warmth-postprocess");
 const {
   resolveVoiceGenerationMode,
   shouldApplyCloneWarmthPostprocess,
+  shouldUseInlineIdentityClone,
 } = require("../voice-generation-modes");
 const { shouldUseDeepChestClone } = require("../voice-deep-chest");
 
@@ -75,7 +76,7 @@ async function ensureFishReferenceId({ fishReferenceId, referenceAudio, label })
     );
   }
 
-  const prepared = await prepareVoiceCloneSampleBuffer(referenceAudio).catch(
+  const prepared = await prepareVoiceCloneInlineReferenceBuffer(referenceAudio).catch(
     () => referenceAudio,
   );
 
@@ -277,14 +278,26 @@ module.exports = async function voiceGenerateHandler(req, res) {
           ? fallbackAudio
           : null;
 
-    const deepChestClone = shouldUseDeepChestClone({
-      generationMode: voiceMode.mode,
-      cloneSourceType:
-        voiceContext.cloneSourceType ||
-        (typeof body.sourceType === "string" ? body.sourceType.trim() : null),
-      hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
-      referenceWavBuffer: referenceAudio,
-    });
+    const cloneSourceType =
+      voiceContext.cloneSourceType ||
+      (typeof body.sourceType === "string" ? body.sourceType.trim() : null);
+
+    const cloneFidelity = !voiceMode.isCatalogPresetVoice;
+
+    const deepChestClone =
+      cloneFidelity &&
+      shouldUseDeepChestClone({
+        referenceWavBuffer: referenceAudio,
+      });
+
+    const inlineIdentityClone =
+      cloneFidelity &&
+      shouldUseInlineIdentityClone({
+        generationMode: voiceMode.mode,
+        cloneSourceType,
+        hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
+      }) &&
+      !deepChestClone;
 
     const generationPayload = {
       user_id: userId,
@@ -302,6 +315,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         voice_name: voiceName,
         voice_pipeline_mode: voiceMode.mode,
         deep_chest_clone: deepChestClone,
+        inline_identity_clone: inlineIdentityClone,
       },
     };
 
@@ -345,16 +359,19 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const catalogTtsSpeed = isCatalogPresetVoice
       ? catalogStudio?.speed
       : resolveCatalogGenerationTtsSpeed(resolvedFishId || fishReferenceId);
-    /** Mode A = catalogue studio (Fish catalogue). B/C = clone inline avec profil fidélité. */
-    const cloneFidelity = !isCatalogPresetVoice;
 
     let inlineReferenceAudio = null;
-    if (referenceAudio && referenceAudio.length > 1024) {
-      if (instantAudio && instantAudio.length > 1024) {
-        inlineReferenceAudio = await prepareVoiceCloneSampleBuffer(instantAudio).catch(
-          () => instantAudio,
+    if (referenceAudio && referenceAudio.length > 1024 && cloneFidelity) {
+      const useLightInlinePrep =
+        inlineIdentityClone ||
+        deepChestClone ||
+        Boolean(instantAudio && instantAudio.length > 1024);
+      if (useLightInlinePrep) {
+        const raw = instantAudio && instantAudio.length > 1024 ? instantAudio : referenceAudio;
+        inlineReferenceAudio = await prepareVoiceCloneInlineReferenceBuffer(raw).catch(
+          () => raw,
         );
-      } else if (!isCatalogPresetVoice) {
+      } else {
         inlineReferenceAudio = referenceAudio;
       }
     }
@@ -373,6 +390,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         speed: catalogTtsSpeed,
         cloneFidelity,
         deepChestClone,
+        inlineIdentityClone,
       });
     }
 
@@ -387,6 +405,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         speed: catalogTtsSpeed,
         cloneFidelity,
         deepChestClone: cloneFidelity ? deepChestClone : false,
+        inlineIdentityClone: cloneFidelity ? inlineIdentityClone : false,
       });
     }
 
@@ -433,6 +452,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
     if (shouldApplyCloneWarmthPostprocess(voiceMode)) {
       audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer, {
         deepChest: deepChestClone,
+        identityInline: inlineIdentityClone,
       });
     }
 

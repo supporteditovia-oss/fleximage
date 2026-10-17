@@ -30,7 +30,20 @@ function shouldApplyCloneWarmthPostprocess({ isCatalogPresetVoice }) {
   return !isCatalogPresetVoice;
 }
 
+/** Mode C / import vidéo — profil Fish inline orienté identité timbrale. */
+function shouldUseInlineIdentityClone({
+  generationMode,
+  cloneSourceType,
+  hasInstantImport,
+} = {}) {
+  if (generationMode === "C") return true;
+  if (hasInstantImport) return true;
+  if (cloneSourceType === "import") return true;
+  return false;
+}
+
 module.exports = {
   resolveVoiceGenerationMode,
   shouldApplyCloneWarmthPostprocess,
+  shouldUseInlineIdentityClone,
 };

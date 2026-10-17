@@ -15,12 +15,25 @@ test("buildTtsOptions deep chest clone — moins de lissage", () => {
 
 test("buildTtsOptions clone fidelity — paramètres validés", () => {
   const opts = buildTtsOptions("Bonjour test clone", { cloneFidelity: true, speed: 1.1 });
-  assert.equal(opts.temperature, 0.42);
-  assert.equal(opts.top_p, 0.68);
-  assert.equal(opts.repetition_penalty, 1.01);
+  assert.equal(opts.temperature, 0.46);
+  assert.equal(opts.top_p, 0.72);
+  assert.equal(opts.repetition_penalty, 1.02);
   assert.equal(opts.mp3_bitrate, 256);
   assert.equal(opts.condition_on_previous_chunks, false);
   assert.equal(opts.prosody.speed, 0.98);
+});
+
+test("buildTtsOptions inline identity Mode C — timbre marqué", () => {
+  const opts = buildTtsOptions("Interview Jul", {
+    cloneFidelity: true,
+    inlineIdentityClone: true,
+    speed: 1.05,
+  });
+  assert.equal(opts.temperature, 0.54);
+  assert.equal(opts.top_p, 0.76);
+  assert.equal(opts.repetition_penalty, 1.04);
+  assert.equal(opts.prosody.speed, 0.99);
+  assert.equal(opts.min_chunk_length, 120);
 });
 
 test("buildTtsOptions catalogue — débit catalogue sans profil clone", () => {

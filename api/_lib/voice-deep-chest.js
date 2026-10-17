@@ -46,14 +46,7 @@ function estimateDeepChestFromWav(wavBuffer) {
   return rms >= 650 && zcr <= 0.095;
 }
 
-function shouldUseDeepChestClone({
-  generationMode,
-  cloneSourceType,
-  hasInstantImport,
-  referenceWavBuffer,
-} = {}) {
-  if (generationMode === "C" || hasInstantImport) return true;
-  if (cloneSourceType === "import") return true;
+function shouldUseDeepChestClone({ referenceWavBuffer } = {}) {
   if (referenceWavBuffer && estimateDeepChestFromWav(referenceWavBuffer)) return true;
   return false;
 }

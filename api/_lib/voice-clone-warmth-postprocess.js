@@ -33,6 +33,12 @@ const VOICE_CLONE_WARMTH_DEEP_AF =
   "equalizer=f=4500:width_type=o:width=2:g=-1.8," +
   "acompressor=threshold=-22dB:ratio=2:attack=14:release=160:makeup=1.35";
 
+/** Mode C identité (Jul…) — correction légère sans aplatir le timbre. */
+const VOICE_CLONE_WARMTH_IDENTITY_AF =
+  "equalizer=f=2800:width_type=o:width=2:g=-1.4," +
+  "equalizer=f=4800:width_type=o:width=2:g=-1.6," +
+  "acompressor=threshold=-24dB:ratio=1.6:attack=18:release=170:makeup=0.8";
+
 async function applyVoiceCloneWarmthPostprocess(inputBuffer, options = {}) {
   if (!inputBuffer?.length) {
     throw Object.assign(new Error("Audio vide"), {
@@ -46,7 +52,11 @@ async function applyVoiceCloneWarmthPostprocess(inputBuffer, options = {}) {
   }
 
   const filter =
-    options.deepChest === true ? VOICE_CLONE_WARMTH_DEEP_AF : VOICE_CLONE_WARMTH_AF;
+    options.deepChest === true
+      ? VOICE_CLONE_WARMTH_DEEP_AF
+      : options.identityInline === true
+        ? VOICE_CLONE_WARMTH_IDENTITY_AF
+        : VOICE_CLONE_WARMTH_AF;
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "voice-warmth-"));
   const inputPath = path.join(tmpDir, "in.mp3");
@@ -85,5 +95,6 @@ async function applyVoiceCloneWarmthPostprocess(inputBuffer, options = {}) {
 module.exports = {
   VOICE_CLONE_WARMTH_AF,
   VOICE_CLONE_WARMTH_DEEP_AF,
+  VOICE_CLONE_WARMTH_IDENTITY_AF,
   applyVoiceCloneWarmthPostprocess,
 };

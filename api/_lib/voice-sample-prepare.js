@@ -17,7 +17,7 @@ const execFileAsync = promisify(execFile);
  * Chaîne FFmpeg pour interviews / extraits bruts :
  * - coupe silence extrême, HP/LP, réduction bruit légère, loudness cible, mono 44.1 kHz.
  */
-/** Mode C — interviews / vidéo : préserve les graves (HP 60 Hz), signal riche avant Fish. */
+/** Mode C — interviews bruitées : nettoyage plus poussé (modèle Fish / archive). */
 const VOICE_CLONE_AF =
   "silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB," +
   "areverse,silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB,areverse," +
@@ -27,11 +27,18 @@ const VOICE_CLONE_AF =
   "loudnorm=I=-16:TP=-1.5:LRA=10:print_format=none";
 
 /**
+ * Inline Fish (zero-shot) — préserve nasalité / timbre (Jul…) : pas de denoise ni compresseur agressif.
+ */
+const VOICE_CLONE_INLINE_AF =
+  "highpass=f=60,lowpass=f=14000," +
+  "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=none";
+
+/**
  * Prépare un échantillon clone (WAV ou autre audio) avant Fish / ASR.
  * @param {Buffer} inputBuffer
  * @returns {Promise<Buffer>}
  */
-async function prepareVoiceCloneSampleBuffer(inputBuffer) {
+async function runFfmpegVoiceFilter(inputBuffer, audioFilter) {
   if (!inputBuffer?.length) {
     throw Object.assign(new Error("Échantillon audio vide"), {
       status: 400,
@@ -63,7 +70,7 @@ async function prepareVoiceCloneSampleBuffer(inputBuffer) {
         "-acodec",
         "pcm_s16le",
         "-af",
-        VOICE_CLONE_AF,
+        audioFilter,
         outputPath,
       ],
       { timeout: 90_000 },
@@ -77,6 +84,21 @@ async function prepareVoiceCloneSampleBuffer(inputBuffer) {
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+async function prepareVoiceCloneInlineReferenceBuffer(inputBuffer) {
+  return runFfmpegVoiceFilter(inputBuffer, VOICE_CLONE_INLINE_AF);
+}
+
+async function prepareVoiceCloneSampleBuffer(inputBuffer) {
+  if (!inputBuffer?.length) {
+    throw Object.assign(new Error("Échantillon audio vide"), {
+      status: 400,
+      code: "empty_audio",
+    });
+  }
+
+  return runFfmpegVoiceFilter(inputBuffer, VOICE_CLONE_AF);
 }
 
 /**
@@ -138,12 +160,14 @@ async function prepareVoiceSampleForCloneSource(inputBuffer, sourceType = "impor
   if (sourceType === "catalog") {
     return inputBuffer;
   }
-  return prepareVoiceCloneSampleBuffer(inputBuffer);
+  return prepareVoiceCloneInlineReferenceBuffer(inputBuffer);
 }
 
 module.exports = {
   prepareVoiceCloneSampleBuffer,
+  prepareVoiceCloneInlineReferenceBuffer,
   normalizeVoiceRecordSampleBuffer,
   prepareVoiceSampleForCloneSource,
   VOICE_CLONE_AF,
+  VOICE_CLONE_INLINE_AF,
 };

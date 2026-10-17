@@ -4,6 +4,11 @@ const {
   clampTtsSpeed,
   resolveCatalogTtsSpeed,
 } = require("./voice-catalog");
+const { estimateWavDurationSec } = require("./wav-duration");
+const {
+  VOICE_CLONE_MIN_SAMPLE_SEC,
+  isVoiceCloneSampleLongEnough,
+} = require("./voice-clone-limits");
 
 const FISH_API_BASE = "https://api.fish.audio";
 
@@ -25,13 +30,13 @@ const FIDELITY_TTS = {
   features: [],
 };
 
-/** Clone personnel / inline — stabilité + grain chaud (spec validée). */
+/** Clone personnel (micro Mode B) — équilibre stabilité / grain. */
 const CLONE_FIDELITY_TTS = {
   latency: "normal",
   normalize: false,
-  temperature: 0.42,
-  top_p: 0.68,
-  repetition_penalty: 1.01,
+  temperature: 0.46,
+  top_p: 0.72,
+  repetition_penalty: 1.02,
   condition_on_previous_chunks: false,
   mp3_bitrate: 256,
   chunk_length: 300,
@@ -42,6 +47,21 @@ const CLONE_FIDELITY_TTS = {
     normalize_loudness: false,
   },
   features: [],
+};
+
+/** Mode C inline — interviews / timbre marqué (Jul…) : moins de lissage Fish. */
+const CLONE_INLINE_IDENTITY_TTS = {
+  ...CLONE_FIDELITY_TTS,
+  temperature: 0.54,
+  top_p: 0.76,
+  repetition_penalty: 1.04,
+  chunk_length: 320,
+  min_chunk_length: 120,
+  prosody: {
+    speed: 0.99,
+    volume: 0,
+    normalize_loudness: false,
+  },
 };
 
 /** Mode C inline — voix lourdes / interviews : moins de lissage Fish, coffre préservé. */
@@ -75,19 +95,42 @@ function buildTtsOptions(text, options = {}) {
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
   const deepChestClone = options.deepChestClone === true && cloneFidelity;
+  const inlineIdentityClone =
+    options.inlineIdentityClone === true && cloneFidelity && !deepChestClone;
   const catalogFastFlow = options.catalogFastFlow === true && !cloneFidelity;
 
   if (cloneFidelity) {
-    const base = deepChestClone ? CLONE_DEEP_CHEST_TTS : CLONE_FIDELITY_TTS;
-    const speedCap = deepChestClone ? 0.96 : 0.98;
+    const base = deepChestClone
+      ? CLONE_DEEP_CHEST_TTS
+      : inlineIdentityClone
+        ? CLONE_INLINE_IDENTITY_TTS
+        : CLONE_FIDELITY_TTS;
+    const speedCap = deepChestClone ? 0.96 : inlineIdentityClone ? 0.99 : 0.98;
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
         ? Math.min(clampTtsSpeed(speed), speedCap)
         : speedCap;
+    const chunkLength =
+      inlineIdentityClone && len <= 200
+        ? 320
+        : len <= 200
+          ? 300
+          : inlineIdentityClone
+            ? 300
+            : 280;
+    const minChunk =
+      inlineIdentityClone && len <= 200
+        ? 120
+        : len <= 200
+          ? 100
+          : inlineIdentityClone
+            ? 100
+            : 80;
+
     return {
       ...base,
-      chunk_length: len <= 200 ? 300 : 280,
-      min_chunk_length: len <= 200 ? 100 : 80,
+      chunk_length: chunkLength,
+      min_chunk_length: minChunk,
       condition_on_previous_chunks: false,
       prosody: {
         ...base.prosody,
@@ -363,6 +406,7 @@ async function synthesizeWithReferenceMsgpack({
   speed,
   cloneFidelity,
   deepChestClone,
+  inlineIdentityClone,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -379,6 +423,19 @@ async function synthesizeWithReferenceMsgpack({
     );
   }
 
+  const referenceDurationSec = estimateWavDurationSec(audioBuffer);
+  if (
+    referenceDurationSec > 0 &&
+    !isVoiceCloneSampleLongEnough(referenceDurationSec)
+  ) {
+    throw Object.assign(
+      new Error(
+        `Échantillon inline trop court (${Math.round(referenceDurationSec * 10) / 10} s) — minimum ${VOICE_CLONE_MIN_SAMPLE_SEC} s pour capturer le timbre.`,
+      ),
+      { status: 400, code: "inline_reference_too_short" },
+    );
+  }
+
   const payload = {
     text: trimmed.slice(0, 2000),
     references: [
@@ -388,7 +445,12 @@ async function synthesizeWithReferenceMsgpack({
       },
     ],
     format: "mp3",
-    ...buildTtsOptions(trimmed, { speed, cloneFidelity, deepChestClone }),
+    ...buildTtsOptions(trimmed, {
+      speed,
+      cloneFidelity,
+      deepChestClone,
+      inlineIdentityClone,
+    }),
   };
 
   const body = encode(payload);
@@ -425,6 +487,7 @@ async function synthesizeSpeech({
   cloneFidelity,
   catalogFastFlow,
   deepChestClone,
+  inlineIdentityClone,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -459,6 +522,7 @@ async function synthesizeSpeech({
         cloneFidelity,
         catalogFastFlow,
         deepChestClone,
+        inlineIdentityClone,
       }),
     }),
   });
@@ -482,6 +546,7 @@ module.exports = {
   transcribeAudio,
   buildTtsOptions,
   CLONE_FIDELITY_TTS,
+  CLONE_INLINE_IDENTITY_TTS,
   CLONE_DEEP_CHEST_TTS,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,
