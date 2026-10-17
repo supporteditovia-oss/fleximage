@@ -254,21 +254,9 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
     }
 
     const maxGap = getMaxAvGapSec();
-    if (gapBefore <= maxGap) {
-      return {
-        buffer: mp4Buffer,
-        skipped: false,
-        aligned: false,
-        durationsBefore: before,
-        durationsAfter: before,
-        gapBefore,
-        gapAfter: gapBefore,
-        method: null,
-      };
-    }
 
     let method = null;
-    if (audioSec + 0.02 < videoSec) {
+    if (Number.isFinite(audioSec) && Number.isFinite(videoSec) && audioSec + 0.02 < videoSec) {
       method = "pad_audio";
       const padDur = videoSec - audioSec;
       await runFfmpeg([
@@ -287,26 +275,29 @@ async function alignVideoAudioInMp4Buffer(mp4Buffer) {
         "+faststart",
         outPath,
       ]);
-    } else if (videoSec + 0.02 < audioSec) {
-      method = "trim_video";
-      await runFfmpeg([
-        "-y",
-        "-i",
-        inPath,
-        "-t",
-        String(audioSec),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-crf",
-        "20",
-        "-c:a",
-        "copy",
-        "-movflags",
-        "+faststart",
-        outPath,
-      ]);
+    } else if (audioExceedsVideoDuration(before, maxGap)) {
+      return {
+        buffer: mp4Buffer,
+        skipped: false,
+        aligned: false,
+        rejectRecommended: true,
+        durationsBefore: before,
+        durationsAfter: before,
+        gapBefore,
+        gapAfter: gapBefore,
+        method: null,
+      };
+    } else if (gapBefore <= maxGap) {
+      return {
+        buffer: mp4Buffer,
+        skipped: false,
+        aligned: false,
+        durationsBefore: before,
+        durationsAfter: before,
+        gapBefore,
+        gapAfter: gapBefore,
+        method: null,
+      };
     } else {
       return {
         buffer: mp4Buffer,
@@ -363,6 +354,23 @@ function passesAvDurationQa(gapSec) {
   return gapSec <= getMaxAvGapSec();
 }
 
+/** Échec QA uniquement si l’audio dépasse la vidéo (+ marge). Audio plus court = OK (silence en fin). */
+function audioExceedsVideoDuration(durations, marginSec) {
+  const margin =
+    typeof marginSec === "number" && Number.isFinite(marginSec)
+      ? marginSec
+      : getMaxAvGapSec();
+  const videoSec = Number(durations?.videoSec ?? durations?.formatSec);
+  const audioSec = Number(durations?.audioSec);
+  if (!Number.isFinite(videoSec) || videoSec <= 0) return false;
+  if (!Number.isFinite(audioSec) || audioSec < 0) return false;
+  return audioSec > videoSec + margin;
+}
+
+function shouldRejectI2VAvDuration(durations) {
+  return audioExceedsVideoDuration(durations);
+}
+
 async function downloadVideoBuffer(url, timeoutMs = 45_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -399,8 +407,18 @@ async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
       maxGapSec: getMaxAvGapSec(),
     };
 
-    if (!passesAvDurationQa(gapAfter)) {
-      return { ok: false, url: null, qa, failReason: "av_duration_gap_exceeded" };
+    const durationsAfter =
+      aligned.durationsAfter || aligned.durationsBefore || null;
+    if (
+      aligned.rejectRecommended === true ||
+      shouldRejectI2VAvDuration(durationsAfter)
+    ) {
+      return {
+        ok: false,
+        url: null,
+        qa,
+        failReason: "audio_exceeds_video",
+      };
     }
 
     const outBuffer =
@@ -435,5 +453,7 @@ module.exports = {
   isI2VVoiceTrackRequested,
   shouldRunI2VAvDurationQa,
   passesAvDurationQa,
+  audioExceedsVideoDuration,
+  shouldRejectI2VAvDuration,
   downloadAlignAndStoreI2VVideo,
 };

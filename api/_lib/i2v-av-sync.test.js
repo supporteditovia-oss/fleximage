@@ -4,6 +4,8 @@ const {
   I2VVoiceDurationExceedsTargetError,
   effectiveAvGapSec,
   passesAvDurationQa,
+  audioExceedsVideoDuration,
+  shouldRejectI2VAvDuration,
   getMaxAvGapSec,
   shouldRunI2VAvDurationQa,
 } = require("./i2v-av-sync");
@@ -28,6 +30,18 @@ describe("i2v-av-sync", () => {
     assert.equal(passesAvDurationQa(0.25), true);
     assert.equal(passesAvDurationQa(0.902), false);
     assert.equal(getMaxAvGapSec(), 0.3);
+  });
+
+  it("short audio vs longer video is accepted (pad policy)", () => {
+    const shortAudio = { videoSec: 5, audioSec: 4 };
+    assert.equal(audioExceedsVideoDuration(shortAudio), false);
+    assert.equal(shouldRejectI2VAvDuration(shortAudio), false);
+  });
+
+  it("audio longer than video + margin is rejected", () => {
+    const tooLong = { videoSec: 5, audioSec: 5.5 };
+    assert.equal(audioExceedsVideoDuration(tooLong), true);
+    assert.equal(shouldRejectI2VAvDuration(tooLong), true);
   });
 
   it("shouldRunI2VAvDurationQa only for pipeline v2 I2V with explicit voice", () => {

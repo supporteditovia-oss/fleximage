@@ -1565,7 +1565,9 @@ module.exports = async function handler(req, res) {
               if (i2vResult.ok === false) {
                 apiStatus = "fail";
                 apiFailMsg =
-                  "La piste audio ne couvre pas toute la vidéo (désynchronisation). Jetons remboursés — réessaie avec un clip plus court ou un texte vocal plus court.";
+                  i2vResult.failReason === "audio_exceeds_video"
+                    ? "La voix IA dépasse la durée de la vidéo. Raccourcis le texte ou choisis une durée plus longue — jetons remboursés."
+                    : "Synchronisation audio/vidéo impossible. Jetons remboursés — réessaie dans un instant.";
                 i2vAvRejected = true;
                 resultUrls = [];
               } else if (i2vResult.url) {
