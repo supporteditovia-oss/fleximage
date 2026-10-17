@@ -60,18 +60,21 @@ export const landingV2Resources = {
         "Deux ateliers : photo animée, ou clip transformé — danse & corps, ou décor & voiture — le studio choisit le moteur adapté.",
       specs: "Image → Vidéo · Vidéo → Vidéo · 720p à 4K",
       cta: "Ouvrir le studio vidéo",
+      workshopLabel: "Atelier {{index}}",
       tabsAria: "Ateliers vidéo",
       hint:
-        "Exemple visuel — vos clips vidéo pourront remplacer ces aperçus dès qu'ils seront prêts.",
+        "Chaque atelier présente la source à gauche et le résultat à droite.",
       i2v: {
         title: "Cinématique photo",
         tech: "Image → Vidéo",
         description:
           "Une image fixe devient un plan vivant — lumière, profondeur et mouvement de caméra en cinq secondes.",
-        beforeLabel: "Photo source",
-        beforeAlt: "Photo source avant animation",
-        afterLabel: "Clip animé · 5 s",
-        afterAlt: "Aperçu clip Image vers Vidéo",
+        beforeLabel: "Photo · Avant",
+        beforeAlt:
+          "Photo fixe d’un homme en pull noir assis au restaurant avec son plat",
+        afterLabel: "Vidéo IA · Après",
+        afterAlt:
+          "Vidéo de l’homme en pull noir en train de manger au restaurant, générée par IA",
         staticTag: "Photo",
       },
       v2v: {
@@ -79,10 +82,12 @@ export const landingV2Resources = {
         tech: "Vidéo → Vidéo",
         description:
           "Votre clip smartphone : danse et changement de corps, ou décor, luxe et véhicule — un seul bouton, le bon moteur est choisi pour vous.",
-        beforeLabel: "Clip smartphone",
-        beforeAlt: "Vidéo source filmée au smartphone",
-        afterLabel: "Séquence transformée",
-        afterAlt: "Aperçu séquence Vidéo vers Vidéo",
+        beforeLabel: "Mercedes · Avant",
+        beforeAlt:
+          "Vidéo source de l’homme en train de conduire sa voiture Mercedes",
+        afterLabel: "Lamborghini · Après",
+        afterAlt:
+          "Vidéo de l’homme en train de conduire la Lamborghini transformée par IA",
         staticTag: "Vidéo",
       },
     },
@@ -230,18 +235,19 @@ export const landingV2Resources = {
         "Two workshops: animated photo, or transformed clip — dance & body, or setting & car — we pick the right engine.",
       specs: "Image → Video · Video → Video · 720p to 4K",
       cta: "Open video studio",
+      workshopLabel: "Workshop {{index}}",
       tabsAria: "Video workshops",
       hint:
-        "Visual example — your video clips can replace these previews when ready.",
+        "Each workshop shows the source on the left and the result on the right.",
       i2v: {
         title: "Photo cinematic",
         tech: "Image → Video",
         description:
           "A still image becomes a living shot — light, depth and camera motion in five seconds.",
-        beforeLabel: "Source photo",
-        beforeAlt: "Source photo before animation",
-        afterLabel: "Animated clip · 5 s",
-        afterAlt: "Image to Video clip preview",
+        beforeLabel: "Photo · Before",
+        beforeAlt: "Still photo of a man in a black sweater seated with his meal at a restaurant",
+        afterLabel: "AI video · After",
+        afterAlt: "AI-generated video of the man in the black sweater eating at the restaurant",
         staticTag: "Photo",
       },
       v2v: {
@@ -249,10 +255,10 @@ export const landingV2Resources = {
         tech: "Video → Video",
         description:
           "Your smartphone clip: dance and body swap, or luxury setting and vehicle — one button, the right engine for your prompt.",
-        beforeLabel: "Smartphone clip",
-        beforeAlt: "Source video filmed on smartphone",
-        afterLabel: "Transformed sequence",
-        afterAlt: "Video to Video sequence preview",
+        beforeLabel: "Mercedes · Before",
+        beforeAlt: "Source video of a man driving his Mercedes",
+        afterLabel: "Lamborghini · After",
+        afterAlt: "AI-transformed video of the man driving the Lamborghini",
         staticTag: "Video",
       },
     },
@@ -400,18 +406,21 @@ export const landingV2Resources = {
         "Dos talleres: foto animada o clip transformado — baile y cuerpo, o escenario y coche — el estudio elige el motor.",
       specs: "Imagen → Vídeo · Vídeo → Vídeo · 720p a 4K",
       cta: "Abrir estudio de vídeo",
+      workshopLabel: "Taller {{index}}",
       tabsAria: "Talleres de vídeo",
       hint:
-        "Ejemplo visual — tus clips de vídeo podrán sustituir estas vistas previas cuando estén listos.",
+        "Cada taller muestra la fuente a la izquierda y el resultado a la derecha.",
       i2v: {
         title: "Cinemática foto",
         tech: "Imagen → Vídeo",
         description:
           "Una imagen fija se convierte en plano vivo — luz, profundidad y movimiento de cámara en cinco segundos.",
-        beforeLabel: "Foto origen",
-        beforeAlt: "Foto origen antes de la animación",
-        afterLabel: "Clip animado · 5 s",
-        afterAlt: "Vista previa clip Imagen a Vídeo",
+        beforeLabel: "Foto · Antes",
+        beforeAlt:
+          "Foto fija de un hombre con jersey negro sentado en un restaurante con su plato",
+        afterLabel: "Vídeo IA · Después",
+        afterAlt:
+          "Vídeo generado por IA del hombre con jersey negro comiendo en el restaurante",
         staticTag: "Foto",
       },
       v2v: {
@@ -419,10 +428,10 @@ export const landingV2Resources = {
         tech: "Vídeo → Vídeo",
         description:
           "Tu clip del móvil: baile y cambio de cuerpo, o escenario de lujo y vehículo — un solo botón, motor automático.",
-        beforeLabel: "Clip smartphone",
-        beforeAlt: "Vídeo origen grabado con smartphone",
-        afterLabel: "Secuencia transformada",
-        afterAlt: "Vista previa secuencia Vídeo a Vídeo",
+        beforeLabel: "Mercedes · Antes",
+        beforeAlt: "Vídeo fuente de un hombre conduciendo su Mercedes",
+        afterLabel: "Lamborghini · Después",
+        afterAlt: "Vídeo transformado por IA del hombre conduciendo el Lamborghini",
         staticTag: "Vídeo",
       },
     },

@@ -983,64 +983,27 @@
   line-height: 1.5;
 }
 
-.landing-v2 .video-showcase__tabs {
+.landing-v2 .video-showcase {
   display: grid;
-  gap: 16px;
-  margin-bottom: clamp(28px, 5vw, 44px);
+  gap: clamp(36px, 6vw, 64px);
 }
 
-.landing-v2 .video-showcase__tab {
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  width: 100%;
+.landing-v2 .video-showcase__workshop-heading {
+  margin-bottom: 18px;
 }
 
-.landing-v2 .video-cinema-lanes {
-  display: grid;
-  gap: 16px;
-}
-
-.landing-v2 .video-cinema-lane {
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: clamp(22px, 3vw, 30px);
-  display: grid;
-  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
-}
-
-.landing-v2 .video-showcase__tab:hover,
-.landing-v2 .video-cinema-lane:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(211, 189, 139, 0.22);
-}
-
-.landing-v2 .video-showcase__tab.is-active {
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-}
-
-.landing-v2 .video-cinema-lane--accent {
-  border-color: rgba(211, 189, 139, 0.28);
-  background: rgba(183, 139, 50, 0.06);
-}
-
-.landing-v2 .video-cinema-lane__index {
-  color: rgb(111, 106, 96);
-  font-family: var(--font-geist-sans);
-  letter-spacing: 0.1em;
-  margin-top: 4px;
+.landing-v2 .video-showcase__workshop-index {
+  color: var(--gold-soft);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   font-size: 9px;
+  font-weight: 600;
 }
 
-.landing-v2 .video-cinema-lane__body h3 {
+.landing-v2 .video-showcase__workshop-heading h3 {
   font-family: var(--font-cormorant);
-  letter-spacing: -0.02em;
-  margin: 0 0 6px;
-  font-size: clamp(22px, 2.5vw, 28px);
+  margin: 7px 0 4px;
+  font-size: clamp(25px, 3vw, 34px);
   font-weight: 500;
 }
 
@@ -1048,7 +1011,7 @@
   color: var(--gold-soft);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   font-size: 8px;
   font-weight: 600;
 }
@@ -1057,7 +1020,7 @@
   color: rgb(170, 166, 156);
   font-family: var(--font-cormorant);
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.55;
 }
 
@@ -1163,37 +1126,6 @@
   border-radius: 999px;
   padding: 6px 10px;
   font-size: 8px;
-}
-
-.landing-v2 .video-showcase-media__play {
-  color: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 50%;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  font-size: 13px;
-  display: grid;
-  z-index: 1;
-}
-
-.landing-v2 .video-showcase-media--motion .video-showcase-media__pulse {
-  position: absolute;
-  inset: 18%;
-  border: 1px solid rgba(211, 189, 139, 0.35);
-  animation: video-motion-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes video-motion-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.96);
-  }
-  50% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
 }
 
 .landing-v2 .video-showcase-media__label {
@@ -2045,21 +1977,6 @@
     aspect-ratio: 9 / 11;
   }
 
-  .landing-v2 .video-showcase__tabs {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 18px;
-  }
-
-  .landing-v2 .video-cinema-lane__desc {
-    display: none;
-  }
-
-  .landing-v2 .video-cinema-lane {
-    padding: 16px;
-    gap: 12px;
-  }
-
   .landing-v2 .video-cinema-header {
     margin-bottom: 28px;
   }
@@ -2254,36 +2171,6 @@
     line-height: 1.4;
   }
 
-  .landing-v2 .video-showcase__tabs {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .landing-v2 .video-cinema-lane {
-    padding: 12px;
-    gap: 8px;
-  }
-
-  .landing-v2 .video-cinema-lane__index {
-    font-size: 8px;
-    margin-top: 2px;
-  }
-
-  .landing-v2 .video-cinema-lane__body h3 {
-    font-size: 17px;
-    margin-bottom: 4px;
-  }
-
-  .landing-v2 .video-cinema-lane__tech {
-    margin-bottom: 0;
-    font-size: 7px;
-  }
-
-  .landing-v2 .video-cinema-lane__desc {
-    display: none;
-  }
-
   .landing-v2 .video-showcase__compare {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
@@ -2299,10 +2186,6 @@
     bottom: 10px;
     left: 10px;
     font-size: 7px;
-  }
-
-  .landing-v2 .video-showcase__hint {
-    display: none;
   }
 
   .landing-v2 .video-cinema-footer {

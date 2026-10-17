@@ -208,7 +208,6 @@ export default function LandingV2() {
         </p>
       </section>
 
-      {adminPreview ? (
       <section className="video-cinema-section" id="video-ia" aria-labelledby="video-title">
         <div className="video-cinema-inner">
           <div className="video-cinema-header">
@@ -225,21 +224,16 @@ export default function LandingV2() {
 
           <div className="video-cinema-footer">
             <span className="video-cinema-specs">{t("landing:video.specs")}</span>
-            <a
+            <Link
               className="light-button"
-              href="#top"
-              onClick={(e) => {
-                e.preventDefault();
-                writeStudioMode("video");
-                document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
-              }}
+              href={loggedIn ? "/video-ia" : "/register"}
+              onClick={() => writeStudioMode("video")}
             >
               {t("landing:video.cta")} <span>↗</span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
-      ) : null}
 
       {adminPreview ? (
       <section className="voice-section" aria-labelledby="voice-title">
