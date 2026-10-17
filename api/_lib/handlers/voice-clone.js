@@ -23,6 +23,7 @@ const {
   extractVoiceSampleWavFromVideoBuffer,
   MAX_VOICE_VIDEO_BYTES,
 } = require("../extract-audio-from-video-buffer");
+const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
 
 async function parseVoiceSampleDataUrl(dataUrl, durationHint) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
@@ -197,12 +198,14 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
+    const preparedBuffer = await prepareVoiceCloneSampleBuffer(parsed.buffer);
+
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
-    const sampleUrl = await uploadToR2(sampleKey, parsed.buffer, parsed.contentType);
+    const sampleUrl = await uploadToR2(sampleKey, preparedBuffer, "audio/wav");
 
     let referenceTranscript = null;
     try {
-      referenceTranscript = await transcribeAudio(parsed.buffer, "fr");
+      referenceTranscript = await transcribeAudio(preparedBuffer, "fr");
     } catch (asrErr) {
       const lowCredit =
         asrErr?.status === 402 || /insufficient api credit/i.test(String(asrErr?.message || ""));
@@ -217,10 +220,10 @@ module.exports = async function voiceCloneHandler(req, res) {
     const fishVoice = await createVoiceModel({
       title: `LuxeFlexIA — ${name}`.slice(0, 80),
       description: `Clone user ${userId}`,
-      audioBuffers: [parsed.buffer],
+      audioBuffers: [preparedBuffer],
       texts: referenceTranscript ? [referenceTranscript] : undefined,
       trainMode: process.env.FISH_VOICE_TRAIN_MODE || "fast",
-      enhanceAudioQuality: true,
+      enhanceAudioQuality: false,
     });
 
     try {

@@ -3,6 +3,7 @@ const { promisify } = require("util");
 const fs = require("fs/promises");
 const path = require("path");
 const os = require("os");
+const { VOICE_CLONE_AF } = require("./voice-sample-prepare");
 
 let ffmpegPath = null;
 try {
@@ -58,6 +59,8 @@ async function extractVoiceSampleWavFromVideoBuffer(
         "44100",
         "-ac",
         "1",
+        "-af",
+        VOICE_CLONE_AF,
         outputPath,
       ],
       { timeout: 120_000 },

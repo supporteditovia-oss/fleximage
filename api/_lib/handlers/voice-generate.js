@@ -17,6 +17,7 @@ const {
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
 const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -291,15 +292,21 @@ module.exports = async function voiceGenerateHandler(req, res) {
 
     const cloneFidelity = Boolean(voiceCloneId);
 
-    async function synthesizeInlineFromSample() {
-      if (!referenceAudio) return null;
+    const inlineReferenceAudio =
+      referenceAudio && referenceAudio.length > 1024
+        ? await prepareVoiceCloneSampleBuffer(referenceAudio).catch(() => referenceAudio)
+        : null;
+
+    async function synthesizeInlineFromSample({ forceFreshTranscript = false } = {}) {
+      const audioBuf = inlineReferenceAudio || referenceAudio;
+      if (!audioBuf) return null;
       let referenceText = voiceContext.referenceTranscript;
-      if (!referenceText || referenceText.length < 3) {
-        referenceText = await transcribeAudio(referenceAudio, "fr");
+      if (forceFreshTranscript || !referenceText || referenceText.length < 3) {
+        referenceText = await transcribeAudio(audioBuf, "fr");
       }
       return synthesizeWithReferenceMsgpack({
         text: ttsText,
-        audioBuffer: referenceAudio,
+        audioBuffer: audioBuf,
         referenceText,
         speed: catalogTtsSpeed,
         cloneFidelity,
@@ -307,41 +314,44 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     let audioBuffer;
-    if (cloneFidelity && referenceAudio) {
-      try {
-        audioBuffer = await synthesizeInlineFromSample();
-      } catch (inlineErr) {
-        console.warn("voice-generate clone inline failed, fallback reference_id", inlineErr);
-      }
+
+    async function synthesizeWithReferenceId() {
+      if (!resolvedFishId) return null;
+      await waitForVoiceModelReady(resolvedFishId);
+      return synthesizeSpeech({
+        text: ttsText,
+        referenceId: resolvedFishId,
+        speed: catalogTtsSpeed,
+        cloneFidelity,
+      });
     }
 
-    if (!audioBuffer && resolvedFishId) {
-      await waitForVoiceModelReady(resolvedFishId);
+    if (cloneFidelity) {
       try {
-        audioBuffer = await synthesizeSpeech({
-          text: ttsText,
-          referenceId: resolvedFishId,
-          speed: catalogTtsSpeed,
-          cloneFidelity,
-        });
+        audioBuffer = await synthesizeWithReferenceId();
+      } catch (refErr) {
+        console.warn("voice-generate clone reference_id failed, fallback inline", refErr);
+      }
+      if (!audioBuffer && (inlineReferenceAudio || referenceAudio)) {
+        try {
+          audioBuffer = await synthesizeInlineFromSample({ forceFreshTranscript: true });
+        } catch (inlineErr) {
+          console.warn("voice-generate clone inline failed", inlineErr);
+        }
+      }
+    } else if (resolvedFishId) {
+      try {
+        audioBuffer = await synthesizeWithReferenceId();
       } catch (refErr) {
         console.warn("voice-generate reference_id failed, fallback inline", refErr);
         audioBuffer = await synthesizeInlineFromSample();
         if (!audioBuffer) throw refErr;
       }
-    } else if (!audioBuffer && referenceAudio) {
-      let referenceText = voiceContext.referenceTranscript;
-      if (!referenceText || referenceText.length < 3) {
-        referenceText = await transcribeAudio(referenceAudio, "fr");
-      }
+    } else if (inlineReferenceAudio || referenceAudio) {
+      audioBuffer = await synthesizeInlineFromSample({ forceFreshTranscript: true });
+    }
 
-      audioBuffer = await synthesizeWithReferenceMsgpack({
-        text: ttsText,
-        audioBuffer: referenceAudio,
-        referenceText,
-        cloneFidelity,
-      });
-    } else {
+    if (!audioBuffer) {
       throw Object.assign(new Error("Voix de référence indisponible"), {
         status: 400,
         code: "missing_voice",

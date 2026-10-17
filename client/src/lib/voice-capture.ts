@@ -433,6 +433,24 @@ function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
+function connectVoiceClonePrepChain(ctx: BaseAudioContext, source: AudioNode): AudioNode {
+  const highpass = ctx.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = 80;
+  highpass.Q.value = 0.7;
+
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -22;
+  compressor.knee.value = 24;
+  compressor.ratio.value = 3;
+  compressor.attack.value = 0.004;
+  compressor.release.value = 0.2;
+
+  source.connect(highpass);
+  highpass.connect(compressor);
+  return compressor;
+}
+
 /** WAV 44.1 kHz mono 16-bit — format optimal pour Fish Audio. */
 export async function prepareVoiceClipForClone(clip: VoiceClip): Promise<Blob> {
   const maxBytes = 3_800_000;
@@ -444,7 +462,8 @@ export async function prepareVoiceClipForClone(clip: VoiceClip): Promise<Blob> {
     const offline = new OfflineAudioContext(1, length, targetRate);
     const src = offline.createBufferSource();
     src.buffer = decoded;
-    src.connect(offline.destination);
+    const chainOut = connectVoiceClonePrepChain(offline, src);
+    chainOut.connect(offline.destination);
     src.start(0);
     const rendered = await offline.startRendering();
     let wav = await audioBufferToWavBlob(rendered);
@@ -453,7 +472,7 @@ export async function prepareVoiceClipForClone(clip: VoiceClip): Promise<Blob> {
     const compact = new OfflineAudioContext(1, decoded.length, 22050);
     const compactSrc = compact.createBufferSource();
     compactSrc.buffer = decoded;
-    compactSrc.connect(compact.destination);
+    connectVoiceClonePrepChain(compact, compactSrc).connect(compact.destination);
     compactSrc.start(0);
     const compactRendered = await compact.startRendering();
     wav = await audioBufferToWavBlob(compactRendered);
