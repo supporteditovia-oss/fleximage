@@ -26,6 +26,7 @@ const {
   resolveVoiceGenerationMode,
   shouldApplyCloneWarmthPostprocess,
 } = require("../voice-generation-modes");
+const { shouldUseDeepChestClone } = require("../voice-deep-chest");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -102,12 +103,17 @@ function mapFishErrorMessage(message) {
 
 async function resolveVoiceContext(supabase, userId, voiceCloneId, fishReferenceId) {
   if (!voiceCloneId) {
-    return { fishReferenceId: fishReferenceId || "", sampleBuffer: null, referenceTranscript: null };
+    return {
+      fishReferenceId: fishReferenceId || "",
+      sampleBuffer: null,
+      referenceTranscript: null,
+      cloneSourceType: null,
+    };
   }
 
   const { data: cloneRow, error: cloneError } = await supabase
     .from("voice_clones")
-    .select("id, fish_reference_id, user_id, sample_r2_key, metadata")
+    .select("id, fish_reference_id, user_id, sample_r2_key, source_type, metadata")
     .eq("id", voiceCloneId)
     .maybeSingle();
 
@@ -124,6 +130,7 @@ async function resolveVoiceContext(supabase, userId, voiceCloneId, fishReference
       fishReferenceId: cloneRow.fish_reference_id,
       sampleBuffer,
       referenceTranscript: referenceTranscript || null,
+      cloneSourceType: cloneRow.source_type || null,
     };
   }
 
@@ -140,6 +147,7 @@ async function resolveVoiceContext(supabase, userId, voiceCloneId, fishReference
     fishReferenceId: manifest.fish_reference_id || manifest.fishReferenceId || "",
     sampleBuffer,
     referenceTranscript: referenceTranscript || null,
+    cloneSourceType: manifest.source_type || manifest.sourceType || null,
   };
 }
 
@@ -269,6 +277,15 @@ module.exports = async function voiceGenerateHandler(req, res) {
           ? fallbackAudio
           : null;
 
+    const deepChestClone = shouldUseDeepChestClone({
+      generationMode: voiceMode.mode,
+      cloneSourceType:
+        voiceContext.cloneSourceType ||
+        (typeof body.sourceType === "string" ? body.sourceType.trim() : null),
+      hasInstantImport: Boolean(instantAudio && instantAudio.length > 1024),
+      referenceWavBuffer: referenceAudio,
+    });
+
     const generationPayload = {
       user_id: userId,
       voice_clone_id: voiceCloneId || null,
@@ -284,6 +301,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         fish_script: script.fishText,
         voice_name: voiceName,
         voice_pipeline_mode: voiceMode.mode,
+        deep_chest_clone: deepChestClone,
       },
     };
 
@@ -354,6 +372,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         referenceText,
         speed: catalogTtsSpeed,
         cloneFidelity,
+        deepChestClone,
       });
     }
 
@@ -367,6 +386,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         referenceId: resolvedFishId,
         speed: catalogTtsSpeed,
         cloneFidelity,
+        deepChestClone: cloneFidelity ? deepChestClone : false,
       });
     }
 
@@ -411,7 +431,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     if (shouldApplyCloneWarmthPostprocess(voiceMode)) {
-      audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer);
+      audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer, {
+        deepChest: deepChestClone,
+      });
     }
 
     const audioKey = `voice-generations/${userId}/${generationId}.mp3`;

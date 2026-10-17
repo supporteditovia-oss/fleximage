@@ -2,6 +2,17 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { buildTtsOptions } = require("./fish-audio");
 
+test("buildTtsOptions deep chest clone — moins de lissage", () => {
+  const opts = buildTtsOptions("Interview Kaaris", {
+    cloneFidelity: true,
+    deepChestClone: true,
+    speed: 1,
+  });
+  assert.equal(opts.temperature, 0.36);
+  assert.equal(opts.top_p, 0.64);
+  assert.equal(opts.prosody.speed, 0.96);
+});
+
 test("buildTtsOptions clone fidelity — paramètres validés", () => {
   const opts = buildTtsOptions("Bonjour test clone", { cloneFidelity: true, speed: 1.1 });
   assert.equal(opts.temperature, 0.42);

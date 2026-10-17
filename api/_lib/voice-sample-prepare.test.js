@@ -5,8 +5,8 @@ const {
   prepareVoiceSampleForCloneSource,
 } = require("./voice-sample-prepare");
 
-test("VOICE_CLONE_AF inclut highpass et loudnorm", () => {
-  assert.match(VOICE_CLONE_AF, /highpass=f=80/);
+test("VOICE_CLONE_AF inclut highpass graves (60 Hz) et loudnorm renforcé", () => {
+  assert.match(VOICE_CLONE_AF, /highpass=f=60/);
   assert.match(VOICE_CLONE_AF, /loudnorm=/);
   assert.match(VOICE_CLONE_AF, /afftdn=/);
 });

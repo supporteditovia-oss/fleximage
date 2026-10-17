@@ -17,13 +17,14 @@ const execFileAsync = promisify(execFile);
  * Chaîne FFmpeg pour interviews / extraits bruts :
  * - coupe silence extrême, HP/LP, réduction bruit légère, loudness cible, mono 44.1 kHz.
  */
+/** Mode C — interviews / vidéo : préserve les graves (HP 60 Hz), signal riche avant Fish. */
 const VOICE_CLONE_AF =
   "silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB," +
   "areverse,silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB,areverse," +
-  "highpass=f=80,lowpass=f=12000," +
-  "afftdn=nf=-22:nt=w," +
-  "acompressor=threshold=-20dB:ratio=3:attack=5:release=80:makeup=2," +
-  "loudnorm=I=-18:TP=-2:LRA=9:print_format=none";
+  "highpass=f=60,lowpass=f=12000," +
+  "afftdn=nf=-24:nt=w," +
+  "acompressor=threshold=-22dB:ratio=2.5:attack=8:release=120:makeup=2.5," +
+  "loudnorm=I=-16:TP=-1.5:LRA=10:print_format=none";
 
 /**
  * Prépare un échantillon clone (WAV ou autre audio) avant Fish / ASR.

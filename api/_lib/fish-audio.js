@@ -44,6 +44,19 @@ const CLONE_FIDELITY_TTS = {
   features: [],
 };
 
+/** Mode C inline — voix lourdes / interviews : moins de lissage Fish, coffre préservé. */
+const CLONE_DEEP_CHEST_TTS = {
+  ...CLONE_FIDELITY_TTS,
+  temperature: 0.36,
+  top_p: 0.64,
+  repetition_penalty: 1.0,
+  prosody: {
+    speed: 0.96,
+    volume: 0,
+    normalize_loudness: false,
+  },
+};
+
 /**
  * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
  * Plus long → chunks liés pour garder la cohérence.
@@ -61,20 +74,23 @@ function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
+  const deepChestClone = options.deepChestClone === true && cloneFidelity;
   const catalogFastFlow = options.catalogFastFlow === true && !cloneFidelity;
 
   if (cloneFidelity) {
+    const base = deepChestClone ? CLONE_DEEP_CHEST_TTS : CLONE_FIDELITY_TTS;
+    const speedCap = deepChestClone ? 0.96 : 0.98;
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
-        ? Math.min(clampTtsSpeed(speed), 0.98)
-        : 0.98;
+        ? Math.min(clampTtsSpeed(speed), speedCap)
+        : speedCap;
     return {
-      ...CLONE_FIDELITY_TTS,
+      ...base,
       chunk_length: len <= 200 ? 300 : 280,
       min_chunk_length: len <= 200 ? 100 : 80,
       condition_on_previous_chunks: false,
       prosody: {
-        ...CLONE_FIDELITY_TTS.prosody,
+        ...base.prosody,
         speed: resolvedSpeed,
       },
     };
@@ -346,6 +362,7 @@ async function synthesizeWithReferenceMsgpack({
   referenceText,
   speed,
   cloneFidelity,
+  deepChestClone,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -371,7 +388,7 @@ async function synthesizeWithReferenceMsgpack({
       },
     ],
     format: "mp3",
-    ...buildTtsOptions(trimmed, { speed, cloneFidelity }),
+    ...buildTtsOptions(trimmed, { speed, cloneFidelity, deepChestClone }),
   };
 
   const body = encode(payload);
@@ -407,6 +424,7 @@ async function synthesizeSpeech({
   speed,
   cloneFidelity,
   catalogFastFlow,
+  deepChestClone,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -440,6 +458,7 @@ async function synthesizeSpeech({
         speed: resolvedSpeed,
         cloneFidelity,
         catalogFastFlow,
+        deepChestClone,
       }),
     }),
   });
@@ -463,6 +482,7 @@ module.exports = {
   transcribeAudio,
   buildTtsOptions,
   CLONE_FIDELITY_TTS,
+  CLONE_DEEP_CHEST_TTS,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,
 };
