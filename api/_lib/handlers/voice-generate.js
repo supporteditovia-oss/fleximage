@@ -16,9 +16,13 @@ const {
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
-const { resolveCatalogTtsSpeed, lookupCatalogEntryByFishId } = require("../voice-catalog");
+const { resolveCatalogTtsSpeed } = require("../voice-catalog");
 const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
 const { applyVoiceCloneWarmthPostprocess } = require("../voice-clone-warmth-postprocess");
+const {
+  resolveVoiceGenerationMode,
+  shouldApplyCloneWarmthPostprocess,
+} = require("../voice-generation-modes");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -238,6 +242,13 @@ module.exports = async function voiceGenerateHandler(req, res) {
       label: `LuxeFlexIA — ${voiceCloneId || userId}`,
     });
 
+    const voiceMode = resolveVoiceGenerationMode({
+      voiceCloneId,
+      fishReferenceId: resolvedFishId || fishReferenceId,
+      sourceType:
+        typeof body.sourceType === "string" ? body.sourceType.trim() : undefined,
+    });
+
     const referenceAudio =
       voiceContext.sampleBuffer && voiceContext.sampleBuffer.length > 1024
         ? voiceContext.sampleBuffer
@@ -259,6 +270,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         delivery_style: deliveryStyle,
         fish_script: script.fishText,
         voice_name: voiceName,
+        voice_pipeline_mode: voiceMode.mode,
       },
     };
 
@@ -296,13 +308,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const ttsText = script.fishText;
     const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
-    const catalogFishEntry = lookupCatalogEntryByFishId(
-      resolvedFishId || fishReferenceId,
-    );
-    /** Mode A — catalogue rappeurs : reference_id stable, pas de re-préparation destructive. */
-    const isCatalogPresetVoice = Boolean(catalogFishEntry && !voiceCloneId);
-    /** Mode B/C — clone perso ou extrait uploadé. */
-    const cloneFidelity = Boolean(voiceCloneId) || !isCatalogPresetVoice;
+    const isCatalogPresetVoice = voiceMode.isCatalogPresetVoice;
+    /** Mode A = catalogue studio (Fish catalogue). B/C = clone inline avec profil fidélité. */
+    const cloneFidelity = !isCatalogPresetVoice;
 
     let inlineReferenceAudio = null;
     if (referenceAudio && referenceAudio.length > 1024) {
@@ -345,7 +353,12 @@ module.exports = async function voiceGenerateHandler(req, res) {
     }
 
     if (isCatalogPresetVoice && resolvedFishId) {
-      audioBuffer = await synthesizeWithReferenceId();
+      audioBuffer = await synthesizeSpeech({
+        text: ttsText,
+        referenceId: resolvedFishId,
+        speed: catalogTtsSpeed,
+        cloneFidelity: false,
+      });
     } else if (cloneFidelity) {
       try {
         audioBuffer = await synthesizeWithReferenceId();
@@ -378,7 +391,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
       });
     }
 
-    audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer);
+    if (shouldApplyCloneWarmthPostprocess(voiceMode)) {
+      audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer);
+    }
 
     const audioKey = `voice-generations/${userId}/${generationId}.mp3`;
     const audioUrl = await uploadToR2(audioKey, audioBuffer, "audio/mpeg");

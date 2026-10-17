@@ -14,7 +14,8 @@ try {
 const execFileAsync = promisify(execFile);
 
 /**
- * Post-traitement sortie Fish (clone) — chaleur bas-médiums, atténuation métallique, compresse douce.
+ * Post-traitement sortie Fish — modes B/C uniquement (pas le catalogue studio Mode A).
+ * Chaleur bas-médiums, atténuation métallique, compresse douce.
  */
 const VOICE_CLONE_WARMTH_AF =
   "equalizer=f=200:width_type=o:width=2:g=2.4," +
