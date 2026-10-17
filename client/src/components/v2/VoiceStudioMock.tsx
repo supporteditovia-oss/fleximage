@@ -80,6 +80,11 @@ import {
   type VoiceSharePlatform,
 } from "@/lib/share-voice";
 import {
+  primeVoiceResultPlayback,
+  startVoiceResultPlayback,
+  type VoiceResultPlaybackSession,
+} from "@/lib/voice-result-playback";
+import {
   fileToVideoDataUrl,
   withNormalizedVideoFile,
 } from "@/lib/media-file-detect";
@@ -181,6 +186,7 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
   const stopSpeakRef = useRef<(() => void) | null>(null);
   const cloneReplayRef = useRef<HTMLAudioElement | null>(null);
   const resultAudioRef = useRef<HTMLAudioElement | null>(null);
+  const resultPlaybackSessionRef = useRef<VoiceResultPlaybackSession | null>(null);
   const shareBlobRef = useRef<Blob | null>(null);
   const genTimerRef = useRef<number | null>(null);
   const importBufferRef = useRef<AudioBuffer | null>(null);
@@ -437,6 +443,8 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     stopSpeakRef.current?.();
     stopSpeakRef.current = null;
     cloneReplayRef.current?.pause();
+    resultPlaybackSessionRef.current?.stop();
+    resultPlaybackSessionRef.current = null;
     const audio = resultAudioRef.current;
     if (audio) {
       audio.pause();
@@ -454,33 +462,63 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
     }
   }, []);
 
-  const playResultAudio = useCallback(async (url: string) => {
-    stopPreview();
-    let audio = resultAudioRef.current;
-    if (!audio) {
-      audio = new Audio();
-      resultAudioRef.current = audio;
-    }
-    audio.onended = () => {
-      setPlaying(false);
-      syncPlaybackClock(audio);
-    };
-    audio.onerror = () => setPlaying(false);
-    audio.ontimeupdate = () => syncPlaybackClock(audio);
-    audio.onloadedmetadata = () => syncPlaybackClock(audio);
-    audio.src = url;
-    audio.currentTime = 0;
-    setPlaybackCurrentSec(0);
-    setPlaybackDurationSec(0);
-    setReadyToPlay(true);
-    setPlaying(true);
-    try {
-      await audio.play();
-      syncPlaybackClock(audio);
-    } catch {
-      setPlaying(false);
-    }
-  }, [syncPlaybackClock]);
+  const playResultAudio = useCallback(
+    async (url: string, generationId?: string | null) => {
+      stopPreview();
+      setPlaybackCurrentSec(0);
+      setPlaybackDurationSec(0);
+      setReadyToPlay(true);
+      setPlaying(true);
+
+      try {
+        const blob = await fetchVoiceBlob(url, generationId ?? undefined);
+        shareBlobRef.current = blob;
+        const session = await startVoiceResultPlayback(
+          blob,
+          (currentSec, durationSec) => {
+            setPlaybackCurrentSec(currentSec);
+            setPlaybackDurationSec(durationSec);
+          },
+          () => {
+            resultPlaybackSessionRef.current = null;
+            setPlaying(false);
+          },
+        );
+        if (session) {
+          resultPlaybackSessionRef.current = session;
+          return;
+        }
+      } catch {
+        /* repli <audio> ci-dessous */
+      }
+
+      let audio = resultAudioRef.current;
+      if (!audio) {
+        audio = new Audio();
+        resultAudioRef.current = audio;
+      }
+      audio.onended = () => {
+        setPlaying(false);
+        syncPlaybackClock(audio);
+      };
+      audio.onerror = () => setPlaying(false);
+      audio.ontimeupdate = () => syncPlaybackClock(audio);
+      audio.onloadedmetadata = () => syncPlaybackClock(audio);
+      audio.src = url;
+      audio.currentTime = 0;
+      try {
+        await audio.play();
+        syncPlaybackClock(audio);
+      } catch {
+        setPlaying(false);
+        toast({
+          title: "Vocal prêt",
+          description: "Appuie sur lecture pour l’écouter.",
+        });
+      }
+    },
+    [syncPlaybackClock, toast],
+  );
 
   const prefetchShareBlob = useCallback(async (url: string, generationId?: string | null) => {
     try {
@@ -1034,6 +1072,8 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
       return;
     }
 
+    primeVoiceResultPlayback();
+
     void (async () => {
       releaseGenerationLoaderTheme();
       voiceGenStartedAtRef.current = Date.now();
@@ -1157,10 +1197,9 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
 
         setResultAudioUrl(result.audioUrl);
         setResultGenerationId(result.generation.id);
-        void prefetchShareBlob(result.audioUrl, result.generation.id);
         void queryClient.invalidateQueries({ queryKey: currentPlanQueryRoot });
         void queryClient.invalidateQueries({ queryKey: voiceHistoryQueryKey });
-        await playResultAudio(result.audioUrl);
+        await playResultAudio(result.audioUrl, result.generation.id);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Génération vocale impossible.";
