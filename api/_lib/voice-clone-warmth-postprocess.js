@@ -24,16 +24,16 @@ const VOICE_CLONE_WARMTH_AF =
   "equalizer=f=5200:width_type=o:width=2:g=-1.4," +
   "acompressor=threshold=-20dB:ratio=2.2:attack=12:release=140:makeup=1.2";
 
-/** Mode C voix graves — coffre caverneux 85–200 Hz + grain léger. */
+/** Mode C voix graves — restauration 85–200 Hz (Kaaris, Jul…) + grain rauque. */
 const VOICE_CLONE_WARMTH_DEEP_AF =
-  "equalizer=f=85:width_type=o:width=1.5:g=1.8," +
-  "equalizer=f=130:width_type=o:width=2:g=2.8," +
-  "equalizer=f=150:width_type=o:width=2:g=4.2," +
-  "equalizer=f=200:width_type=o:width=2:g=3.6," +
-  "equalizer=f=950:width_type=o:width=2:g=0.9," +
-  "equalizer=f=3000:width_type=o:width=2:g=-1.0," +
-  "equalizer=f=4500:width_type=o:width=2:g=-1.6," +
-  "acompressor=threshold=-23dB:ratio=1.9:attack=16:release=170:makeup=1.25";
+  "equalizer=f=85:width_type=o:width=1.5:g=2.4," +
+  "equalizer=f=120:width_type=o:width=2:g=3.8," +
+  "equalizer=f=150:width_type=o:width=2:g=5.0," +
+  "equalizer=f=200:width_type=o:width=2:g=4.2," +
+  "equalizer=f=950:width_type=o:width=2:g=1.1," +
+  "equalizer=f=3000:width_type=o:width=2:g=-0.8," +
+  "equalizer=f=4500:width_type=o:width=2:g=-1.4," +
+  "acompressor=threshold=-26dB:ratio=1.45:attack=22:release=200:makeup=0.95";
 
 /** Mode C identité (Jul…) — correction légère sans aplatir le timbre. */
 const VOICE_CLONE_WARMTH_IDENTITY_AF =

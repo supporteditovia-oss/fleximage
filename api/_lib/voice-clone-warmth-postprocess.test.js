@@ -12,9 +12,10 @@ test("VOICE_CLONE_WARMTH_AF inclut EQ bas-médiums et atténuation aigu", () => 
   assert.match(VOICE_CLONE_WARMTH_AF, /acompressor=/);
 });
 
-test("VOICE_CLONE_WARMTH_DEEP_AF — coffre 150–200 Hz renforcé", () => {
-  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=150:.*:g=4\.2/);
-  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=200:.*:g=3\.6/);
+test("VOICE_CLONE_WARMTH_DEEP_AF — coffre 120–200 Hz renforcé", () => {
+  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=120:.*:g=3\.8/);
+  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=150:.*:g=5\.0/);
+  assert.match(VOICE_CLONE_WARMTH_DEEP_AF, /equalizer=f=200:.*:g=4\.2/);
 });
 
 test("VOICE_CLONE_WARMTH_IDENTITY_AF — correction légère sans gros boost bas", () => {
