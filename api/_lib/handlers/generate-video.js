@@ -401,8 +401,6 @@ module.exports = async function handler(req, res) {
       body.v2v_intent === "motion" || body.v2v_intent === "scene"
         ? body.v2v_intent
         : null;
-    const subtitlesEnabled = Boolean(body.subtitles_enabled);
-
     if (workflow === "image_to_video" && !voiceEnabled) {
       const sanitizedMotion = stripVoiceInstructionsFromPrompt(motionPrompt);
       if (sanitizedMotion.length < 10) {
@@ -696,12 +694,21 @@ module.exports = async function handler(req, res) {
           : null,
       lip_sync_enabled: voiceEnabled,
       i2v_provider: "kling_ai_avatar_pro",
-      i2v_avatar_pipeline_v2: isAdmin,
-      subtitles_enabled:
-        workflow === "image_to_video" ? subtitlesEnabled : false,
-      subtitle_style: body.subtitle_style || "minimal_white",
-      subtitle_position: body.subtitle_position || "bottom",
-      overlay_text: body.overlay_text || null,
+      i2v_avatar_pipeline_v2:
+        workflow === "image_to_video" && voiceEnabled ? true : isAdmin,
+      subtitles_enabled: false,
+      draw_text: false,
+      subtitle_style: null,
+      subtitle_position: null,
+      overlay_text: null,
+      i2v_output_duration_sec:
+        workflow === "image_to_video" ? durationSec : null,
+      i2v_output_height:
+        workflow === "image_to_video"
+          ? quality === "high"
+            ? 1080
+            : 720
+          : null,
       vehicle_preset: body.vehicle_preset || null,
       vehicle_prompt: studioVehicleDescription,
       vehicle_prompt_raw: vehiclePromptRaw || studioVehicleDescription,

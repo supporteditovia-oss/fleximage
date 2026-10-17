@@ -386,14 +386,35 @@ async function downloadVideoBuffer(url, timeoutMs = 45_000) {
 }
 
 /**
- * Télécharge la vidéo Kie, aligne A/V si besoin, ré-upload R2.
+ * Télécharge la vidéo Kie, aligne A/V si besoin, applique trim/résolution, ré-upload R2.
+ * @param {string} larpId
+ * @param {string} sourceUrl
+ * @param {{ align?: boolean, outputSpec?: { durationSec: 3|5, height: 720|1080 } }} [options]
  * @returns {Promise<{ ok: boolean, url: string|null, qa: object }>}
  */
-async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
+async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl, options = {}) {
   const { uploadToR2 } = require("./r2");
+  const {
+    enforceI2VOutputOnMp4Buffer,
+    isValidI2VOutputSpec,
+  } = require("./i2v-output-enforce");
+  const alignAv = options.align !== false;
+  const outputSpec = options.outputSpec || null;
   try {
     const rawBuffer = await downloadVideoBuffer(sourceUrl);
-    const aligned = await alignVideoAudioInMp4Buffer(rawBuffer);
+    const aligned = alignAv
+      ? await alignVideoAudioInMp4Buffer(rawBuffer)
+      : {
+          buffer: rawBuffer,
+          skipped: true,
+          aligned: false,
+          gapBefore: null,
+          gapAfter: null,
+          method: null,
+          reason: "align_skipped",
+          durationsBefore: null,
+          durationsAfter: null,
+        };
     const gapAfter = aligned.gapAfter ?? effectiveAvGapSec(aligned.durationsAfter);
     const qa = {
       gapBefore: aligned.gapBefore ?? null,
@@ -421,8 +442,20 @@ async function downloadAlignAndStoreI2VVideo(larpId, sourceUrl) {
       };
     }
 
-    const outBuffer =
+    let outBuffer =
       aligned.buffer && aligned.buffer.length >= 2048 ? aligned.buffer : rawBuffer;
+    let outputEnforce = { enforced: false, reason: "no_spec" };
+    if (outputSpec && isValidI2VOutputSpec(outputSpec)) {
+      const enforced = await enforceI2VOutputOnMp4Buffer(outBuffer, outputSpec);
+      outBuffer = enforced.buffer;
+      outputEnforce = {
+        enforced: enforced.enforced === true,
+        reason: enforced.reason || null,
+        durationSec: outputSpec.durationSec,
+        height: outputSpec.height,
+      };
+    }
+    qa.outputEnforce = outputEnforce;
     const key = `larps/${larpId}/video.mp4`;
     const url = await uploadToR2(key, outBuffer, "video/mp4");
     return { ok: true, url, qa };

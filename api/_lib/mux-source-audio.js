@@ -139,6 +139,115 @@ async function stripAudioFromVideoUrl({ videoUrl, larpId }) {
   }
 }
 
+/** Volume piste décor (mer, vent, moteur…) — voix générée à 100 %. */
+const DEFAULT_AMBIENT_MIX_VOLUME = 0.18;
+
+async function generatedVideoHasAudioStream(videoPath) {
+  return sourceHasAudioStream(videoPath);
+}
+
+/**
+ * Mixe l’ambiance de la vidéo source (~18 %) avec la piste voix de la vidéo générée.
+ */
+async function mixSourceAmbientWithGeneratedAudio({
+  sourceVideoUrl,
+  generatedVideoUrl,
+  larpId,
+  ambientVolume = DEFAULT_AMBIENT_MIX_VOLUME,
+}) {
+  if (!ffmpegPath) {
+    console.warn("[mux-source-audio] ffmpeg-static indisponible (mix)");
+    return null;
+  }
+  if (!sourceVideoUrl || !generatedVideoUrl || !larpId) return null;
+
+  const ambVol =
+    typeof ambientVolume === "number" &&
+    Number.isFinite(ambientVolume) &&
+    ambientVolume >= 0 &&
+    ambientVolume <= 1
+      ? ambientVolume
+      : DEFAULT_AMBIENT_MIX_VOLUME;
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "v2v-mix-"));
+  const genPath = path.join(tmpDir, "generated.mp4");
+  const srcPath = path.join(tmpDir, "source.mp4");
+  const outPath = path.join(tmpDir, "output.mp4");
+
+  try {
+    await Promise.all([
+      downloadToFile(generatedVideoUrl, genPath),
+      downloadToFile(sourceVideoUrl, srcPath),
+    ]);
+
+    const [srcHasAudio, genHasAudio] = await Promise.all([
+      sourceHasAudioStream(srcPath),
+      generatedVideoHasAudioStream(genPath),
+    ]);
+
+    if (!srcHasAudio && !genHasAudio) {
+      console.info("[mux-source-audio] mix skipped — no audio on either input", {
+        larpId,
+      });
+      return null;
+    }
+
+    if (!genHasAudio) {
+      return muxSourceAudioOntoVideo({
+        sourceVideoUrl,
+        generatedVideoUrl,
+        larpId,
+      });
+    }
+
+    if (!srcHasAudio) {
+      return null;
+    }
+
+    const filterComplex = `[1:a]volume=${ambVol}[amb];[0:a]volume=1.0[vox];[amb][vox]amix=inputs=2:duration=shortest:dropout_transition=0[aout]`;
+
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-y",
+        "-i",
+        genPath,
+        "-i",
+        srcPath,
+        "-filter_complex",
+        filterComplex,
+        "-map",
+        "0:v:0",
+        "-map",
+        "[aout]",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-shortest",
+        "-movflags",
+        "+faststart",
+        outPath,
+      ],
+      { timeout: 120_000, maxBuffer: 12 * 1024 * 1024 },
+    );
+
+    const outBuffer = await fs.readFile(outPath);
+    if (outBuffer.length < 2048) return null;
+
+    const { uploadToR2 } = require("./r2");
+    const key = `larps/${larpId}/video.mp4`;
+    return await uploadToR2(key, outBuffer, "video/mp4");
+  } catch (err) {
+    console.error("[mux-source-audio] ambient mix failed", { larpId, err });
+    return null;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 async function muxSourceAudioOntoVideo({
   sourceVideoUrl,
   generatedVideoUrl,
@@ -208,9 +317,11 @@ async function muxSourceAudioOntoVideo({
 }
 
 module.exports = {
+  DEFAULT_AMBIENT_MIX_VOLUME,
   getSourceVideoUrlFromLarp,
   getReferenceImageUrlFromLarp,
   isLikelyVideoAssetUrl,
+  mixSourceAmbientWithGeneratedAudio,
   muxSourceAudioOntoVideo,
   stripAudioFromVideoUrl,
 };

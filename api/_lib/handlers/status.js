@@ -2,7 +2,7 @@ const { requireUser, sendError } = require("../user-auth");
 const { downloadAndStoreImages, downloadAndStoreVideo } = require("../r2");
 const {
   getSourceVideoUrlFromLarp,
-  muxSourceAudioOntoVideo,
+  mixSourceAmbientWithGeneratedAudio,
   stripAudioFromVideoUrl,
 } = require("../mux-source-audio");
 const { getRunwayVideoStatus } = require("../kie-runway");
@@ -1552,12 +1552,28 @@ module.exports = async function handler(req, res) {
               shouldRunI2VAvDurationQa,
               downloadAlignAndStoreI2VVideo,
             } = require("../i2v-av-sync");
+            const {
+              resolveI2VOutputSpecFromMeta,
+              shouldEnforceI2VOutputSpec,
+            } = require("../i2v-output-enforce");
+
+            const isI2VWorkflow = meta.workflow === "image_to_video";
+            const i2vOutputSpec = shouldEnforceI2VOutputSpec(meta)
+              ? resolveI2VOutputSpecFromMeta(meta)
+              : null;
+            if (i2vOutputSpec) {
+              metadataPatch.i2v_output_duration_sec = i2vOutputSpec.durationSec;
+              metadataPatch.i2v_output_height = i2vOutputSpec.height;
+            }
 
             let stored = null;
             let i2vAvRejected = false;
-            if (shouldRunI2VAvDurationQa(pollMeta)) {
+            if (isI2VWorkflow) {
               const i2vResult = await withTimeout(
-                downloadAlignAndStoreI2VVideo(larp.id, parsed.video_url),
+                downloadAlignAndStoreI2VVideo(larp.id, parsed.video_url, {
+                  align: shouldRunI2VAvDurationQa(pollMeta),
+                  outputSpec: i2vOutputSpec || undefined,
+                }),
                 120_000,
                 { ok: true, url: null, qa: { skipped: true, reason: "timeout" } },
               );
@@ -1591,21 +1607,27 @@ module.exports = async function handler(req, res) {
             const isV2VWorkflow = meta.workflow === "video_to_video";
             const shouldPreserveSourceAudio =
               isV2VWorkflow && meta.preserve_source_audio === true;
-            if (shouldPreserveSourceAudio && resultUrls[0]) {
+            const shouldMixI2VAmbient =
+              isI2VWorkflow &&
+              meta.voice_enabled === true &&
+              meta.lip_sync_enabled === true;
+            const shouldMixAmbient =
+              (shouldPreserveSourceAudio || shouldMixI2VAmbient) && resultUrls[0];
+            if (shouldMixAmbient) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
               if (sourceVideoUrl) {
-                const muxedUrl = await withTimeout(
-                  muxSourceAudioOntoVideo({
+                const mixedUrl = await withTimeout(
+                  mixSourceAmbientWithGeneratedAudio({
                     sourceVideoUrl,
                     generatedVideoUrl: resultUrls[0],
                     larpId: larp.id,
                   }),
-                  90_000,
+                  120_000,
                   null,
                 );
-                if (muxedUrl) {
-                  resultUrls = [muxedUrl];
-                  metadataPatch.source_audio_muxed = true;
+                if (mixedUrl) {
+                  resultUrls = [mixedUrl];
+                  metadataPatch.source_audio_ambient_mixed = true;
                 }
               }
             } else if (isV2VWorkflow && resultUrls[0]) {

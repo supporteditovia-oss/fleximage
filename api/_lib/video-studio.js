@@ -773,6 +773,7 @@ function buildRunwayPrompt(params) {
     "Mouvement réaliste, pas de diaporama, pas de simple zoom sur photo statique.",
     "Garder l'identité du sujet, traits stables, texture de peau naturelle.",
     "Une seule prise continue, pas de montage saccadé.",
+    "Aucun sous-titre, légende, texte incrusté ni charabia à l'écran.",
   ];
 
   if (params.voiceEnabled && params.voiceText) {

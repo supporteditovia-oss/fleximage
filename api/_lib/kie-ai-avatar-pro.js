@@ -44,9 +44,13 @@ async function createAiAvatarProTask(input) {
     input: {
       image_url: imageUrl,
       audio_url: audioUrl,
-      prompt:
+      prompt: [
         prompt ||
-        "Natural cinematic motion, subtle expression, premium photorealistic look.",
+          "Natural cinematic motion, subtle expression, premium photorealistic look.",
+        "No subtitles, no captions, no on-screen text, no burned-in lettering.",
+      ]
+        .join(" ")
+        .slice(0, 5000),
     },
   };
 
