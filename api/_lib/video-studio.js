@@ -750,8 +750,29 @@ function isActionMotionPrompt(text) {
 /**
  * Prompt Kie Avatar Pro (I2V) : réutilise buildRunwayPrompt (caméra / intensité / style UI).
  */
+function stripSpokenScriptFromMotionPrompt(motionPrompt, voiceText) {
+  let motion = String(motionPrompt || "").trim();
+  const script = String(voiceText || "").trim();
+  if (script.length >= 5 && motion.includes(script)) {
+    motion = motion.replace(script, " ").replace(/\s+/g, " ").trim();
+  }
+  motion = motion
+    .replace(/[«""][^«""\n]{4,500}[»""]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return motion;
+}
+
 function buildI2VAvatarPrompt(params) {
-  const motionPrompt = String(params.motionPrompt || "").trim();
+  const { appendI2VNoOnScreenTextLock } = require("./i2v-no-text-overlay");
+  let motionPrompt = String(params.motionPrompt || "").trim();
+  if (params.voiceEnabled) {
+    motionPrompt = stripSpokenScriptFromMotionPrompt(
+      motionPrompt,
+      params.voiceText,
+    );
+    motionPrompt = stripVoiceInstructionsFromPrompt(motionPrompt);
+  }
   const action = isActionMotionPrompt(motionPrompt);
   const motionIntensity =
     action && params.motionIntensity !== "dynamic"
@@ -764,14 +785,13 @@ function buildI2VAvatarPrompt(params) {
     motionIntensity,
     style: params.style || "realistic",
     voiceEnabled: Boolean(params.voiceEnabled),
-    voiceText: params.voiceText,
   });
 
   if (action) {
     prompt = `${prompt} ${I2V_ACTION_MOTION_LOCK}`;
   }
 
-  return prompt.trim();
+  return appendI2VNoOnScreenTextLock(prompt.trim());
 }
 
 function buildRunwayPrompt(params) {
@@ -791,14 +811,10 @@ function buildRunwayPrompt(params) {
     "Aucun sous-titre, légende, texte incrusté ni charabia à l'écran.",
   ];
 
-  if (params.voiceEnabled && params.voiceText) {
-    const spoken = String(params.voiceText || "")
-      .trim()
-      .replace(/["«»]/g, "'")
-      .slice(0, 280);
+  if (params.voiceEnabled) {
     parts.push(
-      "Visage visible : synchronisation labiale précise, mot pour mot, timing naturel comme une vraie vidéo tournée (pas une photo animée).",
-      `Le personnage dit exactement à voix haute : '${spoken}'. Mouvements de bouche et expressions alignés sur chaque syllabe.`,
+      "Visage visible : synchronisation labiale naturelle calée sur la piste audio fournie (pas une photo animée).",
+      "Ne jamais afficher, graver ou générer à l'écran les paroles, sous-titres ou texte du script — audio seulement.",
     );
   } else {
     parts.push(V2V_SILENT_OUTPUT_LOCK.trim());
