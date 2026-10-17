@@ -18,13 +18,6 @@ import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase"
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import { LandingEditorialGrid } from "@/components/landing/LandingEditorialGrid";
 import { LandingVoicePlayer } from "@/components/landing/LandingVoicePlayer";
-import {
-  formatCreditPackPriceInline,
-  formatPlanPriceInline,
-  getCreditPackCards,
-  getPaywallPlanCards,
-  resolveBillingCurrency,
-} from "@shared/billing";
 import "./landing-v2.css";
 import "@/pages/video-ia-page.css";
 
@@ -57,11 +50,6 @@ export default function LandingV2() {
   const appHref = loggedIn ? (adminPreview ? "/create" : "/generate") : "/register";
 
   const currentLocale = resolvePreferredLocale(i18n.resolvedLanguage, "fr") as UiLocale;
-  const billingCurrency = resolveBillingCurrency(i18n.resolvedLanguage);
-  const subscriptionCards = getPaywallPlanCards(billingCurrency);
-  const creditPackCards = getCreditPackCards(billingCurrency);
-  const formatCredits = (credits: number) =>
-    new Intl.NumberFormat(currentLocale).format(credits);
 
   useEffect(() => {
     applyLocaleFromSearch(window.location.search);
@@ -284,71 +272,6 @@ export default function LandingV2() {
           <span>03</span>
           <h3>{t("landing:proof.item3Title")}</h3>
           <p>{t("landing:proof.item3Body")}</p>
-        </div>
-      </section>
-
-      <section className="journey-pricing-section" aria-labelledby="pricing-title">
-        <div className="journey-pricing-inner">
-          <div className="journey-heading">
-            <p className="section-kicker">{t("landing:journey.kicker")}</p>
-            <h2>{t("landing:journey.title")}</h2>
-          </div>
-          <ol className="journey-steps">
-            {([1, 2, 3] as const).map((step) => (
-              <li key={step}>
-                <span>0{step}</span>
-                <h3>{t(`landing:journey.step${step}Title`)}</h3>
-                <p>{t(`landing:journey.step${step}Body`)}</p>
-              </li>
-            ))}
-          </ol>
-
-          <div className="pricing-heading">
-            <p className="section-kicker">{t("landing:pricing.kicker")}</p>
-            <h2 id="pricing-title">{t("landing:pricing.title")}</h2>
-            <p>{t("landing:pricing.subtitle")}</p>
-          </div>
-
-          <h3 className="pricing-group-title">{t("landing:pricing.plansTitle")}</h3>
-          <div className="pricing-cards">
-            {subscriptionCards.map((card) => (
-              <article className="pricing-card" key={card.id}>
-                <h4>{t(`landing:pricing.names.${card.id}`)}</h4>
-                <p className="pricing-card__price">
-                  {formatPlanPriceInline(card.id, billingCurrency)}
-                  <span> / {t("landing:pricing.monthly")}</span>
-                </p>
-                <p className="pricing-card__credits">
-                  {t("landing:pricing.creditsMonthly", {
-                    credits: formatCredits(card.credits),
-                  })}
-                </p>
-                <Link className="pricing-card__cta" href={loggedIn ? appHref : "/register"}>
-                  {t("landing:pricing.choose")}
-                </Link>
-              </article>
-            ))}
-          </div>
-
-          <h3 className="pricing-group-title">{t("landing:pricing.packsTitle")}</h3>
-          <div className="pricing-cards pricing-cards--packs">
-            {creditPackCards.map((pack) => (
-              <article className="pricing-card pricing-card--pack" key={pack.id}>
-                <h4>{t(`landing:pricing.names.${pack.id}`)}</h4>
-                <p className="pricing-card__price">
-                  {formatCreditPackPriceInline(pack.id, billingCurrency)}
-                </p>
-                <p className="pricing-card__credits">
-                  {t("landing:pricing.creditsPack", {
-                    credits: formatCredits(pack.credits),
-                  })}
-                </p>
-                <Link className="pricing-card__cta" href={loggedIn ? appHref : "/register"}>
-                  {t("landing:pricing.choose")}
-                </Link>
-              </article>
-            ))}
-          </div>
         </div>
       </section>
 

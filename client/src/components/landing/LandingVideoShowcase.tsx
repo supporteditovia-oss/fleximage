@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { LANDING_VIDEO_SHOWCASES } from "@/lib/landing-video-showcase";
-import type {
-  LandingVideoShowcaseSlot,
+import {
+  LANDING_VIDEO_SHOWCASE_ASSETS,
+  type LandingVideoShowcaseSlot,
 } from "@/lib/landing-video-showcase";
 
 function ShowcaseMedia({ slot }: { slot: LandingVideoShowcaseSlot }) {
@@ -23,7 +23,9 @@ function ShowcaseMedia({ slot }: { slot: LandingVideoShowcaseSlot }) {
         <>
           <img src={slot.poster} alt={slot.alt} loading="lazy" />
           <div className="video-showcase-media__overlay" aria-hidden>
-            <span className="video-showcase-media__tag">{slot.staticTag ?? "Photo"}</span>
+            <span className="video-showcase-media__tag">
+              {slot.staticTag ?? "Photo"}
+            </span>
           </div>
         </>
       )}
@@ -37,24 +39,30 @@ export function LandingVideoShowcase() {
 
   const showcases = useMemo(
     () =>
-      LANDING_VIDEO_SHOWCASES.map((item) => ({
+      LANDING_VIDEO_SHOWCASE_ASSETS.map((item) => ({
         id: item.id,
         index: item.index,
-        title: t(`landing:video.${item.id}.title`),
-        tech: t(`landing:video.${item.id}.tech`),
-        description: t(`landing:video.${item.id}.description`),
+        title: t(`landing:video.${item.prefix}.title`),
+        tech: t(`landing:video.${item.prefix}.tech`),
+        description: t(`landing:video.${item.prefix}.description`),
         before: {
-          ...item.before,
-          label: t(`landing:video.${item.id}.beforeLabel`),
-          alt: t(`landing:video.${item.id}.beforeAlt`),
-          ...(item.before.staticTag
-            ? { staticTag: t(`landing:video.${item.id}.staticTag`) }
+          label: t(`landing:video.${item.prefix}.beforeLabel`),
+          poster: item.beforePoster,
+          video: item.beforeVideo,
+          alt: t(`landing:video.${item.prefix}.beforeAlt`),
+          ...(item.beforeStaticTag
+            ? {
+                staticTag: t(
+                  `landing:video.${item.prefix}.staticTag`,
+                ),
+              }
             : {}),
         },
         after: {
-          ...item.after,
-          label: t(`landing:video.${item.id}.afterLabel`),
-          alt: t(`landing:video.${item.id}.afterAlt`),
+          label: t(`landing:video.${item.prefix}.afterLabel`),
+          poster: item.afterPoster,
+          video: item.afterVideo,
+          alt: t(`landing:video.${item.prefix}.afterAlt`),
         },
       })),
     [t],
