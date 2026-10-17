@@ -16,8 +16,9 @@ const {
   upsertVoiceGenerationIndex,
   fetchVoiceSampleBuffer,
 } = require("../voice-store");
-const { resolveCatalogTtsSpeed } = require("../voice-catalog");
+const { resolveCatalogTtsSpeed, lookupCatalogEntryByFishId } = require("../voice-catalog");
 const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
+const { applyVoiceCloneWarmthPostprocess } = require("../voice-clone-warmth-postprocess");
 
 const VOICE_CREDIT_COST = 8;
 
@@ -66,11 +67,16 @@ async function ensureFishReferenceId({ fishReferenceId, referenceAudio, label })
     );
   }
 
+  const prepared = await prepareVoiceCloneSampleBuffer(referenceAudio).catch(
+    () => referenceAudio,
+  );
+
   const fishVoice = await createVoiceModel({
     title: String(label || "LuxeFlexIA voice").slice(0, 80),
     description: "LuxeFlexIA voice generate",
-    audioBuffers: [referenceAudio],
+    audioBuffers: [prepared],
     trainMode: "fast",
+    enhanceAudioQuality: false,
   });
 
   return fishVoice.id;
@@ -290,12 +296,24 @@ module.exports = async function voiceGenerateHandler(req, res) {
     const ttsText = script.fishText;
     const catalogTtsSpeed = resolveCatalogTtsSpeed(resolvedFishId || fishReferenceId);
 
-    const cloneFidelity = Boolean(voiceCloneId);
+    const catalogFishEntry = lookupCatalogEntryByFishId(
+      resolvedFishId || fishReferenceId,
+    );
+    /** Mode A — catalogue rappeurs : reference_id stable, pas de re-préparation destructive. */
+    const isCatalogPresetVoice = Boolean(catalogFishEntry && !voiceCloneId);
+    /** Mode B/C — clone perso ou extrait uploadé. */
+    const cloneFidelity = Boolean(voiceCloneId) || !isCatalogPresetVoice;
 
-    const inlineReferenceAudio =
-      referenceAudio && referenceAudio.length > 1024
-        ? await prepareVoiceCloneSampleBuffer(referenceAudio).catch(() => referenceAudio)
-        : null;
+    let inlineReferenceAudio = null;
+    if (referenceAudio && referenceAudio.length > 1024) {
+      if (instantAudio && instantAudio.length > 1024) {
+        inlineReferenceAudio = await prepareVoiceCloneSampleBuffer(instantAudio).catch(
+          () => instantAudio,
+        );
+      } else if (!isCatalogPresetVoice) {
+        inlineReferenceAudio = referenceAudio;
+      }
+    }
 
     async function synthesizeInlineFromSample({ forceFreshTranscript = false } = {}) {
       const audioBuf = inlineReferenceAudio || referenceAudio;
@@ -326,7 +344,9 @@ module.exports = async function voiceGenerateHandler(req, res) {
       });
     }
 
-    if (cloneFidelity) {
+    if (isCatalogPresetVoice && resolvedFishId) {
+      audioBuffer = await synthesizeWithReferenceId();
+    } else if (cloneFidelity) {
       try {
         audioBuffer = await synthesizeWithReferenceId();
       } catch (refErr) {
@@ -357,6 +377,8 @@ module.exports = async function voiceGenerateHandler(req, res) {
         code: "missing_voice",
       });
     }
+
+    audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer);
 
     const audioKey = `voice-generations/${userId}/${generationId}.mp3`;
     const audioUrl = await uploadToR2(audioKey, audioBuffer, "audio/mpeg");

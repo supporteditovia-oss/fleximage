@@ -23,7 +23,7 @@ const {
   extractVoiceSampleWavFromVideoBuffer,
   MAX_VOICE_VIDEO_BYTES,
 } = require("../extract-audio-from-video-buffer");
-const { prepareVoiceCloneSampleBuffer } = require("../voice-sample-prepare");
+const { prepareVoiceSampleForCloneSource } = require("../voice-sample-prepare");
 
 async function parseVoiceSampleDataUrl(dataUrl, durationHint) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
@@ -198,7 +198,10 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
-    const preparedBuffer = await prepareVoiceCloneSampleBuffer(parsed.buffer);
+    const preparedBuffer = await prepareVoiceSampleForCloneSource(
+      parsed.buffer,
+      sourceTypeEarly,
+    );
 
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
     const sampleUrl = await uploadToR2(sampleKey, preparedBuffer, "audio/wav");

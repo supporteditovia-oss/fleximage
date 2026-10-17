@@ -25,6 +25,25 @@ const FIDELITY_TTS = {
   features: [],
 };
 
+/** Clone personnel / inline — stabilité + grain chaud (spec validée). */
+const CLONE_FIDELITY_TTS = {
+  latency: "normal",
+  normalize: false,
+  temperature: 0.42,
+  top_p: 0.68,
+  repetition_penalty: 1.01,
+  condition_on_previous_chunks: false,
+  mp3_bitrate: 256,
+  chunk_length: 300,
+  min_chunk_length: 100,
+  prosody: {
+    speed: 0.98,
+    volume: 0,
+    normalize_loudness: false,
+  },
+  features: [],
+};
+
 /**
  * Phrases ≤ 200 car. → un seul bloc (min_chunk=100), débit légèrement vivant.
  * Plus long → chunks liés pour garder la cohérence.
@@ -43,17 +62,31 @@ function buildTtsOptions(text, options = {}) {
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
 
+  if (cloneFidelity) {
+    const resolvedSpeed =
+      typeof speed === "number" && Number.isFinite(speed)
+        ? Math.min(clampTtsSpeed(speed), 0.98)
+        : 0.98;
+    return {
+      ...CLONE_FIDELITY_TTS,
+      chunk_length: len <= 200 ? 300 : 280,
+      min_chunk_length: len <= 200 ? 100 : 80,
+      condition_on_previous_chunks: false,
+      prosody: {
+        ...CLONE_FIDELITY_TTS.prosody,
+        speed: resolvedSpeed,
+      },
+    };
+  }
+
   if (len <= 200) {
     return {
       ...FIDELITY_TTS,
       chunk_length: 300,
       min_chunk_length: 100,
       condition_on_previous_chunks: false,
-      temperature: cloneFidelity ? 0.42 : 0.6,
-      top_p: cloneFidelity ? 0.68 : 0.78,
-      repetition_penalty: cloneFidelity ? 1.01 : 1.06,
       prosody: {
-        speed: cloneFidelity ? Math.min(speed, 0.98) : speed,
+        speed,
         volume: 0,
         normalize_loudness: false,
       },
@@ -64,12 +97,12 @@ function buildTtsOptions(text, options = {}) {
     ...FIDELITY_TTS,
     chunk_length: 280,
     min_chunk_length: 80,
-    temperature: cloneFidelity ? 0.44 : 0.54,
-    top_p: cloneFidelity ? 0.7 : 0.74,
-    repetition_penalty: cloneFidelity ? 1.03 : 1.1,
+    temperature: 0.54,
+    top_p: 0.74,
+    repetition_penalty: 1.1,
     condition_on_previous_chunks: true,
     prosody: {
-      speed: Math.min(speed, cloneFidelity ? 0.98 : 1),
+      speed: Math.min(speed, 1),
       volume: 0,
       normalize_loudness: false,
     },
@@ -400,6 +433,7 @@ module.exports = {
   createVoiceModel,
   transcribeAudio,
   buildTtsOptions,
+  CLONE_FIDELITY_TTS,
   synthesizeSpeech,
   synthesizeWithReferenceMsgpack,
 };

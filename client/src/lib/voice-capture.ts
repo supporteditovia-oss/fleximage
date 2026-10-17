@@ -433,11 +433,27 @@ function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
-function connectVoiceClonePrepChain(ctx: BaseAudioContext, source: AudioNode): AudioNode {
+function connectVoiceClonePrepChain(
+  ctx: BaseAudioContext,
+  source: AudioNode,
+  options?: { heavyImportPrep?: boolean },
+): AudioNode {
   const highpass = ctx.createBiquadFilter();
   highpass.type = "highpass";
   highpass.frequency.value = 80;
   highpass.Q.value = 0.7;
+
+  let tail: AudioNode = highpass;
+  source.connect(highpass);
+
+  if (options?.heavyImportPrep) {
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 12_000;
+    lowpass.Q.value = 0.7;
+    highpass.connect(lowpass);
+    tail = lowpass;
+  }
 
   const compressor = ctx.createDynamicsCompressor();
   compressor.threshold.value = -22;
@@ -446,8 +462,7 @@ function connectVoiceClonePrepChain(ctx: BaseAudioContext, source: AudioNode): A
   compressor.attack.value = 0.004;
   compressor.release.value = 0.2;
 
-  source.connect(highpass);
-  highpass.connect(compressor);
+  tail.connect(compressor);
   return compressor;
 }
 
@@ -462,8 +477,13 @@ export async function prepareVoiceClipForClone(clip: VoiceClip): Promise<Blob> {
     const offline = new OfflineAudioContext(1, length, targetRate);
     const src = offline.createBufferSource();
     src.buffer = decoded;
-    const chainOut = connectVoiceClonePrepChain(offline, src);
-    chainOut.connect(offline.destination);
+    if (clip.source === "record") {
+      src.connect(offline.destination);
+    } else {
+      connectVoiceClonePrepChain(offline, src, { heavyImportPrep: true }).connect(
+        offline.destination,
+      );
+    }
     src.start(0);
     const rendered = await offline.startRendering();
     let wav = await audioBufferToWavBlob(rendered);
@@ -472,7 +492,13 @@ export async function prepareVoiceClipForClone(clip: VoiceClip): Promise<Blob> {
     const compact = new OfflineAudioContext(1, decoded.length, 22050);
     const compactSrc = compact.createBufferSource();
     compactSrc.buffer = decoded;
-    connectVoiceClonePrepChain(compact, compactSrc).connect(compact.destination);
+    if (clip.source === "record") {
+      compactSrc.connect(compact.destination);
+    } else {
+      connectVoiceClonePrepChain(compact, compactSrc, { heavyImportPrep: true }).connect(
+        compact.destination,
+      );
+    }
     compactSrc.start(0);
     const compactRendered = await compact.startRendering();
     wav = await audioBufferToWavBlob(compactRendered);

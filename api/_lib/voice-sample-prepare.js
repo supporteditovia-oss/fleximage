@@ -78,7 +78,71 @@ async function prepareVoiceCloneSampleBuffer(inputBuffer) {
   }
 }
 
+/**
+ * Cas B — enregistrement micro : format mono 44.1 kHz sans filtrage destructif.
+ */
+async function normalizeVoiceRecordSampleBuffer(inputBuffer) {
+  if (!inputBuffer?.length) {
+    throw Object.assign(new Error("Échantillon audio vide"), {
+      status: 400,
+      code: "empty_audio",
+    });
+  }
+
+  if (!ffmpegPath) {
+    return inputBuffer;
+  }
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "voice-norm-"));
+  const inputPath = path.join(tmpDir, "in.wav");
+  const outputPath = path.join(tmpDir, "out.wav");
+
+  try {
+    await fs.writeFile(inputPath, inputBuffer);
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-y",
+        "-i",
+        inputPath,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "44100",
+        "-acodec",
+        "pcm_s16le",
+        outputPath,
+      ],
+      { timeout: 60_000 },
+    );
+    const out = await fs.readFile(outputPath);
+    if (!out.length) return inputBuffer;
+    return out;
+  } catch (err) {
+    console.warn("voice-sample-normalize fallback", err?.message || err);
+    return inputBuffer;
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
+ * Prépare l’échantillon selon la source (B enregistrement vs C import externe).
+ */
+async function prepareVoiceSampleForCloneSource(inputBuffer, sourceType = "import") {
+  if (sourceType === "record") {
+    return normalizeVoiceRecordSampleBuffer(inputBuffer);
+  }
+  if (sourceType === "catalog") {
+    return inputBuffer;
+  }
+  return prepareVoiceCloneSampleBuffer(inputBuffer);
+}
+
 module.exports = {
   prepareVoiceCloneSampleBuffer,
+  normalizeVoiceRecordSampleBuffer,
+  prepareVoiceSampleForCloneSource,
   VOICE_CLONE_AF,
 };
