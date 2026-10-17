@@ -1,7 +1,7 @@
 import { Mic } from "lucide-react";
 import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
 import { VideoI2VCatalogVoicePicker } from "@/components/video/VideoI2VCatalogVoicePicker";
-import type { I2VLibraryVoice } from "@/lib/i2v-voice-library";
+import type { AdminVideoVoice } from "@/lib/admin-video-voice-catalog";
 
 type VideoVoiceAddonProps = {
   enabled: boolean;
@@ -13,7 +13,7 @@ type VideoVoiceAddonProps = {
   /** Catalogue homme / femme — preview admin Vidéo IA. */
   adminVoiceCatalogEnabled?: boolean;
   i2vVoiceId?: string | null;
-  onI2vVoiceId?: (voice: I2VLibraryVoice) => void;
+  onI2vVoiceId?: (voice: AdminVideoVoice) => void;
 };
 
 export function VideoVoiceAddon({

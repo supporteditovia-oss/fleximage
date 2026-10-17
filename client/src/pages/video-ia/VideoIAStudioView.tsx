@@ -47,7 +47,7 @@ export type VideoIAStudioViewProps = {
   voiceExtraCredit: number;
   adminVoiceCatalogEnabled?: boolean;
   i2vVoiceId?: string | null;
-  onI2vVoiceId?: (voice: import("@/lib/i2v-voice-library").I2VLibraryVoice) => void;
+  onI2vVoiceId?: (voice: import("@/lib/admin-video-voice-catalog").AdminVideoVoice) => void;
   canGenerateI2V: boolean;
   onGenerateI2V: () => void;
   i2vPending: boolean;

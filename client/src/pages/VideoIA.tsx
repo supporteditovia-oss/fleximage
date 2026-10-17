@@ -73,9 +73,10 @@ import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
 import {
-  findI2VLibraryVoiceById,
-  resolveDefaultI2VLibraryVoiceId,
-} from "@/lib/i2v-voice-library";
+  resolveAdminVideoVoiceFishId,
+  resolveDefaultAdminVideoVoiceId,
+  resolveI2VVoiceIdForApi,
+} from "@/lib/admin-video-voice-catalog";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
@@ -151,7 +152,7 @@ export default function VideoIA() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
   const [i2vVoiceId, setI2vVoiceId] = useState<string | null>(() =>
-    resolveDefaultI2VLibraryVoiceId() || null,
+    resolveDefaultAdminVideoVoiceId() || null,
   );
   const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
@@ -315,11 +316,14 @@ export default function VideoIA() {
           voice_text: voiceText.trim(),
           voice_consent: true,
           ...(studioAdmin && i2vVoiceId
-            ? {
-                i2v_voice_id: i2vVoiceId,
-                voice_fish_reference_id:
-                  findI2VLibraryVoiceById(i2vVoiceId)?.fishId ?? undefined,
-              }
+            ? (() => {
+                const apiI2vId = resolveI2VVoiceIdForApi(i2vVoiceId);
+                return {
+                  ...(apiI2vId ? { i2v_voice_id: apiI2vId } : {}),
+                  voice_fish_reference_id:
+                    resolveAdminVideoVoiceFishId(i2vVoiceId),
+                };
+              })()
             : {}),
         }
       : { voice_enabled: false };
