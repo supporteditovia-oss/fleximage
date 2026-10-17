@@ -442,6 +442,7 @@ export function GenerationProgress({
                 larpId={displayLarpId!}
                 resultType={displayResultType}
                 posterUrl={inputImageUrl}
+                aspectRatio={data?.aspectRatio ?? aspectRatio}
               />
               <button
                 type="button"

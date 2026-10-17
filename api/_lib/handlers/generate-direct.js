@@ -47,6 +47,7 @@ const {
   SESSION_BURST_WINDOW_MS,
 } = require("../generation-dedup");
 const { enrichPromptForGeneration } = require("../prompt-intelligence");
+const { buildAspectRatioPromptSuffix } = require("../aspect-ratio-prompt");
 
 function normalizeAspectRatio(value) {
   return value === "16:9" ? "16:9" : OUTPUT_ASPECT_RATIO;
@@ -507,7 +508,7 @@ module.exports = async function handler(req, res) {
       faceSwapLockedPose: isBuiltinFaceSwap,
     });
 
-    const finalPrompt = isBuiltinFaceSwapWithOutfit
+    let finalPrompt = isBuiltinFaceSwapWithOutfit
       ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
           "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
           { subjectPoseBlock },
@@ -523,6 +524,10 @@ module.exports = async function handler(req, res) {
             }),
             effectivePrompt,
           );
+    const strictAspectRatio = admin;
+    if (strictAspectRatio) {
+      finalPrompt = `${finalPrompt}${buildAspectRatioPromptSuffix(aspectRatio)}`;
+    }
     const oneshotModelVariant = ONESHOT_MODEL_VARIANT;
     const estimatedSeconds = estimateGenerationSeconds(effectivePrompt, {
       referenceImageCount: imageUrls.length,
@@ -539,6 +544,8 @@ module.exports = async function handler(req, res) {
       subject_type: subject,
       pose_style: poseStyle,
       server_prompt_ready_at: new Date().toISOString(),
+      strict_aspect_ratio: strictAspectRatio,
+      requested_aspect_ratio: aspectRatio,
       ...(templateReferenceId
         ? {
             ...(isBuiltinTemplateId(templateId)
@@ -567,6 +574,7 @@ module.exports = async function handler(req, res) {
         imageUrls,
         modelVariant: oneshotModelVariant,
         adminPreferDeepInfra: admin,
+        strictAspectRatio,
         logContext: {
           userId,
           source,
