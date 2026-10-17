@@ -35,7 +35,8 @@ async function synthesizeCatalogPresetSpeech({
       format: "mp3",
       speed,
       cloneFidelity: false,
-      catalogFastFlow: false,
+      catalogFastFlow: studio.catalogFastFlow === true,
+      catalogIncisiveFlow: studio.catalogIncisiveFlow === true,
     });
     if (buffer?.length >= 512) return buffer;
   } catch (primaryErr) {

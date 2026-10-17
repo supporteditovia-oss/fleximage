@@ -380,19 +380,13 @@ module.exports = async function voiceGenerateHandler(req, res) {
 
     let inlineReferenceAudio = null;
     if (referenceAudio && referenceAudio.length > 1024 && cloneFidelity) {
-      const useLightInlinePrep =
-        inlineIdentityClone ||
-        incisiveClone ||
-        deepChestClone ||
-        Boolean(instantAudio && instantAudio.length > 1024);
-      if (useLightInlinePrep) {
-        const raw = instantAudio && instantAudio.length > 1024 ? instantAudio : referenceAudio;
-        inlineReferenceAudio = await prepareVoiceCloneInlineReferenceBuffer(raw, {
-          punch: incisiveClone,
-        }).catch(() => raw);
-      } else {
-        inlineReferenceAudio = referenceAudio;
-      }
+      const raw =
+        instantAudio && instantAudio.length > 1024 ? instantAudio : referenceAudio;
+      const { prepareVoiceReferenceForGeneration } = require("../voice-sample-prepare");
+      inlineReferenceAudio = await prepareVoiceReferenceForGeneration(raw, {
+        generationMode: voiceMode.mode,
+        incisive: incisiveClone,
+      }).catch(() => raw);
     }
 
     const incisiveRap =
@@ -490,7 +484,15 @@ module.exports = async function voiceGenerateHandler(req, res) {
       });
     }
 
-    if (shouldApplyCloneWarmthPostprocess(voiceMode)) {
+    if (
+      shouldApplyCloneWarmthPostprocess({
+        isCatalogPresetVoice,
+        generationMode: voiceMode.mode,
+        incisiveClone,
+        deepChestClone,
+        inlineIdentityClone,
+      })
+    ) {
       audioBuffer = await applyVoiceCloneWarmthPostprocess(audioBuffer, {
         deepChest: deepChestClone,
         identityInline: inlineIdentityClone,

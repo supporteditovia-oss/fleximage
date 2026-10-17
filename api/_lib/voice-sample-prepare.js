@@ -21,10 +21,15 @@ const execFileAsync = promisify(execFile);
 const VOICE_CLONE_AF =
   "silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB," +
   "areverse,silenceremove=start_periods=1:start_silence=0.25:start_threshold=-42dB,areverse," +
-  "highpass=f=50,lowpass=f=12000," +
+  "highpass=f=58,lowpass=f=12000," +
   "afftdn=nf=-24:nt=w," +
   "acompressor=threshold=-20dB:ratio=2:attack=12:release=140:makeup=1.5," +
   "loudnorm=I=-16:TP=-1.5:LRA=13:print_format=none";
+
+/** Mode C incisif — HP/LP + compresseur léger, pas de denoise/loudnorm destructifs. */
+const VOICE_CLONE_MODE_C_INCISIVE_AF =
+  "highpass=f=58,lowpass=f=12000," +
+  "acompressor=threshold=-22dB:ratio=1.8:attack=8:release=120:makeup=1.2";
 
 /**
  * Inline Fish (zero-shot) — préserve nasalité / timbre (Jul…) : pas de denoise ni compresseur agressif.
@@ -159,6 +164,10 @@ async function normalizeVoiceRecordSampleBuffer(inputBuffer) {
 /**
  * Prépare l’échantillon selon la source (B enregistrement vs C import externe).
  */
+async function prepareVoiceCloneModeCIncisiveBuffer(inputBuffer) {
+  return runFfmpegVoiceFilter(inputBuffer, VOICE_CLONE_MODE_C_INCISIVE_AF);
+}
+
 async function prepareVoiceSampleForCloneSource(inputBuffer, sourceType = "import") {
   if (sourceType === "record") {
     return normalizeVoiceRecordSampleBuffer(inputBuffer);
@@ -166,7 +175,21 @@ async function prepareVoiceSampleForCloneSource(inputBuffer, sourceType = "impor
   if (sourceType === "catalog") {
     return inputBuffer;
   }
-  return prepareVoiceCloneInlineReferenceBuffer(inputBuffer);
+  return prepareVoiceCloneSampleBuffer(inputBuffer);
+}
+
+/**
+ * Préparation échantillon inline à la génération (modes B / C).
+ */
+async function prepareVoiceReferenceForGeneration(inputBuffer, options = {}) {
+  const mode = options.generationMode || "C";
+  if (!inputBuffer?.length) return inputBuffer;
+  if (mode === "A") return inputBuffer;
+  if (mode === "B") return normalizeVoiceRecordSampleBuffer(inputBuffer);
+  if (options.incisive === true) {
+    return prepareVoiceCloneModeCIncisiveBuffer(inputBuffer);
+  }
+  return prepareVoiceCloneSampleBuffer(inputBuffer);
 }
 
 module.exports = {
@@ -175,6 +198,9 @@ module.exports = {
   normalizeVoiceRecordSampleBuffer,
   prepareVoiceSampleForCloneSource,
   VOICE_CLONE_AF,
+  VOICE_CLONE_MODE_C_INCISIVE_AF,
   VOICE_CLONE_INLINE_AF,
   VOICE_CLONE_INLINE_PUNCH_AF,
+  prepareVoiceCloneModeCIncisiveBuffer,
+  prepareVoiceReferenceForGeneration,
 };

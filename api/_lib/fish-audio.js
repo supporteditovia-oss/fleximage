@@ -134,7 +134,7 @@ function buildTtsOptions(text, options = {}) {
           ? 0.99
           : 0.98;
     if (incisiveClone && options.incisiveRap === true) {
-      speedCap = Math.min(1.08, speedCap + 0.02);
+      speedCap = Math.min(1.1, speedCap + 0.04);
     }
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
@@ -162,6 +162,24 @@ function buildTtsOptions(text, options = {}) {
     typeof speed === "number" && Number.isFinite(speed)
       ? clampTtsSpeed(speed)
       : DEFAULT_TTS_SPEED;
+
+  if (options.catalogIncisiveFlow === true && !cloneFidelity) {
+    const rapSpeed = Math.max(resolvedCatalogSpeed, 1.02);
+    return {
+      ...FIDELITY_TTS,
+      temperature: 0.68,
+      top_p: 0.86,
+      repetition_penalty: 1.07,
+      chunk_length: len <= 220 ? 340 : 300,
+      min_chunk_length: 120,
+      condition_on_previous_chunks: false,
+      prosody: {
+        speed: clampTtsSpeed(rapSpeed),
+        volume: 0,
+        normalize_loudness: false,
+      },
+    };
+  }
 
   if (catalogFastFlow) {
     const singleTake = len <= 420;
@@ -516,6 +534,7 @@ async function synthesizeSpeech({
   speed,
   cloneFidelity,
   catalogFastFlow,
+  catalogIncisiveFlow,
   deepChestClone,
   inlineIdentityClone,
   incisiveClone,
@@ -553,6 +572,7 @@ async function synthesizeSpeech({
         speed: resolvedSpeed,
         cloneFidelity,
         catalogFastFlow,
+        catalogIncisiveFlow,
         deepChestClone,
         inlineIdentityClone,
         incisiveClone,

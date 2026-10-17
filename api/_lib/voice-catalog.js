@@ -131,10 +131,12 @@ function resolveCatalogDeliveryProfile(fishReferenceId) {
 function resolveCatalogStudioSynth(fishReferenceId) {
   const entry = lookupCatalogEntryByFishId(fishReferenceId);
   const fishId = entry ? resolveEffectiveCatalogFishId(entry) : String(fishReferenceId || "").toLowerCase();
+  const fastFlow = isCatalogFastDelivery(entry);
   return {
     referenceId: fishId,
     speed: resolveCatalogPreviewTtsSpeed(fishReferenceId),
-    catalogFastFlow: false,
+    catalogFastFlow: fastFlow,
+    catalogIncisiveFlow: fastFlow,
     cloneFidelity: false,
     voiceName: entry?.name ?? null,
     spokenName: entry?.spokenName ?? null,

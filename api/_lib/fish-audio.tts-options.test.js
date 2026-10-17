@@ -42,7 +42,18 @@ test("buildTtsOptions incisif rap — boost vitesse", () => {
     incisiveRap: true,
     speed: 1.1,
   });
-  assert.equal(opts.prosody.speed, 1.08);
+  assert.equal(opts.prosody.speed, 1.1);
+});
+
+test("buildTtsOptions catalogue incisif Mode A — PLK / Niska", () => {
+  const opts = buildTtsOptions("Flow rap serré", {
+    cloneFidelity: false,
+    catalogIncisiveFlow: true,
+    speed: 1.06,
+  });
+  assert.equal(opts.temperature, 0.68);
+  assert.equal(opts.top_p, 0.86);
+  assert.ok(opts.prosody.speed >= 1.02);
 });
 
 test("buildTtsOptions inline identity Mode C — timbre marqué", () => {

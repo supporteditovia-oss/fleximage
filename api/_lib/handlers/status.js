@@ -2,9 +2,9 @@ const { requireUser, sendError } = require("../user-auth");
 const { downloadAndStoreImages, downloadAndStoreVideo } = require("../r2");
 const {
   getSourceVideoUrlFromLarp,
-  mixSourceAmbientWithGeneratedAudio,
   stripAudioFromVideoUrl,
 } = require("../mux-source-audio");
+const { finalizeVideoDeliveryAudio } = require("../video-delivery-audio");
 const { getRunwayVideoStatus } = require("../kie-runway");
 const {
   mapStudioStage,
@@ -1605,32 +1605,29 @@ module.exports = async function handler(req, res) {
                   : [parsed.video_url];
             }
             const isV2VWorkflow = meta.workflow === "video_to_video";
-            const shouldPreserveSourceAudio =
-              isV2VWorkflow && meta.preserve_source_audio === true;
-            const shouldMixI2VAmbient =
-              isI2VWorkflow &&
-              meta.voice_enabled === true &&
-              meta.lip_sync_enabled === true;
-            const shouldMixAmbient =
-              (shouldPreserveSourceAudio || shouldMixI2VAmbient) && resultUrls[0];
-            if (shouldMixAmbient) {
+            if (resultUrls[0]) {
               const sourceVideoUrl = getSourceVideoUrlFromLarp(larp);
-              if (sourceVideoUrl) {
-                const mixedUrl = await withTimeout(
-                  mixSourceAmbientWithGeneratedAudio({
-                    sourceVideoUrl,
-                    generatedVideoUrl: resultUrls[0],
-                    larpId: larp.id,
-                  }),
-                  120_000,
-                  null,
-                );
-                if (mixedUrl) {
-                  resultUrls = [mixedUrl];
-                  metadataPatch.source_audio_ambient_mixed = true;
-                }
+              const deliveryAudio = await withTimeout(
+                finalizeVideoDeliveryAudio({
+                  meta,
+                  generatedVideoUrl: resultUrls[0],
+                  sourceVideoUrl,
+                  larpId: larp.id,
+                }),
+                150_000,
+                null,
+              );
+              if (deliveryAudio?.url) {
+                resultUrls = [deliveryAudio.url];
+                metadataPatch.video_delivery_audio_mode = deliveryAudio.mode;
               }
-            } else if (isV2VWorkflow && resultUrls[0]) {
+            }
+            if (
+              isV2VWorkflow &&
+              resultUrls[0] &&
+              !meta.voice_enabled &&
+              meta.preserve_source_audio !== true
+            ) {
               const silentUrl = await withTimeout(
                 stripAudioFromVideoUrl({
                   videoUrl: resultUrls[0],

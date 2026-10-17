@@ -7,6 +7,7 @@ const {
   isI2VAvatarPipelineV2Enabled,
 } = require("./i2v-av-sync");
 const { normalizeI2VDurationSec } = require("../../shared/video-i2v-pricing.cjs");
+const { resolveCatalogStudioSynth } = require("./voice-catalog");
 const catalog = require("../../shared/voice-catalog.json");
 
 const DEFAULT_CATALOG_FISH_ID =
@@ -29,6 +30,16 @@ function resolveI2VTargetDurationSec(meta) {
   return normalizeI2VDurationSec(raw);
 }
 
+function resolveI2VCatalogTtsOptions(meta) {
+  const fishId = resolveFishReferenceId(meta);
+  const studio = resolveCatalogStudioSynth(fishId);
+  return {
+    speed: studio?.speed,
+    catalogFastFlow: studio?.catalogFastFlow === true,
+    catalogIncisiveFlow: studio?.catalogIncisiveFlow === true,
+  };
+}
+
 /** Comportement prod clients (main) — Fish brut, pas de calage durée. */
 async function prepareI2VAvatarAudioUrlLegacy({ userId, meta }) {
   const voiceEnabled = meta?.voice_enabled === true;
@@ -38,11 +49,15 @@ async function prepareI2VAvatarAudioUrlLegacy({ userId, meta }) {
     voiceEnabled && voiceText.length >= 5
       ? prepareI2VVoiceTextForFish(voiceText)
       : "…";
+  const catalogTts = resolveI2VCatalogTtsOptions(meta);
   const buffer = await synthesizeSpeech({
     text: ttsText,
     referenceId,
     format: "mp3",
     cloneFidelity: false,
+    speed: catalogTts.speed,
+    catalogFastFlow: catalogTts.catalogFastFlow,
+    catalogIncisiveFlow: catalogTts.catalogIncisiveFlow,
   });
   const url = await uploadAudioBufferToR2(userId, buffer);
   return { url, targetSec: null, voiceEnabled, pipelineV2: false };
@@ -56,11 +71,15 @@ async function prepareI2VAvatarAudioUrlV2({ userId, meta }) {
   let buffer;
   if (voiceEnabled && voiceText.length >= 5) {
     const ttsText = prepareI2VVoiceTextForFish(voiceText);
+    const catalogTts = resolveI2VCatalogTtsOptions(meta);
     const rawBuffer = await synthesizeSpeech({
       text: ttsText,
       referenceId: resolveFishReferenceId(meta),
       format: "mp3",
       cloneFidelity: false,
+      speed: catalogTts.speed,
+      catalogFastFlow: catalogTts.catalogFastFlow,
+      catalogIncisiveFlow: catalogTts.catalogIncisiveFlow,
     });
     buffer = await fitAudioBufferToDurationSec(rawBuffer, targetSec);
   } else {

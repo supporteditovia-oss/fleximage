@@ -11,17 +11,29 @@ test("Mode A — PLK catalogue sans clone id", () => {
   });
   assert.equal(r.mode, "A");
   assert.equal(r.isCatalogPresetVoice, true);
-  assert.equal(shouldApplyCloneWarmthPostprocess(r), false);
+  assert.equal(
+    shouldApplyCloneWarmthPostprocess({
+      isCatalogPresetVoice: true,
+      generationMode: "A",
+    }),
+    false,
+  );
 });
 
-test("Mode B — clone enregistré micro", () => {
+test("Mode B — clone enregistré micro sans warmth destructif", () => {
   const r = resolveVoiceGenerationMode({
     voiceCloneId: "clone-1",
     fishReferenceId: "abcabcabcabcabcabcabcabcabcabc",
     sourceType: "record",
   });
   assert.equal(r.mode, "B");
-  assert.equal(shouldApplyCloneWarmthPostprocess(r), true);
+  assert.equal(
+    shouldApplyCloneWarmthPostprocess({
+      isCatalogPresetVoice: false,
+      generationMode: "B",
+    }),
+    false,
+  );
 });
 
 test("catalog Fish id prioritaire sur voiceCloneId résiduel (Niska)", () => {
@@ -32,4 +44,24 @@ test("catalog Fish id prioritaire sur voiceCloneId résiduel (Niska)", () => {
   assert.equal(mode.mode, "A");
   assert.equal(mode.isCatalogPresetVoice, true);
   assert.equal(mode.catalogEntry?.slug, "niska");
+});
+
+test("Mode C incisif — pas de warmth post-TTS", () => {
+  assert.equal(
+    shouldApplyCloneWarmthPostprocess({
+      generationMode: "C",
+      incisiveClone: true,
+    }),
+    false,
+  );
+});
+
+test("Mode C deep chest — warmth autorisé", () => {
+  assert.equal(
+    shouldApplyCloneWarmthPostprocess({
+      generationMode: "C",
+      deepChestClone: true,
+    }),
+    true,
+  );
 });

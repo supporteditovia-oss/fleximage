@@ -27,8 +27,24 @@ function resolveVoiceGenerationMode({
   return { mode: "C", catalogEntry: null, isCatalogPresetVoice: false };
 }
 
-function shouldApplyCloneWarmthPostprocess({ isCatalogPresetVoice }) {
-  return !isCatalogPresetVoice;
+/**
+ * Warmth post-TTS uniquement quand utile (coffre / identité Mode C).
+ * Mode A catalogue et Mode B micro : aucun filtre FFmpeg destructif en sortie.
+ */
+function shouldApplyCloneWarmthPostprocess({
+  isCatalogPresetVoice,
+  generationMode,
+  incisiveClone,
+  deepChestClone,
+  inlineIdentityClone,
+} = {}) {
+  if (isCatalogPresetVoice || generationMode === "A") return false;
+  if (generationMode === "B") return false;
+  if (incisiveClone === true) return false;
+  if (generationMode === "C") {
+    return deepChestClone === true || inlineIdentityClone === true;
+  }
+  return false;
 }
 
 /** Mode C / import vidéo — profil Fish inline orienté identité timbrale. */
