@@ -382,9 +382,13 @@ export function PaywallOverlay({
                           <h3 className="lx-display text-[13px] font-semibold leading-none text-[var(--lx-ink)] md:text-xl">
                             {t(`paywall.plans.${plan.id}.name`)}
                           </h3>
-                          <p className="mt-1.5 text-[10px] font-semibold text-[var(--lx-muted)] line-through md:text-xs">
-                            {t(`paywall.plans.${plan.id}.oldPrice`)}
-                          </p>
+                          {t(`paywall.plans.${plan.id}.oldPrice`, {
+                            defaultValue: "",
+                          }) ? (
+                            <p className="mt-1.5 text-[10px] font-semibold text-[var(--lx-muted)] line-through md:text-xs">
+                              {t(`paywall.plans.${plan.id}.oldPrice`)}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="mt-3 flex items-end gap-0.5 md:mt-4 md:gap-1">

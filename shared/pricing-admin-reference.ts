@@ -9,7 +9,7 @@ import { computeV2VStudioCreditCost } from "./video-ultra-pricing";
 export const ADMIN_PRICING_REFERENCE = {
   version: "v2-preview" as const,
   prodBillingNote:
-    "Clients : débit actuel inchangé (ex. vidéo I2V 60 cr) jusqu’à activation v2.",
+    "Tarifs de vente alignés sur Stripe. Les abonnements déjà actifs conservent leur tarif actuel.",
 
   creditBurn: {
     image: 10,
@@ -27,6 +27,7 @@ export const ADMIN_PRICING_REFERENCE = {
       label: "Découverte",
       priceLabel: "9,90 €/mois",
       creditsPerMonth: 250,
+      recommended: false,
     },
     {
       id: "essential",
@@ -40,6 +41,7 @@ export const ADMIN_PRICING_REFERENCE = {
       label: "Ultimate",
       priceLabel: "49,90 €/mois",
       creditsPerMonth: 2850,
+      recommended: false,
     },
   ],
 

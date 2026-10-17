@@ -5,20 +5,20 @@
 
 const PLAN_CREDITS = {
   discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
+  essential: 1200,
+  ultimate: 2850,
 };
 
 const PLAN_PRICES_EUR = {
-  discovery: "8,90",
-  essential: "19,90",
-  ultimate: "39,90",
+  discovery: "9,90",
+  essential: "24,90",
+  ultimate: "49,90",
 };
 
 const PLAN_PRICES_USD = {
   discovery: "9.99",
-  essential: "19.99",
-  ultimate: "39.99",
+  essential: "24.99",
+  ultimate: "49.99",
 };
 
 const PLAN_ENV_KEYS_EUR = {
@@ -47,29 +47,29 @@ const CREDIT_PACKS_EUR = [
   {
     id: "mini",
     envKey: "STRIPE_PACK_MINI_PRICE_ID",
-    credits: 50,
-    amountCents: 290,
+    credits: 90,
+    amountCents: 349,
     label: "Boost Mini",
-    priceLabel: "2,90 €",
-    images: 5,
+    priceLabel: "3,49 €",
+    images: 9,
   },
   {
     id: "standard",
     envKey: "STRIPE_PACK_STANDARD_PRICE_ID",
-    credits: 120,
-    amountCents: 590,
+    credits: 210,
+    amountCents: 799,
     label: "Boost Standard",
-    priceLabel: "5,90 €",
-    images: 12,
+    priceLabel: "7,99 €",
+    images: 21,
   },
   {
     id: "plus",
     envKey: "STRIPE_PACK_PLUS_PRICE_ID",
-    credits: 250,
-    amountCents: 990,
+    credits: 450,
+    amountCents: 1499,
     label: "Boost Plus",
-    priceLabel: "9,90 €",
-    images: 25,
+    priceLabel: "14,99 €",
+    images: 45,
   },
 ];
 
@@ -77,29 +77,29 @@ const CREDIT_PACKS_USD = [
   {
     id: "mini",
     envKey: "STRIPE_PACK_MINI_PRICE_ID_USD",
-    credits: 50,
-    amountCents: 299,
+    credits: 90,
+    amountCents: 349,
     label: "Boost Mini",
-    priceLabel: "$2.99",
-    images: 5,
+    priceLabel: "$3.49",
+    images: 9,
   },
   {
     id: "standard",
     envKey: "STRIPE_PACK_STANDARD_PRICE_ID_USD",
-    credits: 120,
-    amountCents: 599,
+    credits: 210,
+    amountCents: 799,
     label: "Boost Standard",
-    priceLabel: "$5.99",
-    images: 12,
+    priceLabel: "$7.99",
+    images: 21,
   },
   {
     id: "plus",
     envKey: "STRIPE_PACK_PLUS_PRICE_ID_USD",
-    credits: 250,
-    amountCents: 999,
+    credits: 450,
+    amountCents: 1499,
     label: "Boost Plus",
-    priceLabel: "$9.99",
-    images: 25,
+    priceLabel: "$14.99",
+    images: 45,
   },
 ];
 
@@ -108,21 +108,21 @@ const UPGRADE_COPY_EUR = {
     plan: "essential",
     priceLabel: PLAN_PRICES_EUR.essential,
     credits: PLAN_CREDITS.essential,
-    creditsLabel: "1 100 crédits",
+    creditsLabel: "1 200 crédits",
     headline: "Passe en Essential",
     pitch:
-      "1 100 crédits / mois (110 images) — bien plus rentable que les packs.",
-    cta: "Passer à Essential — 19,90 €/mois",
+      "1 200 crédits / mois (120 images) — bien plus rentable que les packs.",
+    cta: "Passer à Essential — 24,90 €/mois",
   },
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_EUR.ultimate,
     credits: PLAN_CREDITS.ultimate,
-    creditsLabel: "2 500 crédits",
+    creditsLabel: "2 850 crédits",
     headline: "Passe en Ultimate",
     pitch:
-      "2 500 crédits / mois (250 images). Le max de volume, moins cher à l’image.",
-    cta: "Passer à Ultimate — 39,90 €/mois",
+      "2 850 crédits / mois (285 images). Le max de volume, moins cher à l’image.",
+    cta: "Passer à Ultimate — 49,90 €/mois",
   },
 };
 
@@ -131,21 +131,21 @@ const UPGRADE_COPY_USD = {
     plan: "essential",
     priceLabel: PLAN_PRICES_USD.essential,
     credits: PLAN_CREDITS.essential,
-    creditsLabel: "1,100 credits",
+    creditsLabel: "1,200 credits",
     headline: "Upgrade to Essential",
     pitch:
-      "1,100 credits / month (110 images) — much better value than one-off packs.",
-    cta: "Upgrade to Essential — $19.99/mo",
+      "1,200 credits / month (120 images) — much better value than one-off packs.",
+    cta: "Upgrade to Essential — $24.99/mo",
   },
   ultimate: {
     plan: "ultimate",
     priceLabel: PLAN_PRICES_USD.ultimate,
     credits: PLAN_CREDITS.ultimate,
-    creditsLabel: "2,500 credits",
+    creditsLabel: "2,850 credits",
     headline: "Upgrade to Ultimate",
     pitch:
-      "2,500 credits / month (250 images). Maximum volume, lowest cost per image.",
-    cta: "Upgrade to Ultimate — $39.99/mo",
+      "2,850 credits / month (285 images). Maximum volume, lowest cost per image.",
+    cta: "Upgrade to Ultimate — $49.99/mo",
   },
 };
 

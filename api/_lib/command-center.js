@@ -1,7 +1,7 @@
 const PLAN_MRR_CENTS = {
-  discovery: 890,
-  essential: 1990,
-  ultimate: 3990,
+  discovery: 990,
+  essential: 2490,
+  ultimate: 4990,
 };
 
 function getTimeZoneOffsetMs(date, timeZone) {

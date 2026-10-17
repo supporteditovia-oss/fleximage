@@ -1,15 +1,15 @@
 const PLAN_CREDITS = {
   discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
+  essential: 1200,
+  ultimate: 2850,
 };
 
 const { getPackById } = require("./billing-offers");
 
 const PLAN_MRR_CENTS = {
-  discovery: 890,
-  essential: 1990,
-  ultimate: 3990,
+  discovery: 990,
+  essential: 2490,
+  ultimate: 4990,
 };
 
 function normalizePlan(plan) {

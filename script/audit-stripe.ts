@@ -10,14 +10,15 @@ type Check = {
   message: string;
 };
 
-type PlanDefinition = {
-  key: "discovery" | "essential" | "ultimate";
+type PriceDefinition = {
+  key: string;
+  kind: "subscription" | "pack";
+  currency: "eur" | "usd";
   envKey: string;
   lookupKey: string;
   amount: number;
   credits: number;
-  displayCredits: number;
-  bonusCredits: number;
+  interval: "month" | null;
 };
 
 const ENV_PATH = ".env";
@@ -28,35 +29,51 @@ const REQUIRED_WEBHOOK_EVENTS = [
   "customer.subscription.updated",
 ] as const;
 
-const PLANS: PlanDefinition[] = [
-  {
-    key: "discovery",
-    envKey: "STRIPE_DISCOVERY_PRICE_ID",
-    lookupKey: "larpking_discovery_monthly_eur",
-    amount: 890,
-    credits: 250,
-    displayCredits: 250,
-    bonusCredits: 0,
+const PLAN_CATALOG = [
+  { key: "discovery", credits: 250 },
+  { key: "essential", credits: 1200 },
+  { key: "ultimate", credits: 2850 },
+] as const;
+const PACK_CATALOG = [
+  { key: "mini", credits: 90 },
+  { key: "standard", credits: 210 },
+  { key: "plus", credits: 450 },
+] as const;
+const PRICES = {
+  eur: {
+    plans: { discovery: 990, essential: 2490, ultimate: 4990 },
+    packs: { mini: 349, standard: 799, plus: 1499 },
   },
-  {
-    key: "essential",
-    envKey: "STRIPE_ESSENTIAL_PRICE_ID",
-    lookupKey: "larpking_essential_monthly_eur",
-    amount: 1990,
-    credits: 1100,
-    displayCredits: 850,
-    bonusCredits: 250,
+  usd: {
+    plans: { discovery: 999, essential: 2499, ultimate: 4999 },
+    packs: { mini: 349, standard: 799, plus: 1499 },
   },
-  {
-    key: "ultimate",
-    envKey: "STRIPE_ULTIMATE_PRICE_ID",
-    lookupKey: "larpking_ultimate_monthly_eur",
-    amount: 3990,
-    credits: 2500,
-    displayCredits: 2500,
-    bonusCredits: 0,
-  },
-];
+} as const;
+const PRICING_VERSION = "20261017";
+const CATALOG: PriceDefinition[] = (["eur", "usd"] as const).flatMap(
+  (currency) => [
+    ...PLAN_CATALOG.map((plan) => ({
+      key: plan.key,
+      kind: "subscription" as const,
+      currency,
+      envKey: `STRIPE_${plan.key.toUpperCase()}_PRICE_ID${currency === "usd" ? "_USD" : ""}`,
+      lookupKey: `luxeflexia_${plan.key}_${currency}_monthly_v${PRICING_VERSION}`,
+      amount: PRICES[currency].plans[plan.key],
+      credits: plan.credits,
+      interval: "month" as const,
+    })),
+    ...PACK_CATALOG.map((pack) => ({
+      key: pack.key,
+      kind: "pack" as const,
+      currency,
+      envKey: `STRIPE_PACK_${pack.key.toUpperCase()}_PRICE_ID${currency === "usd" ? "_USD" : ""}`,
+      lookupKey: `luxeflexia_boost_${pack.key}_${currency}_once_v${PRICING_VERSION}`,
+      amount: PRICES[currency].packs[pack.key],
+      credits: pack.credits,
+      interval: null,
+    })),
+  ],
+);
 
 function parseArgs(): { requireLive: boolean; envPath: string } {
   const args = process.argv.slice(2);
@@ -164,10 +181,11 @@ async function auditStripe(
 
   const stripe = new Stripe(secretKey);
 
-  for (const plan of PLANS) {
-    const priceId = env[plan.envKey];
+  for (const item of CATALOG) {
+    const area = `stripe.price.${item.kind}.${item.key}.${item.currency}`;
+    const priceId = env[item.envKey];
     if (!priceId) {
-      addCheck(checks, "fail", `stripe.price.${plan.key}`, `${plan.envKey} is missing`);
+      addCheck(checks, "fail", area, `${item.envKey} is missing`);
       continue;
     }
 
@@ -178,7 +196,7 @@ async function auditStripe(
       addCheck(
         checks,
         "fail",
-        `stripe.price.${plan.key}`,
+        area,
         `Cannot retrieve ${maskId(priceId)}: ${error.message}`,
       );
       continue;
@@ -190,92 +208,90 @@ async function auditStripe(
     addCheck(
       checks,
       price.active ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
+      area,
       `Price ${maskId(price.id)} active=${price.active}`,
     );
     addCheck(
       checks,
       requireLive && !price.livemode ? "fail" : "pass",
-      `stripe.price.${plan.key}`,
+      area,
       `Price livemode=${price.livemode}`,
     );
     addCheck(
       checks,
-      price.currency === "eur" ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
+      price.currency === item.currency ? "pass" : "fail",
+      area,
       `Currency is ${price.currency}`,
     );
     addCheck(
       checks,
-      price.unit_amount === plan.amount ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
+      price.unit_amount === item.amount ? "pass" : "fail",
+      area,
       `Amount is ${price.unit_amount}`,
     );
     addCheck(
       checks,
-      price.recurring?.interval === "month" ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
+      (price.recurring?.interval ?? null) === item.interval ? "pass" : "fail",
+      area,
       `Recurring interval is ${price.recurring?.interval ?? "none"}`,
     );
     addCheck(
       checks,
-      price.lookup_key === plan.lookupKey ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
+      price.lookup_key === item.lookupKey ? "pass" : "fail",
+      area,
       `Lookup key is ${price.lookup_key ?? "missing"}`,
     );
     addCheck(
       checks,
-      price.metadata?.plan_type === plan.key ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
-      `Metadata plan_type is ${price.metadata?.plan_type ?? "missing"}`,
+      price.metadata?.currency === item.currency ? "pass" : "fail",
+      area,
+      `Metadata currency is ${price.metadata?.currency ?? "missing"}`,
     );
     addCheck(
       checks,
-      price.metadata?.credits_per_cycle === String(plan.credits) ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
-      `Metadata credits_per_cycle is ${price.metadata?.credits_per_cycle ?? "missing"}`,
-    );
-    addCheck(
-      checks,
-      price.metadata?.display_credits_per_cycle === String(plan.displayCredits) ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
-      `Metadata display_credits_per_cycle is ${price.metadata?.display_credits_per_cycle ?? "missing"}`,
-    );
-    addCheck(
-      checks,
-      price.metadata?.bonus_credits_per_cycle === String(plan.bonusCredits) ? "pass" : "fail",
-      `stripe.price.${plan.key}`,
-      `Metadata bonus_credits_per_cycle is ${price.metadata?.bonus_credits_per_cycle ?? "missing"}`,
+      (item.kind === "subscription"
+        ? price.metadata?.plan_type === item.key &&
+          price.metadata?.credits_per_cycle === String(item.credits)
+        : price.metadata?.pack_id === item.key &&
+          price.metadata?.credits === String(item.credits))
+        ? "pass"
+        : "fail",
+      area,
+      item.kind === "subscription"
+        ? `Plan metadata credits_per_cycle is ${price.metadata?.credits_per_cycle ?? "missing"}`
+        : `Pack metadata credits is ${price.metadata?.credits ?? "missing"}`,
     );
 
     if (!product) {
-      addCheck(checks, "fail", `stripe.product.${plan.key}`, "Product is not expandable");
+      addCheck(checks, "fail", `${area}.product`, "Product is not expandable");
       continue;
     }
 
     addCheck(
       checks,
       product.active ? "pass" : "fail",
-      `stripe.product.${plan.key}`,
+      `${area}.product`,
       `Product active=${product.active}`,
     );
     addCheck(
       checks,
       requireLive && !product.livemode ? "fail" : "pass",
-      `stripe.product.${plan.key}`,
+      `${area}.product`,
       `Product livemode=${product.livemode}`,
     );
     addCheck(
       checks,
-      product.metadata?.larpking_plan === plan.key ? "pass" : "fail",
-      `stripe.product.${plan.key}`,
-      `Product metadata larpking_plan is ${product.metadata?.larpking_plan ?? "missing"}`,
-    );
-    addCheck(
-      checks,
-      product.metadata?.credits_per_cycle === String(plan.credits) ? "pass" : "fail",
-      `stripe.product.${plan.key}`,
-      `Product metadata credits_per_cycle is ${product.metadata?.credits_per_cycle ?? "missing"}`,
+      (item.kind === "subscription"
+        ? product.metadata?.luxeflexia_plan === item.key &&
+          product.metadata?.credits_per_cycle === String(item.credits)
+        : product.metadata?.luxeflexia_pack === item.key &&
+          product.metadata?.credits === String(item.credits))
+        ? "pass"
+        : "fail",
+      `${area}.product`,
+      item.kind === "subscription"
+        ? "Product plan and credit metadata match"
+        : "Product pack and credit metadata match",
     );
   }
 

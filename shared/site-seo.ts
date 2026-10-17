@@ -409,19 +409,19 @@ export function buildStructuredData(origin: string) {
           {
             "@type": "Offer",
             name: "Abonnement LuxeFlexIA Discovery",
-            price: "8.90",
+            price: "9.90",
             priceCurrency: "EUR",
           },
           {
             "@type": "Offer",
             name: "Abonnement LuxeFlexIA Essential",
-            price: "19.90",
+            price: "24.90",
             priceCurrency: "EUR",
           },
           {
             "@type": "Offer",
             name: "Abonnement LuxeFlexIA Ultimate",
-            price: "39.90",
+            price: "49.90",
             priceCurrency: "EUR",
           },
         ],

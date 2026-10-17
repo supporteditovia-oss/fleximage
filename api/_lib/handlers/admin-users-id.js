@@ -2,8 +2,8 @@ const { requireAdmin, readBody, sendError } = require("../admin-auth");
 
 const PLAN_CREDITS = {
   discovery: 250,
-  essential: 1100,
-  ultimate: 2500,
+  essential: 1200,
+  ultimate: 2850,
 };
 
 const PLAN_ENV_KEYS = {

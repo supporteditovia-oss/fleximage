@@ -15,7 +15,6 @@ const PLAN_CARD_META: Record<
     featureKeys: ["photo", "realistic", "hd", "history", "support"],
   },
   essential: {
-    bonusKey: "essentialBonus",
     popular: true,
     featureKeys: ["photo", "marketRealism", "details", "prioritySupport"],
   },
