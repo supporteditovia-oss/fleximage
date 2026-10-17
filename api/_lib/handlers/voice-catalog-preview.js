@@ -12,6 +12,77 @@ const {
   resolveI2VPreviewPhrase,
 } = require("../../../shared/i2v-voice-library.cjs");
 
+function wantsStreamMedia(req) {
+  return (
+    req.query?.media === "1" ||
+    req.query?.stream === "1" ||
+    String(req.headers.accept || "").includes("audio/")
+  );
+}
+
+function resolvePreviewText(fishReferenceId, i2vEntry, catalogEntry, locale) {
+  if (i2vEntry) return resolveI2VPreviewPhrase(i2vEntry);
+  if (catalogEntry?.name) {
+    return `Bonjour, je suis ${String(catalogEntry.name).trim()}.`;
+  }
+  return buildCatalogSampleLine(catalogEntry?.name || "LuxeFlexIA", locale);
+}
+
+async function loadCachedPreviewBuffer(cacheKey) {
+  const { publicUrl } = getR2Config();
+  const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
+  try {
+    const cached = await fetch(cachedUrl);
+    if (!cached.ok) return null;
+    const buffer = Buffer.from(await cached.arrayBuffer());
+    return buffer.length >= 512 ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getCatalogPreviewBuffer(fishReferenceId, locale) {
+  const fish = fishReferenceId.toLowerCase();
+  const i2vEntry = findI2VLibraryEntryByFishId(fish);
+  const catalogEntry = lookupCatalogEntryByFishId(fish);
+  const cacheKey = i2vEntry
+    ? `voice-catalog/i2v/v4/${String(locale).toLowerCase()}/${fish}.mp3`
+    : unifiedPreviewCacheKey(fish, locale);
+
+  const cached = await loadCachedPreviewBuffer(cacheKey);
+  if (cached) {
+    return { buffer: cached, cached: true, cacheKey };
+  }
+
+  const previewText = resolvePreviewText(fish, i2vEntry, catalogEntry, locale);
+  const ttsSpeed =
+    typeof i2vEntry?.ttsSpeed === "number"
+      ? i2vEntry.ttsSpeed
+      : resolveCatalogTtsSpeed(fish);
+
+  const buffer = await synthesizeSpeech({
+    text: previewText,
+    referenceId: fish,
+    format: "mp3",
+    speed: ttsSpeed ?? undefined,
+  });
+
+  if (!buffer || buffer.length < 512) {
+    throw Object.assign(new Error("Aperçu vocal vide. Réessaie dans un instant."), {
+      status: 502,
+      code: "preview_empty",
+    });
+  }
+
+  try {
+    await uploadToR2(cacheKey, buffer, "audio/mpeg");
+  } catch (err) {
+    console.warn("[voice-catalog-preview] R2 upload skipped", err?.message || err);
+  }
+
+  return { buffer, cached: false, cacheKey };
+}
+
 module.exports = async function voiceCatalogPreviewHandler(req, res) {
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -32,60 +103,37 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     return;
   }
 
+  const fish = fishReferenceId.toLowerCase();
+  const streamMedia = wantsStreamMedia(req);
+
   try {
-    const i2vEntry = findI2VLibraryEntryByFishId(fishReferenceId);
-    const cacheKey = i2vEntry
-      ? `voice-catalog/i2v/v3/${String(locale).toLowerCase()}/${fishReferenceId.toLowerCase()}.mp3`
-      : unifiedPreviewCacheKey(fishReferenceId, locale);
-    const { publicUrl } = getR2Config();
-    const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
+    const { buffer, cached } = await getCatalogPreviewBuffer(fish, locale);
 
-    try {
-      const head = await fetch(cachedUrl, { method: "HEAD" });
-      if (head.ok) {
-        res.status(200).json({
-          audioUrl: cachedUrl,
-          cached: true,
-          fishId: fishReferenceId.toLowerCase(),
-        });
-        return;
-      }
-    } catch {
-      /* cache miss — synthèse Fish */
-    }
-
-    const entry = lookupCatalogEntryByFishId(fishReferenceId);
-    const previewText = i2vEntry
-      ? resolveI2VPreviewPhrase(i2vEntry)
-      : buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale);
-    const ttsSpeed =
-      typeof i2vEntry?.ttsSpeed === "number"
-        ? i2vEntry.ttsSpeed
-        : resolveCatalogTtsSpeed(fishReferenceId);
-
-    const buffer = await synthesizeSpeech({
-      text: previewText,
-      referenceId: fishReferenceId.toLowerCase(),
-      format: "mp3",
-      speed: ttsSpeed ?? undefined,
-    });
-
-    if (!buffer || buffer.length < 512) {
-      res.status(502).json({
-        code: "preview_empty",
-        message: "Aperçu vocal vide. Réessaie dans un instant.",
-      });
+    if (streamMedia) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      res.setHeader("X-Voice-Preview-Cached", cached ? "1" : "0");
+      res.setHeader("X-Voice-Fish-Id", fish);
+      res.status(200).send(buffer);
       return;
     }
 
-    const audioUrl = await uploadToR2(cacheKey, buffer, "audio/mpeg");
+    const params = new URLSearchParams({
+      fish_id: fish,
+      lang: String(locale),
+      media: "1",
+    });
     res.status(200).json({
-      audioUrl,
-      cached: false,
-      fishId: fishReferenceId.toLowerCase(),
+      audioUrl: `/api/larps/voice/catalog-preview?${params.toString()}`,
+      cached,
+      fishId: fish,
     });
   } catch (error) {
     console.error("[voice-catalog-preview]", error);
+    if (streamMedia) {
+      res.status(error.status || 502).end();
+      return;
+    }
     res.status(error.status || 502).json({
       code: error.code || "preview_failed",
       message: error.message || "Aperçu catalogue indisponible.",
