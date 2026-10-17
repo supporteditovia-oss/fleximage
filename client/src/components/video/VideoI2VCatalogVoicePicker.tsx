@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import {
   findI2VLibraryVoiceById,
@@ -6,6 +6,11 @@ import {
   resolveDefaultI2VLibraryVoiceId,
   type I2VLibraryVoice,
 } from "@/lib/i2v-voice-library";
+import {
+  prefetchCatalogPreviews,
+  speakCatalogSample,
+  stopCatalogSample,
+} from "@/lib/v2-mock-voice";
 
 type GenderFilter = "homme" | "femme";
 
@@ -24,10 +29,20 @@ export function VideoI2VCatalogVoicePicker({
   onSelectedVoiceId,
 }: VideoI2VCatalogVoicePickerProps) {
   const voices = useMemo(() => listActiveI2VLibraryVoices(), []);
-  const [filter, setFilter] = useState<GenderFilter>("homme");
+  const [filter, setFilter] = useState<GenderFilter>("femme");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stopPreviewRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    prefetchCatalogPreviews(
+      voices.map((voice) => ({ fishReferenceId: voice.fishId })),
+    );
+    return () => {
+      stopPreviewRef.current?.();
+      stopCatalogSample();
+    };
+  }, [voices]);
 
   const filtered = useMemo(
     () => voices.filter((v) => v.gender === filter),
@@ -40,35 +55,34 @@ export function VideoI2VCatalogVoicePicker({
   const previewVoice = (voice: I2VLibraryVoice, event: MouseEvent) => {
     event.stopPropagation();
     if (previewId === voice.id || loadingPreviewId === voice.id) {
-      audioRef.current?.pause();
+      stopPreviewRef.current?.();
+      stopPreviewRef.current = null;
       setPreviewId(null);
       setLoadingPreviewId(null);
       return;
     }
-    audioRef.current?.pause();
-    const audio = audioRef.current ?? new Audio();
-    audioRef.current = audio;
+    stopPreviewRef.current?.();
     setLoadingPreviewId(voice.id);
     setPreviewId(null);
-    audio.onended = () => {
-      setPreviewId(null);
-      setLoadingPreviewId(null);
-    };
-    audio.onerror = () => {
-      setPreviewId(null);
-      setLoadingPreviewId(null);
-    };
-    audio.src = voice.previewPath;
-    void audio
-      .play()
-      .then(() => {
-        setLoadingPreviewId(null);
-        setPreviewId(voice.id);
-      })
-      .catch(() => {
-        setPreviewId(null);
-        setLoadingPreviewId(null);
-      });
+    stopPreviewRef.current = speakCatalogSample(
+      {
+        name: voice.name,
+        fishReferenceId: voice.fishId,
+        pitch: 1,
+        rate: 1,
+      },
+      {
+        onLoading: () => setLoadingPreviewId(voice.id),
+        onPlaying: () => {
+          setLoadingPreviewId(null);
+          setPreviewId(voice.id);
+        },
+        onEnd: () => {
+          setPreviewId(null);
+          setLoadingPreviewId(null);
+        },
+      },
+    );
   };
 
   return (
@@ -77,19 +91,10 @@ export function VideoI2VCatalogVoicePicker({
         Bibliothèque voix admin ({voices.length})
       </p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-        5 hommes · 5 femmes — écoute ▶, choisis une carte, puis active « Ajouter
-        une voix IA » + texte pour générer. Visible uniquement compte admin.
+        5 hommes · 5 femmes — ▶ aperçu Fish (phrase courte, préchargé). Choisis
+        une carte puis active « Ajouter une voix IA » pour générer.
       </p>
       <div className="via-i2v-voice-catalog__filters" role="tablist" aria-label="Genre">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "homme"}
-          className={`via-i2v-voice-catalog__filter${filter === "homme" ? " is-active" : ""}`}
-          onClick={() => setFilter("homme")}
-        >
-          Hommes ({hommeCount})
-        </button>
         <button
           type="button"
           role="tab"
@@ -98,6 +103,15 @@ export function VideoI2VCatalogVoicePicker({
           onClick={() => setFilter("femme")}
         >
           Femmes ({femmeCount})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "homme"}
+          className={`via-i2v-voice-catalog__filter${filter === "homme" ? " is-active" : ""}`}
+          onClick={() => setFilter("homme")}
+        >
+          Hommes ({hommeCount})
         </button>
       </div>
       <div className="via-i2v-voice-catalog__grid" role="list">

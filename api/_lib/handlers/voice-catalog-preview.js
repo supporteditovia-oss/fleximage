@@ -4,8 +4,13 @@ const {
   buildCatalogSampleLine,
   isValidFishReferenceId,
   lookupCatalogEntryByFishId,
+  resolveCatalogTtsSpeed,
   unifiedPreviewCacheKey,
 } = require("../voice-catalog");
+const {
+  findI2VLibraryEntryByFishId,
+  resolveI2VPreviewPhrase,
+} = require("../../../shared/i2v-voice-library.cjs");
 
 module.exports = async function voiceCatalogPreviewHandler(req, res) {
   if (req.method === "OPTIONS") {
@@ -28,7 +33,10 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
   }
 
   try {
-    const cacheKey = unifiedPreviewCacheKey(fishReferenceId, locale);
+    const i2vEntry = findI2VLibraryEntryByFishId(fishReferenceId);
+    const cacheKey = i2vEntry
+      ? `voice-catalog/i2v/v2/${String(locale).toLowerCase()}/${fishReferenceId.toLowerCase()}.mp3`
+      : unifiedPreviewCacheKey(fishReferenceId, locale);
     const { publicUrl } = getR2Config();
     const cachedUrl = `${publicUrl.replace(/\/$/, "")}/${cacheKey}`;
 
@@ -43,10 +51,19 @@ module.exports = async function voiceCatalogPreviewHandler(req, res) {
     }
 
     const entry = lookupCatalogEntryByFishId(fishReferenceId);
+    const previewText = i2vEntry
+      ? resolveI2VPreviewPhrase(i2vEntry)
+      : buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale);
+    const ttsSpeed =
+      typeof i2vEntry?.ttsSpeed === "number"
+        ? i2vEntry.ttsSpeed
+        : resolveCatalogTtsSpeed(fishReferenceId);
+
     const buffer = await synthesizeSpeech({
-      text: buildCatalogSampleLine(entry?.name || "LuxeFlexIA", locale),
+      text: previewText,
       referenceId: fishReferenceId,
       format: "mp3",
+      speed: ttsSpeed ?? undefined,
     });
 
     if (!buffer || buffer.length < 512) {
