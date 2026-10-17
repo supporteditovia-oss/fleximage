@@ -80,13 +80,13 @@ const CLONE_DEEP_CHEST_TTS = {
 /** Mode C — voix incisives / trap (Niska…) : attaque et relief préservés. */
 const CLONE_INCISIVE_TTS = {
   ...CLONE_FIDELITY_TTS,
-  temperature: 0.62,
-  top_p: 0.8,
-  repetition_penalty: 1.06,
-  chunk_length: 320,
-  min_chunk_length: 110,
+  temperature: 0.69,
+  top_p: 0.86,
+  repetition_penalty: 1.08,
+  chunk_length: 340,
+  min_chunk_length: 120,
   prosody: {
-    speed: 1.02,
+    speed: 1.03,
     volume: 0,
     normalize_loudness: false,
   },
@@ -126,13 +126,16 @@ function buildTtsOptions(text, options = {}) {
         : inlineIdentityClone
           ? CLONE_INLINE_IDENTITY_TTS
           : CLONE_FIDELITY_TTS;
-    const speedCap = deepChestClone
+    let speedCap = deepChestClone
       ? 0.92
       : incisiveClone
-        ? 1.04
+        ? 1.06
         : inlineIdentityClone
           ? 0.99
           : 0.98;
+    if (incisiveClone && options.incisiveRap === true) {
+      speedCap = Math.min(1.08, speedCap + 0.02);
+    }
     const resolvedSpeed =
       typeof speed === "number" && Number.isFinite(speed)
         ? Math.min(clampTtsSpeed(speed), speedCap)
@@ -372,7 +375,7 @@ async function createVoiceModel({
 /**
  * Transcrit un échantillon vocal (requis pour le zero-shot inline).
  */
-async function transcribeAudio(audioBuffer, language = "fr") {
+async function transcribeAudio(audioBuffer, language = "fr", options = {}) {
   if (!audioBuffer || audioBuffer.length < 1024) {
     throw Object.assign(new Error("Échantillon audio trop court pour transcription"), {
       status: 400,
@@ -383,7 +386,10 @@ async function transcribeAudio(audioBuffer, language = "fr") {
   const form = new FormData();
   form.append("audio", new Blob([audioBuffer], { type: "audio/wav" }), "sample.wav");
   if (language) form.append("language", language);
-  form.append("ignore_timestamps", "true");
+  form.append(
+    "ignore_timestamps",
+    options.ignoreTimestamps === false ? "false" : "true",
+  );
 
   const response = await fetch(`${FISH_API_BASE}/v1/asr`, {
     method: "POST",
@@ -400,6 +406,10 @@ async function transcribeAudio(audioBuffer, language = "fr") {
   }
 
   const payload = await response.json();
+  if (options.parsePayload === true) {
+    return payload;
+  }
+
   const transcript = String(payload.text || "").trim();
   if (transcript.length < 3) {
     throw Object.assign(
@@ -424,6 +434,7 @@ async function synthesizeWithReferenceMsgpack({
   deepChestClone,
   inlineIdentityClone,
   incisiveClone,
+  incisiveRap,
 }) {
   const trimmed = String(text || "").trim();
   const transcript = String(referenceText || "").trim();
@@ -468,6 +479,7 @@ async function synthesizeWithReferenceMsgpack({
       deepChestClone,
       inlineIdentityClone,
       incisiveClone,
+      incisiveRap,
     }),
   };
 
@@ -507,6 +519,7 @@ async function synthesizeSpeech({
   deepChestClone,
   inlineIdentityClone,
   incisiveClone,
+  incisiveRap,
 }) {
   const trimmed = String(text || "").trim();
   if (!trimmed) {
@@ -543,6 +556,7 @@ async function synthesizeSpeech({
         deepChestClone,
         inlineIdentityClone,
         incisiveClone,
+        incisiveRap,
       }),
     }),
   });

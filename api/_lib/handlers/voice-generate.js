@@ -32,6 +32,7 @@ const {
   shouldUseIncisiveClone,
 } = require("../voice-clone-timbre");
 const { synthesizeCatalogPresetSpeech } = require("../catalog-voice-synth");
+const { transcribeCloneReferenceAudio } = require("../voice-reference-transcript");
 const { normalizeVoiceLocale } = require("../landing-voice-demo");
 
 const VOICE_CREDIT_COST = 8;
@@ -394,12 +395,22 @@ module.exports = async function voiceGenerateHandler(req, res) {
       }
     }
 
+    const incisiveRap =
+      incisiveClone && (deliveryStyle === "rap" || deliveryStyle === "hype");
+
     async function synthesizeInlineFromSample({ forceFreshTranscript = false } = {}) {
       const audioBuf = inlineReferenceAudio || referenceAudio;
       if (!audioBuf) return null;
       let referenceText = voiceContext.referenceTranscript;
-      if (forceFreshTranscript || !referenceText || referenceText.length < 3) {
-        referenceText = await transcribeAudio(audioBuf, "fr");
+      const mustRefreshAsr =
+        incisiveClone ||
+        forceFreshTranscript ||
+        !referenceText ||
+        referenceText.length < 3;
+      if (mustRefreshAsr) {
+        referenceText = await transcribeCloneReferenceAudio(audioBuf, {
+          incisive: incisiveClone,
+        });
       }
       return synthesizeWithReferenceMsgpack({
         text: ttsText,
@@ -410,6 +421,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         deepChestClone,
         inlineIdentityClone,
         incisiveClone,
+        incisiveRap,
       });
     }
 
@@ -426,6 +438,7 @@ module.exports = async function voiceGenerateHandler(req, res) {
         deepChestClone: cloneFidelity ? deepChestClone : false,
         inlineIdentityClone: cloneFidelity ? inlineIdentityClone : false,
         incisiveClone: cloneFidelity ? incisiveClone : false,
+        incisiveRap: cloneFidelity ? incisiveRap : false,
       });
     }
 
@@ -437,10 +450,19 @@ module.exports = async function voiceGenerateHandler(req, res) {
         allowBundledReferenceFallback: isAdmin,
       });
     } else if (cloneFidelity) {
-      try {
-        audioBuffer = await synthesizeWithReferenceId();
-      } catch (refErr) {
-        console.warn("voice-generate clone reference_id failed, fallback inline", refErr);
+      if (incisiveClone && (inlineReferenceAudio || referenceAudio)) {
+        try {
+          audioBuffer = await synthesizeInlineFromSample({ forceFreshTranscript: true });
+        } catch (inlineErr) {
+          console.warn("voice-generate incisive inline preferred failed", inlineErr);
+        }
+      }
+      if (!audioBuffer) {
+        try {
+          audioBuffer = await synthesizeWithReferenceId();
+        } catch (refErr) {
+          console.warn("voice-generate clone reference_id failed, fallback inline", refErr);
+        }
       }
       if (!audioBuffer && (inlineReferenceAudio || referenceAudio)) {
         try {

@@ -34,10 +34,8 @@ const VOICE_CLONE_INLINE_AF =
   "highpass=f=50,lowpass=f=14000," +
   "loudnorm=I=-17:TP=-1.2:LRA=16:print_format=none";
 
-/** Mode C incisif (Niska…) — pas de loudnorm : conserve le punch des consonnes. */
-const VOICE_CLONE_INLINE_PUNCH_AF =
-  "highpass=f=50,lowpass=f=15000," +
-  "acompressor=threshold=-9dB:ratio=1.35:attack=2:release=60:makeup=0";
+/** Mode C incisif (Niska…) — formants intacts : pas de compresseur ni loudnorm. */
+const VOICE_CLONE_INLINE_PUNCH_AF = "highpass=f=45,lowpass=f=16000";
 
 /**
  * Prépare un échantillon clone (WAV ou autre audio) avant Fish / ASR.

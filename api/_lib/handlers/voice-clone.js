@@ -1,5 +1,6 @@
 const { requireUser, readBody, sendError } = require("../user-auth");
-const { createVoiceModel, waitForVoiceModelReady, transcribeAudio } = require("../fish-audio");
+const { createVoiceModel, waitForVoiceModelReady } = require("../fish-audio");
+const { transcribeCloneReferenceAudio } = require("../voice-reference-transcript");
 const { uploadToR2 } = require("../r2");
 const { buildCloneRecord, saveVoiceCloneManifest } = require("../voice-store");
 const { isUserAdmin } = require("../admin-access");
@@ -208,7 +209,9 @@ module.exports = async function voiceCloneHandler(req, res) {
 
     let referenceTranscript = null;
     try {
-      referenceTranscript = await transcribeAudio(preparedBuffer, "fr");
+      referenceTranscript = await transcribeCloneReferenceAudio(preparedBuffer, {
+        incisive: sourceTypeEarly === "import",
+      });
     } catch (asrErr) {
       const lowCredit =
         asrErr?.status === 402 || /insufficient api credit/i.test(String(asrErr?.message || ""));

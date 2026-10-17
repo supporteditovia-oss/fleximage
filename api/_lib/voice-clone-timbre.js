@@ -38,8 +38,8 @@ function estimateDeepChestFromWav(wavBuffer) {
 function estimateIncisivePunchFromWav(wavBuffer) {
   const { rms, zcr, crest } = analyzeWavTimbre(wavBuffer);
   if (estimateDeepChestFromWav(wavBuffer)) return false;
-  if (zcr >= 0.1 && rms >= 380) return true;
-  if (crest >= 5.2 && rms >= 420) return true;
+  if (zcr >= 0.095 && rms >= 360) return true;
+  if (crest >= 4.8 && rms >= 400) return true;
   return false;
 }
 

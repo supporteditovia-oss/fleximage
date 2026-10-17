@@ -20,9 +20,11 @@ test("VOICE_CLONE_INLINE_AF préserve le timbre (pas de denoise agressif)", () =
   assert.doesNotMatch(VOICE_CLONE_INLINE_AF, /acompressor=/);
 });
 
-test("VOICE_CLONE_INLINE_PUNCH_AF — pas de loudnorm", () => {
-  assert.match(VOICE_CLONE_INLINE_PUNCH_AF, /acompressor=/);
+test("VOICE_CLONE_INLINE_PUNCH_AF — formants (pas de dynamique écrasée)", () => {
+  assert.match(VOICE_CLONE_INLINE_PUNCH_AF, /highpass=f=45/);
+  assert.match(VOICE_CLONE_INLINE_PUNCH_AF, /lowpass=f=16000/);
   assert.doesNotMatch(VOICE_CLONE_INLINE_PUNCH_AF, /loudnorm=/);
+  assert.doesNotMatch(VOICE_CLONE_INLINE_PUNCH_AF, /acompressor=/);
 });
 
 test("prepareVoiceSampleForCloneSource expose les modes record/import", () => {

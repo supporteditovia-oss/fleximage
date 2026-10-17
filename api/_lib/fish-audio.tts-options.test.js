@@ -29,10 +29,20 @@ test("buildTtsOptions incisif Mode C — attaque Niska", () => {
     incisiveClone: true,
     speed: 1.08,
   });
-  assert.equal(opts.temperature, 0.62);
-  assert.equal(opts.top_p, 0.8);
-  assert.equal(opts.repetition_penalty, 1.06);
-  assert.equal(opts.prosody.speed, 1.04);
+  assert.equal(opts.temperature, 0.69);
+  assert.equal(opts.top_p, 0.86);
+  assert.equal(opts.repetition_penalty, 1.08);
+  assert.equal(opts.prosody.speed, 1.06);
+});
+
+test("buildTtsOptions incisif rap — boost vitesse", () => {
+  const opts = buildTtsOptions("Énervé", {
+    cloneFidelity: true,
+    incisiveClone: true,
+    incisiveRap: true,
+    speed: 1.1,
+  });
+  assert.equal(opts.prosody.speed, 1.08);
 });
 
 test("buildTtsOptions inline identity Mode C — timbre marqué", () => {
