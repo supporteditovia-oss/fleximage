@@ -73,9 +73,12 @@ export function VideoI2VCatalogVoicePicker({
 
   return (
     <div className="via-i2v-voice-catalog">
-      <p className="via-step-label">Bibliothèque voix ({voices.length})</p>
+      <p className="via-step-label">
+        Bibliothèque voix admin ({voices.length})
+      </p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-        5 hommes · 5 femmes — aperçu ▶ puis génère (admin).
+        5 hommes · 5 femmes — écoute ▶, choisis une carte, puis active « Ajouter
+        une voix IA » + texte pour générer. Visible uniquement compte admin.
       </p>
       <div className="via-i2v-voice-catalog__filters" role="tablist" aria-label="Genre">
         <button

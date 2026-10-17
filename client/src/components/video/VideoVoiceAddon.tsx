@@ -53,6 +53,13 @@ export function VideoVoiceAddon({
         </p>
       ) : null}
 
+      {adminVoiceCatalogEnabled && onI2vVoiceId ? (
+        <VideoI2VCatalogVoicePicker
+          selectedVoiceId={i2vVoiceId}
+          onSelectedVoiceId={onI2vVoiceId}
+        />
+      ) : null}
+
       {enabled ? (
         <div className="via-voice-addon__panel">
           <label className="via-step-label" htmlFor="video-voice-script">
@@ -74,16 +81,12 @@ export function VideoVoiceAddon({
           />
           <p className="via-voice-addon__hint">
             {text.trim().length}/{maxChars} caractères
-            {adminVoiceCatalogEnabled ? "" : " · voix catalogue"} · le prompt
-            mouvement décrit l&apos;action, ce champ décrit{" "}
+            {adminVoiceCatalogEnabled
+              ? " · voix choisie ci-dessus (admin)"
+              : " · voix catalogue"}{" "}
+            · le prompt mouvement décrit l&apos;action, ce champ décrit{" "}
             <strong>uniquement</strong> ce qu&apos;on entend
           </p>
-          {adminVoiceCatalogEnabled && onI2vVoiceId ? (
-            <VideoI2VCatalogVoicePicker
-              selectedVoiceId={i2vVoiceId}
-              onSelectedVoiceId={onI2vVoiceId}
-            />
-          ) : null}
         </div>
       ) : null}
     </div>

@@ -100,7 +100,7 @@ function v2vResolutionLabel(res: VideoUltraResolution): string {
 
 export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
-  const { v2Enabled, isLoading: v2Loading } = useV2Access();
+  const { v2Enabled, isLoading: v2Loading, isAdmin: studioAdmin } = useV2Access();
   const { user } = useAuth();
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
@@ -771,7 +771,7 @@ export default function VideoIA() {
     );
   }
 
-  if (!v2Enabled) {
+  if (!studioAdmin && !v2Enabled) {
     return <Redirect to="/create" />;
   }
 
@@ -856,7 +856,7 @@ export default function VideoIA() {
       onVoiceText={setVoiceText}
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
-      adminVoiceCatalogEnabled={adminPreview}
+      adminVoiceCatalogEnabled={studioAdmin && adminPreview}
       i2vVoiceId={i2vVoiceId}
       onI2vVoiceId={(voice) => setI2vVoiceId(voice.id)}
       canGenerateI2V={canGenerateI2V}
