@@ -18,6 +18,11 @@ export type AdminVideoVoice = {
 
 export type AdminVideoVoiceFilter = "femme" | "homme" | "rap";
 
+/** Filtres autorisés studio Image/Vidéo (sans rappeurs). */
+export type AdminImageVideoVoiceFilter = "femme" | "homme";
+
+export const ADMIN_IMAGE_VIDEO_VOICE_CATALOG_REVISION = 3;
+
 function catalogToAdminVoice(voice: MockVoiceProfile): AdminVideoVoice | null {
   const fishId = String(voice.fishReferenceId || "").trim();
   if (!/^[a-f0-9]{32}$/i.test(fishId)) return null;
@@ -50,7 +55,33 @@ export function listAdminVideoVoices(): AdminVideoVoice[] {
 
 /** Studio Image → Vidéo / Vidéo IA admin — voix I2V + catalogue Homme/Femme (pas les rappeurs). */
 export function listAdminImageVideoStudioVoices(): AdminVideoVoice[] {
-  return listAdminVideoVoices().filter((v) => v.group !== "rap");
+  const i2v: AdminVideoVoice[] = listActiveI2VLibraryVoices().map((v) => ({
+    id: v.id,
+    name: v.name,
+    fishId: v.fishId.toLowerCase(),
+    tag: v.styleFr,
+    gender: v.gender,
+    group: "i2v" as const,
+  }));
+  const catalog = MOCK_VOICE_CATALOG.filter((v) => v.category !== "Rap")
+    .map(catalogToAdminVoice)
+    .filter((v): v is AdminVideoVoice => v !== null);
+  return [...i2v, ...catalog];
+}
+
+export function filterAdminImageVideoStudioVoices(
+  voices: AdminVideoVoice[],
+  filter: AdminImageVideoVoiceFilter,
+): AdminVideoVoice[] {
+  if (filter === "femme") {
+    return voices.filter((v) => v.gender === "femme");
+  }
+  return voices.filter((v) => v.gender === "homme");
+}
+
+export function isAdminImageVideoStudioVoiceId(id: string | null): boolean {
+  if (!id) return false;
+  return listAdminImageVideoStudioVoices().some((v) => v.id === id);
 }
 
 export function filterAdminVideoVoices(

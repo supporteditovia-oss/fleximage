@@ -78,6 +78,7 @@ import {
   resolveAdminVideoVoiceFishId,
   resolveDefaultAdminVideoVoiceId,
   resolveI2VVoiceIdForApi,
+  isAdminImageVideoStudioVoiceId,
 } from "@/lib/admin-video-voice-catalog";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { writeStudioMode } from "@/lib/v2-experience";
@@ -163,6 +164,13 @@ export default function VideoIA() {
   const [generationEstimate, setGenerationEstimate] = useState<number | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!studioAdmin || !i2vVoiceId) return;
+    if (isAdminImageVideoStudioVoiceId(i2vVoiceId)) return;
+    const fallback = resolveDefaultAdminVideoVoiceId();
+    if (fallback) setI2vVoiceId(fallback);
+  }, [studioAdmin, i2vVoiceId]);
 
   useEffect(() => {
     writeStudioMode("video");
@@ -875,7 +883,7 @@ export default function VideoIA() {
       onVoiceText={setVoiceText}
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
-      adminVoiceCatalogEnabled={studioAdmin && adminPreview}
+      adminVoiceCatalogEnabled={studioAdmin}
       adminInlineVoiceCounter={studioAdmin}
       i2vVoiceId={i2vVoiceId}
       onI2vVoiceId={(voice) => setI2vVoiceId(voice.id)}

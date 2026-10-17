@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import {
-  filterAdminVideoVoices,
+  ADMIN_IMAGE_VIDEO_VOICE_CATALOG_REVISION,
+  filterAdminImageVideoStudioVoices,
   findAdminVideoVoiceById,
   listAdminImageVideoStudioVoices,
   resolveDefaultAdminVideoVoiceId,
+  type AdminImageVideoVoiceFilter,
   type AdminVideoVoice,
-  type AdminVideoVoiceFilter,
 } from "@/lib/admin-video-voice-catalog";
 import {
   playI2VVoicePreview,
@@ -29,7 +30,7 @@ export function VideoI2VCatalogVoicePicker({
   onSelectedVoiceId,
 }: VideoI2VCatalogVoicePickerProps) {
   const voices = useMemo(() => listAdminImageVideoStudioVoices(), []);
-  const [filter, setFilter] = useState<AdminVideoVoiceFilter>("femme");
+  const [filter, setFilter] = useState<AdminImageVideoVoiceFilter>("femme");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const stopPreviewRef = useRef<(() => void) | null>(null);
@@ -44,7 +45,7 @@ export function VideoI2VCatalogVoicePicker({
   }, [voices]);
 
   const filtered = useMemo(
-    () => filterAdminVideoVoices(voices, filter),
+    () => filterAdminImageVideoStudioVoices(voices, filter),
     [filter, voices],
   );
 
@@ -86,9 +87,12 @@ export function VideoI2VCatalogVoicePicker({
   };
 
   return (
-    <div className="via-i2v-voice-catalog">
+    <div
+      className="via-i2v-voice-catalog"
+      data-admin-i2v-voice-catalog-rev={ADMIN_IMAGE_VIDEO_VOICE_CATALOG_REVISION}
+    >
       <p className="via-step-label">
-        Bibliothèque voix admin ({voices.length})
+        Bibliothèque voix admin · Hommes &amp; Femmes ({voices.length})
       </p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
         Voix naturelles I2V (5H/5F) + catalogue Homme/Femme — ▶ aperçu Fish,
