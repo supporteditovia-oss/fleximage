@@ -1,72 +1,105 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useMemo, useRef, useState, type MouseEvent } from "react";
 import { Loader2, Pause, Play } from "lucide-react";
 import {
-  MOCK_VOICE_CATALOG,
-  prefetchCatalogPreviews,
-  speakCatalogSample,
-  stopCatalogSample,
-  type MockVoiceProfile,
-} from "@/lib/v2-mock-voice";
+  findI2VLibraryVoiceById,
+  listActiveI2VLibraryVoices,
+  resolveDefaultI2VLibraryVoiceId,
+  type I2VLibraryVoice,
+} from "@/lib/i2v-voice-library";
 
-const I2V_NATURAL_VOICES = MOCK_VOICE_CATALOG.filter(
-  (v) => v.id === "cat-voix-homme" || v.id === "cat-voix-femme",
-);
+type GenderFilter = "homme" | "femme";
 
 type VideoI2VCatalogVoicePickerProps = {
-  fishReferenceId: string | null;
-  onFishReferenceId: (fishId: string, voice: MockVoiceProfile) => void;
+  selectedVoiceId: string | null;
+  onSelectedVoiceId: (voice: I2VLibraryVoice) => void;
 };
 
+export function defaultI2VCatalogFishReferenceId(): string {
+  const voice = findI2VLibraryVoiceById(resolveDefaultI2VLibraryVoiceId());
+  return voice?.fishId ?? "";
+}
+
 export function VideoI2VCatalogVoicePicker({
-  fishReferenceId,
-  onFishReferenceId,
+  selectedVoiceId,
+  onSelectedVoiceId,
 }: VideoI2VCatalogVoicePickerProps) {
+  const voices = useMemo(() => listActiveI2VLibraryVoices(), []);
+  const [filter, setFilter] = useState<GenderFilter>("homme");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
-  const stopSpeakRef = useRef<(() => void) | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    prefetchCatalogPreviews(I2V_NATURAL_VOICES);
-    return () => {
-      stopSpeakRef.current?.();
-      stopCatalogSample();
-    };
-  }, []);
+  const filtered = useMemo(
+    () => voices.filter((v) => v.gender === filter),
+    [filter, voices],
+  );
 
-  const previewVoice = (voice: MockVoiceProfile, event: MouseEvent) => {
+  const hommeCount = voices.filter((v) => v.gender === "homme").length;
+  const femmeCount = voices.filter((v) => v.gender === "femme").length;
+
+  const previewVoice = (voice: I2VLibraryVoice, event: MouseEvent) => {
     event.stopPropagation();
     if (previewId === voice.id || loadingPreviewId === voice.id) {
-      stopSpeakRef.current?.();
+      audioRef.current?.pause();
       setPreviewId(null);
       setLoadingPreviewId(null);
       return;
     }
-    stopSpeakRef.current?.();
-    stopSpeakRef.current = speakCatalogSample(voice, {
-      onLoading: () => setLoadingPreviewId(voice.id),
-      onPlaying: () => {
+    audioRef.current?.pause();
+    const audio = audioRef.current ?? new Audio();
+    audioRef.current = audio;
+    setLoadingPreviewId(voice.id);
+    setPreviewId(null);
+    audio.onended = () => {
+      setPreviewId(null);
+      setLoadingPreviewId(null);
+    };
+    audio.onerror = () => {
+      setPreviewId(null);
+      setLoadingPreviewId(null);
+    };
+    audio.src = voice.previewPath;
+    void audio
+      .play()
+      .then(() => {
         setLoadingPreviewId(null);
         setPreviewId(voice.id);
-      },
-      onEnd: () => {
+      })
+      .catch(() => {
         setPreviewId(null);
         setLoadingPreviewId(null);
-        stopSpeakRef.current = null;
-      },
-    });
+      });
   };
 
   return (
     <div className="via-i2v-voice-catalog">
-      <p className="via-step-label">Voix catalogue</p>
+      <p className="via-step-label">Bibliothèque voix ({voices.length})</p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-        Homme ou femme naturelle — aperçu ▶ puis génère.
+        5 hommes · 5 femmes — aperçu ▶ puis génère (admin).
       </p>
+      <div className="via-i2v-voice-catalog__filters" role="tablist" aria-label="Genre">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "homme"}
+          className={`via-i2v-voice-catalog__filter${filter === "homme" ? " is-active" : ""}`}
+          onClick={() => setFilter("homme")}
+        >
+          Hommes ({hommeCount})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "femme"}
+          className={`via-i2v-voice-catalog__filter${filter === "femme" ? " is-active" : ""}`}
+          onClick={() => setFilter("femme")}
+        >
+          Femmes ({femmeCount})
+        </button>
+      </div>
       <div className="via-i2v-voice-catalog__grid" role="list">
-        {I2V_NATURAL_VOICES.map((voice) => {
-          const selected =
-            Boolean(voice.fishReferenceId) &&
-            voice.fishReferenceId === fishReferenceId;
+        {filtered.map((voice) => {
+          const selected = selectedVoiceId === voice.id;
           const isPlaying = previewId === voice.id;
           const isLoading = loadingPreviewId === voice.id;
           return (
@@ -74,14 +107,10 @@ export function VideoI2VCatalogVoicePicker({
               <button
                 type="button"
                 className={`via-i2v-voice-catalog__card${selected ? " is-selected" : ""}`}
-                onClick={() => {
-                  if (voice.fishReferenceId) {
-                    onFishReferenceId(voice.fishReferenceId, voice);
-                  }
-                }}
+                onClick={() => onSelectedVoiceId(voice)}
               >
                 <span className="via-i2v-voice-catalog__name">{voice.name}</span>
-                <span className="via-i2v-voice-catalog__tag">{voice.category}</span>
+                <span className="via-i2v-voice-catalog__tag">{voice.styleFr}</span>
               </button>
               <button
                 type="button"
@@ -103,8 +132,4 @@ export function VideoI2VCatalogVoicePicker({
       </div>
     </div>
   );
-}
-
-export function defaultI2VCatalogFishReferenceId(): string {
-  return I2V_NATURAL_VOICES.find((v) => v.id === "cat-voix-homme")?.fishReferenceId ?? "";
 }

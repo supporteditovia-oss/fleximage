@@ -72,8 +72,10 @@ import {
 import { isImageMediaFile, isVideoMediaFile } from "@/lib/media-file-detect";
 import { extractVideoFrameAsJpegFile } from "@/lib/video-frame";
 import { useAdminPreviewFeatures } from "@/lib/admin-preview-features";
-import { defaultI2VCatalogFishReferenceId } from "@/components/video/VideoI2VCatalogVoicePicker";
-import type { MockVoiceProfile } from "@/lib/v2-mock-voice";
+import {
+  findI2VLibraryVoiceById,
+  resolveDefaultI2VLibraryVoiceId,
+} from "@/lib/i2v-voice-library";
 import { useV2Access } from "@/hooks/use-v2-access";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { releaseGenerationSubmitLock } from "@/lib/generation-submit-lock";
@@ -148,8 +150,8 @@ export default function VideoIA() {
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceText, setVoiceText] = useState("");
-  const [catalogFishReferenceId, setCatalogFishReferenceId] = useState<string | null>(
-    () => defaultI2VCatalogFishReferenceId() || null,
+  const [i2vVoiceId, setI2vVoiceId] = useState<string | null>(() =>
+    resolveDefaultI2VLibraryVoiceId() || null,
   );
   const [preserveSourceVoice, setPreserveSourceVoice] = useState(false);
 
@@ -312,8 +314,12 @@ export default function VideoIA() {
           voice_mode: "catalog" as const,
           voice_text: voiceText.trim(),
           voice_consent: true,
-          ...(adminPreview && catalogFishReferenceId
-            ? { voice_fish_reference_id: catalogFishReferenceId }
+          ...(adminPreview && i2vVoiceId
+            ? {
+                i2v_voice_id: i2vVoiceId,
+                voice_fish_reference_id:
+                  findI2VLibraryVoiceById(i2vVoiceId)?.fishId ?? undefined,
+              }
             : {}),
         }
       : { voice_enabled: false };
@@ -851,10 +857,8 @@ export default function VideoIA() {
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
       adminVoiceCatalogEnabled={adminPreview}
-      catalogFishReferenceId={catalogFishReferenceId}
-      onCatalogFishReferenceId={(fishId, _voice: MockVoiceProfile) => {
-        setCatalogFishReferenceId(fishId);
-      }}
+      i2vVoiceId={i2vVoiceId}
+      onI2vVoiceId={(voice) => setI2vVoiceId(voice.id)}
       canGenerateI2V={canGenerateI2V}
       onGenerateI2V={handleGenerateI2V}
       i2vPending={isSubmitting || generateVideo.isPending}

@@ -1,7 +1,7 @@
 import { Mic } from "lucide-react";
 import { VIDEO_VOICE_EXTRA_CREDIT } from "@/lib/video-studio-config";
 import { VideoI2VCatalogVoicePicker } from "@/components/video/VideoI2VCatalogVoicePicker";
-import type { MockVoiceProfile } from "@/lib/v2-mock-voice";
+import type { I2VLibraryVoice } from "@/lib/i2v-voice-library";
 
 type VideoVoiceAddonProps = {
   enabled: boolean;
@@ -12,8 +12,8 @@ type VideoVoiceAddonProps = {
   voiceExtraCredit?: number;
   /** Catalogue homme / femme — preview admin Vidéo IA. */
   adminVoiceCatalogEnabled?: boolean;
-  catalogFishReferenceId?: string | null;
-  onCatalogFishReferenceId?: (fishId: string, voice: MockVoiceProfile) => void;
+  i2vVoiceId?: string | null;
+  onI2vVoiceId?: (voice: I2VLibraryVoice) => void;
 };
 
 export function VideoVoiceAddon({
@@ -24,8 +24,8 @@ export function VideoVoiceAddon({
   maxChars = 200,
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
   adminVoiceCatalogEnabled = false,
-  catalogFishReferenceId = null,
-  onCatalogFishReferenceId,
+  i2vVoiceId = null,
+  onI2vVoiceId,
 }: VideoVoiceAddonProps) {
   return (
     <div className="via-voice-addon">
@@ -78,10 +78,10 @@ export function VideoVoiceAddon({
             mouvement décrit l&apos;action, ce champ décrit{" "}
             <strong>uniquement</strong> ce qu&apos;on entend
           </p>
-          {adminVoiceCatalogEnabled && onCatalogFishReferenceId ? (
+          {adminVoiceCatalogEnabled && onI2vVoiceId ? (
             <VideoI2VCatalogVoicePicker
-              fishReferenceId={catalogFishReferenceId}
-              onFishReferenceId={onCatalogFishReferenceId}
+              selectedVoiceId={i2vVoiceId}
+              onSelectedVoiceId={onI2vVoiceId}
             />
           ) : null}
         </div>

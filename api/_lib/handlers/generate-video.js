@@ -13,6 +13,11 @@ const {
   lookupCatalogEntryByFishId,
 } = require("../voice-catalog");
 const {
+  findI2VLibraryEntryById,
+  resolveI2VLibraryFishId,
+  listActiveI2VLibraryEntries,
+} = require("../../shared/i2v-voice-library.cjs");
+const {
   VIDEO_V2V_MAX_DURATION_SEC,
   VIDEO_V2V_MAX_SIZE_BYTES,
   validateSourceVideoDuration,
@@ -211,13 +216,29 @@ function resolveVehicleDescription(body) {
 
 
 function resolveVideoCatalogFishReferenceId(body, isAdmin) {
+  if (isAdmin) {
+    const libraryVoiceId = String(body.i2v_voice_id || body.i2vVoiceId || "").trim();
+    if (libraryVoiceId) {
+      const entry = findI2VLibraryEntryById(libraryVoiceId);
+      if (entry?.active) {
+        const fish = resolveI2VLibraryFishId(entry);
+        if (fish) return fish;
+      }
+    }
+  }
+
   const raw = String(
     body.voice_fish_reference_id || body.voiceFishReferenceId || "",
   ).trim();
   if (!isAdmin || !isValidFishReferenceId(raw)) {
     return DEFAULT_CATALOG_FISH_ID;
   }
-  return lookupCatalogEntryByFishId(raw) ? raw : DEFAULT_CATALOG_FISH_ID;
+  if (lookupCatalogEntryByFishId(raw)) return raw;
+  const inLibrary = listActiveI2VLibraryEntries().some(
+    (entry) =>
+      String(entry.fishId || "").toLowerCase() === raw.toLowerCase(),
+  );
+  return inLibrary ? raw : DEFAULT_CATALOG_FISH_ID;
 }
 
 async function validateVoiceOwnership(supabase, userId, body, uiLocale) {

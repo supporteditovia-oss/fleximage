@@ -46,11 +46,8 @@ export type VideoIAStudioViewProps = {
   voiceMaxChars: number;
   voiceExtraCredit: number;
   adminVoiceCatalogEnabled?: boolean;
-  catalogFishReferenceId?: string | null;
-  onCatalogFishReferenceId?: (
-    fishId: string,
-    voice: import("@/lib/v2-mock-voice").MockVoiceProfile,
-  ) => void;
+  i2vVoiceId?: string | null;
+  onI2vVoiceId?: (voice: import("@/lib/i2v-voice-library").I2VLibraryVoice) => void;
   canGenerateI2V: boolean;
   onGenerateI2V: () => void;
   i2vPending: boolean;
@@ -280,8 +277,8 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               maxChars={props.voiceMaxChars}
               voiceExtraCredit={props.voiceExtraCredit}
               adminVoiceCatalogEnabled={props.adminVoiceCatalogEnabled}
-              catalogFishReferenceId={props.catalogFishReferenceId}
-              onCatalogFishReferenceId={props.onCatalogFishReferenceId}
+              i2vVoiceId={props.i2vVoiceId}
+              onI2vVoiceId={props.onI2vVoiceId}
             />
 
             <button
