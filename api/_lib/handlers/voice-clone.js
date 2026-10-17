@@ -16,6 +16,10 @@ const {
   extractVoiceSampleWavFromVideoBuffer,
   MAX_VOICE_VIDEO_BYTES,
 } = require("../extract-audio-from-video-buffer");
+const {
+  convertVoiceSampleToWav,
+  getCanonicalWavDurationSec,
+} = require("../voice-sample-wav");
 
 async function parseVoiceSampleDataUrl(dataUrl, durationHint) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
@@ -124,6 +128,11 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
+    const sampleBuffer = await convertVoiceSampleToWav(
+      parsed.buffer,
+      parsed.contentType,
+    );
+
     const admin = await isUserAdmin(supabase, userId);
     const { data: profile } = await supabase
       .from("profiles")
@@ -160,17 +169,14 @@ module.exports = async function voiceCloneHandler(req, res) {
         : "import";
     const sourceLabel =
       typeof body.sourceLabel === "string" ? body.sourceLabel.trim().slice(0, 120) : null;
-    const durationSec =
-      typeof body.durationSec === "number" && body.durationSec > 0
-        ? body.durationSec
-        : null;
+    const durationSec = getCanonicalWavDurationSec(sampleBuffer);
 
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
-    const sampleUrl = await uploadToR2(sampleKey, parsed.buffer, parsed.contentType);
+    const sampleUrl = await uploadToR2(sampleKey, sampleBuffer, "audio/wav");
 
     let referenceTranscript = null;
     try {
-      referenceTranscript = await transcribeAudio(parsed.buffer, "fr");
+      referenceTranscript = await transcribeAudio(sampleBuffer, "fr");
     } catch (asrErr) {
       const lowCredit =
         asrErr?.status === 402 || /insufficient api credit/i.test(String(asrErr?.message || ""));
@@ -185,7 +191,7 @@ module.exports = async function voiceCloneHandler(req, res) {
     const fishVoice = await createVoiceModel({
       title: `LuxeFlexIA — ${name}`.slice(0, 80),
       description: `Clone user ${userId}`,
-      audioBuffers: [parsed.buffer],
+      audioBuffers: [sampleBuffer],
       texts: referenceTranscript ? [referenceTranscript] : undefined,
       trainMode: process.env.FISH_VOICE_TRAIN_MODE || "fast",
       enhanceAudioQuality: true,
