@@ -510,11 +510,11 @@ export async function buildVoiceClipFromBuffer(
   const blob = await sliceAudioBufferToBlob(buffer, startSec, windowSec);
   const url = URL.createObjectURL(blob);
   const measuredSec = await getAudioDurationSec(blob, { fallbackSec: windowSec });
-  const durationSec = normalizeMeasuredDuration(measuredSec, windowSec);
+  const clipDurationSec = normalizeMeasuredDuration(measuredSec, windowSec);
   return {
     blob,
     url,
-    durationSec,
+    durationSec: clipDurationSec,
     source,
     fileName,
   };

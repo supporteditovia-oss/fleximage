@@ -1,5 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type KeyboardEvent } from "react";
 import { Check, Pause, Play, Share2, Trash2, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { VoiceShareSheet } from "@/components/v2/VoiceShareSheet";
 import {
   useDeleteVoiceGenerations,
@@ -49,6 +59,7 @@ export function VoiceHistorySection({
   const [shareItem, setShareItem] = useState<VoiceHistoryItem | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const shareBlobRef = useRef<Blob | null>(null);
   const historyAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -175,6 +186,23 @@ export function VoiceHistorySection({
     }
   };
 
+  const deleteAll = async () => {
+    const ids = items.map((item) => item.id);
+    if (ids.length === 0) return;
+    try {
+      await deleteGenerations.mutateAsync(ids);
+      stopHistoryAudio();
+      setDeleteAllOpen(false);
+      exitSelection();
+      toast({ title: "Historique vidé" });
+    } catch {
+      toast({
+        title: "Suppression impossible",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!enabled) return null;
 
   return (
@@ -190,16 +218,28 @@ export function VoiceHistorySection({
             </p>
           </div>
           {items.length > 0 ? (
-            <button
-              type="button"
-              className="vs-link"
-              onClick={() => {
-                if (selectionMode) exitSelection();
-                else setSelectionMode(true);
-              }}
-            >
-              {selectionMode ? "Annuler" : "Sélectionner"}
-            </button>
+            selectionMode ? (
+              <div className="vs-history-head-actions">
+                <button
+                  type="button"
+                  className="vs-history-delete-all"
+                  onClick={() => setDeleteAllOpen(true)}
+                >
+                  Tout supprimer
+                </button>
+                <button type="button" className="vs-link" onClick={exitSelection}>
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="vs-link"
+                onClick={() => setSelectionMode(true)}
+              >
+                Sélectionner
+              </button>
+            )
           ) : null}
         </div>
 
@@ -222,18 +262,35 @@ export function VoiceHistorySection({
               const isPlaying = playingId === item.id;
               const isSelected = selectedIds.has(item.id);
               return (
-                <li key={item.id} className={`vs-history-item${isSelected ? " is-selected" : ""}`}>
+                <li
+                  key={item.id}
+                  className={`vs-history-item${isSelected ? " is-selected" : ""}${
+                    selectionMode ? " is-selectable" : ""
+                  }`}
+                  {...(selectionMode
+                    ? {
+                        role: "button" as const,
+                        tabIndex: 0,
+                        "aria-pressed": isSelected,
+                        onClick: () => toggleSelected(item.id),
+                        onKeyDown: (event: KeyboardEvent) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggleSelected(item.id);
+                          }
+                        },
+                      }
+                    : {})}
+                >
                   {selectionMode ? (
-                    <button
-                      type="button"
+                    <span
                       className={`vs-history-select${isSelected ? " is-on" : ""}`}
-                      aria-label={isSelected ? "Désélectionner" : "Sélectionner"}
-                      onClick={() => toggleSelected(item.id)}
+                      aria-hidden
                     >
                       {isSelected ? (
                         <Check className="h-3.5 w-3.5" aria-hidden />
                       ) : null}
-                    </button>
+                    </span>
                   ) : null}
                   <div className="vs-history-copy">
                     <strong>{item.voiceName || "Voix clonée"}</strong>
@@ -298,6 +355,31 @@ export function VoiceHistorySection({
           void handleShare(platform);
         }}
       />
+
+      <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tout supprimer ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tu vas effacer {items.length} vocal{items.length > 1 ? "aux" : ""} de ton
+              historique. Cette action est définitive.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteGenerations.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                void deleteAll();
+              }}
+            >
+              Tout supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

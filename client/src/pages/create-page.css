@@ -1688,6 +1688,30 @@ html.luxeflexia-create-page::before {
   gap: 0.75rem;
 }
 
+.vs-history-head-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.vs-history-delete-all {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fca5a5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.vs-history-delete-all:active {
+  opacity: 0.85;
+}
+
 .vs-history-list {
   list-style: none;
   margin: 0.75rem 0 0;
@@ -1710,6 +1734,15 @@ html.luxeflexia-create-page::before {
 .vs-history-item.is-selected {
   border-color: rgba(201, 162, 39, 0.45);
   background: rgba(201, 162, 39, 0.08);
+}
+
+.vs-history-item.is-selectable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vs-history-item.is-selectable:active {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .vs-history-copy {
@@ -1747,11 +1780,12 @@ html.luxeflexia-create-page::before {
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: transparent;
+  border: 2px solid rgba(201, 162, 39, 0.55);
+  background: rgba(255, 255, 255, 0.06);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
 .vs-history-select.is-on {
