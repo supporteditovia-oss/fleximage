@@ -27,7 +27,7 @@ describe("voice-catalog", () => {
   it("builds stable cache keys", () => {
     assert.equal(
       unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004", "fr"),
-      "voice-catalog/unified/v5/fr/6be490a175744894826dd464cf3a5004.mp3",
+      "voice-catalog/unified/v6/fr/6be490a175744894826dd464cf3a5004.mp3",
     );
   });
 
@@ -46,5 +46,12 @@ describe("voice-catalog", () => {
   it("clamps tts speed to safe bounds", () => {
     assert.equal(clampTtsSpeed(2), 1.35);
     assert.equal(clampTtsSpeed(0.2), 0.65);
+  });
+
+  it("prefers clonage catalogue rate over I2V when fish id is shared", () => {
+    assert.equal(
+      resolveCatalogTtsSpeed("690813f2df56491b82ee02a22d1c67fd"),
+      1,
+    );
   });
 });

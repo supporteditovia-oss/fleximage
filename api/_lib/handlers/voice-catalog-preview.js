@@ -7,6 +7,7 @@ const {
   resolveCatalogTtsSpeed,
   unifiedPreviewCacheKey,
 } = require("../voice-catalog");
+const { buildLandingVoiceScript } = require("../../../shared/voice-locale-scripts.cjs");
 const {
   findI2VLibraryEntryByFishId,
   resolveI2VPreviewPhrase,
@@ -20,12 +21,15 @@ function wantsStreamMedia(req) {
   );
 }
 
-function resolvePreviewText(fishReferenceId, i2vEntry, catalogEntry, locale) {
-  if (i2vEntry) return resolveI2VPreviewPhrase(i2vEntry);
-  if (catalogEntry?.name) {
-    return `Bonjour, je suis ${String(catalogEntry.name).trim()}.`;
+function resolvePreviewText(_fishReferenceId, i2vEntry, catalogEntry, locale) {
+  if (catalogEntry) {
+    return buildLandingVoiceScript(
+      { name: catalogEntry.name, demoKind: catalogEntry.demoKind },
+      locale,
+    );
   }
-  return buildCatalogSampleLine(catalogEntry?.name || "LuxeFlexIA", locale);
+  if (i2vEntry) return resolveI2VPreviewPhrase(i2vEntry);
+  return buildCatalogSampleLine("LuxeFlexIA", locale);
 }
 
 async function loadCachedPreviewBuffer(cacheKey) {
@@ -48,11 +52,13 @@ async function loadCachedPreviewBuffer(cacheKey) {
 
 async function getCatalogPreviewBuffer(fishReferenceId, locale) {
   const fish = fishReferenceId.toLowerCase();
-  const i2vEntry = findI2VLibraryEntryByFishId(fish);
   const catalogEntry = lookupCatalogEntryByFishId(fish);
-  const cacheKey = i2vEntry
-    ? `voice-catalog/i2v/v4/${String(locale).toLowerCase()}/${fish}.mp3`
-    : unifiedPreviewCacheKey(fish, locale);
+  const i2vEntry = findI2VLibraryEntryByFishId(fish);
+  const cacheKey = catalogEntry
+    ? unifiedPreviewCacheKey(fish, locale)
+    : i2vEntry
+      ? `voice-catalog/i2v/v4/${String(locale).toLowerCase()}/${fish}.mp3`
+      : unifiedPreviewCacheKey(fish, locale);
 
   const cached = await loadCachedPreviewBuffer(cacheKey);
   if (cached) {
@@ -60,10 +66,7 @@ async function getCatalogPreviewBuffer(fishReferenceId, locale) {
   }
 
   const previewText = resolvePreviewText(fish, i2vEntry, catalogEntry, locale);
-  const ttsSpeed =
-    typeof i2vEntry?.ttsSpeed === "number"
-      ? i2vEntry.ttsSpeed
-      : resolveCatalogTtsSpeed(fish);
+  const ttsSpeed = resolveCatalogTtsSpeed(fish);
 
   const buffer = await synthesizeSpeech({
     text: previewText,

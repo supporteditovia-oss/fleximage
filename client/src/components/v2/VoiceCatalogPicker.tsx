@@ -5,14 +5,12 @@ import { cn } from "@/lib/utils";
 import {
   MOCK_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
+  prefetchCatalogPreviews,
+  speakCatalogSample,
+  stopCatalogSample,
   type MockVoiceProfile,
   type VoiceCatalogFilter,
 } from "@/lib/v2-mock-voice";
-import {
-  playI2VVoicePreview,
-  prefetchI2VVoicePreviews,
-  stopI2VVoicePreview,
-} from "@/lib/i2v-voice-preview";
 import "@/pages/bibliotheque-page.css";
 
 type VoiceCatalogPickerProps = {
@@ -53,12 +51,10 @@ export function VoiceCatalogPicker({
   }, [filter, query]);
 
   useEffect(() => {
-    prefetchI2VVoicePreviews(
-      MOCK_VOICE_CATALOG.map((v) => v.fishReferenceId).filter(Boolean) as string[],
-    );
+    prefetchCatalogPreviews(MOCK_VOICE_CATALOG);
     return () => {
       stopSpeakRef.current?.();
-      stopI2VVoicePreview();
+      stopCatalogSample();
     };
   }, []);
 
@@ -85,9 +81,7 @@ export function VoiceCatalogPicker({
     setPreviewId(null);
     setLoadingPreviewId(null);
 
-    const fishId = voice.fishReferenceId;
-    if (!fishId) return;
-    stopSpeakRef.current = playI2VVoicePreview(fishId, {
+    stopSpeakRef.current = speakCatalogSample(voice, {
       onLoading: () => setLoadingPreviewId(id),
       onPlaying: () => {
         setLoadingPreviewId(null);
@@ -98,16 +92,12 @@ export function VoiceCatalogPicker({
         setLoadingPreviewId(null);
         stopSpeakRef.current = null;
       },
-      onError: () => {
-        setPreviewId(null);
-        setLoadingPreviewId(null);
-      },
     });
   };
 
   const selectVoice = (voice: MockVoiceProfile) => {
     stopSpeakRef.current?.();
-    stopI2VVoicePreview();
+    stopCatalogSample();
     setPreviewId(null);
     setLoadingPreviewId(null);
     onSelect(voice);

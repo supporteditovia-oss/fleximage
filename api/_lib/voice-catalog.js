@@ -15,7 +15,7 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 5;
+const UNIFIED_PREVIEW_VERSION = 6;
 
 function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
   const locale = normalizeVoiceLocale(localeLike);
@@ -41,23 +41,23 @@ function lookupCatalogEntryByFishId(fishReferenceId) {
  * Retourne null si voix hors catalogue → débit global par défaut.
  */
 function resolveCatalogTtsSpeed(fishReferenceId) {
+  const entry = lookupCatalogEntryByFishId(fishReferenceId);
+  if (entry) {
+    const raw =
+      typeof entry.ttsSpeed === "number" && Number.isFinite(entry.ttsSpeed)
+        ? entry.ttsSpeed
+        : typeof entry.rate === "number" && Number.isFinite(entry.rate)
+          ? entry.rate
+          : null;
+    if (raw != null) return clampTtsSpeed(raw);
+  }
+
   const i2vEntry = findI2VLibraryEntryByFishId(fishReferenceId);
   if (i2vEntry && typeof i2vEntry.ttsSpeed === "number") {
     return clampTtsSpeed(i2vEntry.ttsSpeed);
   }
 
-  const entry = lookupCatalogEntryByFishId(fishReferenceId);
-  if (!entry) return null;
-
-  const raw =
-    typeof entry.ttsSpeed === "number" && Number.isFinite(entry.ttsSpeed)
-      ? entry.ttsSpeed
-      : typeof entry.rate === "number" && Number.isFinite(entry.rate)
-        ? entry.rate
-        : null;
-
-  if (raw == null) return null;
-  return clampTtsSpeed(raw);
+  return null;
 }
 
 module.exports = {
