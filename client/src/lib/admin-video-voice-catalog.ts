@@ -48,6 +48,11 @@ export function listAdminVideoVoices(): AdminVideoVoice[] {
   return [...i2v, ...catalog];
 }
 
+/** Studio Image → Vidéo / Vidéo IA admin — voix I2V + catalogue Homme/Femme (pas les rappeurs). */
+export function listAdminImageVideoStudioVoices(): AdminVideoVoice[] {
+  return listAdminVideoVoices().filter((v) => v.group !== "rap");
+}
+
 export function filterAdminVideoVoices(
   voices: AdminVideoVoice[],
   filter: AdminVideoVoiceFilter,
@@ -64,7 +69,12 @@ export function filterAdminVideoVoices(
 }
 
 export function resolveDefaultAdminVideoVoiceId(): string {
-  return resolveDefaultI2VLibraryVoiceId() || listAdminVideoVoices()[0]?.id || "";
+  const studioVoices = listAdminImageVideoStudioVoices();
+  const i2vDefault = resolveDefaultI2VLibraryVoiceId();
+  if (i2vDefault && studioVoices.some((v) => v.id === i2vDefault)) {
+    return i2vDefault;
+  }
+  return studioVoices[0]?.id || "";
 }
 
 export function findAdminVideoVoiceById(id: string | null): AdminVideoVoice | null {

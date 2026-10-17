@@ -3,7 +3,7 @@ import { Loader2, Pause, Play } from "lucide-react";
 import {
   filterAdminVideoVoices,
   findAdminVideoVoiceById,
-  listAdminVideoVoices,
+  listAdminImageVideoStudioVoices,
   resolveDefaultAdminVideoVoiceId,
   type AdminVideoVoice,
   type AdminVideoVoiceFilter,
@@ -28,8 +28,8 @@ export function VideoI2VCatalogVoicePicker({
   selectedVoiceId,
   onSelectedVoiceId,
 }: VideoI2VCatalogVoicePickerProps) {
-  const voices = useMemo(() => listAdminVideoVoices(), []);
-  const [filter, setFilter] = useState<AdminVideoVoiceFilter>("rap");
+  const voices = useMemo(() => listAdminImageVideoStudioVoices(), []);
+  const [filter, setFilter] = useState<AdminVideoVoiceFilter>("femme");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const stopPreviewRef = useRef<(() => void) | null>(null);
@@ -48,11 +48,8 @@ export function VideoI2VCatalogVoicePicker({
     [filter, voices],
   );
 
-  const rapCount = voices.filter((v) => v.group === "rap").length;
   const femmeCount = voices.filter((v) => v.gender === "femme").length;
-  const hommeCount = voices.filter(
-    (v) => v.gender === "homme" && v.group !== "rap",
-  ).length;
+  const hommeCount = voices.filter((v) => v.gender === "homme").length;
 
   const previewVoice = (voice: AdminVideoVoice, event: MouseEvent) => {
     event.stopPropagation();
@@ -94,19 +91,10 @@ export function VideoI2VCatalogVoicePicker({
         Bibliothèque voix admin ({voices.length})
       </p>
       <p className="via-voice-addon__hint via-voice-addon__hint--panel">
-        Rappeurs + voix naturelles I2V (5H/5F) + catalogue Homme/Femme — ▶
-        aperçu Fish, puis active « Ajouter une voix IA ».
+        Voix naturelles I2V (5H/5F) + catalogue Homme/Femme — ▶ aperçu Fish,
+        puis active « Ajouter une voix IA ».
       </p>
       <div className="via-i2v-voice-catalog__filters" role="tablist" aria-label="Genre">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "rap"}
-          className={`via-i2v-voice-catalog__filter${filter === "rap" ? " is-active" : ""}`}
-          onClick={() => setFilter("rap")}
-        >
-          Rap ({rapCount})
-        </button>
         <button
           type="button"
           role="tab"
