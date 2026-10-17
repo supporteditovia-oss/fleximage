@@ -45,6 +45,7 @@ export type VideoIAStudioViewProps = {
   onVoiceText: (v: string) => void;
   voiceMaxChars: number;
   voiceExtraCredit: number;
+  voiceStudioAvailable: boolean;
   adminVoiceCatalogEnabled?: boolean;
   adminInlineVoiceCounter?: boolean;
   i2vVoiceId?: string | null;
@@ -278,6 +279,7 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               maxChars={props.voiceMaxChars}
               durationSec={props.durationSec}
               voiceExtraCredit={props.voiceExtraCredit}
+              voiceStudioAvailable={props.voiceStudioAvailable}
               adminVoiceCatalogEnabled={props.adminVoiceCatalogEnabled}
               adminInlineVoiceCounter={props.adminInlineVoiceCounter}
               i2vVoiceId={props.i2vVoiceId}

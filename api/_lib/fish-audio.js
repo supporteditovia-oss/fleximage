@@ -150,7 +150,7 @@ function buildTtsOptions(text, options = {}) {
       ...base,
       chunk_length: chunkLength,
       min_chunk_length: minChunk,
-      condition_on_previous_chunks: false,
+      condition_on_previous_chunks: len > 200,
       prosody: {
         ...base.prosody,
         speed: resolvedSpeed,

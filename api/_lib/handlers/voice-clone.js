@@ -25,6 +25,10 @@ const {
   MAX_VOICE_VIDEO_BYTES,
 } = require("../extract-audio-from-video-buffer");
 const { prepareVoiceSampleForCloneSource } = require("../voice-sample-prepare");
+const {
+  convertVoiceSampleToWav,
+  getCanonicalWavDurationSec,
+} = require("../voice-sample-wav");
 
 async function parseVoiceSampleDataUrl(dataUrl, durationHint) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,([\s\S]+)$/);
@@ -133,6 +137,11 @@ module.exports = async function voiceCloneHandler(req, res) {
       return;
     }
 
+    const sampleBuffer = await convertVoiceSampleToWav(
+      parsed.buffer,
+      parsed.contentType,
+    );
+
     const admin = await isUserAdmin(supabase, userId);
     const { data: profile } = await supabase
       .from("profiles")
@@ -169,20 +178,15 @@ module.exports = async function voiceCloneHandler(req, res) {
         : "import";
     const sourceLabel =
       typeof body.sourceLabel === "string" ? body.sourceLabel.trim().slice(0, 120) : null;
-    const durationSec =
-      typeof body.durationSec === "number" && body.durationSec > 0
-        ? body.durationSec
-        : null;
-
     const sourceTypeEarly =
       body.sourceType === "record" || body.sourceType === "catalog"
         ? body.sourceType
         : "import";
 
-    const measuredSampleSec = estimateWavDurationSec(parsed.buffer);
+    const measuredSampleSec = estimateWavDurationSec(sampleBuffer);
     const effectiveSampleSec = resolveEffectiveVoiceCloneSampleSec(
       measuredSampleSec,
-      durationSec,
+      null,
     );
 
     if (
@@ -200,9 +204,20 @@ module.exports = async function voiceCloneHandler(req, res) {
     }
 
     const preparedBuffer = await prepareVoiceSampleForCloneSource(
-      parsed.buffer,
+      sampleBuffer,
       sourceTypeEarly,
     );
+    const durationSec = getCanonicalWavDurationSec(preparedBuffer);
+    if (!isVoiceCloneSampleLongEnough(durationSec)) {
+      res.status(400).json({
+        code: "sample_too_short",
+        message: formatVoiceCloneSampleTooShortMessage(durationSec, {
+          source: sourceTypeEarly === "record" ? "record" : "import",
+          minSec: VOICE_CLONE_MIN_SAMPLE_SEC,
+        }),
+      });
+      return;
+    }
 
     const sampleKey = `voice-samples/${userId}/${Date.now()}.wav`;
     const sampleUrl = await uploadToR2(sampleKey, preparedBuffer, "audio/wav");

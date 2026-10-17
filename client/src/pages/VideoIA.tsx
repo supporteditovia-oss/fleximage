@@ -106,6 +106,8 @@ export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading, isAdmin: studioAdmin } = useV2Access();
   const { user } = useAuth();
+  const voiceStudioAvailable =
+    studioAdmin || import.meta.env.DEV || import.meta.env.MODE === "test";
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
   const { toast } = useToast();
   const generateVideo = useVideoStudioGenerate();
@@ -153,6 +155,7 @@ export default function VideoIA() {
     useState<VideoUltraResolution>("720p");
 
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const i2vVoiceEnabled = voiceStudioAvailable && voiceEnabled;
   const [voiceText, setVoiceText] = useState("");
   const [i2vVoiceId, setI2vVoiceId] = useState<string | null>(() =>
     resolveDefaultAdminVideoVoiceId() || null,
@@ -266,7 +269,7 @@ export default function VideoIA() {
   }, [durationSec, workflow]);
 
   const voiceReady =
-    !voiceEnabled ||
+    !i2vVoiceEnabled ||
     (voiceText.trim().length >= 5 &&
       voiceText.trim().length <= voiceScriptLimits.maxChars &&
       voiceScriptLimits.wordCount <= voiceScriptLimits.maxWords);
@@ -322,17 +325,17 @@ export default function VideoIA() {
             workflow: "image_to_video",
             durationSec,
             quality: videoQuality,
-            voiceEnabled,
+            voiceEnabled: i2vVoiceEnabled,
           })
         : computeVideoCreditCost({
             workflow: "image_to_video",
             durationSec,
             quality: videoQuality,
-            voiceEnabled,
+            voiceEnabled: i2vVoiceEnabled,
           });
 
   const buildVoicePayload = () =>
-    voiceEnabled
+    i2vVoiceEnabled
       ? {
           voice_enabled: true,
           voice_mode: "catalog" as const,
@@ -573,7 +576,7 @@ export default function VideoIA() {
           workflow: "image_to_video",
           durationSec,
           quality: videoQuality,
-          voiceEnabled,
+          voiceEnabled: i2vVoiceEnabled,
         }),
       );
       setIsSubmitting(true);
@@ -583,7 +586,7 @@ export default function VideoIA() {
         motionPrompt.trim().length >= 10
           ? motionPrompt.trim()
           : `${motionPrompt.trim()}. ${DEFAULT_IMAGE_TO_VIDEO_PROMPT}`;
-      const prompt = finalizeI2VMotionPromptForSubmit(rawPrompt, voiceEnabled);
+      const prompt = finalizeI2VMotionPromptForSubmit(rawPrompt, i2vVoiceEnabled);
       if (prompt.length < 10) {
         toast({
           variant: "destructive",
@@ -820,7 +823,7 @@ export default function VideoIA() {
               sourceVideoDurationSec: videoDurationSec,
               preserveSourceAudio: preserveSourceVoice,
               durationSec,
-              voiceEnabled,
+              voiceEnabled: i2vVoiceEnabled,
             })
           }
           inputImageUrl={loaderImageUrl}
@@ -877,14 +880,15 @@ export default function VideoIA() {
       i2vExtra1080={i2vExtra1080}
       aspectRatio={aspectRatio}
       onAspectRatio={setAspectRatio}
-      voiceEnabled={voiceEnabled}
+      voiceEnabled={i2vVoiceEnabled}
       onVoiceEnabled={setVoiceEnabled}
       voiceText={voiceText}
       onVoiceText={setVoiceText}
       voiceMaxChars={voiceMaxChars}
       voiceExtraCredit={adminBurn.videoVoiceExtra}
-      adminVoiceCatalogEnabled={studioAdmin}
-      adminInlineVoiceCounter={studioAdmin}
+      voiceStudioAvailable={voiceStudioAvailable}
+      adminVoiceCatalogEnabled={voiceStudioAvailable}
+      adminInlineVoiceCounter={voiceStudioAvailable}
       i2vVoiceId={i2vVoiceId}
       onI2vVoiceId={(voice) => setI2vVoiceId(voice.id)}
       canGenerateI2V={canGenerateI2V}
@@ -921,4 +925,3 @@ export default function VideoIA() {
     />
   );
 }
-

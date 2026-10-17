@@ -21,6 +21,7 @@ type VideoVoiceAddonProps = {
   adminVoiceCatalogEnabled?: boolean;
   /** Compteur incrusté dans le champ — rollout admin uniquement. */
   adminInlineVoiceCounter?: boolean;
+  voiceStudioAvailable?: boolean;
   i2vVoiceId?: string | null;
   onI2vVoiceId?: (voice: AdminVideoVoice) => void;
 };
@@ -35,6 +36,7 @@ export function VideoVoiceAddon({
   voiceExtraCredit = VIDEO_VOICE_EXTRA_CREDIT,
   adminVoiceCatalogEnabled = false,
   adminInlineVoiceCounter = false,
+  voiceStudioAvailable = false,
   i2vVoiceId = null,
   onI2vVoiceId,
 }: VideoVoiceAddonProps) {
@@ -45,6 +47,8 @@ export function VideoVoiceAddon({
 
   const effectiveMaxChars = maxChars || limits.maxChars;
   const counterId = "video-voice-script-counter";
+
+  if (!voiceStudioAvailable) return null;
 
   return (
     <div className="via-voice-addon">
