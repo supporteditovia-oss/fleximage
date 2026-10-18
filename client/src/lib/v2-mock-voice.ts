@@ -45,7 +45,15 @@ export type MockVoiceProfile = {
   fishReferenceId?: string;
   /** Prononciation TTS (ex. Jul → Joul). */
   spokenName?: string;
+  slug?: string;
+  /** Démo voix clonée IA (MP3 studio). */
+  demoCloneAudio?: string;
+  demoOriginalAudio?: string;
+  demoOriginalVideo?: string;
+  studioPremium?: boolean;
 };
+
+export type CatalogStudioDemoVariant = "ia" | "original";
 
 export type MockVoiceGeneration = {
   id: string;
@@ -109,6 +117,12 @@ export function catalogPhotoForSlug(slug: string): string {
 
 /** MP3 calibrés par rappeur (priorité lecture instantanée Clonage IA). */
 export function catalogBundledSampleUrl(slug: string): string {
+  const entry = catalog.entries.find((item) => item.slug === slug) as
+    | { demoCloneAudio?: string }
+    | undefined;
+  if (entry?.demoCloneAudio) {
+    return `${entry.demoCloneAudio}?v=${LANDING_VOICE_DEMO_VERSION}`;
+  }
   return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
 }
 
@@ -150,6 +164,7 @@ function initialsFrom(name: string, override?: string): string {
 export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
   (seed, index) => ({
     id: `cat-${seed.slug}`,
+    slug: seed.slug,
     name: seed.name,
     description: seed.description,
     durationLabel: "0:06",
@@ -168,6 +183,19 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
       "spokenName" in seed && typeof seed.spokenName === "string"
         ? seed.spokenName
         : undefined,
+    demoCloneAudio:
+      "demoCloneAudio" in seed && typeof seed.demoCloneAudio === "string"
+        ? seed.demoCloneAudio
+        : undefined,
+    demoOriginalAudio:
+      "demoOriginalAudio" in seed && typeof seed.demoOriginalAudio === "string"
+        ? seed.demoOriginalAudio
+        : undefined,
+    demoOriginalVideo:
+      "demoOriginalVideo" in seed && typeof seed.demoOriginalVideo === "string"
+        ? seed.demoOriginalVideo
+        : undefined,
+    studioPremium: "studioPremium" in seed && seed.studioPremium === true,
   }),
 );
 
@@ -473,6 +501,23 @@ function playCatalogAudio(
     cancelled = true;
     if (token === catalogToken) stopCatalogSample();
   };
+}
+
+/** Aperçu studio : voix IA (clone) ou piste originale enregistrée. */
+export function speakCatalogStudioDemo(
+  profile: MockVoiceProfile,
+  variant: CatalogStudioDemoVariant,
+  onEndOrCallbacks?: (() => void) | CatalogPreviewCallbacks,
+): () => void {
+  const callbacks = resolveCatalogPreviewCallbacks(onEndOrCallbacks);
+  const bust = `?v=${LANDING_VOICE_DEMO_VERSION}`;
+  if (variant === "ia" && profile.demoCloneAudio) {
+    return playCatalogAudio(`${profile.demoCloneAudio}${bust}`, callbacks);
+  }
+  if (variant === "original" && profile.demoOriginalAudio) {
+    return playCatalogAudio(`${profile.demoOriginalAudio}${bust}`, callbacks);
+  }
+  return speakCatalogSample(profile, callbacks);
 }
 
 /**

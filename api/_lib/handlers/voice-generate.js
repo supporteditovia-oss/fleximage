@@ -18,6 +18,8 @@ const {
 } = require("../voice-store");
 const {
   resolveCatalogStudioSynth,
+  lookupCatalogEntryBySlug,
+  resolveEffectiveCatalogFishId,
   resolveCatalogGenerationTtsSpeed,
 } = require("../voice-catalog");
 const { prepareVoiceCloneInlineReferenceBuffer } = require("../voice-sample-prepare");
@@ -206,6 +208,14 @@ module.exports = async function voiceGenerateHandler(req, res) {
       typeof body.voiceCloneId === "string" ? body.voiceCloneId.trim() : "";
     let fishReferenceId =
       typeof body.fishReferenceId === "string" ? body.fishReferenceId.trim() : "";
+    const catalogVoiceSlug =
+      typeof body.catalogVoiceSlug === "string" ? body.catalogVoiceSlug.trim().toLowerCase() : "";
+    if (catalogVoiceSlug && !voiceCloneId) {
+      const catalogEntry = lookupCatalogEntryBySlug(catalogVoiceSlug);
+      if (catalogEntry?.fishId) {
+        fishReferenceId = resolveEffectiveCatalogFishId(catalogEntry);
+      }
+    }
 
     const voiceContext = await resolveVoiceContext(
       supabase,
