@@ -27,7 +27,7 @@ describe("voice-catalog", () => {
   it("builds stable cache keys", () => {
     assert.equal(
       unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004", "fr"),
-      "voice-catalog/unified/v8/fr/6be490a175744894826dd464cf3a5004.mp3",
+      "voice-catalog/unified/v9/fr/6be490a175744894826dd464cf3a5004.mp3",
     );
   });
 

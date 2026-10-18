@@ -24,12 +24,10 @@ const AMBIENT_DUCK_SIDECHAIN =
 const SOURCE_AMBIENT_AF =
   "highpass=f=180,lowpass=f=9000,afftdn=nf=-32:nt=w,volume=0.22";
 
-/** Intégration voix type micro smartphone (extérieur). */
-const GENERATED_VOICE_AF =
-  "highpass=f=95,lowpass=f=11500," +
-  "equalizer=f=2500:t=h:width=250:g=-2.0," +
-  "equalizer=f=3800:t=h:width=400:g=2.2," +
-  "acompressor=threshold=-20dB:ratio=2.2:attack=6:release=90:makeup=2";
+/** Intégration voix — DÉSACTIVÉ le 2026-10-18 : l'EQ + compresseur altérait le
+ * timbre brut des voix du catalogue (ex: Kaaris parfait en preview, dénaturé
+ * en vidéo finale). La voix est désormais préservée telle quelle. */
+const GENERATED_VOICE_AF = "";
 
 async function downloadToFile(url, filePath, timeoutMs = 45_000) {
   const controller = new AbortController();
@@ -113,6 +111,8 @@ async function mixSourceAmbientWithDucking({
           "aac",
           "-b:a",
           "192k",
+          "-ar",
+          "44100",
           "-shortest",
           "-movflags",
           "+faststart",
@@ -121,11 +121,11 @@ async function mixSourceAmbientWithDucking({
         { timeout: 120_000, maxBuffer: 14 * 1024 * 1024 },
       );
     } else {
+      // Voix brute préservée (GENERATED_VOICE_AF désactivé) — mix direct avec l'ambiance duckée.
       const filterComplex = [
         `[1:a]${SOURCE_AMBIENT_AF}[ambraw]`,
-        `[0:a]${GENERATED_VOICE_AF}[vox]`,
-        `[ambraw][vox]${AMBIENT_DUCK_SIDECHAIN}[ambduck]`,
-        `[vox][ambduck]amix=inputs=2:duration=shortest:dropout_transition=0:weights=1 ${AMBIENT_BASE_VOLUME}[aout]`,
+        `[ambraw][0:a]${AMBIENT_DUCK_SIDECHAIN}[ambduck]`,
+        `[0:a][ambduck]amix=inputs=2:duration=shortest:dropout_transition=0:weights=1 ${AMBIENT_BASE_VOLUME}[aout]`,
       ].join(";");
       await execFileAsync(
         ffmpegPath,
@@ -147,6 +147,8 @@ async function mixSourceAmbientWithDucking({
           "aac",
           "-b:a",
           "192k",
+          "-ar",
+          "44100",
           "-shortest",
           "-movflags",
           "+faststart",
@@ -188,26 +190,27 @@ async function polishGeneratedVideoVoiceOnly({
     const hasAudio = await pathHasAudio(genPath);
     if (!hasAudio) return null;
 
-    await execFileAsync(
-      ffmpegPath,
-      [
-        "-y",
-        "-i",
-        genPath,
-        "-af",
-        GENERATED_VOICE_AF,
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "-movflags",
-        "+faststart",
-        outPath,
-      ],
-      { timeout: 90_000, maxBuffer: 12 * 1024 * 1024 },
-    );
+    const ffmpegArgs = [
+      "-y",
+      "-i",
+      genPath,
+      // Pas de -af : la voix est préservée brute (GENERATED_VOICE_AF désactivé).
+      "-c:v",
+      "copy",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "192k",
+      "-ar",
+      "44100",
+      "-movflags",
+      "+faststart",
+      outPath,
+    ];
+    await execFileAsync(ffmpegPath, ffmpegArgs, {
+      timeout: 90_000,
+      maxBuffer: 12 * 1024 * 1024,
+    });
 
     const outBuffer = await fs.readFile(outPath);
     if (outBuffer.length < 2048) return null;
