@@ -60,14 +60,6 @@
   ],
   "rewrites": [
     {
-      "source": "/assets/voice-catalog/samples/:slug.mp3",
-      "destination": "/api/larps/voice/landing-demo?slug=:slug&media=1"
-    },
-    {
-      "source": "/assets/landing-voice-demos/:slug.mp3",
-      "destination": "/api/larps/voice/landing-demo?slug=:slug&media=1"
-    },
-    {
       "source": "/api/funnel/(.*)",
       "destination": "/api/funnel-router?__funnelPath=$1"
     },
@@ -112,7 +104,7 @@
       "destination": "/api/larps-router?__larpsPath=templates/$1"
     },
     {
-      "source": "/((?!api/|assets/|robots\\.txt$|sitemap\\.xml$).*)",
+      "source": "/((?!api/|assets/|voices/|robots\\.txt$|sitemap\\.xml$).*)",
       "destination": "/index.html"
     }
   ],
