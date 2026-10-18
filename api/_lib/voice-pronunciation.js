@@ -23,6 +23,8 @@ const PRONUNCIATION_ENTRIES = [
   { match: /\bSCH\b/g, speak: "EssCéAsh" },
   { match: /\bSDM\b/g, speak: "EssDéEm" },
   { match: /\bKLM\b/g, speak: "KaLéEm" },
+  { match: /\bN\.?\s*I\.?\b/g, speak: "N I" },
+  { match: /\bbinks\b/giu, speak: "banks" },
   { match: /\bTiakola\b/giu, speak: "Tiakola" },
   { match: /\bWerenoi\b/giu, speak: "Werénoi" },
   { match: /\bBadBad\b/giu, speak: "Bad Bad" },
