@@ -107,6 +107,32 @@ function resolveTtsSpeed(text, speedOverride) {
 
 function buildTtsOptions(text, options = {}) {
   const len = String(text || "").trim().length;
+
+  // 1:1 catalogue — si la voix a des ttsParams exacts (ceux du MP3 preview),
+  // on les utilise STRICTEMENT, sans preset ni post-traitement.
+  const exact = options.ttsParams;
+  if (exact && typeof exact === "object") {
+    const speed = typeof exact.speed === "number" && Number.isFinite(exact.speed)
+      ? clampTtsSpeed(exact.speed)
+      : resolveTtsSpeed(text, options.speed);
+    return {
+      ...FIDELITY_TTS,
+      temperature: exact.temperature ?? FIDELITY_TTS.temperature,
+      top_p: exact.top_p ?? FIDELITY_TTS.top_p,
+      repetition_penalty: exact.repetition_penalty ?? FIDELITY_TTS.repetition_penalty,
+      chunk_length: exact.chunk_length ?? 300,
+      min_chunk_length: exact.min_chunk_length ?? 100,
+      normalize: exact.normalize ?? false,
+      latency: exact.latency ?? "normal",
+      condition_on_previous_chunks: false,
+      prosody: {
+        speed,
+        volume: 0,
+        normalize_loudness: false,
+      },
+    };
+  }
+
   const speed = resolveTtsSpeed(text, options.speed);
   const cloneFidelity = options.cloneFidelity === true;
   const deepChestClone = options.deepChestClone === true && cloneFidelity;
@@ -533,6 +559,7 @@ async function synthesizeSpeech({
   format = "mp3",
   speed,
   cloneFidelity,
+  ttsParams,
   catalogFastFlow,
   catalogIncisiveFlow,
   deepChestClone,
@@ -571,6 +598,7 @@ async function synthesizeSpeech({
       ...buildTtsOptions(trimmed, {
         speed: resolvedSpeed,
         cloneFidelity,
+        ttsParams,
         catalogFastFlow,
         catalogIncisiveFlow,
         deepChestClone,

@@ -11,7 +11,17 @@
       "pitch": 0.88,
       "rate": 1,
       "previewTtsSpeed": 1.05,
-      "demoKind": "artist"
+      "demoKind": "artist",
+      "ttsParams": {
+        "temperature": 0.73,
+        "top_p": 0.84,
+        "speed": 1.02,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "maes",
@@ -23,7 +33,17 @@
       "photo": "maes.jpg",
       "pitch": 0.78,
       "rate": 0.84,
-      "demoKind": "artist"
+      "demoKind": "artist",
+      "ttsParams": {
+        "temperature": 0.7,
+        "top_p": 0.83,
+        "speed": 1.0,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "niska",
@@ -40,7 +60,17 @@
       "studioPremium": true,
       "demoCloneAudio": "/voices/demos/niska-ia.mp3",
       "demoOriginalVideo": "/voices/demos/niska-originale.mp4",
-      "demoOriginalAudio": "/voices/demos/niska-originale.mp3"
+      "demoOriginalAudio": "/voices/demos/niska-originale.mp3",
+      "ttsParams": {
+        "temperature": 0.66,
+        "top_p": 0.8,
+        "speed": 0.94,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "kaaris",
@@ -57,7 +87,17 @@
       "studioPremium": true,
       "demoCloneAudio": "/voices/demos/kaaris-ia.mp3",
       "demoOriginalVideo": "/voices/demos/kaaris-originale.mp4",
-      "demoOriginalAudio": "/voices/demos/kaaris-originale.mp3"
+      "demoOriginalAudio": "/voices/demos/kaaris-originale.mp3",
+      "ttsParams": {
+        "temperature": 0.68,
+        "top_p": 0.82,
+        "speed": 0.96,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "plk",
@@ -75,7 +115,17 @@
       "studioPremium": true,
       "demoCloneAudio": "/voices/demos/plk-ia.mp3",
       "demoOriginalVideo": "/voices/demos/plk-originale.mp4",
-      "demoOriginalAudio": "/voices/demos/plk-originale.mp3"
+      "demoOriginalAudio": "/voices/demos/plk-originale.mp3",
+      "ttsParams": {
+        "temperature": 0.7,
+        "top_p": 0.83,
+        "speed": 1.02,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "damso",
@@ -92,7 +142,17 @@
       "studioPremium": true,
       "demoCloneAudio": "/voices/demos/damso-ia.mp3",
       "demoOriginalVideo": "/voices/demos/damso-originale.mp4",
-      "demoOriginalAudio": "/voices/demos/damso-originale.mp3"
+      "demoOriginalAudio": "/voices/demos/damso-originale.mp3",
+      "ttsParams": {
+        "temperature": 0.6,
+        "top_p": 0.8,
+        "speed": 0.94,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "booba",
@@ -117,7 +177,17 @@
       "pitch": 0.82,
       "rate": 1.06,
       "spokenName": "Joul",
-      "demoKind": "artist"
+      "demoKind": "artist",
+      "ttsParams": {
+        "temperature": 0.75,
+        "top_p": 0.85,
+        "speed": 1.04,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "ninho",
@@ -129,7 +199,17 @@
       "photo": "ninho.jpg",
       "pitch": 0.8,
       "rate": 1.02,
-      "demoKind": "artist"
+      "demoKind": "artist",
+      "ttsParams": {
+        "temperature": 0.7,
+        "top_p": 0.83,
+        "speed": 1.0,
+        "repetition_penalty": 1.05,
+        "chunk_length": 300,
+        "min_chunk_length": 100,
+        "normalize": false,
+        "latency": "normal"
+      }
     },
     {
       "slug": "sch",
