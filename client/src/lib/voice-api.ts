@@ -79,6 +79,7 @@ export async function generateVoice(params: {
   text: string;
   voiceCloneId?: string;
   fishReferenceId?: string;
+  catalogVoiceSlug?: string;
   instantAudioDataUrl?: string;
   style?: VoiceDeliveryStyle;
   humanize?: boolean;
@@ -89,6 +90,7 @@ export async function generateVoice(params: {
       text: params.text,
       voiceCloneId: params.voiceCloneId,
       fishReferenceId: params.fishReferenceId,
+      catalogVoiceSlug: params.catalogVoiceSlug,
       instantAudioDataUrl: params.instantAudioDataUrl,
       style: params.style ?? "casual",
       humanize: params.humanize === true,

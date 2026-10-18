@@ -23,6 +23,7 @@ import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import {
   MOCK_VOICE_CATALOG,
   findCatalogProfileByName,
+  slugFromCatalogVoiceId,
   type ClonedVoice,
   type MockVoiceProfile,
 } from "@/lib/v2-mock-voice";
@@ -1214,10 +1215,16 @@ export function VoiceStudioMock({ guestFunnel = false }: VoiceStudioMockProps) {
           throw new Error("Choisis ou crée une voix avant de générer.");
         }
 
+        const catalogVoiceSlug =
+          activeVoice?.kind === "catalog"
+            ? slugFromCatalogVoiceId(activeVoice.id) ?? undefined
+            : undefined;
+
         const result = await generateVoice({
           text: text.trim(),
           voiceCloneId,
           fishReferenceId,
+          catalogVoiceSlug,
           instantAudioDataUrl,
           style: deliveryStyle,
           humanize: true,
