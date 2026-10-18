@@ -15,7 +15,7 @@ function isValidFishReferenceId(id) {
 }
 
 /** Incrémenter quand le débit catalogue change (invalidation cache R2). */
-const UNIFIED_PREVIEW_VERSION = 7;
+const UNIFIED_PREVIEW_VERSION = 8;
 
 function unifiedPreviewCacheKey(fishReferenceId, localeLike) {
   const locale = normalizeVoiceLocale(localeLike);
@@ -132,14 +132,22 @@ function resolveCatalogStudioSynth(fishReferenceId) {
   const entry = lookupCatalogEntryByFishId(fishReferenceId);
   const fishId = entry ? resolveEffectiveCatalogFishId(entry) : String(fishReferenceId || "").toLowerCase();
   const fastFlow = isCatalogFastDelivery(entry);
+  const ttsParams = entry?.ttsParams ?? null;
+  // Si ttsParams exacts, la vitesse vient de là (1:1 avec le MP3 preview).
+  const speed = ttsParams && typeof ttsParams.speed === "number" && Number.isFinite(ttsParams.speed)
+    ? clampTtsSpeed(ttsParams.speed)
+    : resolveCatalogPreviewTtsSpeed(fishReferenceId);
   return {
     referenceId: fishId,
-    speed: resolveCatalogPreviewTtsSpeed(fishReferenceId),
+    speed,
     catalogFastFlow: fastFlow,
     catalogIncisiveFlow: fastFlow,
     cloneFidelity: false,
     voiceName: entry?.name ?? null,
     spokenName: entry?.spokenName ?? null,
+    // Paramètres TTS exacts utilisés pour le MP3 du catalogue (1:1 parfait).
+    // Quand présents, buildTtsOptions les utilise en priorité sur les presets.
+    ttsParams,
   };
 }
 

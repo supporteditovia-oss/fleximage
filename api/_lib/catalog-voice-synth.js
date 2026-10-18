@@ -35,6 +35,7 @@ async function synthesizeCatalogPresetSpeech({
       format: "mp3",
       speed,
       cloneFidelity: false,
+      ttsParams: studio.ttsParams ?? null,
       catalogFastFlow: studio.catalogFastFlow === true,
       catalogIncisiveFlow: studio.catalogIncisiveFlow === true,
     });

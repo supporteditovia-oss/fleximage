@@ -35,6 +35,7 @@ function resolveI2VCatalogTtsOptions(meta) {
   const studio = resolveCatalogStudioSynth(fishId);
   return {
     speed: studio?.speed,
+    ttsParams: studio?.ttsParams ?? null,
     catalogFastFlow: studio?.catalogFastFlow === true,
     catalogIncisiveFlow: studio?.catalogIncisiveFlow === true,
   };

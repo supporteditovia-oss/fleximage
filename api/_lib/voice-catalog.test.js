@@ -27,7 +27,7 @@ describe("voice-catalog", () => {
   it("builds stable cache keys", () => {
     assert.equal(
       unifiedPreviewCacheKey("6BE490A175744894826DD464CF3A5004", "fr"),
-      "voice-catalog/unified/v6/fr/6be490a175744894826dd464cf3a5004.mp3",
+      "voice-catalog/unified/v8/fr/6be490a175744894826dd464cf3a5004.mp3",
     );
   });
 
@@ -57,13 +57,14 @@ describe("voice-catalog", () => {
 
   it("PLK — studio parity preview = génération", () => {
     const {
-      resolveCatalogPreviewTtsSpeed,
       resolveCatalogStudioSynth,
     } = require("./voice-catalog");
-    const fish = "c9188f639648467f8f1c513b0dbac9f7";
+    const fish = "5762a2bdd80c40debb77bd3330d6717d";
     const studio = resolveCatalogStudioSynth(fish);
-    assert.equal(resolveCatalogPreviewTtsSpeed(fish), 0.96);
-    assert.equal(studio.speed, 0.96);
+    // 1:1 avec le MP3 du catalogue (ttsParams exacts)
+    assert.equal(studio.speed, 1.02);
+    assert.equal(studio.ttsParams.speed, 1.02);
+    assert.equal(studio.ttsParams.temperature, 0.70);
     assert.equal(studio.catalogFastFlow, false);
   });
 
