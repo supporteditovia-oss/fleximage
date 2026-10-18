@@ -23,7 +23,7 @@ export type LandingVoiceEntry = {
 };
 
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
-export const LANDING_VOICE_DEMO_VERSION = 9;
+export const LANDING_VOICE_DEMO_VERSION = 10;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
