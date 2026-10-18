@@ -20,39 +20,19 @@ export type LandingVoiceEntry = {
   demoKind: "artist" | "natural-male" | "natural-female";
   initials?: string;
   accent?: string;
-  demoVideo?: string;
-  demoCloneAudio?: string;
-  demoOriginalVideo?: string;
-  demoOriginalAudio?: string;
-  studioPremium?: boolean;
 };
 
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
-export const LANDING_VOICE_DEMO_VERSION = 16;
-
-/** Démos studio premium — ordre landing / tests voix IA. */
-export const LANDING_VOICE_FEATURED_SLUGS = ["niska", "kaaris", "plk", "damso"] as const;
+export const LANDING_VOICE_DEMO_VERSION = 10;
 
 export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
 
-/** Voix affichées sur la landing (4 rappeurs studio premium). */
-export const LANDING_VOICE_FEATURED: LandingVoiceEntry[] = LANDING_VOICE_FEATURED_SLUGS.map(
-  (slug) => LANDING_VOICE_CATALOG.find((e) => e.slug === slug),
-).filter(Boolean) as LandingVoiceEntry[];
-
-export const LANDING_VOICE_DEFAULT_SLUG = "niska";
+export const LANDING_VOICE_DEFAULT_SLUG = "gims";
 
 export function pickRandomLandingVoiceSlug(): string {
-  if (LANDING_VOICE_FEATURED.length === 0) return LANDING_VOICE_DEFAULT_SLUG;
-  const index = Math.floor(Math.random() * LANDING_VOICE_FEATURED.length);
-  return LANDING_VOICE_FEATURED[index]?.slug ?? LANDING_VOICE_DEFAULT_SLUG;
-}
-
-/** MP4 démo studio (même fichier que bibliothèque). */
-export function landingVoiceDemoVideoSrc(slug: string): string {
-  const entry = LANDING_VOICE_CATALOG.find((e) => e.slug === slug);
-  const path = entry?.demoVideo || `/voices/${encodeURIComponent(slug)}.mp4`;
-  return `${path}?v=${LANDING_VOICE_DEMO_VERSION}`;
+  if (LANDING_VOICE_CATALOG.length === 0) return LANDING_VOICE_DEFAULT_SLUG;
+  const index = Math.floor(Math.random() * LANDING_VOICE_CATALOG.length);
+  return LANDING_VOICE_CATALOG[index]?.slug ?? LANDING_VOICE_DEFAULT_SLUG;
 }
 
 function readActiveVoiceLocale(): string {
@@ -77,19 +57,7 @@ export function landingVoicePhoto(entry: LandingVoiceEntry): string | null {
 
 /** MP3 statiques landing — intro personnalisée (alignée sous-titres). */
 export function landingVoiceDemoStaticSrc(slug: string): string {
-  const entry = LANDING_VOICE_CATALOG.find((e) => e.slug === slug);
-  if (entry?.demoCloneAudio) {
-    return `${entry.demoCloneAudio}?v=${LANDING_VOICE_DEMO_VERSION}`;
-  }
   return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
-}
-
-export function landingVoiceDemoOriginalSrc(slug: string): string | null {
-  const entry = LANDING_VOICE_CATALOG.find((e) => e.slug === slug);
-  if (entry?.demoOriginalAudio) {
-    return `${entry.demoOriginalAudio}?v=${LANDING_VOICE_DEMO_VERSION}`;
-  }
-  return null;
 }
 
 /** Ancien chemin prod — réécrit vers l’API landing (vercel.json). */

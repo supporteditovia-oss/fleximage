@@ -257,41 +257,6 @@
   transform: scale(1.05);
 }
 
-.biblio-catalog__demo-pair {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  width: 100%;
-  max-width: 5.5rem;
-  margin-top: 0.1rem;
-}
-
-.biblio-catalog__demo-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  width: 100%;
-  padding: 0.2rem 0.35rem;
-  border: 1px solid rgba(201, 162, 39, 0.28);
-  border-radius: 999px;
-  background: rgba(20, 18, 16, 0.06);
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--lx-ink);
-  cursor: pointer;
-}
-
-.biblio-catalog__demo-btn.is-active {
-  border-color: rgba(201, 162, 39, 0.55);
-  background: rgba(201, 162, 39, 0.2);
-}
-
-.biblio-catalog__demo-btn--orig {
-  opacity: 0.92;
-}
-
 .biblio-catalog__name {
   max-width: 100%;
   overflow: hidden;

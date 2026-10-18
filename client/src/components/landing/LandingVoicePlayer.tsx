@@ -6,7 +6,6 @@ import {
   isLandingVoiceAudioFailed,
 } from "@/lib/landing-voice-audio";
 import {
-  LANDING_VOICE_FEATURED,
   LANDING_VOICE_CATALOG,
   type LandingVoiceEntry,
   buildLandingVoiceScript,
@@ -148,7 +147,7 @@ function VoicePicker({
         role="listbox"
         aria-label="Choisir une voix du catalogue"
       >
-        {LANDING_VOICE_FEATURED.map((voice) => (
+        {LANDING_VOICE_CATALOG.map((voice) => (
           <button
             key={voice.slug}
             type="button"
@@ -190,9 +189,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   const [error, setError] = useState(false);
 
   const entry =
-    LANDING_VOICE_FEATURED.find((item) => item.slug === activeSlug) ??
-    LANDING_VOICE_FEATURED[0] ??
-    LANDING_VOICE_CATALOG[0];
+    LANDING_VOICE_CATALOG.find((item) => item.slug === activeSlug) ?? LANDING_VOICE_CATALOG[0];
 
   const script = useMemo(
     () => buildLandingVoiceScript(entry),
@@ -263,7 +260,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
   );
 
   useEffect(() => {
-    for (const voice of LANDING_VOICE_FEATURED) {
+    for (const voice of LANDING_VOICE_CATALOG) {
       const audio = getAudio(voice.slug);
       if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
         audio.load();
@@ -278,7 +275,7 @@ export function LandingVoicePlayer({ variant = "widget" }: LandingVoicePlayerPro
     setDurationSec(0);
     setError(false);
     pendingPlayRef.current = false;
-    for (const voice of LANDING_VOICE_FEATURED) {
+    for (const voice of LANDING_VOICE_CATALOG) {
       getAudio(voice.slug, true);
     }
   }, [getAudio, i18n.resolvedLanguage]);

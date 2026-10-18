@@ -5,7 +5,10 @@ import {
   speechSynthesisLang,
 } from "@shared/voice-locale-scripts";
 import { APP_LOCALE_STORAGE_KEY } from "@shared/locales";
-import { LANDING_VOICE_DEMO_VERSION } from "@/lib/landing-voice-demo";
+import {
+  LANDING_VOICE_DEMO_VERSION,
+  landingVoiceDemoApiSrc,
+} from "@/lib/landing-voice-demo";
 
 export type VoiceCategory =
   | "Rap"
@@ -45,15 +48,7 @@ export type MockVoiceProfile = {
   fishReferenceId?: string;
   /** Prononciation TTS (ex. Jul → Joul). */
   spokenName?: string;
-  slug?: string;
-  /** Démo voix clonée IA (MP3 studio). */
-  demoCloneAudio?: string;
-  demoOriginalAudio?: string;
-  demoOriginalVideo?: string;
-  studioPremium?: boolean;
 };
-
-export type CatalogStudioDemoVariant = "ia" | "original";
 
 export type MockVoiceGeneration = {
   id: string;
@@ -115,15 +110,13 @@ export function catalogPhotoForSlug(slug: string): string {
   return `/assets/voice-catalog/${slug}.jpg`;
 }
 
-/** MP3 calibrés par rappeur (priorité lecture instantanée Clonage IA). */
+/** MP3 statiques LuxeFlexIA (repli après API unifiée). */
 export function catalogBundledSampleUrl(slug: string): string {
-  const entry = catalog.entries.find((item) => item.slug === slug) as
-    | { demoCloneAudio?: string }
-    | undefined;
-  if (entry?.demoCloneAudio) {
-    return `${entry.demoCloneAudio}?v=${LANDING_VOICE_DEMO_VERSION}`;
-  }
   return `/assets/landing-voice-demos/${encodeURIComponent(slug)}.mp3?v=${LANDING_VOICE_DEMO_VERSION}`;
+}
+
+function catalogLandingDemoAudioUrl(slug: string): string {
+  return landingVoiceDemoApiSrc(slug);
 }
 
 export function slugFromCatalogVoiceId(voiceId: string): string | null {
@@ -164,7 +157,6 @@ function initialsFrom(name: string, override?: string): string {
 export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
   (seed, index) => ({
     id: `cat-${seed.slug}`,
-    slug: seed.slug,
     name: seed.name,
     description: seed.description,
     durationLabel: "0:06",
@@ -183,19 +175,6 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
       "spokenName" in seed && typeof seed.spokenName === "string"
         ? seed.spokenName
         : undefined,
-    demoCloneAudio:
-      "demoCloneAudio" in seed && typeof seed.demoCloneAudio === "string"
-        ? seed.demoCloneAudio
-        : undefined,
-    demoOriginalAudio:
-      "demoOriginalAudio" in seed && typeof seed.demoOriginalAudio === "string"
-        ? seed.demoOriginalAudio
-        : undefined,
-    demoOriginalVideo:
-      "demoOriginalVideo" in seed && typeof seed.demoOriginalVideo === "string"
-        ? seed.demoOriginalVideo
-        : undefined,
-    studioPremium: "studioPremium" in seed && seed.studioPremium === true,
   }),
 );
 
@@ -379,19 +358,23 @@ function preloadCatalogAudioUrl(url: string): Promise<void> {
 
 /** Précharge les extraits locaux (+ cache Fish unifié en arrière-plan). */
 export function prefetchCatalogPreviews(
-  profiles: Array<Pick<MockVoiceProfile, "fishReferenceId" | "sampleUrl">>,
+  profiles: Array<Pick<MockVoiceProfile, "id" | "fishReferenceId" | "sampleUrl">>,
 ): void {
   if (typeof window === "undefined") return;
 
   for (const profile of profiles) {
-    if (profile.sampleUrl) {
+    const fishReferenceId = profile.fishReferenceId;
+    if (fishReferenceId) {
+      void fetchUnifiedCatalogPreviewUrl(fishReferenceId).then((url) => {
+        if (url) void preloadCatalogAudioUrl(url);
+      });
+    }
+    const slug = slugFromCatalogVoiceId(profile.id ?? "");
+    if (slug) {
+      void preloadCatalogAudioUrl(catalogLandingDemoAudioUrl(slug));
+    } else if (profile.sampleUrl) {
       void preloadCatalogAudioUrl(profile.sampleUrl);
     }
-    const fishReferenceId = profile.fishReferenceId;
-    if (!fishReferenceId) continue;
-    void fetchUnifiedCatalogPreviewUrl(fishReferenceId).then((url) => {
-      if (url) void preloadCatalogAudioUrl(url);
-    });
   }
 }
 
@@ -503,30 +486,13 @@ function playCatalogAudio(
   };
 }
 
-/** Aperçu studio : voix IA (clone) ou piste originale enregistrée. */
-export function speakCatalogStudioDemo(
-  profile: MockVoiceProfile,
-  variant: CatalogStudioDemoVariant,
-  onEndOrCallbacks?: (() => void) | CatalogPreviewCallbacks,
-): () => void {
-  const callbacks = resolveCatalogPreviewCallbacks(onEndOrCallbacks);
-  const bust = `?v=${LANDING_VOICE_DEMO_VERSION}`;
-  if (variant === "ia" && profile.demoCloneAudio) {
-    return playCatalogAudio(`${profile.demoCloneAudio}${bust}`, callbacks);
-  }
-  if (variant === "original" && profile.demoOriginalAudio) {
-    return playCatalogAudio(`${profile.demoOriginalAudio}${bust}`, callbacks);
-  }
-  return speakCatalogSample(profile, callbacks);
-}
-
 /**
  * Aperçu catalogue UNIQUEMENT — même phrase et même modèle Fish que la génération.
  */
 export function speakCatalogSample(
   profile: Pick<
     MockVoiceProfile,
-    "name" | "pitch" | "rate" | "sampleUrl" | "fishReferenceId"
+    "id" | "name" | "pitch" | "rate" | "sampleUrl" | "fishReferenceId"
   >,
   onEndOrCallbacks?: (() => void) | CatalogPreviewCallbacks,
 ): () => void {
@@ -538,45 +504,42 @@ export function speakCatalogSample(
     stopCatalogSample();
   };
 
-  if (profile.fishReferenceId) {
-    void fetchUnifiedCatalogPreviewUrl(profile.fishReferenceId);
-  }
+  const slug = slugFromCatalogVoiceId(profile.id ?? "");
 
-  if (profile.sampleUrl && readActiveVoiceLocale() === "fr") {
-    return playCatalogAudio(profile.sampleUrl, callbacks);
-  }
+  void (async () => {
+    callbacks.onLoading?.();
 
-  if (profile.fishReferenceId) {
-    void (async () => {
-      const unifiedUrl = await fetchUnifiedCatalogPreviewUrl(
-        profile.fishReferenceId!,
-      );
+    if (profile.fishReferenceId) {
+      const unifiedUrl = await fetchUnifiedCatalogPreviewUrl(profile.fishReferenceId);
       if (cancelled) return;
       if (unifiedUrl) {
         playCatalogAudio(unifiedUrl, callbacks);
         return;
       }
-      callbacks.onPlaying?.();
-      speakRaw(
-        {
-          text: catalogSampleLine(profile.name),
-          pitch: profile.pitch ?? 1,
-          rate: profile.rate ?? 1,
-        },
-        callbacks.onEnd,
-      );
-    })();
-    return cancel;
-  }
-  callbacks.onPlaying?.();
-  return speakRaw(
-    {
-      text: catalogSampleLine(profile.name),
-      pitch: profile.pitch ?? 1,
-      rate: profile.rate ?? 1,
-    },
-    callbacks.onEnd,
-  );
+    }
+
+    if (slug) {
+      playCatalogAudio(catalogLandingDemoAudioUrl(slug), callbacks);
+      return;
+    }
+
+    if (profile.sampleUrl && readActiveVoiceLocale() === "fr") {
+      playCatalogAudio(profile.sampleUrl, callbacks);
+      return;
+    }
+
+    callbacks.onPlaying?.();
+    speakRaw(
+      {
+        text: catalogSampleLine(profile.name),
+        pitch: profile.pitch ?? 1,
+        rate: profile.rate ?? 1,
+      },
+      callbacks.onEnd,
+    );
+  })();
+
+  return cancel;
 }
 
 /**
