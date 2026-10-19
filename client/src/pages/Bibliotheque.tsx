@@ -111,6 +111,8 @@ function ImageLibrary() {
 
 function VoiceCatalogLibrary() {
   const [, navigate] = useLocation();
+  const { isAdmin } = useAuth();
+  const VOICE_CATALOG = isAdmin ? ADMIN_VOICE_CATALOG : MOCK_VOICE_CATALOG;
   const [filter, setFilter] = useState<CatalogFilter>("Tous");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(() =>
@@ -327,7 +329,6 @@ function VoiceCatalogLibrary() {
  */
 export default function Bibliotheque() {
   const { isLoading: authLoading, isAdmin } = useAuth();
-  const VOICE_CATALOG = isAdmin ? ADMIN_VOICE_CATALOG : MOCK_VOICE_CATALOG;
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
   const [studioMode, setStudioMode] = useState<StudioMode>(() =>
     readStudioMode(),
