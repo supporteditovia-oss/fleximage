@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { currentPlanQueryRoot, useCurrentPlan } from "@/hooks/use-billing";
 import {
   MOCK_VOICE_CATALOG,
+  ADMIN_VOICE_CATALOG,
   findCatalogProfileByName,
   type ClonedVoice,
   type MockVoiceProfile,
@@ -145,7 +146,9 @@ function resolveActiveFromStorage(): {
 
   const id = readSelectedCatalogVoiceId();
   if (id) {
-    const profile = MOCK_VOICE_CATALOG.find((v) => v.id === id);
+    const profile =
+      MOCK_VOICE_CATALOG.find((v) => v.id === id) ??
+      ADMIN_VOICE_CATALOG.find((v) => v.id === id);
     if (profile) {
       return {
         id: profile.id,

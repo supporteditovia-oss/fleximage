@@ -137,7 +137,7 @@ function normalizeCatalogName(value: string): string {
 export function findCatalogProfileByName(name: string): MockVoiceProfile | undefined {
   const needle = normalizeCatalogName(name);
   if (!needle) return undefined;
-  return MOCK_VOICE_CATALOG.find((voice) => {
+  return [...MOCK_VOICE_CATALOG, ...ADMIN_VOICE_CATALOG].find((voice) => {
     const byName = normalizeCatalogName(voice.name);
     const slug = slugFromCatalogVoiceId(voice.id);
     const bySlug = slug ? normalizeCatalogName(slug) : "";
