@@ -1,9 +1,9 @@
-import {
+﻿import {
   findI2VLibraryVoiceById,
   listActiveI2VLibraryVoices,
   resolveDefaultI2VLibraryVoiceId,
 } from "@/lib/i2v-voice-library";
-import { MOCK_VOICE_CATALOG, type MockVoiceProfile } from "@/lib/v2-mock-voice";
+import { ADMIN_VOICE_CATALOG as MOCK_VOICE_CATALOG, type MockVoiceProfile } from "@/lib/v2-mock-voice";
 
 export type AdminVideoVoiceGroup = "i2v" | "rap" | "catalog";
 

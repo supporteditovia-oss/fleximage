@@ -1,4 +1,4 @@
-import catalog from "@shared/voice-catalog.json";
+﻿import catalog from "@shared/voice-catalog.json";
 import {
   buildCatalogSampleLine,
   normalizeVoiceLocale,
@@ -154,15 +154,15 @@ function initialsFrom(name: string, override?: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
-  (seed, index) => ({
+function buildVoiceProfile(seed, index) {
+  return {
     id: `cat-${seed.slug}`,
     name: seed.name,
     description: seed.description,
     durationLabel: "0:06",
     catalog: true,
-    category: seed.category as VoiceCategory,
-    gender: seed.gender as VoiceGender,
+    category: seed.category,
+    gender: seed.gender,
     initials: initialsFrom(seed.name, seed.initials),
     accent: seed.accent ?? ACCENTS[index % ACCENTS.length],
     photoUrl: seed.photo ? `/assets/voice-catalog/${seed.photo}` : undefined,
@@ -175,8 +175,13 @@ export const MOCK_VOICE_CATALOG: MockVoiceProfile[] = catalog.entries.map(
       "spokenName" in seed && typeof seed.spokenName === "string"
         ? seed.spokenName
         : undefined,
-  }),
-);
+  };
+}
+export const MOCK_VOICE_CATALOG = catalog.entries
+  .filter((seed) => !seed.adminOnly)
+  .map(buildVoiceProfile);
+export const ADMIN_VOICE_CATALOG =
+  catalog.entries.map(buildVoiceProfile);
 
 export type VoiceCatalogFilter = "Tous" | "Homme" | "Femme" | "Rap";
 

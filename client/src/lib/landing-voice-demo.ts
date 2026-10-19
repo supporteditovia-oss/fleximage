@@ -1,4 +1,4 @@
-import catalog from "@shared/voice-catalog.json";
+﻿import catalog from "@shared/voice-catalog.json";
 import {
   buildLandingVoiceScript as buildSharedLandingVoiceScript,
   normalizeVoiceLocale,
@@ -25,7 +25,7 @@ export type LandingVoiceEntry = {
 /** Incrémenter pour invalider le cache navigateur des aperçus voix landing. */
 export const LANDING_VOICE_DEMO_VERSION = 10;
 
-export const LANDING_VOICE_CATALOG = catalog.entries as LandingVoiceEntry[];
+export const LANDING_VOICE_CATALOG = (catalog.entries as LandingVoiceEntry[]).filter((e) => !e.adminOnly);
 
 export const LANDING_VOICE_DEFAULT_SLUG = "gims";
 
