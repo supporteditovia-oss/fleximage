@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useV2Access } from "@/hooks/use-v2-access";
 import {
   MOCK_VOICE_CATALOG,
+  ADMIN_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
   prefetchCatalogPreviews,
   speakCatalogSample,
@@ -121,7 +122,7 @@ function VoiceCatalogLibrary() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK_VOICE_CATALOG.filter((v) => {
+    return VOICE_CATALOG.filter((v) => {
       if (filter === "Homme" && v.gender !== "homme") return false;
       if (filter === "Femme" && v.gender !== "femme") return false;
       if (filter === "Rap" && v.category !== "Rap") return false;
@@ -135,7 +136,7 @@ function VoiceCatalogLibrary() {
   }, [filter, query]);
 
   useEffect(() => {
-    prefetchCatalogPreviews(MOCK_VOICE_CATALOG);
+    prefetchCatalogPreviews(VOICE_CATALOG);
     return () => {
       stopSpeakRef.current?.();
       stopCatalogSample();
@@ -154,10 +155,10 @@ function VoiceCatalogLibrary() {
   }, []);
 
   const categoryCount = (cat: CatalogFilter) => {
-    if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
-    if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
-    if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
-    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
+    if (cat === "Tous") return VOICE_CATALOG.length;
+    if (cat === "Homme") return VOICE_CATALOG.filter((v) => v.gender === "homme").length;
+    if (cat === "Femme") return VOICE_CATALOG.filter((v) => v.gender === "femme").length;
+    return VOICE_CATALOG.filter((v) => v.category === "Rap").length;
   };
 
   const selectVoice = (id: string) => {
@@ -167,7 +168,7 @@ function VoiceCatalogLibrary() {
   };
 
   const previewVoice = (id: string) => {
-    const voice = MOCK_VOICE_CATALOG.find((v) => v.id === id);
+    const voice = VOICE_CATALOG.find((v) => v.id === id);
     if (!voice) return;
 
     stopSpeakRef.current?.();
@@ -198,7 +199,7 @@ function VoiceCatalogLibrary() {
   return (
     <div className="biblio-catalog">
       <p className="biblio-catalog__intro">
-        {MOCK_VOICE_CATALOG.length} voix prêtes — écoute un extrait, puis utilise
+        {VOICE_CATALOG.length} voix prêtes — écoute un extrait, puis utilise
         la voix dans le studio.
       </p>
 
@@ -325,7 +326,8 @@ function VoiceCatalogLibrary() {
  * Mode Voix → catalogue (à la place de la bibliothèque images).
  */
 export default function Bibliotheque() {
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, isAdmin } = useAuth();
+  const VOICE_CATALOG = isAdmin ? ADMIN_VOICE_CATALOG : MOCK_VOICE_CATALOG;
   const { v2Enabled, isLoading: gateLoading } = useV2Access();
   const [studioMode, setStudioMode] = useState<StudioMode>(() =>
     readStudioMode(),
