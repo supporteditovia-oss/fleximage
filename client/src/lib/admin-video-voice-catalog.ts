@@ -47,9 +47,9 @@ export function listAdminVideoVoices(): AdminVideoVoice[] {
     gender: v.gender,
     group: "i2v" as const,
   }));
-  const catalog = MOCK_VOICE_CATALOG.map(catalogToAdminVoice).filter(
-    (v): v is AdminVideoVoice => v !== null,
-  );
+  const catalog = MOCK_VOICE_CATALOG.filter((v) => v.category !== "Admin")
+    .map(catalogToAdminVoice)
+    .filter((v): v is AdminVideoVoice => v !== null);
   return [...i2v, ...catalog];
 }
 
@@ -63,7 +63,7 @@ export function listAdminImageVideoStudioVoices(): AdminVideoVoice[] {
     gender: v.gender,
     group: "i2v" as const,
   }));
-  const catalog = MOCK_VOICE_CATALOG.filter((v) => v.category !== "Rap")
+  const catalog = MOCK_VOICE_CATALOG.filter((v) => v.category !== "Rap" && v.category !== "Admin")
     .map(catalogToAdminVoice)
     .filter((v): v is AdminVideoVoice => v !== null);
   return [...i2v, ...catalog];

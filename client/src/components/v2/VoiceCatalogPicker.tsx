@@ -4,6 +4,7 @@ import { Loader2, Pause, Play, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MOCK_VOICE_CATALOG,
+  ADMIN_VOICE_CATALOG,
   VOICE_CATALOG_FILTERS,
   prefetchCatalogPreviews,
   speakCatalogSample,
@@ -11,6 +12,7 @@ import {
   type MockVoiceProfile,
   type VoiceCatalogFilter,
 } from "@/lib/v2-mock-voice";
+import { useAuth } from "@/hooks/use-auth";
 import "@/pages/bibliotheque-page.css";
 
 type VoiceCatalogPickerProps = {
@@ -29,6 +31,9 @@ export function VoiceCatalogPicker({
   intro,
 }: VoiceCatalogPickerProps) {
   const { t } = useTranslation();
+  const { isAdmin } = useAuth();
+  // Admin voit aussi les voix adminOnly (ex: Maman Africaine)
+  const VOICE_CATALOG = isAdmin ? ADMIN_VOICE_CATALOG : MOCK_VOICE_CATALOG;
   const [filter, setFilter] = useState<VoiceCatalogFilter>(defaultFilter);
   const [query, setQuery] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -37,7 +42,7 @@ export function VoiceCatalogPicker({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK_VOICE_CATALOG.filter((v) => {
+    return VOICE_CATALOG.filter((v) => {
       if (filter === "Homme" && v.gender !== "homme") return false;
       if (filter === "Femme" && v.gender !== "femme") return false;
       if (filter === "Rap" && v.category !== "Rap") return false;
@@ -51,7 +56,7 @@ export function VoiceCatalogPicker({
   }, [filter, query]);
 
   useEffect(() => {
-    prefetchCatalogPreviews(MOCK_VOICE_CATALOG);
+    prefetchCatalogPreviews(VOICE_CATALOG);
     return () => {
       stopSpeakRef.current?.();
       stopCatalogSample();
@@ -59,15 +64,15 @@ export function VoiceCatalogPicker({
   }, []);
 
   const categoryCount = (cat: VoiceCatalogFilter) => {
-    if (cat === "Tous") return MOCK_VOICE_CATALOG.length;
-    if (cat === "Homme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "homme").length;
-    if (cat === "Femme") return MOCK_VOICE_CATALOG.filter((v) => v.gender === "femme").length;
-    return MOCK_VOICE_CATALOG.filter((v) => v.category === "Rap").length;
+    if (cat === "Tous") return VOICE_CATALOG.length;
+    if (cat === "Homme") return VOICE_CATALOG.filter((v) => v.gender === "homme").length;
+    if (cat === "Femme") return VOICE_CATALOG.filter((v) => v.gender === "femme").length;
+    return VOICE_CATALOG.filter((v) => v.category === "Rap").length;
   };
 
   const previewVoice = (id: string, event: MouseEvent) => {
     event.stopPropagation();
-    const voice = MOCK_VOICE_CATALOG.find((v) => v.id === id);
+    const voice = VOICE_CATALOG.find((v) => v.id === id);
     if (!voice) return;
 
     if (previewId === id || loadingPreviewId === id) {
@@ -107,7 +112,7 @@ export function VoiceCatalogPicker({
     <div className="biblio-catalog voice-catalog-picker">
       <p className="biblio-catalog__intro">
         {intro ??
-          t("landing:voiceCatalog.intro", { count: MOCK_VOICE_CATALOG.length })}
+          t("landing:voiceCatalog.intro", { count: VOICE_CATALOG.length })}
       </p>
 
       <div className="biblio-catalog__toolbar">
