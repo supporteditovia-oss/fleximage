@@ -40,8 +40,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SESSION_TIMEOUT_MS = 4000;
-const PROFILE_TIMEOUT_MS = 3500;
+const SESSION_TIMEOUT_MS = 12000;
+const PROFILE_TIMEOUT_MS = 10000;
 
 function fallbackProfile(user: User): Profile {
   return {
