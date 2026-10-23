@@ -452,6 +452,13 @@ const VEHICLE_BODY_FROM_REFERENCE_GUARD =
   "Image 2 = target vehicle identity — copy THAT exact body, color, wheels, badges, trim, and proportions from image 2 onto the car in image 1. " +
   "FORBIDDEN: inventing a different model (Nissan Juke/Silvia, Skyline, random widebody), re-parking, recentering, changing the scene, or ignoring image 2.";
 
+const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
+  "TWO-PHOTO MOTORCYCLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
+  "Image 2 = target bike identity — copy THAT exact motorcycle body, plastics, color, wheels, tires, exhaust, bars, and badges from image 2 onto the bike volume in image 1. " +
+  "RIDER POSE LOCK: same person straddling the NEW seat facing the front wheel, hips ON the seat with realistic weight, hands on NEW grips — photoreal blend with matched overcast/daylight and contact shadows (never a pasted sticker layer). " +
+  "REAL-WORLD SCALE LOCK (critical): use factory dimensions of the named model (e.g. Yamaha YZ125 = full-size motocross, ~96cm seat height — NOT an oversized CGI bike, NOT a tiny pit bike unless the user asked for pit bike). If image 1 had a mini pit bike, scale UP to the real full-size model while keeping natural adult proportions on the seat. " +
+  "FORBIDDEN: burnt oversaturated plastics, floating wheels, sideways lounge across the seat, giant bike with tiny rider, ignoring image 2, keeping the original yellow/mini bike silhouette.";
+
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
   "BACKGROUND LOCK: shop/shutters/lights/pump/pavement/car-wash brushes UNCHANGED — pixel-stable outside the car mask. " +
@@ -600,7 +607,9 @@ function motorcycleModelHint(prompt) {
   }
   if (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125|a55yz|a55\s*yz)\b/.test(text)) {
     return (
-      " (YZ125 LOCK: real Yamaha YZ125 motocross — tall MX frame, long-travel forks, knobby off-road tires, high fenders, MX seat/tank, no street-scooter body. Correct Yamaha MX plastics — never keep street-scooter rims/colors.)"
+      " (YZ125 LOCK: real Yamaha YZ125 full-size motocross — factory MX wheelbase/seat height (~96cm seat), long-travel gold forks, knobby tires, expansion chamber exhaust, RENTHAL-era bar pad if shown in reference. " +
+      "Adult rider: natural straddle — knees bent toward tank, one foot on ground OK on wet road, both hands on grips; bike sized like real life (NOT cartoon oversized, NOT child pit-bike scale). " +
+      "Copy exact blue/white plastics and badges from image 2 when provided. FORBIDDEN: street-scooter shape, giant paste-on bike, burnt HDR blue, floating rider.)"
     );
   }
   if (/\b(yz|yamaha\s*yz)\b/.test(text) && !/\btmax\b/.test(text)) {
@@ -2450,13 +2459,65 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   if (refs < 2) return false;
   const text = normalizePromptText(prompt);
   const mentionsRef =
-    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
       text,
     );
+  if (
+    /\b(moto|motos|scooter|motorcycle|motocross|dirt\s*bike|guidon|tmax|yz125|yz\s*125)\b/i.test(
+      text,
+    )
+  ) {
+    return false;
+  }
   const mentionsCar =
     /\b(voiture|car|auto|vehicule|vehicle)\b/i.test(text) ||
     /\b(remplac\w*|replace\w*|swap\w*)\b/i.test(text);
   return mentionsRef && mentionsCar;
+}
+
+function isMotorcycleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
+  const refs = Math.max(0, Number(referenceImageCount) || 0);
+  if (refs < 2) return false;
+  const text = normalizePromptText(prompt);
+  const mentionsRef =
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|premiere\s+(photo|image).*deuxieme|first\s+(photo|image).*second)\b/i.test(
+      text,
+    );
+  if (!mentionsRef) return false;
+  if (isMotorcycleBikeMention(prompt) || isMotorcycleReplacePrompt(prompt)) {
+    return true;
+  }
+  return (
+    /\b(moto|motos|scooter|motorcycle|motocross|dirt\s*bike|guidon)\b/i.test(text) &&
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*)\b/i.test(text)
+  );
+}
+
+function buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
+  if (!isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
+    return "";
+  }
+  const bikeHint = motorcycleModelHint(userPrompt);
+  return (
+    `TWO-PHOTO BIKE SWAP: image1=scene+rider pose+foot contact lock, image2=exact target motorcycle (plastics/color/wheels/badges). ` +
+    `${MOTORCYCLE_BODY_FROM_REFERENCE_GUARD} ` +
+    `${bikeHint || ""}`
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
+  if (!isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
+    return String(userPrompt || "").trim();
+  }
+  const hint = motorcycleModelHint(userPrompt);
+  return (
+    "Photoreal edit: transplant the EXACT motorcycle from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
+    "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
+    "Real-world factory scale and natural forward straddle on the seat — matched grain, shadows, and reflections; never an oversized paste-on CGI bike." +
+    (hint ? ` ${hint}` : "")
+  ).trim();
 }
 
 function buildVehicleReplaceUserLine(userPrompt, referenceImageCount = 0) {
@@ -4138,6 +4199,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   if (
     !rawFacialHair &&
     !isPersonSwapPrompt(userPrompt) &&
+    !isMotorcycleReplacePrompt(userPrompt) &&
+    !isMotorcycleRidePrompt(userPrompt) &&
     (isFictionalVehiclePrompt(userPrompt) || isFictionalVehiclePrompt(cleaned))
   ) {
     return buildFictionalVehiclePrompt(userPrompt, {
@@ -4413,6 +4476,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !screenUiScene &&
     !namedFigure &&
     !addCompanion;
+  const motorcycleReplaceFromRef =
+    motorcycleRideScene &&
+    isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount);
   const sceneGuard = swap
     ? PERSON_SWAP_GUARD
     : facialHairOnly
@@ -4427,7 +4493,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
             : motorcycleRideScene
               ? isMotorcycleSeatedUserPrompt(userPrompt) ||
-                isMotorcycleSeatedUserPrompt(cleaned)
+                isMotorcycleSeatedUserPrompt(cleaned) ||
+                motorcycleReplaceFromRef
                 ? MOTORCYCLE_SEATED_REALISM_GUARD
                 : MOTORCYCLE_RIDE_GUARD
             : vehicleReplaceScene
@@ -4464,12 +4531,14 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     ? cleaned
     : animalScene
       ? cleaned
-      : vehicleReplaceScene
-        ? buildVehicleReplaceUserLine(userPrompt, referenceImageCount)
-        : expandImageEditUserRequest(cleaned, {
-            allowSceneChange: lifestyleScene || fullRewrite,
-            allowCameraChange: cameraChange,
-          });
+      : motorcycleRideScene && motorcycleReplaceFromRef
+        ? buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount)
+        : vehicleReplaceScene
+          ? buildVehicleReplaceUserLine(userPrompt, referenceImageCount)
+          : expandImageEditUserRequest(cleaned, {
+              allowSceneChange: lifestyleScene || fullRewrite,
+              allowCameraChange: cameraChange,
+            });
   const userBlock = weatherAtmosphereScene
     ? `Sky/atmosphere inpaint only — freeze ground and concrete exactly as uploaded. User request: ${cleaned}`
     : animalScene
@@ -4515,8 +4584,16 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const vehicleReplaceHead = vehicleReplaceScene
     ? buildVehicleReplaceCompactHead(userPrompt, referenceImageCount)
     : "";
-  const effectiveSceneGuard = vehicleReplaceHead
-    ? `${vehicleReplaceHead} ${sceneGuard}`
+  const motorcycleReplaceHead = motorcycleReplaceFromRef
+    ? buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount)
+    : "";
+  const replaceCompactHead = [vehicleReplaceHead, motorcycleReplaceHead]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const effectiveSceneGuard = replaceCompactHead
+    ? `${replaceCompactHead} ${sceneGuard}`
     : sceneGuard;
   const core = `${nonCarScenePrefix}${effectiveSceneGuard}${subjectPoseInject}${cameraOverride}${celebInject}${bleed}${blend} ${userBlock}`.trim();
   const literal = localObjectScene && !cameraChange ? LOCAL_LITERAL_LOCK : STRICT_LITERAL_EXECUTION;
@@ -4551,6 +4628,21 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
       .replace(/\s+/g, " ")
       .trim();
     const rawUser = buildVehicleReplaceUserLine(userPrompt, referenceImageCount);
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
+    return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  })();
+  const compactMotorcycleReplaceCore = (() => {
+    if (!motorcycleReplaceFromRef) return "";
+    const head = [
+      motorcycleReplaceHead,
+      "SEATED REALISM LOCK: forward straddle, hips ON seat, feet on pegs or ground.",
+      "Use image 2 as the exact target motorcycle.",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const rawUser = buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount);
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
@@ -4589,7 +4681,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           ? [compactCockpitCore, core].filter(Boolean)
           : vehicleReplaceScene
             ? [compactVehicleReplaceCore, core].filter(Boolean)
-            : [core]
+            : motorcycleReplaceFromRef
+              ? [compactMotorcycleReplaceCore, core].filter(Boolean)
+              : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
@@ -4828,6 +4922,7 @@ module.exports = {
   isVehicleReplacePrompt,
   isMotorcycleRidePrompt,
   isMotorcycleReplacePrompt,
+  isMotorcycleReplaceFromReferencePrompt,
   isMotorcycleSeatedUserPrompt,
   isMotorcycleWheelOnVehiclePrompt,
   motorcycleWheelContactHint,
