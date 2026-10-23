@@ -457,7 +457,13 @@ const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
   "Image 2 = target bike identity — copy THAT exact motorcycle body, plastics, color, wheels, tires, exhaust, bars, and badges from image 2 onto the bike volume in image 1. " +
   "RIDER POSE LOCK: same person straddling the NEW seat facing the front wheel, hips ON the seat with realistic weight, hands on NEW grips — photoreal blend with matched overcast/daylight and contact shadows (never a pasted sticker layer). " +
   "REAL-WORLD SCALE LOCK (critical): use factory dimensions of the named model (e.g. Yamaha YZ125 = full-size motocross, ~96cm seat height — NOT an oversized CGI bike, NOT a tiny pit bike unless the user asked for pit bike). If image 1 had a mini pit bike, scale UP to the real full-size model while keeping natural adult proportions on the seat. " +
-  "FORBIDDEN: burnt oversaturated plastics, floating wheels, sideways lounge across the seat, giant bike with tiny rider, ignoring image 2, keeping the original yellow/mini bike silhouette.";
+  "HANDLEBAR GRIP LOCK (critical #1): hands that grasped the old bars MUST wrap the NEW bike's visible grips/clutch/brake — fingers on rubber, wrists aligned with the NEW bar width/height. If image 1 had a small pit bike, RE-REACH arms to the real grips of the full-size bike — NEVER a wrist or fist gripping empty air where the old mini bars were. " +
+  "FORBIDDEN: burnt oversaturated plastics, floating wheels, sideways lounge across the seat, giant bike with tiny rider, ghost handlebar in void, ignoring image 2, keeping the original yellow/mini bike silhouette.";
+
+const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
+  " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, each hand on the bars MUST physically contact the NEW motorcycle's real grips — knuckles/fingers wrapped on rubber, brake/clutch perch visible. " +
+  "Small original bike → bigger replacement: move arms/shoulders so hands meet the NEW bar geometry — NEVER floating wrist grasping invisible handlebars in mid-air. " +
+  "If one hand makes a gesture off the bar, the other hand STILL grips the visible handlebar. FORBIDDEN: void grip, disconnected hand, bar missing under palm.)";
 
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
@@ -550,8 +556,9 @@ const MOTORCYCLE_RIDE_GUARD =
   "IDENTITY LOCK: factory-correct proportions, panels, headlights, badges, and paint of THAT model — never a sticker 'TMAX' on a Zip/50cc city scooter, never keep original rim colors or decals. " +
   "SCALE LOCK (critical): real-world size vs the adult rider. A TMAX is a LARGE maxi-scooter (long wheelbase, thick body, tall seat) — NEVER a tiny toy under the rider. A YZ/motocross is a tall dirt bike with long-travel suspension and knobby tires — never a street scooter shape. " +
   "If the named bike is bigger than the upload, the new bike MUST look bigger — rider proportions must fit a real adult on that real machine. " +
-  "POSE LOCK: keep the SAME rider body angle, stoppie/wheelie/cabriole/endo lean, and handlebar reach from the upload (front wheel contact unchanged). Hips on the NEW seat, feet on NEW pegs/boards, BOTH hands on NEW handlebars. " +
-  "PHOTOREAL: sharp mechanical metal/plastic, real tire tread, natural reflections, matched daylight — FORBIDDEN: burnt HDR, plastic CGI, hanging ignition keys as a fake tell, toy scale, AI smear, bike hovering off the car hood.";
+  "POSE LOCK: keep the SAME rider body angle, stoppie/wheelie/cabriole/endo lean from the upload (front wheel contact unchanged). Hips on the NEW seat, feet on NEW pegs/boards. " +
+  "HANDLEBAR GRIP LOCK (critical): re-anchor BOTH hands to the NEW handlebars — fingers wrapped on the actual grips at the NEW width/height; if the old bike was smaller, extend/adjust arms so palms touch real bars (never grip empty air at the old mini-bar position). " +
+  "PHOTOREAL: sharp mechanical metal/plastic, real tire tread, natural reflections, matched daylight — FORBIDDEN: burnt HDR, plastic CGI, hanging ignition keys as a fake tell, toy scale, AI smear, bike hovering off the car hood, ghost grips in void.";
 
 /** User asks to sit ON a bike/scooter (moi + assis) — forward straddle, not sideways paste. */
 const MOTORCYCLE_SEATED_REALISM_GUARD =
@@ -562,9 +569,10 @@ const MOTORCYCLE_SEATED_REALISM_GUARD =
   "STRADDLE LOCK: hips and buttocks fully ON the seat cushion with realistic weight; thighs naturally gripping the seat. " +
   "LEGS LOCK: feet on floorboards/footrests OR one foot on asphalt if the bike is on its side stand — knees bent naturally, never through fairings or floating in air. " +
   "UPPER BODY: torso oriented toward the handlebars; slight natural lean OK; hands on grips unless the user asked for phone-in-hand while parked. " +
+  "HANDLEBAR GRIP LOCK: fingers must wrap the visible rubber grips/clutch/brake on THIS bike — if replacing a smaller bike, adjust arm reach so hands sit on the NEW bars (never a wrist gripping void where old narrow bars were). " +
   "SCALE LOCK: adult human on real maxi-scooter/motorcycle proportions (Honda X-ADV, TMAX, etc.) — not toy scale, no clipping through bodywork. " +
   "IDENTITY LOCK: use the uploaded user's face, skin tone, and body build — seamless photoreal blend with scene lighting and contact shadows on seat and footboards. " +
-  "FORBIDDEN: sideways lounge pose, legs on wrong side of bike, standing on seat, hovering above seat, backwards rider, burnt CGI, cutout halo.";
+  "FORBIDDEN: sideways lounge pose, legs on wrong side of bike, standing on seat, hovering above seat, backwards rider, burnt CGI, cutout halo, ghost handlebar grip.";
 
 const MOTORCYCLE_SEATED_CLARIFIER =
   " (SEATED REALISM LOCK — critical: straddle the seat facing the front wheel; hips ON the seat; feet on floorboards; real parked-rider pose — NEVER sideways across the bike.)";
@@ -580,6 +588,7 @@ const MOTORCYCLE_REPLACE_CLARIFIER =
   " (BIKE SWAP LOCK — critical: FULL replace of the bike body with the named model ONLY. " +
   "Do NOT keep original wheel colors, Zip/SP stickers, small scooter silhouette, or dangling keys. " +
   "TMAX 530/560 = big Yamaha maxi-scooter proportions under the rider. YZ125/motocross = real dirt-bike geometry. " +
+  "HANDLEBAR GRIP LOCK: hands on the NEW real grips — re-reach if old bike was smaller; never void grip. " +
   "Keep stoppie/wheelie/cabriole pose AND exact wheel-on-hood contact if present. Photoreal — never toy, never burnt AI.)";
 
 /** Freeze rider + background — but NOT the original bike colors/geometry. */
@@ -2515,7 +2524,8 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   return (
     "Photoreal edit: transplant the EXACT motorcycle from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
     "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
-    "Real-world factory scale and natural forward straddle on the seat — matched grain, shadows, and reflections; never an oversized paste-on CGI bike." +
+    "Real-world factory scale and natural forward straddle on the seat — matched grain, shadows, and reflections; never an oversized paste-on CGI bike. " +
+    "Re-anchor every hand that was on the old handlebars to physically wrap the NEW bike's visible grips (adjust arm reach after pit-bike → full-size swap — no gripping air)." +
     (hint ? ` ${hint}` : "")
   ).trim();
 }
@@ -3460,6 +3470,9 @@ function sanitizeUserPrompt(prompt) {
       motorcycleWheelContactHint(cleaned) || motorcycleWheelContactHint(prompt);
     if (wheelContact && !/WHEEL CONTACT LOCK/i.test(cleaned)) {
       cleaned = `${wheelContact}${cleaned}`;
+    }
+    if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
     }
     // Bike identity + scale FIRST (2900-char budget) — prepend so they survive the cut.
     const bikeHint = motorcycleModelHint(cleaned) || motorcycleModelHint(prompt);
@@ -4635,6 +4648,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!motorcycleReplaceFromRef) return "";
     const head = [
       motorcycleReplaceHead,
+      "HANDLEBAR GRIP LOCK: fingers on NEW visible grips — never void/wrist in air after scale change.",
       "SEATED REALISM LOCK: forward straddle, hips ON seat, feet on pegs or ground.",
       "Use image 2 as the exact target motorcycle.",
     ]

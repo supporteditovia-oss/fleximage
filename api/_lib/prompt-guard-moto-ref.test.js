@@ -34,4 +34,14 @@ test("two-photo YZ125 swap prioritizes scale, seating, and image 2 bike", () => 
   assert.match(prompt, /full-size motocross|Real-world factory scale/i);
   assert.match(prompt, /SEATED REALISM|straddl/i);
   assert.match(prompt, /Use image 2 as the exact target motorcycle/i);
+  assert.match(prompt, /HANDLEBAR GRIP LOCK/i);
+  assert.match(prompt, /gripping empty air|void grip|NEW bike's visible grips/i);
+});
+
+test("single-photo bike replace prepends handlebar grip lock", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la moto par une Yamaha Tracer 7",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /HANDLEBAR GRIP LOCK/i);
 });
