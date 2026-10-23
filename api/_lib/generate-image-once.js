@@ -2,7 +2,13 @@ const {
   uploadImageUrlsToOneshot,
   createOneshotJob,
   ONESHOT_MODEL_VARIANT,
+  isGoogleAiPromptFlagged,
 } = require("./oneshot");
+const {
+  buildLiteralRetryPrompt,
+  buildWeaponHardRetryPrompt,
+  isWeaponPrompt,
+} = require("./prompt-guard");
 const {
   resolveImageGenerationProvider,
   isOneshotCreditsExhaustedError,
@@ -259,6 +265,7 @@ async function generateImageOnce(supabase, params) {
     nextMeta,
     outputAssets,
     terminalStatus,
+    finalPromptOverride,
   }) {
     const mergedTaskId = mergeProviderTaskId(
       claim.generation.provider_task_id,
@@ -279,6 +286,9 @@ async function generateImageOnce(supabase, params) {
       patch.status = terminalStatus;
       patch.completed_at = new Date().toISOString();
     }
+    if (typeof finalPromptOverride === "string" && finalPromptOverride.trim()) {
+      patch.final_prompt = finalPromptOverride.trim();
+    }
     await supabase.from("generations").update(patch).eq("id", generationId);
   }
 
@@ -288,15 +298,55 @@ async function generateImageOnce(supabase, params) {
         ? await uploadImageUrlsToOneshot(imageUrls)
         : [];
 
-    const oneshotResponse = await createOneshotJob(finalPrompt, {
+    const jobOptions = {
       generationId,
       caller: "generateImageOnce",
       aspectRatio,
       modelVariant,
       ...(referenceFileIds.length > 0 ? { referenceFileIds } : {}),
-    });
+    };
 
-    if (!oneshotResponse || !oneshotResponse.id) {
+    const retryPrompts = [finalPrompt];
+    const literalRetry = buildLiteralRetryPrompt(finalPrompt);
+    if (literalRetry && literalRetry !== finalPrompt) {
+      retryPrompts.push(literalRetry);
+    }
+    if (isWeaponPrompt(finalPrompt)) {
+      const weaponRetry = buildWeaponHardRetryPrompt(finalPrompt);
+      if (weaponRetry && !retryPrompts.includes(weaponRetry)) {
+        retryPrompts.push(weaponRetry);
+      }
+    }
+
+    let oneshotResponse = null;
+    let promptUsed = finalPrompt;
+    let autoRetries = 0;
+    let lastErr = null;
+
+    for (let i = 0; i < retryPrompts.length; i += 1) {
+      try {
+        oneshotResponse = await createOneshotJob(retryPrompts[i], jobOptions);
+        promptUsed = retryPrompts[i];
+        autoRetries = i;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (!isGoogleAiPromptFlagged(err) || i >= retryPrompts.length - 1) {
+          throw err;
+        }
+        console.warn("[generate-image-once] Google safety flag — retrying prompt", {
+          generationId,
+          attempt: i + 1,
+          ...logContext,
+        });
+      }
+    }
+
+    if (!oneshotResponse) {
+      throw lastErr || new Error("Invalid response from OneshotAPI");
+    }
+
+    if (!oneshotResponse.id) {
       throw new Error("Invalid response from OneshotAPI");
     }
 
@@ -311,7 +361,8 @@ async function generateImageOnce(supabase, params) {
       requestedAt: claim.generation.metadata?.provider_call_started_at || null,
       completedAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
-      autoRetry: false,
+      autoRetry: autoRetries > 0,
+      ...(autoRetries > 0 ? { autoRetryCount: autoRetries } : {}),
     };
     const nextMeta = {
       ...(claim.generation.metadata || {}),
@@ -319,7 +370,8 @@ async function generateImageOnce(supabase, params) {
       provider_call_completed_at: new Date().toISOString(),
       oneshot_job_id: oneshotResponse.id,
       provider_duration_ms: Date.now() - startedAt,
-      provider_auto_retries: 0,
+      provider_auto_retries: autoRetries,
+      ...(autoRetries > 0 ? { oneshot_soft_retry: true, final_prompt_used: promptUsed } : {}),
     };
 
     await persistProviderResult({
@@ -327,6 +379,9 @@ async function generateImageOnce(supabase, params) {
       externalTaskId,
       attemptRecord,
       nextMeta,
+      ...(autoRetries > 0 && promptUsed !== finalPrompt
+        ? { finalPromptOverride: promptUsed }
+        : {}),
     });
 
     console.info("[generate-image-once] provider call completed", {
@@ -336,7 +391,7 @@ async function generateImageOnce(supabase, params) {
       externalTaskId,
       durationMs: Date.now() - startedAt,
       apiCallCount: 1,
-      autoRetries: 0,
+      autoRetries,
       ...logContext,
     });
 
