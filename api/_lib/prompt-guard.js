@@ -455,15 +455,22 @@ const VEHICLE_BODY_FROM_REFERENCE_GUARD =
 const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
   "TWO-PHOTO MOTORCYCLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
   "Image 2 = target bike identity — copy THAT exact motorcycle body, plastics, color, wheels, tires, exhaust, bars, and badges from image 2 onto the bike volume in image 1. " +
-  "RIDER POSE LOCK: same person straddling the NEW seat facing the front wheel, hips ON the seat with realistic weight, hands on NEW grips — photoreal blend with matched overcast/daylight and contact shadows (never a pasted sticker layer). " +
-  "REAL-WORLD SCALE LOCK (critical): use factory dimensions of the named model (e.g. Yamaha YZ125 = full-size motocross, ~96cm seat height — NOT an oversized CGI bike, NOT a tiny pit bike unless the user asked for pit bike). If image 1 had a mini pit bike, scale UP to the real full-size model while keeping natural adult proportions on the seat. " +
-  "HANDLEBAR GRIP LOCK (critical #1): hands that grasped the old bars MUST wrap the NEW bike's visible grips/clutch/brake — fingers on rubber, wrists aligned with the NEW bar width/height. If image 1 had a small pit bike, RE-REACH arms to the real grips of the full-size bike — NEVER a wrist or fist gripping empty air where the old mini bars were. " +
-  "FORBIDDEN: burnt oversaturated plastics, floating wheels, sideways lounge across the seat, giant bike with tiny rider, ghost handlebar in void, ignoring image 2, keeping the original yellow/mini bike silhouette.";
+  "RIDER SCALE LOCK (absolute): the person keeps the EXACT body height, head size, torso, and outfit volume from image 1 — NEVER upscale or enlarge the human. " +
+  "BIKE SLOT LOCK (critical): the NEW motorcycle occupies the SAME position, lean angle, wheel steering, and tire contact patches on the road as the original bike in image 1 — same distance to camera, same crop footprint. Image 2 = model/color/parts identity ONLY — NOT a blown-up catalog hero or XXL studio bike pasted over the scene. " +
+  "REAL-WORLD PROPORTION LOCK: believable adult-on-machine scale (Tracer/YZ/TMAX vs real rider) INSIDE that original bike slot — never a bike taller than the rider's head to sky, never wider than the original bike silhouette in the photo. " +
+  "HAND GESTURE LOCK: preserve EXACT hand roles from image 1 — if one hand was raised (middle finger / gesture OFF the bar), keep that SAME hand and gesture; the OTHER hand wraps the NEW grip. " +
+  "HANDLEBAR GRIP LOCK: the hand that was on the old bar MUST touch the NEW visible grip — adjust arm reach only for that hand; gesture hand stays OFF the bar. NEVER grip empty air at the old mini-bar position. " +
+  "FORBIDDEN: XXL bike, enlarged rider, re-parking, recentering, burnt plastics, sideways lounge, ghost handlebar, ignoring image 2, keeping yellow pit-bike decals.";
 
 const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
-  " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, each hand on the bars MUST physically contact the NEW motorcycle's real grips — knuckles/fingers wrapped on rubber, brake/clutch perch visible. " +
-  "Small original bike → bigger replacement: move arms/shoulders so hands meet the NEW bar geometry — NEVER floating wrist grasping invisible handlebars in mid-air. " +
-  "If one hand makes a gesture off the bar, the other hand STILL grips the visible handlebar. FORBIDDEN: void grip, disconnected hand, bar missing under palm.)";
+  " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, the hand that was ON the bar MUST physically contact the NEW motorcycle's real grip — knuckles on rubber, brake/clutch perch visible. " +
+  "Adjust arm reach for that grip hand only — NEVER floating wrist in mid-air. If image 1 had a gesture hand OFF the bar (middle finger, wave), KEEP that exact gesture on the SAME hand; the other hand grips the new bar. FORBIDDEN: void grip, both hands forced on bars when upload had one-hand gesture.)";
+
+const MOTORCYCLE_ANTI_OVERSIZE_CLARIFIER =
+  " (BIKE SIZE LOCK — critical: NEVER XXL or catalog-hero scale. Replacement bike fits the SAME road slot as the original — same angle, lean, tire contact points, camera distance. Image 2 = look/parts only, not giant paste. Rider body size UNCHANGED from upload. FORBIDDEN: bike dwarfing the scene, rider enlarged, bike bigger than original footprint in the photo.)";
+
+const MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER =
+  " (HAND GESTURE LOCK — copy image 1 exactly: middle finger / raised hand stays on the SAME side OFF the bar; grip hand on NEW handlebar. Do not remove gestures unless user asked.)";
 
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
@@ -554,11 +561,12 @@ const MOTORCYCLE_RIDE_GUARD =
   "BACKGROUND CAR LOCK: freeze the police/parked car behind the rider — same hood angle, lights, plate, Battenburg markings, crop — ONLY the motorcycle body changes. " +
   "Delete the ENTIRE original bike geometry — fairings, frame silhouette, wheels, rims, tires, exhaust, seat, footboards, stickers, keys. Rebuild as the EXACT named machine only (e.g. Yamaha TMAX 530/560, YZ125, motocross). " +
   "IDENTITY LOCK: factory-correct proportions, panels, headlights, badges, and paint of THAT model — never a sticker 'TMAX' on a Zip/50cc city scooter, never keep original rim colors or decals. " +
-  "SCALE LOCK (critical): real-world size vs the adult rider. A TMAX is a LARGE maxi-scooter (long wheelbase, thick body, tall seat) — NEVER a tiny toy under the rider. A YZ/motocross is a tall dirt bike with long-travel suspension and knobby tires — never a street scooter shape. " +
-  "If the named bike is bigger than the upload, the new bike MUST look bigger — rider proportions must fit a real adult on that real machine. " +
+  "BIKE SLOT LOCK (critical): new bike in the SAME pose slot as the upload — same tire contact points, lean, angle to camera, footprint on pavement; NEVER XXL catalog scale. " +
+  "RIDER SCALE LOCK: NEVER change the rider's body size — only swap the machine under them with believable real-world proportions vs that unchanged adult. " +
   "POSE LOCK: keep the SAME rider body angle, stoppie/wheelie/cabriole/endo lean from the upload (front wheel contact unchanged). Hips on the NEW seat, feet on NEW pegs/boards. " +
-  "HANDLEBAR GRIP LOCK (critical): re-anchor BOTH hands to the NEW handlebars — fingers wrapped on the actual grips at the NEW width/height; if the old bike was smaller, extend/adjust arms so palms touch real bars (never grip empty air at the old mini-bar position). " +
-  "PHOTOREAL: sharp mechanical metal/plastic, real tire tread, natural reflections, matched daylight — FORBIDDEN: burnt HDR, plastic CGI, hanging ignition keys as a fake tell, toy scale, AI smear, bike hovering off the car hood, ghost grips in void.";
+  "HAND GESTURE LOCK: preserve one-hand gestures from the upload (middle finger etc.) on the SAME hand; the grip hand wraps the NEW bar. " +
+  "HANDLEBAR GRIP LOCK (critical): grip hand fingers on the actual NEW grips — never void at old bar position. " +
+  "PHOTOREAL: sharp mechanical metal/plastic, real tire tread, natural reflections, matched daylight — FORBIDDEN: burnt HDR, plastic CGI, XXL bike, enlarged rider, toy scale, AI smear, ghost grips in void.";
 
 /** User asks to sit ON a bike/scooter (moi + assis) — forward straddle, not sideways paste. */
 const MOTORCYCLE_SEATED_REALISM_GUARD =
@@ -568,9 +576,9 @@ const MOTORCYCLE_SEATED_REALISM_GUARD =
   "FORBIDDEN: sitting sideways across the seat, backwards, perpendicular to the bike, or lying across the saddle. " +
   "STRADDLE LOCK: hips and buttocks fully ON the seat cushion with realistic weight; thighs naturally gripping the seat. " +
   "LEGS LOCK: feet on floorboards/footrests OR one foot on asphalt if the bike is on its side stand — knees bent naturally, never through fairings or floating in air. " +
-  "UPPER BODY: torso oriented toward the handlebars; slight natural lean OK; hands on grips unless the user asked for phone-in-hand while parked. " +
-  "HANDLEBAR GRIP LOCK: fingers must wrap the visible rubber grips/clutch/brake on THIS bike — if replacing a smaller bike, adjust arm reach so hands sit on the NEW bars (never a wrist gripping void where old narrow bars were). " +
-  "SCALE LOCK: adult human on real maxi-scooter/motorcycle proportions (Honda X-ADV, TMAX, etc.) — not toy scale, no clipping through bodywork. " +
+  "UPPER BODY: torso oriented toward the handlebars; slight natural lean OK; preserve upload hand roles (gesture hand OFF bar, other hand on grip). " +
+  "BIKE SLOT + RIDER SCALE: same bike position/footprint and UNCHANGED rider body size as the upload — believable proportions, never XXL paste. " +
+  "HANDLEBAR GRIP LOCK: grip hand on visible rubber/clutch/brake — never void; gesture hand unchanged. " +
   "IDENTITY LOCK: use the uploaded user's face, skin tone, and body build — seamless photoreal blend with scene lighting and contact shadows on seat and footboards. " +
   "FORBIDDEN: sideways lounge pose, legs on wrong side of bike, standing on seat, hovering above seat, backwards rider, burnt CGI, cutout halo, ghost handlebar grip.";
 
@@ -617,8 +625,14 @@ function motorcycleModelHint(prompt) {
   if (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125|a55yz|a55\s*yz)\b/.test(text)) {
     return (
       " (YZ125 LOCK: real Yamaha YZ125 full-size motocross — factory MX wheelbase/seat height (~96cm seat), long-travel gold forks, knobby tires, expansion chamber exhaust, RENTHAL-era bar pad if shown in reference. " +
-      "Adult rider: natural straddle — knees bent toward tank, one foot on ground OK on wet road, both hands on grips; bike sized like real life (NOT cartoon oversized, NOT child pit-bike scale). " +
-      "Copy exact blue/white plastics and badges from image 2 when provided. FORBIDDEN: street-scooter shape, giant paste-on bike, burnt HDR blue, floating rider.)"
+      "Adult rider unchanged size from image 1 — natural straddle, one foot on ground OK; bike in SAME road slot as original (NOT XXL, NOT catalog giant). " +
+      "Copy exact blue/white plastics and badges from image 2 when provided. FORBIDDEN: street-scooter shape, XXL paste-on bike, enlarged rider, burnt HDR blue.)"
+    );
+  }
+  if (/\b(tracer\s*7|tracer7|tracer\s*9|tracer9)\b/.test(text)) {
+    return (
+      " (TRACER LOCK: Yamaha Tracer 7/9 sport-touring — mid-size road bike proportions vs unchanged adult rider; SAME camera slot as original bike in image 1. " +
+      "Windscreen, twin LED, blue accents from reference — NOT SUV/XXL scale, NOT enlarged rider. FORBIDDEN: catalog hero bike filling entire frame.)"
     );
   }
   if (/\b(yz|yamaha\s*yz)\b/.test(text) && !/\btmax\b/.test(text)) {
@@ -2524,8 +2538,9 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   return (
     "Photoreal edit: transplant the EXACT motorcycle from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
     "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
-    "Real-world factory scale and natural forward straddle on the seat — matched grain, shadows, and reflections; never an oversized paste-on CGI bike. " +
-    "Re-anchor every hand that was on the old handlebars to physically wrap the NEW bike's visible grips (adjust arm reach after pit-bike → full-size swap — no gripping air)." +
+    "Keep the rider's exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
+    "New bike in the SAME position and road footprint as the original — image 2 for model look only, never XXL catalog scale. " +
+    "Grip hand on the NEW visible handlebar; gesture hand stays OFF the bar as in image 1." +
     (hint ? ` ${hint}` : "")
   ).trim();
 }
@@ -3473,6 +3488,12 @@ function sanitizeUserPrompt(prompt) {
     }
     if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
+    }
+    if (!/BIKE SIZE LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_ANTI_OVERSIZE_CLARIFIER}${cleaned}`;
+    }
+    if (!/HAND GESTURE LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
     }
     // Bike identity + scale FIRST (2900-char budget) — prepend so they survive the cut.
     const bikeHint = motorcycleModelHint(cleaned) || motorcycleModelHint(prompt);
@@ -4644,19 +4665,30 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const motorcycleCompactSwap =
+    motorcycleRideScene &&
+    (motorcycleReplaceFromRef ||
+      isMotorcycleReplacePrompt(userPrompt) ||
+      isMotorcycleReplacePrompt(cleaned));
   const compactMotorcycleReplaceCore = (() => {
-    if (!motorcycleReplaceFromRef) return "";
+    if (!motorcycleCompactSwap) return "";
+    const bikeHint = motorcycleModelHint(userPrompt);
     const head = [
+      "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
+      "HAND GESTURE LOCK: keep middle finger / gesture hand from upload; grip hand on NEW bar.",
       motorcycleReplaceHead,
-      "HANDLEBAR GRIP LOCK: fingers on NEW visible grips — never void/wrist in air after scale change.",
-      "SEATED REALISM LOCK: forward straddle, hips ON seat, feet on pegs or ground.",
-      "Use image 2 as the exact target motorcycle.",
+      motorcycleReplaceFromRef
+        ? "Use image 2 for motorcycle identity only — not catalog giant scale."
+        : "",
+      bikeHint,
     ]
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-    const rawUser = buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount);
+    const rawUser = motorcycleReplaceFromRef
+      ? buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount)
+      : String(userPrompt || "").trim();
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
@@ -4695,7 +4727,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           ? [compactCockpitCore, core].filter(Boolean)
           : vehicleReplaceScene
             ? [compactVehicleReplaceCore, core].filter(Boolean)
-            : motorcycleReplaceFromRef
+            : motorcycleCompactSwap
               ? [compactMotorcycleReplaceCore, core].filter(Boolean)
               : [core]
       : localObjectScene

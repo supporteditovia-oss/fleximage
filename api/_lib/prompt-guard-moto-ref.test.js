@@ -29,19 +29,22 @@ test("two-photo YZ125 swap prioritizes scale, seating, and image 2 bike", () => 
   );
   assert.match(prompt, /TWO-PHOTO BIKE SWAP/i);
   assert.match(prompt, /TWO-PHOTO MOTORCYCLE SWAP/i);
-  assert.match(prompt, /transplant the EXACT motorcycle from reference image 2/i);
   assert.match(prompt, /YZ125 LOCK/i);
-  assert.match(prompt, /full-size motocross|Real-world factory scale/i);
+  assert.match(prompt, /BIKE SLOT LOCK|XXL/i);
+  assert.match(prompt, /RIDER SCALE LOCK|rider body size unchanged|NEVER upscale/i);
   assert.match(prompt, /SEATED REALISM|straddl/i);
-  assert.match(prompt, /Use image 2 as the exact target motorcycle/i);
-  assert.match(prompt, /HANDLEBAR GRIP LOCK/i);
-  assert.match(prompt, /gripping empty air|void grip|NEW bike's visible grips/i);
+  assert.match(prompt, /image 2|Image 2/i);
+  assert.match(prompt, /HANDLEBAR GRIP LOCK|grip hand on/i);
+  assert.match(prompt, /HAND GESTURE LOCK|middle finger/i);
+  assert.match(prompt, /XXL|BIKE SLOT LOCK/i);
 });
 
-test("single-photo bike replace prepends handlebar grip lock", () => {
+test("single-photo bike replace prepends anti-XXL and gesture locks", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace la moto par une Yamaha Tracer 7",
     { referenceImageCount: 1 },
   );
-  assert.match(prompt, /HANDLEBAR GRIP LOCK/i);
+  assert.match(prompt, /BIKE SIZE LOCK|NEVER XXL/i);
+  assert.match(prompt, /HAND GESTURE LOCK|middle finger/i);
+  assert.match(prompt, /TRACER LOCK/i);
 });
