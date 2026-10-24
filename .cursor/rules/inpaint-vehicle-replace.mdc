@@ -18,6 +18,6 @@ Lors d’un swap corps véhicule ou moto sur une photo uploadée :
 
 - **Occupation** : pas de mains/bras dans l’upload ⇒ n’en invente pas ; rétros = décor arrière uniquement (pas de bras, pas de gestes).
 - **Braquage** : même rotation du guidon que l’image 1 (ex. légèrement à gauche).
-- **Modèle** : TMAX 560 / etc. = usine réelle (`TMAX LOCK` dans `prompt-guard.js`).
+- **Modèle** : TMAX 560 = cockpit usine (2 cadrans analogiques + petit LCD central, badge TMAX) — ref catalogue `yamaha-tmax560/cockpit-pov.jpg`. Support téléphone bleu (Quad Lock) **optionnel**.
 
 Implémentation : `VEHICLE_INPAINT_REPLACE_*` et `VEHICLE_INPAINT_BRIEF` dans `api/_lib/prompt-guard.js`. Toute modif de ces flux doit préserver ces locks et les tests `prompt-guard-moto-ref.test.js` / `prompt-guard-vehicle-ref.test.js`.
