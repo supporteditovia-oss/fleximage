@@ -77,6 +77,17 @@ test("YZ125 swap locks YZ graphics and rider clothing text", () => {
   assert.match(prompt, /RIDER CLOTHING LOCK|STREET/i);
 });
 
+test("moto replace includes inpaint orientation and scene policy", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la moto par une Yamaha Tracer 7",
+    { referenceImageCount: 2 },
+  );
+  assert.match(prompt, /INPAINT REPLACE POLICY|ORIENTATION\+PERSPECTIVE\+SCENE|INPAINT REPLACE:/i);
+  assert.match(prompt, /mirror flip|same facing/i);
+  assert.match(prompt, /camera angle|PERSPECTIVE/i);
+  assert.match(prompt, /background|scene pixels frozen|SCENE INPAINT/i);
+});
+
 test("single-photo bike replace prepends anti-XXL and gesture locks", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace la moto par une Yamaha Tracer 7",

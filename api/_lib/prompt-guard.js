@@ -430,8 +430,22 @@ const {
   buildVehicleBackgroundInpaintLock,
 } = require("./vehicle-fidelity-lock");
 
+/** Inpainting / replacement policy — orientation, perspective, scene (moto + car). */
+const VEHICLE_INPAINT_REPLACE_POLICY =
+  "INPAINT REPLACE POLICY (mandatory — any vehicle or motorcycle body swap on the uploaded photo). " +
+  "ORIENTATION LOCK: the replacement points the EXACT same direction as the original — same front/rear heading (left vs right in frame), same wheel or handlebar yaw, same viewing axis. FORBIDDEN: mirror flip, reversed facing, swapping nose and tail toward camera, opposite travel vector. " +
+  "PERSPECTIVE LOCK: preserve the identical camera angle (level, low angle, high angle, 3/4, profile), identical scale in frame, identical tire contact points and placement relative to pavement, grass, trees, curbs, and scene props — never re-park, recenter, zoom, or reframe. " +
+  "SCENE INPAINT LOCK: change ONLY the vehicle model identity (body, glass, wheels, plastics). Background, sky, trees, road, ambient light, exposure, grain, and ground contact shadows outside the vehicle silhouette stay strictly unchanged — inpaint inside the original silhouette only; alpha-composite original scene pixels back outside the mask.";
+
+const VEHICLE_INPAINT_REPLACE_CLARIFIER =
+  " (INPAINT REPLACE POLICY — ORIENTATION: same direction as upload, NO mirror flip or reversed facing. PERSPECTIVE: same camera angle, scale, and ground position vs trees/road/decor. SCENE: model swap only — background, lighting, and shadows unchanged.)";
+
+const VEHICLE_INPAINT_BRIEF =
+  "ORIENTATION+PERSPECTIVE+SCENE: same facing as original (FORBIDDEN mirror flip), same camera angle/scale/park slot, background/light/shadows frozen outside vehicle mask. ";
+
 const VEHICLE_REPLACE_SCENE_GUARD =
   "VEHICLE BODY SWAP on the uploaded photograph (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
   "Change ONLY the car/bike already in the photo into the EXACT named vehicle (brand + model + generation/chassis + trim + tuner). " +
   "PARK LOCK: the new vehicle occupies the EXACT original parking pose — same slot, same diagonal angle, same distance to camera, same crop, same wheel steering direction, same tire contact points on the ground. Never re-park, never straighten, never center, never reframe. " +
   "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, car-wash brushes/rollers, other parked cars, people, sky, buildings. " +
@@ -448,12 +462,16 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "MODEL LOCK: output the EXACT brand+model the user named — NEVER Nissan Silvia/S15, Skyline, GT-R, R34/R35, Supra, or generic JDM widebody when they asked BMW, Lamborghini, Mercedes, Ferrari, etc.";
 
 const VEHICLE_BODY_FROM_REFERENCE_GUARD =
-  "TWO-PHOTO VEHICLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, pavement, buildings, people, sky, lighting, camera distance, crop, and the original car's parking pose/angle/wheel direction. " +
+  "TWO-PHOTO VEHICLE SWAP (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
+  "Image 1 = scene lock — keep EXACT background, pavement, buildings, people, sky, lighting, camera distance, crop, and the original car's parking pose/angle/wheel direction. " +
   "Image 2 = target vehicle identity — copy THAT exact body, color, wheels, badges, trim, and proportions from image 2 onto the car in image 1. " +
   "FORBIDDEN: inventing a different model (Nissan Juke/Silvia, Skyline, random widebody), re-parking, recentering, changing the scene, or ignoring image 2.";
 
 const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
-  "TWO-PHOTO MOTORCYCLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
+  "TWO-PHOTO MOTORCYCLE SWAP (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
+  "Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
   "Image 2 = target bike identity ONLY (plastics/color/wheels/badges) — NEVER copy image 2 background, tree, grass, sky, or catalog parked pose. " +
   "Copy THAT exact motorcycle body look from image 2 onto the bike volume in image 1. " +
   "RIDER SCALE LOCK (absolute): the person keeps the EXACT body height, head size, torso, and outfit volume from image 1 — NEVER upscale or enlarge the human. " +
@@ -3472,6 +3490,9 @@ function sanitizeUserPrompt(prompt) {
     if (!/PARK LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_REPLACE_CLARIFIER}`;
     }
+    if (!/INPAINT REPLACE POLICY/i.test(cleaned)) {
+      cleaned = `${VEHICLE_INPAINT_REPLACE_CLARIFIER}${cleaned}`;
+    }
     const paintLockEarly =
       parseVehiclePaintColor(prompt) || parseVehiclePaintColor(cleaned);
     if (paintLockEarly) {
@@ -3535,6 +3556,12 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${genHint}${cleaned}`;
     }
   } else if (motorcycleRideRequest) {
+    if (
+      (isMotorcycleReplacePrompt(cleaned) || isMotorcycleReplacePrompt(prompt)) &&
+      !/INPAINT REPLACE POLICY/i.test(cleaned)
+    ) {
+      cleaned = `${VEHICLE_INPAINT_REPLACE_CLARIFIER}${cleaned}`;
+    }
     const seatedUser =
       isMotorcycleSeatedUserPrompt(cleaned) || isMotorcycleSeatedUserPrompt(prompt);
     if (seatedUser && !/SEATED REALISM LOCK/i.test(cleaned)) {
@@ -4774,6 +4801,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const compactVehicleReplaceCore = (() => {
     if (!vehicleReplaceScene) return "";
     const head = [
+      "INPAINT REPLACE: same direction (no mirror flip), same camera angle/scale/park slot, scene pixels frozen.",
       vehicleReplaceHead,
       vehicleReplaceFromRef ? "Use image 2 as the exact target car." : "",
     ]
@@ -4794,16 +4822,17 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!motorcycleCompactSwap) return "";
     const bikeHint = motorcycleModelHint(userPrompt);
     const head = [
+      "INPAINT REPLACE: same direction (no mirror flip), same camera angle/scale/ground slot, scene pixels frozen.",
+      bikeHint,
       "IMAGE 2 SCENE FORBIDDEN: image2=parts/color only — never image2 background, tree, or catalog side-view pose.",
       "BIKE MERGE + OCCLUSION LOCK: inpaint inside upload bike mask — tree/background unchanged; hidden tail/rear stays hidden.",
       "PARKED LEAN LOCK: same kickstand/tree lean and trunk overlap as image 1.",
       "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
-      "HAND GESTURE LOCK: keep middle finger / gesture hand from upload; grip hand on NEW bar.",
+      "HAND GESTURE LOCK: preserve middle finger / grip roles from upload.",
       motorcycleReplaceHead,
       motorcycleReplaceFromRef
         ? "Use image 2 for motorcycle identity only — not catalog giant scale."
         : "",
-      bikeHint,
     ]
       .filter(Boolean)
       .join(" ")
