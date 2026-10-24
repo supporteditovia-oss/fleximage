@@ -9,3 +9,4 @@ vite.config.ts.*
 mcp.json
 graphify-out/
 .vercel
+.cursor/skills/impeccable/scripts/bin/
