@@ -90,3 +90,23 @@ test("two-photo swap with explicit paint keeps user color lock", () => {
   assert.match(prompt, /Kyalami/i);
   assert.match(prompt, /not default white/i);
 });
+
+test("Spanish Clase G car swap routes with G-Wagen body lock", () => {
+  const user =
+    "Reemplaza mi coche por un Mercedes-Benz Clase G 4x4, el todoterreno de carrocería cuadrada y alta, con faros delanteros redondos, pasos de rueda anchos y rueda de repuesto en la puerta trasera. No una berlina ni un SUV de líneas redondeadas. Mantén el mismo ángulo de cámara y adapta el tamaño, las sombras y los reflejos para que parezca una foto real. No cambies el resto de la imagen.";
+  const prompt = buildIdentityPreservingPrompt(user, { referenceImageCount: 1 });
+  assert.match(prompt, /INPAINT REPLACE|INPAINT REPLACE POLICY/i);
+  assert.match(prompt, /Mercedes-Benz G-Class \(G-Wagen\)/i);
+  assert.match(prompt, /G-WAGEN BODY LOCK/i);
+  assert.match(prompt, /round headlamps|spare wheel|BOX-SHAPE/i);
+});
+
+test("French class G typo resolves to Mercedes G-Class swap", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace ma voiture par une Mercedes class G",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /Mercedes-Benz G-Class/i);
+  assert.match(prompt, /G-WAGEN BODY LOCK/i);
+  assert.match(prompt, /Replace ONLY the existing car with Mercedes-Benz G-Class/i);
+});
