@@ -1,0 +1,28 @@
+[
+  {
+    "id": "yamaha-yz125",
+    "label": "Yamaha YZ125",
+    "match": [
+      "yz125",
+      "yz 125",
+      "125 yz",
+      "yamaha 125 yz",
+      "yamaha yz125",
+      "a55yz",
+      "a55 yz"
+    ],
+    "angles": [
+      {
+        "id": "left-3q",
+        "path": "/assets/vehicle-ref/yamaha-yz125/left-3q.jpg",
+        "note": "factory left 3/4 — YZ shroud lettering and plastics"
+      },
+      {
+        "id": "side-right",
+        "path": "/assets/vehicle-ref/yamaha-yz125/side-right.jpg",
+        "note": "side profile — wheelbase, seat height, exhaust"
+      }
+    ],
+    "promptBlock": "FACTORY CATALOG REFS (360-style): additional reference photos show the real Yamaha YZ125 from multiple angles — copy EXACT factory plastics, blue/white livery, and letter-perfect YZ graphics from these refs (both letters Y and Z, never gibberish)."
+  }
+]

@@ -36,7 +36,9 @@ const { resolveTemplateGeneration } = require("../template-refs");
 const {
   isBuiltinTemplateId,
   resolveBuiltinTemplateGeneration,
+  resolveReferenceUrl,
 } = require("../builtin-image-templates");
+const { enrichImageUrlsWithVehicleCatalog } = require("../vehicle-moto-reference-catalog");
 const {
   findRecentInFlightGeneration,
   SESSION_BURST_WINDOW_MS,
@@ -489,6 +491,25 @@ module.exports = async function handler(req, res) {
       faceSwapLockedPose: isBuiltinFaceSwap,
     });
 
+    let catalogPromptInject = "";
+    let vehicleCatalogId = null;
+    let vehicleCatalogRefsAdded = 0;
+    if (!isBuiltinFaceSwapWithOutfit && !isBuiltinFaceSwap) {
+      const catalogEnriched = enrichImageUrlsWithVehicleCatalog(
+        effectivePrompt,
+        imageUrls,
+        resolveReferenceUrl,
+      );
+      imageUrls = catalogEnriched.urls;
+      catalogPromptInject = catalogEnriched.promptInject || "";
+      vehicleCatalogId = catalogEnriched.catalogId;
+      vehicleCatalogRefsAdded = catalogEnriched.addedCount || 0;
+    }
+    const subjectPoseBlockWithCatalog = [subjectPoseBlock, catalogPromptInject]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
     const finalPrompt = isBuiltinFaceSwapWithOutfit
       ? buildBuiltinTemplateFaceSwapWithOutfitPrompt(
           "Remplace uniquement la personne de l'image 3 par la personne de l'image 1. Remplace ma tenue par l'image 2. Garde le décor, la pose et l'éclairage de l'image 3 identiques.",
@@ -501,7 +522,7 @@ module.exports = async function handler(req, res) {
         : ensureVehicleReplacePromptForImageProvider(
             buildIdentityPreservingPrompt(effectivePrompt, {
               referenceImageCount: imageUrls.length,
-              subjectPoseBlock,
+              subjectPoseBlock: subjectPoseBlockWithCatalog,
             }),
             effectivePrompt,
           );
@@ -521,6 +542,12 @@ module.exports = async function handler(req, res) {
       subject_type: subject,
       pose_style: poseStyle,
       server_prompt_ready_at: new Date().toISOString(),
+      ...(vehicleCatalogId
+        ? {
+            vehicle_catalog_id: vehicleCatalogId,
+            vehicle_catalog_refs_added: vehicleCatalogRefsAdded,
+          }
+        : {}),
       ...(templateReferenceId
         ? {
             ...(isBuiltinTemplateId(templateId)
