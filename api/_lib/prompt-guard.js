@@ -2056,15 +2056,11 @@ function isVehicleReplacePrompt(prompt) {
   if (isLifestyleRelocatePrompt(prompt)) return false;
   if (isAddVehiclesToScenePrompt(prompt)) return false;
   if (isPersonSwapPrompt(prompt) || isFacialHairPrompt(prompt)) return false;
-  const text = normalizePromptText(prompt);
-  const hasReplaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne)\b/.test(
-      text,
-    );
-  const mentionsCarNoun =
-    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
+  const hasReplaceVerb = VEHICLE_REPLACE_VERB_RE.test(text);
+  const mentionsCarNoun = VEHICLE_CAR_NOUN_RE.test(text);
   const mentionsSecondRefImage =
-    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+image|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|celle\s+de\s+l['']?image\s*2)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|imagen\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|segunda\s+(foto|imagen)|second\s+(photo|picture|image)|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|celle\s+de\s+l['']?image\s*2)\b/i.test(
       text,
     );
   if (hasReplaceVerb && mentionsCarNoun && mentionsSecondRefImage) return true;
@@ -2112,6 +2108,22 @@ function isVehicleCockpitRefinePrompt(prompt) {
   return false;
 }
 
+/** FR/EN/ES aliases before vehicle regex parsing. */
+function normalizeVehicleLanguageAliases(text) {
+  return String(text || "")
+    .replace(/\bmercedes[\s-]benz\b/gi, "mercedes")
+    .replace(/\bclase\s+g\b/gi, "classe g")
+    .replace(/\bclass\s+g\b/gi, "classe g")
+    .replace(/\bg\s*clase\b/gi, "classe g")
+    .replace(/\bg\s*class\b/gi, "classe g");
+}
+
+const VEHICLE_REPLACE_VERB_RE =
+  /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne|reemplaz\w*|sustitu\w*|cambi\w*|intercambi\w*)\b/;
+
+const VEHICLE_CAR_NOUN_RE =
+  /\b(voiture|voitures|car|cars|auto|autos|vehicule|vehicle|vehiculos|automovil|automoviles|coche|coches|moto|scooter)\b/;
+
 function prettyVehicleToken(tok) {
   const t = String(tok || "").trim();
   if (!t) return "";
@@ -2128,7 +2140,7 @@ function prettyVehicleToken(tok) {
 function parseVehicleSpec(prompt) {
   if (isYachtPrimaryPrompt(prompt)) return null;
   if (isGolfSportPrompt(prompt)) return null;
-  const text = normalizePromptText(prompt);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
   const names = [];
   const nameRe = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "gi");
   let m;
@@ -2179,6 +2191,14 @@ function parseVehicleSpec(prompt) {
   }
   if (names.includes("rs3") && !/\burus\b/.test(text)) {
     label = /\baudi\b/.test(text) ? "Audi RS3" : "Audi RS3 sportback";
+  }
+  const wantsMercedesGClass =
+    /\b(classe\s*g|g[\-\s]?wagen|g63)\b/.test(text) &&
+    !/\b(urus|range\s*rover|land\s*rover|jeep|defender|golf)\b/.test(text);
+  if (wantsMercedesGClass) {
+    label = "Mercedes-Benz G-Class (G-Wagen)";
+    if (!names.includes("mercedes")) names.push("mercedes");
+    if (!names.some((n) => /g63|wagen|classe/.test(n))) names.push("g-wagen");
   }
 
   return {
@@ -2441,6 +2461,20 @@ function generationAntimixLine(prompt) {
   return "";
 }
 
+const MERCEDES_G_WAGEN_BODY_LOCK =
+  " (G-WAGEN BODY LOCK — Mercedes-Benz G-Class ONLY: tall BOX-SHAPE 4x4, flat upright panels, round headlamps, wide flat wheel arches, rear-door mounted spare wheel, upright grille with Mercedes star. FORBIDDEN: rounded soft SUV/crossover, sedan, coupe, GLC/GLE blob, missing spare, aerodynamic teardrop body.)";
+
+function vehicleBodyGeometryHint(prompt) {
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
+  if (
+    /\b(classe\s*g|g[\-\s]?wagen|g63)\b/.test(text) &&
+    !/\b(urus|range\s*rover|land\s*rover|jeep|defender|golf)\b/.test(text)
+  ) {
+    return MERCEDES_G_WAGEN_BODY_LOCK;
+  }
+  return "";
+}
+
 function vehicleIdentityHint(prompt) {
   // Always parse the user's raw request — enriched clarifiers mention Urus/MANSORY and poison GEN LOCK.
   const spec = parseVehicleSpec(prompt);
@@ -2563,6 +2597,7 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
     `${vehicleIdentityHint(userPrompt)}` +
+    `${vehicleBodyGeometryHint(userPrompt)}` +
     `${vehiclePaintColorHint(userPrompt, referenceImageCount)}` +
     `${
       parseVehiclePaintColor(userPrompt)
@@ -2575,9 +2610,9 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
 function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   const refs = Math.max(0, Number(referenceImageCount) || 0);
   if (refs < 2) return false;
-  const text = normalizePromptText(prompt);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
   const mentionsRef =
-    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|imagen\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|segunda\s+(foto|imagen)|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
       text,
     );
   if (
@@ -2588,8 +2623,7 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
     return false;
   }
   const mentionsCar =
-    /\b(voiture|car|auto|vehicule|vehicle)\b/i.test(text) ||
-    /\b(remplac\w*|replace\w*|swap\w*)\b/i.test(text);
+    VEHICLE_CAR_NOUN_RE.test(text) || VEHICLE_REPLACE_VERB_RE.test(text);
   return mentionsRef && mentionsCar;
 }
 
@@ -3516,6 +3550,11 @@ function sanitizeUserPrompt(prompt) {
       vehicleIdentityHint(prompt);
     if (genHint && !/GEN LOCK:/i.test(cleaned)) {
       cleaned = `${genHint}${cleaned}`;
+    }
+    const bodyGeomHint =
+      vehicleBodyGeometryHint(prompt) || vehicleBodyGeometryHint(cleaned);
+    if (bodyGeomHint && !/G-WAGEN BODY LOCK/i.test(cleaned)) {
+      cleaned = `${bodyGeomHint}${cleaned}`;
     }
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
