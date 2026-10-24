@@ -460,7 +460,15 @@ const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
   "REAL-WORLD PROPORTION LOCK: believable adult-on-machine scale (Tracer/YZ/TMAX vs real rider) INSIDE that original bike slot — never a bike taller than the rider's head to sky, never wider than the original bike silhouette in the photo. " +
   "HAND GESTURE LOCK: preserve EXACT hand roles from image 1 — if one hand was raised (middle finger / gesture OFF the bar), keep that SAME hand and gesture; the OTHER hand wraps the NEW grip. " +
   "HANDLEBAR GRIP LOCK: the hand that was on the old bar MUST touch the NEW visible grip — adjust arm reach only for that hand; gesture hand stays OFF the bar. NEVER grip empty air at the old mini-bar position. " +
-  "FORBIDDEN: XXL bike, enlarged rider, re-parking, recentering, burnt plastics, sideways lounge, ghost handlebar, ignoring image 2, keeping yellow pit-bike decals.";
+  "BIKE MERGE + OCCLUSION LOCK (critical): inpaint ONLY inside the original motorcycle silhouette in image 1 — alpha-composite tree, grass, sky, walls, and background back over any new-bike pixels outside that upload footprint. " +
+  "VISIBILITY LOCK: if tail, rear wheel, exhaust, or fairing was hidden behind a tree trunk, wall, crop, or prop in image 1, the replacement MUST stay equally hidden — never rotate or re-pose to reveal the full catalog profile. " +
+  "Same viewing direction, same lean, same overlap with the tree/object, same partial visibility at frame edges. Image 2 = paint/parts identity only, NOT a new camera angle. " +
+  "FORBIDDEN: XXL bike, enlarged rider, re-parking, recentering, burnt plastics, sideways lounge, ghost handlebar, ignoring image 2, keeping yellow pit-bike decals, pulling bike away from tree, showing rear not visible in upload.";
+
+const MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER =
+  " (BIKE MERGE + OCCLUSION LOCK — critical: merge the new motorcycle INTO image 1 like a real inpaint — keep every background pixel (tree bark, leaves, sky, grass) exactly; only swap paint/metal inside the old bike mask. " +
+  "If the original tail/rear wheel/exhaust was behind the tree or off-frame, the new model's tail/rear MUST stay behind that SAME tree/off-frame — never expose what was hidden. " +
+  "Never spin the bike to face the camera more than image 1 did. FORBIDDEN: full side-profile catalog hero when upload showed a partial 3/4 view.)";
 
 const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
   " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, the hand that was ON the bar MUST physically contact the NEW motorcycle's real grip — knuckles on rubber, brake/clutch perch visible. " +
@@ -653,8 +661,8 @@ function motorcycleModelHint(prompt) {
   }
   if (/\b(tracer\s*7|tracer7|tracer\s*9|tracer9)\b/.test(text)) {
     return (
-      " (TRACER LOCK: Yamaha Tracer 7/9 sport-touring — mid-size road bike proportions vs unchanged adult rider; SAME camera slot as original bike in image 1. " +
-      "Windscreen, twin LED, blue accents from reference — NOT SUV/XXL scale, NOT enlarged rider. FORBIDDEN: catalog hero bike filling entire frame.)"
+      " (TRACER LOCK: Yamaha Tracer 7/9 sport-touring — mid-size road bike proportions vs unchanged adult rider; SAME camera slot, lean, and partial visibility as original bike in image 1 (merge — do not reveal rear hidden by tree/crop). " +
+      "Windscreen, twin LED, blue accents from reference — NOT SUV/XXL scale, NOT enlarged rider. FORBIDDEN: catalog hero bike filling entire frame, full side profile when upload was partial.)"
     );
   }
   if (/\b(yz|yamaha\s*yz)\b/.test(text) && !/\btmax\b/.test(text)) {
@@ -2570,6 +2578,7 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
     "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
     "Keep the rider's exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
     "New bike in the SAME position and road footprint as the original — image 2 for model look only, never XXL catalog scale. " +
+    "MERGE into image 1: preserve exact partial visibility — parts hidden by tree/wall/crop in image 1 stay hidden on the new bike; never reveal the full rear if upload did not show it. " +
     "Grip hand on the NEW visible handlebar; gesture hand stays OFF the bar as in image 1." +
     (hint ? ` ${hint}` : "")
   ).trim();
@@ -3556,6 +3565,21 @@ function sanitizeUserPrompt(prompt) {
     }
     if (!/BIKE SCENE LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_SCENE_CLARIFIER}`;
+    }
+    const motoTwoPhotoHint =
+      /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|second\s+(photo|image))\b/i.test(
+        cleaned,
+      ) ||
+      /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|second\s+(photo|image))\b/i.test(
+        prompt,
+      );
+    if (
+      (motoTwoPhotoHint ||
+        isMotorcycleReplacePrompt(cleaned) ||
+        isMotorcycleReplacePrompt(prompt)) &&
+      !/BIKE MERGE \+ OCCLUSION LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER}${cleaned}`;
     }
   } else if (vehicleBehindRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
@@ -4737,6 +4761,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!motorcycleCompactSwap) return "";
     const bikeHint = motorcycleModelHint(userPrompt);
     const head = [
+      "BIKE MERGE + OCCLUSION LOCK: inpaint inside upload bike mask — tree/background unchanged; hidden tail/rear stays hidden.",
       "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
       "HAND GESTURE LOCK: keep middle finger / gesture hand from upload; grip hand on NEW bar.",
       motorcycleReplaceHead,

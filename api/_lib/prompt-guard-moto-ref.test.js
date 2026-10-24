@@ -37,6 +37,17 @@ test("two-photo YZ125 swap prioritizes scale, seating, and image 2 bike", () => 
   assert.match(prompt, /HANDLEBAR GRIP LOCK|grip hand on/i);
   assert.match(prompt, /HAND GESTURE LOCK|middle finger/i);
   assert.match(prompt, /XXL|BIKE SLOT LOCK/i);
+  assert.match(prompt, /BIKE MERGE \+ OCCLUSION LOCK|hidden behind|partial visibility/i);
+});
+
+test("two-photo Tracer swap locks merge and occlusion behind tree", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la moto de la première photo par le modèle de l'image 2 Yamaha Tracer 7",
+    { referenceImageCount: 2 },
+  );
+  assert.match(prompt, /BIKE MERGE \+ OCCLUSION LOCK/i);
+  assert.match(prompt, /tree|hidden|partial visibility|alpha-composite/i);
+  assert.match(prompt, /TRACER LOCK/i);
 });
 
 test("YZ125 swap locks YZ graphics and rider clothing text", () => {
