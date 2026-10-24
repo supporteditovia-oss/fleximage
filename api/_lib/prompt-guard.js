@@ -454,7 +454,8 @@ const VEHICLE_BODY_FROM_REFERENCE_GUARD =
 
 const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
   "TWO-PHOTO MOTORCYCLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
-  "Image 2 = target bike identity — copy THAT exact motorcycle body, plastics, color, wheels, tires, exhaust, bars, and badges from image 2 onto the bike volume in image 1. " +
+  "Image 2 = target bike identity ONLY (plastics/color/wheels/badges) — NEVER copy image 2 background, tree, grass, sky, or catalog parked pose. " +
+  "Copy THAT exact motorcycle body look from image 2 onto the bike volume in image 1. " +
   "RIDER SCALE LOCK (absolute): the person keeps the EXACT body height, head size, torso, and outfit volume from image 1 — NEVER upscale or enlarge the human. " +
   "BIKE SLOT LOCK (critical): the NEW motorcycle occupies the SAME position, lean angle, wheel steering, and tire contact patches on the road as the original bike in image 1 — same distance to camera, same crop footprint. Image 2 = model/color/parts identity ONLY — NOT a blown-up catalog hero or XXL studio bike pasted over the scene. " +
   "REAL-WORLD PROPORTION LOCK: believable adult-on-machine scale (Tracer/YZ/TMAX vs real rider) INSIDE that original bike slot — never a bike taller than the rider's head to sky, never wider than the original bike silhouette in the photo. " +
@@ -469,6 +470,14 @@ const MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER =
   " (BIKE MERGE + OCCLUSION LOCK — critical: merge the new motorcycle INTO image 1 like a real inpaint — keep every background pixel (tree bark, leaves, sky, grass) exactly; only swap paint/metal inside the old bike mask. " +
   "If the original tail/rear wheel/exhaust was behind the tree or off-frame, the new model's tail/rear MUST stay behind that SAME tree/off-frame — never expose what was hidden. " +
   "Never spin the bike to face the camera more than image 1 did. FORBIDDEN: full side-profile catalog hero when upload showed a partial 3/4 view.)";
+
+const MOTORCYCLE_REF2_SCENE_FORBIDDEN_CLARIFIER =
+  " (IMAGE 2 SCENE FORBIDDEN — critical: reference image 2 is paint/plastics/wheels/badges ONLY. " +
+  "NEVER copy image 2's background, tree, grass, sky, lighting, camera angle, or parked pose. " +
+  "Image 1 alone defines merge, lean against tree/wall, kickstand, occlusion, and crop.)";
+
+const MOTORCYCLE_PARKED_LEAN_CLARIFIER =
+  " (PARKED LEAN LOCK — when image 1 shows a bike on kickstand or leaning on a tree/wall: keep that EXACT support — same trunk overlap on fairing/seat, same hidden rear sections, same grass shadow — only change the machine's model livery.)";
 
 const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
   " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, the hand that was ON the bar MUST physically contact the NEW motorcycle's real grip — knuckles on rubber, brake/clutch perch visible. " +
@@ -2531,18 +2540,28 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
 function isMotorcycleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   const refs = Math.max(0, Number(referenceImageCount) || 0);
   if (refs < 2) return false;
+  if (
+    isOutfitFromReferencePrompt(prompt) &&
+    isOutfitWearPrompt(prompt) &&
+    !isMotorcycleReplacePrompt(prompt)
+  ) {
+    return false;
+  }
   const text = normalizePromptText(prompt);
   const mentionsRef =
     /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|premiere\s+(photo|image).*deuxieme|first\s+(photo|image).*second)\b/i.test(
       text,
     );
-  if (!mentionsRef) return false;
-  if (isMotorcycleBikeMention(prompt) || isMotorcycleReplacePrompt(prompt)) {
+  if (isMotorcycleReplacePrompt(prompt)) return true;
+  if (
+    mentionsRef &&
+    (isMotorcycleBikeMention(prompt) || isMotorcycleReplacePrompt(prompt))
+  ) {
     return true;
   }
   return (
-    /\b(moto|motos|scooter|motorcycle|motocross|dirt\s*bike|guidon)\b/i.test(text) &&
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*)\b/i.test(text)
+    isMotorcycleBikeMention(prompt) &&
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|modele|model)\b/i.test(text)
   );
 }
 
@@ -2574,9 +2593,10 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   }
   const hint = motorcycleModelHint(userPrompt);
   return (
-    "Photoreal edit: transplant the EXACT motorcycle from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
-    "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
-    "Keep the rider's exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
+    "Photoreal edit: transplant the EXACT motorcycle LOOK from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
+    "Image 1 keeps background, lighting, camera angle, tree/grass, kickstand/lean, and crop; NEVER import image 2's scene or viewing angle. " +
+    "If a rider is present, keep their exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
+    "If image 1 is bike-only (no person), keep the same parked/leaning support against tree or kickstand — do not stand the bike up for a catalog side view. " +
     "New bike in the SAME position and road footprint as the original — image 2 for model look only, never XXL catalog scale. " +
     "MERGE into image 1: preserve exact partial visibility — parts hidden by tree/wall/crop in image 1 stay hidden on the new bike; never reveal the full rear if upload did not show it. " +
     "Grip hand on the NEW visible handlebar; gesture hand stays OFF the bar as in image 1." +
@@ -3580,6 +3600,18 @@ function sanitizeUserPrompt(prompt) {
       !/BIKE MERGE \+ OCCLUSION LOCK/i.test(cleaned)
     ) {
       cleaned = `${MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER}${cleaned}`;
+    }
+    if (
+      (motoTwoPhotoHint || isMotorcycleReplaceFromReferencePrompt(cleaned, 2)) &&
+      !/IMAGE 2 SCENE FORBIDDEN/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_REF2_SCENE_FORBIDDEN_CLARIFIER}${cleaned}`;
+    }
+    if (
+      (isMotorcycleReplacePrompt(cleaned) || isMotorcycleReplacePrompt(prompt)) &&
+      !/PARKED LEAN LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_PARKED_LEAN_CLARIFIER}${cleaned}`;
     }
   } else if (vehicleBehindRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
@@ -4610,11 +4642,12 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           : exteriorTrafficScene
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
             : motorcycleRideScene
-              ? isMotorcycleSeatedUserPrompt(userPrompt) ||
-                isMotorcycleSeatedUserPrompt(cleaned) ||
-                motorcycleReplaceFromRef
-                ? MOTORCYCLE_SEATED_REALISM_GUARD
-                : MOTORCYCLE_RIDE_GUARD
+              ? motorcycleReplaceFromRef
+                ? MOTORCYCLE_BODY_FROM_REFERENCE_GUARD
+                : isMotorcycleSeatedUserPrompt(userPrompt) ||
+                    isMotorcycleSeatedUserPrompt(cleaned)
+                  ? MOTORCYCLE_SEATED_REALISM_GUARD
+                  : MOTORCYCLE_RIDE_GUARD
             : vehicleReplaceScene
             ? VEHICLE_REPLACE_SCENE_GUARD
               : vehicleBehindScene
@@ -4761,7 +4794,9 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!motorcycleCompactSwap) return "";
     const bikeHint = motorcycleModelHint(userPrompt);
     const head = [
+      "IMAGE 2 SCENE FORBIDDEN: image2=parts/color only — never image2 background, tree, or catalog side-view pose.",
       "BIKE MERGE + OCCLUSION LOCK: inpaint inside upload bike mask — tree/background unchanged; hidden tail/rear stays hidden.",
+      "PARKED LEAN LOCK: same kickstand/tree lean and trunk overlap as image 1.",
       "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
       "HAND GESTURE LOCK: keep middle finger / gesture hand from upload; grip hand on NEW bar.",
       motorcycleReplaceHead,
