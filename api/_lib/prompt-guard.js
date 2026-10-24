@@ -526,6 +526,18 @@ const OUTFIT_FROM_REF_CLARIFIER =
   "GLASSES LOCK: if photo 1 has glasses and photo 2 does NOT → KEEP photo-1 glasses; if photo 2 shows glasses → use them; if photo 1 has none and photo 2 shows glasses → add them. " +
   "HAIR LOCK: keep photo-1 hair exactly (loose/tied/length/color) unless photo 2 is a worn look on a person with clearly different hair AND user asked for that hair — flat-lay/product shots must NOT change hair.)";
 
+const OUTFIT_FROM_REF_POSE_GESTURE_CLARIFIER =
+  " (OUTFIT POSE LOCK — critical: freeze EXACT pose, arms, and hand gestures from photo 1 ONLY — same middle finger / grip / bar contact on the SAME hands. " +
+  "Photo 2 is garments only — NEVER copy the catalog model's shush/peace/pointing hands, stance, or head tilt from image 2. Motorcycle/vehicle/background in photo 1 stay unchanged.)";
+
+const OUTFIT_NO_RETAIL_TAG_CLARIFIER =
+  " (OUTFIT TAG LOCK — mandatory: remove ALL retail hang tags, price tags, cardboard labels, plastic fasteners, and store stickers from clothes when worn — clean real-world outfit, never e-commerce tags on leg or jacket.)";
+
+const OUTFIT_FROM_REF_COMPACT_GUARD =
+  "TWO-PHOTO OUTFIT SWAP (mandatory). Image 1 = person identity + face + mask/hood + skin + body build + BOTH hand gestures + pose + motorcycle/scene lock. " +
+  "Image 2 = garment fabric/cut/color/shoes/bag ONLY — NEVER the model face, cap, mask, skin, body, or hand poses from image 2. " +
+  "Wear clothes on the photo-1 rider with matched outdoor lighting. NO retail tags on worn clothes.";
+
 const OUTFIT_IDENTITY_ACCESSORY_CLARIFIER =
   " (OUTFIT IDENTITY LOCK — critical: EXACT same face, eyes, nose, lips, skin, makeup as the uploaded person. " +
   "NEVER remove glasses just because the outfit reference has none — keep photo-1 glasses unless the reference clearly shows glasses to copy. " +
@@ -535,10 +547,13 @@ const OUTFIT_IDENTITY_ACCESSORY_CLARIFIER =
 const OUTFIT_FROM_REF_GUARD =
   "OUTFIT FROM REFERENCE (mandatory — photo 1 = real person, photo 2 = outfit/clothes reference). " +
   "Dress photo-1 person IN the EXACT garments from photo 2 — real fabric on body, shoes ON feet, bag if shown — never flat product collage or e-commerce paste. " +
-  "FACE LOCK (critical): drop-of-water match to photo 1 — same face, eyes, nose, lips, skin tone, makeup, expression. NEVER generate a different woman or model face. " +
+  "FACE LOCK (critical): drop-of-water match to photo 1 — same face, eyes, nose, lips, skin tone, makeup, expression, mask/hood/beanie as upload. NEVER generate a different person or catalog model face from image 2. " +
+  "POSE & GESTURE LOCK (critical): EXACT same body pose and hand roles from photo 1 — if one hand shows middle finger or grips the handlebar, keep that SAME gesture on the SAME hand. NEVER import shush/peace/pointing poses from the outfit model in photo 2. " +
+  "SCENE LOCK: keep photo-1 motorcycle/vehicle, road, trees, lighting, camera, and crop — change clothes only. " +
+  "TAG LOCK: strip all retail hang tags, price labels, and store stickers from garments when worn — no visible product tags on pants/jacket. " +
   "GLASSES RULE: photo-1 glasses STAY if photo 2 has no glasses (flat-lay, mannequin, or model without glasses). Add/copy glasses ONLY if photo 2 clearly shows them. NEVER strip glasses because the outfit plate lacks them. " +
   "HAIR RULE: keep photo-1 hairstyle exactly — loose stays loose, tied stays tied, same length and color. If photo 2 is clothes-only flat-lay, NEVER import a bun/updo from the reference layout. Change hair ONLY if photo 2 is a worn outfit on a person with visible hair AND that hair is part of the requested look. " +
-  "Keep photo-1 pose, room, mirror, phone in hand, lighting, and body proportions. Match garment light/shadows to the original scene.";
+  "Keep photo-1 body proportions. Match garment light/shadows to the original scene.";
 
 const OUTFIT_WEAR_GUARD =
   "OUTFIT WEAR EDIT on the uploaded person (mandatory — NOT a collage). " +
@@ -2516,6 +2531,14 @@ function isMotorcycleReplaceFromReferencePrompt(prompt, referenceImageCount = 0)
   );
 }
 
+function buildOutfitFromRefUserLine(userPrompt) {
+  return (
+    "Photoreal outfit edit: dress the person from image 1 in the clothes, shoes, and bag from image 2 — fabric worn on the body only. " +
+    "Keep image-1 face, mask, hood/beanie, skin tone, body build, BOTH hand gestures (middle finger / handlebar grip on the SAME hands), motorcycle, road, and background unchanged. " +
+    "Never copy the catalog model face, cap, or hand poses from image 2 (no shush gesture). Remove all retail hang tags and price labels from the worn clothes."
+  ).trim();
+}
+
 function buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
   if (!isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
     return "";
@@ -3642,6 +3665,24 @@ function sanitizeUserPrompt(prompt) {
     cleaned = `${cleaned}${OUTFIT_FROM_REF_CLARIFIER}`;
   }
   if (
+    outfitWearRequest &&
+    !lifestyleRequest &&
+    (isOutfitFromReferencePrompt(cleaned) ||
+      isOutfitFromReferencePrompt(prompt)) &&
+    !/OUTFIT POSE LOCK/i.test(cleaned)
+  ) {
+    cleaned = `${OUTFIT_FROM_REF_POSE_GESTURE_CLARIFIER}${cleaned}`;
+  }
+  if (
+    outfitWearRequest &&
+    !lifestyleRequest &&
+    (isOutfitFromReferencePrompt(cleaned) ||
+      isOutfitFromReferencePrompt(prompt)) &&
+    !/OUTFIT TAG LOCK/i.test(cleaned)
+  ) {
+    cleaned = `${OUTFIT_NO_RETAIL_TAG_CLARIFIER}${cleaned}`;
+  }
+  if (
     !lifestyleRequest &&
     !outfitWearRequest &&
     /\b(tenue|outfit|fringues|habits|vetement|vêtement|change.*(tenue|outfit|habits)|mets.*(tenue|outfit)|put.*outfit|change.*clothes)\b/i.test(
@@ -4279,9 +4320,11 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     !cockpitInteriorReplaceScene &&
     (rawExteriorTraffic || isExteriorTrafficReplacePrompt(userPrompt));
   // Bike swap / ride BEFORE car body-swap — preserve wheelie/cabriole pose.
+  // Outfit-from-ref on a moto photo must NOT route to bike-swap guards.
   const motorcycleRideScene =
     !facialHairOnly &&
     !swap &&
+    !rawOutfitWear &&
     !addVehiclesScene &&
     !cockpitInteriorReplaceScene &&
     !exteriorTrafficScene &&
@@ -4565,14 +4608,16 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     ? cleaned
     : animalScene
       ? cleaned
-      : motorcycleRideScene && motorcycleReplaceFromRef
-        ? buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount)
-        : vehicleReplaceScene
-          ? buildVehicleReplaceUserLine(userPrompt, referenceImageCount)
-          : expandImageEditUserRequest(cleaned, {
-              allowSceneChange: lifestyleScene || fullRewrite,
-              allowCameraChange: cameraChange,
-            });
+      : outfitFromRefScene
+        ? buildOutfitFromRefUserLine(userPrompt)
+        : motorcycleRideScene && motorcycleReplaceFromRef
+          ? buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount)
+          : vehicleReplaceScene
+            ? buildVehicleReplaceUserLine(userPrompt, referenceImageCount)
+            : expandImageEditUserRequest(cleaned, {
+                allowSceneChange: lifestyleScene || fullRewrite,
+                allowCameraChange: cameraChange,
+              });
   const userBlock = weatherAtmosphereScene
     ? `Sky/atmosphere inpaint only — freeze ground and concrete exactly as uploaded. User request: ${cleaned}`
     : animalScene
@@ -4621,7 +4666,8 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const motorcycleReplaceHead = motorcycleReplaceFromRef
     ? buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount)
     : "";
-  const replaceCompactHead = [vehicleReplaceHead, motorcycleReplaceHead]
+  const outfitFromRefHead = outfitFromRefScene ? OUTFIT_FROM_REF_COMPACT_GUARD : "";
+  const replaceCompactHead = [vehicleReplaceHead, motorcycleReplaceHead, outfitFromRefHead]
     .filter(Boolean)
     .join(" ")
     .replace(/\s+/g, " ")
@@ -4692,6 +4738,20 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
     return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
   })();
+  const compactOutfitFromRefCore = (() => {
+    if (!outfitFromRefScene) return "";
+    const head = [
+      OUTFIT_FROM_REF_COMPACT_GUARD,
+      "OUTFIT POSE LOCK: photo-1 hand gestures only — never catalog shush from image 2.",
+      "OUTFIT TAG LOCK: no hang tags or price labels on worn clothes.",
+    ]
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const rawUser = buildOutfitFromRefUserLine(userPrompt);
+    const budget = Math.max(80, MAX_FINAL_PROMPT - head.length - 24);
+    return `${head} User request: ${rawUser.slice(0, budget)}`.trim();
+  })();
   const compactCockpitCore = (() => {
     if (!cockpitInteriorReplaceScene) return "";
     const genHint = vehicleIdentityHint(userPrompt);
@@ -4727,9 +4787,11 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           ? [compactCockpitCore, core].filter(Boolean)
           : vehicleReplaceScene
             ? [compactVehicleReplaceCore, core].filter(Boolean)
-            : motorcycleCompactSwap
-              ? [compactMotorcycleReplaceCore, core].filter(Boolean)
-              : [core]
+            : outfitFromRefScene
+              ? [compactOutfitFromRefCore, core].filter(Boolean)
+              : motorcycleCompactSwap
+                ? [compactMotorcycleReplaceCore, core].filter(Boolean)
+                : [core]
       : localObjectScene
         ? [`${core} ${literal} ${suffix}`, `${core} ${literal}`, core]
         : [
@@ -4970,6 +5032,8 @@ module.exports = {
   isMotorcycleReplacePrompt,
   isMotorcycleReplaceFromReferencePrompt,
   isMotorcycleSeatedUserPrompt,
+  isOutfitFromReferencePrompt,
+  isOutfitWearPrompt,
   isMotorcycleWheelOnVehiclePrompt,
   motorcycleWheelContactHint,
   isLocalObjectEditPrompt,
