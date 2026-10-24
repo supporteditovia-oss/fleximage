@@ -40,6 +40,7 @@ Client (Vite + React)     →  /api/* (Vercel serverless)
 | `docs/formation-collegue/` | **Playbook fondateur** (funnel, onboarding, ads) |
 | `.cursor/rules/` | Règles workspace (playbook, graphify) |
 | `.cursor/skills/` | Skills projet (token-shield, find-skills, frontend-design, **impeccable**…) |
+| `.agents/skills/task-observer/` | **Task Observer** (source **uniquement** `rebelytics/one-skill-to-rule-them-all`, via `skills-lock.json`) |
 | `graphify-out/` | Graphe code (si présent) — `graphify query "…"` avant gros grep |
 
 ---
@@ -59,6 +60,8 @@ Client (Vite + React)     →  /api/* (Vercel serverless)
 | `npx skills find <query>` | Découvrir skills (skill **find-skills**) |
 | `npx impeccable detect client/src/…` | Contrôle design UI (anti-slop, a11y, typo) |
 | `npx impeccable install -y --project --providers=cursor` | (Re)installer skill + binaire moteur |
+| `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer -y -a cursor` | (Re)installer **Task Observer** — **projet seulement** (sans `-g`) |
+| `npx skills experimental_install` | Restaurer les skills verrouillés dans `skills-lock.json` |
 
 Variables : voir `.env.example` (Supabase, Stripe, OneShot, R2, providers vidéo).
 
@@ -132,3 +135,57 @@ node --test api/_lib/vehicle-moto-reference-catalog.test.js
 - Ne pas lire `package-lock.json` / binaires / `client/public/wasm/` sauf tâche WASM explicite.
 - Ne pas refactorer `prompt-guard.js` en dehors du besoin moto/voiture/tenue demandé.
 - `new-sas-plant/` : sandbox séparé — ignorer sauf consigne explicite.
+
+---
+
+## Task Observer (dernier skill projet — leçons isolées par repo)
+
+- **Source autorisée** : `rebelytics/one-skill-to-rule-them-all` seulement (pas skills.sh alternatif, pas fork, pas copie manuelle d’un autre dépôt).
+- **Scope** : installation **projet** (`./.agents/skills/task-observer`, **jamais** `-g` / global) pour que `skill-observations/` reste dans ce repo, séparé des autres projets.
+- **Bundle** : conserver `SKILL.md`, `references/` et `scripts/` ensemble (install via la commande ci-dessus).
+
+### Bloc d’activation (AGENTS.md — template v3.8.0)
+
+```text
+(task-observer activation block — template of v3.8.0)
+Before the first tool call of any session — and before writing or
+proposing a plan, not merely before executing one — invoke the
+task-observer skill AND execute its Session Start Protocol (storage
+check, frontmatter scan, review trigger). Loading the skill and running
+the protocol are separate steps; a session that loads the file and stops
+has activated nothing. Any turn that will involve a tool call counts; do
+not classify the session as "too simple" from its opening message.
+A step you did not run is reported before the answer, in one line — never
+after it, where it reads as a suggestion. If the skill does not resolve on
+this turn, say which probe told you so (the skill listing, or the skill
+directory on disk), re-check the listing on every later turn that makes a
+tool call, and run the protocol the first time it resolves — a "not
+installed" verdict holds for one turn.
+
+Select skills on the DECISION the request is about, not on the artefact it
+arrived as. Name what the user is deciding, then match the installed skill
+descriptions against that — a request handed over as a file to review
+still needs the skill whose description names its subject.
+
+After completing each task, list the observation records written this
+session in the same turn and report a one-line summary from that listing
+(ids and titles, or "none logged and why") — never from memory of
+writing them.
+
+The task-observer workspace for this project is:
+  /workspace
+Every path the skill uses derives from that root:
+  /workspace/skill-observations/observation-log/
+  /workspace/skill-observations/cross-cutting-principles.md
+  /workspace/skill-updates/
+  /workspace/skill-updates/PENDING.md
+Never resolve these from cwd inside an ephemeral checkout (worktree, clone temporaire).
+
+The user's repositories live under:
+  /workspace
+
+A subagent dispatched by a session that already runs this protocol does
+not run it again and does not write to the log; the controller observes.
+```
+
+Référence complète : `.agents/skills/task-observer/references/environments.md`.
