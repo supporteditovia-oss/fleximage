@@ -102,6 +102,9 @@ test("TMAX 560 POV swap locks occupancy, yaw, and factory model", () => {
     { referenceImageCount: 1 },
   );
   assert.match(prompt, /TMAX LOCK|TMAX 560/i);
+  assert.match(prompt, /COCKPIT LOCK|analog speedo|monochrome LCD/i);
+  assert.match(prompt, /Quad Lock|phone mount.*OPTIONAL|omit unless/i);
+  assert.match(prompt, /FORBIDDEN full-width touchscreen|full-width touchscreen/i);
   assert.match(prompt, /EMPTY CONTROLS|RIDER OCCUPANCY/i);
   assert.match(prompt, /HANDLEBAR YAW|turned left/i);
   assert.match(prompt, /mirrors reflect|scenery only|NEVER reflect rider/i);

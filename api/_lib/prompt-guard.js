@@ -682,9 +682,11 @@ function motorcycleModelHint(prompt) {
         ? String(variant[2]).replace(/\s+/g, "").toUpperCase()
         : "560";
     return (
-      ` (TMAX LOCK: real factory Yamaha TMAX ${ver} maxi-scooter — EXACT production body, twin LED front, tall windscreen, wide digital dash, wide floorboards, 15\" wheels, FACTORY TMAX rim style (NOT Zip SP cyan rims), Yamaha + TMAX ${ver} badges letter-perfect, real mirror stems/glass shape of TMAX ${ver}. ` +
-      "Adult scale when a rider is visible; POV shots without rider keep empty grips. " +
-      "FORBIDDEN: fictional/sci-fi scooter, small Zip body, invented dash UI, toy scale, burnt AI plastic.)"
+      ` (TMAX LOCK: real factory Yamaha TMAX ${ver} maxi-scooter — EXACT production maxi body, twin front lights, smoked tall windscreen, wide floorboards, 15\" wheels, FACTORY TMAX rim style (NOT Zip SP cyan rims). ` +
+      `COCKPIT LOCK (critical for POV/guidon): authentic TMAX ${ver} rider view — LEFT analog speedo (km/h), RIGHT analog tach (x1000 RPM), SMALL central monochrome LCD trip panel (time/temp/odo) — FORBIDDEN full-width touchscreen/tablet cluster. Silver Yamaha tuning-fork on bar yoke, italic TMAX badge, round ignition ring (SEAT OPEN/OFF/LOCK labels), honeycomb-textured lower console plastic, brake-fluid reservoir on the bar. ` +
+      "Blue Quad Lock phone mount is OPTIONAL accessory only — omit unless user or reference image shows it; never paint the dash blue. " +
+      "Adult scale when a rider is visible; POV without rider = empty grips, mirrors reflect scenery only. " +
+      "FORBIDDEN: fictional/sci-fi scooter, Zip body, invented UI, toy scale, burnt AI plastic.)"
     );
   }
   if (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125|a55yz|a55\s*yz)\b/.test(text)) {

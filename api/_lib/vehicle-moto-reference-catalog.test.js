@@ -9,6 +9,10 @@ test("detects Yamaha YZ125 catalog entry", () => {
   assert.equal(detectCatalogModel("Remplace la moto par une Yamaha 125 YZ")?.id, "yamaha-yz125");
 });
 
+test("detects Yamaha TMAX 560 catalog entry", () => {
+  assert.equal(detectCatalogModel("Remplace la moto par un Yamaha TMAX 560")?.id, "yamaha-tmax560");
+});
+
 test("enriches image urls with catalog angles", () => {
   const resolveUrl = (p) => `https://example.com${p}`;
   const { urls, promptInject, catalogId, addedCount } =
