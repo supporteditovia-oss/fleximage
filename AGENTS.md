@@ -39,7 +39,7 @@ Client (Vite + React)     →  /api/* (Vercel serverless)
 | `script/` | Build Vercel, SEO statique, Stripe, purge |
 | `docs/formation-collegue/` | **Playbook fondateur** (funnel, onboarding, ads) |
 | `.cursor/rules/` | Règles workspace (playbook, graphify) |
-| `.cursor/skills/` | Skills projet (token-shield, find-skills, frontend-design…) |
+| `.cursor/skills/` | Skills projet (token-shield, find-skills, frontend-design, **impeccable**…) |
 | `graphify-out/` | Graphe code (si présent) — `graphify query "…"` avant gros grep |
 
 ---
@@ -57,6 +57,8 @@ Client (Vite + React)     →  /api/* (Vercel serverless)
 | `npm run db:push` | Drizzle → DB |
 | `graphify query "…"` | Cartographie code (règle `.cursor/rules/graphify.mdc`) |
 | `npx skills find <query>` | Découvrir skills (skill **find-skills**) |
+| `npx impeccable detect client/src/…` | Contrôle design UI (anti-slop, a11y, typo) |
+| `npx impeccable install -y --project --providers=cursor` | (Re)installer skill + binaire moteur |
 
 Variables : voir `.env.example` (Supabase, Stripe, OneShot, R2, providers vidéo).
 
@@ -81,6 +83,11 @@ Variables : voir `.env.example` (Supabase, Stripe, OneShot, R2, providers vidéo
 ### Découverte (**find-skills**)
 - Sur un **nouveau besoin** : `npx skills find …` / skills.sh **avant** de proposer architecture ou grosse implémentation.
 
+### UI / design (**Impeccable**)
+- Skill installé : `.cursor/skills/impeccable/` (+ global `~/.cursor/skills/impeccable`).
+- **Après chaque changement d’interface** : lancer `npx impeccable detect` sur les fichiers touchés (`client/src/…`) ou l’URL locale si le dev server tourne ; corriger les findings **primary** avant de dire « c’est fini ».
+- Exit `2` = problèmes détectés ; exit `0` = pas de finding primary (scan partiel sur seul `.tsx` — préférer URL/build HTML pour règles complètes si besoin).
+
 ### Code & PR (Cloud Agent)
 - Branches : `cursor/<description>-bcf8`.
 - PR via outil **ManagePullRequest** (pas `gh pr create` pour ouvrir).
@@ -92,7 +99,7 @@ Variables : voir `.env.example` (Supabase, Stripe, OneShot, R2, providers vidéo
 - Prioriser la **plus grosse fuite du funnel**, pas la feature la plus visible.
 
 ### Exploration code
-- **graphify** en premier** si `graphify-out/graph.json` existe ; sinon grep ciblé.
+- **graphify en premier** si `graphify-out/graph.json` existe ; sinon grep ciblé.
 - Après modif de fichiers code : `graphify update .` (AST, sans coût API).
 
 ### Prompts image (moto, voiture, tenue)
