@@ -477,8 +477,8 @@ const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
   "RIDER SCALE LOCK (absolute): the person keeps the EXACT body height, head size, torso, and outfit volume from image 1 — NEVER upscale or enlarge the human. " +
   "BIKE SLOT LOCK (critical): the NEW motorcycle occupies the SAME position, lean angle, wheel steering, and tire contact patches on the road as the original bike in image 1 — same distance to camera, same crop footprint. Image 2 = model/color/parts identity ONLY — NOT a blown-up catalog hero or XXL studio bike pasted over the scene. " +
   "REAL-WORLD PROPORTION LOCK: believable adult-on-machine scale (Tracer/YZ/TMAX vs real rider) INSIDE that original bike slot — never a bike taller than the rider's head to sky, never wider than the original bike silhouette in the photo. " +
-  "HAND GESTURE LOCK: preserve EXACT hand roles from image 1 — if one hand was raised (middle finger / gesture OFF the bar), keep that SAME hand and gesture; the OTHER hand wraps the NEW grip. " +
-  "HANDLEBAR GRIP LOCK: the hand that was on the old bar MUST touch the NEW visible grip — adjust arm reach only for that hand; gesture hand stays OFF the bar. NEVER grip empty air at the old mini-bar position. " +
+  "HANDLEBAR YAW + RIDER OCCUPANCY: same bar rotation as image 1; no hands in upload ⇒ no hands/mirror arms; if hands visible preserve exact roles only. " +
+  "HANDLEBAR GRIP LOCK (only when upload shows hands): grip hand on NEW rubber; gesture hand OFF bar if upload had gesture. " +
   "BIKE MERGE + OCCLUSION LOCK (critical): inpaint ONLY inside the original motorcycle silhouette in image 1 — alpha-composite tree, grass, sky, walls, and background back over any new-bike pixels outside that upload footprint. " +
   "VISIBILITY LOCK: if tail, rear wheel, exhaust, or fairing was hidden behind a tree trunk, wall, crop, or prop in image 1, the replacement MUST stay equally hidden — never rotate or re-pose to reveal the full catalog profile. " +
   "Same viewing direction, same lean, same overlap with the tree/object, same partial visibility at frame edges. Image 2 = paint/parts identity only, NOT a new camera angle. " +
@@ -496,6 +496,15 @@ const MOTORCYCLE_REF2_SCENE_FORBIDDEN_CLARIFIER =
 
 const MOTORCYCLE_PARKED_LEAN_CLARIFIER =
   " (PARKED LEAN LOCK — when image 1 shows a bike on kickstand or leaning on a tree/wall: keep that EXACT support — same trunk overlap on fairing/seat, same hidden rear sections, same grass shadow — only change the machine's model livery.)";
+
+const MOTORCYCLE_HANDLEBAR_YAW_CLARIFIER =
+  " (HANDLEBAR YAW LOCK — critical: keep the IDENTICAL handlebar rotation/steering angle as image 1 — if the bars are turned left, they stay turned left; if slightly off-center, keep that exact yaw. FORBIDDEN: straightening the bars to perfect symmetry when the upload was turned.)";
+
+const MOTORCYCLE_RIDER_OCCUPANCY_CLARIFIER =
+  " (RIDER OCCUPANCY LOCK — critical: mirror image 1 exactly. If upload shows ZERO human hands/arms/body in frame → output ZERO hands, arms, fingers, sleeves, or gestures on or near the grips; empty grips/rubber OK. Side mirrors may show road/trees/sky BEHIND the bike only — NEVER reflect rider arms, hands, middle finger, or body. If upload DOES show hands, preserve ONLY those exact roles — never invent an extra hand or new gesture.)";
+
+const MOTORCYCLE_EMPTY_CONTROLS_CLARIFIER =
+  " (EMPTY CONTROLS LOCK — POV/handlebar swap with no rider in upload: no invented pilot, no gloves, no fingers on bars, no offensive gestures, no arms in mirror glass — factory mirrors reflect the scenery only.)";
 
 const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
   " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, the hand that was ON the bar MUST physically contact the NEW motorcycle's real grip — knuckles on rubber, brake/clutch perch visible. " +
@@ -673,9 +682,9 @@ function motorcycleModelHint(prompt) {
         ? String(variant[2]).replace(/\s+/g, "").toUpperCase()
         : "560";
     return (
-      ` (TMAX LOCK: real Yamaha TMAX ${ver} maxi-scooter — LONG heavy body, wide floorboards, tall thick seat, large 15"-class wheels with FACTORY TMAX rim style (NOT cyan/blue Zip SP rims), correct twin headlight/fairing of current TMAX, Yamaha + TMAX badges letter-perfect. ` +
-      "Adult rider sits IN a big scooter — bike length roughly from rider hips past the knees to a long nose. " +
-      "FORBIDDEN: small city scooter, Zip SP body, blue/cyan Zip rims, Zip stickers, toy scale, dangling keys, burnt AI plastic.)"
+      ` (TMAX LOCK: real factory Yamaha TMAX ${ver} maxi-scooter — EXACT production body, twin LED front, tall windscreen, wide digital dash, wide floorboards, 15\" wheels, FACTORY TMAX rim style (NOT Zip SP cyan rims), Yamaha + TMAX ${ver} badges letter-perfect, real mirror stems/glass shape of TMAX ${ver}. ` +
+      "Adult scale when a rider is visible; POV shots without rider keep empty grips. " +
+      "FORBIDDEN: fictional/sci-fi scooter, small Zip body, invented dash UI, toy scale, burnt AI plastic.)"
     );
   }
   if (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125|a55yz|a55\s*yz)\b/.test(text)) {
@@ -1836,6 +1845,33 @@ function isMotorcycleBikeMention(prompt) {
 }
 
 /** User wants to be seated ON a bike realistically (not a bike-only swap). */
+/** Handlebar / rider-seat POV (bars + dash + road — often no visible rider limbs). */
+function isMotorcycleHandlebarPovPrompt(prompt) {
+  const text = normalizePromptText(prompt);
+  if (
+    /\b(pov|premiere personne|first[- ]person|vue guidon|handlebar view|camera guidon|depuis le guidon|from the handlebars|subjective|selfie guidon|photo guidon)\b/.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (
+    isMotorcycleReplacePrompt(prompt) &&
+    /\b(guidon|handlebar|tableau de bord|dashboard|compteur|instrument)\b/.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** User explicitly wants rider hands/body/gesture in the result. */
+function isMotorcycleRiderBodyExplicitPrompt(prompt) {
+  const text = normalizePromptText(prompt);
+  return /\b(moi|me|je|myself|main|mains|hands|bras|arms|doigt|geste|middle finger|pilote|rider|ass(?:is|ise|ied)|tenir le guidon|sur la moto)\b/.test(
+    text,
+  );
+}
+
 function isMotorcycleSeatedUserPrompt(prompt) {
   if (isMotorcycleReplacePrompt(prompt)) return false;
   if (!isMotorcycleBikeMention(prompt)) return false;
@@ -2595,14 +2631,9 @@ function buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount = 0) 
   if (!isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
     return "";
   }
-  const bikeHint = motorcycleModelHint(userPrompt);
   return (
-    `TWO-PHOTO BIKE SWAP: image1=scene+rider pose+foot contact lock, image2=exact target motorcycle (plastics/color/wheels/badges). ` +
-    `${MOTORCYCLE_BODY_FROM_REFERENCE_GUARD} ` +
-    `${bikeHint || ""}`
-  )
-    .replace(/\s+/g, " ")
-    .trim();
+    "TWO-PHOTO BIKE SWAP: image1=scene+handlebar yaw+occupancy lock, image2=motorcycle look only (not image2 scene)."
+  ).trim();
 }
 
 function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
@@ -2613,11 +2644,11 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   return (
     "Photoreal edit: transplant the EXACT motorcycle LOOK from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
     "Image 1 keeps background, lighting, camera angle, tree/grass, kickstand/lean, and crop; NEVER import image 2's scene or viewing angle. " +
-    "If a rider is present, keep their exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
-    "If image 1 is bike-only (no person), keep the same parked/leaning support against tree or kickstand — do not stand the bike up for a catalog side view. " +
+    "Keep the EXACT handlebar steering yaw from image 1 (turned left stays turned left). " +
+    "RIDER OCCUPANCY: if image 1 shows no hands/arms/body, add NONE — empty grips OK, mirrors reflect road/trees only (no arms, no middle finger). If hands were visible, preserve only those exact roles on the NEW grips. " +
+    "If image 1 is bike-only POV, keep the same parked view — do not invent a rider. " +
     "New bike in the SAME position and road footprint as the original — image 2 for model look only, never XXL catalog scale. " +
-    "MERGE into image 1: preserve exact partial visibility — parts hidden by tree/wall/crop in image 1 stay hidden on the new bike; never reveal the full rear if upload did not show it. " +
-    "Grip hand on the NEW visible handlebar; gesture hand stays OFF the bar as in image 1." +
+    "MERGE into image 1: preserve exact partial visibility — parts hidden by tree/wall/crop in image 1 stay hidden on the new bike; never reveal the full rear if upload did not show it." +
     (hint ? ` ${hint}` : "")
   ).trim();
 }
@@ -3572,14 +3603,37 @@ function sanitizeUserPrompt(prompt) {
     if (wheelContact && !/WHEEL CONTACT LOCK/i.test(cleaned)) {
       cleaned = `${wheelContact}${cleaned}`;
     }
-    if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
-      cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
+    if (!/RIDER OCCUPANCY LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_RIDER_OCCUPANCY_CLARIFIER}${cleaned}`;
+    }
+    if (!/HANDLEBAR YAW LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_HANDLEBAR_YAW_CLARIFIER}${cleaned}`;
+    }
+    const riderBodyExplicit =
+      isMotorcycleRiderBodyExplicitPrompt(cleaned) ||
+      isMotorcycleRiderBodyExplicitPrompt(prompt) ||
+      isMotorcycleWheelOnVehiclePrompt(cleaned) ||
+      isMotorcycleWheelOnVehiclePrompt(prompt);
+    const handlebarPov =
+      isMotorcycleHandlebarPovPrompt(cleaned) || isMotorcycleHandlebarPovPrompt(prompt);
+    if (riderBodyExplicit) {
+      if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
+      }
+      if (!/HAND GESTURE LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
+      }
+    } else if (
+      handlebarPov ||
+      isMotorcycleReplacePrompt(cleaned) ||
+      isMotorcycleReplacePrompt(prompt)
+    ) {
+      if (!/EMPTY CONTROLS LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_EMPTY_CONTROLS_CLARIFIER}${cleaned}`;
+      }
     }
     if (!/BIKE SIZE LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_ANTI_OVERSIZE_CLARIFIER}${cleaned}`;
-    }
-    if (!/HAND GESTURE LOCK/i.test(cleaned)) {
-      cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
     }
     if (!outfitWearRequest && !/RIDER CLOTHING LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_RIDER_CLOTHING_TEXT_CLARIFIER}${cleaned}`;
@@ -3607,7 +3661,7 @@ function sanitizeUserPrompt(prompt) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
-    if (!/RIDE LOCK/i.test(cleaned)) {
+    if (riderBodyExplicit && !/RIDE LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_RIDE_CLARIFIER}`;
     }
     if (!/BIKE SCENE LOCK:/i.test(cleaned)) {
@@ -4824,11 +4878,12 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     const head = [
       "INPAINT REPLACE: same direction (no mirror flip), same camera angle/scale/ground slot, scene pixels frozen.",
       bikeHint,
+      "RIDER OCCUPANCY: no hands in upload ⇒ no hands/arms/gestures; mirrors = scenery only.",
+      "HANDLEBAR YAW: same bar steering rotation as image 1 — never straighten.",
       "IMAGE 2 SCENE FORBIDDEN: image2=parts/color only — never image2 background, tree, or catalog side-view pose.",
       "BIKE MERGE + OCCLUSION LOCK: inpaint inside upload bike mask — tree/background unchanged; hidden tail/rear stays hidden.",
       "PARKED LEAN LOCK: same kickstand/tree lean and trunk overlap as image 1.",
       "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
-      "HAND GESTURE LOCK: preserve middle finger / grip roles from upload.",
       motorcycleReplaceHead,
       motorcycleReplaceFromRef
         ? "Use image 2 for motorcycle identity only — not catalog giant scale."
