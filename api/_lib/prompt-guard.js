@@ -472,6 +472,12 @@ const MOTORCYCLE_ANTI_OVERSIZE_CLARIFIER =
 const MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER =
   " (HAND GESTURE LOCK — copy image 1 exactly: middle finger / raised hand stays on the SAME side OFF the bar; grip hand on NEW handlebar. Do not remove gestures unless user asked.)";
 
+const MOTORCYCLE_RIDER_CLOTHING_TEXT_CLARIFIER =
+  " (RIDER CLOTHING LOCK — bike swap ONLY: keep the upload vest/hoodie/pants exactly — same colors and panels; NEVER invent new chest/back text (FORBIDDEN: STREET, SPORT, random slogans, gibberish letters on jacket). Change clothes ONLY when user asked outfit/tenue.)";
+
+const MOTORCYCLE_YZ_GRAPHICS_CLARIFIER =
+  " (YZ GRAPHICS LOCK — Yamaha YZ125/YZ shrouds: crisp factory letter-perfect \"YZ\" (Y and Z both readable) in correct Yamaha MX font and placement — FORBIDDEN partial Z, fake alphabet soup, unreadable decal gibberish.)";
+
 const VEHICLE_REPLACE_CLARIFIER =
   " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
   "BACKGROUND LOCK: shop/shutters/lights/pump/pavement/car-wash brushes UNCHANGED — pixel-stable outside the car mask. " +
@@ -641,7 +647,8 @@ function motorcycleModelHint(prompt) {
     return (
       " (YZ125 LOCK: real Yamaha YZ125 full-size motocross — factory MX wheelbase/seat height (~96cm seat), long-travel gold forks, knobby tires, expansion chamber exhaust, RENTHAL-era bar pad if shown in reference. " +
       "Adult rider unchanged size from image 1 — natural straddle, one foot on ground OK; bike in SAME road slot as original (NOT XXL, NOT catalog giant). " +
-      "Copy exact blue/white plastics and badges from image 2 when provided. FORBIDDEN: street-scooter shape, XXL paste-on bike, enlarged rider, burnt HDR blue.)"
+      "Factory shrouds: letter-perfect \"YZ\" logo (both letters) — never gibberish Z-only text. " +
+      "Copy exact blue/white plastics and badges from image 2 or catalog refs when provided. FORBIDDEN: street-scooter shape, XXL paste-on bike, invented chest text on rider, burnt HDR blue.)"
     );
   }
   if (/\b(tracer\s*7|tracer7|tracer\s*9|tracer9)\b/.test(text)) {
@@ -3517,6 +3524,16 @@ function sanitizeUserPrompt(prompt) {
     }
     if (!/HAND GESTURE LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
+    }
+    if (!outfitWearRequest && !/RIDER CLOTHING LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_RIDER_CLOTHING_TEXT_CLARIFIER}${cleaned}`;
+    }
+    if (
+      (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125)\b/i.test(cleaned) ||
+        /\b(yz\s*125|yz125|125\s*yz|yamaha\s*125)\b/i.test(prompt)) &&
+      !/YZ GRAPHICS LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_YZ_GRAPHICS_CLARIFIER}${cleaned}`;
     }
     // Bike identity + scale FIRST (2900-char budget) — prepend so they survive the cut.
     const bikeHint = motorcycleModelHint(cleaned) || motorcycleModelHint(prompt);

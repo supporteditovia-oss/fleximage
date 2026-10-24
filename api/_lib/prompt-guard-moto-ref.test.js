@@ -39,6 +39,15 @@ test("two-photo YZ125 swap prioritizes scale, seating, and image 2 bike", () => 
   assert.match(prompt, /XXL|BIKE SLOT LOCK/i);
 });
 
+test("YZ125 swap locks YZ graphics and rider clothing text", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la moto par une Yamaha 125 YZ",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /YZ GRAPHICS LOCK|letter-perfect \"YZ\"/i);
+  assert.match(prompt, /RIDER CLOTHING LOCK|STREET/i);
+});
+
 test("single-photo bike replace prepends anti-XXL and gesture locks", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace la moto par une Yamaha Tracer 7",
