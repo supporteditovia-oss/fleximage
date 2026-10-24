@@ -1,0 +1,17 @@
+---
+description: Règles inpainting / remplacement véhicule (moto, voiture) sur photo existante
+globs:
+  - api/_lib/prompt-guard.js
+  - api/_lib/handlers/generate-direct.js
+  - api/_lib/vehicle-*.js
+---
+
+# Inpainting / remplacement véhicule
+
+Lors d’un swap corps véhicule ou moto sur une photo uploadée :
+
+1. **Orientation** — même direction que l’original ; interdit miroir / sens inverse / avant-arrière inversé.
+2. **Perspective** — même angle caméra, échelle, position au sol vs décor (arbres, route).
+3. **Scène** — ne changer que le modèle ; arrière-plan, lumière, ombres au sol inchangés (inpaint dans le masque véhicule).
+
+Implémentation : `VEHICLE_INPAINT_REPLACE_*` et `VEHICLE_INPAINT_BRIEF` dans `api/_lib/prompt-guard.js`. Toute modif de ces flux doit préserver ces locks et les tests `prompt-guard-moto-ref.test.js` / `prompt-guard-vehicle-ref.test.js`.
