@@ -723,6 +723,13 @@ html.luxeflexia-video-page .floating-header::before {
   gap: 0.65rem;
 }
 
+.via-cloud-prep-hint {
+  margin: -0.25rem 0 0.65rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: rgba(92, 79, 56, 0.85);
+}
+
 .via-scene-help {
   margin: -0.35rem 0 0.85rem;
   padding: 0.75rem 0.85rem;

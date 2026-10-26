@@ -417,6 +417,13 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               )}
             </div>
 
+            {props.videoPreview && props.isVideoCloudSync ? (
+              <p className="via-cloud-prep-hint" role="status">
+                Préparation cloud en arrière-plan… tu peux lancer la
+                transformation dès que ta vidéo est visible.
+              </p>
+            ) : null}
+
             <div className="via-option-block via-option-block--prominent">
               <p className="via-option-block__label">Qualité</p>
               <div
@@ -518,16 +525,13 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               type="button"
               className="via-cta"
               disabled={
-                !props.canGenerateV2V || props.v2vPending || props.videoImportBusy
+                !props.canGenerateV2V ||
+                props.v2vPending ||
+                props.videoImportBusy
               }
               onClick={() => void props.onGenerateV2V()}
             >
-              {props.isVideoCloudSync ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Envoi…
-                </>
-              ) : props.v2vPending ? (
+              {props.v2vPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Génération…

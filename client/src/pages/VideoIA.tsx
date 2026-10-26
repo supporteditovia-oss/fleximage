@@ -400,7 +400,8 @@ export default function VideoIA() {
   const hasVideoReady = Boolean(videoSource || localVideoFile);
   const videoImportBusy = isVideoReading && !videoPreview;
   const motionRefReady =
-    v2vIntent !== "motion" || Boolean(refImageBase64 || refImagePreview);
+    v2vIntent !== "motion" ||
+    Boolean(refImageBase64 || refImagePreview || localVideoFile || videoSource);
   const sceneLuxeReady =
     v2vIntent !== "scene" ||
     swapPrompt.trim().length >= 5 ||
@@ -514,6 +515,7 @@ export default function VideoIA() {
     const uploadGen = ++videoUploadGenRef.current;
     setIsVideoReading(true);
     setIsVideoCloudSync(false);
+    setIsSubmitting(false);
     setVideoSource(null);
     setLocalVideoFile(null);
     setVideoDurationSec(null);
@@ -828,80 +830,83 @@ export default function VideoIA() {
     if (isSubmitting || generateVideo.isPending || taskId) return;
     if (!canGenerateV2V) return;
 
-    let source = videoSource;
-    if (!source && localVideoFile) {
-      setIsVideoCloudSync(true);
-      try {
-        source = await prepareVideoFileForStudio(localVideoFile);
-        setVideoSource(source);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
-        toast({
-          variant: "destructive",
-          title: "Envoi impossible",
-          description: message,
-        });
-        return;
-      } finally {
-        setIsVideoCloudSync(false);
-      }
-    }
-    if (!source) return;
-
-    if (source.mode === "inline") {
-      const approxBytes = Math.floor((source.dataUrl.length * 3) / 4);
-      if (approxBytes > 3.5 * 1024 * 1024) {
-        toast({
-          variant: "destructive",
-          title: "Vidéo trop lourde",
-          description:
-            "L'envoi direct n'a pas abouti. Réessaie en Wi‑Fi (upload cloud) ou avec une vidéo plus légère en 720p.",
-        });
-        return;
-      }
-    }
-
-    const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
-
-    let referenceImages: string[] | undefined;
-    let motionRefB64 = refImageBase64;
-    if (v2vIntent === "motion" && !motionRefB64 && localVideoFile) {
-      try {
-        const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
-        const frameCompressed = await compressImageForGeneration(frameFile);
-        motionRefB64 = await fileToBase64(frameCompressed);
-        setRefImageBase64(motionRefB64);
-        setRefImageIsCustom(false);
-      } catch {
-        toast({
-          variant: "destructive",
-          title: "Photo requise",
-          description:
-            "Pour Mouvement, ajoute ta photo (+ Ta photo) ou réimporte la vidéo.",
-        });
-        return;
-      }
-    }
-    if (v2vIntent === "scene" && sceneLuxePhotos.length > 0) {
-      referenceImages = sceneLuxePhotos.map((p) => p.base64);
-    } else if (v2vProvider === "kling_motion" && motionRefB64) {
-      referenceImages = [motionRefB64];
-    }
-
     releaseGenerationLoaderTheme();
     flushSync(() => {
-      setGenerationEstimate(
-        estimateVideoGenerationSeconds({
-          workflow: "video_to_video",
-          v2vProvider,
-          sourceVideoDurationSec: videoDurationSec,
-          preserveSourceAudio: preserveSourceVoice,
-        }),
-      );
       setIsSubmitting(true);
     });
+
     try {
+      let source = videoSource;
+      if (!source && localVideoFile) {
+        setIsVideoCloudSync(true);
+        try {
+          source = await prepareVideoFileForStudio(localVideoFile);
+          setVideoSource(source);
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
+          toast({
+            variant: "destructive",
+            title: "Envoi impossible",
+            description: message,
+          });
+          return;
+        } finally {
+          setIsVideoCloudSync(false);
+        }
+      }
+      if (!source) return;
+
+      if (source.mode === "inline") {
+        const approxBytes = Math.floor((source.dataUrl.length * 3) / 4);
+        if (approxBytes > 3.5 * 1024 * 1024) {
+          toast({
+            variant: "destructive",
+            title: "Vidéo trop lourde",
+            description:
+              "L'envoi direct n'a pas abouti. Réessaie en Wi‑Fi (upload cloud) ou avec une vidéo plus légère en 720p.",
+          });
+          return;
+        }
+      }
+
+      const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
+
+      let referenceImages: string[] | undefined;
+      let motionRefB64 = refImageBase64;
+      if (v2vIntent === "motion" && !motionRefB64 && localVideoFile) {
+        try {
+          const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
+          const frameCompressed = await compressImageForGeneration(frameFile);
+          motionRefB64 = await fileToBase64(frameCompressed);
+          setRefImageBase64(motionRefB64);
+          setRefImageIsCustom(false);
+        } catch {
+          toast({
+            variant: "destructive",
+            title: "Photo requise",
+            description:
+              "Pour Mouvement, ajoute ta photo (+ Ta photo) ou réimporte la vidéo.",
+          });
+          return;
+        }
+      }
+      if (v2vIntent === "scene" && sceneLuxePhotos.length > 0) {
+        referenceImages = sceneLuxePhotos.map((p) => p.base64);
+      } else if (v2vProvider === "kling_motion" && motionRefB64) {
+        referenceImages = [motionRefB64];
+      }
+
+      flushSync(() => {
+        setGenerationEstimate(
+          estimateVideoGenerationSeconds({
+            workflow: "video_to_video",
+            v2vProvider,
+            sourceVideoDurationSec: videoDurationSec,
+            preserveSourceAudio: preserveSourceVoice,
+          }),
+        );
+      });
       const sanitizedPrompt = finalizeV2VPromptForSubmit(
         swapPrompt,
         preserveSourceVoice,
@@ -943,6 +948,7 @@ export default function VideoIA() {
         err instanceof Error ? err.message : "Remplacement impossible";
       toast({ variant: "destructive", title: "Erreur", description: message });
     } finally {
+      setIsVideoCloudSync(false);
       setIsSubmitting(false);
     }
   };
