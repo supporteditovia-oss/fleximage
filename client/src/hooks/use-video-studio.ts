@@ -40,6 +40,7 @@ export interface VideoStudioGenerateInput {
   vehicle_prompt?: string;
   source_video_duration_sec?: number;
   reference_images?: string[];
+  reference_photo_roles?: string[];
   reference_image_url?: string;
   preserve_source_audio?: boolean;
   voice_enabled?: boolean;

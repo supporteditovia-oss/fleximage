@@ -3,7 +3,15 @@ import { Film, Loader2, Trash2, Upload } from "lucide-react";
 import { VideoStudioModePicker } from "@/components/video/VideoStudioModePicker";
 import { VideoStudioPromptField } from "@/components/video/VideoStudioPromptField";
 import { V2VIntentPicker } from "@/components/video/V2VIntentPicker";
+import { SceneLuxePhotosPanel } from "@/components/video/SceneLuxePhotosPanel";
+import { SceneLuxePromptHelp } from "@/components/video/SceneLuxePromptHelp";
 import { VideoVoiceAddon } from "@/components/video/VideoVoiceAddon";
+import { isMotionStudioUiEnabled } from "@/lib/motion-studio-ui";
+import {
+  getVisibleV2VIntentOptions,
+  type V2VIntentOption,
+} from "@/lib/v2v-studio-intent";
+import type { SceneLuxePhotoSlots } from "@/lib/scene-luxe-reference-photos";
 import { VideoSourceVoiceAddon } from "@/components/video/VideoSourceVoiceAddon";
 import type { VideoStudioMode } from "@/lib/video-studio-modes";
 import type { V2VStudioIntent } from "@/lib/v2v-studio-intent";
@@ -76,6 +84,13 @@ export type VideoIAStudioViewProps = {
   refImageIsCustom: boolean;
   refImagePreview: string | null;
   onRefImageUpload: (file: File | null) => void;
+  adminPreviewFeatures?: boolean;
+  sceneLuxeSlots: SceneLuxePhotoSlots;
+  scenePhotosBusy: boolean;
+  onScenePhotoAddAtSlot: (slotIndex: number, file: File) => void;
+  onScenePhotosAddMany: (files: File[]) => void;
+  onScenePhotoRemove: (id: string) => void;
+  onScenePhotoRoleChange: (id: string, role: string) => void;
   preserveSourceVoice: boolean;
   onPreserveSourceVoice: (v: boolean) => void;
   canGenerateV2V: boolean;
@@ -126,6 +141,11 @@ function AspectFormatToggle(props: {
 
 export function VideoIAStudioView(props: VideoIAStudioViewProps) {
   const isI2V = props.workflow === "image_to_video";
+  const adminPreview = props.adminPreviewFeatures === true;
+  const motionUi = isMotionStudioUiEnabled(adminPreview);
+  const v2vIntentOptions: V2VIntentOption[] =
+    getVisibleV2VIntentOptions(adminPreview);
+  const showV2vIntentPicker = v2vIntentOptions.length > 1;
   const aspectPreviewClass =
     props.aspectRatio === "16:9" ? "is-landscape" : "is-portrait";
 
@@ -307,14 +327,25 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
           </>
         ) : (
           <>
-            <div className="via-intent-block via-intent-block--tight">
-              <p className="via-option-block__label">Type</p>
-              <V2VIntentPicker
-                active={props.v2vIntent}
-                onSelect={props.onV2vIntent}
-                variant="cards"
-              />
-            </div>
+            {showV2vIntentPicker ? (
+              <div className="via-intent-block via-intent-block--tight">
+                <p className="via-option-block__label">Type</p>
+                <V2VIntentPicker
+                  active={props.v2vIntent}
+                  onSelect={props.onV2vIntent}
+                  variant="cards"
+                  options={v2vIntentOptions}
+                />
+              </div>
+            ) : null}
+
+            {motionUi && props.v2vIntent === "motion" ? (
+              <p className="via-motion-scope-notice" role="note">
+                <strong>1 photo = 1 personnage remplacé dans la vidéo.</strong>{" "}
+                Scène, caméra et gestes = ta vidéo source. Photo en pied de
+                préférence, clip 3–8 s, plan fixe.
+              </p>
+            ) : null}
 
             <AspectFormatToggle
               aspectRatio={props.aspectRatio}
@@ -413,52 +444,67 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
               onChange={props.onSwapPrompt}
               typewriterIdeas={typewriterIdeas}
               onRandom={randomPrompt}
-              fallbackPlaceholder="Ex. danse TikTok, Dubai de nuit, Urus Mansory…"
+              fallbackPlaceholder="Ex. Remplace ma voiture par une Urus noire — garde le cadrage et la lumière du clip…"
               ariaLabel="Transformation"
             />
 
+            {props.v2vIntent === "scene" ? <SceneLuxePromptHelp /> : null}
+
+            {props.v2vIntent === "scene" ? (
+              <SceneLuxePhotosPanel
+                slots={props.sceneLuxeSlots}
+                busy={props.scenePhotosBusy}
+                onAddAtSlot={props.onScenePhotoAddAtSlot}
+                onAddMany={props.onScenePhotosAddMany}
+                onRemove={props.onScenePhotoRemove}
+                onRoleChange={props.onScenePhotoRoleChange}
+              />
+            ) : null}
+
             {props.videoPreview ? (
               <>
-                <input
-                  ref={props.refImageFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    void props.onRefImageUpload(e.target.files?.[0] ?? null)
-                  }
-                />
-                <div className="via-ref-photo-row">
-                  <button
-                    type="button"
-                    className={`via-upload-zone via-upload-zone--compact ${
-                      props.refImageIsCustom ? "has-file" : ""
-                    }`}
-                    onClick={() => props.refImageFileRef.current?.click()}
-                  >
-                    <span className="via-upload-zone__text">
-                      {props.refImageIsCustom
-                        ? "Changer ta photo"
-                        : props.v2vIntent === "motion"
-                          ? "+ Ta photo (visage / corps à mettre dans la vidéo)"
-                          : "+ Photo bonus (optionnel)"}
-                    </span>
-                  </button>
-                  {props.refImageIsCustom && props.refImagePreview ? (
-                    <>
-                      <div className="via-preview-frame via-preview-frame--thumb">
-                        <img src={props.refImagePreview} alt="" />
-                      </div>
-                      <MediaClearButton
-                        label="Supprimer la photo bonus"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          props.onClearRefImage();
-                        }}
-                      />
-                    </>
-                  ) : null}
-                </div>
+                {motionUi && props.v2vIntent === "motion" ? (
+                  <>
+                    <input
+                      ref={props.refImageFileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        void props.onRefImageUpload(e.target.files?.[0] ?? null)
+                      }
+                    />
+                    <div className="via-ref-photo-row">
+                      <button
+                        type="button"
+                        className={`via-upload-zone via-upload-zone--compact ${
+                          props.refImageIsCustom ? "has-file" : ""
+                        }`}
+                        onClick={() => props.refImageFileRef.current?.click()}
+                      >
+                        <span className="via-upload-zone__text">
+                          {props.refImageIsCustom
+                            ? "Changer ta photo"
+                            : "+ Ta photo (1 personne, en pied si possible)"}
+                        </span>
+                      </button>
+                      {props.refImageIsCustom && props.refImagePreview ? (
+                        <>
+                          <div className="via-preview-frame via-preview-frame--thumb">
+                            <img src={props.refImagePreview} alt="" />
+                          </div>
+                          <MediaClearButton
+                            label="Supprimer la photo"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              props.onClearRefImage();
+                            }}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
 
                 <VideoSourceVoiceAddon
                   enabled={props.preserveSourceVoice}
@@ -466,15 +512,6 @@ export function VideoIAStudioView(props: VideoIAStudioViewProps) {
                   voiceExtraCredit={props.voiceExtraCredit}
                 />
               </>
-            ) : null}
-
-            {props.v2vIntent === "motion" ? (
-              <p className="via-motion-scope-notice" role="note">
-                <strong>1 photo = 1 personnage remplacé dans la vidéo.</strong>{" "}
-                La scène, la caméra et les mouvements restent ceux de ta vidéo
-                source. Avec plusieurs personnes dans le clip, une seule est
-                remplacée (souvent la plus visible).
-              </p>
             ) : null}
 
             <button
