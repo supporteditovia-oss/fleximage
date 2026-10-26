@@ -7,12 +7,14 @@ type V2VIntentPickerProps = {
   active: V2VStudioIntent;
   onSelect: (intent: V2VStudioIntent) => void;
   variant?: "compact" | "cards";
+  options?: typeof V2V_INTENT_OPTIONS;
 };
 
 export function V2VIntentPicker({
   active,
   onSelect,
   variant = "compact",
+  options = V2V_INTENT_OPTIONS,
 }: V2VIntentPickerProps) {
   if (variant === "cards") {
     return (
@@ -21,7 +23,7 @@ export function V2VIntentPicker({
         role="tablist"
         aria-label="Intention Vidéo vers Vidéo"
       >
-        {V2V_INTENT_OPTIONS.map((option) => {
+        {options.map((option) => {
           const Icon = option.icon;
           const isActive = active === option.id;
           return (
@@ -53,7 +55,7 @@ export function V2VIntentPicker({
       role="tablist"
       aria-label="Type de transformation"
     >
-      {V2V_INTENT_OPTIONS.map((option) => {
+      {options.map((option) => {
         const isActive = active === option.id;
         return (
           <button
