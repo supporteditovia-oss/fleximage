@@ -114,9 +114,10 @@ function v2vResolutionLabel(res: VideoUltraResolution): string {
 export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading, isAdmin: studioAdmin } = useV2Access();
-  const { user } = useAuth();
-  /** Mouvement V2V : profil admin + confirmation API /api/v2-access. */
-  const motionAdminEnabled = studioAdmin || adminPreview;
+  const { user, isAdmin: profileAdmin, isLoading: authLoading } = useAuth();
+  /** Mouvement V2V — réservé comptes admin (profil Supabase ou /api/v2-access). */
+  const motionAdminEnabled = profileAdmin || studioAdmin || adminPreview;
+  const motionAccessReady = !authLoading && !v2Loading;
   const voiceStudioAvailable =
     studioAdmin || import.meta.env.DEV || import.meta.env.MODE === "test";
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
@@ -229,16 +230,18 @@ export default function VideoIA() {
     if (raw === "video_to_video" || raw === "image_to_video") {
       setWorkflow(raw);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!motionAccessReady) return;
+    const params = new URLSearchParams(window.location.search);
     const intentFromUrl = parseV2VIntentFromUrl(params.get("intent"));
     if (intentFromUrl) {
       setV2vIntent(coerceV2VStudioIntent(intentFromUrl, motionAdminEnabled));
+      return;
     }
-  }, [motionAdminEnabled]);
-
-  useEffect(() => {
-    if (v2Loading) return;
     setV2vIntent((prev) => coerceV2VStudioIntent(prev, motionAdminEnabled));
-  }, [motionAdminEnabled, v2Loading]);
+  }, [motionAdminEnabled, motionAccessReady]);
 
   const syncV2vUrl = useCallback(
     (intent: V2VStudioIntent) => {
