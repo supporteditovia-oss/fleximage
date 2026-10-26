@@ -115,6 +115,8 @@ export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading, isAdmin: studioAdmin } = useV2Access();
   const { user } = useAuth();
+  /** Mouvement V2V : profil admin + confirmation API /api/v2-access. */
+  const motionAdminEnabled = studioAdmin || adminPreview;
   const voiceStudioAvailable =
     studioAdmin || import.meta.env.DEV || import.meta.env.MODE === "test";
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
@@ -229,13 +231,14 @@ export default function VideoIA() {
     }
     const intentFromUrl = parseV2VIntentFromUrl(params.get("intent"));
     if (intentFromUrl) {
-      setV2vIntent(coerceV2VStudioIntent(intentFromUrl, adminPreview));
+      setV2vIntent(coerceV2VStudioIntent(intentFromUrl, motionAdminEnabled));
     }
-  }, [adminPreview]);
+  }, [motionAdminEnabled]);
 
   useEffect(() => {
-    setV2vIntent((prev) => coerceV2VStudioIntent(prev, adminPreview));
-  }, [adminPreview]);
+    if (v2Loading) return;
+    setV2vIntent((prev) => coerceV2VStudioIntent(prev, motionAdminEnabled));
+  }, [motionAdminEnabled, v2Loading]);
 
   const syncV2vUrl = useCallback(
     (intent: V2VStudioIntent) => {
@@ -249,7 +252,7 @@ export default function VideoIA() {
   );
 
   const handleV2vIntentSelect = (intent: V2VStudioIntent) => {
-    const next = coerceV2VStudioIntent(intent, adminPreview);
+    const next = coerceV2VStudioIntent(intent, motionAdminEnabled);
     setV2vIntent(next);
     syncV2vUrl(next);
   };
@@ -1093,7 +1096,7 @@ export default function VideoIA() {
       refImageIsCustom={refImageIsCustom}
       refImagePreview={refImagePreview}
       onRefImageUpload={handleRefImageUpload}
-      adminPreviewFeatures={adminPreview}
+      adminPreviewFeatures={motionAdminEnabled}
       sceneLuxeSlots={sceneLuxeSlots}
       scenePhotosBusy={scenePhotosBusy}
       onScenePhotoAddAtSlot={handleScenePhotoAddAtSlot}

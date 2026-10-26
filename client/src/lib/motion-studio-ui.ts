@@ -1,4 +1,4 @@
-/** Mouvement (V2V danse / body swap) — visible admin preview uniquement (décision 13 oct). */
-export function isMotionStudioUiEnabled(adminPreview: boolean): boolean {
-  return adminPreview;
+/** Mouvement (V2V danse / body swap) — comptes admin uniquement (décision 13 oct). */
+export function isMotionStudioUiEnabled(motionAdminEnabled: boolean): boolean {
+  return motionAdminEnabled;
 }
