@@ -467,6 +467,17 @@ module.exports = async function handler(req, res) {
       body.v2v_intent === "motion" || body.v2v_intent === "scene"
         ? body.v2v_intent
         : null;
+    if (workflow === "video_to_video" && v2vIntent === "motion" && !isAdmin) {
+      res.status(403).json({
+        code: "V2V_MOTION_ADMIN_ONLY",
+        message: copy(
+          uiLocale,
+          "Le mode Mouvement est réservé aux comptes admin.",
+          "Motion mode is reserved for admin accounts.",
+        ),
+      });
+      return;
+    }
     if (workflow === "image_to_video" && !voiceEnabled) {
       const sanitizedMotion = stripVoiceInstructionsFromPrompt(motionPrompt);
       if (sanitizedMotion.length < 10) {
