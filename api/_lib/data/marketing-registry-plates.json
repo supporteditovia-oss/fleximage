@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "comment": "Plaques autorisées pour le marketing (véhicules réels enregistrés). Remplacer par vos immat ou MARKETING_REGISTRY_PLATES_JSON / MARKETING_PLATE_* sur Vercel.",
+  "entries": [
+    {
+      "id": "lamborghini_aventador_svj",
+      "verifyModel": "Lamborghini Aventador SVJ",
+      "labelMatchers": ["aventador svj", "lamborghini aventador svj"],
+      "plates": {
+        "default": "",
+        "france": "",
+        "spain": "",
+        "dubai": "",
+        "uk": "",
+        "usa": ""
+      }
+    },
+    {
+      "id": "lamborghini_urus",
+      "verifyModel": "Lamborghini Urus",
+      "labelMatchers": ["lamborghini urus", "urus"],
+      "plates": {
+        "default": "",
+        "france": "",
+        "spain": "",
+        "dubai": "",
+        "uk": "",
+        "usa": ""
+      }
+    },
+    {
+      "id": "lamborghini_huracan",
+      "verifyModel": "Lamborghini Huracán",
+      "labelMatchers": ["huracan", "huracán"],
+      "plates": {
+        "default": "",
+        "france": "",
+        "spain": "",
+        "dubai": "",
+        "uk": "",
+        "usa": ""
+      }
+    }
+  ]
+}

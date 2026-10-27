@@ -665,6 +665,13 @@ module.exports = async function handler(req, res) {
             length: studioVehicleDescription.length,
           });
         }
+        const {
+          enrichPromptWithMarketingRegistryPlateAuto,
+        } = require("../marketing-registry-plates");
+        studioVehicleDescription = enrichPromptWithMarketingRegistryPlateAuto(
+          studioVehicleDescription || vehiclePromptRaw,
+        ).slice(0, 500);
+
         sourceAssetUrl = sourceBundle.url;
         const referenceImageUrls = sourceBundle.refs || [];
         referenceImageUrlsStored = referenceImageUrls;
