@@ -666,10 +666,11 @@ module.exports = async function handler(req, res) {
           });
         }
         const {
-          enrichPromptWithMarketingRegistryPlateAuto,
+          enrichLongPromptWithMarketingRegistryPlateAuto,
         } = require("../marketing-registry-plates");
-        studioVehicleDescription = enrichPromptWithMarketingRegistryPlateAuto(
+        studioVehicleDescription = enrichLongPromptWithMarketingRegistryPlateAuto(
           studioVehicleDescription || vehiclePromptRaw,
+          500,
         ).slice(0, 500);
 
         sourceAssetUrl = sourceBundle.url;
