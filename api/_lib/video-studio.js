@@ -407,7 +407,18 @@ function buildAlephSubmitPrompt(
     );
   }
 
-  const combined = parts.join(" ");
+  let combined = parts.join(" ");
+  try {
+    const {
+      buildMarketingRegistryPlateClarifierForPrompt,
+    } = require("./marketing-registry-plates");
+    const registryPlate = buildMarketingRegistryPlateClarifierForPrompt(prompt);
+    if (registryPlate && !/REGISTRY PLATE LOCK:/i.test(combined)) {
+      combined = `${combined}${registryPlate}`.replace(/\s+/g, " ").trim();
+    }
+  } catch {
+    /* optional */
+  }
   return combined.length <= 1980 ? combined : combined.slice(0, 1980);
 }
 

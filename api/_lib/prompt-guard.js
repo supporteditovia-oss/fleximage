@@ -2000,6 +2000,19 @@ function plateLockClarifier(prompt) {
   if (isNonCarLifestylePrompt(prompt)) return "";
   const hasCar = Boolean(parseVehicleSpec(prompt));
   if (!hasCar) return "";
+  try {
+    const {
+      buildMarketingRegistryPlateClarifier,
+    } = require("./marketing-registry-plates");
+    const registryPlate = buildMarketingRegistryPlateClarifier(prompt, {
+      isVehicleReplacePrompt,
+      parseVehicleSpec,
+      detectPlateLocation,
+    });
+    if (registryPlate) return registryPlate;
+  } catch {
+    /* registry optional at build time */
+  }
   const loc = detectPlateLocation(prompt);
   if (loc) {
     return ` (PLATE LOCK: ${loc.label} — ${loc.plate}. Letter-perfect, physically stamped on the bumper only. Never a door sticker saying the city name. Never the wrong country, never gibberish.)`;
