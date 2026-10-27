@@ -296,16 +296,14 @@ async function kickoffVideoStudioProvider(supabase, larp, userId) {
       });
       const avatarPrompt =
         String(larp.final_prompt || "").trim() ||
-        (isI2VAvatarPipelineV2Enabled(meta)
-          ? buildI2VAvatarPrompt({
-              motionPrompt: larp.prompt || userPrompt,
-              cameraMovement: meta.camera_movement,
-              motionIntensity: meta.motion_intensity,
-              style: meta.style,
-              voiceEnabled: meta.voice_enabled === true,
-              voiceText: meta.voice_text,
-            }).trim()
-          : "") ||
+        buildI2VAvatarPrompt({
+          motionPrompt: larp.prompt || userPrompt,
+          cameraMovement: meta.camera_movement,
+          motionIntensity: meta.motion_intensity,
+          style: meta.style,
+          voiceEnabled: meta.voice_enabled === true,
+          voiceText: meta.voice_text,
+        }).trim() ||
         String(providerPrompt || larp.prompt || "").trim();
       const kickoffMetaPatch = { ...meta };
       if (isI2VAvatarPipelineV2Enabled(meta)) {
