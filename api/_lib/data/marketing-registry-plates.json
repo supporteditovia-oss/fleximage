@@ -1,18 +1,27 @@
 {
-  "version": 1,
-  "comment": "Plaques autorisées pour le marketing (véhicules réels enregistrés). Remplacer par vos immat ou MARKETING_REGISTRY_PLATES_JSON / MARKETING_PLATE_* sur Vercel.",
+  "version": 2,
+  "comment": "Pré-plaques marketing par modèle (toutes voitures). Clés plates = juridiction lue sur la SOURCE (EU_F = bande bleue F, EU_E = E, UAE, US…). Env: MARKETING_PLATE_<ID> ou MARKETING_PLATE_<ID>_EU_F. Toute voiture reconnue par parseVehicleSpec obtient un id auto (slug du label) même sans ligne ici.",
+  "jurisdictionHint": {
+    "EU_F": "France — bande UE F, format SIV",
+    "EU_E": "Espagne — bande E",
+    "EU_I": "Italie — bande I",
+    "EU_D": "Allemagne — bande D",
+    "EU_GB": "Royaume-Uni",
+    "UAE": "Émirats / Dubai",
+    "US": "Plaque US",
+    "DEFAULT": "Si une seule pré-plaque pour ce modèle"
+  },
   "entries": [
     {
       "id": "lamborghini_aventador_svj",
       "verifyModel": "Lamborghini Aventador SVJ",
-      "labelMatchers": ["aventador svj", "lamborghini aventador svj"],
+      "labelMatchers": ["aventador svj", "lamborghini aventador svj", "svg"],
       "plates": {
-        "default": "",
-        "france": "",
-        "spain": "",
-        "dubai": "",
-        "uk": "",
-        "usa": ""
+        "EU_F": "",
+        "EU_E": "",
+        "UAE": "",
+        "US": "",
+        "DEFAULT": ""
       }
     },
     {
@@ -20,25 +29,10 @@
       "verifyModel": "Lamborghini Urus",
       "labelMatchers": ["lamborghini urus", "urus"],
       "plates": {
-        "default": "",
-        "france": "",
-        "spain": "",
-        "dubai": "",
-        "uk": "",
-        "usa": ""
-      }
-    },
-    {
-      "id": "lamborghini_huracan",
-      "verifyModel": "Lamborghini Huracán",
-      "labelMatchers": ["huracan", "huracán"],
-      "plates": {
-        "default": "",
-        "france": "",
-        "spain": "",
-        "dubai": "",
-        "uk": "",
-        "usa": ""
+        "EU_F": "",
+        "EU_E": "",
+        "UAE": "",
+        "DEFAULT": ""
       }
     }
   ]

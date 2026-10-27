@@ -2007,7 +2007,6 @@ function plateLockClarifier(prompt) {
     const registryPlate = buildMarketingRegistryPlateClarifier(prompt, {
       isVehicleReplacePrompt,
       parseVehicleSpec,
-      detectPlateLocation,
     });
     if (registryPlate) return registryPlate;
   } catch {
