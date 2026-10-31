@@ -446,8 +446,22 @@ const {
   buildVehicleBackgroundInpaintLock,
 } = require("./vehicle-fidelity-lock");
 
+/** Inpainting / replacement policy — orientation, perspective, scene (moto + car). */
+const VEHICLE_INPAINT_REPLACE_POLICY =
+  "INPAINT REPLACE POLICY (mandatory — any vehicle or motorcycle body swap on the uploaded photo). " +
+  "ORIENTATION LOCK: the replacement points the EXACT same direction as the original — same front/rear heading (left vs right in frame), same wheel or handlebar yaw, same viewing axis. FORBIDDEN: mirror flip, reversed facing, swapping nose and tail toward camera, opposite travel vector. " +
+  "PERSPECTIVE LOCK: preserve the identical camera angle (level, low angle, high angle, 3/4, profile), identical scale in frame, identical tire contact points and placement relative to pavement, grass, trees, curbs, and scene props — never re-park, recenter, zoom, or reframe. " +
+  "SCENE INPAINT LOCK: change ONLY the vehicle model identity (body, glass, wheels, plastics). Background, sky, trees, road, ambient light, exposure, grain, and ground contact shadows outside the vehicle silhouette stay strictly unchanged — inpaint inside the original silhouette only; alpha-composite original scene pixels back outside the mask.";
+
+const VEHICLE_INPAINT_REPLACE_CLARIFIER =
+  " (INPAINT REPLACE POLICY — ORIENTATION: same direction as upload, NO mirror flip or reversed facing. PERSPECTIVE: same camera angle, scale, and ground position vs trees/road/decor. SCENE: model swap only — background, lighting, and shadows unchanged.)";
+
+const VEHICLE_INPAINT_BRIEF =
+  "ORIENTATION+PERSPECTIVE+SCENE: same facing as original (FORBIDDEN mirror flip), same camera angle/scale/park slot, background/light/shadows frozen outside vehicle mask. ";
+
 const VEHICLE_REPLACE_SCENE_GUARD =
   "VEHICLE BODY SWAP on the uploaded photograph (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
   "Change ONLY the car/bike already in the photo into the EXACT named vehicle (brand + model + generation/chassis + trim + tuner). " +
   "PARK LOCK: the new vehicle occupies the EXACT original parking pose — same slot, same diagonal angle, same distance to camera, same crop, same wheel steering direction, same tire contact points on the ground. Never re-park, never straighten, never center, never reframe. " +
   "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, car-wash brushes/rollers, other parked cars, people, sky, buildings. " +
@@ -464,19 +478,49 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   "MODEL LOCK: output the EXACT brand+model the user named — NEVER Nissan Silvia/S15, Skyline, GT-R, R34/R35, Supra, or generic JDM widebody when they asked BMW, Lamborghini, Mercedes, Ferrari, etc.";
 
 const VEHICLE_BODY_FROM_REFERENCE_GUARD =
-  "TWO-PHOTO VEHICLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, pavement, buildings, people, sky, lighting, camera distance, crop, and the original car's parking pose/angle/wheel direction. " +
+  "TWO-PHOTO VEHICLE SWAP (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
+  "Image 1 = scene lock — keep EXACT background, pavement, buildings, people, sky, lighting, camera distance, crop, and the original car's parking pose/angle/wheel direction. " +
   "Image 2 = target vehicle identity — copy THAT exact body, color, wheels, badges, trim, and proportions from image 2 onto the car in image 1. " +
   "FORBIDDEN: inventing a different model (Nissan Juke/Silvia, Skyline, random widebody), re-parking, recentering, changing the scene, or ignoring image 2.";
 
 const MOTORCYCLE_BODY_FROM_REFERENCE_GUARD =
-  "TWO-PHOTO MOTORCYCLE SWAP (mandatory). Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
-  "Image 2 = target bike identity — copy THAT exact motorcycle body, plastics, color, wheels, tires, exhaust, bars, and badges from image 2 onto the bike volume in image 1. " +
+  "TWO-PHOTO MOTORCYCLE SWAP (mandatory). " +
+  `${VEHICLE_INPAINT_BRIEF}` +
+  "Image 1 = scene lock — keep EXACT background, road, trees, sky, lighting, camera distance, crop, AND the rider's identity, outfit, face angle, hand gesture, and foot-to-ground or foot-to-peg contact points. " +
+  "Image 2 = target bike identity ONLY (plastics/color/wheels/badges) — NEVER copy image 2 background, tree, grass, sky, or catalog parked pose. " +
+  "Copy THAT exact motorcycle body look from image 2 onto the bike volume in image 1. " +
   "RIDER SCALE LOCK (absolute): the person keeps the EXACT body height, head size, torso, and outfit volume from image 1 — NEVER upscale or enlarge the human. " +
   "BIKE SLOT LOCK (critical): the NEW motorcycle occupies the SAME position, lean angle, wheel steering, and tire contact patches on the road as the original bike in image 1 — same distance to camera, same crop footprint. Image 2 = model/color/parts identity ONLY — NOT a blown-up catalog hero or XXL studio bike pasted over the scene. " +
   "REAL-WORLD PROPORTION LOCK: believable adult-on-machine scale (Tracer/YZ/TMAX vs real rider) INSIDE that original bike slot — never a bike taller than the rider's head to sky, never wider than the original bike silhouette in the photo. " +
-  "HAND GESTURE LOCK: preserve EXACT hand roles from image 1 — if one hand was raised (middle finger / gesture OFF the bar), keep that SAME hand and gesture; the OTHER hand wraps the NEW grip. " +
-  "HANDLEBAR GRIP LOCK: the hand that was on the old bar MUST touch the NEW visible grip — adjust arm reach only for that hand; gesture hand stays OFF the bar. NEVER grip empty air at the old mini-bar position. " +
-  "FORBIDDEN: XXL bike, enlarged rider, re-parking, recentering, burnt plastics, sideways lounge, ghost handlebar, ignoring image 2, keeping yellow pit-bike decals.";
+  "HANDLEBAR YAW + RIDER OCCUPANCY: same bar rotation as image 1; no hands in upload ⇒ no hands/mirror arms; if hands visible preserve exact roles only. " +
+  "HANDLEBAR GRIP LOCK (only when upload shows hands): grip hand on NEW rubber; gesture hand OFF bar if upload had gesture. " +
+  "BIKE MERGE + OCCLUSION LOCK (critical): inpaint ONLY inside the original motorcycle silhouette in image 1 — alpha-composite tree, grass, sky, walls, and background back over any new-bike pixels outside that upload footprint. " +
+  "VISIBILITY LOCK: if tail, rear wheel, exhaust, or fairing was hidden behind a tree trunk, wall, crop, or prop in image 1, the replacement MUST stay equally hidden — never rotate or re-pose to reveal the full catalog profile. " +
+  "Same viewing direction, same lean, same overlap with the tree/object, same partial visibility at frame edges. Image 2 = paint/parts identity only, NOT a new camera angle. " +
+  "FORBIDDEN: XXL bike, enlarged rider, re-parking, recentering, burnt plastics, sideways lounge, ghost handlebar, ignoring image 2, keeping yellow pit-bike decals, pulling bike away from tree, showing rear not visible in upload.";
+
+const MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER =
+  " (BIKE MERGE + OCCLUSION LOCK — critical: merge the new motorcycle INTO image 1 like a real inpaint — keep every background pixel (tree bark, leaves, sky, grass) exactly; only swap paint/metal inside the old bike mask. " +
+  "If the original tail/rear wheel/exhaust was behind the tree or off-frame, the new model's tail/rear MUST stay behind that SAME tree/off-frame — never expose what was hidden. " +
+  "Never spin the bike to face the camera more than image 1 did. FORBIDDEN: full side-profile catalog hero when upload showed a partial 3/4 view.)";
+
+const MOTORCYCLE_REF2_SCENE_FORBIDDEN_CLARIFIER =
+  " (IMAGE 2 SCENE FORBIDDEN — critical: reference image 2 is paint/plastics/wheels/badges ONLY. " +
+  "NEVER copy image 2's background, tree, grass, sky, lighting, camera angle, or parked pose. " +
+  "Image 1 alone defines merge, lean against tree/wall, kickstand, occlusion, and crop.)";
+
+const MOTORCYCLE_PARKED_LEAN_CLARIFIER =
+  " (PARKED LEAN LOCK — when image 1 shows a bike on kickstand or leaning on a tree/wall: keep that EXACT support — same trunk overlap on fairing/seat, same hidden rear sections, same grass shadow — only change the machine's model livery.)";
+
+const MOTORCYCLE_HANDLEBAR_YAW_CLARIFIER =
+  " (HANDLEBAR YAW LOCK — critical: keep the IDENTICAL handlebar rotation/steering angle as image 1 — if the bars are turned left, they stay turned left; if slightly off-center, keep that exact yaw. FORBIDDEN: straightening the bars to perfect symmetry when the upload was turned.)";
+
+const MOTORCYCLE_RIDER_OCCUPANCY_CLARIFIER =
+  " (RIDER OCCUPANCY LOCK — critical: mirror image 1 exactly. If upload shows ZERO human hands/arms/body in frame → output ZERO hands, arms, fingers, sleeves, or gestures on or near the grips; empty grips/rubber OK. Side mirrors may show road/trees/sky BEHIND the bike only — NEVER reflect rider arms, hands, middle finger, or body. If upload DOES show hands, preserve ONLY those exact roles — never invent an extra hand or new gesture.)";
+
+const MOTORCYCLE_EMPTY_CONTROLS_CLARIFIER =
+  " (EMPTY CONTROLS LOCK — POV/handlebar swap with no rider in upload: no invented pilot, no gloves, no fingers on bars, no offensive gestures, no arms in mirror glass — factory mirrors reflect the scenery only.)";
 
 const MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER =
   " (HANDLEBAR GRIP LOCK — critical: after ANY bike body swap, the hand that was ON the bar MUST physically contact the NEW motorcycle's real grip — knuckles on rubber, brake/clutch perch visible. " +
@@ -654,9 +698,11 @@ function motorcycleModelHint(prompt) {
         ? String(variant[2]).replace(/\s+/g, "").toUpperCase()
         : "560";
     return (
-      ` (TMAX LOCK: real Yamaha TMAX ${ver} maxi-scooter — LONG heavy body, wide floorboards, tall thick seat, large 15"-class wheels with FACTORY TMAX rim style (NOT cyan/blue Zip SP rims), correct twin headlight/fairing of current TMAX, Yamaha + TMAX badges letter-perfect. ` +
-      "Adult rider sits IN a big scooter — bike length roughly from rider hips past the knees to a long nose. " +
-      "FORBIDDEN: small city scooter, Zip SP body, blue/cyan Zip rims, Zip stickers, toy scale, dangling keys, burnt AI plastic.)"
+      ` (TMAX LOCK: real factory Yamaha TMAX ${ver} maxi-scooter — EXACT production maxi body, twin front lights, smoked tall windscreen, wide floorboards, 15\" wheels, FACTORY TMAX rim style (NOT Zip SP cyan rims). ` +
+      `COCKPIT LOCK (critical for POV/guidon): authentic TMAX ${ver} rider view — LEFT analog speedo (km/h), RIGHT analog tach (x1000 RPM), SMALL central monochrome LCD trip panel (time/temp/odo) — FORBIDDEN full-width touchscreen/tablet cluster. Silver Yamaha tuning-fork on bar yoke, italic TMAX badge, round ignition ring (SEAT OPEN/OFF/LOCK labels), honeycomb-textured lower console plastic, brake-fluid reservoir on the bar. ` +
+      "Blue Quad Lock phone mount is OPTIONAL accessory only — omit unless user or reference image shows it; never paint the dash blue. " +
+      "Adult scale when a rider is visible; POV without rider = empty grips, mirrors reflect scenery only. " +
+      "FORBIDDEN: fictional/sci-fi scooter, Zip body, invented UI, toy scale, burnt AI plastic.)"
     );
   }
   if (/\b(yz\s*125|yz125|125\s*yz|yamaha\s*125|a55yz|a55\s*yz)\b/.test(text)) {
@@ -669,8 +715,8 @@ function motorcycleModelHint(prompt) {
   }
   if (/\b(tracer\s*7|tracer7|tracer\s*9|tracer9)\b/.test(text)) {
     return (
-      " (TRACER LOCK: Yamaha Tracer 7/9 sport-touring — mid-size road bike proportions vs unchanged adult rider; SAME camera slot as original bike in image 1. " +
-      "Windscreen, twin LED, blue accents from reference — NOT SUV/XXL scale, NOT enlarged rider. FORBIDDEN: catalog hero bike filling entire frame.)"
+      " (TRACER LOCK: Yamaha Tracer 7/9 sport-touring — mid-size road bike proportions vs unchanged adult rider; SAME camera slot, lean, and partial visibility as original bike in image 1 (merge — do not reveal rear hidden by tree/crop). " +
+      "Windscreen, twin LED, blue accents from reference — NOT SUV/XXL scale, NOT enlarged rider. FORBIDDEN: catalog hero bike filling entire frame, full side profile when upload was partial.)"
     );
   }
   if (/\b(yz|yamaha\s*yz)\b/.test(text) && !/\btmax\b/.test(text)) {
@@ -1817,6 +1863,33 @@ function isMotorcycleBikeMention(prompt) {
 }
 
 /** User wants to be seated ON a bike realistically (not a bike-only swap). */
+/** Handlebar / rider-seat POV (bars + dash + road — often no visible rider limbs). */
+function isMotorcycleHandlebarPovPrompt(prompt) {
+  const text = normalizePromptText(prompt);
+  if (
+    /\b(pov|premiere personne|first[- ]person|vue guidon|handlebar view|camera guidon|depuis le guidon|from the handlebars|subjective|selfie guidon|photo guidon)\b/.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+  if (
+    isMotorcycleReplacePrompt(prompt) &&
+    /\b(guidon|handlebar|tableau de bord|dashboard|compteur|instrument)\b/.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** User explicitly wants rider hands/body/gesture in the result. */
+function isMotorcycleRiderBodyExplicitPrompt(prompt) {
+  const text = normalizePromptText(prompt);
+  return /\b(moi|me|je|myself|main|mains|hands|bras|arms|doigt|geste|middle finger|pilote|rider|ass(?:is|ise|ied)|tenir le guidon|sur la moto)\b/.test(
+    text,
+  );
+}
+
 function isMotorcycleSeatedUserPrompt(prompt) {
   if (isMotorcycleReplacePrompt(prompt)) return false;
   if (!isMotorcycleBikeMention(prompt)) return false;
@@ -1943,6 +2016,18 @@ function plateLockClarifier(prompt) {
   if (isNonCarLifestylePrompt(prompt)) return "";
   const hasCar = Boolean(parseVehicleSpec(prompt));
   if (!hasCar) return "";
+  try {
+    const {
+      buildMarketingRegistryPlateClarifier,
+    } = require("./marketing-registry-plates");
+    const registryPlate = buildMarketingRegistryPlateClarifier(prompt, {
+      isVehicleReplacePrompt,
+      parseVehicleSpec,
+    });
+    if (registryPlate) return registryPlate;
+  } catch {
+    /* registry optional at build time */
+  }
   const loc = detectPlateLocation(prompt);
   if (loc) {
     return ` (PLATE LOCK: ${loc.label} — ${loc.plate}. Letter-perfect, physically stamped on the bumper only. Never a door sticker saying the city name. Never the wrong country, never gibberish.)`;
@@ -1999,15 +2084,11 @@ function isVehicleReplacePrompt(prompt) {
   if (isLifestyleRelocatePrompt(prompt)) return false;
   if (isAddVehiclesToScenePrompt(prompt)) return false;
   if (isPersonSwapPrompt(prompt) || isFacialHairPrompt(prompt)) return false;
-  const text = normalizePromptText(prompt);
-  const hasReplaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne)\b/.test(
-      text,
-    );
-  const mentionsCarNoun =
-    /\b(voiture|car|auto|vehicule|vehicle|moto|scooter)\b/.test(text);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
+  const hasReplaceVerb = VEHICLE_REPLACE_VERB_RE.test(text);
+  const mentionsCarNoun = VEHICLE_CAR_NOUN_RE.test(text);
   const mentionsSecondRefImage =
-    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+image|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|celle\s+de\s+l['']?image\s*2)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|imagen\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|segunda\s+(foto|imagen)|second\s+(photo|picture|image)|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|celle\s+de\s+l['']?image\s*2)\b/i.test(
       text,
     );
   if (hasReplaceVerb && mentionsCarNoun && mentionsSecondRefImage) return true;
@@ -2055,6 +2136,22 @@ function isVehicleCockpitRefinePrompt(prompt) {
   return false;
 }
 
+/** FR/EN/ES aliases before vehicle regex parsing. */
+function normalizeVehicleLanguageAliases(text) {
+  return String(text || "")
+    .replace(/\bmercedes[\s-]benz\b/gi, "mercedes")
+    .replace(/\bclase\s+g\b/gi, "classe g")
+    .replace(/\bclass\s+g\b/gi, "classe g")
+    .replace(/\bg\s*clase\b/gi, "classe g")
+    .replace(/\bg\s*class\b/gi, "classe g");
+}
+
+const VEHICLE_REPLACE_VERB_RE =
+  /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*|mets|mettre|met(s)?|put|donne|reemplaz\w*|sustitu\w*|cambi\w*|intercambi\w*)\b/;
+
+const VEHICLE_CAR_NOUN_RE =
+  /\b(voiture|voitures|car|cars|auto|autos|vehicule|vehicle|vehiculos|automovil|automoviles|coche|coches|moto|scooter)\b/;
+
 function prettyVehicleToken(tok) {
   const t = String(tok || "").trim();
   if (!t) return "";
@@ -2071,7 +2168,7 @@ function prettyVehicleToken(tok) {
 function parseVehicleSpec(prompt) {
   if (isYachtPrimaryPrompt(prompt)) return null;
   if (isGolfSportPrompt(prompt)) return null;
-  const text = normalizePromptText(prompt);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
   const names = [];
   const nameRe = new RegExp(`\\b(${VEHICLE_NAME_RE})\\b`, "gi");
   let m;
@@ -2122,6 +2219,14 @@ function parseVehicleSpec(prompt) {
   }
   if (names.includes("rs3") && !/\burus\b/.test(text)) {
     label = /\baudi\b/.test(text) ? "Audi RS3" : "Audi RS3 sportback";
+  }
+  const wantsMercedesGClass =
+    /\b(classe\s*g|g[\-\s]?wagen|g63)\b/.test(text) &&
+    !/\b(urus|range\s*rover|land\s*rover|jeep|defender|golf)\b/.test(text);
+  if (wantsMercedesGClass) {
+    label = "Mercedes-Benz G-Class (G-Wagen)";
+    if (!names.includes("mercedes")) names.push("mercedes");
+    if (!names.some((n) => /g63|wagen|classe/.test(n))) names.push("g-wagen");
   }
 
   return {
@@ -2384,6 +2489,20 @@ function generationAntimixLine(prompt) {
   return "";
 }
 
+const MERCEDES_G_WAGEN_BODY_LOCK =
+  " (G-WAGEN BODY LOCK — Mercedes-Benz G-Class ONLY: tall BOX-SHAPE 4x4, flat upright panels, round headlamps, wide flat wheel arches, rear-door mounted spare wheel, upright grille with Mercedes star. FORBIDDEN: rounded soft SUV/crossover, sedan, coupe, GLC/GLE blob, missing spare, aerodynamic teardrop body.)";
+
+function vehicleBodyGeometryHint(prompt) {
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
+  if (
+    /\b(classe\s*g|g[\-\s]?wagen|g63)\b/.test(text) &&
+    !/\b(urus|range\s*rover|land\s*rover|jeep|defender|golf)\b/.test(text)
+  ) {
+    return MERCEDES_G_WAGEN_BODY_LOCK;
+  }
+  return "";
+}
+
 function vehicleIdentityHint(prompt) {
   // Always parse the user's raw request — enriched clarifiers mention Urus/MANSORY and poison GEN LOCK.
   const spec = parseVehicleSpec(prompt);
@@ -2506,6 +2625,7 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
     `${vehicleWrongModelForbiddenHint(userPrompt)}` +
     `${vehicleForbiddenBrandHint(userPrompt)}` +
     `${vehicleIdentityHint(userPrompt)}` +
+    `${vehicleBodyGeometryHint(userPrompt)}` +
     `${vehiclePaintColorHint(userPrompt, referenceImageCount)}` +
     `${
       parseVehiclePaintColor(userPrompt)
@@ -2518,9 +2638,9 @@ function buildVehicleReplaceCompactHead(userPrompt, referenceImageCount = 0) {
 function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   const refs = Math.max(0, Number(referenceImageCount) || 0);
   if (refs < 2) return false;
-  const text = normalizePromptText(prompt);
+  const text = normalizeVehicleLanguageAliases(normalizePromptText(prompt));
   const mentionsRef =
-    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
+    /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|imagen\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|segunda\s+(foto|imagen)|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2)\b/i.test(
       text,
     );
   if (
@@ -2531,26 +2651,35 @@ function isVehicleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
     return false;
   }
   const mentionsCar =
-    /\b(voiture|car|auto|vehicule|vehicle)\b/i.test(text) ||
-    /\b(remplac\w*|replace\w*|swap\w*)\b/i.test(text);
+    VEHICLE_CAR_NOUN_RE.test(text) || VEHICLE_REPLACE_VERB_RE.test(text);
   return mentionsRef && mentionsCar;
 }
 
 function isMotorcycleReplaceFromReferencePrompt(prompt, referenceImageCount = 0) {
   const refs = Math.max(0, Number(referenceImageCount) || 0);
   if (refs < 2) return false;
+  if (
+    isOutfitFromReferencePrompt(prompt) &&
+    isOutfitWearPrompt(prompt) &&
+    !isMotorcycleReplacePrompt(prompt)
+  ) {
+    return false;
+  }
   const text = normalizePromptText(prompt);
   const mentionsRef =
     /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|seconde\s+(photo|image)|seconde\s+image|second\s+(photo|picture|image)|l['']image\s*2|la\s+2e|par\s+l['']?image\s*2|avec\s+l['']?image\s*2|premiere\s+(photo|image).*deuxieme|first\s+(photo|image).*second)\b/i.test(
       text,
     );
-  if (!mentionsRef) return false;
-  if (isMotorcycleBikeMention(prompt) || isMotorcycleReplacePrompt(prompt)) {
+  if (isMotorcycleReplacePrompt(prompt)) return true;
+  if (
+    mentionsRef &&
+    (isMotorcycleBikeMention(prompt) || isMotorcycleReplacePrompt(prompt))
+  ) {
     return true;
   }
   return (
-    /\b(moto|motos|scooter|motorcycle|motocross|dirt\s*bike|guidon)\b/i.test(text) &&
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*)\b/i.test(text)
+    isMotorcycleBikeMention(prompt) &&
+    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|modele|model)\b/i.test(text)
   );
 }
 
@@ -2566,14 +2695,9 @@ function buildMotorcycleReplaceCompactHead(userPrompt, referenceImageCount = 0) 
   if (!isMotorcycleReplaceFromReferencePrompt(userPrompt, referenceImageCount)) {
     return "";
   }
-  const bikeHint = motorcycleModelHint(userPrompt);
   return (
-    `TWO-PHOTO BIKE SWAP: image1=scene+rider pose+foot contact lock, image2=exact target motorcycle (plastics/color/wheels/badges). ` +
-    `${MOTORCYCLE_BODY_FROM_REFERENCE_GUARD} ` +
-    `${bikeHint || ""}`
-  )
-    .replace(/\s+/g, " ")
-    .trim();
+    "TWO-PHOTO BIKE SWAP: image1=scene+handlebar yaw+occupancy lock, image2=motorcycle look only (not image2 scene)."
+  ).trim();
 }
 
 function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
@@ -2582,11 +2706,13 @@ function buildMotorcycleReplaceUserLine(userPrompt, referenceImageCount = 0) {
   }
   const hint = motorcycleModelHint(userPrompt);
   return (
-    "Photoreal edit: transplant the EXACT motorcycle from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
-    "Image 1 keeps background, lighting, camera angle, and the rider's pose and outfit; only the motorcycle body changes. " +
-    "Keep the rider's exact body size and hand gestures from image 1 (middle finger / one-hand gesture unchanged). " +
+    "Photoreal edit: transplant the EXACT motorcycle LOOK from reference image 2 onto reference image 1 — same plastics, color, wheels, tires, exhaust, and badges as image 2. " +
+    "Image 1 keeps background, lighting, camera angle, tree/grass, kickstand/lean, and crop; NEVER import image 2's scene or viewing angle. " +
+    "Keep the EXACT handlebar steering yaw from image 1 (turned left stays turned left). " +
+    "RIDER OCCUPANCY: if image 1 shows no hands/arms/body, add NONE — empty grips OK, mirrors reflect road/trees only (no arms, no middle finger). If hands were visible, preserve only those exact roles on the NEW grips. " +
+    "If image 1 is bike-only POV, keep the same parked view — do not invent a rider. " +
     "New bike in the SAME position and road footprint as the original — image 2 for model look only, never XXL catalog scale. " +
-    "Grip hand on the NEW visible handlebar; gesture hand stays OFF the bar as in image 1." +
+    "MERGE into image 1: preserve exact partial visibility — parts hidden by tree/wall/crop in image 1 stay hidden on the new bike; never reveal the full rear if upload did not show it." +
     (hint ? ` ${hint}` : "")
   ).trim();
 }
@@ -3453,11 +3579,19 @@ function sanitizeUserPrompt(prompt) {
     if (genHint && !/GEN LOCK:/i.test(cleaned)) {
       cleaned = `${genHint}${cleaned}`;
     }
+    const bodyGeomHint =
+      vehicleBodyGeometryHint(prompt) || vehicleBodyGeometryHint(cleaned);
+    if (bodyGeomHint && !/G-WAGEN BODY LOCK/i.test(cleaned)) {
+      cleaned = `${bodyGeomHint}${cleaned}`;
+    }
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
     if (!/PARK LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_REPLACE_CLARIFIER}`;
+    }
+    if (!/INPAINT REPLACE POLICY/i.test(cleaned)) {
+      cleaned = `${VEHICLE_INPAINT_REPLACE_CLARIFIER}${cleaned}`;
     }
     const paintLockEarly =
       parseVehiclePaintColor(prompt) || parseVehiclePaintColor(cleaned);
@@ -3522,6 +3656,12 @@ function sanitizeUserPrompt(prompt) {
       cleaned = `${genHint}${cleaned}`;
     }
   } else if (motorcycleRideRequest) {
+    if (
+      (isMotorcycleReplacePrompt(cleaned) || isMotorcycleReplacePrompt(prompt)) &&
+      !/INPAINT REPLACE POLICY/i.test(cleaned)
+    ) {
+      cleaned = `${VEHICLE_INPAINT_REPLACE_CLARIFIER}${cleaned}`;
+    }
     const seatedUser =
       isMotorcycleSeatedUserPrompt(cleaned) || isMotorcycleSeatedUserPrompt(prompt);
     if (seatedUser && !/SEATED REALISM LOCK/i.test(cleaned)) {
@@ -3532,14 +3672,37 @@ function sanitizeUserPrompt(prompt) {
     if (wheelContact && !/WHEEL CONTACT LOCK/i.test(cleaned)) {
       cleaned = `${wheelContact}${cleaned}`;
     }
-    if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
-      cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
+    if (!/RIDER OCCUPANCY LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_RIDER_OCCUPANCY_CLARIFIER}${cleaned}`;
+    }
+    if (!/HANDLEBAR YAW LOCK/i.test(cleaned)) {
+      cleaned = `${MOTORCYCLE_HANDLEBAR_YAW_CLARIFIER}${cleaned}`;
+    }
+    const riderBodyExplicit =
+      isMotorcycleRiderBodyExplicitPrompt(cleaned) ||
+      isMotorcycleRiderBodyExplicitPrompt(prompt) ||
+      isMotorcycleWheelOnVehiclePrompt(cleaned) ||
+      isMotorcycleWheelOnVehiclePrompt(prompt);
+    const handlebarPov =
+      isMotorcycleHandlebarPovPrompt(cleaned) || isMotorcycleHandlebarPovPrompt(prompt);
+    if (riderBodyExplicit) {
+      if (!/HANDLEBAR GRIP LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_HANDLEBAR_GRIP_CLARIFIER}${cleaned}`;
+      }
+      if (!/HAND GESTURE LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
+      }
+    } else if (
+      handlebarPov ||
+      isMotorcycleReplacePrompt(cleaned) ||
+      isMotorcycleReplacePrompt(prompt)
+    ) {
+      if (!/EMPTY CONTROLS LOCK/i.test(cleaned)) {
+        cleaned = `${MOTORCYCLE_EMPTY_CONTROLS_CLARIFIER}${cleaned}`;
+      }
     }
     if (!/BIKE SIZE LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_ANTI_OVERSIZE_CLARIFIER}${cleaned}`;
-    }
-    if (!/HAND GESTURE LOCK/i.test(cleaned)) {
-      cleaned = `${MOTORCYCLE_GESTURE_PRESERVE_CLARIFIER}${cleaned}`;
     }
     if (!outfitWearRequest && !/RIDER CLOTHING LOCK/i.test(cleaned)) {
       cleaned = `${MOTORCYCLE_RIDER_CLOTHING_TEXT_CLARIFIER}${cleaned}`;
@@ -3567,11 +3730,38 @@ function sanitizeUserPrompt(prompt) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
-    if (!/RIDE LOCK/i.test(cleaned)) {
+    if (riderBodyExplicit && !/RIDE LOCK/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_RIDE_CLARIFIER}`;
     }
     if (!/BIKE SCENE LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${MOTORCYCLE_SCENE_CLARIFIER}`;
+    }
+    const motoTwoPhotoHint =
+      /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|second\s+(photo|image))\b/i.test(
+        cleaned,
+      ) ||
+      /\b(image\s*[#-]?\s*2|photo\s*[#-]?\s*2|2e\s+(photo|image)|deuxieme\s+(photo|image)|second\s+(photo|image))\b/i.test(
+        prompt,
+      );
+    if (
+      (motoTwoPhotoHint ||
+        isMotorcycleReplacePrompt(cleaned) ||
+        isMotorcycleReplacePrompt(prompt)) &&
+      !/BIKE MERGE \+ OCCLUSION LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_OCCLUSION_MERGE_CLARIFIER}${cleaned}`;
+    }
+    if (
+      (motoTwoPhotoHint || isMotorcycleReplaceFromReferencePrompt(cleaned, 2)) &&
+      !/IMAGE 2 SCENE FORBIDDEN/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_REF2_SCENE_FORBIDDEN_CLARIFIER}${cleaned}`;
+    }
+    if (
+      (isMotorcycleReplacePrompt(cleaned) || isMotorcycleReplacePrompt(prompt)) &&
+      !/PARKED LEAN LOCK/i.test(cleaned)
+    ) {
+      cleaned = `${MOTORCYCLE_PARKED_LEAN_CLARIFIER}${cleaned}`;
     }
   } else if (vehicleBehindRequest) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
@@ -4602,11 +4792,12 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
           : exteriorTrafficScene
             ? EXTERIOR_TRAFFIC_REPLACE_GUARD
             : motorcycleRideScene
-              ? isMotorcycleSeatedUserPrompt(userPrompt) ||
-                isMotorcycleSeatedUserPrompt(cleaned) ||
-                motorcycleReplaceFromRef
-                ? MOTORCYCLE_SEATED_REALISM_GUARD
-                : MOTORCYCLE_RIDE_GUARD
+              ? motorcycleReplaceFromRef
+                ? MOTORCYCLE_BODY_FROM_REFERENCE_GUARD
+                : isMotorcycleSeatedUserPrompt(userPrompt) ||
+                    isMotorcycleSeatedUserPrompt(cleaned)
+                  ? MOTORCYCLE_SEATED_REALISM_GUARD
+                  : MOTORCYCLE_RIDE_GUARD
             : vehicleReplaceScene
             ? VEHICLE_REPLACE_SCENE_GUARD
               : vehicleBehindScene
@@ -4733,6 +4924,7 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
   const compactVehicleReplaceCore = (() => {
     if (!vehicleReplaceScene) return "";
     const head = [
+      "INPAINT REPLACE: same direction (no mirror flip), same camera angle/scale/park slot, scene pixels frozen.",
       vehicleReplaceHead,
       vehicleReplaceFromRef ? "Use image 2 as the exact target car." : "",
     ]
@@ -4753,13 +4945,18 @@ function buildIdentityPreservingPrompt(userPrompt, options = {}) {
     if (!motorcycleCompactSwap) return "";
     const bikeHint = motorcycleModelHint(userPrompt);
     const head = [
+      "INPAINT REPLACE: same direction (no mirror flip), same camera angle/scale/ground slot, scene pixels frozen.",
+      bikeHint,
+      "RIDER OCCUPANCY: no hands in upload ⇒ no hands/arms/gestures; mirrors = scenery only.",
+      "HANDLEBAR YAW: same bar steering rotation as image 1 — never straighten.",
+      "IMAGE 2 SCENE FORBIDDEN: image2=parts/color only — never image2 background, tree, or catalog side-view pose.",
+      "BIKE MERGE + OCCLUSION LOCK: inpaint inside upload bike mask — tree/background unchanged; hidden tail/rear stays hidden.",
+      "PARKED LEAN LOCK: same kickstand/tree lean and trunk overlap as image 1.",
       "BIKE SIZE LOCK: same slot/angle/tire contact as upload — NEVER XXL; rider body size unchanged.",
-      "HAND GESTURE LOCK: keep middle finger / gesture hand from upload; grip hand on NEW bar.",
       motorcycleReplaceHead,
       motorcycleReplaceFromRef
         ? "Use image 2 for motorcycle identity only — not catalog giant scale."
         : "",
-      bikeHint,
     ]
       .filter(Boolean)
       .join(" ")

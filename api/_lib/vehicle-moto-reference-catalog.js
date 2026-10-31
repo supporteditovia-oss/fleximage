@@ -66,8 +66,14 @@ function enrichImageUrlsWithVehicleCatalog(prompt, imageUrls, resolveUrl) {
     addedCount += 1;
   }
 
+  const uploadOrderNote =
+    urls.length > 2
+      ? " UPLOAD ORDER LOCK: image 1 = scene photograph (pose, tree occlusion, crop). Image 2 = user target bike (colors/parts ONLY — never copy image 2 background or angle). Extra catalog images = factory geometry/graphics only — never their camera pose."
+      : "";
   const promptInject =
-    addedCount > 0 && entry.promptBlock ? String(entry.promptBlock).trim() : "";
+    addedCount > 0 && entry.promptBlock
+      ? `${String(entry.promptBlock).trim()}${uploadOrderNote}`
+      : uploadOrderNote.trim();
 
   return {
     urls,

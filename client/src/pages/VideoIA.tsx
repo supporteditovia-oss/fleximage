@@ -54,11 +54,20 @@ import {
   finalizeV2VPromptForSubmit,
 } from "@/lib/v2v-prompt";
 import {
+  coerceV2VStudioIntent,
   parseV2VIntentFromUrl,
   resolveV2VBillingProvider,
   resolveV2VProviderForStudioSubmit,
   type V2VStudioIntent,
 } from "@/lib/v2v-studio-intent";
+import {
+  createEmptySceneLuxeSlots,
+  newSceneLuxePhotoId,
+  sceneLuxeFilledPhotos,
+  SCENE_LUXE_MAX_PHOTOS,
+  type SceneLuxePhotoRef,
+  type SceneLuxePhotoSlots,
+} from "@/lib/scene-luxe-reference-photos";
 import {
   formatVideoDurationLabel,
   readVideoDurationSec,
@@ -105,7 +114,10 @@ function v2vResolutionLabel(res: VideoUltraResolution): string {
 export default function VideoIA() {
   const adminPreview = useAdminPreviewFeatures();
   const { v2Enabled, isLoading: v2Loading, isAdmin: studioAdmin } = useV2Access();
-  const { user } = useAuth();
+  const { user, isAdmin: profileAdmin, isLoading: authLoading } = useAuth();
+  /** Mouvement V2V — réservé comptes admin (profil Supabase ou /api/v2-access). */
+  const motionAdminEnabled = profileAdmin || studioAdmin || adminPreview;
+  const motionAccessReady = !authLoading && !v2Loading;
   const voiceStudioAvailable =
     studioAdmin || import.meta.env.DEV || import.meta.env.MODE === "test";
   const { data: plan } = useCurrentPlan({ enabled: Boolean(user) });
@@ -150,6 +162,19 @@ export default function VideoIA() {
     refImageIsCustomRef.current = refImageIsCustom;
   }, [refImageIsCustom]);
   const [swapPrompt, setSwapPrompt] = useState("");
+  const [sceneLuxeSlots, setSceneLuxeSlots] = useState<SceneLuxePhotoSlots>(
+    createEmptySceneLuxeSlots,
+  );
+  const sceneLuxeSlotsRef = useRef<SceneLuxePhotoSlots>(createEmptySceneLuxeSlots());
+  const scenePhotoAddChainRef = useRef<Promise<void>>(Promise.resolve());
+  const [scenePhotosBusy, setScenePhotosBusy] = useState(false);
+  useEffect(() => {
+    sceneLuxeSlotsRef.current = sceneLuxeSlots;
+  }, [sceneLuxeSlots]);
+  const sceneLuxePhotos = useMemo(
+    () => sceneLuxeFilledPhotos(sceneLuxeSlots),
+    [sceneLuxeSlots],
+  );
   const [v2vIntent, setV2vIntent] = useState<V2VStudioIntent>("scene");
   const [v2vResolution, setV2vResolution] =
     useState<VideoUltraResolution>("720p");
@@ -205,9 +230,18 @@ export default function VideoIA() {
     if (raw === "video_to_video" || raw === "image_to_video") {
       setWorkflow(raw);
     }
-    const intentFromUrl = parseV2VIntentFromUrl(params.get("intent"));
-    if (intentFromUrl) setV2vIntent(intentFromUrl);
   }, []);
+
+  useEffect(() => {
+    if (!motionAccessReady) return;
+    const params = new URLSearchParams(window.location.search);
+    const intentFromUrl = parseV2VIntentFromUrl(params.get("intent"));
+    if (intentFromUrl) {
+      setV2vIntent(coerceV2VStudioIntent(intentFromUrl, motionAdminEnabled));
+      return;
+    }
+    setV2vIntent((prev) => coerceV2VStudioIntent(prev, motionAdminEnabled));
+  }, [motionAdminEnabled, motionAccessReady]);
 
   const syncV2vUrl = useCallback(
     (intent: V2VStudioIntent) => {
@@ -221,8 +255,9 @@ export default function VideoIA() {
   );
 
   const handleV2vIntentSelect = (intent: V2VStudioIntent) => {
-    setV2vIntent(intent);
-    syncV2vUrl(intent);
+    const next = coerceV2VStudioIntent(intent, motionAdminEnabled);
+    setV2vIntent(next);
+    syncV2vUrl(next);
   };
 
   const handleStudioModeSelect = (mode: VideoStudioMode) => {
@@ -365,10 +400,16 @@ export default function VideoIA() {
   const hasVideoReady = Boolean(videoSource || localVideoFile);
   const videoImportBusy = isVideoReading && !videoPreview;
   const motionRefReady =
-    v2vIntent !== "motion" || Boolean(refImageBase64 || refImagePreview);
+    v2vIntent !== "motion" ||
+    Boolean(refImageBase64 || refImagePreview || localVideoFile || videoSource);
+  const sceneLuxeReady =
+    v2vIntent !== "scene" ||
+    swapPrompt.trim().length >= 5 ||
+    sceneLuxePhotos.length > 0;
   const canGenerateV2V =
     hasVideoReady &&
-    swapPrompt.trim().length >= 5 &&
+    sceneLuxeReady &&
+    (v2vIntent !== "scene" ? swapPrompt.trim().length >= 5 : true) &&
     canAfford &&
     !videoImportBusy &&
     motionRefReady;
@@ -382,6 +423,15 @@ export default function VideoIA() {
     setPrefillImageUrl(null);
     setPrefillLarpId(null);
     if (imageFileRef.current) imageFileRef.current.value = "";
+  }, []);
+
+  const clearSceneLuxePhotos = useCallback(() => {
+    setSceneLuxeSlots((prev) => {
+      for (const p of prev) {
+        if (p) URL.revokeObjectURL(p.previewUrl);
+      }
+      return createEmptySceneLuxeSlots();
+    });
   }, []);
 
   const handleClearVideo = useCallback(() => {
@@ -401,9 +451,10 @@ export default function VideoIA() {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    clearSceneLuxePhotos();
     if (videoFileRef.current) videoFileRef.current.value = "";
     if (refImageFileRef.current) refImageFileRef.current.value = "";
-  }, []);
+  }, [clearSceneLuxePhotos]);
 
   const handleClearRefImage = useCallback(() => {
     setRefImageBase64(null);
@@ -464,6 +515,7 @@ export default function VideoIA() {
     const uploadGen = ++videoUploadGenRef.current;
     setIsVideoReading(true);
     setIsVideoCloudSync(false);
+    setIsSubmitting(false);
     setVideoSource(null);
     setLocalVideoFile(null);
     setVideoDurationSec(null);
@@ -649,82 +701,212 @@ export default function VideoIA() {
     }
   };
 
+  const ingestScenePhotoFile = async (file: File): Promise<SceneLuxePhotoRef> => {
+    const compressed = await compressImageForGeneration(file);
+    const base64 = await fileToBase64(compressed);
+    return {
+      id: newSceneLuxePhotoId(),
+      previewUrl: URL.createObjectURL(compressed),
+      base64,
+      role: "",
+    };
+  };
+
+  const runScenePhotoImport = (task: () => Promise<void>) => {
+    scenePhotoAddChainRef.current = scenePhotoAddChainRef.current
+      .then(task)
+      .catch(() => {});
+    return scenePhotoAddChainRef.current;
+  };
+
+  const handleScenePhotoAddAtSlot = (slotIndex: number, file: File) => {
+    void runScenePhotoImport(async () => {
+      if (slotIndex < 0 || slotIndex >= SCENE_LUXE_MAX_PHOTOS) return;
+      if (sceneLuxeSlotsRef.current[slotIndex]) return;
+
+      setScenePhotosBusy(true);
+      try {
+        const photo = await ingestScenePhotoFile(file);
+        setSceneLuxeSlots((prev) => {
+          if (prev[slotIndex]) {
+            URL.revokeObjectURL(photo.previewUrl);
+            return prev;
+          }
+          const next = [...prev] as SceneLuxePhotoSlots;
+          next[slotIndex] = photo;
+          return next;
+        });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Import impossible",
+          description: "Choisis une image JPG ou PNG valide.",
+        });
+      } finally {
+        setScenePhotosBusy(false);
+      }
+    });
+  };
+
+  const handleScenePhotosAddMany = (files: File[]) => {
+    if (files.length === 0) return;
+    void runScenePhotoImport(async () => {
+      const emptyIndices: number[] = [];
+      const slots = sceneLuxeSlotsRef.current;
+      for (let i = 0; i < SCENE_LUXE_MAX_PHOTOS; i++) {
+        if (!slots[i]) emptyIndices.push(i);
+      }
+      const batch = files.slice(0, emptyIndices.length);
+      if (batch.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Maximum 9 photos",
+          description: "Supprime une photo pour en ajouter une autre.",
+        });
+        return;
+      }
+      if (files.length > batch.length) {
+        toast({
+          title: "Maximum 9 photos",
+          description: `Seules ${batch.length} photo(s) ont été ajoutées.`,
+        });
+      }
+
+      setScenePhotosBusy(true);
+      try {
+        const pairs: { index: number; photo: SceneLuxePhotoRef }[] = [];
+        for (let j = 0; j < batch.length; j++) {
+          pairs.push({
+            index: emptyIndices[j]!,
+            photo: await ingestScenePhotoFile(batch[j]!),
+          });
+        }
+        setSceneLuxeSlots((prev) => {
+          const next = [...prev] as SceneLuxePhotoSlots;
+          for (const { index, photo } of pairs) {
+            if (next[index]) URL.revokeObjectURL(photo.previewUrl);
+            else next[index] = photo;
+          }
+          return next;
+        });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Import impossible",
+          description: "Choisis des images JPG ou PNG valides.",
+        });
+      } finally {
+        setScenePhotosBusy(false);
+      }
+    });
+  };
+
+  const handleScenePhotoRemove = useCallback((id: string) => {
+    setSceneLuxeSlots((prev) => {
+      const next = [...prev] as SceneLuxePhotoSlots;
+      for (let i = 0; i < next.length; i++) {
+        if (next[i]?.id === id) {
+          URL.revokeObjectURL(next[i]!.previewUrl);
+          next[i] = null;
+          break;
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const handleScenePhotoRoleChange = useCallback((id: string, role: string) => {
+    setSceneLuxeSlots((prev) => {
+      const next = [...prev] as SceneLuxePhotoSlots;
+      for (let i = 0; i < next.length; i++) {
+        const p = next[i];
+        if (p?.id === id) next[i] = { ...p, role };
+      }
+      return next;
+    });
+  }, []);
+
   const handleGenerateV2V = async () => {
     if (isSubmitting || generateVideo.isPending || taskId) return;
     if (!canGenerateV2V) return;
 
-    let source = videoSource;
-    if (!source && localVideoFile) {
-      setIsVideoCloudSync(true);
-      try {
-        source = await prepareVideoFileForStudio(localVideoFile);
-        setVideoSource(source);
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
-        toast({
-          variant: "destructive",
-          title: "Envoi impossible",
-          description: message,
-        });
-        return;
-      } finally {
-        setIsVideoCloudSync(false);
-      }
-    }
-    if (!source) return;
-
-    if (source.mode === "inline") {
-      const approxBytes = Math.floor((source.dataUrl.length * 3) / 4);
-      if (approxBytes > 3.5 * 1024 * 1024) {
-        toast({
-          variant: "destructive",
-          title: "Vidéo trop lourde",
-          description:
-            "L'envoi direct n'a pas abouti. Réessaie en Wi‑Fi (upload cloud) ou avec une vidéo plus légère en 720p.",
-        });
-        return;
-      }
-    }
-
-    const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
-
-    let referenceImages: string[] | undefined;
-    let motionRefB64 = refImageBase64;
-    if (v2vIntent === "motion" && !motionRefB64 && localVideoFile) {
-      try {
-        const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
-        const frameCompressed = await compressImageForGeneration(frameFile);
-        motionRefB64 = await fileToBase64(frameCompressed);
-        setRefImageBase64(motionRefB64);
-        setRefImageIsCustom(false);
-      } catch {
-        toast({
-          variant: "destructive",
-          title: "Photo requise",
-          description:
-            "Pour Mouvement, ajoute ta photo (+ Ta photo) ou réimporte la vidéo.",
-        });
-        return;
-      }
-    }
-    if (v2vProvider === "kling_motion" && motionRefB64) {
-      referenceImages = [motionRefB64];
-    }
-
     releaseGenerationLoaderTheme();
     flushSync(() => {
-      setGenerationEstimate(
-        estimateVideoGenerationSeconds({
-          workflow: "video_to_video",
-          v2vProvider,
-          sourceVideoDurationSec: videoDurationSec,
-          preserveSourceAudio: preserveSourceVoice,
-        }),
-      );
       setIsSubmitting(true);
     });
+
     try {
+      let source = videoSource;
+      if (!source && localVideoFile) {
+        setIsVideoCloudSync(true);
+        try {
+          source = await prepareVideoFileForStudio(localVideoFile);
+          setVideoSource(source);
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : "Impossible d'envoyer la vidéo.";
+          toast({
+            variant: "destructive",
+            title: "Envoi impossible",
+            description: message,
+          });
+          return;
+        } finally {
+          setIsVideoCloudSync(false);
+        }
+      }
+      if (!source) return;
+
+      if (source.mode === "inline") {
+        const approxBytes = Math.floor((source.dataUrl.length * 3) / 4);
+        if (approxBytes > 3.5 * 1024 * 1024) {
+          toast({
+            variant: "destructive",
+            title: "Vidéo trop lourde",
+            description:
+              "L'envoi direct n'a pas abouti. Réessaie en Wi‑Fi (upload cloud) ou avec une vidéo plus légère en 720p.",
+          });
+          return;
+        }
+      }
+
+      const v2vProvider = resolveV2VProviderForStudioSubmit(v2vIntent);
+
+      let referenceImages: string[] | undefined;
+      let motionRefB64 = refImageBase64;
+      if (v2vIntent === "motion" && !motionRefB64 && localVideoFile) {
+        try {
+          const frameFile = await extractVideoFrameAsJpegFile(localVideoFile);
+          const frameCompressed = await compressImageForGeneration(frameFile);
+          motionRefB64 = await fileToBase64(frameCompressed);
+          setRefImageBase64(motionRefB64);
+          setRefImageIsCustom(false);
+        } catch {
+          toast({
+            variant: "destructive",
+            title: "Photo requise",
+            description:
+              "Pour Mouvement, ajoute ta photo (+ Ta photo) ou réimporte la vidéo.",
+          });
+          return;
+        }
+      }
+      if (v2vIntent === "scene" && sceneLuxePhotos.length > 0) {
+        referenceImages = sceneLuxePhotos.map((p) => p.base64);
+      } else if (v2vProvider === "kling_motion" && motionRefB64) {
+        referenceImages = [motionRefB64];
+      }
+
+      flushSync(() => {
+        setGenerationEstimate(
+          estimateVideoGenerationSeconds({
+            workflow: "video_to_video",
+            v2vProvider,
+            sourceVideoDurationSec: videoDurationSec,
+            preserveSourceAudio: preserveSourceVoice,
+          }),
+        );
+      });
       const sanitizedPrompt = finalizeV2VPromptForSubmit(
         swapPrompt,
         preserveSourceVoice,
@@ -745,6 +927,11 @@ export default function VideoIA() {
         ...(referenceImages?.length
           ? { reference_images: referenceImages }
           : {}),
+        ...(v2vIntent === "scene" && sceneLuxePhotos.length
+          ? {
+              reference_photo_roles: sceneLuxePhotos.map((p) => p.role.trim()),
+            }
+          : {}),
         ...(v2vIntent === "motion" && referenceImages?.length
           ? {
               motion_reference_source: refImageIsCustomRef.current
@@ -761,6 +948,7 @@ export default function VideoIA() {
         err instanceof Error ? err.message : "Remplacement impossible";
       toast({ variant: "destructive", title: "Erreur", description: message });
     } finally {
+      setIsVideoCloudSync(false);
       setIsSubmitting(false);
     }
   };
@@ -917,6 +1105,13 @@ export default function VideoIA() {
       refImageIsCustom={refImageIsCustom}
       refImagePreview={refImagePreview}
       onRefImageUpload={handleRefImageUpload}
+      adminPreviewFeatures={motionAdminEnabled}
+      sceneLuxeSlots={sceneLuxeSlots}
+      scenePhotosBusy={scenePhotosBusy}
+      onScenePhotoAddAtSlot={handleScenePhotoAddAtSlot}
+      onScenePhotosAddMany={handleScenePhotosAddMany}
+      onScenePhotoRemove={handleScenePhotoRemove}
+      onScenePhotoRoleChange={handleScenePhotoRoleChange}
       preserveSourceVoice={preserveSourceVoice}
       onPreserveSourceVoice={setPreserveSourceVoice}
       canGenerateV2V={canGenerateV2V}

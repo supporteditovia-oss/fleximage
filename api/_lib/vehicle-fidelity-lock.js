@@ -87,11 +87,21 @@ function buildVehicleBackgroundInpaintLock() {
 }
 
 function buildVehicleFidelityPromptBlock(userPrompt) {
+  let registryPlate = "";
+  try {
+    const {
+      buildMarketingRegistryPlateClarifierForPrompt,
+    } = require("./marketing-registry-plates");
+    registryPlate = buildMarketingRegistryPlateClarifierForPrompt(userPrompt);
+  } catch {
+    registryPlate = "";
+  }
   const parts = [
     VEHICLE_SYSTEM_INJECTION,
     buildVehicleBackgroundInpaintLock(),
     buildVehicleOccupancyLock(userPrompt),
     buildVehicleStickerPolicyClause(userPrompt),
+    registryPlate,
     `Negative prompt: ${VEHICLE_ANTI_HALLUCINATION_NEGATIVE}.`,
   ].filter(Boolean);
   return parts.join(" ");

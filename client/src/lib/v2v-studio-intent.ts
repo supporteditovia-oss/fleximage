@@ -84,6 +84,22 @@ export function parseV2VIntentFromUrl(raw: string | null): V2VStudioIntent | nul
   return null;
 }
 
+/** Clients : Scène & luxe seulement. Admin preview : Mouvement + Scène. */
+export function getVisibleV2VIntentOptions(
+  adminPreview: boolean,
+): V2VIntentOption[] {
+  if (adminPreview) return V2V_INTENT_OPTIONS;
+  return V2V_INTENT_OPTIONS.filter((o) => o.id === "scene");
+}
+
+export function coerceV2VStudioIntent(
+  intent: V2VStudioIntent,
+  adminPreview: boolean,
+): V2VStudioIntent {
+  if (!adminPreview && intent === "motion") return "scene";
+  return intent;
+}
+
 export function v2vIntentPlaceholder(intent: V2VStudioIntent): string {
   return intent === "motion"
     ? "Ex. même danse, autre personne…"

@@ -186,21 +186,41 @@ async function resolveSourceVideoUrl(userId, body) {
   return uploaded;
 }
 
-async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
+const SEEDANCE_MAX_REFERENCE_PHOTOS = 9;
+
+function parseReferencePhotoRoles(body) {
+  const raw = body.reference_photo_roles;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((r) => (typeof r === "string" ? r.trim() : ""))
+    .slice(0, SEEDANCE_MAX_REFERENCE_PHOTOS);
+}
+
+async function resolveOptionalReferenceImageUrls(supabase, userId, body) {
   const refImages = Array.isArray(body.reference_images)
     ? body.reference_images
     : [];
+  if (refImages.length > SEEDANCE_MAX_REFERENCE_PHOTOS) {
+    throw Object.assign(new Error("Maximum 9 photos"), {
+      status: 422,
+      code: "REFERENCE_PHOTOS_MAX",
+    });
+  }
   if (refImages.length > 0) {
-    const uploaded = await uploadInputImagesToR2(userId, refImages);
-    return uploaded[0] || null;
+    return uploadInputImagesToR2(userId, refImages);
   }
   if (
     typeof body.reference_image_url === "string" &&
     body.reference_image_url.startsWith("http")
   ) {
-    return body.reference_image_url;
+    return [body.reference_image_url];
   }
-  return null;
+  return [];
+}
+
+async function resolveOptionalReferenceImageUrl(supabase, userId, body) {
+  const urls = await resolveOptionalReferenceImageUrls(supabase, userId, body);
+  return urls[0] || null;
 }
 
 function resolveVehicleDescription(body) {
@@ -341,7 +361,49 @@ module.exports = async function handler(req, res) {
         return;
       }
     } else {
-      if (!vehicleDescription || vehicleDescription.length > 500) {
+      const v2vIntentEarly =
+        body.v2v_intent === "motion" || body.v2v_intent === "scene"
+          ? body.v2v_intent
+          : "scene";
+      const refCount = Array.isArray(body.reference_images)
+        ? body.reference_images.length
+        : 0;
+      if (refCount > SEEDANCE_MAX_REFERENCE_PHOTOS) {
+        res.status(422).json({
+          code: "REFERENCE_PHOTOS_MAX",
+          message: copy(uiLocale, "Maximum 9 photos", "Maximum 9 photos"),
+        });
+        return;
+      }
+      const sceneMultiref =
+        v2vIntentEarly === "scene" &&
+        (refCount > 0 ||
+          (vehicleDescription && vehicleDescription.length >= 5));
+      if (v2vIntentEarly === "scene" && sceneMultiref) {
+        if (vehicleDescription && vehicleDescription.length > 2000) {
+          res.status(400).json({
+            message: copy(
+              uiLocale,
+              "Texte trop long (2000 caractères max).",
+              "Text too long (2000 characters max).",
+            ),
+          });
+          return;
+        }
+        if (
+          refCount === 0 &&
+          (!vehicleDescription || vehicleDescription.length < 5)
+        ) {
+          res.status(400).json({
+            message: copy(
+              uiLocale,
+              "Décris ce que tu veux ou ajoute au moins une photo.",
+              "Describe what you want or add at least one photo.",
+            ),
+          });
+          return;
+        }
+      } else if (!vehicleDescription || vehicleDescription.length > 500) {
         res.status(400).json({
           message: copy(
             uiLocale,
@@ -405,6 +467,17 @@ module.exports = async function handler(req, res) {
       body.v2v_intent === "motion" || body.v2v_intent === "scene"
         ? body.v2v_intent
         : null;
+    if (workflow === "video_to_video" && v2vIntent === "motion" && !isAdmin) {
+      res.status(403).json({
+        code: "V2V_MOTION_ADMIN_ONLY",
+        message: copy(
+          uiLocale,
+          "Le mode Mouvement est réservé aux comptes admin.",
+          "Motion mode is reserved for admin accounts.",
+        ),
+      });
+      return;
+    }
     if (workflow === "image_to_video" && !voiceEnabled) {
       const sanitizedMotion = stripVoiceInstructionsFromPrompt(motionPrompt);
       if (sanitizedMotion.length < 10) {
@@ -550,14 +623,19 @@ module.exports = async function handler(req, res) {
 
     let sourceAssetUrl;
     let referenceImageUrl = null;
+    let referenceImageUrlsStored = [];
+    let referencePhotoRolesStored = [];
     let v2vProvider = null;
     let motionReferenceSource = null;
     let providerPrompt;
     let alephSubmitPrompt = null;
     try {
       if (workflow === "video_to_video") {
+        const referencePhotoRolesFr = parseReferencePhotoRoles(body);
         const skipV2VEnrichment =
-          v2vIntent === "motion" || isVehicleDrivingPrompt(vehiclePromptRaw);
+          v2vIntent === "motion" ||
+          v2vIntent === "scene" ||
+          isVehicleDrivingPrompt(vehiclePromptRaw);
         const [enrichedDesc, sourceBundle] = await Promise.all([
           studioVehicleDescription && !skipV2VEnrichment
             ? enrichPromptForGeneration(studioVehicleDescription, {
@@ -567,12 +645,12 @@ module.exports = async function handler(req, res) {
             : Promise.resolve(studioVehicleDescription),
           (async () => {
             const url = await resolveSourceVideoUrl(userId, body);
-            const ref = await resolveOptionalReferenceImageUrl(
+            const refs = await resolveOptionalReferenceImageUrls(
               supabase,
               userId,
               body,
             );
-            return { url, ref };
+            return { url, refs };
           })(),
         ]);
         if (
@@ -587,8 +665,25 @@ module.exports = async function handler(req, res) {
             length: studioVehicleDescription.length,
           });
         }
+        const {
+          enrichLongPromptWithMarketingRegistryPlateAuto,
+        } = require("../marketing-registry-plates");
+        studioVehicleDescription = enrichLongPromptWithMarketingRegistryPlateAuto(
+          studioVehicleDescription || vehiclePromptRaw,
+          500,
+        ).slice(0, 500);
+
         sourceAssetUrl = sourceBundle.url;
-        referenceImageUrl = sourceBundle.ref;
+        const referenceImageUrls = sourceBundle.refs || [];
+        referenceImageUrlsStored = referenceImageUrls;
+        referencePhotoRolesStored = referencePhotoRolesFr.slice(
+          0,
+          referenceImageUrls.length,
+        );
+        while (referencePhotoRolesStored.length < referenceImageUrls.length) {
+          referencePhotoRolesStored.push("");
+        }
+        referenceImageUrl = referenceImageUrls[0] || null;
         const { inferMotionReferenceSource } = require("../video-user-errors");
         motionReferenceSource = inferMotionReferenceSource(
           referenceImageUrl,
@@ -734,6 +829,12 @@ module.exports = async function handler(req, res) {
       v2v_resolution: v2vResolution,
       v2v_provider: v2vProvider,
       v2v_intent: v2vIntent,
+      reference_photo_roles_fr:
+        workflow === "video_to_video" && v2vIntent === "scene"
+          ? referencePhotoRolesStored
+          : null,
+      seedance_scene_luxe_multiref:
+        workflow === "video_to_video" && v2vIntent === "scene",
       v2v_omni_transform_rollout: isAdmin,
       v2v_seedance_transform_rollout: isAdmin,
       v2v_engine_family: v2vProvider
@@ -773,7 +874,7 @@ module.exports = async function handler(req, res) {
         aspect_ratio: aspectRatio,
         input_assets:
           workflow === "video_to_video"
-            ? [referenceImageUrl, sourceAssetUrl].filter(Boolean)
+            ? [...referenceImageUrlsStored, sourceAssetUrl].filter(Boolean)
             : [sourceAssetUrl],
         credit_cost: creditCost,
         metadata: studioMetadata,

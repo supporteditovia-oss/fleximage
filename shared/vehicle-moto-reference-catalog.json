@@ -24,5 +24,25 @@
       }
     ],
     "promptBlock": "FACTORY CATALOG REFS (360-style): additional reference photos show the real Yamaha YZ125 from multiple angles — copy EXACT factory plastics, blue/white livery, and letter-perfect YZ graphics from these refs (both letters Y and Z, never gibberish)."
+  },
+  {
+    "id": "yamaha-tmax560",
+    "label": "Yamaha TMAX 560",
+    "match": [
+      "tmax560",
+      "tmax 560",
+      "560 tmax",
+      "t-max 560",
+      "yamaha tmax",
+      "tmax"
+    ],
+    "angles": [
+      {
+        "id": "cockpit-pov",
+        "path": "/assets/vehicle-ref/yamaha-tmax560/cockpit-pov.jpg",
+        "note": "factory rider POV — dual analog gauges, central LCD, TMAX badge, yoke, ignition"
+      }
+    ],
+    "promptBlock": "TMAX 560 FACTORY COCKPIT REF: copy the REAL Yamaha TMAX 560 maxi-scooter dash from catalog — left analog speedometer (km/h), right analog tach (x1000), small central monochrome trip LCD (NOT a full-width tablet/touch UI), silver Yamaha tuning-fork on the bar yoke, italic TMAX badge, round ignition (SEAT OPEN/OFF/LOCK), honeycomb-textured lower console, smoked windscreen, factory mirror stems. Optional blue Quad Lock phone mount only if user asked or reference shows it — never required. FORBIDDEN: invented mega-screen cluster, Zip/scooter dash, fictional badges."
   }
 ]
