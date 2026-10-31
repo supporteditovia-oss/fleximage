@@ -12,6 +12,25 @@ test("car body swap includes inpaint orientation and scene policy", () => {
   assert.match(prompt, /camera angle|PERSPECTIVE/i);
 });
 
+test("generic replace locks nearest car only and freezes background cars", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la voiture par un Urus jaune",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /SINGLE TARGET/i);
+  assert.match(prompt, /OTHER VEHICLES FREEZE|OTHER CARS LOCK/i);
+  assert.match(prompt, /PRIMARY subject|nearest to camera/i);
+  assert.match(prompt, /invented.*pump|STATION/i);
+});
+
+test("named black Golf targets that car explicitly", () => {
+  const prompt = buildIdentityPreservingPrompt(
+    "Remplace la Golf noire par un Urus jaune",
+    { referenceImageCount: 1 },
+  );
+  assert.match(prompt, /Volkswagen Golf|SINGLE TARGET/i);
+});
+
 test("two-photo car swap uses image 2 reference guard", () => {
   const prompt = buildIdentityPreservingPrompt(
     "Remplace ma voiture par l'image 2",

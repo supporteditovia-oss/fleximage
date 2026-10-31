@@ -3,7 +3,8 @@
  */
 
 const VEHICLE_ANTI_HALLUCINATION_NEGATIVE =
-  "driver, person inside car, human arm out window, hands, passengers, learner sticker, L plate, A sticker, probationary badge, text overlays, modified background, altered environment, deformed car wash brushes, artifacts";
+  "driver, person inside car, human arm out window, hands, passengers, learner sticker, L plate, A sticker, probationary badge, text overlays, modified background, altered environment, deformed car wash brushes, artifacts, " +
+  "background car recolored, distant car swapped, second car replaced, third car modified, invented van, invented extra gas pump, invented station equipment behind car";
 
 const VEHICLE_SYSTEM_INJECTION =
   "Strictly match the occupancy state of the original image: if the car was empty, keep the new car empty with no driver and closed windows. Do not add people or arms. Strictly preserve the original background and surroundings. Pristine supercar finish without any added stickers or badges.";
@@ -86,6 +87,37 @@ function buildVehicleBackgroundInpaintLock() {
   );
 }
 
+/** Which car to swap when the user says « remplace la voiture » with several cars in frame. */
+function parseVehicleReplaceTargetHint(userPrompt) {
+  const text = normalizePromptText(userPrompt);
+  if (/\b(la\s+)?golf\b/.test(text)) {
+    return "the Volkswagen Golf visible in the upload";
+  }
+  if (/\b(la\s+)?(voiture|car|auto)\s+(noir|noire|black)\b/.test(text)) {
+    return "the black car the user named";
+  }
+  if (/\b(la\s+)?(voiture|car|auto)\s+(blanc|blanche|white)\b/.test(text)) {
+    return "the white car the user named";
+  }
+  if (/\b(la\s+)?voiture\s+(devant|au\s+premier\s+plan|la\s+plus\s+proche)\b/.test(text)) {
+    return "the foreground car closest to the camera";
+  }
+  return null;
+}
+
+function buildVehiclePrimaryTargetSwapLock(userPrompt) {
+  const named = parseVehicleReplaceTargetHint(userPrompt);
+  const target = named
+    ? `Swap ONLY ${named} — that exact vehicle instance.`
+    : "Swap ONLY ONE car: the PRIMARY subject vehicle — largest in frame, nearest to camera, typically under the fuel canopy / pump island / center foreground — NOT cars in the far left/right background.";
+  return (
+    "SINGLE TARGET SWAP LOCK (mandatory): " +
+    `${target} ` +
+    "OTHER VEHICLES FREEZE: every other car, van, SUV, or truck in the scene keeps IDENTICAL color, model, position, scale, crop, and pixels — zero recolor, zero replacement, zero deletion. " +
+    "STATION / SCENE FREEZE: do NOT invent new gas pumps, hoses, price totems, trash bins, cones, or equipment behind or beside the swapped car — keep existing pumps, pillar, Synergy/Esso signs, pavement marks exactly as the original photo."
+  );
+}
+
 function buildVehicleFidelityPromptBlock(userPrompt) {
   let registryPlate = "";
   try {
@@ -98,6 +130,7 @@ function buildVehicleFidelityPromptBlock(userPrompt) {
   }
   const parts = [
     VEHICLE_SYSTEM_INJECTION,
+    buildVehiclePrimaryTargetSwapLock(userPrompt),
     buildVehicleBackgroundInpaintLock(),
     buildVehicleOccupancyLock(userPrompt),
     buildVehicleStickerPolicyClause(userPrompt),
@@ -170,6 +203,8 @@ module.exports = {
   buildVehicleStickerPolicyClause,
   buildVehicleOccupancyLock,
   buildVehicleBackgroundInpaintLock,
+  buildVehiclePrimaryTargetSwapLock,
+  parseVehicleReplaceTargetHint,
   buildVehicleFidelityPromptBlock,
   buildV2VVehicleFidelityBlock,
   isVehicleExteriorBodySwapPrompt,
