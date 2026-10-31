@@ -216,6 +216,16 @@ export function GenerationLoader({
       <div className="lx-gen-loader__photo-shade" aria-hidden />
       {!isResult && !isExiting ? (
         <>
+          <div className="lx-gen-loader__frame-brand" aria-hidden>
+            <Gem
+              className="lx-gen-loader__frame-brand-gem"
+              strokeWidth={1.75}
+            />
+            <BrandMark
+              className="lx-gen-loader__frame-brand-text"
+              accentClassName="lx-gen-loader__frame-brand-accent"
+            />
+          </div>
           <div className="lx-gen-loader__scan" aria-hidden />
           <div className="lx-gen-loader__prism" aria-hidden />
         </>
