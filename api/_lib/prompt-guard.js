@@ -464,7 +464,8 @@ const VEHICLE_REPLACE_SCENE_GUARD =
   `${VEHICLE_INPAINT_BRIEF}` +
   "Change ONLY the car/bike already in the photo into the EXACT named vehicle (brand + model + generation/chassis + trim + tuner). " +
   "PARK LOCK: the new vehicle occupies the EXACT original parking pose — same slot, same diagonal angle, same distance to camera, same crop, same wheel steering direction, same tire contact points on the ground. Never re-park, never straighten, never center, never reframe. " +
-  "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, car-wash brushes/rollers, other parked cars, people, sky, buildings. " +
+  "BACKGROUND LOCK: freeze EVERYTHING that is not the swapped vehicle — pavement, yellow lines, bollards, fuel pump, hose, canopy lights, car-wash brushes/rollers, people, sky, buildings. " +
+  "OTHER CARS LOCK: background/distant cars (left, right, behind pillars) stay PIXEL-IDENTICAL — same color and model — never recolor a white sedan black or swap a far parking-lot car. " +
   "INPAINT MASK: edit ONLY the vehicle volume (body, glass, wheels) — alpha composite the original background back outside the car silhouette. " +
   `${VEHICLE_SYSTEM_INJECTION} ` +
   `${buildVehicleBackgroundInpaintLock()} ` +
@@ -539,8 +540,9 @@ const MOTORCYCLE_YZ_GRAPHICS_CLARIFIER =
   " (YZ GRAPHICS LOCK — Yamaha YZ125/YZ shrouds: crisp factory letter-perfect \"YZ\" (Y and Z both readable) in correct Yamaha MX font and placement — FORBIDDEN partial Z, fake alphabet soup, unreadable decal gibberish.)";
 
 const VEHICLE_REPLACE_CLARIFIER =
-  " (PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
-  "BACKGROUND LOCK: shop/shutters/lights/pump/pavement/car-wash brushes UNCHANGED — pixel-stable outside the car mask. " +
+  " (SINGLE TARGET: replace ONLY the nearest/main foreground car unless user named a specific car (e.g. black Golf) — NEVER touch other cars' paint or model. " +
+  "PARK LOCK — critical: new car sits in the EXACT original parking pose — same angle, same spot, same tires on the same ground marks. " +
+  "BACKGROUND LOCK: shop/shutters/lights/pump/pavement/car-wash brushes UNCHANGED — pixel-stable outside the car mask; no invented pumps/vans behind the Urus. " +
   "OCCUPANCY LOCK: empty source car ⇒ empty swapped car — no invented driver, arm, or lowered window. " +
   "PRISTINE DEFAULT: no invented A/L stickers; remove decals if user asked; showroom finish otherwise. " +
   "Doors and fuel flap stay as in the original. Open tank = real empty filler only — no yellow glow, no invented object, no liquid unless asked. " +
@@ -3587,8 +3589,16 @@ function sanitizeUserPrompt(prompt) {
     if (!/PRODUCT LOCK:/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_PRODUCT_CLARIFIER}`;
     }
-    if (!/PARK LOCK/i.test(cleaned)) {
+    if (!/SINGLE TARGET/i.test(cleaned)) {
       cleaned = `${cleaned}${VEHICLE_REPLACE_CLARIFIER}`;
+    }
+    if (!/SINGLE TARGET SWAP LOCK/i.test(cleaned)) {
+      try {
+        const { buildVehiclePrimaryTargetSwapLock } = require("./vehicle-fidelity-lock");
+        cleaned = `${cleaned} (${buildVehiclePrimaryTargetSwapLock(cleaned)})`;
+      } catch {
+        /* optional */
+      }
     }
     if (!/INPAINT REPLACE POLICY/i.test(cleaned)) {
       cleaned = `${VEHICLE_INPAINT_REPLACE_CLARIFIER}${cleaned}`;
