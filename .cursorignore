@@ -1,0 +1,22 @@
+# Token Shield — files the agent must NEVER read (they only burn tokens)
+# Copy this file to the ROOT of each project, next to .gitignore.
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+.turbo/
+.vercel/
+.git/
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.min.js
+*.min.css
+*.map
+*.log
+__pycache__/
+*.pyc
+.DS_Store

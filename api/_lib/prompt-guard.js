@@ -81,6 +81,18 @@ const BUILTIN_TEMPLATE_FACE_SWAP_GUARD =
   "Seamless photoreal identity transfer with matched scene shadows and natural skin pores. No text, no watermark.";
 
 /** Renfort explicite — jambes/mains visibles entre vêtements (Urus, yacht torse nu, etc.). */
+/** Modèles prêts — pas de chaussure/sac/objet flottant en plus de la scène. */
+const BUILTIN_TEMPLATE_PROP_ZERO_EXTRA_LOCK =
+  "PROP ZERO-EXTRA (ready model — mandatory): the output must contain ONLY objects that belong in image 2's scene, worn or placed naturally. " +
+  "Shoes/sneakers ONLY on the subject's feet — NEVER an extra floating shoe beside the leg, chair, table, or seat; NEVER duplicate footwear; NEVER catalog product paste next to the body. " +
+  "Bags/accessories only where image 2 had them on the body — not cloned, not hovering. Remove hallucinated props entirely.";
+
+/** Modèles prêts — la personne générée doit être celle de la photo user, pas un mannequin random. */
+const BUILTIN_TEMPLATE_IDENTITY_STRICT_LOCK =
+  "IDENTITY STRICT (image 1 wins): the replaced person MUST be recognizably the SAME individual as image 1 — same face shape, eyes, nose, lips, jaw, eyebrows, age band, and hairstyle from the user photo. " +
+  "FORBIDDEN: different woman/man, generic model face, beauty-filter substitute, wrong ethnicity, or keeping the original template model's identity. " +
+  "If image 2 shows a celebrity beside the slot, keep that celebrity unchanged; replace ONLY the template person slot with image 1, with matched lighting, grain, and contact shadows on both faces.";
+
 const BUILTIN_SKIN_UNIFORMITY_CLARIFIER =
   "UNIFORM SKIN MANDATORY (reject if violated): recolor EVERY pixel of exposed skin on the replaced person to match image 1 — " +
   "face, neck, ears, chest, stomach, arms, hands, fingers, knees, shins, ankles, legs between shorts/pants and socks, feet if bare. " +
@@ -98,6 +110,8 @@ function buildBuiltinTemplateFaceSwapPrompt(templatePrompt, options = {}) {
   const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_GUARD,
+    BUILTIN_TEMPLATE_IDENTITY_STRICT_LOCK,
+    BUILTIN_TEMPLATE_PROP_ZERO_EXTRA_LOCK,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     subjectPoseBlock,
     userPart,
@@ -140,6 +154,8 @@ function buildBuiltinTemplateFaceSwapWithOutfitPrompt(templatePrompt, options = 
   const subjectPoseBlock = String(options.subjectPoseBlock || "").trim();
   const parts = [
     BUILTIN_TEMPLATE_FACE_SWAP_WITH_OUTFIT_GUARD,
+    BUILTIN_TEMPLATE_IDENTITY_STRICT_LOCK,
+    BUILTIN_TEMPLATE_PROP_ZERO_EXTRA_LOCK,
     OUTFIT_FROM_REF_GUARD,
     BUILTIN_SKIN_UNIFORMITY_CLARIFIER,
     subjectPoseBlock,
