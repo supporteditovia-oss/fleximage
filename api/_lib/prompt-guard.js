@@ -736,6 +736,11 @@ function motorcycleModelHint(prompt) {
       " (SCOOTER MODEL LOCK: exact named scooter factory body and scale — not a generic small Zip with a badge swap, not original rim colors.)"
     );
   }
+  if (/\b(s[\s-]?1000|s1000rr|s\s*1000\s*rr)\b/.test(text)) {
+    return (
+      " (S1000RR LOCK: real BMW S 1000 RR sportbike — sharp sport fairing, asymmetric headlights, correct BMW Motorrad badges, black/blue factory livery as requested — same scale and parking slot as the original scooter/bike in the photo, never a maxi-scooter silhouette.)"
+    );
+  }
   return "";
 }
 
@@ -1855,10 +1860,10 @@ function isMotorcycleBikeMention(prompt) {
     return false;
   }
   return (
-    /\b(motocross|enduro|tmax|t\s*max|tmag|scooter|moto|motos|motorcycle|quad|atv|cross|dirt\s*bike|guidon|handlebar|nmax|xmax|forza|pcx|mt[- ]?\d+|r1\b|r6\b|yz\s*125|yz125|a55yz|a55\s*yz|\byz\b|x[\s-]?adv|maxi[\s-]?scooter)\b/i.test(
+    /\b(motocross|enduro|tmax|t\s*max|tmag|scooter|moto|motos|motocicleta|motorcycle|quad|atv|cross|dirt\s*bike|guidon|handlebar|nmax|xmax|forza|pcx|mt[- ]?\d+|r1\b|r6\b|yz\s*125|yz125|a55yz|a55\s*yz|\byz\b|x[\s-]?adv|maxi[\s-]?scooter)\b/i.test(
       text,
     ) ||
-    /\b(yamaha|ducati|ktm|s1000|gsxr|vespa|honda\s*(moto|scooter|adv|pcx|forza|sh)|bmw\s*(moto|scooter|g\s*310|c[\s-]?400))\b/i.test(
+    /\b(yamaha|ducati|ktm|s[\s-]?1000|s1000rr|gsxr|vespa|honda\s*(moto|scooter|adv|pcx|forza|sh)|bmw\s*(moto|scooter|g\s*310|c[\s-]?400|s[\s-]?1000))\b/i.test(
       text,
     )
   );
@@ -1948,12 +1953,14 @@ function isMotorcycleReplacePrompt(prompt) {
   if (isPersonSwapPrompt(prompt) || isFacialHairPrompt(prompt)) return false;
   if (!isMotorcycleBikeMention(prompt)) return false;
   const text = normalizePromptText(prompt);
-  if (/\b(derriere|behind|dans mon dos)\b/.test(text)) return false;
-  const replaceVerb =
-    /\b(remplac\w*|replace\w*|swap\w*|echange\w*|a\s+la\s+place|instead\s+of|change\w*|transforme\w*)\b/.test(
-      text,
-    );
-  if (replaceVerb) return true;
+  if (/\b(derriere|behind|dans mon dos|detras|detr[aá]s)\b/.test(text)) return false;
+  if (VEHICLE_REPLACE_VERB_RE.test(text)) return true;
+  if (
+    /\b(edita|editar|edit)\b/.test(text) &&
+    /\b(reemplaz\w*|sustitu\w*|cambi\w*|scooter|moto|motocicleta)\b/.test(text)
+  ) {
+    return true;
+  }
   // "mets un TMAX" / "put a TMAX" on an existing bike photo (no "put ME on").
   if (
     /\b(mets|mettre|put)\b/.test(text) &&

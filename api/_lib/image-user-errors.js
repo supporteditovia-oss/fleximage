@@ -15,9 +15,45 @@ function isImageProviderSafetyBlock(raw) {
   );
 }
 
+function isMotorcycleScooterProviderRefusal(raw) {
+  const text = String(raw || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return (
+    (text.includes("motorcycle") || text.includes("scooter") || text.includes("motocicleta")) &&
+    (text.includes("can't generate") ||
+      text.includes("cannot generate") ||
+      text.includes("can not generate") ||
+      text.includes("unable to generate") ||
+      text.includes("no puedo generar") ||
+      text.includes("impossible de generer"))
+  );
+}
+
 function mapImageProviderMessage(raw, locale = "fr") {
   const text = String(raw || "").trim();
   if (!text) return null;
+
+  if (isMotorcycleScooterProviderRefusal(text)) {
+    if (locale === "es") {
+      return (
+        "El laboratorio de IA ha rechazado esta petición — suele pasar si no detecta un reemplazo sobre tu foto. " +
+        "Vuelve a intentarlo: sube la foto del scooter y escribe por ejemplo «Reemplaza el scooter por una BMW S 1000 RR negra y azul, misma escena». " +
+        "Créditos reembolsados."
+      );
+    }
+    if (locale === "en") {
+      return (
+        "The AI lab refused this request — it often happens when it does not read your prompt as an in-place swap on your photo. " +
+        "Retry with your scooter photo and: «Replace the scooter with a BMW S 1000 RR, same scene». Credits refunded."
+      );
+    }
+    return (
+      "Le labo IA a refusé — souvent quand il ne comprend pas un remplacement sur ta photo existante. " +
+      "Réessaie avec ta photo de scooter et : « Remplace le scooter par une BMW S 1000 RR, même scène ». Jetons remboursés."
+    );
+  }
 
   if (isImageProviderSafetyBlock(text)) {
     if (locale === "es") {
@@ -46,5 +82,6 @@ function mapImageProviderMessage(raw, locale = "fr") {
 
 module.exports = {
   isImageProviderSafetyBlock,
+  isMotorcycleScooterProviderRefusal,
   mapImageProviderMessage,
 };
