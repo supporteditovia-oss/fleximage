@@ -6,6 +6,7 @@ const funnelHandler = require("./_lib/handlers/admin-funnel");
 const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
 const cronProviderEnv = require("./_lib/handlers/cron-provider-env");
+const cronStripeDiscoveryReprice = require("./_lib/handlers/cron-stripe-discovery-reprice");
 const { handleCrmAdminApi } = require("./_lib/crm-admin-api");
 
 function pathParts(req) {
@@ -86,6 +87,10 @@ module.exports = async function handler(req, res) {
 
   if (parts[0] === "cron" && parts[1] === "provider-env" && !parts[2]) {
     return cronProviderEnv(req, res);
+  }
+
+  if (parts[0] === "cron" && parts[1] === "stripe-discovery-reprice" && !parts[2]) {
+    return cronStripeDiscoveryReprice(req, res);
   }
 
   res.status(404).json({
