@@ -84,6 +84,10 @@
       "destination": "/api/admin-router?__adminPath=cron/provider-env"
     },
     {
+      "source": "/api/cron/stripe-discovery-reprice",
+      "destination": "/api/admin-router?__adminPath=cron/stripe-discovery-reprice"
+    },
+    {
       "source": "/api/larps/(.*)",
       "destination": "/api/larps-router?__larpsPath=$1"
     },

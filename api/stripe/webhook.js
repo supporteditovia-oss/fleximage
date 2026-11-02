@@ -9,6 +9,7 @@ const {
   asStripeId,
   reconcilePaidCheckoutSession,
   PLAN_CREDITS,
+  creditsPerCycleForPlan,
 } = require("../_lib/stripe-billing");
 
 /**
@@ -98,8 +99,7 @@ async function handleInvoicePaid(supabase, invoice) {
   }
 
   const plan = normalizePlan(subscriptionRow.plan_type);
-  const creditsPerCycle =
-    Number(subscriptionRow.credits_per_cycle) || PLAN_CREDITS[plan] || 0;
+  const creditsPerCycle = creditsPerCycleForPlan(plan);
   if (!creditsPerCycle) return;
 
   await grantSubscriptionCredits(supabase, {
@@ -174,13 +174,7 @@ async function handleSubscriptionUpdated(supabase, subscription) {
     (subscription.metadata && subscription.metadata.plan_type) ||
       (prevSubscription && prevSubscription.plan_type),
   );
-  const creditsPerCycle =
-    Number(
-      subscription.metadata && subscription.metadata.credits_per_cycle,
-    ) ||
-    PLAN_CREDITS[plan] ||
-    (prevSubscription && prevSubscription.credits_per_cycle) ||
-    0;
+  const creditsPerCycle = creditsPerCycleForPlan(plan);
 
   const previousPlanType = prevSubscription?.plan_type
     ? normalizePlan(prevSubscription.plan_type)
