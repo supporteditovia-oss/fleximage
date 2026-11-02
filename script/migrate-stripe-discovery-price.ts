@@ -61,6 +61,32 @@ async function main(): Promise<void> {
 
   console.log(JSON.stringify(report, null, 2));
 
+  if (apply && report.migrated > 0) {
+    try {
+      const { getSupabaseAdmin } = require("../api/_lib/user-auth");
+      const supabase = getSupabaseAdmin();
+      let dbUpdated = 0;
+      for (const row of report.subscriptions) {
+        if (row.action !== "migrated" || !row.subscriptionId) continue;
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            plan_type: "discovery",
+            credits_per_cycle: 250,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", row.subscriptionId);
+        if (!error) dbUpdated += 1;
+      }
+      console.log(`Supabase: credits_per_cycle=250 pour ${dbUpdated} abonnement(s).`);
+    } catch (err) {
+      console.warn(
+        "Supabase sync ignoré (vars manquantes ou erreur):",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   if (!apply) {
     console.log("\nDry-run only. Relance avec --apply pour migrer les abonnements.");
     console.log(

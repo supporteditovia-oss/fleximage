@@ -20,6 +20,12 @@ function normalizePlan(plan) {
   return "discovery";
 }
 
+/** Canonical monthly quota — ignores stale Stripe/DB metadata (legacy 8,90 € ≠ more credits). */
+function creditsPerCycleForPlan(plan) {
+  const normalized = normalizePlan(plan);
+  return PLAN_CREDITS[normalized] ?? 0;
+}
+
 function asStripeId(value) {
   if (!value) return null;
   if (typeof value === "string") return value;
@@ -109,9 +115,7 @@ async function reconcilePaidCheckoutSession(supabase, stripe, session, source) {
     // keep metadata price
   }
 
-  const creditsPerCycle =
-    Number(session.metadata && session.metadata.credits_per_cycle) ||
-    PLAN_CREDITS[plan];
+  const creditsPerCycle = creditsPerCycleForPlan(plan);
 
   const { error: profileErr } = await supabase
     .from("profiles")
@@ -245,6 +249,7 @@ async function reconcilePaidPackSession(supabase, session, source) {
 module.exports = {
   PLAN_CREDITS,
   normalizePlan,
+  creditsPerCycleForPlan,
   asStripeId,
   applyCreditDelta,
   grantSubscriptionCredits,

@@ -166,6 +166,9 @@ async function migrateDiscoverySubscriptionsTo990(stripe, options = {}) {
               plan_type: "discovery",
               price_id: targetPriceId,
               luxeflexia_plan: "discovery",
+              credits_per_cycle: "250",
+              display_credits_per_cycle: "250",
+              bonus_credits_per_cycle: "0",
             },
           });
           results.migrated += 1;
