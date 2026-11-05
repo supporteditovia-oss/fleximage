@@ -23,6 +23,7 @@ const {
   validateSourceVideoDuration,
 } = require("../video-limits");
 const { normalizeI2VDurationSec } = require("../../../shared/video-i2v-pricing.cjs");
+const { normalizeI2VTextOverlayFlags } = require("../i2v-no-text-overlay");
 const { normalizeVideoUltraResolution } = require("../../../shared/video-ultra-pricing.cjs");
 const {
   computeVideoCreditCost,
@@ -737,18 +738,16 @@ module.exports = async function handler(req, res) {
         }
       } else {
         sourceAssetUrl = await resolveSourceImageUrl(supabase, userId, body);
-        providerPrompt = isAdmin
-          ? buildI2VAvatarPrompt({
-              motionPrompt: studioMotionPrompt,
-              cameraMovement: body.camera_movement || "fixed",
-              motionIntensity: body.motion_intensity || "natural",
-              style: body.style || "realistic",
-              voiceEnabled,
-              voiceText: voiceEnabled
-                ? String(body.voice_text || "").trim()
-                : null,
-            }).slice(0, 5000)
-          : studioMotionPrompt.slice(0, 5000);
+        providerPrompt = buildI2VAvatarPrompt({
+          motionPrompt: studioMotionPrompt,
+          cameraMovement: body.camera_movement || "fixed",
+          motionIntensity: body.motion_intensity || "natural",
+          style: body.style || "realistic",
+          voiceEnabled,
+          voiceText: voiceEnabled
+            ? String(body.voice_text || "").trim()
+            : null,
+        }).slice(0, 5000);
       }
     } catch (srcErr) {
       res.status(srcErr.status || 422).json({
@@ -759,7 +758,7 @@ module.exports = async function handler(req, res) {
     }
 
     const pendingTaskId = `pending_${randomUUID()}`;
-    const studioMetadata = {
+    const studioMetadata = normalizeI2VTextOverlayFlags({
       video_request_id: videoRequestId,
       // Never overwritten — lets status.js recover this row even if
       // provider_task_id itself is ever corrupted/overwritten by a bug.
@@ -795,11 +794,6 @@ module.exports = async function handler(req, res) {
       i2v_provider: "kling_ai_avatar_pro",
       i2v_avatar_pipeline_v2:
         workflow === "image_to_video" && voiceEnabled ? true : isAdmin,
-      subtitles_enabled: false,
-      draw_text: false,
-      subtitle_style: null,
-      subtitle_position: null,
-      overlay_text: null,
       i2v_output_duration_sec:
         workflow === "image_to_video" ? durationSec : null,
       i2v_output_height:
@@ -853,7 +847,7 @@ module.exports = async function handler(req, res) {
         sourceVideoDurationSec,
         preserveSourceAudio,
       }),
-    };
+    });
 
     const userPrompt =
       workflow === "video_to_video"

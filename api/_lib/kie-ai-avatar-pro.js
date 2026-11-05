@@ -4,6 +4,7 @@ const {
   extractKieJobsFailMessage,
 } = require("./kie-jobs-result");
 const { isAiAvatarSensitiveModerationError } = require("./video-user-errors");
+const { appendI2VNoOnScreenTextLock } = require("./i2v-no-text-overlay");
 
 const AI_AVATAR_PRO_MODEL = "kling/ai-avatar-pro";
 
@@ -39,18 +40,17 @@ async function createAiAvatarProTask(input) {
     });
   }
 
+  const visualPrompt = appendI2VNoOnScreenTextLock(
+    prompt ||
+      "Natural cinematic motion, subtle expression, premium photorealistic look.",
+  );
+
   const body = {
     model: AI_AVATAR_PRO_MODEL,
     input: {
       image_url: imageUrl,
       audio_url: audioUrl,
-      prompt: [
-        prompt ||
-          "Natural cinematic motion, subtle expression, premium photorealistic look.",
-        "No subtitles, no captions, no on-screen text, no burned-in lettering.",
-      ]
-        .join(" ")
-        .slice(0, 5000),
+      prompt: visualPrompt,
     },
   };
 

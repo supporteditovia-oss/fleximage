@@ -27,6 +27,9 @@ describe("kie-ai-avatar-pro", () => {
     assert.equal(capturedBody.model, "kling/ai-avatar-pro");
     assert.equal(capturedBody.input.image_url, "https://example.com/a.jpg");
     assert.equal(capturedBody.input.audio_url, "https://example.com/a.mp3");
+    assert.match(capturedBody.input.prompt, /no subtitles/i);
+    assert.match(capturedBody.input.prompt, /aucun texte/i);
+    assert.doesNotMatch(capturedBody.input.prompt, /drawtext/i);
 
     global.fetch = originalFetch;
   });
