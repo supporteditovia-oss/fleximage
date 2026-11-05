@@ -89,6 +89,22 @@ test("computeDefaultSubjectBox targets ~80% canvas height", () => {
   assert.ok(occ <= SUBJECT_OCCUPANCY_MAX);
 });
 
+test("expandBoxForOcclusionCover widens dancer box", () => {
+  const { expandBoxForOcclusionCover } = require("./motion-control-composite");
+  const inner = { left: 200, top: 300, width: 180, height: 700 };
+  const out = expandBoxForOcclusionCover(inner, 720, 1280);
+  assert.ok(out.width > inner.width);
+  assert.ok(out.height >= inner.height);
+});
+
+test("computeSubjectBoxAtAnchor keeps dancer horizontal position", () => {
+  const { computeSubjectBoxAtAnchor } = require("./motion-control-composite");
+  const anchored = computeSubjectBoxAtAnchor(720, 1280, 520);
+  const centered = computeSubjectBoxAtAnchor(720, 1280, 360);
+  assert.ok(anchored.left > centered.left);
+  assert.ok(Math.abs(anchored.left + anchored.width / 2 - 520) < 2);
+});
+
 test("measureSubjectPhotoVerticalOccupancy accepts tall portrait segmentation", async () => {
   const { measureSubjectPhotoVerticalOccupancy } = require("./motion-control-composite");
   const w = 400;

@@ -5,6 +5,8 @@ const {
   isRetryableAlephError,
   isRetryableKlingError,
   isRetryableProviderFailText,
+  motionKlingClientFailOptions,
+  isMotionKlingPollExhausted,
 } = require("./v2v-provider-errors");
 
 test("isKlingCharacterRejection", () => {
@@ -36,4 +38,19 @@ test("isRetryableProviderFailText", () => {
     true,
   );
   assert.equal(isRetryableProviderFailText("No valid characters detected"), false);
+});
+
+test("motionKlingClientFailOptions — exhausted only after retries", () => {
+  const early = motionKlingClientFailOptions(
+    { video_auto_retries: 1, v2v_intent: "motion" },
+    { motionStudioJob: true },
+  );
+  assert.equal(early.v2vExhausted, false);
+  assert.equal(early.afterAlephFallback, false);
+  const late = motionKlingClientFailOptions(
+    { video_auto_retries: 5, v2v_intent: "motion" },
+    { motionStudioJob: true },
+  );
+  assert.equal(late.v2vExhausted, true);
+  assert.equal(isMotionKlingPollExhausted({ video_auto_retries: 5 }), true);
 });
