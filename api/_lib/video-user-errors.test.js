@@ -117,3 +117,9 @@ test("mapMotionCompositeUserMessage — vidéo illisible", () => {
   });
   assert.match(msg, /720p/i);
 });
+
+test("mapVideoProviderMessage — image_url file type not supported : message précis (pas « format vidéo »)", () => {
+  const msg = mapVideoProviderMessage("image_url file type not supported", "fr");
+  assert.match(msg, /JPG ou PNG/);
+  assert.doesNotMatch(msg, /Format vidéo incompatible/);
+});

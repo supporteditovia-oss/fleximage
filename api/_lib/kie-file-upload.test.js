@@ -35,3 +35,36 @@ test("isKieSuccessResponse — success true", () => {
 test("isKieSuccessResponse — code 200", () => {
   assert.equal(isKieSuccessResponse({ code: 200 }, true), true);
 });
+
+test("normalizeImageForKie — convertit un WebP 9:16 en JPEG (Kie refuse le WebP)", async () => {
+  const http = require("node:http");
+  const sharp = require("sharp");
+  const { normalizeImageForKie, sniffKieSafeImageType } = require("./kie-file-upload");
+  const webp = await sharp({
+    create: { width: 360, height: 640, channels: 3, background: "#336699" },
+  })
+    .webp()
+    .toBuffer();
+  const png = await sharp({
+    create: { width: 40, height: 40, channels: 3, background: "#fff" },
+  })
+    .png()
+    .toBuffer();
+  const server = http.createServer((req, res) => {
+    res.end(req.url.endsWith("png") ? png : webp);
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const out = await normalizeImageForKie(`${base}/a.webp`, "a.webp");
+    assert.equal(out.mimeType, "image/jpeg");
+    assert.equal(out.fileName, "a.jpg");
+    assert.equal(sniffKieSafeImageType(out.buffer), "jpeg");
+    const meta = await sharp(out.buffer).metadata();
+    assert.deepEqual([meta.width, meta.height], [360, 640]);
+    // PNG déjà accepté : pas de conversion
+    assert.equal(await normalizeImageForKie(`${base}/b.png`, "b.png"), null);
+  } finally {
+    server.close();
+  }
+});

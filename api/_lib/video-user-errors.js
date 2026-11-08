@@ -69,6 +69,18 @@ function mapVideoProviderMessage(raw, locale = "fr", options = {}) {
       : "The video engine had a temporary issue. Try again in 1–2 minutes — credits refunded if generation failed.";
   }
 
+  if (/image_url[^a-z]*file type not supported/i.test(text)) {
+    return locale === "fr"
+      ? "Cette image n'a pas pu être lue par le moteur vidéo (format non pris en charge ou fichier abîmé). Réessaie avec une photo JPG ou PNG (idéalement 9:16, moins de 10 Mo). Jetons remboursés."
+      : "The video engine could not read this image (unsupported format or damaged file). Try a JPG or PNG photo (ideally 9:16, under 10 MB). Credits refunded.";
+  }
+
+  if (/audio_url[^a-z]*file type not supported/i.test(text)) {
+    return locale === "fr"
+      ? "La piste voix n'a pas pu être lue par le moteur vidéo. Réessaie sans voix ou avec un autre texte. Jetons remboursés."
+      : "The voice track could not be read by the video engine. Try without voice or with a different text. Credits refunded.";
+  }
+
   if (/file type not supported/i.test(text)) {
     return locale === "fr"
       ? "Format vidéo incompatible. Réessaie avec un clip 3–8 s (720p). Jetons remboursés."

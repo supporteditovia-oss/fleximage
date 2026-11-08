@@ -167,6 +167,69 @@ async function uploadUrlToKie(sourceUrl, { uploadPath, fileName }) {
   }
 }
 
+const KIE_MAX_IMAGE_SIDE = 4096;
+
+/** Détecte JPEG/PNG par signature binaire (l'extension de l'URL ne prouve rien). */
+function sniffKieSafeImageType(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "jpeg";
+  if (
+    buffer[0] === 0x89 &&
+    buffer.toString("ascii", 1, 4) === "PNG"
+  ) {
+    return "png";
+  }
+  return null;
+}
+
+/**
+ * Télécharge l'image source ; si ce n'est pas un JPEG/PNG (ex. WebP), renvoie un JPEG
+ * (orientation EXIF appliquée, transparence aplatie sur blanc, côté max 4096 px).
+ * Renvoie null si l'image est déjà acceptée telle quelle ou si la conversion est impossible
+ * (l'appelant retombe alors sur l'upload direct d'origine).
+ */
+async function normalizeImageForKie(sourceUrl, fileName) {
+  let buffer;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const response = await fetch(sourceUrl, { signal: controller.signal });
+      if (!response.ok) return null;
+      buffer = Buffer.from(await response.arrayBuffer());
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+  if (!buffer.length || sniffKieSafeImageType(buffer)) return null;
+
+  try {
+    const sharp = require("sharp");
+    const out = await sharp(buffer, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: KIE_MAX_IMAGE_SIDE,
+        height: KIE_MAX_IMAGE_SIDE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 92, mozjpeg: true })
+      .toBuffer();
+    const base = String(fileName || "ref").replace(/\.[a-z0-9]+$/i, "") || "ref";
+    console.info("[kie-file-upload] image convertie en JPEG pour Kie", {
+      inBytes: buffer.length,
+      outBytes: out.length,
+    });
+    return { buffer: out, fileName: `${base}.jpg`, mimeType: "image/jpeg" };
+  } catch (err) {
+    console.warn("[kie-file-upload] conversion JPEG impossible", err?.message);
+    return null;
+  }
+}
+
 /**
  * Kling / Aleph échouent souvent en "internal error" si le provider ne peut pas fetcher R2.
  * On pousse une copie sur le CDN KIE (stream si besoin).
@@ -183,6 +246,19 @@ async function ensureKieAccessibleMediaUrl(sourceUrl, kind = "video") {
 
   if (/kieai\.|aiquickdraw\.com|redpandaai\.co|tempfile\./i.test(url)) {
     return url;
+  }
+
+  // Kie (Kling Avatar Pro, etc.) n'accepte que JPEG/PNG : un .webp (ou .heic, .avif, .gif…)
+  // donne « image_url file type not supported ». On convertit donc toute image non JPEG/PNG.
+  if (kind === "image") {
+    const normalized = await normalizeImageForKie(url, fileName);
+    if (normalized) {
+      return uploadBufferToKie(normalized.buffer, {
+        fileName: normalized.fileName,
+        mimeType: normalized.mimeType,
+        uploadPath,
+      });
+    }
   }
 
   try {
@@ -225,6 +301,8 @@ async function ensureKieAccessibleMediaUrl(sourceUrl, kind = "video") {
 
 module.exports = {
   ensureKieAccessibleMediaUrl,
+  normalizeImageForKie,
+  sniffKieSafeImageType,
   uploadUrlToKie,
   uploadBufferToKie,
   resolveKieUploadFileUrl,

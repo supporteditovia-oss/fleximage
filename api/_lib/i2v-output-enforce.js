@@ -75,7 +75,8 @@ async function enforceI2VOutputOnMp4Buffer(mp4Buffer, spec) {
 
   try {
     await fs.writeFile(inPath, mp4Buffer);
-    const vf = `scale=-2:${height}`;
+    // 720p/1080p = petit côté : paysage → 1280×720, vertical 9:16 → 720×1280 (et non 402×720).
+    const vf = `scale='if(gt(iw,ih),-2,${height})':'if(gt(iw,ih),${height},-2)'`;
     await execFileAsync(
       ffmpegPath,
       [
