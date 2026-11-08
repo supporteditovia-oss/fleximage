@@ -549,6 +549,31 @@ async function synthesizeWithReferenceMsgpack({
   return Buffer.from(await response.arrayBuffer());
 }
 
+/** Voix « Maman Africaine » (catalogue admin) — seule voix concernée par le cri. */
+const MAMAN_AFRICAINE_FISH_ID = "fb1bf759f90f49e5a1e23488e78138f4";
+const MAMAN_AFRICAINE_SHOUT_TAG = "[screaming] [shouting] [panicked] [hysterical]";
+/** Boost côté Fish : volume +6 dB, un peu plus vite, plus d'expressivité (mesuré : énergie ×2,2). */
+const MAMAN_AFRICAINE_SHOUT_TTS = Object.freeze({ volume: 6, speed: 1.15, temperature: 0.9 });
+
+function isAllCapsText(text) {
+  const t = String(text || "");
+  const letters = t.match(/\p{L}/gu) || [];
+  if (letters.length < 4) return false;
+  return t === t.toLocaleUpperCase("fr") && t !== t.toLocaleLowerCase("fr");
+}
+
+/**
+ * Maman Africaine : texte en TOUTES MAJUSCULES → indice d'émotion Fish pour crier, paniquée
+ * (testé : énergie voisée ×2,2 et hauteur +15 % vs voix calme).
+ * Texte normal ou autre voix : inchangé.
+ */
+function applyMamanAfricaineShout(text, referenceId) {
+  if (referenceId !== MAMAN_AFRICAINE_FISH_ID) return text;
+  if (!isAllCapsText(text)) return text;
+  if (/^\s*[(\[]/.test(text)) return text; // déjà un tag d'émotion explicite
+  return `${MAMAN_AFRICAINE_SHOUT_TAG} ${text.trim().replace(/[\s!.?…]+$/u, "")} !!!`;
+}
+
 /**
  * Synthesize speech from text using a cloned voice reference id.
  * @returns {Promise<Buffer>}
@@ -584,6 +609,22 @@ async function synthesizeSpeech({
   const catalogSpeed = resolveCatalogTtsSpeed(referenceId);
   const resolvedSpeed =
     typeof speed === "number" && Number.isFinite(speed) ? speed : catalogSpeed;
+  const spokenText = applyMamanAfricaineShout(trimmed, referenceId);
+  const shoutOverrides =
+    spokenText !== trimmed
+      ? (() => {
+          const base = buildTtsOptions(spokenText, { speed: resolvedSpeed, ttsParams });
+          return {
+            temperature: MAMAN_AFRICAINE_SHOUT_TTS.temperature,
+            prosody: {
+              ...(base.prosody || {}),
+              speed: MAMAN_AFRICAINE_SHOUT_TTS.speed,
+              volume: MAMAN_AFRICAINE_SHOUT_TTS.volume,
+              normalize_loudness: false,
+            },
+          };
+        })()
+      : {};
 
   const response = await fetch(`${FISH_API_BASE}/v1/tts`, {
     method: "POST",
@@ -592,10 +633,10 @@ async function synthesizeSpeech({
       Accept: "audio/mpeg",
     }),
     body: JSON.stringify({
-      text: trimmed.slice(0, 2000),
+      text: spokenText.slice(0, 2000),
       reference_id: referenceId,
       format,
-      ...buildTtsOptions(trimmed, {
+      ...buildTtsOptions(spokenText, {
         speed: resolvedSpeed,
         cloneFidelity,
         ttsParams,
@@ -606,6 +647,7 @@ async function synthesizeSpeech({
         incisiveClone,
         incisiveRap,
       }),
+      ...shoutOverrides,
     }),
   });
 
@@ -621,6 +663,8 @@ async function synthesizeSpeech({
 }
 
 module.exports = {
+  applyMamanAfricaineShout,
+  MAMAN_AFRICAINE_FISH_ID,
   getFishConfig,
   getVoiceModel,
   waitForVoiceModelReady,
