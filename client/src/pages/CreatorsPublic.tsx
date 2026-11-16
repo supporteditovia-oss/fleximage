@@ -11,7 +11,6 @@ import {
   Play,
   Share2,
   Sparkles,
-  Ticket,
 } from "lucide-react";
 import "./creators-page.css";
 
@@ -35,15 +34,15 @@ const STEPS = [
     text: "Tu utilises le studio (image, voix, vidéo IA) pour faire des vidéos qui donnent envie d'essayer, puis tu les publies.",
   },
   {
-    title: "Tu dis « luxeflexia.com » + ton code",
-    text: "Tu reçois un <b>code personnel</b>. Dans tes vidéos, tu dis simplement <b>luxeflexia.com</b> et ton code : tes spectateurs le saisissent à l'inscription et tout est compté pour toi, même sans lien.",
+    title: "Tu publies, on compte tes vues",
+    text: "Tu publies tes vidéos sur tes réseaux. On suit le nombre de vues et tu es <b>payé selon tes vues</b>, directement sur WhatsApp.",
   },
 ];
 
 const BENEFITS = [
   { icon: Sparkles, title: "Le studio complet", text: "Image IA, vidéo IA et clonage vocal pour créer du contenu qui accroche." },
-  { icon: Ticket, title: "Ton code perso", text: "Un code à dire dans tes vidéos. Pas besoin de lien ni de compte TikTok complet." },
-  { icon: BarChart3, title: "Suivi de tes résultats", text: "On suit les inscriptions et clients que tu amènes grâce à ton code." },
+  { icon: Eye, title: "Payé à la vue", text: "Plus tes vidéos font de vues, plus tu gagnes. Simple et transparent." },
+  { icon: BarChart3, title: "Suivi de tes vues", text: "Tu m'envoies le lien de tes vidéos, je compte les vues avec toi." },
   { icon: Mic, title: "Sans engagement", text: "Tu commences quand tu veux, tu t'arrêtes quand tu veux." },
 ];
 
@@ -51,7 +50,7 @@ const RULES = [
   "Indique clairement « partenariat / pub » sur tes vidéos (obligatoire en France).",
   "Pas de fausses promesses : montre de vrais résultats du studio.",
   "Pas d'utilisation de la photo d'une personne sans son accord.",
-  "Le suivi se fait avec ton code : tu n'as rien à installer.",
+  "Tu m'envoies le lien de tes vidéos : rien à installer.",
 ];
 
 const MARQUEE = [
@@ -59,7 +58,6 @@ const MARQUEE = [
   "Clonage vocal",
   "Vidéo IA",
   "Paiement aux vues",
-  "Code personnel",
   "Sans engagement",
   "Suivi de tes résultats",
 ];
@@ -193,7 +191,7 @@ export default function CreatorsPublic() {
             </div>
             <div className="cr-trust">
               <span>Sans engagement</span>
-              <span>Sans lien nécessaire</span>
+              <span>Payé à la vue</span>
               <span>Réponse sur WhatsApp</span>
             </div>
           </div>
@@ -228,16 +226,15 @@ export default function CreatorsPublic() {
                 </div>
                 <div className="cr-screen-ui">
                   <div className="cr-caption">
-                    Regarde ce que l'IA vient de faire 🤯 <b>luxeflexia.com</b> — code <b>TONCODE</b>
+                    Regarde ce que l'IA vient de faire 🤯 <b>luxeflexia.com</b>
                   </div>
                 </div>
               </div>
             </div>
             <div className="cr-chip cr-chip--code">
-              <Ticket size={20} />
+              <Sparkles size={20} />
               <div>
-                TONCODE
-                <small>ton code personnel</small>
+                Payé à la vue$1<small>selon tes vues</small>
               </div>
             </div>
           </div>

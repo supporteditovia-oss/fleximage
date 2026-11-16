@@ -439,7 +439,7 @@ export default function AuthPage() {
                 />
               </div>
 
-              {!isLogin && (
+              {false && !isLogin && (
                 <div className="space-y-2">
                   <Label
                     htmlFor="creator-code"

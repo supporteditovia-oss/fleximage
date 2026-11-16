@@ -491,7 +491,7 @@ export default function Settings() {
       ) : null}
 
       {/* Code créateur */}
-      <CreatorCodeSection />
+      {false && <CreatorCodeSection />}
 
       {/* Support section */}
       <section className="space-y-4">
