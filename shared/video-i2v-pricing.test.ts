@@ -75,3 +75,14 @@ describe("video-i2v-pricing — zero perte COGS", () => {
     assert.ok(revenue > cogs * 1.2);
   });
 });
+
+describe("grille prod I2V — prix ronds", () => {
+  it("720p : 3 s = 50, 5 s = 60 ; 1080p : 5 s = 130 (écart +70, pas +71)", () => {
+    const c = (durationSec: 3 | 5, quality: "standard" | "high") =>
+      computeImageToVideoCreditCost({ durationSec, quality });
+    assert.equal(c(3, "standard"), 50);
+    assert.equal(c(5, "standard"), 60);
+    assert.equal(c(5, "high"), 130);
+    assert.equal(c(5, "high") - c(5, "standard"), 70);
+  });
+});

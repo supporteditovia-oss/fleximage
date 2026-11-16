@@ -99,6 +99,11 @@ export function runwayProviderDurationSec(
   return RUNWAY_I2V_MIN_BILLED_SEC;
 }
 
+/** Prix 1080p arrondi au multiple de 5 le plus proche (130 et non 131 : pas de jeton orphelin). */
+function roundI2V1080p(raw: number): number {
+  return Math.round(raw / 5) * 5;
+}
+
 function coreI2VCredits(
   duration: VideoI2VDurationSec,
   quality: VideoI2VQuality,
@@ -107,7 +112,7 @@ function coreI2VCredits(
   const base5_720 = i2vBase5s720p(grid);
   let credits =
     quality === "high"
-      ? Math.ceil(base5_720 * RUNWAY_KIE_1080P_COST_FACTOR)
+      ? roundI2V1080p(base5_720 * RUNWAY_KIE_1080P_COST_FACTOR)
       : base5_720;
   if (duration === 3) {
     credits = Math.max(

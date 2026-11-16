@@ -64,11 +64,16 @@ function i2vBase5s720p(grid) {
   return grid === "admin_v2" ? ADMIN_I2V_5S_720P : VIDEO_I2V_CREDIT_COST;
 }
 
+/** Prix 1080p arrondi au multiple de 5 le plus proche (130 et non 131 : pas de jeton orphelin). */
+function roundI2V1080p(raw) {
+  return Math.round(raw / 5) * 5;
+}
+
 function coreI2VCredits(duration, quality, grid) {
   const base5_720 = i2vBase5s720p(grid);
   let credits =
     quality === "high"
-      ? Math.ceil(base5_720 * RUNWAY_KIE_1080P_COST_FACTOR)
+      ? roundI2V1080p(base5_720 * RUNWAY_KIE_1080P_COST_FACTOR)
       : base5_720;
   if (duration === 3) {
     credits = Math.max(
