@@ -4,13 +4,15 @@ export type V2AccessProfile = {
   credits?: number | null;
 };
 
-/** Studio V2 — admin, abonné actif, ou IP allowlist (API /api/v2-access). */
+/**
+ * Studio V2 (Image IA / Clonage IA / Vidéo IA) — ouvert à TOUS les clients connectés.
+ * L'accès aux générations reste contrôlé côté serveur par les jetons (crédits).
+ */
 export function isV2ExperienceEnabled(
-  profile: V2AccessProfile | null | undefined,
-  isAdmin = false,
+  _profile?: V2AccessProfile | null,
+  _isAdmin = false,
 ): boolean {
-  if (isAdmin || profile?.role === "admin") return true;
-  return Boolean(profile?.is_subscriber);
+  return true;
 }
 
 export type StudioMode = "image" | "voice" | "video";

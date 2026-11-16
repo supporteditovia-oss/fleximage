@@ -56,7 +56,8 @@ module.exports = async function handler(req, res) {
       /* optional auth — IP discovery still works */
     }
 
-    const enabled = isAdmin || isSubscriber || ipAllowed;
+    // Studio V2 ouvert à tous les clients (les jetons contrôlent les générations).
+    const enabled = true;
 
     res.status(200).json({
       enabled,
