@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Gem } from "lucide-react";
+import { trackFunnelStep } from "@/lib/funnel-tracker";
 import { writeStudioMode } from "@/lib/v2-experience";
 import { Link } from "wouter";
 import { SocialProofLine } from "@/components/marketing/SocialProofLine";
@@ -53,6 +54,11 @@ export default function LandingV2() {
 
   useEffect(() => {
     applyLocaleFromSearch(window.location.search);
+  }, []);
+
+  // Funnel : sans cet événement, HQ/Funnel restaient à 0 (dernier « landing » enregistré : 13 sept.).
+  useEffect(() => {
+    trackFunnelStep("landing", { source: "home" });
   }, []);
 
   useEffect(() => {

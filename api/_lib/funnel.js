@@ -169,16 +169,41 @@ function buildFunnelPayload(rows) {
 
 async function fetchFunnelStats(supabase, range) {
   const { from, to } = resolveFunnelRange(range);
-  const { data, error } = await supabase.rpc("admin_funnel_stats", {
-    p_from: from ? from.toISOString() : null,
-    p_to: to ? to.toISOString() : null,
-  });
-  if (error) throw error;
+  // Sessions distinctes par étape, comptées directement (l'ancienne fonction SQL ne comptait
+  // que les sessions ayant un événement « landing », donc 0 partout depuis septembre).
+  const sessionsByStep = Object.fromEntries(FUNNEL_STEPS.map((s) => [s, new Set()]));
+  const PAGE = 1000;
+  for (let offset = 0; ; offset += PAGE) {
+    let q = supabase
+      .from("funnel_events")
+      .select("session_id, step")
+      .order("created_at", { ascending: true })
+      .range(offset, offset + PAGE - 1);
+    if (from) q = q.gte("created_at", from.toISOString());
+    if (to) q = q.lt("created_at", to.toISOString());
+    const { data, error } = await q;
+    if (error) throw error;
+    for (const row of data || []) {
+      if (isValidStep(row.step) && row.session_id) {
+        sessionsByStep[row.step].add(row.session_id);
+      }
+    }
+    if (!data || data.length < PAGE) break;
+  }
+  // Toute session active a forcément « atterri » : sans événement landing, on la compte quand même.
+  const allSessions = new Set();
+  for (const step of FUNNEL_STEPS) {
+    for (const id of sessionsByStep[step]) allSessions.add(id);
+  }
+  const rows = FUNNEL_STEPS.map((step) => ({
+    step,
+    sessions: step === "landing" ? allSessions.size : sessionsByStep[step].size,
+  }));
   return {
     range: range || "today",
     from: from ? from.toISOString() : null,
     to: to ? to.toISOString() : null,
-    ...buildFunnelPayload(data),
+    ...buildFunnelPayload(rows),
   };
 }
 

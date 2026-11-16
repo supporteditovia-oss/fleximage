@@ -11,6 +11,7 @@ import {
   ScrollText,
   Clapperboard,
   GitBranch,
+  Handshake,
   Link2,
   Gauge,
   Library,
@@ -253,6 +254,17 @@ export function BottomDock() {
                     <SettingsIcon className="h-4 w-4" />
                   </div>
                   <span className="font-medium">{t("layout.dock.settings")}</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                asChild
+                className="group/item rounded-lg px-3 py-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground bg-transparent hover:bg-transparent focus:bg-transparent transition-all duration-200"
+              >
+                <Link href="/createurs" className="flex w-full items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent transition-all duration-200 group-hover/item:bg-muted/60">
+                    <Handshake className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Travailler avec nous</span>
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (

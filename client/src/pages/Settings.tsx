@@ -5,6 +5,7 @@ import { createPortalSession } from "@/lib/stripe";
 import { PaywallOverlay } from "@/components/larp/PaywallOverlay";
 import { AdminPricingReferenceCard } from "@/components/admin/AdminPricingReferenceCard";
 import { LanguageSwitch } from "@/components/layout/LanguageSwitch";
+import { CreatorCodeSection } from "@/components/settings/CreatorCodeSection";
 import {
   Select,
   SelectContent,
@@ -488,6 +489,9 @@ export default function Settings() {
           <AdminPricingReferenceCard />
         </section>
       ) : null}
+
+      {/* Code créateur */}
+      <CreatorCodeSection />
 
       {/* Support section */}
       <section className="space-y-4">

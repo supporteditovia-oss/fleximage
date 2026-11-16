@@ -153,7 +153,7 @@ async function fetchCommandCenter(supabase, range) {
   }));
 
   // Detail rows (paginated) for funnel / attribution / providers / pulse.
-  const [
+  let [
     funnelLanded,
     gensDetail,
     signupsDetail,
@@ -161,11 +161,12 @@ async function fetchCommandCenter(supabase, range) {
     newSubsDetail,
     recentGens,
   ] = await Promise.all([
+    // Toutes les sessions actives sur la période (pas seulement celles qui ont un événement
+    // « landing » : la page d'accueil V2 ne l'envoyait plus → funnel à 0).
     fetchAllRows(() => {
       let q = supabase
         .from("funnel_events")
-        .select("session_id, created_at, meta")
-        .eq("step", "landing")
+        .select("session_id, step, created_at, meta, user_id, path")
         .order("created_at", { ascending: true });
       return lt(gte(q));
     }),
@@ -219,20 +220,14 @@ async function fetchCommandCenter(supabase, range) {
       }),
   ]);
 
-  const landedSet = new Set(funnelLanded.map((r) => r.session_id));
-  const landedIds = [...landedSet];
-  const funnelEvents = [];
-  for (let i = 0; i < landedIds.length; i += 100) {
-    const chunk = landedIds.slice(i, i + 100);
-    const chunkRows = await fetchAllRows(() =>
-      supabase
-        .from("funnel_events")
-        .select("session_id, step, created_at, meta, user_id, path")
-        .in("session_id", chunk)
-        .order("created_at", { ascending: true }),
-    );
-    funnelEvents.push(...chunkRows);
+  const funnelEvents = funnelLanded;
+  // 1 ligne « entrée » par session = son premier événement (porte l'attribution utm/ttclid).
+  const firstEventBySession = new Map();
+  for (const r of funnelEvents) {
+    if (!firstEventBySession.has(r.session_id)) firstEventBySession.set(r.session_id, r);
   }
+  const landedSet = new Set(firstEventBySession.keys());
+  funnelLanded = [...firstEventBySession.values()];
 
   const stepCounts = {
     landing: landedSet.size,
@@ -241,6 +236,7 @@ async function fetchCommandCenter(supabase, range) {
     generate: 0,
     preview: 0,
     paywall: 0,
+    checkout: 0,
     subscribed: 0,
   };
   const sessionSteps = new Map();
@@ -366,7 +362,9 @@ async function fetchCommandCenter(supabase, range) {
   );
   const cohortPaid = recentSignups.filter((p) => p.is_subscriber).length;
 
-  const paidInPeriod = stepCounts.subscribed;
+  // Paiements = vrais abonnements créés sur la période (l'événement « subscribed » est parfois perdu côté navigateur).
+  const paidInPeriod = Math.max(stepCounts.subscribed, newSubsDetail.length);
+  stepCounts.subscribed = paidInPeriod;
   const failRate = pct(gensFailed, gensTotal);
 
   const alerts = [];

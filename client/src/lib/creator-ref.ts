@@ -30,6 +30,18 @@ export function storeCreatorRef(raw: string | null | undefined): void {
   }
 }
 
+/** Code saisi à la main (inscription / réglages) : remplace un éventuel code mémorisé. */
+export function setCreatorRef(raw: string | null | undefined): boolean {
+  const code = normalizeCreatorCode(raw);
+  if (!code || typeof window === "undefined") return false;
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify({ code, at: Date.now() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function clearCreatorRef(): void {
   try {
     window.localStorage.removeItem(KEY);

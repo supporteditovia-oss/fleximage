@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { readCreatorRef, setCreatorRef } from "@/lib/creator-ref";
 import { useLocation, Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,11 @@ const PASSWORD_RULES: PasswordRule[] = [
 export default function AuthPage() {
   const [location, setLocation] = useLocation();
   const [email, setEmail] = useState("");
+  const [creatorCode, setCreatorCode] = useState(() => readCreatorRef() ?? "");
+  useEffect(() => {
+    // Code saisi à l'inscription : mémorisé, rattaché au compte à la connexion.
+    if (creatorCode.trim()) setCreatorRef(creatorCode);
+  }, [creatorCode]);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -432,6 +438,26 @@ export default function AuthPage() {
                   data-testid="input-email"
                 />
               </div>
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="creator-code"
+                    className="text-xs font-semibold uppercase tracking-wide text-[var(--lx-muted)]"
+                  >
+                    Code créateur (optionnel)
+                  </Label>
+                  <Input
+                    id="creator-code"
+                    placeholder="Ex. KARIM"
+                    value={creatorCode}
+                    onChange={(e) => setCreatorCode(e.target.value)}
+                    maxLength={24}
+                    autoCapitalize="characters"
+                    className="h-11 rounded-lg border-[var(--lx-ink)]/12 bg-white text-[var(--lx-ink)] placeholder:text-[var(--lx-muted)]/60 focus-visible:ring-[var(--lx-gold)]"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label

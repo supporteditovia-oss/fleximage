@@ -1,7 +1,8 @@
 const { requireAdmin, readBody, sendError } = require("../admin-auth");
 const {
   createCreatorLink,
-  setCreatorActive,
+  updateCreator,
+  assignUserToCreatorByEmail,
   fetchCreatorStats,
 } = require("../creator-links");
 
@@ -21,16 +22,26 @@ module.exports = async function handler(req, res) {
     }
     if (req.method === "POST") {
       const body = readBody(req);
+      if (body?.action === "assign") {
+        const done = await assignUserToCreatorByEmail(supabase, {
+          email: body.email,
+          code: body.code,
+        });
+        res.status(200).json({ assigned: done });
+        return;
+      }
       const created = await createCreatorLink(supabase, {
         name: body?.name,
         code: body?.code,
+        rateCents: body?.rateCents,
       });
       res.status(201).json({ creator: created });
       return;
     }
     if (req.method === "PATCH") {
       const body = readBody(req);
-      const updated = await setCreatorActive(supabase, body?.code, body?.active);
+      const { code: patchCode, ...patch } = body || {};
+      const updated = await updateCreator(supabase, patchCode, patch);
       res.status(200).json({ creator: updated });
       return;
     }

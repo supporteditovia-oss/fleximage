@@ -48,7 +48,7 @@ async function writeRegistry(supabase, registry) {
   if (error) throw error;
 }
 
-async function createCreatorLink(supabase, { name, code }) {
+async function createCreatorLink(supabase, { name, code, rateCents }) {
   const cleanName = String(name || "").trim().slice(0, 60);
   if (!cleanName) {
     throw Object.assign(new Error("Nom requis"), { status: 400 });
@@ -69,20 +69,83 @@ async function createCreatorLink(supabase, { name, code }) {
     name: cleanName,
     active: true,
     createdAt: new Date().toISOString(),
+    rateCents: rateCents !== undefined && rateCents !== "" ? cleanInt(rateCents, 1_000_000) : 0,
+    views: 0,
+    paidCents: 0,
   };
   await writeRegistry(supabase, registry);
   return { code: finalCode, ...registry[finalCode] };
 }
 
-async function setCreatorActive(supabase, code, active) {
+function cleanInt(v, max) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < 0) {
+    throw Object.assign(new Error("Nombre invalide"), { status: 400 });
+  }
+  return Math.min(n, max);
+}
+
+/** Met à jour un créateur : active, name, rateCents (€/1000 vues, en centimes), views, paidCents, notes. */
+async function updateCreator(supabase, code, patch) {
   const c = normalizeCode(code);
   const registry = await readRegistry(supabase);
   if (!c || !registry[c]) {
     throw Object.assign(new Error("Code introuvable"), { status: 404 });
   }
-  registry[c].active = Boolean(active);
+  const cur = registry[c];
+  if (patch.active !== undefined) cur.active = Boolean(patch.active);
+  if (patch.name !== undefined) {
+    const n = String(patch.name).trim().slice(0, 60);
+    if (!n) throw Object.assign(new Error("Nom requis"), { status: 400 });
+    cur.name = n;
+  }
+  if (patch.rateCents !== undefined) cur.rateCents = cleanInt(patch.rateCents, 1_000_000);
+  if (patch.views !== undefined) cur.views = cleanInt(patch.views, 2_000_000_000);
+  if (patch.paidCents !== undefined) cur.paidCents = cleanInt(patch.paidCents, 100_000_000);
+  if (patch.notes !== undefined) cur.notes = String(patch.notes).slice(0, 200);
+  registry[c] = cur;
   await writeRegistry(supabase, registry);
-  return { code: c, ...registry[c] };
+  return { code: c, ...cur };
+}
+
+/** Attribution manuelle (créateur sans lien / sans code) : on rattache un compte par e-mail. */
+async function assignUserToCreatorByEmail(supabase, { email, code }) {
+  const c = normalizeCode(code);
+  const registry = await readRegistry(supabase);
+  if (!c || !registry[c]) {
+    throw Object.assign(new Error("Code créateur introuvable"), { status: 404 });
+  }
+  const mail = String(email || "").trim();
+  if (!mail.includes("@")) {
+    throw Object.assign(new Error("E-mail invalide"), { status: 400 });
+  }
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .ilike("email", mail)
+    .maybeSingle();
+  if (error) throw error;
+  if (!profile) {
+    throw Object.assign(new Error("Aucun compte avec cet e-mail"), { status: 404 });
+  }
+  const { data: prev } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", `creator_user:${profile.id}`)
+    .maybeSingle();
+  if (prev?.value && prev.value !== c) {
+    await supabase.from("app_settings").delete().eq("key", `creator_signup:${prev.value}:${profile.id}`);
+  }
+  const now = new Date().toISOString();
+  const { error: upErr } = await supabase.from("app_settings").upsert(
+    [
+      { key: `creator_user:${profile.id}`, value: c, updated_at: now },
+      { key: `creator_signup:${c}:${profile.id}`, value: now, updated_at: now },
+    ],
+    { onConflict: "key" },
+  );
+  if (upErr) throw upErr;
+  return { code: c, userId: profile.id };
 }
 
 /**
@@ -180,6 +243,10 @@ async function fetchCreatorStats(supabase) {
       name: meta.name,
       active: meta.active !== false,
       createdAt: meta.createdAt,
+      rateCents: Number(meta.rateCents) || 0,
+      views: Number(meta.views) || 0,
+      paidCents: Number(meta.paidCents) || 0,
+      notes: meta.notes || "",
       signups: 0,
       payers: 0,
       payments: 0,
@@ -209,7 +276,15 @@ async function fetchCreatorStats(supabase) {
     }
   }
   return Object.values(stats)
-    .map(({ _payerIds, ...s }) => ({ ...s, payers: _payerIds.size }))
+    .map(({ _payerIds, ...s }) => {
+      const earnedCents = Math.round((s.views / 1000) * s.rateCents);
+      return {
+        ...s,
+        payers: _payerIds.size,
+        earnedCents,
+        owedCents: Math.max(0, earnedCents - s.paidCents),
+      };
+    })
     .sort((a, b) => b.revenueCents - a.revenueCents || b.signups - a.signups);
 }
 
@@ -217,7 +292,8 @@ module.exports = {
   normalizeCode,
   readRegistry,
   createCreatorLink,
-  setCreatorActive,
+  updateCreator,
+  assignUserToCreatorByEmail,
   claimCreatorReferral,
   recordCreatorConversion,
   fetchCreatorStats,

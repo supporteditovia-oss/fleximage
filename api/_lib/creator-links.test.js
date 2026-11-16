@@ -65,6 +65,16 @@ test("créer lien, inscription (1er contact), paiements idempotents, stats", asy
 test("code désactivé : pas d'attribution", async () => {
   const db = fakeSupabase();
   await L.createCreatorLink(db, { name: "Off", code: "OFFCODE" });
-  await L.setCreatorActive(db, "OFFCODE", false);
+  await L.updateCreator(db, "OFFCODE", { active: false });
   assert.equal((await L.claimCreatorReferral(db, "u1", "OFFCODE")).ok, false);
+});
+
+test("tarif aux 1 000 vues : gagné, payé, reste à payer", async () => {
+  const db = fakeSupabase();
+  await L.createCreatorLink(db, { name: "Vues", code: "VUES1", rateCents: 80 }); // 0,80 € / 1000 vues
+  await L.updateCreator(db, "VUES1", { views: 125000, paidCents: 5000 });
+  const s = (await L.fetchCreatorStats(db)).find((x) => x.code === "VUES1");
+  assert.equal(s.earnedCents, 10000); // 125 × 0,80 €
+  assert.equal(s.owedCents, 5000);
+  await assert.rejects(L.updateCreator(db, "VUES1", { views: -5 }), /invalide/);
 });

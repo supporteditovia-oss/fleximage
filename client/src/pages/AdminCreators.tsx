@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Copy, Link2, Plus } from "lucide-react";
@@ -19,7 +19,44 @@ type CreatorRow = {
   payments: number;
   revenueCents: number;
   lastSignupAt: string | null;
+  rateCents: number;
+  views: number;
+  paidCents: number;
+  earnedCents: number;
+  owedCents: number;
 };
+
+/** Champ numérique modifiable : enregistre à la sortie du champ. */
+function NumCell({
+  value,
+  onSave,
+  suffix,
+  width = "w-24",
+}: {
+  value: number;
+  onSave: (n: number) => void;
+  suffix?: string;
+  width?: string;
+}) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(String(value)), [value]);
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Input
+        className={`h-8 ${width} text-right`}
+        inputMode="decimal"
+        value={text}
+        onChange={(e) => setText(e.target.value.replace(",", "."))}
+        onBlur={() => {
+          const n = Number(text);
+          if (Number.isFinite(n) && n >= 0 && n !== value) onSave(n);
+          else setText(String(value));
+        }}
+      />
+      {suffix ? <span className="text-xs text-muted-foreground">{suffix}</span> : null}
+    </span>
+  );
+}
 
 function euro(cents: number): string {
   return (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
@@ -65,8 +102,18 @@ export default function AdminCreators() {
   });
 
   const toggle = useMutation({
-    mutationFn: (v: { code: string; active: boolean }) => api("PATCH", v),
+    mutationFn: (v: { code: string } & Record<string, unknown>) => api("PATCH", v),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-creators"] }),
+  });
+
+  const [assignEmail, setAssignEmail] = useState("");
+  const [assignCode, setAssignCode] = useState("");
+  const assign = useMutation({
+    mutationFn: () => api("POST", { action: "assign", email: assignEmail, code: assignCode }),
+    onSuccess: () => {
+      setAssignEmail("");
+      qc.invalidateQueries({ queryKey: ["admin-creators"] });
+    },
   });
 
   if (!isAdmin) {
@@ -95,8 +142,9 @@ export default function AdminCreators() {
       signups: a.signups + r.signups,
       payers: a.payers + r.payers,
       revenue: a.revenue + r.revenueCents,
+      owed: a.owed + r.owedCents,
     }),
-    { signups: 0, payers: 0, revenue: 0 },
+    { signups: 0, payers: 0, revenue: 0, owed: 0 },
   );
 
   return (
@@ -110,11 +158,12 @@ export default function AdminCreators() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Inscrits via liens", String(totals.signups)],
           ["Clients payants", String(totals.payers)],
           ["Revenu généré", euro(totals.revenue)],
+          ["Reste à payer aux créateurs", euro(totals.owed)],
         ].map(([label, value]) => (
           <Card key={label}>
             <CardHeader className="pb-2">
@@ -163,7 +212,54 @@ export default function AdminCreators() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-lg">Rattacher un client à un créateur</CardTitle>
+          <CardDescription>
+            Pour un créateur sans lien : mets l'e-mail du client et choisis le créateur. Ses futurs paiements lui seront comptés.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-col gap-2 sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (assignEmail.trim() && assignCode) assign.mutate();
+            }}
+          >
+            <Input
+              type="email"
+              placeholder="E-mail du client"
+              value={assignEmail}
+              onChange={(e) => setAssignEmail(e.target.value)}
+            />
+            <select
+              className="h-10 rounded-md border bg-background px-3 text-sm"
+              value={assignCode}
+              onChange={(e) => setAssignCode(e.target.value)}
+            >
+              <option value="">Créateur…</option>
+              {rows.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" disabled={!assignEmail.trim() || !assignCode || assign.isPending}>
+              Rattacher
+            </Button>
+          </form>
+          {assign.isSuccess ? <p className="mt-2 text-sm text-green-600">Client rattaché.</p> : null}
+          {assign.error ? (
+            <p className="mt-2 text-sm text-destructive">{(assign.error as Error).message}</p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-lg">Résultats par créateur</CardTitle>
+          <CardDescription>
+            Modifie le tarif, les vues et le montant déjà payé directement dans le tableau (il s'enregistre en sortant du champ).
+          </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {list.isLoading ? (
@@ -173,7 +269,7 @@ export default function AdminCreators() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucun lien pour l'instant. Crée le premier ci-dessus.</p>
           ) : (
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[980px] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2 pr-3">Créateur</th>
@@ -182,6 +278,10 @@ export default function AdminCreators() {
                   <th className="py-2 pr-3 text-right">Payants</th>
                   <th className="py-2 pr-3 text-right">Revenu</th>
                   <th className="py-2 pr-3 text-right">Conv.</th>
+                  <th className="py-2 pr-3 text-right">€ / 1 000 vues</th>
+                  <th className="py-2 pr-3 text-right">Vues</th>
+                  <th className="py-2 pr-3 text-right">Déjà payé (€)</th>
+                  <th className="py-2 pr-3 text-right">Reste à payer</th>
                   <th className="py-2 text-right">Actif</th>
                 </tr>
               </thead>
@@ -205,6 +305,28 @@ export default function AdminCreators() {
                     <td className="py-2 pr-3 text-right">
                       {r.signups ? `${Math.round((r.payers / r.signups) * 100)}%` : "—"}
                     </td>
+                    <td className="py-2 pr-3 text-right">
+                      <NumCell
+                        width="w-20"
+                        value={r.rateCents / 100}
+                        onSave={(n) => toggle.mutate({ code: r.code, rateCents: Math.round(n * 100) })}
+                      />
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      <NumCell
+                        width="w-28"
+                        value={r.views}
+                        onSave={(n) => toggle.mutate({ code: r.code, views: Math.round(n) })}
+                      />
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      <NumCell
+                        width="w-20"
+                        value={r.paidCents / 100}
+                        onSave={(n) => toggle.mutate({ code: r.code, paidCents: Math.round(n * 100) })}
+                      />
+                    </td>
+                    <td className="py-2 pr-3 text-right font-medium">{euro(r.owedCents)}</td>
                     <td className="py-2 text-right">
                       <Button
                         size="sm"
