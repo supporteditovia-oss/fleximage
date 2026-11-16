@@ -1,4 +1,5 @@
 const Stripe = require("stripe");
+const { recordCreatorConversion } = require("../_lib/creator-links");
 const { buffer } = require("micro");
 const { createClient } = require("@supabase/supabase-js");
 const {
@@ -387,6 +388,14 @@ module.exports = async function handler(req, res) {
           "checkout.session.completed",
         );
         console.log("checkout.session.completed result", result);
+        if (result && result.ok !== false) {
+          const paidSession = event.data.object;
+          await recordCreatorConversion(supabase, {
+            userId: paidSession.metadata && paidSession.metadata.user_id,
+            cents: paidSession.amount_total,
+            eventId: paidSession.id,
+          });
+        }
         break;
       }
       case "invoice.paid":

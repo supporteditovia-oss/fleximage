@@ -11,6 +11,7 @@ import {
   ScrollText,
   Clapperboard,
   GitBranch,
+  Link2,
   Gauge,
   Library,
 } from "lucide-react";
@@ -45,6 +46,7 @@ export function BottomDock() {
     { href: "/platform-admin", label: t("layout.dock.adminOverview"), icon: ShieldCheck },
     { href: "/platform-admin/hq", label: "HQ", icon: Gauge },
     { href: "/platform-admin/funnel", label: "Funnel", icon: GitBranch },
+    { href: "/platform-admin/creators", label: "Créateurs", icon: Link2 },
     { href: "/platform-admin/users", label: t("layout.dock.users"), icon: Users },
     { href: "/platform-admin/templates", label: t("layout.dock.templates"), icon: FileText },
     { href: "/platform-admin/studio", label: "Studio", icon: Clapperboard },

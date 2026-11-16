@@ -1,6 +1,7 @@
 const funnelTrack = require("./_lib/handlers/funnel-track");
 const funnelPreviewLock = require("./_lib/handlers/funnel-preview-lock");
 const funnelPreviewRecovered = require("./_lib/handlers/funnel-preview-recovered");
+const creatorClaim = require("./_lib/handlers/creator-claim");
 
 function pathParts(req) {
   const fromQuery = req.query && req.query.__funnelPath;
@@ -36,6 +37,9 @@ module.exports = async function handler(req, res) {
   }
   if (route === "preview-lock") {
     return funnelPreviewLock(req, res);
+  }
+  if (route === "creator-claim") {
+    return creatorClaim(req, res);
   }
   if (route === "preview-recovered") {
     return funnelPreviewRecovered(req, res);

@@ -7,6 +7,7 @@ const commandCenterHandler = require("./_lib/handlers/admin-command-center");
 const cronPreviewExpiryReminders = require("./_lib/handlers/cron-preview-expiry-reminders");
 const cronProviderEnv = require("./_lib/handlers/cron-provider-env");
 const cronStripeDiscoveryReprice = require("./_lib/handlers/cron-stripe-discovery-reprice");
+const creatorsHandler = require("./_lib/handlers/admin-creators");
 const { handleCrmAdminApi } = require("./_lib/crm-admin-api");
 
 function pathParts(req) {
@@ -68,6 +69,11 @@ module.exports = async function handler(req, res) {
   // GET|PATCH /api/admin/settings
   if (parts[0] === "settings" && !parts[1]) {
     return settingsHandler(req, res);
+  }
+
+  // GET|POST|PATCH /api/admin/creators (liens créateurs — admin uniquement)
+  if (parts[0] === "creators" && !parts[1]) {
+    return creatorsHandler(req, res);
   }
 
   // GET /api/admin/funnel

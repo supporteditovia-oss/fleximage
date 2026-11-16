@@ -1,6 +1,7 @@
 const Stripe = require("stripe");
 const { createClient } = require("@supabase/supabase-js");
 const { reconcilePaidCheckoutSession } = require("../_lib/stripe-billing");
+const { recordCreatorConversion } = require("../_lib/creator-links");
 const { resolveRequestLocale, copy } = require("../_lib/locale-copy");
 
 function readBody(req) {
@@ -82,6 +83,13 @@ module.exports = async function handler(req, res) {
             reason: reconcile.reason,
             payment_status: session.payment_status,
             status: session.status,
+          });
+        } else {
+          // Idempotent (clé = id de session) : compte aussi si le webhook est en retard.
+          await recordCreatorConversion(supabase, {
+            userId: session.metadata && session.metadata.user_id,
+            cents: session.amount_total,
+            eventId: session.id,
           });
         }
       } catch (reconcileErr) {

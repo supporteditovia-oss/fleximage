@@ -16,6 +16,10 @@ import AdminTemplates from "@/pages/AdminTemplates";
 import AdminLogs from "@/pages/AdminLogs";
 import AdminStudio from "@/pages/AdminStudio";
 import AdminFunnel from "@/pages/AdminFunnel";
+import AdminCreators from "@/pages/AdminCreators";
+import CreatorsPublic from "@/pages/CreatorsPublic";
+import { useCreatorClaim } from "@/hooks/use-creator-claim";
+import { storeCreatorRef } from "@/lib/creator-ref";
 import AdminCommandCenter from "@/pages/AdminCommandCenter";
 import Generate from "@/pages/Generate";
 import Create from "@/pages/Create";
@@ -301,6 +305,7 @@ function ProtectedAppRoutes() {
           <Route path="/platform-admin" component={AdminPage} />
           <Route path="/platform-admin/users" component={AdminPage} />
           <Route path="/platform-admin/funnel" component={AdminFunnel} />
+          <Route path="/platform-admin/creators" component={AdminCreators} />
           <Route path="/platform-admin/hq" component={AdminCommandCenter} />
           <Route path="/platform-admin/templates" component={AdminTemplates} />
           <Route path="/platform-admin/logs" component={AdminLogs} />
@@ -333,6 +338,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   "/platform-admin": "meta:titles.admin",
   "/platform-admin/users": "meta:titles.adminUsers",
   "/platform-admin/funnel": "Funnel — LuxeFlexIA",
+  "/platform-admin/creators": "Créateurs — LuxeFlexIA",
+  "/createurs": "Deviens créateur — LuxeFlexIA",
   "/platform-admin/hq": "HQ — LuxeFlexIA",
   "/platform-admin/templates": "meta:titles.adminTemplates",
   "/platform-admin/logs": "meta:titles.adminLogs",
@@ -368,11 +375,18 @@ const PROTECTED_PATHS = new Set([
   "/platform-admin",
   "/platform-admin/users",
   "/platform-admin/funnel",
+  "/platform-admin/creators",
   "/platform-admin/hq",
   "/platform-admin/templates",
   "/platform-admin/logs",
   "/platform-admin/studio",
 ]);
+
+/** /c/CODE : mémorise le créateur puis renvoie vers l'accueil. */
+function CreatorShortLink({ params }: { params: { code: string } }) {
+  storeCreatorRef(params.code);
+  return <Redirect to="/" />;
+}
 
 function Router() {
   const { user, profile } = useAuth();
@@ -381,6 +395,7 @@ function Router() {
   const pathname = location.split("?")[0] || location;
 
   useCrispSubscriberGate();
+  useCreatorClaim(user?.id);
 
   React.useEffect(() => {
     applyLocaleFromSearch(window.location.search);
@@ -524,6 +539,8 @@ function Router() {
       {/* Public Routes */}
       <Route path={AUTH_CONFIG.LANDING_PATH} component={LandingGate} />
       <Route path="/pricing" component={LandingGate} />
+      <Route path="/createurs" component={CreatorsPublic} />
+      <Route path="/c/:code" component={CreatorShortLink} />
       <Route path="/tous-les-generateurs" component={TousLesGenerateurs} />
       <Route path="/generateur/:slug" component={SeoNicheLanding} />
       <Route path="/mentions-legales" component={MentionsLegales} />
